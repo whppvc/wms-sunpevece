@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,17 +9,25 @@
 <body class="bg-gray-100 flex items-center justify-center h-screen">
 
     <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <!-- Logo Area -->
+        
+        <!-- Logo Area (Pastikan nama file di src="" sesuai dengan nama file gambar Anda) -->
+        <div class="flex justify-center mb-4">
+            <img src="sunpevece.png" alt="Logo PT Sunpevece" class="h-20 w-auto object-contain">
+        </div>
+
+        <!-- Judul & Deskripsi -->
         <div class="text-center mb-8">
-            <h1 class="text-2xl font-bold text-blue-600">PT SUNPEVECE INDODELI</h1>
-            <p class="text-gray-500 text-sm">Warehouse Management System</p>
+            <h1 class="text-2xl font-bold text-blue-600">PT SUNPEVECE</h1>
+            <p class="text-gray-500 text-xs mt-3 leading-relaxed font-medium px-2">
+                Report Produksi • STBJ • Catat Stok • Booking Stok • Pengiriman Stok • Laporan • Cetak Label
+            </p>
         </div>
 
         <!-- Login Form -->
         <form id="loginForm" class="space-y-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700">Pilih Bagian</label>
-                <select id="role" class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                <select id="role" class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none">
                     <option value="Gudang">Gudang</option>
                     <option value="PPC">PPC</option>
                     <option value="QC">QC</option>
@@ -28,10 +36,10 @@
             
             <div>
                 <label class="block text-sm font-medium text-gray-700">Password</label>
-                <input type="password" id="password" placeholder="••••••••" class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                <input type="password" id="password" placeholder="••••••••" class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none" required>
             </div>
 
-            <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition">
+            <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition font-semibold mt-4">
                 Masuk ke Dashboard
             </button>
         </form>
@@ -42,16 +50,13 @@
     </div>
 
     <script>
-        // Logika sederhana untuk simulasi login (Nanti kita hubungkan ke Supabase)
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const role = document.getElementById('role').value;
             const pass = document.getElementById('password').value;
             
-            // Contoh validasi sementara
             if(pass) {
                 alert('Mencoba masuk sebagai ' + role);
-                // Logika redirect akan diletakkan di sini
             }
         });
     </script>
