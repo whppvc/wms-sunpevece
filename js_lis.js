@@ -1,17 +1,29 @@
 <script>
   let dataLis = {}; let selectedLisItem = "";
 
-  function initLis() {
-    google.script.run.withSuccessHandler(function(data) { 
-      dataLis = data; 
-      isiDropdown('l', data); 
-    }).getInitialData('LIS');
-    
-    document.getElementById('l-tgl').valueAsDate = new Date();
-    document.getElementById('l-shading').addEventListener('input', function() { this.value = this.value.toUpperCase(); });
-    document.getElementById('l-mesin').addEventListener('change', function() { if(this.value === 'ADD_NEW') { bukaModal('l-modal-tambah-mesin'); this.value = ''; } });
-    
-    // Jangan lupa panggil init Keyboard, cukup dijalankan 1 kali tapi aman dipanggil lagi karena sudah universal
-    initKeyboardGlobal(); 
+  // KODE BARU (VERSI SUPABASE)
+async function initLis() {
+  document.getElementById('l-tgl').valueAsDate = new Date();
+
+  // Meminta data langsung dari tabel master_lis
+  const { data, error } = await _supa.from('master_lis').select('*');
+  
+  if (error) {
+    alert("Gagal memuat data Lis: " + error.message);
+    return;
   }
+
+  if (data) {
+    const getUniq = (key) => [...new Set(data.map(i => i[key]).filter(Boolean))].sort();
+    
+    dataLis = {
+      mesin: getUniq('mesin'),
+      shift: getUniq('shift'),
+      item: getUniq('nama_item'),
+      shading: getUniq('shading')
+    };
+
+    isiDropdown('l', dataLis);
+  }
+}
 </script>
