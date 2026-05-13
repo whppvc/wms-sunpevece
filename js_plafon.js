@@ -8,13 +8,35 @@
       l: { zoom: 3.0, pos: { qr:{x:0,y:0,s:1}, barcode:createBasePos(), nama:createBasePos(), shading:createBasePos(), ukuran:createBasePos(), mesin:createBasePos(), shift:createBasePos(), tanggal:createBasePos() }, barcodeData:"" }
   };
 
-  function initPlafon() {
-    google.script.run.withSuccessHandler(function(data) { dataPlafon = data; isiDropdown('p', data); }).getInitialData('PLAFON');
-    document.getElementById('p-tgl').valueAsDate = new Date();
-    document.getElementById('p-shading').addEventListener('input', function() { this.value = this.value.toUpperCase(); });
-    document.getElementById('p-mesin').addEventListener('change', function() { if(this.value === 'ADD_NEW') { bukaModal('p-modal-tambah-mesin'); this.value = ''; } });
-    initKeyboardGlobal();
+  // KODE BARU (VERSI SUPABASE)
+async function initPlafon() {
+  // Set tanggal hari ini
+  document.getElementById('p-tgl').valueAsDate = new Date();
+
+  // Meminta data langsung dari tabel master_plafon di Supabase
+  const { data, error } = await _supa.from('master_plafon').select('*');
+  
+  if (error) {
+    alert("Gagal memuat data Plafon: " + error.message);
+    return;
   }
+
+  if (data) {
+    // Menyaring data agar tidak ada duplikat (menggantikan fungsi getInitialData di Code.gs)
+    const getUniq = (key) => [...new Set(data.map(i => i[key]).filter(Boolean))].sort();
+    
+    dataPlafon = {
+      mesin: getUniq('mesin'),
+      shift: getUniq('shift'),
+      item: getUniq('nama_item'),
+      grade: getUniq('grade'),
+      po: getUniq('po')
+    };
+
+    // Panggil fungsi isiDropdown bawaan Anda
+    isiDropdown('p', dataPlafon);
+  }
+}
 
   function stepSlider(id, val, m) {
     let el = document.getElementById(id);
