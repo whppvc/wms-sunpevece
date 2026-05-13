@@ -1,392 +1,108 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <base target="_top">
+<html lang="id">
+<head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Dashboard QC (Label Pabrik)</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    
-    <style>
-      /* --- KODE ASLI DARI CSS.TXT ANDA (Tanpa Beautify) --- */
-      body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f4f6f9; }
-      .center-screen { display: flex; justify-content: center; align-items: center; height: 100vh; }
-      .btn-primary { background-color: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; text-decoration:none; display:inline-block;}
-      .btn-primary:hover { background-color: #0b5ed7; }
-      .center-screen .btn-large { font-size: 2.2rem; padding: 25px 45px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);}
-      .btn-success { background-color: #198754; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight:bold;}
-      .btn-secondary { background-color: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight:bold; transition: 0.2s;}
-      .btn-secondary:hover { background-color: #5c636a; }
-      .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-      .modal-content { background-color: #fff; margin: 10% auto; padding: 20px; width: 80%; max-width: 500px; border-radius: 8px; position: relative; }
-      .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 15px; font-weight: bold; font-size: 1.2rem; }
-      .close-modal { cursor: pointer; color: #dc3545; font-weight:bold; font-size: 1.5rem; line-height: 1;}
-      .list-popup { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; margin-top: 5px; border-radius: 4px;}
-      .list-popup li { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #eee; transition: 0.1s;}
-      .list-popup li:hover { background-color: #f8f9fa; }
-      .list-popup li.selected { background-color: #e2e6ea; color: #000; font-weight: bold; border-left: 4px solid #0d6efd; } 
-      .modal-content button { width: 100%; padding: 12px; font-size: 1rem; margin-top: 10px; box-sizing: border-box; border-radius: 4px;}
-      .click-edit { transition: outline 0.2s, background 0.2s; border-radius: 2px; }
-      .click-edit:hover { outline: 1px dashed #6c757d; cursor: pointer; background: rgba(0,0,0,0.03); }
-      .navbar { background-color: #343a40; padding: 10px; display: flex; gap: 10px; }
-      .nav-btn { background: none; border: none; color: white; padding: 10px 20px; cursor: pointer; font-size: 1.1rem; border-radius: 4px; }
-      .nav-btn:hover { background-color: #495057; }
-      .nav-btn.active { background-color: #0d6efd; font-weight: bold; }
-      .layout-container { display: flex; gap: 20px; padding: 20px; }
-      .layout-kiri { flex: 1; min-width: 300px; }
-      .layout-kanan { flex: 2; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-      .panel-form { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-      .form-group { margin-bottom: 15px; }
-      .form-group label { display: block; font-weight: bold; margin-bottom: 5px; }
-      .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-      .input-with-search { display: flex; gap: 5px; }
-      .input-with-search input { flex: 1; }
-      .input-with-search button { background-color: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
-    </style>
-  </head>
-  <body>
-    <div style="background: #0d6efd; padding: 10px 20px; color: white; display:flex; justify-content:space-between; align-items:center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-        <span style="font-weight:bold; font-size:1.2rem;">Dashboard QC - Produksi</span>
-        <a href="index.html" style="color:#0d6efd; background:white; text-decoration:none; font-weight:bold; padding:5px 15px; border-radius:4px; font-size: 0.9rem;">← KEMBALI KE MENU UTAMA</a>
-    </div>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Gudang Plafon - WMS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans">
 
-    <div id="start-view" class="center-screen">
-      <button class="btn-primary btn-large" onclick="mulaiAplikasi()">Mulai membuat Label</button>
-    </div>
-
-    <div id="app-view" style="display: none;">
-      <div class="navbar">
-        <button class="nav-btn active" id="nav-plafon" onclick="pindahMenu('plafon')">Plafon</button>
-        <button class="nav-btn" id="nav-lis" onclick="pindahMenu('lis')">Lis</button>
-        <button class="nav-btn" id="nav-wpc" onclick="pindahMenu('wpc')">Wpc</button>
-      </div>
-      <div id="main-content">
+    <header class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center relative z-20">
+        <div class="flex items-center gap-3 md:gap-4">
+            <button onclick="toggleSidebar()" class="p-2 bg-blue-700 hover:bg-blue-800 rounded transition focus:outline-none">
+                <i class="fa-solid fa-bars text-xl"></i>
+            </button>
+            <h1 class="text-base md:text-xl font-bold tracking-wide uppercase">Dashboard Gudang Plafon</h1>
         </div>
-    </div>
 
-    <div id="template-plafon" style="display:none;">
-      <div class="layout-container">
-        <div class="layout-kiri">
-          <div id="p-panel-form" class="panel-form">
-            <h3 style="margin-top:0; border-bottom:2px solid #0d6efd; padding-bottom:10px;">Form Plafon</h3>
-            <div class="form-group"><label>Tanggal Produksi:</label><input type="date" id="p-tgl"></div>
-            <div class="form-group"><label>Mesin:</label><select id="p-mesin"></select></div>
-            <div class="form-group"><label>Shift:</label><select id="p-shift"></select></div>
-            <div class="form-group"><label>Nama Item:</label><div class="input-with-search"><input type="text" id="p-item" readonly placeholder="Pilih Item..."><button onclick="bukaModal('p-modal-cari-item')">CARI</button></div></div>
-            <div class="form-group"><label>Panjang (M):</label><input type="number" id="p-panjang" placeholder="Contoh: 4"></div>
-            <div class="form-group"><label>Grade:</label><select id="p-grade"></select></div>
-            <div class="form-group"><label>Shading:</label><input type="text" id="p-shading" placeholder="Contoh: WT-1" style="text-transform: uppercase;"></div>
-            <div class="form-group"><label>PO:</label><div class="input-with-search"><input type="text" id="p-po" readonly placeholder="Pilih PO..."><button onclick="bukaModal('p-modal-cari-po')">CARI</button></div></div>
-            
-            <div class="form-group">
-                <label>Jumlah Print:</label>
-                <input type="number" id="p-qty" value="0" min="0" oninput="cekValidasi('p')">
-            </div>
-            <button id="p-btn-generate" class="btn-primary" style="width:100%; padding:15px; opacity:0.5; cursor:not-allowed;" disabled onclick="prosesGenerate('p')">Buat QRCode (Terkunci)</button>
-          </div>
+        <a href="index.html" class="bg-white p-1 rounded hover:scale-105 transition transform cursor-pointer">
+            <img src="logo.png" alt="Logo Sunpevece" class="h-8 md:h-10 w-auto object-contain">
+        </a>
+    </header>
+
+    <div id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-blue-900 text-white shadow-2xl transform -translate-x-full transition-transform duration-300 z-30 flex flex-col">
+        <div class="p-4 flex justify-between items-center border-b border-blue-800 bg-blue-950">
+            <h2 class="font-bold text-lg uppercase">Menu Plafon</h2>
+            <button onclick="toggleSidebar()" class="text-gray-300 hover:text-white">
+                <i class="fa-solid fa-xmark text-2xl"></i>
+            </button>
         </div>
         
-        <div class="layout-kanan" id="p-layout-kanan">
-          <div style="background:#525659; padding:20px; min-height:400px; display:flex; justify-content:center;" id="p-preview-area">
-            <h3 style="color:white; text-align:center;">Layout Thermal Printer<br><small style="font-size:12px;font-weight:normal;">(Silakan integrasikan canvas JS Anda ke sini)</small></h3>
-          </div>
+        <nav class="flex-1 p-4 flex flex-col gap-2 overflow-y-auto">
+            <a href="#" class="p-3 hover:bg-blue-700 rounded flex items-center gap-3"><i class="fa-solid fa-boxes-stacked w-5"></i> Kartu Stok</a>
+            <a href="#" class="p-3 hover:bg-blue-700 rounded flex items-center gap-3"><i class="fa-solid fa-file-lines w-5"></i> Report</a>
+            <a href="#" class="p-3 hover:bg-blue-700 rounded flex items-center gap-3"><i class="fa-solid fa-arrow-right-to-bracket w-5"></i> Barang Masuk</a>
+            <a href="#" class="p-3 hover:bg-blue-700 rounded flex items-center gap-3"><i class="fa-solid fa-arrow-right-from-bracket w-5"></i> Barang Keluar</a>
+            <a href="#" class="p-3 hover:bg-blue-700 rounded flex items-center gap-3"><i class="fa-solid fa-people-carry-box w-5"></i> Pindah Area</a>
+            <a href="#" class="p-3 hover:bg-blue-700 rounded flex items-center gap-3"><i class="fa-solid fa-right-left w-5"></i> Konversi</a>
+            <a href="#" class="p-3 hover:bg-blue-700 rounded flex items-center gap-3"><i class="fa-solid fa-magnifying-glass w-5"></i> Pencarian Stok</a>
+            <a href="#" class="p-3 hover:bg-blue-700 rounded flex items-center gap-3"><i class="fa-solid fa-layer-group w-5"></i> Lembaran</a>
+        </nav>
+
+        <div class="p-4 border-t border-blue-800">
+            <a href="index.html" class="p-3 bg-red-600 hover:bg-red-700 rounded flex items-center justify-center gap-2 font-bold w-full shadow-lg">
+                <i class="fa-solid fa-right-from-bracket"></i> Keluar
+            </a>
         </div>
-      </div>
-      
-      <div id="p-modal-cari-item" class="modal"><div class="modal-content"><div class="modal-header"><span>Cari Item Plafon</span><span class="close-modal" onclick="tutupModal('p-modal-cari-item')">✖</span></div><input type="text" id="p-input-search-item" placeholder="Ketik nama item..." style="width:100%; padding:8px;" onkeyup="filterList('p-input-search-item', 'p-item-list')"><ul id="p-item-list" class="list-popup"></ul><button class="btn-success" onclick="pilihItem('p')">✔ PILIH ITEM</button><button class="btn-primary" onclick="bukaModal('p-modal-tambah-item')">+ Tambah Item Baru</button></div></div>
-      <div id="p-modal-tambah-mesin" class="modal"><div class="modal-content" style="width: 300px;"><div class="modal-header"><span>Mesin Baru</span><span class="close-modal" onclick="tutupModal('p-modal-tambah-mesin')">✖</span></div><input type="text" id="p-input-mesin-baru" style="width:100%; box-sizing:border-box; padding:8px; margin-bottom:10px;"><button class="btn-success" style="width:100%;" onclick="simpanDataSupa('p','mesin')">Simpan Mesin</button></div></div>
-      <div id="p-modal-tambah-item" class="modal" style="z-index: 1001;"><div class="modal-content" style="width: 300px;"><div class="modal-header"><span>Item Baru</span><span class="close-modal" onclick="tutupModal('p-modal-tambah-item')">✖</span></div><input type="text" id="p-input-item-baru" style="width:100%; box-sizing:border-box; padding:8px; margin-bottom:10px;"><button class="btn-success" style="width:100%;" onclick="simpanDataSupa('p','item')">Simpan Item</button></div></div>
-      <div id="p-modal-cari-po" class="modal"><div class="modal-content"><div class="modal-header"><span>Cari PO</span><span class="close-modal" onclick="tutupModal('p-modal-cari-po')">✖</span></div><ul id="p-po-list" class="list-popup"></ul><button class="btn-success" onclick="pilihPO('p')">✔ PILIH PO</button></div></div>
     </div>
 
-    <div id="template-lis" style="display:none;">
-      <div class="layout-container">
-        <div class="layout-kiri">
-          <div id="l-panel-form" class="panel-form">
-            <h3 style="margin-top:0; border-bottom:2px solid #0d6efd; padding-bottom:10px;">Form Lis</h3>
-            <div class="form-group"><label>Tanggal Produksi:</label><input type="date" id="l-tgl"></div>
-            <div class="form-group"><label>Mesin:</label><select id="l-mesin"></select></div>
-            <div class="form-group"><label>Shift:</label><select id="l-shift"></select></div>
-            <div class="form-group"><label>Nama Item:</label><div class="input-with-search"><input type="text" id="l-item" readonly placeholder="Pilih Item..."><button onclick="bukaModal('l-modal-cari-item')">CARI</button></div></div>
-            <div class="form-group"><label>Panjang (M):</label><input type="number" id="l-panjang" placeholder="Contoh: 4"></div>
-            <div class="form-group">
-              <label>Shading:</label>
-              <input type="text" id="l-shading" placeholder="Contoh: WT-1" style="text-transform: uppercase;">
-              <small style="display:block; color:red; font-size:10px; margin-top:2px;">Note: jika no shading, tulis "-" saja</small>
-            </div>
+    <div id="overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 hidden z-10 transition-opacity"></div>
+
+    <main class="p-4 md:p-8 max-w-6xl mx-auto mt-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             
-            <div class="form-group">
-                <label>Jumlah Print:</label>
-                <input type="number" id="l-qty" value="0" min="0" oninput="cekValidasi('l')">
-            </div>
-            <button id="l-btn-generate" class="btn-primary" style="width:100%; padding:15px; opacity:0.5; cursor:not-allowed;" disabled onclick="prosesGenerate('l')">Buat QRCode (Terkunci)</button>
-          </div>
-        </div>
-        
-        <div class="layout-kanan" id="l-layout-kanan">
-          <div style="background:#525659; padding:20px; min-height:400px; display:flex; justify-content:center;" id="l-preview-area">
-            <h3 style="color:white; text-align:center;">Layout Thermal Printer</h3>
-          </div>
-        </div>
-      </div>
-      
-      <div id="l-modal-cari-item" class="modal"><div class="modal-content"><div class="modal-header"><span>Cari Item Lis</span><span class="close-modal" onclick="tutupModal('l-modal-cari-item')">✖</span></div><input type="text" id="l-input-search-item" placeholder="Ketik nama item..." style="width:100%; padding:8px;" onkeyup="filterList('l-input-search-item', 'l-item-list')"><ul id="l-item-list" class="list-popup"></ul><button class="btn-success" onclick="pilihItem('l')">✔ PILIH ITEM</button><button class="btn-primary" onclick="bukaModal('l-modal-tambah-item')">+ Tambah Item Baru</button></div></div>
-      <div id="l-modal-tambah-mesin" class="modal"><div class="modal-content" style="width: 300px;"><div class="modal-header"><span>Mesin Baru LIS</span><span class="close-modal" onclick="tutupModal('l-modal-tambah-mesin')">✖</span></div><input type="text" id="l-input-mesin-baru" style="width:100%; box-sizing:border-box; padding:8px; margin-bottom:10px;"><button class="btn-success" style="width:100%;" onclick="simpanDataSupa('l','mesin')">Simpan</button></div></div>
-      <div id="l-modal-tambah-item" class="modal" style="z-index: 1001;"><div class="modal-content" style="width: 300px;"><div class="modal-header"><span>Item Baru LIS</span><span class="close-modal" onclick="tutupModal('l-modal-tambah-item')">✖</span></div><input type="text" id="l-input-item-baru" style="width:100%; box-sizing:border-box; padding:8px; margin-bottom:10px;"><button class="btn-success" style="width:100%;" onclick="simpanDataSupa('l','item')">Simpan</button></div></div>
-    </div>
+            <button class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center gap-4 text-blue-900 border-t-4 border-blue-500">
+                <i class="fa-solid fa-boxes-stacked text-4xl text-blue-600"></i>
+                <span class="font-bold text-sm md:text-base">Kartu Stok</span>
+            </button>
+            
+            <button class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center gap-4 text-blue-900 border-t-4 border-green-500">
+                <i class="fa-solid fa-file-lines text-4xl text-green-600"></i>
+                <span class="font-bold text-sm md:text-base">Report</span>
+            </button>
 
-    <div id="template-wpc" style="display:none;">
-      <div style="padding: 20px; text-align: center;">
-        <h2>Menu WPC masih dalam tahap pembuatan.</h2>
-      </div>
-    </div>
+            <button class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center gap-4 text-blue-900 border-t-4 border-blue-400">
+                <i class="fa-solid fa-arrow-right-to-bracket text-4xl text-blue-400"></i>
+                <span class="font-bold text-sm md:text-base">Barang Masuk</span>
+            </button>
+
+            <button class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center gap-4 text-blue-900 border-t-4 border-red-500">
+                <i class="fa-solid fa-arrow-right-from-bracket text-4xl text-red-500"></i>
+                <span class="font-bold text-sm md:text-base">Barang Keluar</span>
+            </button>
+
+            <button class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center gap-4 text-blue-900 border-t-4 border-purple-500">
+                <i class="fa-solid fa-people-carry-box text-4xl text-purple-600"></i>
+                <span class="font-bold text-sm md:text-base">Pindah Area</span>
+            </button>
+
+            <button class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center gap-4 text-blue-900 border-t-4 border-orange-500">
+                <i class="fa-solid fa-right-left text-4xl text-orange-500"></i>
+                <span class="font-bold text-sm md:text-base">Konversi</span>
+            </button>
+
+            <button class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center gap-4 text-blue-900 border-t-4 border-teal-500">
+                <i class="fa-solid fa-magnifying-glass text-4xl text-teal-600"></i>
+                <span class="font-bold text-sm md:text-base text-center leading-tight">Pencarian Stok</span>
+            </button>
+
+            <button class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center gap-4 text-blue-900 border-t-4 border-yellow-500">
+                <i class="fa-solid fa-layer-group text-4xl text-yellow-500"></i>
+                <span class="font-bold text-sm md:text-base">Lembaran</span>
+            </button>
+
+        </div>
+    </main>
 
     <script>
-      // 1. KONEKSI SUPABASE
-      // ==========================================
-      const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co/rest/v1/'; // GANTI INI
-      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';                        // GANTI INI
-      const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-      // 2. VARIABEL GLOBAL DARI JS_GLOBAL.TXT
-      // ==========================================
-      let isPlafonInit = false;
-      let isLisInit = false;
-      let dataPlafon = {}; let selectedPlafonItem = ""; let selectedPlafonPO = ""; 
-      let dataLis = {}; let selectedLisItem = "";
-      let currentMenu = 'p';
-
-      function mulaiAplikasi() {
-        document.getElementById('start-view').style.display = 'none';
-        document.getElementById('app-view').style.display = 'block';
-        pindahMenu('plafon');
-      }
-
-      function pindahMenu(menu) {
-        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById('nav-' + menu).classList.add('active');
-
-        document.getElementById('template-plafon').style.display = 'none';
-        document.getElementById('template-lis').style.display = 'none';
-        document.getElementById('template-wpc').style.display = 'none';
-
-        document.getElementById('template-' + menu).style.display = 'block';
-        document.getElementById('main-content').innerHTML = '';
-        document.getElementById('main-content').appendChild(document.getElementById('template-' + menu));
-        document.getElementById('template-' + menu).style.display = 'block';
-
-        currentMenu = menu === 'plafon' ? 'p' : (menu === 'lis' ? 'l' : 'w');
-
-        if(menu === 'plafon' && !isPlafonInit) { initPlafon(); }
-        if(menu === 'lis' && !isLisInit) { initLis(); }
-      }
-
-      // 3. FUNGSI UI & MODAL
-      // ==========================================
-      function bukaModal(id) { document.getElementById(id).style.display = 'block'; }
-      function tutupModal(id) { document.getElementById(id).style.display = 'none'; }
-      
-      // Filter list realtime
-      function filterList(inputId, listId) {
-          let input = document.getElementById(inputId).value.toUpperCase();
-          let li = document.getElementById(listId).getElementsByTagName('li');
-          for (let i = 0; i < li.length; i++) {
-              let txtValue = li[i].textContent || li[i].innerText;
-              if (txtValue.toUpperCase().indexOf(input) > -1) {
-                  li[i].style.display = "";
-              } else {
-                  li[i].style.display = "none";
-              }
-          }
-      }
-
-      function cekValidasi(prefix) {
-          let qty = parseInt(document.getElementById(prefix + '-qty').value) || 0;
-          let btn = document.getElementById(prefix + '-btn-generate');
-          if(qty > 0) {
-              btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; btn.innerText = 'Buat QRCode & Cetak';
-          } else {
-              btn.disabled = true; btn.style.opacity = '0.5'; btn.style.cursor = 'not-allowed'; btn.innerText = 'Buat QRCode (Terkunci)';
-          }
-      }
-
-      // 4. LOGIKA SUPABASE PENGGANTI google.script.run
-      // ==========================================
-      async function fetchInitialDataSupa(jenis) {
-          const tableName = jenis === 'LIS' ? 'master_lis' : 'master_plafon';
-          const { data, error } = await supabase.from(tableName).select('*');
-          if (error) { alert("Error database: " + error.message); return null; }
-          
-          const getUnique = (arr, key) => [...new Set(arr.map(item => item[key]).filter(Boolean))].sort();
-          return {
-              mesin: getUnique(data, 'mesin'),
-              shift: getUnique(data, 'shift'),
-              item: getUnique(data, 'nama_item'),
-              grade: getUnique(data, 'grade'),
-              po: getUnique(data, 'po'),
-              shading: getUnique(data, 'shading')
-          };
-      }
-
-      async function simpanDataSupa(prefix, jenis) {
-          let val = document.getElementById(prefix + '-input-' + jenis + '-baru').value;
-          if(!val) return;
-          const tableName = prefix === 'p' ? 'master_plafon' : 'master_lis';
-          let colName = jenis === 'item' ? 'nama_item' : jenis; // sesuaikan nama kolom di supabase
-          
-          let obj = {}; obj[colName] = val;
-          const { error } = await supabase.from(tableName).insert([obj]);
-          
-          if(error) { alert("Gagal menyimpan: " + error.message); }
-          else {
-              tutupModal(prefix + '-modal-tambah-' + jenis);
-              document.getElementById(prefix + '-input-' + jenis + '-baru').value = '';
-              if(prefix === 'p') { isPlafonInit = false; initPlafon(); }
-              else { isLisInit = false; initLis(); }
-          }
-      }
-
-      function isiDropdown(prefix, data) {
-          let selMesin = document.getElementById(prefix + '-mesin');
-          selMesin.innerHTML = '<option value="">Pilih Mesin</option>';
-          data.mesin.forEach(m => selMesin.innerHTML += `<option value="${m}">${m}</option>`);
-          selMesin.innerHTML += '<option value="ADD_NEW" style="font-weight:bold; color:blue;">+ Tambah Mesin Baru</option>';
-
-          let selShift = document.getElementById(prefix + '-shift');
-          selShift.innerHTML = '<option value="">Pilih Shift</option>';
-          data.shift.forEach(s => selShift.innerHTML += `<option value="${s}">${s}</option>`);
-
-          let ulItem = document.getElementById(prefix + '-item-list');
-          ulItem.innerHTML = '';
-          data.item.forEach(i => {
-              let li = document.createElement('li'); li.innerText = i;
-              li.onclick = function() { 
-                  document.querySelectorAll(`#${prefix}-item-list li`).forEach(el=>el.classList.remove('selected'));
-                  this.classList.add('selected');
-                  if(prefix==='p') selectedPlafonItem = i; else selectedLisItem = i;
-              };
-              ulItem.appendChild(li);
-          });
-
-          if(prefix === 'p') {
-              let selGrade = document.getElementById('p-grade');
-              selGrade.innerHTML = '';
-              data.grade.forEach(g => selGrade.innerHTML += `<option value="${g}">${g}</option>`);
-
-              let ulPO = document.getElementById('p-po-list');
-              ulPO.innerHTML = '';
-              data.po.forEach(p => {
-                  let li = document.createElement('li'); li.innerText = p;
-                  li.onclick = function() {
-                      document.querySelectorAll('#p-po-list li').forEach(el=>el.classList.remove('selected'));
-                      this.classList.add('selected');
-                      selectedPlafonPO = p;
-                  };
-                  ulPO.appendChild(li);
-              });
-          }
-      }
-
-      function pilihItem(prefix) {
-          let val = prefix === 'p' ? selectedPlafonItem : selectedLisItem;
-          document.getElementById(prefix + '-item').value = val;
-          tutupModal(prefix + '-modal-cari-item');
-      }
-
-      function pilihPO(prefix) {
-          document.getElementById(prefix + '-po').value = selectedPlafonPO;
-          tutupModal(prefix + '-modal-cari-po');
-      }
-
-      // 5. INISIALISASI ASLI DARI JS_PLAFON DAN JS_LIS (Dimodifikasi ke Supabase)
-      // ==========================================
-      function initPlafon() {
-          fetchInitialDataSupa('PLAFON').then(data => {
-              if(data) { dataPlafon = data; isiDropdown('p', data); isPlafonInit = true; }
-          });
-          document.getElementById('p-tgl').valueAsDate = new Date();
-          document.getElementById('p-shading').addEventListener('input', function() { this.value = this.value.toUpperCase(); });
-          document.getElementById('p-mesin').addEventListener('change', function() { if(this.value === 'ADD_NEW') { bukaModal('p-modal-tambah-mesin'); this.value = ''; } });
-      }
-
-      function initLis() {
-          fetchInitialDataSupa('LIS').then(data => {
-              if(data) { dataLis = data; isiDropdown('l', data); isLisInit = true; }
-          });
-          document.getElementById('l-tgl').valueAsDate = new Date();
-          document.getElementById('l-shading').addEventListener('input', function() { this.value = this.value.toUpperCase(); });
-          document.getElementById('l-mesin').addEventListener('change', function() { if(this.value === 'ADD_NEW') { bukaModal('l-modal-tambah-mesin'); this.value = ''; } });
-      }
-
-      // 6. LOGIKA INTI GENERATE QR & SIMPAN (Pengganti simpan di Google Sheets)
-      // ==========================================
-      function getJulianDateCode() {
-          const now = new Date();
-          const start = new Date(now.getFullYear(), 0, 0);
-          const diff = now - start;
-          const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(3, '0');
-          const revYear = now.getFullYear().toString().slice(-2).split('').reverse().join('');
-          return dayOfYear + revYear;
-      }
-
-      function shortName(name) {
-          if(!name) return "";
-          return name.toUpperCase().replace("GLOSSY", "GLSY").replace("GOLD", "GD").replace("SILVER", "SLVR").replace("WHITE", "WT").replace("BROWN", "BRWN").replace(/\s+/g, '');
-      }
-
-      async function prosesGenerate(prefix) {
-          let btn = document.getElementById(prefix + '-btn-generate');
-          btn.innerText = "⏳ Menyimpan ke Database...";
-          btn.disabled = true;
-
-          let item = document.getElementById(prefix + '-item').value;
-          let panjang = document.getElementById(prefix + '-panjang').value;
-          let shading = document.getElementById(prefix + '-shading').value || "-";
-          let grade = prefix === 'p' ? document.getElementById('p-grade').value : "-";
-          let msp = document.getElementById(prefix + '-mesin').value + document.getElementById(prefix + '-shift').value + (prefix === 'p' ? document.getElementById('p-po').value : "");
-          let qty = document.getElementById(prefix + '-qty').value;
-
-          if(!item || !panjang || !document.getElementById(prefix + '-mesin').value || !document.getElementById(prefix + '-shift').value) {
-              alert("Mohon lengkapi form terlebih dahulu!"); btn.innerText = "Buat QRCode & Cetak"; btn.disabled = false; return;
-          }
-
-          let itemCode = shortName(item);
-          let shadingClean = (shading === "-") ? "XX" : shading;
-          let dateCode = getJulianDateCode();
-          let idKombinasi = `${itemCode}/${shadingClean}/${panjang}/${dateCode}/${msp}`;
-
-          // Cek serial terakhir di Supabase
-          let { data: unikData } = await supabase.from('database_kode_unik').select('last_serial').eq('barcode_base', idKombinasi);
-          let lastSerial = (unikData && unikData.length > 0) ? (parseInt(unikData[0].last_serial) || 0) : 0;
-          
-          let q = parseInt(qty);
-          let startSerial = lastSerial + 1;
-          let endSerial = lastSerial + q;
-
-          // Update atau Insert ke database_kode_unik
-          if (unikData && unikData.length > 0) {
-              await supabase.from('database_kode_unik').update({ last_serial: endSerial }).eq('barcode_base', idKombinasi);
-          } else {
-              await supabase.from('database_kode_unik').insert([{ barcode_base: idKombinasi, item: item, panjang: panjang, grade: grade, shading: shading, last_serial: endSerial }]);
-          }
-
-          // Simpan history label
-          let serialRangeStr = ("000" + startSerial).slice(-3) + " - " + ("000" + endSerial).slice(-3);
-          await supabase.from('database_label').insert([{
-              tanggal: new Date().toISOString(), item: item, grade: grade, panjang: panjang, shading: shading, mesin_shift_po: msp, kode_unik: idKombinasi, range_serial: serialRangeStr, qty: q
-          }]);
-
-          alert("Berhasil dicatat di Database!\nPrint Serial: " + startSerial + " s/d " + endSerial);
-          btn.innerText = "Buat QRCode & Cetak";
-          btn.disabled = false;
-          
-          /* NOTE: Jika Anda masih memiliki kode logika render layout D-Pad / Zebra Printer (variabel 'node', 'html2canvas', dll) 
-            dari file JS_Plafon lama Anda, silakan paste ke bagian ini. 
-          */
-      }
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
     </script>
-  </body>
+</body>
 </html>
