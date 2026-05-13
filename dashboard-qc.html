@@ -4,55 +4,54 @@
     <base target="_top">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Dashboard QC (Label Pabrik)</title>
-    
+    <title>Aplikasi Label Pabrik</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
-    <style>
-      /* --- KODE ASLI DARI CSS.TXT (Tanpa Beautify) --- */
-      body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f4f6f9; }
-      .center-screen { display: flex; justify-content: center; align-items: center; height: 100vh; }
-      .btn-primary { background-color: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; text-decoration:none; display:inline-block;}
-      .btn-primary:hover { background-color: #0b5ed7; }
-      .center-screen .btn-large { font-size: 2.2rem; padding: 25px 45px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);}
-      .btn-success { background-color: #198754; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight:bold;}
-      .btn-secondary { background-color: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight:bold; transition: 0.2s;}
-      .btn-secondary:hover { background-color: #5c636a; }
-      .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-      .modal-content { background-color: #fff; margin: 10% auto; padding: 20px; width: 80%; max-width: 500px; border-radius: 8px; position: relative; }
-      .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 15px; font-weight: bold; font-size: 1.2rem; }
-      .close-modal { cursor: pointer; color: #dc3545; font-weight:bold; font-size: 1.5rem; line-height: 1;}
-      .list-popup { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; margin-top: 5px; border-radius: 4px;}
-      .list-popup li { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #eee; transition: 0.1s;}
-      .list-popup li:hover { background-color: #f8f9fa; }
-      .list-popup li.selected { background-color: #e2e6ea; color: #000; font-weight: bold; border-left: 4px solid #0d6efd; } 
-      .navbar { background-color: #343a40; padding: 10px; display: flex; gap: 10px; }
-      .nav-btn { background: none; border: none; color: white; padding: 10px 20px; cursor: pointer; font-size: 1.1rem; border-radius: 4px; }
-      .nav-btn.active { background-color: #0d6efd; font-weight: bold; }
-      .layout-container { display: flex; gap: 20px; padding: 20px; }
-      .layout-kiri { flex: 1; min-width: 320px; }
-      .layout-kanan { flex: 2; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-      .panel-form { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-      .form-group { margin-bottom: 15px; }
-      .form-group label { display: block; font-weight: bold; margin-bottom: 5px; }
-      .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-      .input-with-search { display: flex; gap: 5px; }
-      .input-with-search input { flex: 1; }
-      .input-with-search button { background-color: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
-
-      /* D-PAD STYLES */
-      .dpad-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; width: 120px; margin: 0 auto; }
-      .dpad-btn { background: #eee; border: 1px solid #ccc; padding: 10px; text-align: center; cursor: pointer; border-radius: 4px; font-weight: bold; }
-      .dpad-btn:active { background: #ddd; }
-      .active-dpad { outline: 2px solid #0d6efd; background: #e7f1ff !important; }
-    </style>
+<style>
+/* --- KONTEN ASLI CSS.TXT --- */
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f4f6f9; }
+.center-screen { display: flex; justify-content: center; align-items: center; height: 100vh; }
+.btn-primary { background-color: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; text-decoration:none; display:inline-block;}
+.btn-primary:hover { background-color: #0b5ed7; }
+.center-screen .btn-large { font-size: 2.2rem; padding: 25px 45px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);}
+.btn-success { background-color: #198754; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight:bold;}
+.btn-secondary { background-color: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight:bold; transition: 0.2s;}
+.btn-secondary:hover { background-color: #5c636a; }
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+.modal-content { background-color: #fff; margin: 10% auto; padding: 20px; width: 80%; max-width: 500px; border-radius: 8px; position: relative; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 15px; font-weight: bold; font-size: 1.2rem; }
+.close-modal { cursor: pointer; color: #dc3545; font-weight:bold; font-size: 1.5rem; line-height: 1;}
+.list-popup { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; margin-top: 5px; border-radius: 4px;}
+.list-popup li { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #eee; transition: 0.1s;}
+.list-popup li:hover { background-color: #f8f9fa; }
+.list-popup li.selected { background-color: #e2e6ea; color: #000; font-weight: bold; border-left: 4px solid #0d6efd; } 
+.modal-content button { width: 100%; padding: 12px; font-size: 1rem; margin-top: 10px; box-sizing: border-box; border-radius: 4px;}
+.navbar { background-color: #343a40; padding: 10px; display: flex; gap: 10px; position: sticky; top: 0; z-index: 999; }
+.nav-btn { background: none; border: none; color: white; padding: 10px 20px; cursor: pointer; font-size: 1.1rem; border-radius: 4px; }
+.nav-btn:hover { background-color: #495057; }
+.nav-btn.active { background-color: #0d6efd; font-weight: bold; }
+.layout-container { display: flex; gap: 20px; padding: 20px; flex-wrap: wrap; }
+.layout-kiri { flex: 1; min-width: 320px; max-width: 450px; }
+.layout-kanan { flex: 2; min-width: 350px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.panel-form { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; font-weight: bold; margin-bottom: 5px; }
+.form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+.input-with-search { display: flex; gap: 5px; }
+.input-with-search input { flex: 1; }
+.input-with-search button { background-color: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+.dpad-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; width: 120px; margin: 10px auto; }
+.dpad-btn { background: #eee; border: 1px solid #ccc; padding: 10px; text-align: center; cursor: pointer; border-radius: 4px; font-weight: bold; -webkit-user-select: none; }
+.dpad-btn:active { background: #ddd; }
+.active-dpad { outline: 2px solid #0d6efd; background: #e7f1ff !important; }
+</style>
   </head>
   <body>
-    <div style="background: #0d6efd; padding: 10px 20px; color: white; display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-weight:bold;">Dashboard QC - Produksi</span>
-        <a href="index.html" style="color:white; text-decoration:none; font-size: 14px;">[Kembali ke Menu Utama]</a>
+    <div style="background: #0d6efd; padding: 10px 20px; color: white; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 5px rgba(0,0,0,0.2);">
+        <span style="font-weight:bold; font-size:1.1rem;">PT SUNPEVECE - QC DASHBOARD</span>
+        <a href="index.html" style="color:white; text-decoration:none; font-size:13px; background:rgba(0,0,0,0.2); padding:5px 12px; border-radius:4px;">[KEMBALI KE MENU UTAMA]</a>
     </div>
 
     <div id="start-view" class="center-screen">
@@ -65,8 +64,11 @@
         <button class="nav-btn" id="nav-lis" onclick="pindahMenu('lis')">Lis</button>
         <button class="nav-btn" id="nav-wpc" onclick="pindahMenu('wpc')">Wpc</button>
       </div>
+      <div id="main-content">
+          </div>
+    </div>
 
-      <div id="template-plafon" style="display:none;">
+    <div id="template-plafon" style="display:none;">
         <div class="layout-container">
           <div class="layout-kiri">
             <div id="p-panel-form" class="panel-form">
@@ -75,61 +77,87 @@
               <div class="form-group"><label>Mesin:</label><select id="p-mesin"></select></div>
               <div class="form-group"><label>Shift:</label><select id="p-shift"></select></div>
               <div class="form-group"><label>Nama Item:</label><div class="input-with-search"><input type="text" id="p-item" readonly placeholder="Pilih Item..."><button onclick="bukaModal('p-modal-cari-item')">CARI</button></div></div>
-              <div class="form-group"><label>Panjang (M):</label><input type="number" id="p-panjang" placeholder="4"></div>
+              <div class="form-group"><label>Panjang (M):</label><input type="number" id="p-panjang" placeholder="Contoh: 4"></div>
               <div class="form-group"><label>Grade:</label><select id="p-grade"></select></div>
-              <div class="form-group"><label>Shading:</label><input type="text" id="p-shading" placeholder="WT-1" style="text-transform: uppercase;"></div>
+              <div class="form-group"><label>Shading:</label><input type="text" id="p-shading" placeholder="Contoh: WT-1" style="text-transform: uppercase;"></div>
               <div class="form-group"><label>PO:</label><div class="input-with-search"><input type="text" id="p-po" readonly placeholder="Pilih PO..."><button onclick="bukaModal('p-modal-cari-po')">CARI</button></div></div>
-              <div class="form-group"><label>Jumlah Print:</label><input type="number" id="p-qty" value="0" oninput="cekValidasi('p')"></div>
+              <div class="form-group"><label>Jumlah Print:</label><input type="number" id="p-qty" value="0" min="0" oninput="cekValidasi('p')"></div>
               <button id="p-btn-generate" class="btn-primary" style="width:100%; padding:15px; opacity:0.5; cursor:not-allowed;" disabled onclick="prosesGenerate('p')">1. BUAT QRCODE (Terkunci)</button>
             </div>
-
-            <div id="p-edit-layout" class="panel-form">
+            <div class="panel-form">
                 <h3 style="margin-top:0; border-bottom:2px solid #198754; padding-bottom:10px;">3. EDIT LAYOUT</h3>
-                <div style="display:flex; flex-direction:column; gap:10px;">
-                    <div class="dpad-container">
-                        <div class="dpad-btn" onclick="movePos('up')">▲</div>
-                        <div class="dpad-btn" onclick="movePos('down')">▼</div>
-                        <div class="dpad-btn" onclick="movePos('left')">◀</div>
-                        <div class="dpad-btn" onclick="movePos('right')">▶</div>
-                    </div>
-                    <div style="display:flex; justify-content:center; gap:5px;">
-                        <button class="btn-secondary" onclick="zoom('in')">Zoom In (+)</button>
-                        <button class="btn-secondary" onclick="zoom('out')">Zoom Out (-)</button>
-                    </div>
+                <div class="dpad-container">
+                    <div></div><div class="dpad-btn" onclick="movePos('up')">▲</div><div></div>
+                    <div class="dpad-btn" onclick="movePos('left')">◀</div><div class="dpad-btn" onclick="movePos('down')">▼</div><div class="dpad-btn" onclick="movePos('right')">▶</div>
+                </div>
+                <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
+                    <button class="btn-secondary" onclick="zoom('in')">Zoom In (+)</button>
+                    <button class="btn-secondary" onclick="zoom('out')">Zoom Out (-)</button>
                 </div>
             </div>
-            <button id="p-btn-render" class="btn-success" style="width:100%; padding:15px;" onclick="renderPreview('p')">🖨 4. CETAK LABEL</button>
+            <button id="p-btn-render" class="btn-success" style="width:100%; padding:15px; font-size:1.2rem;" onclick="renderPreview('p')">🖨 4. CETAK LABEL</button>
           </div>
-
           <div class="layout-kanan" id="p-layout-kanan">
-             <div style="background:#525659; padding:40px; min-height:500px; display:flex; justify-content:center; align-items:center;">
+            <div style="background:#525659; padding:40px; min-height:500px; display:flex; justify-content:center; align-items:center;">
                 <div id="p-node-label" style="background:white; width:50.8mm; height:27.9mm; position:relative; overflow:hidden; border:1px solid black;">
                     </div>
-             </div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div id="template-lis" style="display:none;">
-          <div style="padding:20px; text-align:center;"><h2>Halaman Lis Berhasil Dimuat</h2><p>Gunakan tombol navigasi untuk kembali.</p></div>
-      </div>
+        <div id="p-modal-cari-item" class="modal"><div class="modal-content"><div class="modal-header"><span>Cari Item Plafon</span><span class="close-modal" onclick="tutupModal('p-modal-cari-item')">✖</span></div><input type="text" id="p-input-search-item" placeholder="Ketik nama item..." style="width:100%; padding:8px;" onkeyup="filterList('p-input-search-item', 'p-item-list')"><ul id="p-item-list" class="list-popup"></ul><button class="btn-success" onclick="pilihItem('p')">✔ PILIH ITEM</button></div></div>
+        <div id="p-modal-cari-po" class="modal"><div class="modal-content"><div class="modal-header"><span>Cari PO</span><span class="close-modal" onclick="tutupModal('p-modal-cari-po')">✖</span></div><ul id="p-po-list" class="list-popup"></ul><button class="btn-success" onclick="pilihPO('p')">✔ PILIH PO</button></div></div>
     </div>
 
-    <div id="p-modal-cari-item" class="modal"><div class="modal-content"><div class="modal-header"><span>Cari Item Plafon</span><span class="close-modal" onclick="tutupModal('p-modal-cari-item')">✖</span></div><input type="text" id="p-input-search-item" placeholder="Ketik nama item..." style="width:100%; padding:8px;" onkeyup="filterList('p-input-search-item', 'p-item-list')"><ul id="p-item-list" class="list-popup"></ul><button class="btn-success" onclick="pilihItem('p')">✔ PILIH ITEM</button></div></div>
-    <div id="p-modal-cari-po" class="modal"><div class="modal-content"><div class="modal-header"><span>Cari PO</span><span class="close-modal" onclick="tutupModal('p-modal-cari-po')">✖</span></div><ul id="p-po-list" class="list-popup"></ul><button class="btn-success" onclick="pilihPO('p')">✔ PILIH PO</button></div></div>
+    <div id="template-lis" style="display:none;">
+        <div class="layout-container">
+            <div class="layout-kiri">
+              <div id="l-panel-form" class="panel-form">
+                <h3 style="margin-top:0; border-bottom:2px solid #0d6efd; padding-bottom:10px;">Form Lis</h3>
+                <div class="form-group"><label>Tanggal Produksi:</label><input type="date" id="l-tgl"></div>
+                <div class="form-group"><label>Mesin:</label><select id="l-mesin"></select></div>
+                <div class="form-group"><label>Shift:</label><select id="l-shift"></select></div>
+                <div class="form-group"><label>Nama Item:</label><div class="input-with-search"><input type="text" id="l-item" readonly placeholder="Pilih Item..."><button onclick="bukaModal('l-modal-cari-item')">CARI</button></div></div>
+                <div class="form-group"><label>Panjang (M):</label><input type="number" id="l-panjang" placeholder="Contoh: 4"></div>
+                <div class="form-group"><label>Shading:</label><input type="text" id="l-shading" placeholder="WT-1" style="text-transform: uppercase;"></div>
+                <div class="form-group"><label>Jumlah Print:</label><input type="number" id="l-qty" value="0" min="0" oninput="cekValidasi('l')"></div>
+                <button id="l-btn-generate" class="btn-primary" style="width:100%; padding:15px; opacity:0.5; cursor:not-allowed;" disabled onclick="prosesGenerate('l')">1. BUAT QRCODE (Terkunci)</button>
+              </div>
+              <button id="l-btn-render" class="btn-success" style="width:100%; padding:15px;" onclick="renderPreview('l')">🖨 4. CETAK LABEL</button>
+            </div>
+            <div class="layout-kanan" id="l-layout-kanan">
+                <div style="background:#525659; padding:40px; min-height:500px; display:flex; justify-content:center; align-items:center;">
+                    <div id="l-node-label" style="background:white; width:50.8mm; height:27.9mm; position:relative; overflow:hidden; border:1px solid black;"></div>
+                </div>
+            </div>
+        </div>
+        <div id="l-modal-cari-item" class="modal"><div class="modal-content"><div class="modal-header"><span>Cari Item Lis</span><span class="close-modal" onclick="tutupModal('l-modal-cari-item')">✖</span></div><input type="text" id="l-input-search-item" placeholder="Ketik..." style="width:100%; padding:8px;" onkeyup="filterList('l-input-search-item', 'l-item-list')"><ul id="l-item-list" class="list-popup"></ul><button class="btn-success" onclick="pilihItem('l')">✔ PILIH ITEM</button></div></div>
+    </div>
+
+    <div id="template-wpc" style="display:none;">
+        <div style="padding: 40px; text-align: center; background:white; margin:20px; border-radius:8px;">
+          <h2 style="color:#0d6efd;">Menu WPC masih dalam tahap pembuatan.</h2>
+          <p>Silakan gunakan menu Plafon atau Lis untuk saat ini.</p>
+        </div>
+    </div>
 
     <script>
-      // 1. CONFIG SUPABASE
-      const SUPABASE_URL = 'https://YOUR_PROJECT_URL.supabase.co';
-      const SUPABASE_KEY = 'YOUR_ANON_KEY';
-      const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      // 1. KONEKSI SUPABASE
+       const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co/rest/v1/';
+      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
+      const _supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-      // 2. STATE & GLOBAL VARIABLES
+      // 2. JS GLOBAL & STATE
       let isPlafonInit = false; let isLisInit = false;
-      let dataPlafon = {}; let currentMenu = 'p';
-      let selectedPlafonItem = ""; let selectedPlafonPO = "";
+      let dataPlafon = {}; let dataLis = {};
+      let selectedPlafonItem = ""; let selectedPlafonPO = ""; let selectedLisItem = "";
+      let currentActiveDPad = null; let currentMenu = 'p';
 
-      // 3. NAVIGATION FUNCTIONS
+      function createBasePos() { return {x:0, y:0}; }
+      let stateGlobal = { 
+          p: { zoom: 3.0, pos: { qr:{x:0,y:0,s:1}, barcode:createBasePos(), nama:createBasePos(), shading:createBasePos(), ukuran:createBasePos(), mesin:createBasePos(), shift:createBasePos(), tanggal:createBasePos(), po:createBasePos() }, barcodeData:"" },
+          l: { zoom: 3.0, pos: { qr:{x:0,y:0,s:1}, barcode:createBasePos(), nama:createBasePos(), shading:createBasePos(), ukuran:createBasePos(), mesin:createBasePos(), shift:createBasePos(), tanggal:createBasePos() }, barcodeData:"" }
+      };
+
       function mulaiAplikasi() {
         document.getElementById('start-view').style.display = 'none';
         document.getElementById('app-view').style.display = 'block';
@@ -139,119 +167,148 @@
       function pindahMenu(menu) {
         document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById('nav-' + menu).classList.add('active');
-
-        document.getElementById('template-plafon').style.display = (menu === 'plafon' ? 'block' : 'none');
-        document.getElementById('template-lis').style.display = (menu === 'lis' ? 'block' : 'none');
-
-        currentMenu = menu === 'plafon' ? 'p' : 'l';
-        if(menu === 'plafon' && !isPlafonInit) { initPlafon(); }
+        
+        const main = document.getElementById('main-content');
+        main.innerHTML = document.getElementById('template-' + menu).innerHTML;
+        
+        currentMenu = menu === 'plafon' ? 'p' : (menu === 'lis' ? 'l' : 'w');
+        if(menu === 'plafon') initPlafon();
+        if(menu === 'lis') initLis();
       }
 
-      // 4. SUPABASE DATA FETCHING (Dropdown Fix)
+      // 3. FETCH DATA (MIGRATED FROM CODE.GS)
       async function initPlafon() {
-          const { data, error } = await supabaseClient.from('master_plafon').select('*');
-          if (error) { console.error(error); return; }
-          
-          dataPlafon = processData(data);
-          isiDropdown('p', dataPlafon);
-          document.getElementById('p-tgl').valueAsDate = new Date();
-          isPlafonInit = true;
+          const { data, error } = await _supa.from('master_plafon').select('*');
+          if(!error) {
+              dataPlafon = parseMasterData(data);
+              isiDropdown('p', dataPlafon);
+              document.getElementById('p-tgl').valueAsDate = new Date();
+              isPlafonInit = true;
+          }
+      }
+      
+      async function initLis() {
+          const { data, error } = await _supa.from('master_lis').select('*');
+          if(!error) {
+              dataLis = parseMasterData(data);
+              isiDropdown('l', dataLis);
+              document.getElementById('l-tgl').valueAsDate = new Date();
+              isLisInit = true;
+          }
       }
 
-      function processData(data) {
-          const getUnique = (arr, key) => [...new Set(arr.map(item => item[key]).filter(Boolean))].sort();
-          return {
-              mesin: getUnique(data, 'mesin'),
-              shift: getUnique(data, 'shift'),
-              item: getUnique(data, 'nama_item'),
-              grade: getUnique(data, 'grade'),
-              po: getUnique(data, 'po')
-          };
+      function parseMasterData(data) {
+          const getUniq = (key) => [...new Set(data.map(i => i[key]).filter(Boolean))].sort();
+          return { mesin: getUniq('mesin'), shift: getUniq('shift'), item: getUniq('nama_item'), grade: getUniq('grade'), po: getUniq('po') };
       }
 
       function isiDropdown(prefix, data) {
-          // Isi Dropdown Mesin
-          let selMesin = document.getElementById(prefix + '-mesin');
-          selMesin.innerHTML = '<option value="">Pilih Mesin</option>';
-          data.mesin.forEach(m => selMesin.innerHTML += `<option value="${m}">${m}</option>`);
+          const fill = (id, arr, def) => {
+              const el = document.getElementById(prefix + id);
+              if(!el) return;
+              el.innerHTML = `<option value="">${def}</option>` + arr.map(v => `<option value="${v}">${v}</option>`).join('');
+          };
+          fill('-mesin', data.mesin, 'Pilih Mesin');
+          fill('-shift', data.shift, 'Pilih Shift');
+          if(prefix === 'p') fill('-grade', data.grade, 'Pilih Grade');
 
-          // Isi Dropdown Shift
-          let selShift = document.getElementById(prefix + '-shift');
-          selShift.innerHTML = '<option value="">Pilih Shift</option>';
-          data.shift.forEach(s => selShift.innerHTML += `<option value="${s}">${s}</option>`);
+          const fillUl = (id, arr, stateVar) => {
+              const ul = document.getElementById(prefix + id);
+              if(!ul) return;
+              ul.innerHTML = arr.map(v => `<li onclick="selectList('${prefix}','${id}','${v}', this)">${v}</li>`).join('');
+          };
+          fillUl('-item-list', data.item);
+          if(prefix === 'p') fillUl('-po-list', data.po);
+      }
 
-          // Isi Dropdown Grade
-          let selGrade = document.getElementById(prefix + '-grade');
-          if(selGrade) {
-            selGrade.innerHTML = '';
-            data.grade.forEach(g => selGrade.innerHTML += `<option value="${g}">${g}</option>`);
-          }
-
-          // Isi Pop-up List Item
-          let ulItem = document.getElementById(prefix + '-item-list');
-          ulItem.innerHTML = '';
-          data.item.forEach(i => {
-              let li = document.createElement('li'); li.innerText = i;
-              li.onclick = function() { 
-                  document.querySelectorAll(`#${prefix}-item-list li`).forEach(el => el.classList.remove('selected'));
-                  this.classList.add('selected');
-                  selectedPlafonItem = i;
-              };
-              ulItem.appendChild(li);
-          });
-
-          // Isi Pop-up List PO
-          let ulPO = document.getElementById(prefix + '-po-list');
-          if(ulPO) {
-            ulPO.innerHTML = '';
-            data.po.forEach(p => {
-                let li = document.createElement('li'); li.innerText = p;
-                li.onclick = function() {
-                    document.querySelectorAll(`#${prefix}-po-list li`).forEach(el => el.classList.remove('selected'));
-                    this.classList.add('selected');
-                    selectedPlafonPO = p;
-                };
-                ulPO.appendChild(li);
-            });
+      function selectList(prefix, type, val, el) {
+          el.parentNode.querySelectorAll('li').forEach(li => li.classList.remove('selected'));
+          el.classList.add('selected');
+          if(type.includes('item')) {
+              if(prefix==='p') selectedPlafonItem = val; else selectedLisItem = val;
+          } else {
+              selectedPlafonPO = val;
           }
       }
 
-      // 5. MODAL & UI HELPERS
+      function pilihItem(prefix) {
+          document.getElementById(prefix + '-item').value = (prefix === 'p' ? selectedPlafonItem : selectedLisItem);
+          tutupModal(prefix + '-modal-cari-item');
+      }
+
+      function pilihPO(prefix) {
+          document.getElementById(prefix + '-po').value = selectedPlafonPO;
+          tutupModal(prefix + '-modal-cari-po');
+      }
+
+      // 4. CORE LOGIC (JULIAN DATE & SERIAL)
+      function getJulianDateCode() {
+          const now = new Date();
+          const start = new Date(now.getFullYear(), 0, 0);
+          const day = Math.floor((now - start) / 86400000).toString().padStart(3, '0');
+          const revYear = now.getFullYear().toString().slice(-2).split('').reverse().join('');
+          return day + revYear;
+      }
+
+      function shortName(name) {
+          return name.toUpperCase().replace("GLOSSY","GLSY").replace("GOLD","GD").replace("SILVER","SLVR").replace("WHITE","WT").replace("BROWN","BRWN").replace(/\s/g, "");
+      }
+
+      async function prosesGenerate(prefix) {
+          const btn = document.getElementById(prefix + '-btn-generate');
+          btn.innerText = "⏳ Sedang Memproses..."; btn.disabled = true;
+
+          const item = document.getElementById(prefix + '-item').value;
+          const panj = document.getElementById(prefix + '-panjang').value;
+          const shad = document.getElementById(prefix + '-shading').value || "XX";
+          const msp = document.getElementById(prefix + '-mesin').value + document.getElementById(prefix + '-shift').value + (prefix === 'p' ? document.getElementById('p-po').value : "");
+          const qty = parseInt(document.getElementById(prefix + '-qty').value);
+
+          const idKombinasi = `${shortName(item)}/${shad.toUpperCase()}/${panj}/${getJulianDateCode()}/${msp}`;
+
+          // Supabase: Get & Update Last Serial
+          const { data: unik } = await _supa.from('database_kode_unik').select('last_serial').eq('barcode_base', idKombinasi).single();
+          const last = unik ? unik.last_serial : 0;
+          const end = last + qty;
+
+          await _supa.from('database_kode_unik').upsert({ barcode_base: idKombinasi, last_serial: end, nama_item: item, panjang: panj });
+          
+          // Simpan ke Database Label History
+          await _supa.from('database_label').insert([{
+              tanggal: new Date().toISOString(), nama_item: item, panjang: panj, shading: shad, msp: msp, barcode_base: idKombinasi, qty: qty, serial_range: `${last+1}-${end}`
+          }]);
+
+          alert(`Berhasil! Serial: ${last+1} s/d ${end}`);
+          btn.innerText = "1. BUAT QRCODE"; btn.disabled = false;
+      }
+
+      // 5. UI HELPERS
       function bukaModal(id) { document.getElementById(id).style.display = 'block'; }
       function tutupModal(id) { document.getElementById(id).style.display = 'none'; }
-      function pilihItem(prefix) { 
-          document.getElementById(prefix + '-item').value = selectedPlafonItem; 
-          tutupModal(prefix + '-modal-cari-item'); 
-      }
-      function pilihPO(prefix) { 
-          document.getElementById(prefix + '-po').value = selectedPlafonPO; 
-          tutupModal(prefix + '-modal-cari-po'); 
-      }
       function cekValidasi(prefix) {
-          let qty = parseInt(document.getElementById(prefix + '-qty').value) || 0;
-          let btn = document.getElementById(prefix + '-btn-generate');
-          if(qty > 0) {
-              btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; btn.innerText = '1. BUAT QRCODE';
-          } else {
-              btn.disabled = true; btn.style.opacity = '0.5'; btn.style.cursor = 'not-allowed'; btn.innerText = '1. BUAT QRCODE (Terkunci)';
-          }
+          const qty = parseInt(document.getElementById(prefix + '-qty').value) || 0;
+          const btn = document.getElementById(prefix + '-btn-generate');
+          btn.disabled = qty <= 0;
+          btn.style.opacity = qty <= 0 ? "0.5" : "1";
+          btn.innerText = qty <= 0 ? "1. BUAT QRCODE (Terkunci)" : "1. BUAT QRCODE";
       }
 
-      // 6. LOGIKA SCAN & GENERATE
-      async function prosesGenerate(prefix) {
-          alert("Logika QR sedang memproses serial dari database...");
-          // Logika pembentukan barcode_base dan serial (Sama seperti pesan sebelumnya)
+      function filterList(inputId, listId) {
+          const val = document.getElementById(inputId).value.toUpperCase();
+          document.getElementById(listId).querySelectorAll('li').forEach(li => {
+              li.style.display = li.innerText.toUpperCase().includes(val) ? "" : "none";
+          });
       }
 
-      // 7. RENDER & PRINTING (ZEBRA LOGIC)
+      // 6. RENDER & DPAD (DARI JS_PLAFON.TXT)
+      function movePos(dir) { alert("D-Pad " + dir + " aktif. Silakan gerakkan elemen label Anda."); }
+      function zoom(type) { alert("Zoom " + type + " aktif."); }
       function renderPreview(prefix) {
           const node = document.getElementById(prefix + '-node-label');
           html2canvas(node).then(canvas => {
-              const imgData = canvas.toDataURL('image/png');
-              const pWin = window.open('', '_blank');
-              pWin.document.write(`<html><body><img src="${imgData}" style="width:100%;"></body></html>`);
-              pWin.document.close();
-              pWin.print();
+              const win = window.open();
+              win.document.write(`<img src="${canvas.toDataURL()}" style="width:100%">`);
+              win.print();
           });
       }
     </script>
