@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard QC - WMS Sunpevece</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans pb-10">
+
+    <header class="bg-blue-800 text-white p-4 shadow-lg flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <button onclick="toggleSidebar()" class="p-2 hover:bg-blue-700 rounded"><i class="fa-solid fa-bars"></i></button>
+            <h1 class="text-lg font-bold uppercase tracking-tighter">QC Dashboard</h1>
+        </div>
+        <a href="index.html"><img src="logo.png" alt="Logo" class="h-8 bg-white p-1 rounded"></a>
+    </header>
+
+    <div id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-slate-900 text-white shadow-2xl transform -translate-x-full transition-transform duration-300 z-[60]">
+        <div class="p-5 border-b border-slate-700 flex justify-between items-center">
+            <span class="font-bold">Menu QC</span>
+            <button onclick="toggleSidebar()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <nav class="p-4 space-y-2">
+            <a href="#" class="block p-3 hover:bg-blue-600 rounded flex items-center gap-3"><i class="fa-solid fa-print"></i> Cetak Label</a>
+            <a href="#" class="block p-3 hover:bg-blue-600 rounded flex items-center gap-3"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat Cetak</a>
+            <a href="#" class="block p-3 hover:bg-blue-600 rounded flex items-center gap-3"><i class="fa-solid fa-ban"></i> Hold Stok</a>
+        </nav>
+    </div>
+
+    <main class="p-4 max-w-4xl mx-auto">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <button onclick="showPanel('panelCetak')" class="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md border-b-4 border-blue-600 flex flex-col items-center gap-3">
+                <i class="fa-solid fa-print text-3xl text-blue-600"></i>
+                <span class="font-bold text-sm">CETAK LABEL</span>
+            </button>
+            <button class="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md border-b-4 border-orange-500 flex flex-col items-center gap-3 opacity-50">
+                <i class="fa-solid fa-microscope text-3xl text-orange-500"></i>
+                <span class="font-bold text-sm">CEK VISUAL</span>
+            </button>
+        </div>
+
+        <div id="panelCetak" class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 hidden">
+            <div class="bg-blue-50 p-4 border-b border-blue-100 flex justify-between items-center">
+                <h3 class="font-black text-blue-900 uppercase">Input Produksi QC</h3>
+                <button onclick="hidePanel('panelCetak')" class="text-gray-400 hover:text-red-500"><i class="fa-solid fa-circle-xmark"></i></button>
+            </div>
+            
+            <div class="p-6 space-y-5">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase">Pilih Master & Nama Item</label>
+                    <div class="flex gap-2">
+                        <select id="masterType" onchange="fetchItems()" class="w-1/3 p-3 bg-gray-50 border rounded-xl text-sm font-bold">
+                            <option value="master_plafon">PLAFON</option>
+                            <option value="master_lis">LIS</option>
+                            <option value="master_wpc">WPC</option>
+                        </select>
+                        <select id="itemName" class="w-2/3 p-3 bg-gray-50 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">-- Pilih Item --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase">Shading</label>
+                        <input type="text" id="shading" placeholder="Contoh: WT" class="w-full p-3 border rounded-xl text-sm uppercase">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase">Panjang</label>
+                        <select id="panjang" class="w-full p-3 border rounded-xl text-sm">
+                            <option value="3">3 Meter</option>
+                            <option value="4">4 Meter</option>
+                            <option value="5">5 Meter</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase">Mesin</label>
+                        <input type="number" id="mesin" class="w-full p-3 border rounded-xl text-sm">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase">Shift</label>
+                        <select id="shift" class="w-full p-3 border rounded-xl text-sm font-bold">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase">No. PO</label>
+                    <input type="text" id="noPO" placeholder="Masukkan Nomor PO" class="w-full p-3 border rounded-xl text-sm font-mono">
+                </div>
+
+                <div class="bg-blue-900 p-6 rounded-2xl text-center shadow-inner">
+                    <label class="text-white text-xs font-bold mb-2 block uppercase tracking-widest">Jumlah Cetak Label</label>
+                    <div class="flex items-center justify-center gap-6">
+                        <button onclick="adjustQty(-1)" class="w-12 h-12 bg-blue-700 text-white rounded-full text-2xl font-bold">-</button>
+                        <span id="qtyPrint" class="text-5xl font-black text-white">1</span>
+                        <button onclick="adjustQty(1)" class="w-12 h-12 bg-blue-700 text-white rounded-full text-2xl font-bold">+</button>
+                    </div>
+                </div>
+
+                <button onclick="generateBarcode()" id="btnGenerate" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-lg hover:bg-blue-700 transform active:scale-95 transition flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-qrcode text-xl"></i>
+                    BUAT QRCODE & CETAK
+                </button>
+            </div>
+        </div>
+
+        <div id="previewArea" class="mt-8 hidden">
+            <h4 class="text-center font-bold text-gray-400 mb-4 uppercase text-xs">Preview Label (Zebra Thermal)</h4>
+            <div id="labelResult" class="flex flex-col items-center gap-4 bg-gray-200 p-6 rounded-xl">
+                </div>
+        </div>
+    </main>
+
+    <script>
+        // ISI DENGAN DATA ANDA
+        const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co/rest/v1/';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let qty = 1;
+
+        // Toggle Sidebar
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+        }
+
+        function showPanel(id) {
+            document.getElementById(id).classList.remove('hidden');
+            fetchItems(); // Load data item saat panel dibuka
+        }
+
+        function hidePanel(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function adjustQty(val) {
+            qty = Math.max(1, qty + val);
+            document.getElementById('qtyPrint').innerText = qty;
+        }
+
+        // AMBIL DATA DARI SUPABASE
+        async function fetchItems() {
+            const table = document.getElementById('masterType').value;
+            const { data, error } = await supabase.from(table).select('nama_item').order('nama_item', { ascending: true });
+            
+            const select = document.getElementById('itemName');
+            select.innerHTML = '<option value="">-- Pilih Item --</option>';
+            if (data) {
+                data.forEach(item => {
+                    select.innerHTML += `<option value="${item.nama_item}">${item.nama_item}</option>`;
+                });
+            }
+        }
+
+        // LOGIKA INTI: SINGKATAN NAMA ITEM
+        function shortName(name) {
+            if(!name) return "";
+            return name.toUpperCase()
+                .replace("GLOSSY", "GLSY")
+                .replace("GOLD", "GD")
+                .replace("SILVER", "SLVR")
+                .replace("WHITE", "WT")
+                .replace("BROWN", "BRWN")
+                .replace(/\s+/g, ''); // Hapus spasi
+        }
+
+        // LOGIKA INTI: JULIAN DATE & REVERSE YEAR
+        function getJulianDateCode() {
+            const now = new Date();
+            const start = new Date(now.getFullYear(), 0, 0);
+            const diff = now - start;
+            const oneDay = 1000 * 60 * 60 * 24;
+            const dayOfYear = Math.floor(diff / oneDay).toString().padStart(3, '0');
+            
+            // Tahun dibalik (2026 -> 62)
+            const yearStr = now.getFullYear().toString().slice(-2);
+            const revYear = yearStr.split('').reverse().join('');
+            
+            return dayOfYear + revYear;
+        }
+
+        // GENERATE BARCODE STRING
+        async function generateBarcode() {
+            const item = document.getElementById('itemName').value;
+            const shad = document.getElementById('shading').value || "XX";
+            const panj = document.getElementById('panjang').value;
+            const dateCode = getJulianDateCode();
+            const msp = document.getElementById('mesin').value + document.getElementById('shift').value + document.getElementById('noPO').value;
+
+            const baseBarcode = `${shortName(item)}/${shad.toUpperCase()}/${panj}/${dateCode}/${msp}`;
+            
+            // Ambil serial terakhir dari Supabase
+            let { data: serialData } = await supabase
+                .from('database_kode_unik')
+                .select('last_serial')
+                .eq('barcode_base', baseBarcode)
+                .single();
+
+            let lastSerial = serialData ? serialData.last_serial : 0;
+            const resultArea = document.getElementById('labelResult');
+            resultArea.innerHTML = '';
+            document.getElementById('previewArea').classList.remove('hidden');
+
+            for (let i = 1; i <= qty; i++) {
+                const newSerial = (lastSerial + i).toString().padStart(3, '0');
+                const fullBarcode = `${baseBarcode}/${newSerial}`;
+                
+                // Buat Preview Label
+                resultArea.innerHTML += `
+                    <div class="bg-white p-4 w-[250px] border border-gray-400 shadow-sm text-center">
+                        <div class="text-[10px] font-bold border-b mb-1 uppercase">${item}</div>
+                        <div class="text-lg font-black tracking-widest my-2">${fullBarcode}</div>
+                        <div class="text-[8px] text-gray-400">ZEBRA THERMAL PREVIEW</div>
+                    </div>
+                `;
+            }
+
+            // Update database_kode_unik
+            await supabase.from('database_kode_unik').upsert({ 
+                barcode_base: baseBarcode, 
+                last_serial: lastSerial + qty 
+            });
+
+            alert('Berhasil membuat ' + qty + ' label!');
+        }
+    </script>
+</body>
+</html>
