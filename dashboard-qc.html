@@ -28,100 +28,360 @@
         <button class="nav-btn" id="nav-lis" onclick="pindahMenu('lis')">Lis</button>
         <button class="nav-btn" id="nav-wpc" onclick="pindahMenu('wpc')">Wpc</button>
       </div>
+      <div id="main-content"></div>
+    </div>
+
+    <div id="template-plafon" style="display:none;"><div class="layout-container">
+  <div class="layout-kiri">
+    <div id="p-panel-form" class="panel-form">
+      <h3 style="margin-top:0; border-bottom:2px solid #0d6efd; padding-bottom:10px;">Form Plafon</h3>
+      <div class="form-group"><label>Tanggal Produksi:</label><input type="date" id="p-tgl"></div>
+      <div class="form-group"><label>Mesin:</label><select id="p-mesin"></select></div>
+      <div class="form-group"><label>Shift:</label><select id="p-shift"></select></div>
+      <div class="form-group"><label>Nama Item:</label><div class="input-with-search"><input type="text" id="p-item" readonly placeholder="Pilih Item..."><button onclick="bukaModal('p-modal-cari-item')">CARI</button></div></div>
+      <div class="form-group"><label>Panjang (M):</label><input type="number" id="p-panjang" placeholder="Contoh: 4"></div>
+      <div class="form-group"><label>Grade:</label><select id="p-grade"></select></div>
+      <div class="form-group"><label>Shading:</label><input type="text" id="p-shading" placeholder="Contoh: WT-1" style="text-transform: uppercase;"></div>
+      <div class="form-group"><label>PO:</label><div class="input-with-search"><input type="text" id="p-po" readonly placeholder="Pilih PO..."><button onclick="bukaModal('p-modal-cari-po')">CARI</button></div></div>
       
-      <div id="main-content">
-        <div id="template-plafon" class="layout-container" style="display:none;">
-          <div class="layout-kiri">
-            <div class="form-card">
-              <div class="form-group"><label>Tanggal:</label><input type="date" id="p-tgl"></div>
-              <div class="form-group"><label>Mesin:</label><select id="p-mesin"></select></div>
-              <div class="form-group"><label>Shift:</label><select id="p-shift"></select></div>
-              <div class="form-group"><label>Item:</label>
-                <div style="display:flex; gap:5px;"><input type="text" id="p-item" readonly><button class="btn-secondary" onclick="bukaModal('p-modal-cari-item')">CARI</button></div>
-              </div>
-              <div class="form-group"><label>Panjang (M):</label><input type="number" id="p-panjang"></div>
-              <div class="form-group"><label>Grade:</label><select id="p-grade"></select></div>
-              <div class="form-group"><label>Shading:</label><input type="text" id="p-shading" style="text-transform:uppercase;"></div>
-              <div class="form-group"><label>PO:</label>
-                <div style="display:flex; gap:5px;"><input type="text" id="p-po" readonly><button class="btn-secondary" onclick="bukaModal('p-modal-cari-po')">CARI</button></div>
-              </div>
-              <div class="form-group" style="background:#f1f8ff; padding:10px; border-radius:5px;">
-                <label>Jumlah Print:</label>
-                <input type="number" id="p-qty" value="0" min="0" oninput="cekValidasi('p')" style="font-weight:bold; text-align:center;">
-              </div>
-              <button id="p-btn-generate" class="btn-locked" disabled onclick="prosesGenerate('p')" style="width:100%; padding:12px;">⚡ 1. BUAT QRCODE</button>
-            </div>
-          </div>
+      <div class="form-group" style="margin-top:15px; background:#f0f7ff; padding:10px; border-radius:5px; border:1px solid #0d6efd;">
+        <label style="color:#0d6efd;">Jumlah Print Label:</label>
+        <input type="number" id="p-qty" value="0" min="0" style="font-weight:bold; font-size:1.2rem; text-align:center;">
+      </div>
+    </div>
 
-          <div class="layout-kanan">
-            <div class="preview-header">
-              <div style="display:flex; gap:10px; align-items:center; flex:1;">
-                <button class="btn-secondary" onclick="movePos('up')">▲</button>
-                <button class="btn-secondary" onclick="movePos('down')">▼</button>
-                <button class="btn-secondary" onclick="movePos('left')">◀</button>
-                <button class="btn-secondary" onclick="movePos('right')">▶</button>
-                <button class="btn-primary" onclick="renderPreview('p')" style="flex:1;">🖨 CETAK LABEL</button>
-              </div>
-              <div class="zoom-controls" style="margin-left:10px;">
-                <button onclick="zoom('out')">🔍 -</button>
-                <span id="p-zoom-text" style="color:white; font-size:12px; margin:auto 5px;">300%</span>
-                <button onclick="zoom('in')">🔍 +</button>
-              </div>
-            </div>
-
-            <div class="preview-box-container" id="p-preview-area" style="background:#525659; min-height:400px; display:flex; justify-content:center; align-items:center;">
-              <div id="p-label-canvas" class="label-canvas" style="transform: scale(3.0); background:white; width:50.8mm; height:27.9mm; position:relative; overflow:hidden; display:flex; border:1px solid #000;">
-                 <div style="width:30%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; border-right:0.1px dashed #eee;">
-                    <div id="p-qrcode-wrapper" style="transition: transform 0.1s;"><div id="p-qrcode"></div></div>
-                    <div id="p-p-barcode-text" style="font-size:5px; font-weight:bold; margin-top:2px; text-align:center;"></div>
-                 </div>
-                 <div id="p-text-container" style="width:70%; height:100%; display:flex; flex-direction:column; padding-left:5px;">
-                    <div id="p-inner-label" style="flex:3; display:flex; flex-direction:column; justify-content:center; align-items:center; transition: transform 0.1s;">
-                       <div id="p-p-nama-item" style="font-size:16px; font-weight:900; line-height:1; text-align:center; max-width:33mm;"></div>
-                       <div id="p-p-shading" style="font-size:14px; font-weight:bold; text-align:center;"></div>
-                    </div>
-                    <div style="flex:1; display:flex; justify-content:center; align-items:flex-end; font-size:6px; font-weight:bold; gap:4px; padding-bottom:2px;">
-                       <div id="p-p-ukuran"></div>
-                       <div id="p-p-mesin"></div>
-                       <div id="p-p-shift"></div>
-                       <div id="p-p-tanggal"></div>
-                       <div id="p-p-po"></div>
-                    </div>
-                 </div>
-              </div>
-            </div>
-          </div>
+    <div id="p-panel-settings" class="panel-settings">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #6c757d; padding-bottom:10px; margin-bottom:15px;"><h3 style="margin:0;">⚙ Atur Label Plafon</h3><button class="btn-secondary" style="font-size: 0.8rem;" onclick="toggleAturLabel('p')">Kembali</button></div>
+      
+      <div class="accordion"><div class="accordion-header bg-gray" onclick="toggleAccordion('p-acc-kertas')">Kertas Label <span>▼</span></div><div id="p-acc-kertas" class="accordion-content"><select id="p-kertas-select" style="width:100%; padding:5px;" onchange="ubahTipeKertas('p')"><option value="50.8x27.9">50.8 x 27.9 mm (Zebra)</option><option value="custom">Custom...</option></select><div id="p-kertas-custom" style="display:none; margin-top:10px;"><div style="display:flex; gap: 5px; align-items:center;"><input type="number" id="p-kertas-w" placeholder="W" style="width:50%; padding:5px;"> x <input type="number" id="p-kertas-h" placeholder="H" style="width:50%; padding:5px;"></div><button onclick="terapkanKertasCustom('p')" class="btn-primary" style="margin-top:5px; width:100%; padding:5px;">Set Ukuran</button></div></div></div>
+      
+      <div class="accordion"><div class="accordion-header bg-cyan" onclick="toggleAccordion('p-acc-qr')">QR Code <span>▼</span></div><div id="p-acc-qr" class="accordion-content"><div class="setting-row"><div class="setting-inputs">
+        <label style="font-size:11px; font-weight:bold;">Skala (%):</label>
+        <div style="display:flex; align-items:center; gap:5px;">
+          <button class="btn-mini" onclick="stepSlider('p-atur-skala-qr', -5, 'p')">-</button>
+          <input type="range" id="p-atur-skala-qr" min="50" max="250" value="100" oninput="terapkanAturLabel('p')">
+          <button class="btn-mini" onclick="stepSlider('p-atur-skala-qr', 5, 'p')">+</button>
+          <span id="p-val-skala-qr" style="font-size:11px; width:30px;">100</span>
         </div>
-
-        <div id="template-lis" class="layout-container" style="display:none;">
-           <div style="padding:50px; text-align:center;">Halaman Lis siap dikonfigurasi.</div>
+      </div><div class="setting-dpad" tabindex="0" id="p-dpad-qr"><span>Posisi QR</span><div class="d-pad"><button class="btn-up" onclick="geserDariDPad('p', ['qr'], 0, -2)">▲</button><button class="btn-left" onclick="geserDariDPad('p', ['qr'], -2, 0)">◀</button><button class="btn-center" onclick="resetDariDPad('p', ['qr'])">O</button><button class="btn-right" onclick="geserDariDPad('p', ['qr'], 2, 0)">▶</button><button class="btn-down" onclick="geserDariDPad('p', ['qr'], 0, 2)">▼</button></div></div></div></div></div>
+      
+      <div class="accordion"><div class="accordion-header bg-purple" onclick="toggleAccordion('p-acc-barcode')">Kode Barcode <span>▼</span></div><div id="p-acc-barcode" class="accordion-content"><div class="setting-row"><div class="setting-inputs">
+        <label style="font-size:11px; font-weight:bold;">Font Size:</label>
+        <div style="display:flex; align-items:center; gap:5px;">
+          <button class="btn-mini" onclick="stepSlider('p-atur-font-barcode', -1, 'p')">-</button>
+          <input type="range" id="p-atur-font-barcode" min="3" max="15" value="5" oninput="terapkanAturLabel('p')">
+          <button class="btn-mini" onclick="stepSlider('p-atur-font-barcode', 1, 'p')">+</button>
+          <span id="p-val-font-barcode" style="font-size:11px; width:30px;">5</span>
         </div>
-        
-        <div id="template-wpc" style="display:none;">
-          <div style="padding: 40px; text-align: center;"><h2>Menu WPC</h2></div>
+      </div><div class="setting-dpad" tabindex="0" id="p-dpad-barcode"><span>Posisi</span><div class="d-pad"><button class="btn-up" onclick="geserDariDPad('p', ['barcode'], 0, -1)">▲</button><button class="btn-left" onclick="geserDariDPad('p', ['barcode'], -1, 0)">◀</button><button class="btn-center" onclick="resetDariDPad('p', ['barcode'])">O</button><button class="btn-right" onclick="geserDariDPad('p', ['barcode'], 1, 0)">▶</button><button class="btn-down" onclick="geserDariDPad('p', ['barcode'], 0, 1)">▼</button></div></div></div></div></div>
+      
+      <div class="accordion"><div class="accordion-header bg-blue" onclick="toggleAccordion('p-acc-teks-atas')">Nama Item & Shading <span>▼</span></div><div id="p-acc-teks-atas" class="accordion-content"><div class="setting-row"><div class="setting-inputs">
+        <div class="input-item"><label>Rata:</label><select id="p-atur-rata-teks-atas" onchange="terapkanAturLabel('p')"><option value="left">Kiri</option><option value="center" selected>Tengah</option><option value="right">Kanan</option></select></div>
+        <label style="font-size:10px; font-weight:bold; margin-top:5px;">Font Size (pt):</label>
+        <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
+          <button class="btn-mini" onclick="stepSlider('p-atur-font-teks-atas', -1, 'p')">-</button>
+          <input type="range" id="p-atur-font-teks-atas" min="8" max="30" value="16" oninput="terapkanAturLabel('p')">
+          <button class="btn-mini" onclick="stepSlider('p-atur-font-teks-atas', 1, 'p')">+</button>
+          <span id="p-val-font-teks-atas" style="font-size:11px; width:20px;">16</span>
+        </div>
+        <label style="font-size:10px; font-weight:bold;">Kerapatan (Gap):</label>
+        <div style="display:flex; align-items:center; gap:5px;">
+          <button class="btn-mini" onclick="stepSlider('p-atur-gap-teks-atas', -1, 'p')">-</button>
+          <input type="range" id="p-atur-gap-teks-atas" min="0" max="20" value="0" oninput="terapkanAturLabel('p')">
+          <button class="btn-mini" onclick="stepSlider('p-atur-gap-teks-atas', 1, 'p')">+</button>
+          <span id="p-val-gap-teks-atas" style="font-size:11px; width:20px;">0</span>
+        </div>
+      </div><div class="setting-dpad" tabindex="0" id="p-dpad-teks"><span>Posisi Grup</span><div class="d-pad"><button class="btn-up" onclick="geserDariDPad('p', ['nama','shading'], 0, -1)">▲</button><button class="btn-left" onclick="geserDariDPad('p', ['nama','shading'], -1, 0)">◀</button><button class="btn-center" onclick="resetDariDPad('p', ['nama','shading'])">O</button><button class="btn-right" onclick="geserDariDPad('p', ['nama','shading'], 1, 0)">▶</button><button class="btn-down" onclick="geserDariDPad('p', ['nama','shading'], 0, 1)">▼</button></div></div></div></div></div>
+      
+      <div class="accordion"><div class="accordion-header bg-teal" onclick="toggleAccordion('p-acc-info')">Info Baris Bawah <span>▼</span></div><div id="p-acc-info" class="accordion-content"><div class="setting-row"><div class="setting-inputs">
+        <div class="input-item"><label>Format:</label><select id="p-atur-rata-info" onchange="terapkanAturLabel('p')"><option value="center" selected>Tengah</option><option value="space-between">Menyebar</option></select></div>
+        <label style="font-size:10px; font-weight:bold; margin-top:5px;">Gap Info:</label>
+        <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
+          <button class="btn-mini" onclick="stepSlider('p-atur-gap-info', -1, 'p')">-</button>
+          <input type="range" id="p-atur-gap-info" min="0" max="20" value="5" oninput="terapkanAturLabel('p')">
+          <button class="btn-mini" onclick="stepSlider('p-atur-gap-info', 1, 'p')">+</button>
+          <span id="p-val-gap-info" style="font-size:11px; width:20px;">5</span>
+        </div>
+        <label style="font-size:10px; font-weight:bold;">Font Size:</label>
+        <div style="display:flex; align-items:center; gap:5px;">
+          <button class="btn-mini" onclick="stepSlider('p-atur-font-info', -1, 'p')">-</button>
+          <input type="range" id="p-atur-font-info" min="3" max="12" value="6" oninput="terapkanAturLabel('p')">
+          <button class="btn-mini" onclick="stepSlider('p-atur-font-info', 1, 'p')">+</button>
+          <span id="p-val-font-info" style="font-size:11px; width:20px;">6</span>
+        </div>
+      </div><div class="setting-dpad" tabindex="0" id="p-dpad-info"><span>Posisi</span><div class="d-pad"><button class="btn-up" onclick="geserDariDPad('p', ['ukuran','mesin','shift','tanggal','po'], 0, -1)">▲</button><button class="btn-left" onclick="geserDariDPad('p', ['ukuran','mesin','shift','tanggal','po'], -1, 0)">◀</button><button class="btn-center" onclick="resetDariDPad('p', ['ukuran','mesin','shift','tanggal','po'])">O</button><button class="btn-right" onclick="geserDariDPad('p', ['ukuran','mesin','shift','tanggal','po'], 1, 0)">▶</button><button class="btn-down" onclick="geserDariDPad('p', ['ukuran','mesin','shift','tanggal','po'], 0, 1)">▼</button></div></div></div></div></div>
+    </div>
+  </div>
+
+  <div class="layout-kanan">
+    <div class="preview-header">
+      <div style="display:flex; gap:10px; align-items:center; flex:1;">
+        <button id="p-btn-generate" class="btn-success" style="flex:1; padding:10px; display:flex; justify-content:center; align-items:center; gap:5px; font-size:14px; text-align:center;" onclick="prosesGenerate('p')">⚡ 1. Buat QRCode</button>
+        <button class="btn-secondary" style="flex:1; padding:10px; display:flex; justify-content:center; align-items:center; gap:5px; font-size:14px; text-align:center;" onclick="toggleAturLabel('p')">⚙ 2. Atur Label</button>
+        <button id="p-btn-simpan-settings" class="btn-success" style="display:none; flex:1; padding:10px; justify-content:center; align-items:center; gap:5px; font-size:14px; text-align:center;" onclick="simpanPengaturanLabel('p')">💾 3. Simpan</button>
+        <button id="p-btn-cetak-label" class="btn-primary" style="flex:1; padding:10px; display:flex; justify-content:center; align-items:center; gap:5px; font-size:14px; text-align:center;" onclick="renderPreview('p')">🖨 4. CETAK LABEL</button>
+      </div>
+      <div class="zoom-controls" style="margin-left:10px;">
+        <button onclick="zoom('out')">🔍 -</button>
+        <span id="p-zoom-text" style="color:white; font-size:12px; margin:auto 5px;">300%</span>
+        <button onclick="zoom('in')">🔍 +</button>
+      </div>
+    </div>
+
+    <div class="preview-box-container" style="background:#525659; min-height:350px; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:20px; border-radius:8px;">
+      
+      <div id="p-label-canvas" class="label-canvas" style="transform: scale(3.0); background:white; width:50.8mm; height:27.9mm; position:relative; overflow:hidden; display:flex; border:1px solid #000;">
+         
+         <div id="p-qr-container" style="width: 32%; height: 100%; display:flex; flex-direction:column; justify-content:center; align-items:center; border-right:0.1px dashed #eee;">
+            <div id="p-qrcode-wrapper" class="click-edit" onclick="pilihElemen('p','qr', event)" style="transition: transform 0.2s;">
+               <div id="p-qrcode"></div>
+            </div>
+            <div id="p-p-barcode-text" class="click-edit" style="font-size: 5px; margin-top:2px; font-weight:bold; text-align: center; line-height: 1.1; max-width: 45px; word-wrap:break-word;" onclick="pilihElemen('p','barcode', event)"></div>
+         </div>
+
+         <div id="p-text-container" style="width: 68%; height: 100%; padding-left: 5px; display:flex; flex-direction:column;">
+            <div id="p-inner-label" style="flex: 3; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:0px; transition: transform 0.1s;">
+                <div id="p-p-nama-item" class="click-edit" style="font-size: 16px; font-weight:900; line-height: 1; text-align:center; max-width:33mm; word-wrap:break-word;" onclick="pilihElemen('p','nama', event)"></div>
+                <div id="p-p-shading" class="click-edit" style="font-size: 14px; font-weight:bold; text-align:center; white-space:nowrap;" onclick="pilihElemen('p','shading', event)"></div>
+            </div>
+            <div style="flex: 1; display:flex; justify-content:center; align-items:flex-end; font-weight:bold; font-size: 6px; gap: 4px; padding-bottom:2px;">
+                <div id="p-p-ukuran" class="click-edit" style="white-space:nowrap;" onclick="pilihElemen('p','ukuran', event)"></div>
+                <div id="p-p-mesin" class="click-edit" style="white-space:nowrap;" onclick="pilihElemen('p','mesin', event)"></div>
+                <div id="p-p-shift" class="click-edit" style="white-space:nowrap;" onclick="pilihElemen('p','shift', event)"></div>
+                <div id="p-p-tanggal" class="click-edit" style="white-space:nowrap;" onclick="pilihElemen('p','tanggal', event)"></div>
+                <div id="p-p-po" class="click-edit" style="white-space:nowrap;" onclick="pilihElemen('p','po', event)"></div>
+            </div>
+         </div>
+      </div>
+
+      <div style="display:flex; justify-content:center; gap:5px; margin-top:20px;">
+          <button class="btn-secondary" onclick="movePos('left')" style="padding:5px 12px;">◀</button>
+          <div style="display:flex; flex-direction:column; gap:5px;">
+              <button class="btn-secondary" onclick="movePos('up')" style="padding:5px 12px;">▲</button>
+              <button class="btn-secondary" onclick="movePos('down')" style="padding:5px 12px;">▼</button>
+          </div>
+          <button class="btn-secondary" onclick="movePos('right')" style="padding:5px 12px;">▶</button>
+      </div>
+    </div>
+
+    <div class="checkbox-panel" style="margin-top:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="togglePanelBody('p-tampil-body', 'p-tampil-icon')">
+        <h4 style="margin: 0; font-size: 14px; user-select:none;">👁 Tampilkan / Sembunyikan Tulisan</h4>
+        <div style="display:flex; align-items:center; gap:15px;">
+          <a href="#" onclick="resetDefaultVisibility('p'); event.stopPropagation(); return false;" style="font-size:12px; color:#0d6efd; text-decoration:none; font-weight:bold;">[Set Default]</a>
+          <span id="p-tampil-icon" style="font-size:12px; font-weight:bold;">▼</span>
+        </div>
+      </div>
+      <div id="p-tampil-body" style="margin-top:10px;">
+        <label class="checkbox-item"><input type="checkbox" id="p-cb-qr" checked onchange="toggleVis('p-qr-container', this.checked)"> QR Code</label>
+        <label class="checkbox-item"><input type="checkbox" id="p-cb-barcode" checked onchange="toggleVis('p-p-barcode-text', this.checked)"> Barcode</label>
+        <label class="checkbox-item"><input type="checkbox" id="p-cb-nama" checked onchange="toggleVis('p-p-nama-item', this.checked)"> Nama Item</label>
+        <label class="checkbox-item"><input type="checkbox" id="p-cb-shading" checked onchange="toggleVis('p-p-shading', this.checked)"> Shading</label>
+        <label class="checkbox-item"><input type="checkbox" id="p-cb-ukuran" checked onchange="toggleVis('p-p-ukuran', this.checked)"> Ukuran</label>
+        <label class="checkbox-item"><input type="checkbox" id="p-cb-mesin" onchange="toggleVis('p-p-mesin', this.checked)"> Mesin</label>
+        <label class="checkbox-item"><input type="checkbox" id="p-cb-shift" checked onchange="toggleVis('p-p-shift', this.checked)"> Shift</label>
+        <label class="checkbox-item"><input type="checkbox" id="p-cb-tanggal" checked onchange="toggleVis('p-p-tanggal', this.checked)"> Tanggal</label>
+        <label class="checkbox-item"><input type="checkbox" id="p-cb-po" onchange="toggleVis('p-p-po', this.checked)"> PO</label>
+      </div>
+    </div>
+
+    <div class="checkbox-panel" style="margin-top:10px; background:#e2e3e5; border-color:#d6d8db;">
+      <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="togglePanelBody('p-wrap-body', 'p-wrap-icon')">
+        <h4 style="margin: 0; font-size: 14px; user-select:none;">🔄 Wrap Text (Bungkus Tulisan)</h4>
+        <span id="p-wrap-icon" style="font-size:12px; font-weight:bold;">▼</span>
+      </div>
+      <div id="p-wrap-body" style="margin-top:10px;">
+        <label class="checkbox-item"><input type="checkbox" id="p-cb-wrap-barcode" checked onchange="toggleWrap('p','barcode-text', this.checked)"> Kode Barcode</label>
+        <label class="checkbox-item"><input type="checkbox" id="p-cb-wrap-nama" checked onchange="toggleWrap('p','nama-item', this.checked)"> Nama Item</label>
+      </div>
+    </div>
+</div>
+</div>
+
+<div id="p-modal-cari-item" class="modal"><div class="modal-content"><div class="modal-header"><span>Cari Item Plafon</span><span class="close-modal" onclick="tutupModal('p-modal-cari-item')">✖</span></div><div style="position: relative; width: 100%; margin-bottom: 10px;"><span style="position: absolute; left: 10px; top: 9px; font-size: 14px; color: #6c757d;">🔍</span><input type="text" id="p-input-search-item" placeholder="Ketik nama item..." style="width:100%; box-sizing:border-box; padding:8px 8px 8px 32px; border:1px solid #ccc; border-radius:4px;" onkeyup="filterList('p-input-search-item', 'p-item-list')"></div><ul id="p-item-list" class="list-popup"></ul><div style="display:flex; flex-direction:column; gap:10px;"><button class="btn-success" onclick="pilihItem('p')">✔ PILIH ITEM</button><button class="btn-primary" onclick="bukaModal('p-modal-tambah-item')">+ Tambah Item Baru</button></div></div></div>
+<div id="p-modal-cari-po" class="modal"><div class="modal-content"><div class="modal-header"><span>Cari PO Plafon</span><span class="close-modal" onclick="tutupModal('p-modal-cari-po')">✖</span></div><div style="position: relative; width: 100%; margin-bottom: 10px;"><span style="position: absolute; left: 10px; top: 9px; font-size: 14px; color: #6c757d;">🔍</span><input type="text" id="p-input-search-po" placeholder="Ketik PO..." style="width:100%; box-sizing:border-box; padding:8px 8px 8px 32px; border:1px solid #ccc; border-radius:4px;" onkeyup="filterList('p-input-search-po', 'p-po-list')"></div><ul id="p-po-list" class="list-popup"></ul><div style="display:flex; flex-direction:column; gap:10px;"><button class="btn-success" onclick="pilihPO('p')">✔ PILIH PO</button><button class="btn-primary" onclick="bukaModal('p-modal-tambah-po')">+ Tambah PO Baru</button></div></div></div>
+<div id="p-modal-tambah-mesin" class="modal"><div class="modal-content" style="width: 300px;"><div class="modal-header"><span>Mesin Baru</span><span class="close-modal" onclick="tutupModal('p-modal-tambah-mesin')">✖</span></div><input type="text" id="p-input-mesin-baru" style="width:100%; box-sizing:border-box; padding:8px; margin-bottom:10px;"><button id="p-btn-simpan-mesin" class="btn-success" style="width:100%;" onclick="simpanDataBaru('p','mesin')">Simpan Mesin</button></div></div>
+<div id="p-modal-tambah-item" class="modal" style="z-index: 1001;"><div class="modal-content" style="width: 300px;"><div class="modal-header"><span>Item Baru</span><span class="close-modal" onclick="tutupModal('p-modal-tambah-item')">✖</span></div><input type="text" id="p-input-item-baru" style="width:100%; box-sizing:border-box; padding:8px; margin-bottom:10px;"><button id="p-btn-simpan-item" class="btn-success" style="width:100%;" onclick="simpanDataBaru('p','item')">Simpan Item</button></div></div>
+<div id="p-modal-tambah-po" class="modal" style="z-index: 1001;"><div class="modal-content" style="width: 300px;"><div class="modal-header"><span>PO Baru</span><span class="close-modal" onclick="tutupModal('p-modal-tambah-po')">✖</span></div><input type="text" id="p-input-po-baru" style="width:100%; box-sizing:border-box; padding:8px; margin-bottom:10px;"><button id="p-btn-simpan-po" class="btn-success" style="width:100%;" onclick="simpanDataBaru('p','po')">Simpan PO</button></div></div>
+        </div>
+    <div id="template-lis" style="display:none;"><div class="layout-container">
+  <div class="layout-kiri">
+    <div id="l-panel-form" class="panel-form">
+      <h3 style="margin-top:0; border-bottom:2px solid #0d6efd; padding-bottom:10px;">Form Lis</h3>
+      <div class="form-group"><label>Tanggal Produksi:</label><input type="date" id="l-tgl"></div>
+      <div class="form-group"><label>Mesin:</label><select id="l-mesin"></select></div>
+      <div class="form-group"><label>Shift:</label><select id="l-shift"></select></div>
+      <div class="form-group"><label>Nama Item:</label><div class="input-with-search"><input type="text" id="l-item" readonly placeholder="Pilih Item..."><button onclick="bukaModal('l-modal-cari-item')">CARI</button></div></div>
+      <div class="form-group"><label>Panjang (M):</label><input type="number" id="l-panjang" placeholder="Contoh: 4"></div>
+      
+      <div class="form-group">
+        <label>Shading:</label>
+        <input type="text" id="l-shading" placeholder="Contoh: WT-1" style="text-transform: uppercase;">
+        <small style="display:block; color:red; font-size:10px; margin-top:2px;">Note: jika no shading, tulis "-" saja</small>
+      </div>
+
+      <div class="form-group" style="margin-top:15px; background:#f0f7ff; padding:10px; border-radius:5px; border:1px solid #0d6efd;">
+        <label style="color:#0d6efd;">Jumlah Print Label:</label>
+        <input type="number" id="l-qty" value="0" min="0" style="font-weight:bold; font-size:1.2rem; text-align:center;">
+      </div>
+    </div>
+
+    <div id="l-panel-settings" class="panel-settings">
+      <div style="display:flex; justify-content:space-between; border-bottom:2px solid #6c757d; padding-bottom:10px; margin-bottom:15px;"><h3 style="margin:0;">⚙ Atur Label Lis</h3><button class="btn-secondary" style="font-size: 0.8rem;" onclick="toggleAturLabel('l')">Kembali</button></div>
+      
+      <div class="accordion"><div class="accordion-header bg-gray" onclick="toggleAccordion('l-acc-kertas')">Kertas Label <span>▼</span></div><div id="l-acc-kertas" class="accordion-content"><select id="l-kertas-select" style="width:100%; padding:5px;" onchange="ubahTipeKertas('l')"><option value="50.8x27.9">50.8 x 27.9 mm (Zebra)</option><option value="custom">Custom...</option></select><div id="l-kertas-custom" style="display:none; margin-top:10px;"><div style="display:flex; gap: 5px;"><input type="number" id="l-kertas-w" placeholder="W" style="width:50%; padding:5px;">x<input type="number" id="l-kertas-h" placeholder="H" style="width:50%; padding:5px;"></div><button onclick="terapkanKertasCustom('l')" class="btn-primary" style="margin-top:5px; width:100%;">Set</button></div></div></div>
+      
+      <div class="accordion"><div class="accordion-header bg-cyan" onclick="toggleAccordion('l-acc-qr')">QR Code <span>▼</span></div><div id="l-acc-qr" class="accordion-content"><div class="setting-row"><div class="setting-inputs">
+        <label style="font-size:11px; font-weight:bold;">Skala (%):</label>
+        <div style="display:flex; align-items:center; gap:5px;">
+          <button class="btn-mini" onclick="stepSlider('l-atur-skala-qr', -5, 'l')">-</button>
+          <input type="range" id="l-atur-skala-qr" min="50" max="250" value="100" oninput="terapkanAturLabel('l')">
+          <button class="btn-mini" onclick="stepSlider('l-atur-skala-qr', 5, 'l')">+</button>
+          <span id="l-val-skala-qr" style="font-size:11px; width:30px;">100</span>
+        </div>
+      </div><div class="setting-dpad" tabindex="0" id="l-dpad-qr"><span>Posisi QR</span><div class="d-pad"><button class="btn-up" onclick="geserDariDPad('l', ['qr'], 0, -2)">▲</button><button class="btn-left" onclick="geserDariDPad('l', ['qr'], -2, 0)">◀</button><button class="btn-center" onclick="resetDariDPad('l', ['qr'])">O</button><button class="btn-right" onclick="geserDariDPad('l', ['qr'], 2, 0)">▶</button><button class="btn-down" onclick="geserDariDPad('l', ['qr'], 0, 2)">▼</button></div></div></div></div></div>
+      
+      <div class="accordion"><div class="accordion-header bg-purple" onclick="toggleAccordion('l-acc-barcode')">Barcode <span>▼</span></div><div id="l-acc-barcode" class="accordion-content"><div class="setting-row"><div class="setting-inputs">
+        <label style="font-size:11px; font-weight:bold;">Font Size:</label>
+        <div style="display:flex; align-items:center; gap:5px;">
+          <button class="btn-mini" onclick="stepSlider('l-atur-font-barcode', -1, 'l')">-</button>
+          <input type="range" id="l-atur-font-barcode" min="3" max="15" value="5" oninput="terapkanAturLabel('l')">
+          <button class="btn-mini" onclick="stepSlider('l-atur-font-barcode', 1, 'l')">+</button>
+          <span id="l-val-font-barcode" style="font-size:11px; width:30px;">5</span>
+        </div>
+      </div><div class="setting-dpad" tabindex="0" id="l-dpad-barcode"><span>Posisi</span><div class="d-pad"><button class="btn-up" onclick="geserDariDPad('l', ['barcode'], 0, -1)">▲</button><button class="btn-left" onclick="geserDariDPad('l', ['barcode'], -1, 0)">◀</button><button class="btn-center" onclick="resetDariDPad('l', ['barcode'])">O</button><button class="btn-right" onclick="geserDariDPad('l', ['barcode'], 1, 0)">▶</button><button class="btn-down" onclick="geserDariDPad('l', ['barcode'], 0, 1)">▼</button></div></div></div></div></div>
+      
+      <div class="accordion"><div class="accordion-header bg-blue" onclick="toggleAccordion('l-acc-teks-atas')">Item & Shading <span>▼</span></div><div id="l-acc-teks-atas" class="accordion-content"><div class="setting-row"><div class="setting-inputs">
+        <div class="input-item"><label>Rata:</label><select id="l-atur-rata-teks-atas" onchange="terapkanAturLabel('l')"><option value="left">Kiri</option><option value="center" selected>Tengah</option><option value="right">Kanan</option></select></div>
+        <label style="font-size:10px; font-weight:bold; margin-top:5px;">Font Size (pt):</label>
+        <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
+          <button class="btn-mini" onclick="stepSlider('l-atur-font-teks-atas', -1, 'l')">-</button>
+          <input type="range" id="l-atur-font-teks-atas" min="8" max="30" value="16" oninput="terapkanAturLabel('l')">
+          <button class="btn-mini" onclick="stepSlider('l-atur-font-teks-atas', 1, 'l')">+</button>
+          <span id="l-val-font-teks-atas" style="font-size:11px; width:20px;">16</span>
+        </div>
+        <label style="font-size:10px; font-weight:bold;">Kerapatan (Gap):</label>
+        <div style="display:flex; align-items:center; gap:5px;">
+          <button class="btn-mini" onclick="stepSlider('l-atur-gap-teks-atas', -1, 'l')">-</button>
+          <input type="range" id="l-atur-gap-teks-atas" min="0" max="20" value="0" oninput="terapkanAturLabel('l')">
+          <button class="btn-mini" onclick="stepSlider('l-atur-gap-teks-atas', 1, 'l')">+</button>
+          <span id="l-val-gap-teks-atas" style="font-size:11px; width:20px;">0</span>
+        </div>
+      </div><div class="setting-dpad" tabindex="0" id="l-dpad-teks"><span>Posisi</span><div class="d-pad"><button class="btn-up" onclick="geserDariDPad('l', ['nama','shading'], 0, -1)">▲</button><button class="btn-left" onclick="geserDariDPad('l', ['nama','shading'], -1, 0)">◀</button><button class="btn-center" onclick="resetDariDPad('l', ['nama','shading'])">O</button><button class="btn-right" onclick="geserDariDPad('l', ['nama','shading'], 1, 0)">▶</button><button class="btn-down" onclick="geserDariDPad('l', ['nama','shading'], 0, 1)">▼</button></div></div></div></div></div>
+      
+      <div class="accordion"><div class="accordion-header bg-teal" onclick="toggleAccordion('l-acc-info')">Info Baris Bawah <span>▼</span></div><div id="l-acc-info" class="accordion-content"><div class="setting-row"><div class="setting-inputs">
+        <div class="input-item"><label>Format:</label><select id="l-atur-rata-info" onchange="terapkanAturLabel('l')"><option value="center" selected>Tengah</option><option value="space-between">Menyebar</option></select></div>
+        <label style="font-size:10px; font-weight:bold; margin-top:5px;">Gap Info:</label>
+        <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
+          <button class="btn-mini" onclick="stepSlider('l-atur-gap-info', -1, 'l')">-</button>
+          <input type="range" id="l-atur-gap-info" min="0" max="20" value="5" oninput="terapkanAturLabel('l')">
+          <button class="btn-mini" onclick="stepSlider('l-atur-gap-info', 1, 'l')">+</button>
+          <span id="l-val-gap-info" style="font-size:11px; width:20px;">5</span>
+        </div>
+        <label style="font-size:10px; font-weight:bold;">Font Size:</label>
+        <div style="display:flex; align-items:center; gap:5px;">
+          <button class="btn-mini" onclick="stepSlider('l-atur-font-info', -1, 'l')">-</button>
+          <input type="range" id="l-atur-font-info" min="3" max="12" value="6" oninput="terapkanAturLabel('l')">
+          <button class="btn-mini" onclick="stepSlider('l-atur-font-info', 1, 'l')">+</button>
+          <span id="l-val-font-info" style="font-size:11px; width:20px;">6</span>
+        </div>
+      </div><div class="setting-dpad" tabindex="0" id="l-dpad-info"><span>Posisi</span><div class="d-pad"><button class="btn-up" onclick="geserDariDPad('l', ['ukuran','mesin','shift','tanggal'], 0, -1)">▲</button><button class="btn-left" onclick="geserDariDPad('l', ['ukuran','mesin','shift','tanggal'], -1, 0)">◀</button><button class="btn-center" onclick="resetDariDPad('l', ['ukuran','mesin','shift','tanggal'])">O</button><button class="btn-right" onclick="geserDariDPad('l', ['ukuran','mesin','shift','tanggal'], 1, 0)">▶</button><button class="btn-down" onclick="geserDariDPad('l', ['ukuran','mesin','shift','tanggal'], 0, 1)">▼</button></div></div></div></div></div>
+    </div>
+  </div>
+
+  <div class="layout-kanan">
+    <div class="preview-header">
+      <div style="display:flex; gap:10px; align-items:center; flex:1;">
+        <button class="btn-success" style="flex:1; padding:10px; display:flex; justify-content:center; align-items:center; gap:5px; font-size:14px; text-align:center;" onclick="generateLabel('l')">⚡ 1. Buat QRCode</button>
+        <button class="btn-secondary" style="flex:1; padding:10px; display:flex; justify-content:center; align-items:center; gap:5px; font-size:14px; text-align:center;" onclick="toggleAturLabel('l')">⚙ 2. Atur Label</button>
+        <button id="l-btn-simpan-settings" class="btn-success" style="display:none; flex:1; padding:10px; justify-content:center; align-items:center; gap:5px; font-size:14px; text-align:center;" onclick="simpanPengaturanLabel('l')">💾 3. Simpan</button>
+        <button id="l-btn-cetak-label" class="btn-primary" style="display:none; flex:1; padding:10px; justify-content:center; align-items:center; gap:5px; font-size:14px; text-align:center;" onclick="cetakLabel('l')">🖨 4. CETAK LABEL</button>
+      </div>
+      <div class="zoom-controls" style="margin-left:10px;"><button onclick="ubahZoom('l',-0.2)">🔍 -</button><span id="l-zoom-text" style="color:white;font-size:12px;margin:auto 5px;">300%</span><button onclick="ubahZoom('l',0.2)">🔍 +</button></div>
+    </div>
+    
+    <div class="preview-box-container">
+      <div id="l-label-canvas" class="label-canvas" style="transform: scale(3.0);">
+         <div id="l-qr-container" style="width: 30%; height: 100%; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+            <div id="l-qrcode-wrapper" class="click-edit" onclick="pilihElemen('l','qr', event)" style="transition: transform 0.2s;">
+               <div id="l-qrcode"></div>
+            </div>
+            <div id="l-l-barcode-text" class="click-edit" style="font-size: 5px; margin-top:2px; font-weight:bold; text-align: center; line-height: 1.1; white-space:normal; word-wrap:break-word; max-width: 45px;" onclick="pilihElemen('l','barcode', event)"></div>
+         </div>
+         <div id="l-text-container" style="width: 70%; height: 100%; padding-left: 5px; display:flex; flex-direction:column;">
+            <div id="l-l-teks-grup" style="flex: 3; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:0px;">
+                <div id="l-l-nama-item" class="click-edit" style="font-size: 16px; font-weight:900; line-height: 1; text-align:center; white-space:normal; word-wrap:break-word; max-width:33mm;" onclick="pilihElemen('l','nama', event)"></div>
+                <div id="l-l-shading" class="click-edit" style="font-size: 14px; font-weight:bold; text-align:center; white-space:nowrap;" onclick="pilihElemen('l','shading', event)"></div>
+            </div>
+            <div id="l-l-info-bawah" style="flex: 1; display:flex; justify-content:center; align-items:flex-end; font-weight:bold; font-size: 6px; gap: 5px;">
+                <div id="l-l-ukuran" class="click-edit" style="white-space:nowrap;" onclick="pilihElemen('l','ukuran', event)"></div>
+                <div id="l-l-mesin" class="click-edit" style="white-space:nowrap;" onclick="pilihElemen('l','mesin', event)"></div>
+                <div id="l-l-shift" class="click-edit" style="white-space:nowrap;" onclick="pilihElemen('l','shift', event)"></div>
+                <div id="l-l-tanggal" class="click-edit" style="white-space:nowrap;" onclick="pilihElemen('l','tanggal', event)"></div>
+            </div>
+         </div>
+      </div>
+    </div>
+
+    <div class="checkbox-panel" style="margin-top:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="togglePanelBody('l-tampil-body', 'l-tampil-icon')">
+        <h4 style="margin: 0; font-size: 14px; user-select:none;">👁 Tampilkan / Sembunyikan Tulisan</h4>
+        <div style="display:flex; align-items:center; gap:15px;">
+          <a href="#" onclick="resetDefaultVisibility('l'); event.stopPropagation(); return false;" style="font-size:12px; color:#0d6efd; text-decoration:none; font-weight:bold;">[Set Default]</a>
+          <span id="l-tampil-icon" style="font-size:12px; font-weight:bold; user-select:none;">▼</span>
+        </div>
+      </div>
+      <div id="l-tampil-body" style="margin-top:10px;">
+        <label class="checkbox-item"><input type="checkbox" id="l-cb-qr" checked onchange="toggleVis('l-qr-container', this.checked)"> QR Code</label>
+        <label class="checkbox-item"><input type="checkbox" id="l-cb-barcode" checked onchange="toggleVis('l-l-barcode-text', this.checked)"> Barcode</label>
+        <label class="checkbox-item"><input type="checkbox" id="l-cb-nama" checked onchange="toggleVis('l-l-nama-item', this.checked)"> Nama Item</label>
+        <label class="checkbox-item"><input type="checkbox" id="l-cb-shading" checked onchange="toggleVis('l-l-shading', this.checked)"> Shading</label>
+        <label class="checkbox-item"><input type="checkbox" id="l-cb-ukuran" checked onchange="toggleVis('l-l-ukuran', this.checked)"> Ukuran</label>
+        <label class="checkbox-item"><input type="checkbox" id="l-cb-mesin" onchange="toggleVis('l-l-mesin', this.checked)"> Mesin</label>
+        <label class="checkbox-item"><input type="checkbox" id="l-cb-shift" checked onchange="toggleVis('l-l-shift', this.checked)"> Shift</label>
+        <label class="checkbox-item"><input type="checkbox" id="l-cb-tanggal" checked onchange="toggleVis('l-l-tanggal', this.checked)"> Tanggal</label>
+      </div>
+    </div>
+
+    <div class="checkbox-panel" style="margin-top:10px; background:#e2e3e5; border-color:#d6d8db;">
+      <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="togglePanelBody('l-wrap-body', 'l-wrap-icon')">
+        <h4 style="margin: 0; font-size: 14px; user-select:none;">🔄 Wrap Text (Bungkus Tulisan)</h4>
+        <span id="l-wrap-icon" style="font-size:12px; font-weight:bold; user-select:none;">▼</span>
+      </div>
+      <div id="l-wrap-body" style="margin-top:10px;">
+        <label class="checkbox-item"><input type="checkbox" id="l-cb-wrap-barcode" checked onchange="toggleWrap('l','barcode-text', this.checked)"> Kode Barcode</label>
+        <label class="checkbox-item"><input type="checkbox" id="l-cb-wrap-nama" checked onchange="toggleWrap('l','nama-item', this.checked)"> Nama Item</label>
+      </div>
+    </div>
+
+    <div class="checkbox-panel" style="margin-top:10px; background:#fff3cd; border-color:#ffeeba;">
+      <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="togglePanelBody('l-grup-body', 'l-grup-icon')">
+        <h4 style="margin: 0; font-size: 14px; color:#856404; user-select:none;">🔗 Grup (Centang untuk Geser Bersamaan)</h4>
+        <span id="l-grup-icon" style="font-size:12px; font-weight:bold; color:#856404; user-select:none;">▼</span>
+      </div>
+      <div id="l-grup-body" style="margin-top:10px;">
+        <div style="display:flex; flex-wrap:wrap; gap:10px;">
+          <label class="checkbox-item"><input type="checkbox" class="l-grup-cb" value="qr"> QR Code</label>
+          <label class="checkbox-item"><input type="checkbox" class="l-grup-cb" value="barcode"> Barcode</label>
+          <label class="checkbox-item"><input type="checkbox" class="l-grup-cb" value="nama"> Nama Item</label>
+          <label class="checkbox-item"><input type="checkbox" class="l-grup-cb" value="shading"> Shading</label>
+          <label class="checkbox-item"><input type="checkbox" class="l-grup-cb" value="ukuran"> Ukuran</label>
+          <label class="checkbox-item"><input type="checkbox" class="l-grup-cb" value="mesin"> Mesin</label>
+          <label class="checkbox-item"><input type="checkbox" class="l-grup-cb" value="shift"> Shift</label>
+          <label class="checkbox-item"><input type="checkbox" class="l-grup-cb" value="tanggal"> Tanggal</label>
         </div>
       </div>
     </div>
 
-    <div id="p-modal-cari-item" class="modal">
-      <div class="modal-content">
-        <div class="modal-header"><span>Cari Nama Item</span><span class="close-modal" onclick="tutupModal('p-modal-cari-item')">✖</span></div>
-        <input type="text" id="p-filter-item" oninput="filterList('p-filter-item','p-item-list')" placeholder="Filter...">
-        <ul id="p-item-list" class="item-list-ul"></ul>
-        <div style="margin-top:10px; display:flex; gap:10px;">
-            <button class="btn-success" onclick="pilihItem('p')" style="flex:1;">PILIH</button>
-            <button onclick="tutupModal('p-modal-cari-item')">BATAL</button>
-        </div>
-      </div>
-    </div>
+  </div>
+</div>
 
-    <div id="p-modal-cari-po" class="modal">
-      <div class="modal-content">
-        <div class="modal-header"><span>Cari PO</span><span class="close-modal" onclick="tutupModal('p-modal-cari-po')">✖</span></div>
-        <input type="text" id="p-filter-po" oninput="filterList('p-filter-po','p-po-list')" placeholder="Filter PO...">
-        <ul id="p-po-list" class="item-list-ul"></ul>
-        <button class="btn-success" onclick="pilihPO('p')" style="width:100%; margin-top:10px;">PILIH</button>
-      </div>
+<div id="l-modal-cari-item" class="modal"><div class="modal-content"><div class="modal-header"><span>Cari Item LIS</span><span class="close-modal" onclick="tutupModal('l-modal-cari-item')">✖</span></div><div style="position: relative; width: 100%; margin-bottom: 10px;"><span style="position: absolute; left: 10px; top: 9px; font-size: 14px; color: #6c757d;">🔍</span><input type="text" id="l-input-search-item" placeholder="Ketik nama item..." style="width:100%; box-sizing:border-box; padding:8px 8px 8px 32px; border:1px solid #ccc; border-radius:4px;" onkeyup="filterList('l-input-search-item', 'l-item-list')"></div><ul id="l-item-list" class="list-popup"></ul><div style="display:flex; flex-direction:column; gap:10px;"><button class="btn-success" onclick="pilihItem('l')">✔ PILIH ITEM</button><button class="btn-primary" onclick="bukaModal('l-modal-tambah-item')">+ Tambah Item Baru</button></div></div></div>
+<div id="l-modal-tambah-mesin" class="modal"><div class="modal-content" style="width: 300px;"><div class="modal-header"><span>Mesin Baru LIS</span><span class="close-modal" onclick="tutupModal('l-modal-tambah-mesin')">✖</span></div><input type="text" id="l-input-mesin-baru" style="width:100%; box-sizing:border-box; padding:8px; margin-bottom:10px;"><button id="l-btn-simpan-mesin" class="btn-success" style="width:100%;" onclick="simpanDataBaru('l','mesin')">Simpan</button></div></div>
+<div id="l-modal-tambah-item" class="modal" style="z-index: 1001;"><div class="modal-content" style="width: 300px;"><div class="modal-header"><span>Item Baru LIS</span><span class="close-modal" onclick="tutupModal('l-modal-tambah-item')">✖</span></div><input type="text" id="l-input-item-baru" style="width:100%; box-sizing:border-box; padding:8px; margin-bottom:10px;"><button id="l-btn-simpan-item" class="btn-success" style="width:100%;" onclick="simpanDataBaru('l','item')">Simpan</button></div></div>
+        </div>
+    <div id="template-wpc" style="display:none;">
+        <div style="padding: 20px; text-align: center;"><h2>Menu WPC masih dalam tahap pembuatan.</h2></div>
     </div>
 
     <script src="js_global.js"></script>
