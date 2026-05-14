@@ -4,7 +4,7 @@
     <base target="_top">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Dashboard QC - PT Sunpevece</title>
+    <title>Aplikasi Label Pabrik - Sunpevece</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -13,174 +13,114 @@
     <link rel="stylesheet" href="css_style.css">
   </head>
   <body>
-    <div style="background: #0d6efd; padding: 10px 20px; color: white; display:flex; justify-content:space-between; align-items:center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-        <span style="font-weight:bold; letter-spacing: 1px;">PT SUNPEVECE - QC DASHBOARD</span>
-        <a href="index.html" style="color:white; text-decoration:none; font-size: 12px; border: 1px solid white; padding: 4px 8px; border-radius: 4px;">[Menu Utama]</a>
+    <div style="background: #0d6efd; padding: 10px 20px; color: white; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:bold;">QC DASHBOARD</span>
+        <a href="index.html" style="color:white; text-decoration:none; font-size: 13px;">[Kembali ke Menu Utama]</a>
     </div>
 
     <div id="start-view" class="center-screen">
-      <div style="text-align:center; background:white; padding:40px; border-radius:12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-          <h2 style="margin-bottom:20px; color:#333;">Sistem Label Produksi v2.0</h2>
-          <button class="btn-primary btn-large" onclick="mulaiAplikasi()" style="padding: 15px 30px; font-size: 1.2rem;">Mulai Membuat Label</button>
-      </div>
+      <button class="btn-primary btn-large" onclick="mulaiAplikasi()">Mulai membuat Label</button>
     </div>
 
     <div id="app-view" style="display: none;">
       <div class="navbar">
-        <button class="nav-btn active" id="nav-plafon" onclick="pindahMenu('plafon')">PLAFON</button>
-        <button class="nav-btn" id="nav-lis" onclick="pindahMenu('lis')">LIS</button>
-        <button class="nav-btn" id="nav-wpc" onclick="pindahMenu('wpc')">WPC</button>
+        <button class="nav-btn active" id="nav-plafon" onclick="pindahMenu('plafon')">Plafon</button>
+        <button class="nav-btn" id="nav-lis" onclick="pindahMenu('lis')">Lis</button>
+        <button class="nav-btn" id="nav-wpc" onclick="pindahMenu('wpc')">Wpc</button>
       </div>
-
+      
       <div id="main-content">
-        
         <div id="template-plafon" class="layout-container" style="display:none;">
           <div class="layout-kiri">
-            <div class="panel-card">
-              <h4 style="margin:0 0 15px 0; border-bottom:1px solid #eee; padding-bottom:10px;">Form Produksi Plafon</h4>
-              
-              <div class="form-group">
-                <label>Tanggal Produksi:</label>
-                <input type="date" id="p-tgl">
+            <div class="form-card">
+              <div class="form-group"><label>Tanggal:</label><input type="date" id="p-tgl"></div>
+              <div class="form-group"><label>Mesin:</label><select id="p-mesin"></select></div>
+              <div class="form-group"><label>Shift:</label><select id="p-shift"></select></div>
+              <div class="form-group"><label>Item:</label>
+                <div style="display:flex; gap:5px;"><input type="text" id="p-item" readonly><button class="btn-secondary" onclick="bukaModal('p-modal-cari-item')">CARI</button></div>
               </div>
-              
-              <div class="form-group">
-                <label>Mesin:</label>
-                <select id="p-mesin"></select>
+              <div class="form-group"><label>Panjang (M):</label><input type="number" id="p-panjang"></div>
+              <div class="form-group"><label>Grade:</label><select id="p-grade"></select></div>
+              <div class="form-group"><label>Shading:</label><input type="text" id="p-shading" style="text-transform:uppercase;"></div>
+              <div class="form-group"><label>PO:</label>
+                <div style="display:flex; gap:5px;"><input type="text" id="p-po" readonly><button class="btn-secondary" onclick="bukaModal('p-modal-cari-po')">CARI</button></div>
               </div>
-              
-              <div class="form-group">
-                <label>Shift:</label>
-                <select id="p-shift"></select>
+              <div class="form-group" style="background:#f1f8ff; padding:10px; border-radius:5px;">
+                <label>Jumlah Print:</label>
+                <input type="number" id="p-qty" value="0" min="0" oninput="cekValidasi('p')" style="font-weight:bold; text-align:center;">
               </div>
-
-              <div class="form-group">
-                <label>Nama Item:</label>
-                <div style="display:flex; gap:5px;">
-                  <input type="text" id="p-item" readonly placeholder="Klik Cari Item..." style="background:#f9f9f9;">
-                  <button class="btn-secondary" onclick="bukaModal('p-modal-cari-item')">CARI</button>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label>Panjang (M):</label>
-                <input type="number" id="p-panjang" placeholder="Contoh: 4">
-              </div>
-
-              <div class="form-group">
-                <label>Grade:</label>
-                <select id="p-grade"></select>
-              </div>
-
-              <div class="form-group">
-                <label>Shading:</label>
-                <input type="text" id="p-shading" placeholder="Contoh: WT-1" style="text-transform:uppercase;">
-              </div>
-
-              <div class="form-group">
-                <label>Nomor PO:</label>
-                <div style="display:flex; gap:5px;">
-                  <input type="text" id="p-po" readonly placeholder="Klik Cari PO..." style="background:#f9f9f9;">
-                  <button class="btn-secondary" onclick="bukaModal('p-modal-cari-po')">CARI</button>
-                </div>
-              </div>
-
-              <div class="form-group" style="background:#e7f3ff; padding:10px; border-radius:6px; border:1px solid #b3d7ff;">
-                <label style="font-weight:bold; color:#0056b3;">Jumlah Print:</label>
-                <input type="number" id="p-qty" value="0" min="0" oninput="cekValidasi('p')" style="font-size:1.2rem; text-align:center; font-weight:bold;">
-              </div>
+              <button id="p-btn-generate" class="btn-locked" disabled onclick="prosesGenerate('p')" style="width:100%; padding:12px;">⚡ 1. BUAT QRCODE</button>
             </div>
           </div>
 
           <div class="layout-kanan">
             <div class="preview-header">
               <div style="display:flex; gap:10px; align-items:center; flex:1;">
-                <button id="p-btn-generate" class="btn-locked" disabled onclick="prosesGenerate('p')">⚡ 1. BUAT QRCODE</button>
-                <button class="btn-secondary" onclick="toggleAturLabel('p')">⚙ 2. ATUR</button>
-                <button id="p-btn-cetak-label" class="btn-primary" onclick="renderPreview('p')">🖨 3. CETAK (ZEBRA)</button>
+                <button class="btn-secondary" onclick="movePos('up')">▲</button>
+                <button class="btn-secondary" onclick="movePos('down')">▼</button>
+                <button class="btn-secondary" onclick="movePos('left')">◀</button>
+                <button class="btn-secondary" onclick="movePos('right')">▶</button>
+                <button class="btn-primary" onclick="renderPreview('p')" style="flex:1;">🖨 CETAK LABEL</button>
               </div>
-              <div class="zoom-controls">
+              <div class="zoom-controls" style="margin-left:10px;">
                 <button onclick="zoom('out')">🔍 -</button>
-                <span id="p-zoom-text" style="color:white; font-size:12px; margin:0 5px;">300%</span>
+                <span id="p-zoom-text" style="color:white; font-size:12px; margin:auto 5px;">300%</span>
                 <button onclick="zoom('in')">🔍 +</button>
               </div>
             </div>
 
-            <div class="preview-box-container" id="p-preview-area">
-              <div id="p-label-canvas" class="label-canvas" style="transform: scale(3.0); background:white; position:relative; overflow:hidden; border:1px solid #000; width:50.8mm; height:27.9mm; display:flex;">
-                
-                <div id="p-qr-container" style="width: 32%; height: 100%; display:flex; flex-direction:column; justify-content:center; align-items:center; border-right: 0.2px dashed #eee;">
-                   <div id="p-qrcode-wrapper" style="transition: transform 0.1s;">
-                      <div id="p-qrcode"></div>
-                   </div>
-                   <div id="p-p-barcode-text" style="font-size: 5px; margin-top:2px; font-weight:bold; text-align: center; max-width: 45px; word-wrap: break-word;"></div>
-                </div>
-
-                <div id="p-text-container" style="width: 68%; height: 100%; display:flex; flex-direction:column; padding-left: 5px;">
-                   <div id="p-inner-label" style="flex: 3; display:flex; flex-direction:column; justify-content:center; align-items:center; transition: transform 0.1s;">
-                      <div id="p-p-nama-item" style="font-size: 16px; font-weight:900; line-height: 1; text-align:center; max-width:33mm; word-wrap:break-word;"></div>
-                      <div id="p-p-shading" style="font-size: 13px; font-weight:bold; text-align:center;"></div>
-                   </div>
-                   <div style="flex: 1; display:flex; justify-content:center; align-items:flex-end; font-weight:bold; font-size: 6px; gap: 4px; padding-bottom: 2px;">
-                      <div id="p-p-ukuran"></div>
-                      <div id="p-p-mesin"></div>
-                      <div id="p-p-shift"></div>
-                      <div id="p-p-tanggal"></div>
-                      <div id="p-p-po"></div>
-                   </div>
-                </div>
+            <div class="preview-box-container" id="p-preview-area" style="background:#525659; min-height:400px; display:flex; justify-content:center; align-items:center;">
+              <div id="p-label-canvas" class="label-canvas" style="transform: scale(3.0); background:white; width:50.8mm; height:27.9mm; position:relative; overflow:hidden; display:flex; border:1px solid #000;">
+                 <div style="width:30%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; border-right:0.1px dashed #eee;">
+                    <div id="p-qrcode-wrapper" style="transition: transform 0.1s;"><div id="p-qrcode"></div></div>
+                    <div id="p-p-barcode-text" style="font-size:5px; font-weight:bold; margin-top:2px; text-align:center;"></div>
+                 </div>
+                 <div id="p-text-container" style="width:70%; height:100%; display:flex; flex-direction:column; padding-left:5px;">
+                    <div id="p-inner-label" style="flex:3; display:flex; flex-direction:column; justify-content:center; align-items:center; transition: transform 0.1s;">
+                       <div id="p-p-nama-item" style="font-size:16px; font-weight:900; line-height:1; text-align:center; max-width:33mm;"></div>
+                       <div id="p-p-shading" style="font-size:14px; font-weight:bold; text-align:center;"></div>
+                    </div>
+                    <div style="flex:1; display:flex; justify-content:center; align-items:flex-end; font-size:6px; font-weight:bold; gap:4px; padding-bottom:2px;">
+                       <div id="p-p-ukuran"></div>
+                       <div id="p-p-mesin"></div>
+                       <div id="p-p-shift"></div>
+                       <div id="p-p-tanggal"></div>
+                       <div id="p-p-po"></div>
+                    </div>
+                 </div>
               </div>
-            </div>
-
-            <div id="p-dpad" class="dpad-container" style="display:flex; justify-content:center; margin-top:10px;">
-                <div style="display:grid; grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(2, 40px); gap:5px;">
-                    <div style="grid-column: 2;"><button onclick="movePos('up')">▲</button></div>
-                    <div style="grid-row: 2;"><button onclick="movePos('left')">◀</button></div>
-                    <div style="grid-row: 2;"><button onclick="movePos('down')">▼</button></div>
-                    <div style="grid-row: 2;"><button onclick="movePos('right')">▶</button></div>
-                </div>
             </div>
           </div>
         </div>
 
         <div id="template-lis" class="layout-container" style="display:none;">
-            <div style="padding:40px; text-align:center;">Halaman Lis siap dikonfigurasi.</div>
+           <div style="padding:50px; text-align:center;">Halaman Lis siap dikonfigurasi.</div>
         </div>
-
+        
         <div id="template-wpc" style="display:none;">
-          <div style="padding: 40px; text-align: center;"><h2>Menu WPC Dalam Pengembangan</h2></div>
+          <div style="padding: 40px; text-align: center;"><h2>Menu WPC</h2></div>
         </div>
       </div>
     </div>
 
     <div id="p-modal-cari-item" class="modal">
       <div class="modal-content">
-        <div class="modal-header"><span>Cari Nama Item Plafon</span><span class="close-modal" onclick="tutupModal('p-modal-cari-item')">✖</span></div>
-        <input type="text" id="p-filter-item" oninput="filterList('p-filter-item','p-item-list')" placeholder="Ketik untuk memfilter..." style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box;">
+        <div class="modal-header"><span>Cari Nama Item</span><span class="close-modal" onclick="tutupModal('p-modal-cari-item')">✖</span></div>
+        <input type="text" id="p-filter-item" oninput="filterList('p-filter-item','p-item-list')" placeholder="Filter...">
         <ul id="p-item-list" class="item-list-ul"></ul>
-        <div style="margin-top:15px; display:flex; gap:10px;">
-          <button class="btn-success" onclick="pilihItem('p')" style="flex:1;">✔ PILIH</button>
-          <button class="btn-primary" onclick="bukaModal('p-modal-tambah-item')">+ BARU</button>
+        <div style="margin-top:10px; display:flex; gap:10px;">
+            <button class="btn-success" onclick="pilihItem('p')" style="flex:1;">PILIH</button>
+            <button onclick="tutupModal('p-modal-cari-item')">BATAL</button>
         </div>
       </div>
     </div>
 
     <div id="p-modal-cari-po" class="modal">
       <div class="modal-content">
-        <div class="modal-header"><span>Cari Nomor PO</span><span class="close-modal" onclick="tutupModal('p-modal-cari-po')">✖</span></div>
-        <input type="text" id="p-filter-po" oninput="filterList('p-filter-po','p-po-list')" placeholder="Ketik untuk memfilter..." style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box;">
+        <div class="modal-header"><span>Cari PO</span><span class="close-modal" onclick="tutupModal('p-modal-cari-po')">✖</span></div>
+        <input type="text" id="p-filter-po" oninput="filterList('p-filter-po','p-po-list')" placeholder="Filter PO...">
         <ul id="p-po-list" class="item-list-ul"></ul>
-        <div style="margin-top:15px;">
-          <button class="btn-success" onclick="pilihPO('p')" style="width:100%;">✔ PILIH PO</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="p-modal-tambah-item" class="modal" style="z-index: 2000;">
-      <div class="modal-content" style="width: 300px;">
-        <div class="modal-header"><span>Tambah Item Baru</span><span class="close-modal" onclick="tutupModal('p-modal-tambah-item')">✖</span></div>
-        <input type="text" id="p-input-item-baru" placeholder="Nama Item..." style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box;">
-        <button class="btn-success" style="width:100%;" onclick="simpanDataBaru('p','item')">Simpan ke Supabase</button>
+        <button class="btn-success" onclick="pilihPO('p')" style="width:100%; margin-top:10px;">PILIH</button>
       </div>
     </div>
 
