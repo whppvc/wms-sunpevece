@@ -140,24 +140,42 @@ async function prosesGenerate(prefix) {
     let lastSerial = unikData ? parseInt(unikData.last_serial) : 0;
     let endSerial = lastSerial + qty;
 
-    // --- RENDER VISUAL KE LAYAR (Kotak Preview) ---
+   // --- RENDER VISUAL KE LAYAR ---
     const node = document.getElementById(prefix + '-node-label');
     if (node) {
-        // Reset transform sebelum render ulang
-        globalZoom = 1; globalX = 0; globalY = 0; 
-        
-        node.innerHTML = `
-            <div id="${prefix}-inner-label" style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; transition: transform 0.2s;">
-                <div style="font-weight:bold; font-size:11px; margin-bottom:2px; text-align:center; white-space:nowrap;">${item} ${panj}M</div>
-                <div id="${prefix}-qr-canvas" style="margin: 0 auto;"></div>
-                <div style="font-size:10px; font-weight:bold; margin-top:2px; text-align:center; white-space:nowrap;">${barcodeText}/${String(lastSerial+1).padStart(3, '0')}</div>
-            </div>
+        // 1. Kosongkan isi lama
+        node.innerHTML = ""; 
+
+        // 2. Buat container utama untuk D-Pad (Inner Label)
+        let innerLabel = document.createElement('div');
+        innerLabel.id = prefix + '-inner-label';
+        innerLabel.style.display = "flex";
+        innerLabel.style.flexDirection = "column";
+        innerLabel.style.alignItems = "center";
+        innerLabel.style.justifyContent = "center";
+        innerLabel.style.width = "100%";
+        innerLabel.style.transition = "transform 0.1s";
+
+        // 3. Masukkan Teks Nama Item & Ukuran
+        innerLabel.innerHTML = `
+            <div style="font-weight:bold; font-size:11px; margin-bottom:2px; text-align:center;">${item} ${panj}M</div>
+            <div id="${prefix}-qr-canvas" style="margin: 5px auto;"></div>
+            <div style="font-size:10px; font-weight:bold; margin-top:2px; text-align:center;">${barcodeText}/${String(lastSerial+1).padStart(3, '0')}</div>
         `;
-        // Membuat Barcode Visual
+
+        node.appendChild(innerLabel);
+
+        // 4. Generate QR Code ke dalam div yang baru dibuat
         new QRCode(document.getElementById(`${prefix}-qr-canvas`), {
             text: `${barcodeText}/${String(lastSerial+1).padStart(3, '0')}`,
-            width: 45, height: 45
+            width: 55, // Ukuran sedikit diperbesar agar mudah discan
+            height: 55,
+            correctLevel: QRCode.CorrectLevel.H
         });
+        
+        // 5. Reset posisi D-Pad ke tengah
+        globalX = 0; globalY = 0; globalZoom = 1;
+        applyTransform(); 
     }
 
     // Simpan ke Supabase
