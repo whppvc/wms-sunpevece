@@ -1,38 +1,42 @@
 // ==========================================
-// FILE: js_plafon.js
+// FILE: js_plafon.js (VERSI FULL FITUR)
 // ==========================================
 let dataPlafon = {}; 
 let selectedPlafonItem = ""; 
 let selectedPlafonPO = ""; 
 
+// VARIABEL UNTUK D-PAD & ZOOM
+let globalZoom = 1;
+let globalX = 0;
+let globalY = 0;
+
 // 1. INIT DATA DARI SUPABASE
 async function initPlafon() {
     document.getElementById('p-tgl').valueAsDate = new Date();
     
-    // Ambil data langsung dari Supabase (Menggantikan google.script.run)
     const { data, error } = await _supa.from('master_plafon').select('*');
-    if (error) {
-        alert("Gagal memuat data Plafon: " + error.message);
-        return;
-    }
+    if (error) { alert("Gagal memuat data Plafon: " + error.message); return; }
+    
     if (data) {
-        // Menyaring data unik untuk Dropdown
         const getUniq = (key) => [...new Set(data.map(i => i[key]).filter(Boolean))].sort();
         dataPlafon = {
-            mesin: getUniq('mesin'),
-            shift: getUniq('shift'),
-            item: getUniq('nama_item'),
-            grade: getUniq('grade'),
-            po: getUniq('po')
+            mesin: getUniq('mesin'), shift: getUniq('shift'), item: getUniq('nama_item'), grade: getUniq('grade'), po: getUniq('po')
         };
         isiDropdownPlafon(dataPlafon);
     }
+
+    // Event Listener Deteksi Opsi "+ Tambah Mesin Baru" di Dropdown
+    document.getElementById('p-mesin').addEventListener('change', function() {
+        if(this.value === 'ADD_NEW') { bukaModal('p-modal-tambah-mesin'); this.value = ''; }
+    });
 }
 
-// 2. MENGISI DROPDOWN & LIST
+// 2. MENGISI DROPDOWN & OPSI TAMBAH BARU
 function isiDropdownPlafon(data) {
     const selMesin = document.getElementById('p-mesin');
-    if(selMesin) selMesin.innerHTML = '<option value="">Pilih Mesin</option>' + data.mesin.map(m => `<option value="${m}">${m}</option>`).join('');
+    if(selMesin) selMesin.innerHTML = '<option value="">Pilih Mesin</option>' + 
+        data.mesin.map(m => `<option value="${m}">${m}</option>`).join('') + 
+        '<option value="ADD_NEW" style="font-weight:bold; color:#0d6efd;">+ Tambah Mesin Baru</option>';
     
     const selShift = document.getElementById('p-shift');
     if(selShift) selShift.innerHTML = '<option value="">Pilih Shift</option>' + data.shift.map(s => `<option value="${s}">${s}</option>`).join('');
@@ -47,125 +51,151 @@ function isiDropdownPlafon(data) {
     if(ulPO) ulPO.innerHTML = data.po.map(p => `<li onclick="pilihPOManual('p', '${p}', this)">${p}</li>`).join('');
 }
 
+// ==========================================
+// FUNGSI BARU: SIMPAN DATA KE MASTER SUPABASE
+// ==========================================
+async function simpanDataBaru(prefix, jenis) {
+    let inputEl = document.getElementById(`${prefix}-input-${jenis}-baru`);
+    if(!inputEl) return;
+    
+    let val = inputEl.value.trim();
+    if(!val) return alert("Isian tidak boleh kosong!");
+
+    let tableName = prefix === 'p' ? 'master_plafon' : 'master_lis';
+    let colName = jenis === 'item' ? 'nama_item' : jenis; 
+    
+    let obj = {}; obj[colName] = val;
+    
+    let btn = document.getElementById(`${prefix}-btn-simpan-${jenis}`);
+    if(btn) { btn.innerText = "⏳ Menyimpan..."; btn.disabled = true; }
+
+    const { error } = await _supa.from(tableName).insert([obj]);
+
+    if(btn) { btn.innerText = "Simpan"; btn.disabled = false; }
+
+    if(error) {
+        alert("Gagal menyimpan: " + error.message);
+    } else {
+        alert("Data berhasil ditambahkan ke Database!");
+        inputEl.value = "";
+        tutupModal(`${prefix}-modal-tambah-${jenis}`);
+        if(prefix === 'p') initPlafon(); else initLis(); // Refresh dropdown otomatis
+    }
+}
+
 // 3. FUNGSI UI & MODAL
 function bukaModal(id) { document.getElementById(id).style.display = 'block'; }
 function tutupModal(id) { document.getElementById(id).style.display = 'none'; }
-
-function pilihItemManual(prefix, val, el) {
-    document.querySelectorAll(`#${prefix}-item-list li`).forEach(li => li.classList.remove('selected'));
-    el.classList.add('selected');
-    if(prefix === 'p') selectedPlafonItem = val; else selectedLisItem = val;
-}
-
-function pilihPOManual(prefix, val, el) {
-    document.querySelectorAll(`#${prefix}-po-list li`).forEach(li => li.classList.remove('selected'));
-    el.classList.add('selected');
-    selectedPlafonPO = val;
-}
-
-function pilihItem(prefix) { 
-    document.getElementById(prefix + '-item').value = prefix === 'p' ? selectedPlafonItem : selectedLisItem; 
-    tutupModal(prefix + '-modal-cari-item'); 
-}
-
-function pilihPO(prefix) { 
-    document.getElementById(prefix + '-po').value = selectedPlafonPO; 
-    tutupModal(prefix + '-modal-cari-po'); 
-}
-
-function filterList(inputId, listId) {
-    const val = document.getElementById(inputId).value.toUpperCase();
-    document.getElementById(listId).querySelectorAll('li').forEach(li => { 
-        li.style.display = li.innerText.toUpperCase().includes(val) ? "" : "none"; 
-    });
-}
+function pilihItemManual(prefix, val, el) { document.querySelectorAll(`#${prefix}-item-list li`).forEach(li => li.classList.remove('selected')); el.classList.add('selected'); if(prefix === 'p') selectedPlafonItem = val; else selectedLisItem = val; }
+function pilihPOManual(prefix, val, el) { document.querySelectorAll(`#${prefix}-po-list li`).forEach(li => li.classList.remove('selected')); el.classList.add('selected'); selectedPlafonPO = val; }
+function pilihItem(prefix) { document.getElementById(prefix + '-item').value = prefix === 'p' ? selectedPlafonItem : selectedLisItem; tutupModal(prefix + '-modal-cari-item'); }
+function pilihPO(prefix) { document.getElementById(prefix + '-po').value = selectedPlafonPO; tutupModal(prefix + '-modal-cari-po'); }
+function filterList(inputId, listId) { const val = document.getElementById(inputId).value.toUpperCase(); document.getElementById(listId).querySelectorAll('li').forEach(li => { li.style.display = li.innerText.toUpperCase().includes(val) ? "" : "none"; }); }
 
 function cekValidasi(prefix) {
     let qty = parseInt(document.getElementById(prefix + '-qty').value) || 0;
     let btn = document.getElementById(prefix + '-btn-generate');
     if(btn) {
-        if(qty > 0) {
-            btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; btn.innerText = '1. BUAT QRCODE & SIMPAN';
-        } else {
-            btn.disabled = true; btn.style.opacity = '0.5'; btn.style.cursor = 'not-allowed'; btn.innerText = '1. BUAT QRCODE (Terkunci)';
-        }
+        if(qty > 0) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; btn.innerText = '1. BUAT QRCODE & SIMPAN'; } 
+        else { btn.disabled = true; btn.style.opacity = '0.5'; btn.style.cursor = 'not-allowed'; btn.innerText = '1. BUAT QRCODE (Terkunci)'; }
     }
 }
 
-// 4. LOGIKA BARCODE (Singkatan & Julian Date)
 function shortName(name, grade) {
     if(!name) return "";
     let abbr = name.toUpperCase().replace("GLOSSY","GLSY").replace("GOLD","GD").replace("SILVER","SLVR").replace("WHITE","WT").replace("BROWN","BRWN").replace(/\s/g, "");
-    if(grade === 'A') abbr += " A";
-    return abbr;
+    if(grade === 'A') abbr += " A"; return abbr;
 }
-
 function getJulianDateCode() {
-    const dObj = new Date();
-    const start = new Date(dObj.getFullYear(), 0, 0);
+    const dObj = new Date(); const start = new Date(dObj.getFullYear(), 0, 0);
     const dayStr = String(Math.floor((dObj - start + (start.getTimezoneOffset()-dObj.getTimezoneOffset())*60*1000) / 86400000)).padStart(3, '0');
-    const yrRev = String(dObj.getFullYear()).slice(-2).split('').reverse().join('');
-    return dayStr + yrRev;
+    return dayStr + String(dObj.getFullYear()).slice(-2).split('').reverse().join('');
 }
 
-// 5. FUNGSI UTAMA GENERATE (Terkoneksi ke Supabase)
+// ==========================================
+// 4. FUNGSI GENERATE & VISUAL QR CODE
+// ==========================================
 async function prosesGenerate(prefix) {
     let btn = document.getElementById(prefix + '-btn-generate');
-    if(btn) { btn.innerText = "⏳ Menyimpan ke Database..."; btn.disabled = true; }
+    if(btn) { btn.innerText = "⏳ Menyimpan..."; btn.disabled = true; }
 
     let item = document.getElementById(prefix + '-item').value;
     let panj = document.getElementById(prefix + '-panjang').value;
     let shad = document.getElementById(prefix + '-shading') ? document.getElementById(prefix + '-shading').value || "XX" : "XX";
-    
-    // Cek apakah ini form Plafon atau Lis
-    if (prefix === 'p') {
-        let grade = document.getElementById('p-grade').value;
-        let msp = document.getElementById('p-mesin').value + document.getElementById('p-shift').value + document.getElementById('p-po').value;
-        let qty = parseInt(document.getElementById('p-qty').value);
+    let grade = document.getElementById('p-grade').value;
+    let msp = document.getElementById('p-mesin').value + document.getElementById('p-shift').value + document.getElementById('p-po').value;
+    let qty = parseInt(document.getElementById('p-qty').value);
 
-        if(!item || !panj || qty === 0) {
-            alert("Harap lengkapi form dan jumlah cetak!");
-            if(btn) { btn.innerText = "1. BUAT QRCODE & SIMPAN"; btn.disabled = false; }
-            return;
-        }
-
-        let idKombinasi = `${item}_${panj}_${grade}_${shad}`;
-        let barcodeText = `${shortName(item, grade)}/${shad}/${panj}/${getJulianDateCode()}/${msp}`;
-
-        // Supabase Process: Ambil nomor urut terakhir
-        const { data: unikData } = await _supa.from('database_kode_unik').select('last_serial').eq('id_kombinasi', idKombinasi).single();
-        let lastSerial = unikData ? parseInt(unikData.last_serial) : 0;
-        let endSerial = lastSerial + qty;
-
-        // Simpan Data Baru
-        await _supa.from('database_kode_unik').upsert({ id_kombinasi: idKombinasi, last_serial: endSerial, nama_item: item, panjang: panj, grade: grade, shading: shad });
-        await _supa.from('database_label').insert([{ tanggal: new Date().toISOString(), nama_item: item, panjang: panj, shading: shad, msp: msp, barcode_base: idKombinasi, qty: qty, serial_range: `${lastSerial+1} - ${endSerial}` }]);
-
-        alert("Data Plafon Berhasil Disimpan ke Supabase!\nSerial: " + (lastSerial+1) + " s/d " + endSerial);
-    } 
-    // Logika LIS
-    else if (prefix === 'l') {
-        let msp = document.getElementById('l-mesin').value + document.getElementById('l-shift').value;
-        let qty = parseInt(document.getElementById('l-qty').value);
-        let idKombinasi = `${item}_${panj}_POLOS_${shad}`;
-        
-        const { data: unikData } = await _supa.from('database_kode_unik').select('last_serial').eq('id_kombinasi', idKombinasi).single();
-        let lastSerial = unikData ? parseInt(unikData.last_serial) : 0;
-        let endSerial = lastSerial + qty;
-
-        await _supa.from('database_kode_unik').upsert({ id_kombinasi: idKombinasi, last_serial: endSerial, nama_item: item, panjang: panj, shading: shad });
-        alert("Data Lis Berhasil Disimpan!\nSerial: " + (lastSerial+1) + " s/d " + endSerial);
+    if(!item || !panj || qty === 0) {
+        alert("Harap lengkapi form dan jumlah cetak!");
+        if(btn) { btn.innerText = "1. BUAT QRCODE & SIMPAN"; btn.disabled = false; }
+        return;
     }
+
+    let idKombinasi = `${item}_${panj}_${grade}_${shad}`;
+    let barcodeText = `${shortName(item, grade)}/${shad}/${panj}/${getJulianDateCode()}/${msp}`;
+
+    // Ambil nomor urut terakhir dari Supabase
+    const { data: unikData } = await _supa.from('database_kode_unik').select('last_serial').eq('id_kombinasi', idKombinasi).single();
+    let lastSerial = unikData ? parseInt(unikData.last_serial) : 0;
+    let endSerial = lastSerial + qty;
+
+    // --- RENDER VISUAL KE LAYAR (Kotak Preview) ---
+    const node = document.getElementById(prefix + '-node-label');
+    if (node) {
+        // Reset transform sebelum render ulang
+        globalZoom = 1; globalX = 0; globalY = 0; 
+        
+        node.innerHTML = `
+            <div id="${prefix}-inner-label" style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; transition: transform 0.2s;">
+                <div style="font-weight:bold; font-size:11px; margin-bottom:2px; text-align:center; white-space:nowrap;">${item} ${panj}M</div>
+                <div id="${prefix}-qr-canvas" style="margin: 0 auto;"></div>
+                <div style="font-size:10px; font-weight:bold; margin-top:2px; text-align:center; white-space:nowrap;">${barcodeText}/${String(lastSerial+1).padStart(3, '0')}</div>
+            </div>
+        `;
+        // Membuat Barcode Visual
+        new QRCode(document.getElementById(`${prefix}-qr-canvas`), {
+            text: `${barcodeText}/${String(lastSerial+1).padStart(3, '0')}`,
+            width: 45, height: 45
+        });
+    }
+
+    // Simpan ke Supabase
+    await _supa.from('database_kode_unik').upsert({ id_kombinasi: idKombinasi, last_serial: endSerial, nama_item: item, panjang: panj, grade: grade, shading: shad });
+    await _supa.from('database_label').insert([{ tanggal: new Date().toISOString(), nama_item: item, panjang: panj, shading: shad, msp: msp, barcode_base: idKombinasi, qty: qty, serial_range: `${lastSerial+1} - ${endSerial}` }]);
 
     if(btn) { btn.innerText = "1. BUAT QRCODE & SIMPAN"; btn.disabled = false; }
 }
 
-// 6. FITUR PRINT ZEBRA (html2canvas)
+// ==========================================
+// 5. FITUR D-PAD, ZOOM & PRINT ZEBRA
+// ==========================================
+function movePos(dir) {
+    let step = 3; // Bergeser 3px per klik
+    if(dir === 'up') globalY -= step;
+    if(dir === 'down') globalY += step;
+    if(dir === 'left') globalX -= step;
+    if(dir === 'right') globalX += step;
+    applyTransform();
+}
+
+function zoom(type) {
+    if(type === 'in') globalZoom += 0.05;
+    if(type === 'out') globalZoom -= 0.05;
+    applyTransform();
+}
+
+function applyTransform() {
+    let prefix = currentMenu; // Mengambil menu aktif dari js_global
+    const inner = document.getElementById(prefix + '-inner-label');
+    if(inner) {
+        inner.style.transform = `scale(${globalZoom}) translate(${globalX}px, ${globalY}px)`;
+    }
+}
+
 function renderPreview(prefix) {
-    // Mencari elemen layout zebra yang akan di screenshot
-    let targetId = prefix === 'p' ? 'p-layout-kanan' : 'l-layout-kanan'; 
+    let targetId = prefix + '-node-label'; 
     const node = document.getElementById(targetId);
-    
     if(!node) { alert("Area preview layout Zebra tidak ditemukan!"); return; }
     
     html2canvas(node, { scale: 2 }).then(canvas => {
