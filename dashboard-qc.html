@@ -114,47 +114,72 @@
   </div>
 
   <div class="layout-kanan">
+
     <div class="preview-header">
+
       <div style="display:flex; gap:10px; align-items:center; flex:1;">
-        <button class="btn-success" style="flex:1; padding:10px; display:flex; justify-content:center; align-items:center; gap:5px; font-size:14px; text-align:center;" onclick="prosesGenerate('p')">⚡ 1. Buat QRCode</button>
+
+        <button class="btn-success" style="flex:1; padding:10px; display:flex; justify-content:center; align-items:center; gap:5px; font-size:14px; text-align:center;" onclick="generateLabel('p')">⚡ 1. Buat QRCode</button>
+
         <button class="btn-secondary" style="flex:1; padding:10px; display:flex; justify-content:center; align-items:center; gap:5px; font-size:14px; text-align:center;" onclick="toggleAturLabel('p')">⚙ 2. Atur Label</button>
+
         <button id="p-btn-simpan-settings" class="btn-success" style="display:none; flex:1; padding:10px; justify-content:center; align-items:center; gap:5px; font-size:14px; text-align:center;" onclick="simpanPengaturanLabel('p')">💾 3. Simpan</button>
-        <button id="p-btn-cetak-label" class="btn-primary" style="display:none; flex:1; padding:10px; justify-content:center; align-items:center; gap:5px; font-size:14px; text-align:center;" onclick="renderPreview('p')">🖨 4. CETAK LABEL</button>
+
+        <button id="p-btn-cetak-label" class="btn-primary" style="display:none; flex:1; padding:10px; justify-content:center; align-items:center; gap:5px; font-size:14px; text-align:center;" onclick="cetakLabel('p')">🖨 4. CETAK LABEL</button>
+
       </div>
-      <div class="zoom-controls" style="margin-left:10px;">
-        <button onclick="zoom('out')">🔍 -</button>
-        <span id="p-zoom-text" style="color:white; font-size:12px; margin:auto 5px;">300%</span>
-        <button onclick="zoom('in')">🔍 +</button>
-      </div>
+
+      <div class="zoom-controls" style="margin-left:10px;"><button onclick="ubahZoom('p',-0.2)">🔍 -</button><span id="p-zoom-text" style="color:white; font-size:12px; margin:auto 5px;">300%</span><button onclick="ubahZoom('p',0.2)">🔍 +</button></div>
+
     </div>
 
-    <div class="preview-box-container" id="p-preview-area">
-      <div id="p-label-canvas" class="label-canvas" style="transform: scale(3.0); background: white; width: 50.8mm; height: 27.9mm; position: relative; display: flex; overflow: hidden; border: 1px solid #000;">
-         
+
+
+    <div class="preview-box-container">
+
+      <div id="p-label-canvas" class="label-canvas" style="transform: scale(3.0);">
+
          <div id="p-qr-container" style="width: 30%; height: 100%; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+
             <div id="p-qrcode-wrapper" class="click-edit" onclick="pilihElemen('p','qr', event)" style="transition: transform 0.2s;">
+
                <div id="p-qrcode"></div>
+
             </div>
-            <div id="p-p-barcode-text" class="click-edit" style="font-size: 5px; margin-top:2px; font-weight:bold; text-align: center; line-height: 1.1; max-width: 45px;" onclick="pilihElemen('p','barcode', event)"></div>
+
+            <div id="p-l-barcode-text" class="click-edit" style="font-size: 5px; margin-top:2px; font-weight:bold; text-align: center; line-height: 1.1; white-space:normal; word-wrap:break-word; max-width: 45px;" onclick="pilihElemen('p','barcode', event)"></div>
+
          </div>
 
          <div id="p-text-container" style="width: 70%; height: 100%; padding-left: 5px; display:flex; flex-direction:column;">
-            <div id="p-p-teks-grup" style="flex: 3; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:0px;">
-                <div id="p-p-nama-item" class="click-edit" style="font-size: 16px; font-weight:900; line-height: 1; text-align:center; max-width:33mm;" onclick="pilihElemen('p','nama', event)"></div>
-                <div id="p-p-shading" class="click-edit" style="font-size: 14px; font-weight:bold; text-align:center;" onclick="pilihElemen('p','shading', event)"></div>
+
+            <div id="p-l-teks-grup" style="flex: 3; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:0px;">
+
+                <div id="p-l-nama-item" class="click-edit" style="font-size: 16px; font-weight:900; line-height: 1; text-align:center; white-space:normal; word-wrap:break-word; max-width:33mm;" onclick="pilihElemen('p','nama', event)"></div>
+
+                <div id="p-l-shading" class="click-edit" style="font-size: 14px; font-weight:bold; text-align:center; white-space:nowrap;" onclick="pilihElemen('p','shading', event)"></div>
+
             </div>
-            <div id="p-p-info-bawah" style="flex: 1; display:flex; justify-content:center; align-items:flex-end; font-weight:bold; font-size: 6px; gap: 5px; padding-bottom: 2px;">
-                <div id="p-p-ukuran" class="click-edit" onclick="pilihElemen('p','ukuran', event)"></div>
-                <div id="p-p-mesin" class="click-edit" onclick="pilihElemen('p','mesin', event)"></div>
-                <div id="p-p-shift" class="click-edit" onclick="pilihElemen('p','shift', event)"></div>
-                <div id="p-p-tanggal" class="click-edit" onclick="pilihElemen('p','tanggal', event)"></div>
-                <div id="p-p-po" class="click-edit" onclick="pilihElemen('p','po', event)"></div>
+
+            <div id="p-l-info-bawah" style="flex: 1; display:flex; justify-content:center; align-items:flex-end; font-weight:bold; font-size: 6px; gap: 5px;">
+
+                <div id="p-l-ukuran" class="click-edit" style="white-space:nowrap;" onclick="pilihElemen('p','ukuran', event)"></div>
+
+                <div id="p-l-mesin" class="click-edit" style="white-space:nowrap;" onclick="pilihElemen('p','mesin', event)"></div>
+
+                <div id="p-l-shift" class="click-edit" style="white-space:nowrap;" onclick="pilihElemen('p','shift', event)"></div>
+
+                <div id="p-l-tanggal" class="click-edit" style="white-space:nowrap;" onclick="pilihElemen('p','tanggal', event)"></div>
+
+                <div id="p-l-po" class="click-edit" style="white-space:nowrap;" onclick="pilihElemen('p','po', event)"></div>
+
             </div>
+
          </div>
 
       </div>
+
     </div>
-</div>
 
     <div class="checkbox-panel" style="margin-top:10px;">
       <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="togglePanelBody('p-tampil-body', 'p-tampil-icon')">
