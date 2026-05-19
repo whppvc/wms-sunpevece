@@ -40,11 +40,11 @@
     </div>
 
     <div class="relative z-10 glass-box p-10 rounded-2xl shadow-[0_20px_50px_rgba(8,_112,_184,_0.7)] w-[90%] max-w-lg">
-        <div class="flex justify-center mb-8">
+        <div class="flex justify-center mb-6">
             <img src="sunpevece.png" alt="Logo Sunpevece" class="h-20 object-contain" onerror="this.style.display='none'">
         </div>
         
-        <h2 class="text-3xl font-extrabold text-center text-gray-800 mb-8 tracking-wide">PORTAL WMS</h2>
+        <h2 class="text-2xl font-extrabold text-center text-gray-700 mb-8 tracking-wide uppercase">Inventory Control Desk</h2>
 
         <div id="error-login" class="hidden mb-6 p-4 bg-red-100 border-l-4 border-red-600 text-red-700 text-sm rounded-r-md font-semibold text-center">
             Password atau Username salah!
@@ -60,17 +60,16 @@
                 <input type="password" id="password" class="w-full p-4 border-2 border-gray-300 rounded-lg outline-none text-black focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition" required>
             </div>
             <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all mt-4 text-lg">
-                MASUK KE SISTEM
+                LOGIN
             </button>
         </form>
     </div>
 
-   <script>
+    <script>
         // MASUKKAN KUNCI SUPABASE ANDA DI SINI
         const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
         
-        // PERBAIKAN: Namanya diubah menjadi 'db' agar tidak bentrok
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // LOGIKA UI
@@ -104,7 +103,6 @@
             const passVal = document.getElementById('password').value;
             const errorLogin = document.getElementById('error-login');
 
-            // PERBAIKAN: Memanggil tabel menggunakan 'db'
             const { data, error } = await db
                 .from('app_users')
                 .select('*')
