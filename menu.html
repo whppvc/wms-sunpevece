@@ -1,11 +1,176 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <title>Menu WMS Sunpevece</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS Sunpevece - Menu Utama</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body style="text-align: center; margin-top: 50px; font-family: sans-serif;">
-    <h1>Ini adalah Halaman Menu Utama</h1>
-    <p>Nanti kotak-kotak menu (STBJ, Kartu Stok) akan dibuat di sini.</p>
-    <button onclick="localStorage.clear(); window.location.href='index.html'">Logout (Kembali ke Login)</button>
+<body class="min-h-screen bg-gray-100 font-sans">
+
+    <header class="bg-white shadow-md px-4 py-3 flex items-center justify-between sticky top-0 z-40">
+        <div class="flex items-center">
+            <img src="sunpevece.png" alt="Logo" class="h-10 object-contain" onerror="this.style.display='none'">
+            <span class="ml-3 font-bold text-gray-700 text-sm md:text-base hidden sm:inline">WMS Control Desk</span>
+        </div>
+
+        <div class="flex items-center gap-4">
+            
+            <div class="relative">
+                <button id="btn-pesan" class="p-2 text-gray-600 hover:bg-gray-100 rounded-full relative cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    <span id="badge-pesan" class="absolute top-1 right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">1</span>
+                </button>
+            </div>
+
+            <div class="relative flex items-center">
+                <div id="search-box" class="hidden md:flex items-center bg-gray-100 rounded-lg px-3 py-1.5 border border-gray-200 mr-2 animate-fade-in">
+                    <input type="text" id="input-search" class="bg-transparent text-sm text-black outline-none w-40 lg:w-56" placeholder="Cari menu di sini...">
+                </div>
+                <button id="btn-search-toggle" class="p-2 text-gray-600 hover:bg-gray-100 rounded-full cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </button>
+            </div>
+
+            <div class="relative">
+                <button id="btn-profile" class="w-10 h-10 bg-blue-600 text-white font-bold rounded-full flex items-center justify-center shadow-md border-2 border-white hover:bg-blue-700 cursor-pointer">
+                    <span id="profile-initial">U</span>
+                </button>
+                <div id="profile-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-1 text-gray-800 z-50 border border-gray-100">
+                    <div class="px-4 py-2 border-b bg-gray-50 text-xs text-gray-500 font-bold" id="user-role-display">Role: User</div>
+                    <button class="block w-full text-left px-4 py-2.5 hover:bg-blue-50 text-sm">🔒 Ganti Password</button>
+                    <button class="block w-full text-left px-4 py-2.5 hover:bg-blue-50 text-sm">🖼️ Ganti Background</button>
+                    <button class="block w-full text-left px-4 py-2.5 hover:bg-blue-50 text-sm">🎨 Ganti Tema</button>
+                    <button id="btn-logout" class="block w-full text-left px-4 py-2.5 hover:bg-red-50 text-red-600 font-semibold text-sm border-t">🚪 Logout</button>
+                </div>
+            </div>
+
+        </div>
+    </header>
+
+    <div id="popup-pesan" class="hidden fixed inset-0 flex items-center justify-center bg-black/50 z-50 px-4">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm relative border-t-4 border-blue-600">
+            <button id="btn-close-pesan" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 font-bold text-xl cursor-pointer">✕</button>
+            <h3 class="text-lg font-bold text-gray-800 mb-2">Pesan Masuk dari Creator</h3>
+            <div class="bg-gray-50 p-3 rounded-lg border text-sm text-gray-700 leading-relaxed mb-4">
+                "Halo! Sistem WMS Sunpevece tahap pertama berhasil dijalankan. Silahkan periksa semua menu gudang."
+            </div>
+            <button id="btn-paham-pesan" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition text-sm">Paham</button>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto p-6 md:p-8">
+        <h2 class="text-xl font-bold text-gray-800 mb-6">Menu Aplikasi Utama</h2>
+        
+        <div id="menu-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            </div>
+    </main>
+
+    <script>
+        // Data master menu sesuai permintaan konsep D7
+        const masterMenus = [
+            { id: 'stbj_report', title: 'Laporan Hasil STBJ', icon: '📊', color: 'from-blue-500 to-indigo-600' },
+            { id: 'stbj', title: 'STBJ', icon: '📝', color: 'from-green-500 to-emerald-600' },
+            { id: 'kartu_stok', title: 'Kartu Stok', icon: '🗂️', color: 'from-amber-500 to-orange-600' },
+            { id: 'scan_input', title: 'Scan & Input', icon: '📷', color: 'from-purple-500 to-pink-600' },
+            { id: 'pengiriman', title: 'Pengiriman', icon: '🚚', color: 'from-cyan-500 to-blue-600' }
+        ];
+
+        // Validasi Sesi Login (A8)
+        let currentUser = null;
+        window.onload = () => {
+            const sessionData = localStorage.getItem('user_session');
+            if (!sessionData) {
+                window.location.href = 'index.html'; // Tendang balik ke login jika belum sah
+                return;
+            }
+            currentUser = JSON.parse(sessionData);
+            
+            // Set inisial nama di lingkaran profil
+            document.getElementById('profile-initial').innerText = currentUser.username.toUpperCase();
+            document.getElementById('user-role-display').innerText = "Role: " + currentUser.role;
+
+            // Render kotak-kotak menu (Creator melihat semua menu - D6)
+            renderMenus(masterMenus);
+        };
+
+        // Fungsi membuat elemen kotak menu secara dinamis
+        function renderMenus(menuList) {
+            const grid = document.getElementById('menu-grid');
+            grid.innerHTML = '';
+
+            menuList.forEach(menu => {
+                const card = document.createElement('div');
+                card.className = `bg-gradient-to-br ${menu.color} text-white p-6 rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200 cursor-pointer flex flex-col justify-between h-40 group`;
+                card.setAttribute('data-title', menu.title.toLowerCase());
+                card.onclick = () => alert(`Membuka menu: ${menu.title}`);
+
+                card.innerHTML = `
+                    <div class="text-4xl group-hover:scale-110 transition-transform duration-200">${menu.icon}</div>
+                    <div class="font-bold text-lg tracking-wide">${menu.title}</div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Fitur Pencarian Menu Dinamis (D3)
+        const btnSearchToggle = document.getElementById('btn-search-toggle');
+        const searchBox = document.getElementById('search-box');
+        const inputSearch = document.getElementById('input-search');
+
+        btnSearchToggle.addEventListener('click', () => {
+            searchBox.classList.toggle('hidden');
+            if(!searchBox.classList.contains('hidden')) inputSearch.focus();
+        });
+
+        inputSearch.addEventListener('input', (e) => {
+            const keyword = e.target.value.toLowerCase();
+            const cards = document.querySelectorAll('#menu-grid > div');
+            
+            cards.forEach(card => {
+                const title = card.getAttribute('data-title');
+                if(title.includes(keyword)) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        });
+
+        // Kontrol Popup Pesan (D4)
+        const btnPesan = document.getElementById('btn-pesan');
+        const popupPesan = document.getElementById('popup-pesan');
+        const btnClosePesan = document.getElementById('btn-close-pesan');
+        const btnPahamPesan = document.getElementById('btn-paham-pesan');
+        const badgePesan = document.getElementById('badge-pesan');
+
+        btnPesan.addEventListener('click', () => popupPesan.classList.remove('hidden'));
+        
+        function tutupPesan() {
+            popupPesan.classList.add('hidden');
+            badgePesan.classList.add('hidden'); // Hilangkan angka notifikasi setelah dibaca
+        }
+        btnClosePesan.addEventListener('click', tutupPesan);
+        btnPahamPesan.addEventListener('click', tutupPesan);
+
+        // Kontrol Dropdown Profile & Logout (D1)
+        const btnProfile = document.getElementById('btn-profile');
+        const profileMenu = document.getElementById('profile-menu');
+        const btnLogout = document.getElementById('btn-logout');
+
+        btnProfile.addEventListener('click', () => profileMenu.classList.toggle('hidden'));
+        
+        // Tutup dropdown jika klik di luar area profil
+        window.addEventListener('click', (e) => {
+            if (!btnProfile.contains(e.target) && !profileMenu.contains(e.target)) {
+                profileMenu.classList.add('hidden');
+            }
+        });
+
+        btnLogout.addEventListener('click', () => {
+            localStorage.clear(); // Hapus sesi
+            window.location.href = 'index.html';
+        });
+    </script>
 </body>
 </html>
