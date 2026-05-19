@@ -19,30 +19,21 @@
                 Back to Login
             </button>
         </div>
-
         <nav class="flex-1 p-4 space-y-2">
-            <button id="menu-user" class="w-full text-left px-4 py-3 rounded-lg font-semibold text-sm transition bg-blue-600 text-white cursor-pointer flex items-center gap-2">
-                👥 User Setting
-            </button>
-            <button id="menu-akses" class="w-full text-left px-4 py-3 rounded-lg font-semibold text-sm transition hover:bg-slate-800 text-slate-300 cursor-pointer flex items-center gap-2">
-                🛡️ Atur Akses Menu
-            </button>
+            <button id="menu-user" class="w-full text-left px-4 py-3 rounded-lg font-semibold text-sm transition bg-blue-600 text-white cursor-pointer flex items-center gap-2">👥 User Setting</button>
+            <button id="menu-akses" class="w-full text-left px-4 py-3 rounded-lg font-semibold text-sm transition hover:bg-slate-800 text-slate-300 cursor-pointer flex items-center gap-2">🛡️ Atur Akses Menu</button>
         </nav>
-        <div class="p-4 bg-slate-950 text-center text-xs text-slate-500 font-semibold">
-            V1.0 • Stock Control System
-        </div>
+        <div class="p-4 bg-slate-950 text-center text-xs text-slate-500 font-semibold">V1.0 • Stock Control System</div>
     </aside>
 
     <main class="flex-1 p-6 md:p-10 overflow-y-auto">
-        
         <section id="section-user" class="space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
                 <div>
                     <h1 class="text-2xl font-extrabold text-slate-800">User Management</h1>
-                    <p class="text-sm text-gray-500">Tambah, hapus, atau ganti password user gudang Anda.</p>
+                    <p class="text-sm text-gray-500">Tambah, hapus, atau edit user gudang Anda.</p>
                 </div>
             </div>
-
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div class="bg-white p-6 rounded-xl shadow-md border h-fit">
                     <h3 class="text-lg font-bold text-slate-700 mb-4" id="form-title">Tambah User Baru</h3>
@@ -58,7 +49,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Role</label>
-                            <input type="text" id="input-role" class="w-full p-2.5 border rounded-lg outline-none focus:border-blue-500 text-sm" placeholder="Ketik manual (misal: Admin)" required>
+                            <input type="text" id="input-role" class="w-full p-2.5 border rounded-lg outline-none focus:border-blue-500 text-sm" placeholder="Ketik Role (misal: Admin)" required>
                         </div>
                         <div class="flex gap-2 pt-2">
                             <button type="button" id="btn-batal-edit" class="hidden w-1/2 py-2.5 bg-gray-200 text-gray-700 font-bold rounded-lg text-xs transition">Batal</button>
@@ -66,20 +57,15 @@
                         </div>
                     </form>
                 </div>
-
                 <div class="bg-white p-6 rounded-xl shadow-md border lg:col-span-2 overflow-x-auto">
                     <h3 class="text-lg font-bold text-slate-700 mb-4">Daftar Akun Terdaftar</h3>
                     <table class="w-full text-left border-collapse text-sm">
                         <thead>
                             <tr class="bg-slate-100 text-slate-600 uppercase text-xs font-bold">
-                                <th class="p-3 border-b">Username</th>
-                                <th class="p-3 border-b">Password</th>
-                                <th class="p-3 border-b">Role</th>
-                                <th class="p-3 border-b text-center">Aksi</th>
+                                <th class="p-3 border-b">Username</th><th class="p-3 border-b">Password</th><th class="p-3 border-b">Role</th><th class="p-3 border-b text-center">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody id="table-user-body">
-                            </tbody>
+                        <tbody id="table-user-body"></tbody>
                     </table>
                 </div>
             </div>
@@ -88,136 +74,180 @@
         <section id="section-akses" class="space-y-6 hidden">
             <div class="border-b pb-4">
                 <h1 class="text-2xl font-extrabold text-slate-800">Atur Akses Menu & Sorting</h1>
-                <p class="text-sm text-gray-500">Sesuaikan menu yang tampil untuk setiap role serta urutan posisinya.</p>
+                <p class="text-sm text-gray-500">Centang user mana saja yang berhak melihat kotak menu ini di halaman utama mereka.</p>
             </div>
             
-            <div class="bg-white p-6 rounded-xl shadow-md border max-w-2xl">
-                <p class="text-amber-600 font-semibold bg-amber-50 p-3 rounded border border-amber-200 text-sm">
-                    ⚠️ Fitur otorisasi menu dinamis ini siap dihubungkan ke struktur data kartu stok pada fase pengerjaan berikutnya.
-                </p>
+            <div class="bg-white p-6 rounded-xl shadow-md border max-w-4xl">
+                <div id="akses-menu-container" class="space-y-4">
+                    <p class="text-gray-500 text-sm italic">Memuat daftar menu dan user...</p>
+                </div>
+                <button id="btn-save-akses" class="mt-6 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow transition">Simpan Pengaturan Akses</button>
             </div>
         </section>
-
     </main>
 
     <script>
         // MASUKKAN KUNCI SUPABASE ANDA DI SINI
-        const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
+        const SUPABASE_URL = 'ISI_URL_SUPABASE_ANDA_DISINI';
+        const SUPABASE_KEY = 'ISI_ANON_KEY_SUPABASE_ANDA_DISINI';
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Elemen UI Navigasi
-        const menuUser = document.getElementById('menu-user');
-        const menuAkses = document.getElementById('menu-akses');
-        const sectionUser = document.getElementById('section-user');
-        const sectionAkses = document.getElementById('section-akses');
+        // VARIABEL GLOBAL UNTUK MENYIMPAN DAFTAR USER
+        let allUsers = [];
 
-        // Pindah Tab Menu Navigasi
-        menuUser.addEventListener('click', () => {
-            switchTab(menuUser, sectionUser, menuAkses, sectionAkses);
-        });
+        const menuUser = document.getElementById('menu-user'), menuAkses = document.getElementById('menu-akses');
+        const sectionUser = document.getElementById('section-user'), sectionAkses = document.getElementById('section-akses');
+        
+        function switchTab(activeBtn, activeSec, inactiveBtn, inactiveSec) {
+            activeBtn.classList.add('bg-blue-600', 'text-white'); activeBtn.classList.remove('hover:bg-slate-800', 'text-slate-300');
+            inactiveBtn.classList.remove('bg-blue-600', 'text-white'); inactiveBtn.classList.add('hover:bg-slate-800', 'text-slate-300');
+            activeSec.classList.remove('hidden'); inactiveSec.classList.add('hidden');
+        }
+        
+        menuUser.addEventListener('click', () => switchTab(menuUser, sectionUser, menuAkses, sectionAkses));
+        
+        // Ketika tab Akses diklik, muat ulang daftar menu & checkbox usernya
         menuAkses.addEventListener('click', () => {
             switchTab(menuAkses, sectionAkses, menuUser, sectionUser);
+            renderMenuAccess();
         });
 
-        function switchTab(activeBtn, activeSec, inactiveBtn, inactiveSec) {
-            activeBtn.classList.add('bg-blue-600', 'text-white');
-            activeBtn.classList.remove('hover:bg-slate-800', 'text-slate-300');
-            inactiveBtn.classList.remove('bg-blue-600', 'text-white');
-            inactiveBtn.classList.add('hover:bg-slate-800', 'text-slate-300');
-            activeSec.classList.remove('hidden');
-            inactiveSec.classList.add('hidden');
-        }
-
-        // AMBIL DATA USER DARI SUPABASE (Load awal)
+        // ----------------------------------------------------
+        // LOGIKA SECTION 1: USER MANAGEMENT
+        // ----------------------------------------------------
         async function fetchUsers() {
             const tbody = document.getElementById('table-user-body');
             tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">Memuat data akun...</td></tr>`;
-
             const { data, error } = await db.from('app_users').select('*').order('id', { ascending: true });
-
-            if (error) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-500">Gagal memuat data!</td></tr>`;
-                return;
-            }
-
+            
+            if (error) { tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-500">Gagal memuat data!</td></tr>`; return; }
+            
+            allUsers = data; // Simpan ke variabel global untuk dipakai di tab Akses Menu
             tbody.innerHTML = '';
             data.forEach(user => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 border-b";
+                const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 border-b";
                 tr.innerHTML = `
-                    <td class="p-3 font-semibold text-slate-700">${user.username}</td>
-                    <td class="p-3 font-mono text-gray-600">${user.password}</td>
-                    <td class="p-3"><span class="px-2 py-1 text-xs font-bold rounded ${getRoleColor(user.role)}">${user.role}</span></td>
+                    <td class="p-3 font-semibold text-slate-700">${user.username}</td><td class="p-3 font-mono text-gray-600">${user.password}</td>
+                    <td class="p-3"><span class="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-700 uppercase">${user.role}</span></td>
                     <td class="p-3 text-center space-x-2">
                         <button onclick="editUser(${user.id}, '${user.username}', '${user.password}', '${user.role}')" class="text-blue-600 hover:text-blue-800 font-bold text-xs cursor-pointer">Edit</button>
                         ${user.username !== 'A' ? `<button onclick="deleteUser(${user.id})" class="text-red-600 hover:text-red-800 font-bold text-xs cursor-pointer">Hapus</button>` : ''}
-                    </td>
-                `;
+                    </td>`;
                 tbody.appendChild(tr);
             });
         }
 
-        function getRoleColor(role) {
-            if (role === 'Creator') return 'bg-purple-100 text-purple-700';
-            if (role === 'Admin') return 'bg-blue-100 text-blue-700';
-            if (role === 'Supervisor') return 'bg-green-100 text-green-700';
-            return 'bg-gray-100 text-gray-700';
-        }
-
-        // SIMPAN / UPDATE USER
         document.getElementById('form-user').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const id = document.getElementById('user-id').value;
-            const username = document.getElementById('input-username').value;
-            const password = document.getElementById('input-password').value;
-            const role = document.getElementById('input-role').value;
-
-            if (id) {
-                // Mode Edit/Update
-                const { error } = await db.from('app_users').update({ username, password, role }).eq('id', id);
-                if (error) alert('Gagal memperbarui user');
-            } else {
-                // Mode Tambah Baru
-                const { error } = await db.from('app_users').insert([{ username, password, role }]);
-                if (error) alert('Gagal menambahkan user');
-            }
-
-            resetForm();
-            fetchUsers();
+            const id = document.getElementById('user-id').value, username = document.getElementById('input-username').value;
+            const password = document.getElementById('input-password').value, role = document.getElementById('input-role').value;
+            if (id) { await db.from('app_users').update({ username, password, role }).eq('id', id); } 
+            else { await db.from('app_users').insert([{ username, password, role }]); }
+            resetForm(); fetchUsers();
         });
 
-        // EDIT & HAPUS AKUN
         window.editUser = (id, username, password, role) => {
-            document.getElementById('user-id').value = id;
-            document.getElementById('input-username').value = username;
-            document.getElementById('input-password').value = password;
-            document.getElementById('input-role').value = role;
-            
+            document.getElementById('user-id').value = id; document.getElementById('input-username').value = username;
+            document.getElementById('input-password').value = password; document.getElementById('input-role').value = role;
             document.getElementById('form-title').innerText = "Edit Password / Role User";
-            document.getElementById('btn-batal-edit').classList.remove('hidden');
-            document.getElementById('btn-submit-user').classList.add('w-1/2');
+            document.getElementById('btn-batal-edit').classList.remove('hidden'); document.getElementById('btn-submit-user').classList.add('w-1/2');
         };
 
         window.deleteUser = async (id) => {
-            if (confirm('Apakah Anda yakin ingin menghapus user ini?')) {
-                const { error } = await db.from('app_users').delete().eq('id', id);
-                if (error) alert('Gagal menghapus user');
-                fetchUsers();
-            }
+            if (confirm('Apakah Anda yakin ingin menghapus user ini?')) { await db.from('app_users').delete().eq('id', id); fetchUsers(); }
         };
 
-        document.getElementById('btn-batal-edit').addEventListener('click', resetForm);
-
         function resetForm() {
-            document.getElementById('user-id').value = '';
-            document.getElementById('form-user').reset();
+            document.getElementById('user-id').value = ''; document.getElementById('form-user').reset();
             document.getElementById('form-title').innerText = "Tambah User Baru";
-            document.getElementById('btn-batal-edit').classList.add('hidden');
-            document.getElementById('btn-submit-user').classList.remove('w-1/2');
+            document.getElementById('btn-batal-edit').classList.add('hidden'); document.getElementById('btn-submit-user').classList.remove('w-1/2');
+        }
+        document.getElementById('btn-batal-edit').addEventListener('click', resetForm);
+        
+        // ----------------------------------------------------
+        // LOGIKA SECTION 2: AKSES MENU (REVISI NO 3)
+        // ----------------------------------------------------
+        async function renderMenuAccess() {
+            const container = document.getElementById('akses-menu-container');
+            container.innerHTML = '<p class="text-gray-500 text-sm">Memuat pengaturan menu...</p>';
+
+            // Ambil data menu dari Supabase
+            const { data: menus, error } = await db.from('menu_access').select('*');
+            if (error || !menus) {
+                container.innerHTML = '<p class="text-red-500 text-sm">Gagal memuat daftar menu dari database.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            
+            // Render setiap menu menjadi baris UI
+            menus.forEach(menu => {
+                // array string user yang diizinkan, pisahkan dengan koma
+                const allowedArr = menu.allowed_users ? menu.allowed_users.split(',').map(s => s.trim()) : [];
+                
+                // Buat kotak untuk setiap menu
+                const box = document.createElement('div');
+                box.className = "flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg bg-slate-50";
+                
+                // Judul Menu di Kiri
+                const titleDiv = document.createElement('div');
+                titleDiv.className = "font-bold text-slate-800 w-full md:w-1/3 mb-3 md:mb-0";
+                titleDiv.innerText = `📦 ${menu.title}`;
+                
+                // Daftar Checkbox User di Kanan
+                const userDiv = document.createElement('div');
+                userDiv.className = "w-full md:w-2/3 flex flex-wrap gap-3";
+                
+                // Buat checkbox untuk setiap user yang terdaftar
+                allUsers.forEach(user => {
+                    const isChecked = allowedArr.includes(user.username) ? 'checked' : '';
+                    // User A (Creator) selalu punya akses, tidak bisa di-uncheck
+                    const isDisabled = user.username === 'A' ? 'disabled checked' : ''; 
+                    
+                    const lbl = document.createElement('label');
+                    lbl.className = "flex items-center gap-1.5 text-sm cursor-pointer bg-white border px-2 py-1 rounded shadow-sm hover:bg-blue-50";
+                    lbl.innerHTML = `
+                        <input type="checkbox" class="cb-akses cursor-pointer" data-menuid="${menu.menu_id}" value="${user.username}" ${isChecked} ${isDisabled}>
+                        <span class="font-medium text-slate-700">${user.username}</span>
+                    `;
+                    userDiv.appendChild(lbl);
+                });
+
+                box.appendChild(titleDiv);
+                box.appendChild(userDiv);
+                container.appendChild(box);
+            });
         }
 
-        // Jalankan pengambilan data saat halaman dibuka
+        // Simpan perubahan ke Supabase
+        document.getElementById('btn-save-akses').addEventListener('click', async () => {
+            const checkboxes = document.querySelectorAll('.cb-akses');
+            const aksesData = {}; // Format: { stbj: ['A', 'Budi'], kartu_stok: ['A'] }
+
+            // Kumpulkan data checkbox
+            checkboxes.forEach(cb => {
+                const menuId = cb.getAttribute('data-menuid');
+                const username = cb.value;
+                if (!aksesData[menuId]) aksesData[menuId] = [];
+                if (cb.checked) aksesData[menuId].push(username);
+            });
+
+            // Update ke database satu per satu
+            let isSuccess = true;
+            for (const menuId in aksesData) {
+                const allowedStr = aksesData[menuId].join(','); // Gabungkan kembali jadi string
+                const { error } = await db.from('menu_access').update({ allowed_users: allowedStr }).eq('menu_id', menuId);
+                if (error) isSuccess = false;
+            }
+
+            if (isSuccess) {
+                alert("Berhasil! Pengaturan akses menu sudah disimpan.");
+            } else {
+                alert("Terjadi kesalahan saat menyimpan data.");
+            }
+        });
+
+        // Load data saat pertama kali buka
         fetchUsers();
     </script>
 </body>
