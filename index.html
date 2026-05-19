@@ -65,11 +65,13 @@
         </form>
     </div>
 
-    <script>
+   <script>
         // MASUKKAN KUNCI SUPABASE ANDA DI SINI
-        const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const SUPABASE_URL = 'ISI_URL_SUPABASE_ANDA_DISINI';
+        const SUPABASE_KEY = 'ISI_ANON_KEY_SUPABASE_ANDA_DISINI';
+        
+        // PERBAIKAN: Namanya diubah menjadi 'db' agar tidak bentrok
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // LOGIKA UI
         document.getElementById('btn-setting-menu').addEventListener('click', () => {
@@ -89,7 +91,6 @@
 
         document.getElementById('btn-masuk-setting').addEventListener('click', () => {
             if(document.getElementById('input-pass-setting').value === '9909') {
-                alert("Password Setting Benar! Berpindah ke Halaman Setting...");
                 window.location.href = 'setting.html';
             } else {
                 document.getElementById('error-setting').classList.remove('hidden');
@@ -103,7 +104,8 @@
             const passVal = document.getElementById('password').value;
             const errorLogin = document.getElementById('error-login');
 
-            const { data, error } = await supabase
+            // PERBAIKAN: Memanggil tabel menggunakan 'db'
+            const { data, error } = await db
                 .from('app_users')
                 .select('*')
                 .eq('username', userVal)
@@ -115,18 +117,9 @@
             } else {
                 errorLogin.classList.add('hidden');
                 localStorage.setItem('user_session', JSON.stringify(data));
-                alert("Login Berhasil! Berpindah ke Halaman Menu...");
                 window.location.href = 'menu.html';
             }
         });
-
-        // CEK SESI
-        window.onload = () => {
-            if(localStorage.getItem('user_session')) {
-                // Dimatikan sementara agar Anda bisa melihat halaman login
-                // window.location.href = 'menu.html'; 
-            }
-        };
     </script>
 </body>
 </html>
