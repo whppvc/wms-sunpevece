@@ -156,11 +156,22 @@
 
         // DATA MASTER DENGAN NAMA IKON DARI LUCIDE
         const masterMenus = [
-            { id: 'stbj_report', title: 'Laporan Hasil STBJ', icon: 'file-bar-chart-2' },
-            { id: 'stbj', title: 'STBJ', icon: 'clipboard-list' },
+            { id: 'stbj', title: 'Stbj', icon: 'clipboard-check', redirect: 'stbj.html' },
+            { id: 'hasil_stbj', title: 'Hasil Stbj', icon: 'file-spreadsheet' },
+            { id: 'scan_input', title: 'Scan & Input', icon: 'scan-barcode' },
+            { id: 'langsir', title: 'Langsir', icon: 'arrow-right-left' },
+            { id: 'riwayat_langsir', title: 'Riwayat Langsir', icon: 'history' },
+            { id: 'riwayat_pindah', title: 'Riwayat Pindah area', icon: 'map-pin' },
+            { id: 'riwayat_masuk', title: 'Riwayat Masuk/retur', icon: 'package-plus' },
+            { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'package-minus' },
+            { id: 'riwayat_konversi', title: 'Riwayat konversi', icon: 'refresh-cw' },
             { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers' },
-            { id: 'scan_input', title: 'Scan & Input', icon: 'scan-line' },
-            { id: 'pengiriman', title: 'Pengiriman', icon: 'truck' }
+            { id: 'laporan_mingguan', title: 'Laporan mingguan', icon: 'calendar-days' },
+            { id: 'nama_item', title: 'Nama item', icon: 'tag' },
+            { id: 'kartu_stok_admin', title: 'Kartu stok (khusus admin)', icon: 'database' },
+            { id: 'kelola_pengiriman', title: 'Kelola pengiriman', icon: 'truck' },
+            { id: 'input_keluar', title: 'Input keluar', icon: 'log-out' },
+            { id: 'absen', title: 'Absen', icon: 'user-check' }
         ];
 
         let currentUser = null;
