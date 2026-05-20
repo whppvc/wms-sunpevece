@@ -88,11 +88,10 @@
 
     <script>
         // MASUKKAN KUNCI SUPABASE ANDA DI SINI
-        const SUPABASE_URL = 'ISI_URL_SUPABASE_ANDA_DISINI';
-        const SUPABASE_KEY = 'ISI_ANON_KEY_SUPABASE_ANDA_DISINI';
+        const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // VARIABEL GLOBAL UNTUK MENYIMPAN DAFTAR USER
         let allUsers = [];
 
         const menuUser = document.getElementById('menu-user'), menuAkses = document.getElementById('menu-akses');
@@ -106,25 +105,26 @@
         
         menuUser.addEventListener('click', () => switchTab(menuUser, sectionUser, menuAkses, sectionAkses));
         
-        // Ketika tab Akses diklik, muat ulang daftar menu & checkbox usernya
         menuAkses.addEventListener('click', () => {
             switchTab(menuAkses, sectionAkses, menuUser, sectionUser);
             renderMenuAccess();
         });
 
-        // ----------------------------------------------------
-        // LOGIKA SECTION 1: USER MANAGEMENT
-        // ----------------------------------------------------
+        // AMBIL DATA USER
         async function fetchUsers() {
             const tbody = document.getElementById('table-user-body');
             tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">Memuat data akun...</td></tr>`;
             const { data, error } = await db.from('app_users').select('*').order('id', { ascending: true });
             
-            if (error) { tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-500">Gagal memuat data!</td></tr>`; return; }
+            if (error) { 
+                alert("Error saat mengambil data tabel: " + error.message);
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-500">Gagal memuat data!</td></tr>`; 
+                return; 
+            }
             
-            allUsers = data; // Simpan ke variabel global untuk dipakai di tab Akses Menu
+            allUsers = data || []; 
             tbody.innerHTML = '';
-            data.forEach(user => {
+            allUsers.forEach(user => {
                 const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 border-b";
                 tr.innerHTML = `
                     <td class="p-3 font-semibold text-slate-700">${user.username}</td><td class="p-3 font-mono text-gray-600">${user.password}</td>
@@ -137,13 +137,29 @@
             });
         }
 
+        // SIMPAN DATA USER BARU
         document.getElementById('form-user').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const id = document.getElementById('user-id').value, username = document.getElementById('input-username').value;
-            const password = document.getElementById('input-password').value, role = document.getElementById('input-role').value;
-            if (id) { await db.from('app_users').update({ username, password, role }).eq('id', id); } 
-            else { await db.from('app_users').insert([{ username, password, role }]); }
-            resetForm(); fetchUsers();
+            const id = document.getElementById('user-id').value;
+            const username = document.getElementById('input-username').value;
+            const password = document.getElementById('input-password').value;
+            const role = document.getElementById('input-role').value;
+
+            try {
+                if (id) { 
+                    const { error } = await db.from('app_users').update({ username, password, role }).eq('id', id);
+                    if (error) throw error;
+                    alert("User berhasil diupdate!");
+                } else { 
+                    const { error } = await db.from('app_users').insert([{ username, password, role }]); 
+                    if (error) throw error;
+                    alert("User baru berhasil ditambahkan!");
+                }
+                resetForm(); 
+                fetchUsers();
+            } catch (err) {
+                alert("Gagal menyimpan user! Pesan Error: " + err.message);
+            }
         });
 
         window.editUser = (id, username, password, role) => {
@@ -154,7 +170,11 @@
         };
 
         window.deleteUser = async (id) => {
-            if (confirm('Apakah Anda yakin ingin menghapus user ini?')) { await db.from('app_users').delete().eq('id', id); fetchUsers(); }
+            if (confirm('Apakah Anda yakin ingin menghapus user ini?')) { 
+                const { error } = await db.from('app_users').delete().eq('id', id); 
+                if (error) { alert("Gagal hapus: " + error.message); }
+                fetchUsers(); 
+            }
         };
 
         function resetForm() {
@@ -164,67 +184,54 @@
         }
         document.getElementById('btn-batal-edit').addEventListener('click', resetForm);
         
-        // ----------------------------------------------------
-        // LOGIKA SECTION 2: AKSES MENU (REVISI NO 3)
-        // ----------------------------------------------------
+        // RENDER MENU AKSES
         async function renderMenuAccess() {
             const container = document.getElementById('akses-menu-container');
-            container.innerHTML = '<p class="text-gray-500 text-sm">Memuat pengaturan menu...</p>';
+            container.innerHTML = '<p class="text-gray-500 text-sm font-bold animate-pulse">Memuat pengaturan menu dari database...</p>';
 
-            // Ambil data menu dari Supabase
-            const { data: menus, error } = await db.from('menu_access').select('*');
-            if (error || !menus) {
-                container.innerHTML = '<p class="text-red-500 text-sm">Gagal memuat daftar menu dari database.</p>';
-                return;
-            }
+            try {
+                const { data: menus, error } = await db.from('menu_access').select('*');
+                if (error) throw error;
+                if (!menus || menus.length === 0) {
+                    container.innerHTML = '<p class="text-amber-600 bg-amber-50 p-3 rounded font-bold border border-amber-200 text-sm">Tabel menu_access masih kosong. Pastikan Anda sudah menjalankan script INSERT di Supabase.</p>';
+                    return;
+                }
 
-            container.innerHTML = '';
-            
-            // Render setiap menu menjadi baris UI
-            menus.forEach(menu => {
-                // array string user yang diizinkan, pisahkan dengan koma
-                const allowedArr = menu.allowed_users ? menu.allowed_users.split(',').map(s => s.trim()) : [];
-                
-                // Buat kotak untuk setiap menu
-                const box = document.createElement('div');
-                box.className = "flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg bg-slate-50";
-                
-                // Judul Menu di Kiri
-                const titleDiv = document.createElement('div');
-                titleDiv.className = "font-bold text-slate-800 w-full md:w-1/3 mb-3 md:mb-0";
-                titleDiv.innerText = `📦 ${menu.title}`;
-                
-                // Daftar Checkbox User di Kanan
-                const userDiv = document.createElement('div');
-                userDiv.className = "w-full md:w-2/3 flex flex-wrap gap-3";
-                
-                // Buat checkbox untuk setiap user yang terdaftar
-                allUsers.forEach(user => {
-                    const isChecked = allowedArr.includes(user.username) ? 'checked' : '';
-                    // User A (Creator) selalu punya akses, tidak bisa di-uncheck
-                    const isDisabled = user.username === 'A' ? 'disabled checked' : ''; 
+                container.innerHTML = '';
+                menus.forEach(menu => {
+                    const allowedArr = menu.allowed_users ? menu.allowed_users.split(',').map(s => s.trim()) : [];
+                    const box = document.createElement('div');
+                    box.className = "flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg bg-slate-50";
                     
-                    const lbl = document.createElement('label');
-                    lbl.className = "flex items-center gap-1.5 text-sm cursor-pointer bg-white border px-2 py-1 rounded shadow-sm hover:bg-blue-50";
-                    lbl.innerHTML = `
-                        <input type="checkbox" class="cb-akses cursor-pointer" data-menuid="${menu.menu_id}" value="${user.username}" ${isChecked} ${isDisabled}>
-                        <span class="font-medium text-slate-700">${user.username}</span>
-                    `;
-                    userDiv.appendChild(lbl);
-                });
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = "font-bold text-slate-800 w-full md:w-1/3 mb-3 md:mb-0";
+                    titleDiv.innerText = `📦 ${menu.title}`;
+                    
+                    const userDiv = document.createElement('div');
+                    userDiv.className = "w-full md:w-2/3 flex flex-wrap gap-3";
+                    
+                    allUsers.forEach(user => {
+                        const isChecked = allowedArr.includes(user.username) ? 'checked' : '';
+                        const isDisabled = user.username === 'A' ? 'disabled checked' : ''; 
+                        const lbl = document.createElement('label');
+                        lbl.className = "flex items-center gap-1.5 text-sm cursor-pointer bg-white border px-2 py-1 rounded shadow-sm hover:bg-blue-50";
+                        lbl.innerHTML = `<input type="checkbox" class="cb-akses cursor-pointer" data-menuid="${menu.menu_id}" value="${user.username}" ${isChecked} ${isDisabled}> <span class="font-medium text-slate-700">${user.username}</span>`;
+                        userDiv.appendChild(lbl);
+                    });
 
-                box.appendChild(titleDiv);
-                box.appendChild(userDiv);
-                container.appendChild(box);
-            });
+                    box.appendChild(titleDiv);
+                    box.appendChild(userDiv);
+                    container.appendChild(box);
+                });
+            } catch (err) {
+                container.innerHTML = `<p class="text-red-500 font-bold text-sm bg-red-50 p-3 rounded border border-red-200">Gagal memuat! Pesan Error: ${err.message}</p>`;
+            }
         }
 
-        // Simpan perubahan ke Supabase
         document.getElementById('btn-save-akses').addEventListener('click', async () => {
             const checkboxes = document.querySelectorAll('.cb-akses');
-            const aksesData = {}; // Format: { stbj: ['A', 'Budi'], kartu_stok: ['A'] }
+            const aksesData = {}; 
 
-            // Kumpulkan data checkbox
             checkboxes.forEach(cb => {
                 const menuId = cb.getAttribute('data-menuid');
                 const username = cb.value;
@@ -232,22 +239,18 @@
                 if (cb.checked) aksesData[menuId].push(username);
             });
 
-            // Update ke database satu per satu
             let isSuccess = true;
             for (const menuId in aksesData) {
-                const allowedStr = aksesData[menuId].join(','); // Gabungkan kembali jadi string
+                const allowedStr = aksesData[menuId].join(','); 
                 const { error } = await db.from('menu_access').update({ allowed_users: allowedStr }).eq('menu_id', menuId);
-                if (error) isSuccess = false;
+                if (error) {
+                    alert("Gagal simpan akses menu " + menuId + ". Error: " + error.message);
+                    isSuccess = false;
+                }
             }
-
-            if (isSuccess) {
-                alert("Berhasil! Pengaturan akses menu sudah disimpan.");
-            } else {
-                alert("Terjadi kesalahan saat menyimpan data.");
-            }
+            if (isSuccess) alert("Berhasil! Pengaturan akses menu sudah disimpan.");
         });
 
-        // Load data saat pertama kali buka
         fetchUsers();
     </script>
 </body>
