@@ -214,6 +214,13 @@
                         </div>
                         <div class="font-bold text-lg tracking-wide">${menuAsli.title}</div>
                     `;
+                    
+                    // TAMBAHKAN BARIS INI:
+                    card.onclick = () => { 
+                        if(menuAsli.redirect) window.location.href = menuAsli.redirect; 
+                        else alert('Menu ' + menuAsli.title + ' sedang dikembangkan.'); 
+                    };
+                    
                     grid.appendChild(card);
                 }
             });
