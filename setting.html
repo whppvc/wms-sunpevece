@@ -7,7 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        .dragging { opacity: 0.5; border: 2px dashed #3b82f6; }
+        /* Efek visual saat kotak menu sedang digeser (Drag) */
+        .dragging { opacity: 0.5; border: 2px dashed #3b82f6; background-color: #eff6ff; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col md:flex-row font-sans text-gray-800">
@@ -18,79 +19,182 @@
                 <img src="sunpevece.png" alt="Logo" class="h-8 object-contain" onerror="this.style.display='none'">
                 <h2 class="font-bold text-base tracking-wider uppercase">Creator Panel</h2>
             </div>
-            <button onclick="window.location.href='index.html'" class="mt-0 md:mt-4 block w-full md:w-auto text-center bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 px-3 rounded transition cursor-pointer">Back to Login</button>
+            <button onclick="window.location.href='index.html'" class="mt-0 md:mt-4 block w-full md:w-auto text-center bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 px-3 rounded transition cursor-pointer">
+                Back to Login
+            </button>
         </div>
         <nav class="flex-1 p-4 space-y-2">
-            <button id="menu-user" class="w-full text-left px-4 py-3 rounded-lg font-semibold text-sm transition bg-blue-600 text-white cursor-pointer flex items-center gap-2">👥 User Setting</button>
-            <button id="menu-akses" class="w-full text-left px-4 py-3 rounded-lg font-semibold text-sm transition hover:bg-slate-800 text-slate-300 cursor-pointer flex items-center gap-2">🛡️ Atur Akses Menu</button>
+            <button id="menu-user" class="w-full text-left px-4 py-3 rounded-lg font-semibold text-sm transition bg-blue-600 text-white cursor-pointer flex items-center gap-2">
+                👥 User Setting
+            </button>
+            <button id="menu-akses" class="w-full text-left px-4 py-3 rounded-lg font-semibold text-sm transition hover:bg-slate-800 text-slate-300 cursor-pointer flex items-center gap-2">
+                🛡️ Atur Akses Menu
+            </button>
         </nav>
     </aside>
 
     <main class="flex-1 p-6 md:p-10 overflow-y-auto">
+        
         <section id="section-user" class="space-y-6">
-            <h1 class="text-2xl font-extrabold text-slate-800">User Management</h1>
+            <div class="border-b pb-4">
+                <h1 class="text-2xl font-extrabold text-slate-800">User Management</h1>
+                <p class="text-sm text-gray-500">Tambah, edit, atau hapus user gudang Anda.</p>
+            </div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div class="bg-white p-6 rounded-xl shadow-md border h-fit">
-                    <h3 class="text-lg font-bold text-slate-700 mb-4" id="form-title">Tambah User</h3>
+                    <h3 class="text-lg font-bold text-slate-700 mb-4" id="form-title">Tambah User Baru</h3>
                     <form id="form-user" class="space-y-4">
                         <input type="hidden" id="user-id">
-                        <input type="text" id="input-username" class="w-full p-2.5 border rounded-lg text-sm" placeholder="Username" required>
-                        <input type="text" id="input-password" class="w-full p-2.5 border rounded-lg text-sm" placeholder="Password" required>
-                        <input type="text" id="input-role" class="w-full p-2.5 border rounded-lg text-sm" placeholder="Role (misal: Admin)" required>
-                        <button type="submit" class="w-full py-2.5 bg-blue-600 text-white font-bold rounded-lg text-sm">Simpan</button>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Username</label>
+                            <input type="text" id="input-username" class="w-full p-2.5 border rounded-lg outline-none focus:border-blue-500 text-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Password</label>
+                            <input type="text" id="input-password" class="w-full p-2.5 border rounded-lg outline-none focus:border-blue-500 text-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Role</label>
+                            <input type="text" id="input-role" class="w-full p-2.5 border rounded-lg outline-none focus:border-blue-500 text-sm" placeholder="Ketik manual (misal: Admin)" required>
+                        </div>
+                        <div class="flex gap-2 pt-2">
+                            <button type="button" id="btn-batal-edit" class="hidden w-1/2 py-2.5 bg-gray-200 text-gray-700 font-bold rounded-lg text-xs transition">Batal</button>
+                            <button type="submit" id="btn-submit-user" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs transition shadow">Simpan User</button>
+                        </div>
                     </form>
                 </div>
                 <div class="bg-white p-6 rounded-xl shadow-md border lg:col-span-2 overflow-x-auto">
+                    <h3 class="text-lg font-bold text-slate-700 mb-4">Daftar Akun Terdaftar</h3>
                     <table class="w-full text-left border-collapse text-sm">
-                        <tbody id="table-user-body"></tbody>
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 uppercase text-xs font-bold">
+                                <th class="p-3 border-b">Username</th>
+                                <th class="p-3 border-b">Password</th>
+                                <th class="p-3 border-b">Role</th>
+                                <th class="p-3 border-b text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-user-body">
+                            <tr><td colspan="4" class="p-4 text-center">Memuat...</td></tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
         </section>
 
         <section id="section-akses" class="space-y-6 hidden">
-            <h1 class="text-2xl font-extrabold text-slate-800">Atur Akses Menu & Sorting</h1>
-            <p class="text-sm text-gray-500">Centang hak akses. Tarik/geser (Drag & Drop) kotak menu di bawah untuk mengubah urutan tampilannya.</p>
+            <div class="border-b pb-4">
+                <h1 class="text-2xl font-extrabold text-slate-800">Atur Akses Menu & Sorting</h1>
+                <p class="text-sm text-gray-500">Centang kotak untuk memberi izin. <b>Tarik dan geser (Drag)</b> baris menu ke atas/bawah untuk mengatur urutannya.</p>
+            </div>
             
             <div class="bg-white p-6 rounded-xl shadow-md border max-w-4xl">
-                <div id="akses-menu-container" class="space-y-3"></div>
-                <button id="btn-save-akses" class="mt-6 w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow transition">Simpan Akses & Urutan</button>
+                <div id="akses-menu-container" class="space-y-3">
+                    </div>
+                <button id="btn-save-akses" class="mt-6 w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow transition">Simpan Pengaturan Akses & Urutan</button>
             </div>
         </section>
+
     </main>
 
     <script>
+        // MASUKKAN KUNCI SUPABASE ANDA DI SINI
         const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
-        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        let db;
+        try {
+            db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (error) {
+            alert("Sistem Gagal! Periksa kembali URL dan KEY Supabase Anda.");
+        }
+
         let allUsers = [];
 
-        // Navigasi Tab
+        // --- NAVIGASI TAB ---
         const menuUser = document.getElementById('menu-user'), menuAkses = document.getElementById('menu-akses');
         const sectionUser = document.getElementById('section-user'), sectionAkses = document.getElementById('section-akses');
-        menuUser.addEventListener('click', () => { sectionUser.classList.remove('hidden'); sectionAkses.classList.add('hidden'); menuUser.classList.add('bg-blue-600','text-white'); menuUser.classList.remove('text-slate-300'); menuAkses.classList.remove('bg-blue-600','text-white'); menuAkses.classList.add('text-slate-300'); });
-        menuAkses.addEventListener('click', () => { sectionAkses.classList.remove('hidden'); sectionUser.classList.add('hidden'); menuAkses.classList.add('bg-blue-600','text-white'); menuAkses.classList.remove('text-slate-300'); menuUser.classList.remove('bg-blue-600','text-white'); menuUser.classList.add('text-slate-300'); renderMenuAccess(); });
-
-        // User Logic Dasar
-        async function fetchUsers() {
-            const { data } = await db.from('app_users').select('*').order('id', { ascending: true });
-            allUsers = data || [];
-            const tbody = document.getElementById('table-user-body'); tbody.innerHTML = '';
-            allUsers.forEach(u => tbody.innerHTML += `<tr class="border-b"><td class="p-2">${u.username}</td><td class="p-2">${u.role}</td></tr>`);
+        
+        function switchTab(activeBtn, activeSec, inactiveBtn, inactiveSec) {
+            activeBtn.classList.add('bg-blue-600', 'text-white'); activeBtn.classList.remove('hover:bg-slate-800', 'text-slate-300');
+            inactiveBtn.classList.remove('bg-blue-600', 'text-white'); inactiveBtn.classList.add('hover:bg-slate-800', 'text-slate-300');
+            activeSec.classList.remove('hidden'); inactiveSec.classList.add('hidden');
         }
-        fetchUsers();
+        
+        menuUser.addEventListener('click', () => switchTab(menuUser, sectionUser, menuAkses, sectionAkses));
+        menuAkses.addEventListener('click', () => {
+            switchTab(menuAkses, sectionAkses, menuUser, sectionUser);
+            renderMenuAccess();
+        });
 
-        // LOGIKA MENU & DRAG DROP
+        // --- LOGIKA USER MANAGEMENT ---
+        async function fetchUsers() {
+            const tbody = document.getElementById('table-user-body');
+            const { data, error } = await db.from('app_users').select('*').order('id', { ascending: true });
+            if (error) { tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-500">Gagal memuat: ${error.message}</td></tr>`; return; }
+            
+            allUsers = data || [];
+            tbody.innerHTML = '';
+            allUsers.forEach(user => {
+                const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 border-b";
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold text-slate-700">${user.username}</td>
+                    <td class="p-3 font-mono text-gray-600">${user.password}</td>
+                    <td class="p-3"><span class="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-700">${user.role}</span></td>
+                    <td class="p-3 text-center space-x-2">
+                        <button onclick="editUser(${user.id}, '${user.username}', '${user.password}', '${user.role}')" class="text-blue-600 hover:text-blue-800 font-bold text-xs">Edit</button>
+                        ${user.username !== 'A' ? `<button onclick="deleteUser(${user.id})" class="text-red-600 hover:text-red-800 font-bold text-xs">Hapus</button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('form-user').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('user-id').value;
+            const username = document.getElementById('input-username').value;
+            const password = document.getElementById('input-password').value;
+            const role = document.getElementById('input-role').value;
+
+            if (id) { await db.from('app_users').update({ username, password, role }).eq('id', id); } 
+            else { await db.from('app_users').insert([{ username, password, role }]); }
+            
+            resetForm(); fetchUsers();
+        });
+
+        window.editUser = (id, username, password, role) => {
+            document.getElementById('user-id').value = id; document.getElementById('input-username').value = username;
+            document.getElementById('input-password').value = password; document.getElementById('input-role').value = role;
+            document.getElementById('form-title').innerText = "Edit User";
+            document.getElementById('btn-batal-edit').classList.remove('hidden'); document.getElementById('btn-submit-user').classList.add('w-1/2');
+        };
+
+        window.deleteUser = async (id) => {
+            if (confirm('Yakin hapus user ini?')) { await db.from('app_users').delete().eq('id', id); fetchUsers(); }
+        };
+
+        function resetForm() {
+            document.getElementById('user-id').value = ''; document.getElementById('form-user').reset();
+            document.getElementById('form-title').innerText = "Tambah User Baru";
+            document.getElementById('btn-batal-edit').classList.add('hidden'); document.getElementById('btn-submit-user').classList.remove('w-1/2');
+        }
+        document.getElementById('btn-batal-edit').addEventListener('click', resetForm);
+
+        // --- LOGIKA AKSES & DRAG DROP ---
         async function renderMenuAccess() {
             const container = document.getElementById('akses-menu-container');
-            container.innerHTML = '<p>Memuat...</p>';
-            const { data: menus } = await db.from('menu_access').select('*').order('sort_order', { ascending: true });
-            
+            container.innerHTML = '<p class="text-gray-500 animate-pulse">Memuat pengaturan menu...</p>';
+
+            const { data: menus, error } = await db.from('menu_access').select('*').order('sort_order', { ascending: true });
+            if (error) { container.innerHTML = `<p class="text-red-500">Gagal: ${error.message}</p>`; return; }
+
             container.innerHTML = '';
             menus.forEach((menu) => {
                 const allowedArr = menu.allowed_users ? menu.allowed_users.split(',').map(s => s.trim()) : [];
                 const box = document.createElement('div');
-                box.className = "menu-draggable flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg bg-slate-50 cursor-move";
+                // Tambahkan class menu-draggable dan property draggable=true
+                box.className = "menu-draggable flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg bg-white shadow-sm cursor-move hover:shadow-md transition";
                 box.draggable = true; 
                 box.setAttribute('data-menuid', menu.menu_id);
                 
@@ -98,18 +202,30 @@
                 allUsers.forEach(user => {
                     const isChecked = allowedArr.includes(user.username) ? 'checked' : '';
                     const isDisabled = user.username === 'A' ? 'disabled checked' : ''; 
-                    userCheckboxes += `<label class="flex items-center gap-1 text-sm bg-white border px-2 py-1 rounded cursor-pointer"><input type="checkbox" class="cb-akses" data-menuid="${menu.menu_id}" value="${user.username}" ${isChecked} ${isDisabled}> ${user.username}</label>`;
+                    userCheckboxes += `
+                        <label class="flex items-center gap-1.5 text-sm bg-gray-50 border px-2 py-1 rounded cursor-pointer hover:bg-blue-50">
+                            <input type="checkbox" class="cb-akses" data-menuid="${menu.menu_id}" value="${user.username}" ${isChecked} ${isDisabled}> 
+                            <span class="font-medium text-slate-700">${user.username}</span>
+                        </label>`;
                 });
 
-                box.innerHTML = `<div class="font-bold text-slate-800 w-full md:w-1/3 flex items-center gap-2"><span class="text-gray-400 text-xl">☰</span> ${menu.title}</div><div class="w-full md:w-2/3 flex flex-wrap gap-2 mt-2 md:mt-0">${userCheckboxes}</div>`;
+                box.innerHTML = `
+                    <div class="font-bold text-slate-800 w-full md:w-1/3 flex items-center gap-3 mb-3 md:mb-0">
+                        <span class="text-gray-400 text-2xl hover:text-blue-500">☰</span> 
+                        📦 ${menu.title}
+                    </div>
+                    <div class="w-full md:w-2/3 flex flex-wrap gap-2">
+                        ${userCheckboxes}
+                    </div>
+                `;
                 container.appendChild(box);
 
-                // Drag Events
+                // Event Listeners untuk Drag & Drop
                 box.addEventListener('dragstart', () => box.classList.add('dragging'));
                 box.addEventListener('dragend', () => box.classList.remove('dragging'));
             });
 
-            // Container Drag Over
+            // Container Drop Zone
             container.addEventListener('dragover', e => {
                 e.preventDefault();
                 const afterElement = getDragAfterElement(container, e.clientY);
@@ -119,21 +235,23 @@
             });
         }
 
+        // Fungsi Menghitung Posisi Drop
         function getDragAfterElement(container, y) {
             const draggableElements = [...container.querySelectorAll('.menu-draggable:not(.dragging)')];
             return draggableElements.reduce((closest, child) => {
                 const box = child.getBoundingClientRect();
                 const offset = y - box.top - box.height / 2;
-                if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
-                else return closest;
+                if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } 
+                else { return closest; }
             }, { offset: Number.NEGATIVE_INFINITY }).element;
         }
 
-        // SIMPAN AKSES & URUTAN
+        // Simpan Data Akses & Urutan
         document.getElementById('btn-save-akses').addEventListener('click', async () => {
             const boxes = document.querySelectorAll('.menu-draggable');
             let isSuccess = true;
 
+            // Looping sesuai urutan kotak dari atas ke bawah
             for (let i = 0; i < boxes.length; i++) {
                 const menuId = boxes[i].getAttribute('data-menuid');
                 const checkboxes = boxes[i].querySelectorAll('.cb-akses:checked');
@@ -142,9 +260,13 @@
                 const { error } = await db.from('menu_access').update({ allowed_users: allowedUsers, sort_order: i }).eq('menu_id', menuId);
                 if(error) isSuccess = false;
             }
-            if(isSuccess) alert("Akses dan Urutan Menu Berhasil Disimpan!");
-            else alert("Ada kesalahan penyimpanan.");
+
+            if(isSuccess) alert("Sukses! Akses dan Urutan Menu Berhasil Disimpan.");
+            else alert("Terjadi kesalahan saat menyimpan pengaturan.");
         });
+
+        // Load data awal
+        fetchUsers();
     </script>
 </body>
 </html>
