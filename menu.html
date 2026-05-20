@@ -3,71 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Sunpevece - Menu Utama</title>
+    <title>Stock Control System - Menu Utama</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Pola background khusus */
+        .bg-cubes { background-image: url('https://www.transparenttextures.com/patterns/cubes.png'); }
+        .bg-dots { background-image: url('https://www.transparenttextures.com/patterns/stardust.png'); }
+    </style>
 </head>
-<body class="min-h-screen bg-gray-100 font-sans">
+<body id="app-body" class="min-h-screen bg-gray-100 font-sans transition-colors duration-300">
 
-    <header class="bg-white shadow-md px-4 py-3 flex items-center justify-between sticky top-0 z-40">
+    <header id="app-header" class="bg-white shadow-md px-4 py-3 flex items-center justify-between sticky top-0 z-40 transition-colors duration-300">
         <div class="flex items-center">
             <img src="sunpevece.png" alt="Logo" class="h-10 object-contain" onerror="this.style.display='none'">
-            <span class="ml-3 font-bold text-gray-700 text-sm md:text-base hidden sm:inline">Stock Control System</span>
+            <span id="header-text" class="ml-3 font-bold text-gray-700 text-sm md:text-base hidden sm:inline">Stock Control System</span>
         </div>
 
         <div class="flex items-center gap-4">
-            
             <div class="relative">
-                <button id="btn-pesan" class="p-2 text-gray-600 hover:bg-gray-100 rounded-full relative cursor-pointer">
+                <button id="btn-pesan" class="p-2 text-gray-600 hover:bg-gray-200 rounded-full relative cursor-pointer header-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                     <span id="badge-pesan" class="absolute top-1 right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">1</span>
                 </button>
             </div>
 
             <div class="relative flex items-center">
-                <div id="search-box" class="hidden md:flex items-center bg-gray-100 rounded-lg px-3 py-1.5 border border-gray-200 mr-2 animate-fade-in">
-                    <input type="text" id="input-search" class="bg-transparent text-sm text-black outline-none w-40 lg:w-56" placeholder="Cari menu di sini...">
+                <div id="search-box" class="hidden md:flex items-center bg-gray-100 rounded-lg px-3 py-1.5 border border-gray-200 mr-2">
+                    <input type="text" id="input-search" class="bg-transparent text-sm text-black outline-none w-40 lg:w-56" placeholder="Cari menu...">
                 </div>
-                <button id="btn-search-toggle" class="p-2 text-gray-600 hover:bg-gray-100 rounded-full cursor-pointer">
+                <button id="btn-search-toggle" class="p-2 text-gray-600 hover:bg-gray-200 rounded-full cursor-pointer header-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 </button>
             </div>
 
             <div class="relative">
-                <button id="btn-profile" class="w-10 h-10 bg-blue-600 text-white font-bold rounded-full flex items-center justify-center shadow-md border-2 border-white hover:bg-blue-700 cursor-pointer">
+                <button id="btn-profile" class="w-10 h-10 bg-blue-600 text-white font-bold rounded-full flex items-center justify-center shadow-md border-2 border-white cursor-pointer theme-bg">
                     <span id="profile-initial">U</span>
                 </button>
                 <div id="profile-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-1 text-gray-800 z-50 border border-gray-100">
                     <div class="px-4 py-2 border-b bg-gray-50 text-xs text-gray-500 font-bold" id="user-role-display">Role: User</div>
-                    <button class="block w-full text-left px-4 py-2.5 hover:bg-blue-50 text-sm">🔒 Ganti Password</button>
-                    <button class="block w-full text-left px-4 py-2.5 hover:bg-blue-50 text-sm">🖼️ Ganti Background</button>
-                    <button class="block w-full text-left px-4 py-2.5 hover:bg-blue-50 text-sm">🎨 Ganti Tema</button>
+                    <button id="btn-modal-pass" class="block w-full text-left px-4 py-2.5 hover:bg-blue-50 text-sm">🔒 Ganti Password</button>
+                    <button id="btn-modal-bg" class="block w-full text-left px-4 py-2.5 hover:bg-blue-50 text-sm">🖼️ Ganti Background</button>
+                    <button id="btn-modal-theme" class="block w-full text-left px-4 py-2.5 hover:bg-blue-50 text-sm">🎨 Ganti Tema</button>
                     <button id="btn-logout" class="block w-full text-left px-4 py-2.5 hover:bg-red-50 text-red-600 font-semibold text-sm border-t">🚪 Logout</button>
                 </div>
             </div>
-
         </div>
     </header>
 
     <div id="popup-pesan" class="hidden fixed inset-0 flex items-center justify-center bg-black/50 z-50 px-4">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm relative border-t-4 border-blue-600">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm relative border-t-4 border-blue-600 theme-border">
             <button id="btn-close-pesan" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 font-bold text-xl cursor-pointer">✕</button>
-            <h3 class="text-lg font-bold text-gray-800 mb-2">Pesan Masuk dari Creator</h3>
-            <div class="bg-gray-50 p-3 rounded-lg border text-sm text-gray-700 leading-relaxed mb-4">
-                "Halo! Sistem WMS Sunpevece tahap pertama berhasil dijalankan. Silahkan periksa semua menu gudang."
-            </div>
-            <button id="btn-paham-pesan" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition text-sm">Paham</button>
+            <h3 class="text-lg font-bold text-gray-800 mb-2">Pesan Masuk</h3>
+            <div class="bg-gray-50 p-3 rounded-lg border text-sm text-gray-700 leading-relaxed mb-4">"Selamat Datang di Stock Control System."</div>
+            <button id="btn-paham-pesan" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition text-sm theme-bg">Paham</button>
         </div>
     </div>
 
-    <main class="max-w-7xl mx-auto p-6 md:p-8">
-        <h2 class="text-xl font-bold text-gray-800 mb-6">Menu Aplikasi Utama</h2>
-        
-        <div id="menu-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    <div id="popup-password" class="hidden fixed inset-0 flex items-center justify-center bg-black/60 z-50 px-4">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Ganti Password Anda</h3>
+            <form id="form-password" class="space-y-4">
+                <input type="password" id="input-new-pass" class="w-full p-3 border rounded-lg text-black outline-none focus:ring-2 focus:ring-blue-500" placeholder="Password Baru" required>
+                <div class="flex gap-2">
+                    <button type="button" id="btn-close-pass" class="w-1/2 py-2 bg-gray-200 text-gray-700 font-bold rounded-lg">Batal</button>
+                    <button type="submit" class="w-1/2 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow theme-bg">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="popup-tampilan" class="hidden fixed inset-0 flex items-center justify-center bg-black/60 z-50 px-4">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+            <h3 class="text-lg font-bold text-gray-800 mb-4" id="title-tampilan">Sesuaikan Tampilan</h3>
+            
+            <div id="area-bg" class="space-y-3 hidden">
+                <button onclick="setBg('bg-gray-100')" class="w-full py-2 border rounded font-semibold text-gray-700 hover:bg-gray-200">Abu-abu (Default)</button>
+                <button onclick="setBg('bg-blue-50')" class="w-full py-2 border rounded font-semibold text-blue-700 hover:bg-blue-100">Biru Muda Lembut</button>
+                <button onclick="setBg('bg-slate-900 bg-cubes')" class="w-full py-2 border rounded font-semibold text-white bg-slate-800 hover:bg-slate-700">Gelap (Cubes)</button>
+            </div>
+
+            <div id="area-theme" class="space-y-3 hidden">
+                <button onclick="setTheme('blue')" class="w-full py-2 border-2 border-blue-600 rounded font-bold text-blue-600 hover:bg-blue-50">Tema Biru</button>
+                <button onclick="setTheme('emerald')" class="w-full py-2 border-2 border-emerald-600 rounded font-bold text-emerald-600 hover:bg-emerald-50">Tema Hijau</button>
+                <button onclick="setTheme('orange')" class="w-full py-2 border-2 border-orange-600 rounded font-bold text-orange-600 hover:bg-orange-50">Tema Oranye</button>
+                <button onclick="setTheme('purple')" class="w-full py-2 border-2 border-purple-600 rounded font-bold text-purple-600 hover:bg-purple-50">Tema Ungu</button>
+            </div>
+
+            <button id="btn-close-tampilan" class="w-full py-2 mt-4 bg-gray-200 text-gray-700 font-bold rounded-lg">Tutup</button>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto p-6 md:p-8 relative z-10">
+        <h2 id="main-title" class="text-xl font-bold text-gray-800 mb-6">Menu Aplikasi Utama</h2>
+        <div id="menu-loading" class="text-gray-500 font-bold animate-pulse">Memuat akses menu Anda...</div>
+        <div id="menu-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 hidden">
             </div>
     </main>
 
     <script>
-        // Data master menu sesuai permintaan konsep D7
+        // MASUKKAN KUNCI SUPABASE ANDA DI SINI
+        const SUPABASE_URL = 'ISI_URL_SUPABASE_ANDA_DISINI';
+        const SUPABASE_KEY = 'ISI_ANON_KEY_SUPABASE_ANDA_DISINI';
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         const masterMenus = [
             { id: 'stbj_report', title: 'Laporan Hasil STBJ', icon: '📊', color: 'from-blue-500 to-indigo-600' },
             { id: 'stbj', title: 'STBJ', icon: '📝', color: 'from-green-500 to-emerald-600' },
@@ -76,101 +116,212 @@
             { id: 'pengiriman', title: 'Pengiriman', icon: '🚚', color: 'from-cyan-500 to-blue-600' }
         ];
 
-        // Validasi Sesi Login (A8)
         let currentUser = null;
-        window.onload = () => {
+
+        // 1. Inisialisasi Saat Halaman Dimuat
+        window.onload = async () => {
             const sessionData = localStorage.getItem('user_session');
-            if (!sessionData) {
-                window.location.href = 'index.html'; // Tendang balik ke login jika belum sah
-                return;
-            }
+            if (!sessionData) { window.location.href = 'index.html'; return; }
             currentUser = JSON.parse(sessionData);
             
-            // Set inisial nama di lingkaran profil
             document.getElementById('profile-initial').innerText = currentUser.username.toUpperCase();
             document.getElementById('user-role-display').innerText = "Role: " + currentUser.role;
 
-            // Render kotak-kotak menu (Creator melihat semua menu - D6)
-            renderMenus(masterMenus);
+            loadSavedTampilan(); // Terapkan tema/background
+            await fetchAksesMenu(); // SOLUSI NO 1: Ambil data akses menu
         };
 
-        // Fungsi membuat elemen kotak menu secara dinamis
+        // ========================================================
+        // SOLUSI 1: FUNGSI AKSES MENU DINAMIS
+        // ========================================================
+        async function fetchAksesMenu() {
+            const loading = document.getElementById('menu-loading');
+            const grid = document.getElementById('menu-grid');
+            
+            // Ambil tabel hak akses dari Supabase
+            const { data: aksesData, error } = await db.from('menu_access').select('*');
+            
+            if (error) {
+                loading.innerText = "Gagal memuat akses database: " + error.message;
+                return;
+            }
+
+            // Saring menu berdasarkan kecocokan nama user di allowed_users
+            let filteredMenus = masterMenus.filter(menu => {
+                // Creator melihat semua menu, tidak perlu difilter
+                if (currentUser.role === 'Creator') return true; 
+
+                // Cari baris menu ini di database
+                let aksesBaris = aksesData.find(a => a.menu_id === menu.id);
+                if (!aksesBaris) return false;
+
+                // Cek apakah nama user ada di kolom allowed_users
+                let allowed = aksesBaris.allowed_users ? aksesBaris.allowed_users.split(',').map(s=>s.trim()) : [];
+                return allowed.includes(currentUser.username);
+            });
+
+            // Sembunyikan loading, tampilkan grid
+            loading.classList.add('hidden');
+            grid.classList.remove('hidden');
+
+            renderMenus(filteredMenus);
+        }
+
         function renderMenus(menuList) {
             const grid = document.getElementById('menu-grid');
             grid.innerHTML = '';
+            
+            if(menuList.length === 0) {
+                grid.innerHTML = `<div class="col-span-full p-4 bg-yellow-50 text-yellow-700 font-bold border rounded-lg">Maaf, Anda belum diberi akses ke menu manapun. Hubungi Creator.</div>`;
+                return;
+            }
 
             menuList.forEach(menu => {
                 const card = document.createElement('div');
                 card.className = `bg-gradient-to-br ${menu.color} text-white p-6 rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200 cursor-pointer flex flex-col justify-between h-40 group`;
                 card.setAttribute('data-title', menu.title.toLowerCase());
-                card.onclick = () => alert(`Membuka menu: ${menu.title}`);
+                card.onclick = () => alert(`Fase Berikutnya: Masuk ke halaman ${menu.title}`);
 
-                card.innerHTML = `
-                    <div class="text-4xl group-hover:scale-110 transition-transform duration-200">${menu.icon}</div>
-                    <div class="font-bold text-lg tracking-wide">${menu.title}</div>
-                `;
+                card.innerHTML = `<div class="text-4xl group-hover:scale-110 transition-transform duration-200">${menu.icon}</div><div class="font-bold text-lg tracking-wide">${menu.title}</div>`;
                 grid.appendChild(card);
             });
         }
 
-        // Fitur Pencarian Menu Dinamis (D3)
-        const btnSearchToggle = document.getElementById('btn-search-toggle');
-        const searchBox = document.getElementById('search-box');
-        const inputSearch = document.getElementById('input-search');
+        // ========================================================
+        // SOLUSI 2 & 3: FUNGSI GANTI TEMA DAN BACKGROUND
+        // ========================================================
+        const popupTampilan = document.getElementById('popup-tampilan');
+        const areaBg = document.getElementById('area-bg');
+        const areaTheme = document.getElementById('area-theme');
+        const titleTampilan = document.getElementById('title-tampilan');
 
-        btnSearchToggle.addEventListener('click', () => {
-            searchBox.classList.toggle('hidden');
-            if(!searchBox.classList.contains('hidden')) inputSearch.focus();
+        document.getElementById('btn-modal-bg').addEventListener('click', () => {
+            document.getElementById('profile-menu').classList.add('hidden');
+            areaBg.classList.remove('hidden'); areaTheme.classList.add('hidden');
+            titleTampilan.innerText = "Pilih Background Aplikasi";
+            popupTampilan.classList.remove('hidden');
         });
 
-        inputSearch.addEventListener('input', (e) => {
-            const keyword = e.target.value.toLowerCase();
-            const cards = document.querySelectorAll('#menu-grid > div');
-            
-            cards.forEach(card => {
-                const title = card.getAttribute('data-title');
-                if(title.includes(keyword)) {
-                    card.classList.remove('hidden');
-                } else {
-                    card.classList.add('hidden');
-                }
-            });
+        document.getElementById('btn-modal-theme').addEventListener('click', () => {
+            document.getElementById('profile-menu').classList.add('hidden');
+            areaBg.classList.add('hidden'); areaTheme.classList.remove('hidden');
+            titleTampilan.innerText = "Pilih Tema Warna Aplikasi";
+            popupTampilan.classList.remove('hidden');
         });
 
-        // Kontrol Popup Pesan (D4)
-        const btnPesan = document.getElementById('btn-pesan');
-        const popupPesan = document.getElementById('popup-pesan');
-        const btnClosePesan = document.getElementById('btn-close-pesan');
-        const btnPahamPesan = document.getElementById('btn-paham-pesan');
-        const badgePesan = document.getElementById('badge-pesan');
+        document.getElementById('btn-close-tampilan').addEventListener('click', () => popupTampilan.classList.add('hidden'));
 
-        btnPesan.addEventListener('click', () => popupPesan.classList.remove('hidden'));
-        
-        function tutupPesan() {
-            popupPesan.classList.add('hidden');
-            badgePesan.classList.add('hidden'); // Hilangkan angka notifikasi setelah dibaca
+        // Fungsi Set & Simpan Background
+        function setBg(bgClass) {
+            localStorage.setItem('app_bg', bgClass);
+            applyBg(bgClass);
+            popupTampilan.classList.add('hidden');
         }
-        btnClosePesan.addEventListener('click', tutupPesan);
-        btnPahamPesan.addEventListener('click', tutupPesan);
+        function applyBg(bgClass) {
+            const body = document.getElementById('app-body');
+            body.className = `min-h-screen font-sans transition-all duration-300 ${bgClass}`;
+            // Sesuaikan warna tulisan berdasarkan gelap/terang bg
+            if(bgClass.includes('slate-900')) {
+                document.getElementById('app-header').classList.replace('bg-white', 'bg-slate-950');
+                document.getElementById('header-text').classList.replace('text-gray-700', 'text-white');
+                document.getElementById('main-title').classList.replace('text-gray-800', 'text-white');
+            } else {
+                document.getElementById('app-header').classList.replace('bg-slate-950', 'bg-white');
+                document.getElementById('header-text').classList.replace('text-white', 'text-gray-700');
+                document.getElementById('main-title').classList.replace('text-white', 'text-gray-800');
+            }
+        }
 
-        // Kontrol Dropdown Profile & Logout (D1)
-        const btnProfile = document.getElementById('btn-profile');
-        const profileMenu = document.getElementById('profile-menu');
-        const btnLogout = document.getElementById('btn-logout');
+        // Fungsi Set & Simpan Tema (Warna Header/Tombol Utama)
+        const themeColors = {
+            'blue': { bg: 'bg-blue-600', hover: 'hover:bg-blue-700', border: 'border-blue-600' },
+            'emerald': { bg: 'bg-emerald-600', hover: 'hover:bg-emerald-700', border: 'border-emerald-600' },
+            'orange': { bg: 'bg-orange-600', hover: 'hover:bg-orange-700', border: 'border-orange-600' },
+            'purple': { bg: 'bg-purple-600', hover: 'hover:bg-purple-700', border: 'border-purple-600' }
+        };
 
-        btnProfile.addEventListener('click', () => profileMenu.classList.toggle('hidden'));
+        function setTheme(colorKey) {
+            localStorage.setItem('app_theme', colorKey);
+            applyTheme(colorKey);
+            popupTampilan.classList.add('hidden');
+        }
+        function applyTheme(colorKey) {
+            const clr = themeColors[colorKey] || themeColors['blue'];
+            
+            // Ubah tombol profile
+            const btnProfile = document.getElementById('btn-profile');
+            btnProfile.className = `w-10 h-10 text-white font-bold rounded-full flex items-center justify-center shadow-md border-2 border-white cursor-pointer transition-colors ${clr.bg} ${clr.hover}`;
+            
+            // Ubah tombol paham popup
+            document.getElementById('btn-paham-pesan').className = `w-full py-2 text-white font-bold rounded-lg transition text-sm ${clr.bg} ${clr.hover}`;
+        }
+
+        function loadSavedTampilan() {
+            const savedBg = localStorage.getItem('app_bg') || 'bg-gray-100';
+            const savedTheme = localStorage.getItem('app_theme') || 'blue';
+            applyBg(savedBg);
+            applyTheme(savedTheme);
+        }
+
+        // ========================================================
+        // SOLUSI 4: GANTI PASSWORD USER SENDIRI
+        // ========================================================
+        const popupPassword = document.getElementById('popup-password');
         
-        // Tutup dropdown jika klik di luar area profil
-        window.addEventListener('click', (e) => {
-            if (!btnProfile.contains(e.target) && !profileMenu.contains(e.target)) {
-                profileMenu.classList.add('hidden');
+        document.getElementById('btn-modal-pass').addEventListener('click', () => {
+            document.getElementById('profile-menu').classList.add('hidden');
+            popupPassword.classList.remove('hidden');
+        });
+        
+        document.getElementById('btn-close-pass').addEventListener('click', () => {
+            popupPassword.classList.add('hidden');
+            document.getElementById('input-new-pass').value = '';
+        });
+
+        document.getElementById('form-password').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newPass = document.getElementById('input-new-pass').value;
+            
+            // Update ke tabel Supabase
+            const { error } = await db.from('app_users').update({ password: newPass }).eq('id', currentUser.id);
+            
+            if(error) {
+                alert("Gagal ganti password: " + error.message);
+            } else {
+                // Update session agar tidak error saat reload
+                currentUser.password = newPass;
+                localStorage.setItem('user_session', JSON.stringify(currentUser));
+                
+                alert("Password Anda berhasil diperbarui!");
+                popupPassword.classList.add('hidden');
+                document.getElementById('input-new-pass').value = '';
             }
         });
 
-        btnLogout.addEventListener('click', () => {
-            localStorage.clear(); // Hapus sesi
-            window.location.href = 'index.html';
+        // ========================================================
+        // LOGIKA DASAR UI LAINNYA (Search, Dropdown, Pesan)
+        // ========================================================
+        const btnProfile = document.getElementById('btn-profile'), profileMenu = document.getElementById('profile-menu');
+        btnProfile.addEventListener('click', () => profileMenu.classList.toggle('hidden'));
+        window.addEventListener('click', (e) => { if (!btnProfile.contains(e.target) && !profileMenu.contains(e.target)) profileMenu.classList.add('hidden'); });
+        
+        document.getElementById('btn-logout').addEventListener('click', () => { localStorage.clear(); window.location.href = 'index.html'; });
+
+        const btnSearchToggle = document.getElementById('btn-search-toggle'), searchBox = document.getElementById('search-box'), inputSearch = document.getElementById('input-search');
+        btnSearchToggle.addEventListener('click', () => { searchBox.classList.toggle('hidden'); if(!searchBox.classList.contains('hidden')) inputSearch.focus(); });
+        
+        inputSearch.addEventListener('input', (e) => {
+            const keyword = e.target.value.toLowerCase();
+            document.querySelectorAll('#menu-grid > div').forEach(card => {
+                card.classList.toggle('hidden', !card.getAttribute('data-title').includes(keyword));
+            });
         });
+
+        const btnPesan = document.getElementById('btn-pesan'), popupPesan = document.getElementById('popup-pesan');
+        function tutupPesan() { popupPesan.classList.add('hidden'); document.getElementById('badge-pesan').classList.add('hidden'); }
+        btnPesan.addEventListener('click', () => popupPesan.classList.remove('hidden'));
+        document.getElementById('btn-close-pesan').addEventListener('click', tutupPesan);
+        document.getElementById('btn-paham-pesan').addEventListener('click', tutupPesan);
     </script>
 </body>
 </html>
