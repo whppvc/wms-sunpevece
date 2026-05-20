@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stock Control - STBJ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-800">
+
+    <header class="bg-white shadow-sm px-4 py-3 flex items-center gap-3 sticky top-0 z-40">
+        <button onclick="window.location.href='menu.html'" class="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition">
+            <i data-lucide="arrow-left" class="w-5 h-5 text-gray-700"></i>
+        </button>
+        <h1 class="font-bold text-lg text-blue-700 uppercase tracking-wide">Menu STBJ</h1>
+    </header>
+
+    <main class="p-4 md:p-6 max-w-5xl mx-auto">
+        
+        <div id="view-menu" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div onclick="bukaScanItem()" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer flex items-center gap-4 transition active:scale-95">
+                <div class="bg-blue-100 p-3 rounded-lg"><i data-lucide="scan-barcode" class="w-8 h-8 text-blue-600"></i></div>
+                <div>
+                    <h3 class="font-bold text-lg">Scan per item</h3>
+                    <p class="text-xs text-gray-500">Scan per dus atau ketik qrcode</p>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer flex items-center gap-4 transition active:scale-95">
+                <div class="bg-emerald-100 p-3 rounded-lg"><i data-lucide="file-down" class="w-8 h-8 text-emerald-600"></i></div>
+                <div>
+                    <h3 class="font-bold text-lg">Import CSV</h3>
+                    <p class="text-xs text-gray-500">Masukkan file daftar barcode utk diterjemahkan</p>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer flex items-center gap-4 transition active:scale-95">
+                <div class="bg-purple-100 p-3 rounded-lg"><i data-lucide="upload-cloud" class="w-8 h-8 text-purple-600"></i></div>
+                <div>
+                    <h3 class="font-bold text-lg">Upload file QC & STBJ</h3>
+                    <p class="text-xs text-gray-500">Download file qc, upload, dan centang satu2</p>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer flex items-center gap-4 transition active:scale-95">
+                <div class="bg-orange-100 p-3 rounded-lg"><i data-lucide="file-text" class="w-8 h-8 text-orange-600"></i></div>
+                <div>
+                    <h3 class="font-bold text-lg">STBJ Lembaran</h3>
+                    <p class="text-xs text-gray-500">Input lembaran</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-scan" class="hidden space-y-4">
+            
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="font-bold text-xl flex items-center gap-2"><i data-lucide="scan-barcode" class="w-6 h-6 text-blue-600"></i> Scan Per Item</h2>
+                <button onclick="kembaliKeMenu()" class="text-sm font-bold text-gray-500 hover:text-gray-800">Batal</button>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Pilih Troli</label>
+                    <select id="select-troli" class="w-full p-3 border-2 border-blue-200 rounded-lg outline-none focus:border-blue-500 bg-blue-50 text-blue-800 font-bold text-sm">
+                        <option value="">-- Memuat Troli... --</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Input QR Code</label>
+                    <form id="form-scan" class="flex gap-2">
+                        <input type="text" id="input-qrcode" class="flex-1 p-3 border-2 border-gray-300 rounded-lg outline-none focus:border-blue-500 text-sm" placeholder="Tap disini dan masukkan kode..." autocomplete="off">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 rounded-lg font-bold shadow-md transition active:scale-95">Input</button>
+                    </form>
+                    <p class="text-[10px] text-gray-400 mt-1">*Bisa input satu-satu, scan alat, atau paste banyak kode sekaligus.</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="overflow-x-auto w-full">
+                    <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-stbj">
+                        <thead>
+                            <tr class="bg-slate-800 text-white uppercase text-xs font-bold" id="tr-header">
+                                <th class="p-3 w-10 text-center"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></th>
+                                <th class="p-3 w-12 text-center">No</th>
+                                <th class="p-3">Nama Troli</th>
+                                <th class="p-3">Text QRCode</th>
+                                </tr>
+                        </thead>
+                        <tbody id="tbody-stbj">
+                            </tbody>
+                    </table>
+                </div>
+                
+                <div id="empty-state" class="p-8 text-center text-gray-400">
+                    <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
+                    <p class="text-sm font-medium">Belum ada QR Code yang di-scan.</p>
+                </div>
+            </div>
+
+            <div class="pt-2 pb-10">
+                <button id="btn-terjemahkan" class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2 text-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <i data-lucide="cpu" class="w-6 h-6"></i> TERJEMAHKAN QR CODE
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // KONEKSI SUPABASE
+        const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // VARIABEL STATE
+        const viewMenu = document.getElementById('view-menu');
+        const viewScan = document.getElementById('view-scan');
+        const inputQr = document.getElementById('input-qrcode');
+        const selectTroli = document.getElementById('select-troli');
+        const tbody = document.getElementById('tbody-stbj');
+        const emptyState = document.getElementById('empty-state');
+        const btnTerjemahkan = document.getElementById('btn-terjemahkan');
+        
+        let rowCount = 0;
+        let isTranslated = false; // Status apakah tabel sudah diperluas kolomnya
+
+        // CEK SESI LOGIN
+        window.onload = async () => {
+            if (!localStorage.getItem('user_session')) { window.location.href = 'index.html'; return; }
+            await loadTroli();
+        };
+
+        // FUNGSI GANTI TAMPILAN
+        function bukaScanItem() {
+            viewMenu.classList.add('hidden');
+            viewScan.classList.remove('hidden');
+            inputQr.focus(); // Otomatis fokus ke input untuk siap scan
+        }
+        function kembaliKeMenu() {
+            viewScan.classList.add('hidden');
+            viewMenu.classList.remove('hidden');
+        }
+
+        // AMBIL DATA TROLI DARI SUPABASE
+        async function loadTroli() {
+            const { data, error } = await db.from('master_1').select('nama_troli').order('nama_troli', { ascending: true });
+            selectTroli.innerHTML = '<option value="">-- Pilih Troli --</option>';
+            if(data) {
+                data.forEach(troli => {
+                    selectTroli.innerHTML += `<option value="${troli.nama_troli}">${troli.nama_troli}</option>`;
+                });
+            } else {
+                selectTroli.innerHTML = '<option value="">Gagal memuat Troli</option>';
+            }
+        }
+
+        // FUNGSI INPUT SCAN
+        document.getElementById('form-scan').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const rawInput = inputQr.value.trim();
+            const troliDipilih = selectTroli.value;
+
+            if(!troliDipilih) { alert("Pilih Nama Troli terlebih dahulu!"); inputQr.focus(); return; }
+            if(!rawInput) return;
+
+            // Fitur: Mendukung Copy-Paste banyak QRCode sekaligus (dipisah dengan baris baru / Enter)
+            const qrList = rawInput.split(/\r?\n/).filter(q => q.trim() !== '');
+            
+            qrList.forEach(qrCode => {
+                tambahkanBaris(troliDipilih, qrCode.trim());
+            });
+
+            inputQr.value = '';
+            inputQr.focus(); // Kembali fokus agar bisa scan berkelanjutan
+            cekEmptyState();
+        });
+
+        // TAMBAH BARIS KE TABEL
+        function tambahkanBaris(troli, qrcode) {
+            rowCount++;
+            const tr = document.createElement('tr');
+            tr.className = "border-b border-gray-100 hover:bg-blue-50 transition";
+            tr.id = `row-${rowCount}`;
+
+            // Kolom dasar
+            let kolomHTML = `
+                <td class="p-3 text-center">
+                    <button onclick="hapusBaris('row-${rowCount}')" class="text-red-500 hover:bg-red-100 p-1.5 rounded-md transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </td>
+                <td class="p-3 text-center font-bold text-gray-500 row-number">${rowCount}</td>
+                <td class="p-3 font-semibold text-blue-700">${troli}</td>
+                <td class="p-3 font-mono text-gray-800">${qrcode}</td>
+            `;
+
+            // Jika sudah di-terjemahkan, tambahkan kolom kosong sementara untuk baris baru ini
+            if(isTranslated) {
+                kolomHTML += `
+                    <td class="p-3 text-gray-400 italic">...</td>
+                    <td class="p-3 text-gray-400 italic">...</td>
+                    <td class="p-3 text-gray-400 italic">...</td>
+                    <td class="p-3 text-gray-400 italic">...</td>
+                    <td class="p-3 text-gray-400 italic">...</td>
+                    <td class="p-3 text-gray-400 italic">...</td>
+                    <td class="p-3 text-gray-400 italic">...</td>
+                    <td class="p-3 text-gray-400 italic">...</td>
+                    <td class="p-3 text-gray-400 italic">...</td>
+                    <td class="p-3 text-gray-400 italic">...</td>
+                `;
+            }
+
+            tr.innerHTML = kolomHTML;
+            tbody.prepend(tr); // Masukkan di paling atas (agar hasil scan terbaru mudah dilihat)
+            
+            // Re-inisialisasi icon untuk baris baru
+            lucide.createIcons();
+            updateNomorUrut(); // Perbaiki nomor urut karena dimasukkan dari atas
+        }
+
+        // HAPUS BARIS
+        window.hapusBaris = (rowId) => {
+            document.getElementById(rowId).remove();
+            updateNomorUrut();
+            cekEmptyState();
+            inputQr.focus();
+        };
+
+        // PERBAIKI NOMOR URUT SAAT DIHAPUS / DITAMBAH (Agar rapi 1,2,3 dari atas ke bawah)
+        function updateNomorUrut() {
+            const rows = tbody.querySelectorAll('tr');
+            rowCount = rows.length;
+            // Penomoran terbalik karena data masuk (prepend) dari atas
+            let counter = rowCount;
+            rows.forEach(tr => {
+                tr.querySelector('.row-number').innerText = counter;
+                counter--;
+            });
+        }
+
+        // CEK APAKAH TABEL KOSONG
+        function cekEmptyState() {
+            if(tbody.children.length > 0) {
+                emptyState.classList.add('hidden');
+                btnTerjemahkan.disabled = false;
+            } else {
+                emptyState.classList.remove('hidden');
+                btnTerjemahkan.disabled = true;
+            }
+        }
+
+        // FUNGSI TERJEMAHKAN QR CODE (MEMPERLUAS TABEL)
+        btnTerjemahkan.addEventListener('click', () => {
+            if(isTranslated) return; // Mencegah double click
+            
+            // 1. Tambah Header Kolom Baru
+            const trHeader = document.getElementById('tr-header');
+            const newHeaders = ['Tgl Produksi', 'Mesin', 'Shift', 'Nama Item', 'Pjg', 'Grade', 'Dus', 'Shading', 'PO', 'Keterangan'];
+            
+            newHeaders.forEach(headText => {
+                const th = document.createElement('th');
+                th.className = "p-3 bg-emerald-700 whitespace-nowrap"; // Warna beda agar terlihat ini kolom terjemahan
+                th.innerText = headText;
+                trHeader.appendChild(th);
+            });
+
+            // 2. Tambah Sel Kolom Kosong ke Semua Baris yang Sudah Ada
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(tr => {
+                // Disini nantinya logika pemecahan text qrcode (Regex/Split) akan diletakkan
+                for(let i=0; i<10; i++) {
+                    const td = document.createElement('td');
+                    td.className = "p-3 text-gray-500 whitespace-nowrap text-sm";
+                    td.innerHTML = `<span class="bg-gray-100 px-2 py-1 rounded animate-pulse">Memproses...</span>`;
+                    tr.appendChild(td);
+                }
+            });
+
+            isTranslated = true;
+            
+            // Ubah tampilan tombol
+            btnTerjemahkan.innerHTML = `<i data-lucide="check-circle" class="w-6 h-6"></i> TERJEMAHAN SELESAI`;
+            btnTerjemahkan.classList.replace('bg-emerald-600', 'bg-slate-700');
+            btnTerjemahkan.classList.replace('hover:bg-emerald-700', 'hover:bg-slate-800');
+            lucide.createIcons();
+            
+            // HINT UNTUK FASE BERIKUTNYA
+            setTimeout(() => {
+                alert("Tabel berhasil diperluas! Logika pemecahan string QRCode menjadi data spesifik akan dikerjakan di fase berikutnya.");
+            }, 500);
+        });
+
+    </script>
+</body>
+</html>
