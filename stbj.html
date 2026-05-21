@@ -7,6 +7,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Agar tabel rapi saat horizontal scroll */
+        .table-container { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans text-gray-800">
 
@@ -17,7 +21,7 @@
         <h1 class="font-bold text-lg text-blue-700 uppercase tracking-wide">Menu STBJ</h1>
     </header>
 
-    <main class="p-4 md:p-6 max-w-5xl mx-auto">
+    <main class="p-4 md:p-6 max-w-[95%] mx-auto">
         
         <div id="view-menu" class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div onclick="bukaScanItem()" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer flex items-center gap-4 transition active:scale-95">
@@ -54,7 +58,7 @@
             
             <div class="flex justify-between items-center mb-2">
                 <h2 class="font-bold text-xl flex items-center gap-2"><i data-lucide="scan-barcode" class="w-6 h-6 text-blue-600"></i> Scan Per Item</h2>
-                <button onclick="kembaliKeMenu()" class="text-sm font-bold text-gray-500 hover:text-gray-800">Batal</button>
+                <button onclick="kembaliKeMenu()" class="text-sm font-bold text-gray-500 hover:text-gray-800 bg-gray-200 px-3 py-1 rounded-md">Kembali</button>
             </div>
 
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 space-y-4">
@@ -68,15 +72,17 @@
                 <div>
                     <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Input QR Code</label>
                     <form id="form-scan" class="flex gap-2">
-                        <input type="text" id="input-qrcode" class="flex-1 p-3 border-2 border-gray-300 rounded-lg outline-none focus:border-blue-500 text-sm" placeholder="Tap disini dan masukkan kode..." autocomplete="off">
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 rounded-lg font-bold shadow-md transition active:scale-95">Input</button>
+                        <input type="text" id="input-qrcode" class="flex-1 p-3 border-2 border-gray-300 rounded-lg outline-none focus:border-blue-500 text-sm" placeholder="Scan atau ketik kode (gunakan ; pemisah)..." autocomplete="off">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 rounded-lg font-bold shadow-md transition active:scale-95 flex items-center gap-2">
+                            <i data-lucide="corner-down-left" class="w-5 h-5"></i>
+                        </button>
                     </form>
-                    <p class="text-[10px] text-gray-400 mt-1">*Bisa input satu-satu, scan alat, atau paste banyak kode sekaligus.</p>
+                    <p class="text-[10px] text-gray-400 mt-1">*Pisahkan banyak kode dengan tombol <b>Enter</b> atau <b>Titik Koma (;)</b></p>
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div class="overflow-x-auto w-full">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
+                <div class="table-container overflow-x-auto w-full">
                     <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-stbj">
                         <thead>
                             <tr class="bg-slate-800 text-white uppercase text-xs font-bold" id="tr-header">
@@ -93,7 +99,7 @@
                 
                 <div id="empty-state" class="p-8 text-center text-gray-400">
                     <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
-                    <p class="text-sm font-medium">Belum ada QR Code yang di-scan.</p>
+                    <p class="text-sm font-medium">Belum ada data QR Code.</p>
                 </div>
             </div>
 
@@ -110,53 +116,35 @@
         lucide.createIcons();
 
         // KONEKSI SUPABASE
-        const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
+        const SUPABASE_URL = 'ISI_URL_SUPABASE_ANDA_DISINI';
+        const SUPABASE_KEY = 'ISI_ANON_KEY_SUPABASE_ANDA_DISINI';
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // VARIABEL STATE
-        const viewMenu = document.getElementById('view-menu');
-        const viewScan = document.getElementById('view-scan');
-        const inputQr = document.getElementById('input-qrcode');
-        const selectTroli = document.getElementById('select-troli');
-        const tbody = document.getElementById('tbody-stbj');
-        const emptyState = document.getElementById('empty-state');
+        // VARIABEL DOM
+        const viewMenu = document.getElementById('view-menu'), viewScan = document.getElementById('view-scan');
+        const inputQr = document.getElementById('input-qrcode'), selectTroli = document.getElementById('select-troli');
+        const tbody = document.getElementById('tbody-stbj'), emptyState = document.getElementById('empty-state');
         const btnTerjemahkan = document.getElementById('btn-terjemahkan');
         
         let rowCount = 0;
-        let isTranslated = false; // Status apakah tabel sudah diperluas kolomnya
+        let isTranslated = false;
 
-        // CEK SESI LOGIN
+        // LOAD AWAL
         window.onload = async () => {
             if (!localStorage.getItem('user_session')) { window.location.href = 'index.html'; return; }
             await loadTroli();
         };
 
-        // FUNGSI GANTI TAMPILAN
-        function bukaScanItem() {
-            viewMenu.classList.add('hidden');
-            viewScan.classList.remove('hidden');
-            inputQr.focus(); // Otomatis fokus ke input untuk siap scan
-        }
-        function kembaliKeMenu() {
-            viewScan.classList.add('hidden');
-            viewMenu.classList.remove('hidden');
-        }
+        function bukaScanItem() { viewMenu.classList.add('hidden'); viewScan.classList.remove('hidden'); inputQr.focus(); }
+        function kembaliKeMenu() { viewScan.classList.add('hidden'); viewMenu.classList.remove('hidden'); }
 
-        // AMBIL DATA TROLI DARI SUPABASE
         async function loadTroli() {
             const { data, error } = await db.from('master_1').select('nama_troli').order('nama_troli', { ascending: true });
             selectTroli.innerHTML = '<option value="">-- Pilih Troli --</option>';
-            if(data) {
-                data.forEach(troli => {
-                    selectTroli.innerHTML += `<option value="${troli.nama_troli}">${troli.nama_troli}</option>`;
-                });
-            } else {
-                selectTroli.innerHTML = '<option value="">Gagal memuat Troli</option>';
-            }
+            if(data) data.forEach(troli => selectTroli.innerHTML += `<option value="${troli.nama_troli}">${troli.nama_troli}</option>`);
         }
 
-        // FUNGSI INPUT SCAN
+        // FUNGSI INPUT BARCODE (REVISI 1: PEMISAH TITIK KOMA & ENTER)
         document.getElementById('form-scan').addEventListener('submit', (e) => {
             e.preventDefault();
             const rawInput = inputQr.value.trim();
@@ -165,130 +153,188 @@
             if(!troliDipilih) { alert("Pilih Nama Troli terlebih dahulu!"); inputQr.focus(); return; }
             if(!rawInput) return;
 
-            // Fitur: Mendukung Copy-Paste banyak QRCode sekaligus (dipisah dengan baris baru / Enter)
-            const qrList = rawInput.split(/\r?\n/).filter(q => q.trim() !== '');
+            // Memisahkan berdasarkan baris baru (\n) ATAU titik koma (;)
+            const qrList = rawInput.split(/[\r\n;]+/).map(q => q.trim()).filter(q => q !== '');
             
             qrList.forEach(qrCode => {
-                tambahkanBaris(troliDipilih, qrCode.trim());
+                tambahkanBaris(troliDipilih, qrCode);
             });
 
             inputQr.value = '';
-            inputQr.focus(); // Kembali fokus agar bisa scan berkelanjutan
+            inputQr.focus();
             cekEmptyState();
         });
 
-        // TAMBAH BARIS KE TABEL
+        // FUNGSI ALGORITMA PENERJEMAH BARCODE (REVISI 2 & 3)
+        function jalankanPenerjemah(barcode) {
+            const parts = barcode.split('/');
+            let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', pjg: '-', grade: '-', dus: '-', shading: '-', po: '-', keterangan: '-' };
+
+            try {
+                if (parts.length >= 4) {
+                    // Indeks 0: Nama Item
+                    data.namaItem = parts[0];
+
+                    // Indeks 1: Shading
+                    data.shading = parts[1];
+
+                    // Indeks 2: Panjang, Grade, Dus, Jenis (contoh: 45BC3L)
+                    const p2 = parts[2];
+                    if (p2.length > 0) {
+                        // Jenis Item (Karakter Paling Belakang)
+                        const kodeJenis = p2.slice(-1);
+                        if (kodeJenis === 'P') data.jenisItem = 'Plafon';
+                        else if (kodeJenis === 'L') data.jenisItem = 'List';
+                        else if (kodeJenis === 'W') data.jenisItem = 'WPC';
+                        else data.jenisItem = kodeJenis;
+
+                        // Panjang (Angka di depan)
+                        const matchPjg = p2.match(/^\d+/);
+                        if (matchPjg) {
+                            let angkaPjg = matchPjg[0];
+                            data.pjg = angkaPjg.length === 2 ? `${angkaPjg[0]}.${angkaPjg[1]} M` : `${angkaPjg} M`;
+                            
+                            // Grade & Dus
+                            let startIndex = angkaPjg.length;
+                            if (startIndex < p2.length - 1) {
+                                let kodeGrade = p2.charAt(startIndex);
+                                if (kodeGrade === 'B') data.grade = 'Bagus';
+                                else if (kodeGrade === 'A') data.grade = 'Grade A';
+                                else if (kodeGrade === '-') data.grade = '';
+                                else data.grade = kodeGrade;
+                                
+                                // Dus (Karakter antara Grade dan Jenis)
+                                data.dus = p2.substring(startIndex + 1, p2.length - 1);
+                            }
+                        }
+                    }
+
+                    // Indeks 3: Tgl, Mesin, Shift, PO (contoh: 14162R212)
+                    const p3 = parts[3];
+                    if (p3.length >= 5) {
+                        const dayOfYear = parseInt(p3.substring(0, 3));
+                        // Membalikkan tahun (misal 62 dibalik jadi 26 -> 2026)
+                        const yearRev = p3.substring(3, 5);
+                        const realYear = parseInt('20' + yearRev.split('').reverse().join(''));
+                        
+                        // Konversi Hari ke Tanggal Normal
+                        const dateObj = new Date(realYear, 0); // Set ke 1 Januari tahun tsb
+                        dateObj.setDate(dayOfYear);
+                        
+                        const dd = String(dateObj.getDate()).padStart(2, '0');
+                        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                        data.tglProduksi = `${dd}/${mm}/${dateObj.getFullYear()}`;
+
+                        // Mesin, Shift, PO
+                        if (p3.length >= 8) {
+                            data.mesin = p3.substring(5, 7);
+                            data.shift = p3.substring(7, 8);
+                            data.po = p3.substring(8);
+                        }
+                    }
+                    
+                    // Indeks 4: Keterangan / Serial (opsional)
+                    if (parts.length >= 5) data.keterangan = parts[4];
+                } else {
+                    data.keterangan = "Format Salah";
+                }
+            } catch (err) {
+                data.keterangan = "Error Parse";
+            }
+
+            return data;
+        }
+
+        // TAMBAH BARIS
         function tambahkanBaris(troli, qrcode) {
             rowCount++;
             const tr = document.createElement('tr');
             tr.className = "border-b border-gray-100 hover:bg-blue-50 transition";
             tr.id = `row-${rowCount}`;
 
-            // Kolom dasar
-            let kolomHTML = `
+            let htmlString = `
                 <td class="p-3 text-center">
-                    <button onclick="hapusBaris('row-${rowCount}')" class="text-red-500 hover:bg-red-100 p-1.5 rounded-md transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    <button onclick="hapusBaris('row-${rowCount}')" class="text-red-500 hover:bg-red-200 p-1.5 rounded-md transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                 </td>
                 <td class="p-3 text-center font-bold text-gray-500 row-number">${rowCount}</td>
                 <td class="p-3 font-semibold text-blue-700">${troli}</td>
-                <td class="p-3 font-mono text-gray-800">${qrcode}</td>
+                <td class="p-3 font-mono text-gray-800 qr-text">${qrcode}</td>
             `;
 
-            // Jika sudah di-terjemahkan, tambahkan kolom kosong sementara untuk baris baru ini
+            // Jika tombol Terjemahkan sudah diklik sebelumnya, baris baru langsung otomatis diterjemahkan!
             if(isTranslated) {
-                kolomHTML += `
-                    <td class="p-3 text-gray-400 italic">...</td>
-                    <td class="p-3 text-gray-400 italic">...</td>
-                    <td class="p-3 text-gray-400 italic">...</td>
-                    <td class="p-3 text-gray-400 italic">...</td>
-                    <td class="p-3 text-gray-400 italic">...</td>
-                    <td class="p-3 text-gray-400 italic">...</td>
-                    <td class="p-3 text-gray-400 italic">...</td>
-                    <td class="p-3 text-gray-400 italic">...</td>
-                    <td class="p-3 text-gray-400 italic">...</td>
-                    <td class="p-3 text-gray-400 italic">...</td>
-                `;
+                const h = jalankanPenerjemah(qrcode);
+                htmlString += _generateKolomTerjemahan(h);
             }
 
-            tr.innerHTML = kolomHTML;
-            tbody.prepend(tr); // Masukkan di paling atas (agar hasil scan terbaru mudah dilihat)
+            tr.innerHTML = htmlString;
+            tbody.prepend(tr);
             
-            // Re-inisialisasi icon untuk baris baru
             lucide.createIcons();
-            updateNomorUrut(); // Perbaiki nomor urut karena dimasukkan dari atas
-        }
-
-        // HAPUS BARIS
-        window.hapusBaris = (rowId) => {
-            document.getElementById(rowId).remove();
             updateNomorUrut();
-            cekEmptyState();
-            inputQr.focus();
-        };
-
-        // PERBAIKI NOMOR URUT SAAT DIHAPUS / DITAMBAH (Agar rapi 1,2,3 dari atas ke bawah)
-        function updateNomorUrut() {
-            const rows = tbody.querySelectorAll('tr');
-            rowCount = rows.length;
-            // Penomoran terbalik karena data masuk (prepend) dari atas
-            let counter = rowCount;
-            rows.forEach(tr => {
-                tr.querySelector('.row-number').innerText = counter;
-                counter--;
-            });
         }
 
-        // CEK APAKAH TABEL KOSONG
-        function cekEmptyState() {
-            if(tbody.children.length > 0) {
-                emptyState.classList.add('hidden');
-                btnTerjemahkan.disabled = false;
-            } else {
-                emptyState.classList.remove('hidden');
-                btnTerjemahkan.disabled = true;
-            }
+        function _generateKolomTerjemahan(h) {
+            return `
+                <td class="p-3 text-gray-700">${h.tglProduksi}</td>
+                <td class="p-3 text-gray-700">${h.mesin}</td>
+                <td class="p-3 text-gray-700">${h.shift}</td>
+                <td class="p-3 text-blue-700 font-bold bg-blue-50/50">${h.jenisItem}</td>
+                <td class="p-3 font-semibold">${h.namaItem}</td>
+                <td class="p-3 text-gray-700">${h.pjg}</td>
+                <td class="p-3 text-gray-700">${h.grade}</td>
+                <td class="p-3 text-gray-700">${h.dus}</td>
+                <td class="p-3 text-gray-700">${h.shading}</td>
+                <td class="p-3 text-gray-700 font-bold">${h.po}</td>
+                <td class="p-3 text-orange-600">${h.keterangan}</td>
+            `;
         }
 
-        // FUNGSI TERJEMAHKAN QR CODE (MEMPERLUAS TABEL)
+        // KLIK TOMBOL TERJEMAHKAN SEMUA
         btnTerjemahkan.addEventListener('click', () => {
-            if(isTranslated) return; // Mencegah double click
+            if(isTranslated) return;
             
-            // 1. Tambah Header Kolom Baru
+            // 1. Tambah Header (Jenis Item diletakkan sebelum Nama Item)
             const trHeader = document.getElementById('tr-header');
-            const newHeaders = ['Tgl Produksi', 'Mesin', 'Shift', 'Nama Item', 'Pjg', 'Grade', 'Dus', 'Shading', 'PO', 'Keterangan'];
+            const newHeaders = ['Tgl Produksi', 'Mesin', 'Shift', 'Jenis Item', 'Nama Item', 'Pjg', 'Grade', 'Dus', 'Shading', 'PO', 'Keterangan'];
             
             newHeaders.forEach(headText => {
                 const th = document.createElement('th');
-                th.className = "p-3 bg-emerald-700 whitespace-nowrap"; // Warna beda agar terlihat ini kolom terjemahan
+                // Beri warna khusus pada header Jenis Item agar menonjol
+                th.className = headText === 'Jenis Item' ? "p-3 bg-blue-600 text-white whitespace-nowrap" : "p-3 bg-slate-700 text-white whitespace-nowrap border-l border-slate-600";
                 th.innerText = headText;
                 trHeader.appendChild(th);
             });
 
-            // 2. Tambah Sel Kolom Kosong ke Semua Baris yang Sudah Ada
+            // 2. Terjemahkan Baris yang sudah ada
             const rows = tbody.querySelectorAll('tr');
             rows.forEach(tr => {
-                // Disini nantinya logika pemecahan text qrcode (Regex/Split) akan diletakkan
-                for(let i=0; i<10; i++) {
-                    const td = document.createElement('td');
-                    td.className = "p-3 text-gray-500 whitespace-nowrap text-sm";
-                    td.innerHTML = `<span class="bg-gray-100 px-2 py-1 rounded animate-pulse">Memproses...</span>`;
-                    tr.appendChild(td);
-                }
+                const qrText = tr.querySelector('.qr-text').innerText;
+                const hasil = jalankanPenerjemah(qrText);
+                
+                // Ubah string HTML menjadi element dan masukkan ke TR
+                tr.insertAdjacentHTML('beforeend', _generateKolomTerjemahan(hasil));
             });
 
             isTranslated = true;
             
-            // Ubah tampilan tombol
             btnTerjemahkan.innerHTML = `<i data-lucide="check-circle" class="w-6 h-6"></i> TERJEMAHAN SELESAI`;
             btnTerjemahkan.classList.replace('bg-emerald-600', 'bg-slate-700');
             btnTerjemahkan.classList.replace('hover:bg-emerald-700', 'hover:bg-slate-800');
+            btnTerjemahkan.disabled = true;
             lucide.createIcons();
-            
-            // HINT UNTUK FASE BERIKUTNYA
-            setTimeout(() => {
-                alert("Tabel berhasil diperluas! Logika pemecahan string QRCode menjadi data spesifik akan dikerjakan di fase berikutnya.");
-            }, 500);
         });
+
+        // UTILITAS TABEL
+        window.hapusBaris = (rowId) => { document.getElementById(rowId).remove(); updateNomorUrut(); cekEmptyState(); inputQr.focus(); };
+        function updateNomorUrut() {
+            const rows = tbody.querySelectorAll('tr'); rowCount = rows.length; let counter = rowCount;
+            rows.forEach(tr => { tr.querySelector('.row-number').innerText = counter; counter--; });
+        }
+        function cekEmptyState() {
+            if(tbody.children.length > 0) { emptyState.classList.add('hidden'); if(!isTranslated) btnTerjemahkan.disabled = false; } 
+            else { emptyState.classList.remove('hidden'); btnTerjemahkan.disabled = true; }
+        }
 
     </script>
 </body>
