@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WMS - Data Control</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
         :root { --bg-main: #f8fafc; --bg-box: #ffffff; --text-main: #1f2937; --border-color: #e2e8f0; }
         body[data-bg="dark"] { --bg-main: #0f172a; --bg-box: #1e293b; --text-main: #f8fafc; --border-color: #334155; }
@@ -20,7 +22,7 @@
 
     <header class="card-dynamic shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b">
         <div class="flex items-center gap-3">
-            <button onclick="history.back()" class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full transition cursor-pointer"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+            <button onclick="history.back()" class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full transition cursor-pointer active:scale-95"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
             <h1 class="font-bold text-lg text-blue-600 uppercase tracking-wide">Data Control</h1>
         </div>
     </header>
@@ -30,7 +32,7 @@
         <div class="card-dynamic p-5 rounded-xl shadow-sm border flex flex-col md:flex-row gap-4 items-center justify-between">
             <div class="w-full md:w-1/2">
                 <label class="block text-xs font-bold uppercase mb-1 opacity-70">Pilih Kategori Tabel</label>
-                <select id="kategori-select" onchange="loadDataKategori()" class="input-dynamic w-full p-3 border-2 border-blue-400 rounded-lg font-bold text-blue-600 outline-none cursor-pointer">
+                <select id="kategori-select" onchange="loadDataKategori()" class="input-dynamic w-full p-3 border-2 border-blue-400 rounded-lg font-bold text-blue-600 outline-none cursor-pointer transition">
                     <option value="nama_troli">Tabel: Nama Troli</option>
                     <option value="mesin">Tabel: Mesin</option>
                     <option value="shift">Tabel: Shift</option>
@@ -42,102 +44,33 @@
                 </select>
             </div>
             <div class="w-full md:w-1/2 flex gap-2">
-                <input type="text" id="input-baru" class="input-dynamic flex-1 p-3 border-2 rounded-lg font-bold uppercase outline-none" placeholder="Ketik Data Baru...">
-                <button onclick="tambahData()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 rounded-lg font-bold shadow transition flex items-center gap-2"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                <input type="text" id="input-baru" class="input-dynamic flex-1 p-3 border-2 rounded-lg font-bold uppercase outline-none focus:border-blue-500 transition" placeholder="Ketik Data Baru..." autocomplete="off">
+                <button id="btn-tambah" onclick="tambahData()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 rounded-lg font-bold shadow transition flex items-center justify-center gap-2 cursor-pointer active:scale-95"><i data-lucide="plus" class="w-5 h-5"></i></button>
             </div>
         </div>
 
         <div class="card-dynamic rounded-xl shadow-sm border overflow-hidden">
             <div class="p-4 border-b border-inherit flex justify-between items-center bg-black/5">
-                <h3 class="font-bold uppercase" id="tabel-judul">Daftar Data</h3>
-                <span id="data-count" class="text-xs font-bold bg-blue-100 text-blue-700 px-3 py-1 rounded-full">0 Data</span>
+                <h3 class="font-bold uppercase tracking-wider" id="tabel-judul">Daftar Data</h3>
+                <span id="data-count" class="text-xs font-bold bg-blue-100 text-blue-700 px-3 py-1 rounded-full border border-blue-200">0 Data</span>
             </div>
             <div class="overflow-x-auto w-full max-h-[60vh]">
                 <table class="w-full text-left text-sm whitespace-nowrap">
-                    <thead>
-                        <tr class="bg-blue-600 text-white uppercase text-xs">
+                    <thead class="bg-blue-600 text-white uppercase text-xs sticky top-0 z-10">
+                        <tr>
                             <th class="p-3 w-12 text-center">Urutan</th>
                             <th class="p-3">Nilai Data</th>
                             <th class="p-3 w-20 text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-master">
-                        <tr><td colspan="3" class="text-center p-4">Memuat...</td></tr>
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
         </div>
     </main>
 
-    <script>
-        lucide.createIcons();
-        document.body.setAttribute('data-bg', localStorage.getItem('app_bg') || 'light');
-        
-        const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
-        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    <script src="data_control_logic.js"></script>
 
-        let currentKolom = 'nama_troli';
-
-        window.onload = () => { loadDataKategori(); };
-
-        async function loadDataKategori() {
-            currentKolom = document.getElementById('kategori-select').value;
-            const judul = document.getElementById('kategori-select').options[document.getElementById('kategori-select').selectedIndex].text;
-            document.getElementById('tabel-judul').innerText = judul;
-            const tbody = document.getElementById('tbody-master');
-            tbody.innerHTML = `<tr><td colspan="3" class="text-center p-4">Memuat data...</td></tr>`;
-
-            // Ambil id dan kolom spesifik, urutkan berdasarkan id agar urutan tidak berantakan
-            const { data, error } = await db.from('master_1').select(`id, ${currentKolom}`).order('id', { ascending: true });
-            
-            if (error) { tbody.innerHTML = `<tr><td colspan="3" class="text-center text-red-500">Error: ${error.message}</td></tr>`; return; }
-            
-            // Filter hanya data yang ada isinya (tidak null / kosong)
-            const filteredData = data.filter(r => r[currentKolom] && r[currentKolom].trim() !== '');
-            document.getElementById('data-count').innerText = `${filteredData.length} Baris`;
-            
-            tbody.innerHTML = '';
-            if(filteredData.length === 0) { tbody.innerHTML = `<tr><td colspan="3" class="text-center p-4 opacity-50">Tabel Kosong.</td></tr>`; return; }
-
-            filteredData.forEach((r, index) => {
-                tbody.innerHTML += `
-                    <tr class="border-b border-inherit hover:bg-blue-500/10 transition">
-                        <td class="p-3 text-center font-bold opacity-50">${index + 1}</td>
-                        <td class="p-3 font-bold text-lg tracking-wide">${r[currentKolom]}</td>
-                        <td class="p-3 text-center">
-                            <button onclick="hapusData(${r.id})" class="text-red-500 hover:text-red-700 bg-red-100 p-2 rounded-lg cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                        </td>
-                    </tr>`;
-            });
-            lucide.createIcons();
-        }
-
-        async function tambahData() {
-            const inputVal = document.getElementById('input-baru').value.trim().toUpperCase();
-            if(!inputVal) return;
-
-            document.getElementById('input-baru').value = 'Menyimpan...';
-
-            // Logika Cerdas: Cari baris yang kolom ini masih kosong (NULL), jika ada, UPDATE baris itu. Jika penuh semua, INSERT baris baru.
-            const { data: slotKosong } = await db.from('master_1').select('id').is(currentKolom, null).limit(1);
-
-            if(slotKosong && slotKosong.length > 0) {
-                await db.from('master_1').update({ [currentKolom]: inputVal }).eq('id', slotKosong[0].id);
-            } else {
-                await db.from('master_1').insert([{ [currentKolom]: inputVal }]);
-            }
-
-            document.getElementById('input-baru').value = '';
-            loadDataKategori();
-        }
-
-        window.hapusData = async (id) => {
-            if(!confirm("Hapus data ini?")) return;
-            // Kita cukup jadikan nilai kolomnya NULL, JANGAN delete row, agar kolom lain di baris tsb tidak ikut terhapus!
-            await db.from('master_1').update({ [currentKolom]: null }).eq('id', id);
-            loadDataKategori();
-        };
-    </script>
 </body>
 </html>
