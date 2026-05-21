@@ -24,10 +24,7 @@
         <div id="view-menu" class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div onclick="bukaScanItem()" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer flex items-center gap-4 transition active:scale-95">
                 <div class="bg-blue-100 p-3 rounded-lg"><i data-lucide="scan-barcode" class="w-8 h-8 text-blue-600"></i></div>
-                <div>
-                    <h3 class="font-bold text-lg">Scan per item</h3>
-                    <p class="text-xs text-gray-500">Scan per dus atau ketik qrcode</p>
-                </div>
+                <div><h3 class="font-bold text-lg">Scan per item</h3><p class="text-xs text-gray-500">Scan per dus atau ketik qrcode</p></div>
             </div>
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer flex items-center gap-4 transition active:scale-95">
                 <div class="bg-emerald-100 p-3 rounded-lg"><i data-lucide="file-down" class="w-8 h-8 text-emerald-600"></i></div>
@@ -53,7 +50,7 @@
                 <div>
                     <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Pilih Troli</label>
                     <select id="select-troli" class="w-full p-3 border-2 border-blue-200 rounded-lg outline-none focus:border-blue-500 bg-blue-50 text-blue-800 font-bold text-sm">
-                        <option value="">-- Memuat Troli... --</option>
+                        <option value="">-- Memuat Data Master... --</option>
                     </select>
                 </div>
                 <div>
@@ -74,7 +71,7 @@
                                 <th class="p-3 w-12 text-center">No</th>
                                 <th class="p-3">Nama Troli</th>
                                 <th class="p-3 border-r border-slate-600">Text QRCode</th>
-                                </tr>
+                            </tr>
                         </thead>
                         <tbody id="tbody-stbj"></tbody>
                     </table>
@@ -101,28 +98,45 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // DATA MASTER DARI DATABASE
+        let masterData = { mesin: [], item: [], dus: [], po: [] };
+        let isTranslated = false;
+        let rowCount = 0;
+
         const viewMenu = document.getElementById('view-menu'), viewScan = document.getElementById('view-scan');
         const inputQr = document.getElementById('input-qrcode'), selectTroli = document.getElementById('select-troli');
         const tbody = document.getElementById('tbody-stbj'), emptyState = document.getElementById('empty-state');
         const btnTerjemahkan = document.getElementById('btn-terjemahkan');
-        
-        let rowCount = 0;
-        let isTranslated = false;
 
         window.onload = async () => {
             if (!localStorage.getItem('user_session')) { window.location.href = 'index.html'; return; }
-            await loadTroli();
+            await loadMasterData();
         };
 
         function bukaScanItem() { viewMenu.classList.add('hidden'); viewScan.classList.remove('hidden'); inputQr.focus(); }
         function kembaliKeMenu() { viewScan.classList.add('hidden'); viewMenu.classList.remove('hidden'); }
 
-        async function loadTroli() {
-            const { data } = await db.from('master_1').select('nama_troli').order('nama_troli', { ascending: true });
+        // MENGAMBIL SELURUH DATA MASTER_1
+        async function loadMasterData() {
+            const { data, error } = await db.from('master_1').select('*').order('id', { ascending: true });
             selectTroli.innerHTML = '<option value="">-- Pilih Troli --</option>';
-            if(data) data.forEach(troli => selectTroli.innerHTML += `<option value="${troli.nama_troli}">${troli.nama_troli}</option>`);
+            
+            if(data) {
+                data.forEach(row => {
+                    // Isi Dropdown Troli
+                    if(row.nama_troli && !selectTroli.querySelector(`option[value="${row.nama_troli}"]`)) {
+                        selectTroli.innerHTML += `<option value="${row.nama_troli}">${row.nama_troli}</option>`;
+                    }
+                    // Isi Array Master (Hindari Duplikat)
+                    if(row.mesin && !masterData.mesin.includes(row.mesin)) masterData.mesin.push(row.mesin);
+                    if(row.nama_item && !masterData.item.includes(row.nama_item)) masterData.item.push(row.nama_item);
+                    if(row.dus && !masterData.dus.includes(row.dus)) masterData.dus.push(row.dus);
+                    if(row.po && !masterData.po.includes(row.po)) masterData.po.push(row.po);
+                });
+            } else { selectTroli.innerHTML = '<option value="">Gagal muat data</option>'; }
         }
 
+        // FUNGSI INPUT BARCODE (TITIK KOMA PEMISAH)
         document.getElementById('form-scan').addEventListener('submit', (e) => {
             e.preventDefault();
             const rawInput = inputQr.value.trim();
@@ -136,73 +150,143 @@
             inputQr.value = ''; inputQr.focus(); cekEmptyState();
         });
 
-        // -------------------------------------------------------------
-        // ALGORITMA PENERJEMAH (REVISI: FORMAT VALIDASI MASTER)
-        // -------------------------------------------------------------
+        // ------------------------------------------------------------------
+        // FUNGSI REVERSE-ENGINEERING (MENCIPTAKAN KODE DARI NAMA MASTER)
+        // ------------------------------------------------------------------
+        
+        // 1. Rumus Mesin (Misal: MPL 01 -> L1)
+        function buatKodeMesin(namaMesin) {
+            try {
+                let kata = namaMesin.split(' ');
+                return kata[0].slice(-1) + parseInt(kata[1], 10);
+            } catch(e) { return namaMesin; }
+        }
+
+        // 2. Rumus Nama Item (Misal: Glossy Silver 101 Matte -> GLSYS101M)
+        function buatKodeItem(namaItem) {
+            let words = namaItem.toUpperCase().split(/\s+/);
+            let res = "";
+            for(let w of words) {
+                if(w === 'GLOSSY') res += 'GLSY';
+                else if(w === 'GOLD') res += 'GD';
+                else if(w === 'SILVER') res += 'S';
+                else if(w === 'MATTE') res += 'M';
+                else if(w.match(/^[0-9]+$/)) res += w; // Jika hanya angka, pertahankan
+                else {
+                    let hurufSaja = w.replace(/[^A-Z]/g, '');
+                    if(hurufSaja.length > 0) res += hurufSaja.charAt(0); // Ambil huruf depan
+                }
+            }
+            return res;
+        }
+
+        // ------------------------------------------------------------------
+        // ALGORITMA UTAMA PENERJEMAH (Mencocokkan Kode dengan Data Master)
+        // ------------------------------------------------------------------
         function jalankanPenerjemah(barcode) {
             const parts = barcode.split('/');
             let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', pjg: '-', grade: '-', dus: '-', shading: '-', po: '-' };
 
             try {
                 if (parts.length >= 4) {
-                    data.namaItem = parts[0];
+                    
+                    // ================= NAMA ITEM =================
+                    let rawItemCode = parts[0]; 
+                    data.namaItem = rawItemCode; // Fallback jika tidak ketemu
+                    for(let i=0; i<masterData.item.length; i++) {
+                        if(buatKodeItem(masterData.item[i]) === rawItemCode) {
+                            data.namaItem = masterData.item[i];
+                            break;
+                        }
+                    }
+
+                    // ================= SHADING =================
                     data.shading = parts[1];
 
+                    // ================= PJG, GRADE, DUS, JENIS =================
                     const p2 = parts[2];
                     if (p2.length > 0) {
+                        
+                        // 1. Jenis Item (Karakter Terakhir)
                         const kodeJenis = p2.slice(-1);
                         if (kodeJenis === 'P') data.jenisItem = 'Plafon';
                         else if (kodeJenis === 'L') data.jenisItem = 'List';
                         else if (kodeJenis === 'W') data.jenisItem = 'WPC';
                         else data.jenisItem = kodeJenis;
 
+                        // 2. Panjang (Angka di Depan)
                         const matchPjg = p2.match(/^\d+/);
                         if (matchPjg) {
                             let angkaPjg = matchPjg[0];
-                            // REVISI: Hapus spasi pada Pjg, cth: 4.5M atau 4M
                             data.pjg = angkaPjg.length === 2 ? `${angkaPjg[0]}.${angkaPjg[1]}M` : `${angkaPjg}M`;
                             
+                            // 3. Grade
                             let startIndex = angkaPjg.length;
                             if (startIndex < p2.length - 1) {
                                 let kodeGrade = p2.charAt(startIndex);
-                                // REVISI: 'B' jadi 'Bagus', 'A' jadi 'A', '-' jadi kosong
                                 if (kodeGrade === 'B') data.grade = 'Bagus';
                                 else if (kodeGrade === 'A') data.grade = 'A';
-                                else if (kodeGrade === '-') data.grade = '';
                                 else data.grade = kodeGrade;
                                 
-                                data.dus = p2.substring(startIndex + 1, p2.length - 1);
+                                // 4. Dus (Karakter antara Grade dan Jenis)
+                                let rawDusCode = p2.substring(startIndex + 1, p2.length - 1);
+                                data.dus = rawDusCode; // Fallback
+                                for(let i=0; i<masterData.dus.length; i++) {
+                                    let expectedCode = masterData.dus[i].charAt(0).toUpperCase() + (i + 1);
+                                    if(expectedCode === rawDusCode) {
+                                        data.dus = masterData.dus[i];
+                                        break;
+                                    }
+                                }
                             }
                         }
                     }
 
+                    // ================= TGL, MESIN, SHIFT, PO =================
                     const p3 = parts[3];
                     if (p3.length >= 5) {
+                        
+                        // 1. Tanggal Produksi
                         const dayOfYear = parseInt(p3.substring(0, 3));
                         const yearRev = p3.substring(3, 5);
                         const realYear = parseInt('20' + yearRev.split('').reverse().join(''));
-                        
-                        const dateObj = new Date(realYear, 0); 
-                        dateObj.setDate(dayOfYear);
+                        const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
                         
                         const dd = String(dateObj.getDate()).padStart(2, '0');
                         const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
                         data.tglProduksi = `${dd}/${mm}/${dateObj.getFullYear()}`;
 
                         if (p3.length >= 8) {
-                            data.mesin = p3.substring(5, 7);
+                            // 2. Mesin
+                            let rawMesinCode = p3.substring(5, 7);
+                            data.mesin = rawMesinCode; // Fallback
+                            for(let i=0; i<masterData.mesin.length; i++) {
+                                if(buatKodeMesin(masterData.mesin[i]) === rawMesinCode) {
+                                    data.mesin = masterData.mesin[i];
+                                    break;
+                                }
+                            }
+
+                            // 3. Shift
                             data.shift = p3.substring(7, 8);
-                            data.po = p3.substring(8);
+                            
+                            // 4. PO
+                            let rawPO = p3.substring(8);
+                            if(rawPO) {
+                                let poIndex = parseInt(rawPO) - 1;
+                                data.po = masterData.po[poIndex] || rawPO;
+                            }
                         }
                     }
-                    // REVISI: Indeks [4] (Nomor Serial) dibuang/tidak diproses
+                    // BAGIAN 5 (SERIAL) SECARA OTOMATIS DIABAIKAN.
                 }
-            } catch (err) {
-                console.log("Gagal membaca barcode: ", barcode);
-            }
+            } catch (err) { console.log("Gagal membaca barcode: ", barcode); }
             return data;
         }
 
+        // -------------------------------------------------------------
+        // RENDER UI TABEL
+        // -------------------------------------------------------------
         function _generateKolomTerjemahan(h) {
             return `
                 <td class="p-3 text-gray-700">${h.tglProduksi}</td>
@@ -211,7 +295,7 @@
                 <td class="p-3 text-blue-700 font-bold bg-blue-50/50">${h.jenisItem}</td>
                 <td class="p-3 font-semibold">${h.namaItem}</td>
                 <td class="p-3 text-gray-700 font-bold">${h.pjg}</td>
-                <td class="p-3 text-gray-700">${h.grade}</td>
+                <td class="p-3 text-gray-700 font-bold">${h.grade}</td>
                 <td class="p-3 text-gray-700">${h.dus}</td>
                 <td class="p-3 text-gray-700">${h.shading}</td>
                 <td class="p-3 text-gray-700 font-bold">${h.po}</td>
@@ -228,19 +312,13 @@
             tr.id = `row-${rowCount}`;
 
             let htmlString = `
-                <td class="p-3 text-center">
-                    <button onclick="hapusBaris('row-${rowCount}')" class="text-red-500 hover:bg-red-200 p-1.5 rounded-md transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                </td>
+                <td class="p-3 text-center"><button onclick="hapusBaris('row-${rowCount}')" class="text-red-500 hover:bg-red-200 p-1.5 rounded-md transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
                 <td class="p-3 text-center font-bold text-gray-500 row-number">${rowCount}</td>
                 <td class="p-3 font-semibold text-blue-700">${troli}</td>
                 <td class="p-3 font-mono text-gray-800 qr-text border-r border-slate-300">${qrcode}</td>
             `;
 
-            if(isTranslated) {
-                const h = jalankanPenerjemah(qrcode);
-                htmlString += _generateKolomTerjemahan(h);
-            }
-
+            if(isTranslated) htmlString += _generateKolomTerjemahan(jalankanPenerjemah(qrcode));
             tr.innerHTML = htmlString;
             tbody.prepend(tr);
             lucide.createIcons();
