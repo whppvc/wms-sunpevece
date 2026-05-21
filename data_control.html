@@ -19,19 +19,29 @@
         </div>
     </header>
 
-    <main class="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <main class="p-4 md:p-8 max-w-[98%] mx-auto space-y-6">
         
         <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-            <h2 class="text-lg font-bold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="database" class="w-5 h-5 text-blue-600"></i> Tambah Data Master 1</h2>
-            <form id="form-master" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nama Troli</label><input type="text" id="i-troli" class="w-full p-2 border rounded uppercase" placeholder="T-01" required></div>
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Mesin</label><input type="text" id="i-mesin" class="w-full p-2 border rounded uppercase" placeholder="MPL 01" required></div>
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nama Item</label><input type="text" id="i-item" class="w-full p-2 border rounded uppercase" placeholder="GLOSSY..." required></div>
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Grade</label><input type="text" id="i-grade" class="w-full p-2 border rounded uppercase" placeholder="A" required></div>
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Dus</label><input type="text" id="i-dus" class="w-full p-2 border rounded uppercase" placeholder="POLOS" required></div>
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">PO</label><input type="text" id="i-po" class="w-full p-2 border rounded uppercase" placeholder="MADIUN"></div>
-                <div class="md:col-span-3 lg:col-span-6 flex justify-end mt-2">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold shadow transition flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Simpan Data</button>
+            <h2 class="text-lg font-bold mb-4 border-b pb-2 flex items-center gap-2" id="form-title">
+                <i data-lucide="database" class="w-5 h-5 text-blue-600"></i> Tambah Data Master_1
+            </h2>
+            <form id="form-master" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input type="hidden" id="i-id">
+                
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nama Troli</label><input type="text" id="i-troli" class="w-full p-2 border border-gray-300 rounded uppercase outline-none focus:border-blue-500" placeholder="T-01"></div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Mesin</label><input type="text" id="i-mesin" class="w-full p-2 border border-gray-300 rounded uppercase outline-none focus:border-blue-500" placeholder="MPL 01"></div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Shift</label><input type="text" id="i-shift" class="w-full p-2 border border-gray-300 rounded uppercase outline-none focus:border-blue-500" placeholder="1 / 2 / 3"></div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Item Plafon</label><input type="text" id="i-plafon" class="w-full p-2 border border-gray-300 rounded uppercase outline-none focus:border-blue-500" placeholder="GLOSSY..."></div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Item Lis</label><input type="text" id="i-lis" class="w-full p-2 border border-gray-300 rounded uppercase outline-none focus:border-blue-500" placeholder="LIS..."></div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Dus</label><input type="text" id="i-dus" class="w-full p-2 border border-gray-300 rounded uppercase outline-none focus:border-blue-500" placeholder="POLOS"></div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Grade</label><input type="text" id="i-grade" class="w-full p-2 border border-gray-300 rounded uppercase outline-none focus:border-blue-500" placeholder="A / BAGUS"></div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">PO</label><input type="text" id="i-po" class="w-full p-2 border border-gray-300 rounded uppercase outline-none focus:border-blue-500" placeholder="MADIUN"></div>
+                
+                <div class="md:col-span-4 flex justify-end gap-2 mt-2">
+                    <button type="button" id="btn-cancel" onclick="resetForm()" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-bold transition">Batal</button>
+                    <button type="submit" id="btn-submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold shadow transition flex items-center gap-2">
+                        <i data-lucide="save" class="w-4 h-4"></i> <span id="btn-submit-text">Simpan Data</span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -45,18 +55,20 @@
                 <table class="w-full text-left text-sm whitespace-nowrap">
                     <thead>
                         <tr class="bg-slate-800 text-white uppercase text-xs">
-                            <th class="p-3 w-10">No</th>
+                            <th class="p-3 w-10 text-center">No</th>
                             <th class="p-3">Troli</th>
                             <th class="p-3">Mesin</th>
-                            <th class="p-3">Nama Item</th>
-                            <th class="p-3">Grade</th>
+                            <th class="p-3">Shift</th>
+                            <th class="p-3 text-emerald-300">Item Plafon</th>
+                            <th class="p-3 text-orange-300">Item Lis</th>
                             <th class="p-3">Dus</th>
+                            <th class="p-3">Grade</th>
                             <th class="p-3">PO</th>
                             <th class="p-3 text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-master">
-                        <tr><td colspan="8" class="text-center p-4">Memuat data...</td></tr>
+                        <tr><td colspan="10" class="text-center p-4">Memuat data...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -67,7 +79,9 @@
     <script>
         lucide.createIcons();
         
+        // =================================================================
         // MASUKKAN KUNCI SUPABASE ANDA DI SINI
+        // =================================================================
         const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -77,32 +91,54 @@
             await loadMasterData();
         };
 
+        // FUNGSI LOAD DATA
         async function loadMasterData() {
             const tbody = document.getElementById('tbody-master');
+            // Menarik data berdasarkan kolom yang benar sesuai instruksi Anda
             const { data, error } = await db.from('master_1').select('*').order('id', { ascending: false });
             
-            if (error) { tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-500">Error: ${error.message}</td></tr>`; return; }
+            if (error) { 
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center text-red-500 font-bold p-4">Error: ${error.message}</td></tr>`; 
+                return; 
+            }
             
             document.getElementById('data-count').innerText = `${data.length} Data`;
             tbody.innerHTML = '';
             
             if(data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center p-4 text-gray-500">Data Master kosong.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center p-4 text-gray-500">Data Master kosong.</td></tr>`;
                 return;
             }
 
             data.forEach((r, i) => {
+                // Konversi null menjadi string kosong agar tidak "null" di UI atau saat klik Edit
+                const troli = r.nama_troli || '';
+                const mesin = r.mesin || '';
+                const shift = r.shift || '';
+                const plafon = r.nama_item_plafon || '';
+                const lis = r.nama_item_lis || '';
+                const dus = r.dus || '';
+                const grade = r.grade || '';
+                const po = r.po || '';
+
                 tbody.innerHTML += `
                     <tr class="border-b hover:bg-blue-50 transition">
-                        <td class="p-3 font-bold text-gray-500">${i+1}</td>
-                        <td class="p-3 font-bold">${r.nama_troli || '-'}</td>
-                        <td class="p-3">${r.mesin || '-'}</td>
-                        <td class="p-3">${r.nama_item || '-'}</td>
-                        <td class="p-3">${r.grade || '-'}</td>
-                        <td class="p-3">${r.dus || '-'}</td>
-                        <td class="p-3">${r.po || '-'}</td>
-                        <td class="p-3 text-center">
-                            <button onclick="hapusMaster(${r.id})" class="text-red-500 hover:text-red-700 bg-red-100 p-1.5 rounded cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <td class="p-3 text-center font-bold text-gray-500">${i+1}</td>
+                        <td class="p-3 font-bold text-blue-700">${troli}</td>
+                        <td class="p-3 font-semibold">${mesin}</td>
+                        <td class="p-3 text-center">${shift}</td>
+                        <td class="p-3 font-bold">${plafon}</td>
+                        <td class="p-3 font-bold">${lis}</td>
+                        <td class="p-3">${dus}</td>
+                        <td class="p-3">${grade}</td>
+                        <td class="p-3 font-semibold">${po}</td>
+                        <td class="p-3 text-center flex justify-center gap-2">
+                            <button onclick="editMaster(${r.id}, '${troli}', '${mesin}', '${shift}', '${plafon}', '${lis}', '${dus}', '${grade}', '${po}')" class="text-blue-600 hover:text-blue-800 bg-blue-100 p-1.5 rounded cursor-pointer transition" title="Edit">
+                                <i data-lucide="edit" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="hapusMaster(${r.id})" class="text-red-500 hover:text-red-700 bg-red-100 p-1.5 rounded cursor-pointer transition" title="Hapus">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
                         </td>
                     </tr>
                 `;
@@ -110,32 +146,85 @@
             lucide.createIcons();
         }
 
+        // FUNGSI RESET FORM
+        function resetForm() {
+            document.getElementById('form-master').reset();
+            document.getElementById('i-id').value = '';
+            document.getElementById('form-title').innerHTML = '<i data-lucide="database" class="w-5 h-5 text-blue-600"></i> Tambah Data Master_1';
+            document.getElementById('btn-submit-text').innerText = 'Simpan Data';
+            document.getElementById('btn-cancel').classList.add('hidden');
+            lucide.createIcons();
+        }
+
+        // FUNGSI ISI FORM SAAT KLIK EDIT
+        window.editMaster = (id, troli, mesin, shift, plafon, lis, dus, grade, po) => {
+            document.getElementById('i-id').value = id;
+            document.getElementById('i-troli').value = troli;
+            document.getElementById('i-mesin').value = mesin;
+            document.getElementById('i-shift').value = shift;
+            document.getElementById('i-plafon').value = plafon;
+            document.getElementById('i-lis').value = lis;
+            document.getElementById('i-dus').value = dus;
+            document.getElementById('i-grade').value = grade;
+            document.getElementById('i-po').value = po;
+
+            document.getElementById('form-title').innerHTML = '<i data-lucide="edit-3" class="w-5 h-5 text-orange-600"></i> Edit Data Master_1';
+            document.getElementById('btn-submit-text').innerText = 'Update Data';
+            document.getElementById('btn-cancel').classList.remove('hidden');
+            lucide.createIcons();
+            
+            // Scroll otomatis ke atas (ke arah form)
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // FUNGSI SIMPAN / UPDATE (SUBMIT)
         document.getElementById('form-master').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            const editId = document.getElementById('i-id').value;
+            
+            // Menyusun Payload sesuai nama kolom yang baru
             const payload = {
                 nama_troli: document.getElementById('i-troli').value.toUpperCase(),
                 mesin: document.getElementById('i-mesin').value.toUpperCase(),
-                nama_item: document.getElementById('i-item').value.toUpperCase(),
-                grade: document.getElementById('i-grade').value.toUpperCase(),
+                shift: document.getElementById('i-shift').value.toUpperCase(),
+                nama_item_plafon: document.getElementById('i-plafon').value.toUpperCase(),
+                nama_item_lis: document.getElementById('i-lis').value.toUpperCase(),
                 dus: document.getElementById('i-dus').value.toUpperCase(),
+                grade: document.getElementById('i-grade').value.toUpperCase(),
                 po: document.getElementById('i-po').value.toUpperCase()
             };
 
-            const btn = e.target.querySelector('button[type="submit"]');
-            btn.innerHTML = 'Menyimpan...'; btn.disabled = true;
+            const btn = document.getElementById('btn-submit');
+            btn.innerHTML = 'Memproses...'; btn.disabled = true;
 
-            const { error } = await db.from('master_1').insert([payload]);
-            if(error) alert("Gagal Simpan: " + error.message);
-            else {
-                document.getElementById('form-master').reset();
+            let errorMsg = null;
+
+            if (editId) {
+                // Mode Update
+                const { error } = await db.from('master_1').update(payload).eq('id', editId);
+                errorMsg = error;
+            } else {
+                // Mode Tambah Baru
+                const { error } = await db.from('master_1').insert([payload]);
+                errorMsg = error;
+            }
+
+            if(errorMsg) {
+                alert("Gagal Memproses: " + errorMsg.message);
+            } else {
+                resetForm();
                 await loadMasterData();
             }
-            btn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Simpan Data'; btn.disabled = false;
+            
+            btn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> <span id="btn-submit-text">Simpan Data</span>'; 
+            btn.disabled = false;
             lucide.createIcons();
         });
 
+        // FUNGSI HAPUS
         window.hapusMaster = async (id) => {
-            if(!confirm("Yakin ingin menghapus data master ini?")) return;
+            if(!confirm("Yakin ingin menghapus baris data master ini?")) return;
             const { error } = await db.from('master_1').delete().eq('id', id);
             if(error) alert("Gagal Hapus: " + error.message);
             else await loadMasterData();
