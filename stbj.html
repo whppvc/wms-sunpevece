@@ -156,13 +156,14 @@
         }
 
         async function loadInitialData() {
-            const { data: mData } = await db.from('master_1').select('nama_troli, nama_item');
+            const { data: mData } = await db.from('master_1').select('nama_troli, nama_item_plafon, nama_item_lis');
             if(mData) {
                 const sel = document.getElementById('select-troli');
                 sel.innerHTML = '<option value="">-- Pilih Troli --</option>';
                 mData.forEach(r => {
                     if(r.nama_troli && !masterData.troli.includes(r.nama_troli)) { masterData.troli.push(r.nama_troli); sel.innerHTML += `<option value="${r.nama_troli}">${r.nama_troli}</option>`; }
-                    if(r.nama_item && !masterData.item.includes(r.nama_item)) { masterData.item.push(r.nama_item); }
+                    if(r.nama_item_plafon && !masterData.item.includes(r.nama_item_plafon)) { masterData.item.push(r.nama_item_plafon); }
+                    if(r.nama_item_lis && !masterData.item.includes(r.nama_item_lis)) { masterData.item.push(r.nama_item_lis); }
                 });
             }
             const { data: rules } = await db.from('qr_rules').select('*');
