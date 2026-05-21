@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Hasil STBJ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100 p-4">
+    <div class="max-w-[98%] mx-auto bg-white rounded-2xl shadow-lg p-6">
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+            <h1 class="text-2xl font-black text-gray-800">LAPORAN HASIL STBJ</h1>
+            <div class="flex gap-2">
+                <button onclick="window.location.href='stbj.html'" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold">Mulai STBJ</button>
+                <button onclick="salinData()" class="bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold">Salin</button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border">
+            <table class="w-full text-left text-xs whitespace-nowrap" id="main-table">
+                <thead class="bg-gray-800 text-white uppercase">
+                    <tr>
+                        <th class="p-3"><input type="checkbox" id="check-all" onclick="toggleAll(this)"></th>
+                        <th class="p-3">No</th>
+                        <th class="p-3">Troli</th>
+                        <th class="p-3">QR Code</th>
+                        <th class="p-3">Tgl Produksi</th>
+                        <th class="p-3">Mesin</th>
+                        <th class="p-3">Shift</th>
+                        <th class="p-3">Nama Item</th>
+                        <th class="p-3">Pjg</th>
+                        <th class="p-3">Grade</th>
+                        <th class="p-3">Dus</th>
+                        <th class="p-3">Shading</th>
+                        <th class="p-3">PO</th>
+                        <th class="p-3">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="data-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'ISI_URL';
+        const SUPABASE_KEY = 'ISI_KEY';
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        window.onload = async () => {
+            const { data } = await db.from('hasil_stbj').select('*').order('created_at', {ascending: false});
+            const tbody = document.getElementById('data-body');
+            data?.forEach((r, i) => {
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-3"><input type="checkbox" class="row-check" data-id="${r.id}"></td>
+                        <td class="p-3">${i+1}</td>
+                        <td class="p-3 font-bold">${r.troli}</td>
+                        <td class="p-3 font-mono">${r.qrcode}</td>
+                        <td class="p-3">${r.tgl_produksi}</td>
+                        <td class="p-3">${r.mesin}</td>
+                        <td class="p-3">${r.shift}</td>
+                        <td class="p-3 font-bold">${r.nama_item}</td>
+                        <td class="p-3 font-bold">${r.pjg}</td>
+                        <td class="p-3">${r.grade}</td>
+                        <td class="p-3">${r.dus}</td>
+                        <td class="p-3">${r.shading}</td>
+                        <td class="p-3">${r.po}</td>
+                        <td class="p-3"><span class="bg-green-100 text-green-700 px-2 py-1 rounded font-bold">${r.status}</span></td>
+                    </tr>
+                `;
+            });
+        };
+
+        function salinData() {
+            const rows = document.querySelectorAll('.row-check:checked');
+            let text = "Troli\tQR Code\tNama Item\tPjg\tGrade\n";
+            rows.forEach(cb => {
+                const tr = cb.closest('tr');
+                const tds = tr.querySelectorAll('td');
+                text += `${tds[2].innerText}\t${tds[3].innerText}\t${tds[7].innerText}\t${tds[8].innerText}\t${tds[9].innerText}\n`;
+            });
+            navigator.clipboard.writeText(text);
+            alert("Data berhasil disalin! Silakan paste ke Excel/Spreadsheet.");
+        }
+        
+        function toggleAll(source) {
+            document.querySelectorAll('.row-check').forEach(cb => cb.checked = source.checked);
+        }
+    </script>
+</body>
+</html>
