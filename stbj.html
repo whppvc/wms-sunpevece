@@ -22,16 +22,24 @@
                 <div class="bg-blue-100 p-3 rounded-lg"><i data-lucide="scan-barcode" class="w-8 h-8 text-blue-600"></i></div>
                 <div><h3 class="font-bold text-lg">Scan per item</h3><p class="text-xs text-gray-500">Scan per dus atau ketik qrcode</p></div>
             </div>
-            <div class="bg-white p-5 rounded-xl opacity-50 cursor-not-allowed flex items-center gap-4">
-                <div class="bg-gray-200 p-3 rounded-lg"><i data-lucide="file-down" class="w-8 h-8 text-gray-500"></i></div>
-                <div><h3 class="font-bold text-lg">Import CSV</h3><p class="text-xs">Tahap Pengembangan</p></div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer flex items-center gap-4 transition active:scale-95">
+                <div class="bg-emerald-100 p-3 rounded-lg"><i data-lucide="file-down" class="w-8 h-8 text-emerald-600"></i></div>
+                <div><h3 class="font-bold text-lg">Import CSV</h3><p class="text-xs text-gray-500">Masukkan file daftar barcode utk diterjemahkan</p></div>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer flex items-center gap-4 transition active:scale-95">
+                <div class="bg-purple-100 p-3 rounded-lg"><i data-lucide="upload-cloud" class="w-8 h-8 text-purple-600"></i></div>
+                <div><h3 class="font-bold text-lg">Upload file QC & STBJ</h3><p class="text-xs text-gray-500">Download file qc, upload, dan centang satu2</p></div>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer flex items-center gap-4 transition active:scale-95">
+                <div class="bg-orange-100 p-3 rounded-lg"><i data-lucide="file-text" class="w-8 h-8 text-orange-600"></i></div>
+                <div><h3 class="font-bold text-lg">STBJ Lembaran</h3><p class="text-xs text-gray-500">Input lembaran</p></div>
             </div>
         </div>
 
         <div id="view-scan" class="hidden space-y-4">
             <div class="flex justify-between items-center mb-2">
                 <h2 class="font-bold text-xl flex items-center gap-2"><i data-lucide="scan-barcode" class="w-6 h-6 text-blue-600"></i> Scan Per Item</h2>
-                <button onclick="kembaliKeMenu()" class="text-sm font-bold text-gray-500 hover:text-gray-800 bg-gray-200 px-3 py-1 rounded-md">Kembali</button>
+                <button onclick="kembaliKeMenu()" class="text-sm font-bold text-gray-500 hover:text-gray-800 bg-gray-200 px-3 py-1 rounded-md transition">Kembali</button>
             </div>
 
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 space-y-4">
@@ -90,9 +98,12 @@
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let masterData = { mesin: [], item: [], dus: [], po: [] };
-        let kamusKaidah = []; // Akan diisi dari qr_rules
+        let kamusKaidah = []; 
         let isTranslated = false;
-        let rowCount = 0;
+        
+        // Variabel untuk mengatasi bug Hapus Baris
+        let globalRowId = 0; 
+        let rowCount = 0; 
 
         const viewMenu = document.getElementById('view-menu'), viewScan = document.getElementById('view-scan');
         const inputQr = document.getElementById('input-qrcode'), selectTroli = document.getElementById('select-troli');
@@ -108,7 +119,7 @@
         function kembaliKeMenu() { viewScan.classList.add('hidden'); viewMenu.classList.remove('hidden'); }
 
         async function loadData() {
-            // Ambil Master
+            // Ambil Master 1
             const { data: mData } = await db.from('master_1').select('*');
             selectTroli.innerHTML = '<option value="">-- Pilih Troli --</option>';
             if(mData) {
@@ -120,12 +131,12 @@
                     if(row.po && !masterData.po.includes(row.po)) masterData.po.push(row.po);
                 });
             }
-            // Ambil Kaidah QR (Kamus Singkatan)
+            // Ambil Kamus QR
             const { data: rData } = await db.from('qr_rules').select('*');
             if(rData) kamusKaidah = rData;
         }
 
-        // FUNGSI INPUT BARCODE (DENGAN FILTER DUPLIKAT OTOMATIS)
+        // FUNGSI INPUT BARCODE
         document.getElementById('form-scan').addEventListener('submit', (e) => {
             e.preventDefault();
             const rawInput = inputQr.value.trim();
@@ -133,32 +144,28 @@
             if(!troliDipilih) { alert("Pilih Nama Troli terlebih dahulu!"); inputQr.focus(); return; }
             if(!rawInput) return;
 
-            // Membaca daftar QR yang sedang tertulis di tabel agar tidak ada ganda
             const existingQRs = Array.from(document.querySelectorAll('.qr-text')).map(el => el.innerText);
-            
             const qrList = rawInput.split(/[\r\n;]+/).map(q => q.trim()).filter(q => q !== '');
             
             let adaDuplikat = false;
             qrList.forEach(qrCode => {
                 if(existingQRs.includes(qrCode)) {
-                    adaDuplikat = true; // Kode ini dibuang/diabaikan
+                    adaDuplikat = true;
                 } else {
                     tambahkanBaris(troliDipilih, qrCode);
-                    existingQRs.push(qrCode); // Masukkan ke memori filter agar copy-paste ganda dari excel juga disaring
+                    existingQRs.push(qrCode); 
                 }
             });
             
-            // Tampilkan Notifikasi jika ada yang dibuang
             if(adaDuplikat) {
                 document.getElementById('alert-dup').classList.remove('hidden');
                 setTimeout(() => document.getElementById('alert-dup').classList.add('hidden'), 2000);
             }
-            
             inputQr.value = ''; inputQr.focus(); cekEmptyState();
         });
 
         // ------------------------------------------------------------------
-        // REVERSE-ENGINEERING MENGGUNAKAN TABEL KAMUS
+        // REVERSE-ENGINEERING
         // ------------------------------------------------------------------
         function buatKodeMesin(namaMesin) { try { let kata = namaMesin.split(' '); return kata[0].slice(-1) + parseInt(kata[1], 10); } catch(e) { return namaMesin; } }
 
@@ -166,16 +173,9 @@
             let words = namaItem.toUpperCase().split(/\s+/);
             let res = "";
             for(let w of words) {
-                // 1. Cek apakah ada di Kamus Kaidah QR
                 let rule = kamusKaidah.find(r => r.kata_asli === w);
-                if (rule) {
-                    res += rule.kode;
-                } 
-                // 2. Jika angka murni, tulis angka
-                else if(w.match(/^[0-9]+$/)) {
-                    res += w;
-                } 
-                // 3. Sisanya, ambil huruf depannya saja
+                if (rule) res += rule.kode;
+                else if(w.match(/^[0-9]+$/)) res += w;
                 else {
                     let hurufSaja = w.replace(/[^A-Z]/g, '');
                     if(hurufSaja.length > 0) res += hurufSaja.charAt(0);
@@ -248,10 +248,28 @@
         }
 
         function tambahkanBaris(troli, qrcode) {
-            rowCount++; const tr = document.createElement('tr'); tr.className = "border-b border-gray-200 hover:bg-blue-50 transition"; tr.id = `row-${rowCount}`;
-            let htmlString = `<td class="p-3 text-center"><button onclick="hapusBaris('row-${rowCount}')" class="text-red-500 hover:bg-red-200 p-1.5 rounded-md"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td><td class="p-3 text-center font-bold text-gray-500 row-number">${rowCount}</td><td class="p-3 font-semibold text-blue-700">${troli}</td><td class="p-3 font-mono text-gray-800 qr-text border-r border-slate-300">${qrcode}</td>`;
+            // FIX BUG TOMBOL HAPUS: Gunakan globalRowId yang terus bertambah, tidak pernah mundur.
+            globalRowId++; 
+            
+            const tr = document.createElement('tr'); 
+            tr.className = "border-b border-gray-200 hover:bg-blue-50 transition"; 
+            tr.id = `row-${globalRowId}`;
+
+            let htmlString = `
+                <td class="p-3 text-center">
+                    <button onclick="hapusBaris('row-${globalRowId}')" class="text-red-500 hover:bg-red-200 p-1.5 rounded-md cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </td>
+                <td class="p-3 text-center font-bold text-gray-500 row-number"></td>
+                <td class="p-3 font-semibold text-blue-700">${troli}</td>
+                <td class="p-3 font-mono text-gray-800 qr-text border-r border-slate-300">${qrcode}</td>
+            `;
+
             if(isTranslated) htmlString += _generateKolomTerjemahan(jalankanPenerjemah(qrcode));
-            tr.innerHTML = htmlString; tbody.prepend(tr); lucide.createIcons(); updateNomorUrut();
+            tr.innerHTML = htmlString; 
+            
+            tbody.prepend(tr); 
+            lucide.createIcons(); 
+            updateNomorUrut();
         }
 
         btnTerjemahkan.addEventListener('click', () => {
@@ -262,9 +280,35 @@
             isTranslated = true; btnTerjemahkan.innerHTML = `<i data-lucide="check-circle" class="w-6 h-6"></i> TERJEMAHAN SELESAI`; btnTerjemahkan.classList.replace('bg-emerald-600', 'bg-slate-700'); btnTerjemahkan.disabled = true; lucide.createIcons();
         });
 
-        window.hapusBaris = (rowId) => { document.getElementById(rowId).remove(); updateNomorUrut(); cekEmptyState(); inputQr.focus(); };
-        function updateNomorUrut() { const rows = tbody.querySelectorAll('tr'); rowCount = rows.length; let counter = rowCount; rows.forEach(tr => { tr.querySelector('.row-number').innerText = counter; counter--; }); }
-        function cekEmptyState() { if(tbody.children.length > 0) { emptyState.classList.add('hidden'); if(!isTranslated) btnTerjemahkan.disabled = false; } else { emptyState.classList.remove('hidden'); btnTerjemahkan.disabled = true; } }
+        // FUNGSI HAPUS BARIS YANG SUDAH DIPERBAIKI
+        window.hapusBaris = (rowId) => { 
+            const rowElement = document.getElementById(rowId);
+            if(rowElement) {
+                rowElement.remove(); 
+                updateNomorUrut(); 
+                cekEmptyState(); 
+                inputQr.focus(); 
+            }
+        };
+
+        function updateNomorUrut() { 
+            const rows = tbody.querySelectorAll('tr'); 
+            let counter = rows.length; 
+            rows.forEach(tr => { 
+                tr.querySelector('.row-number').innerText = counter; 
+                counter--; 
+            }); 
+        }
+
+        function cekEmptyState() { 
+            if(tbody.children.length > 0) { 
+                emptyState.classList.add('hidden'); 
+                if(!isTranslated) btnTerjemahkan.disabled = false; 
+            } else { 
+                emptyState.classList.remove('hidden'); 
+                btnTerjemahkan.disabled = true; 
+            } 
+        }
     </script>
 </body>
 </html>
