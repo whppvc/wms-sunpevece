@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS - Data Control Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-800">
+
+    <header class="bg-white shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-40">
+        <div class="flex items-center gap-3">
+            <button onclick="window.location.href='menu.html'" class="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition cursor-pointer">
+                <i data-lucide="arrow-left" class="w-5 h-5 text-gray-700"></i>
+            </button>
+            <h1 class="font-bold text-lg text-blue-700 uppercase tracking-wide">Data Control (Master)</h1>
+        </div>
+    </header>
+
+    <main class="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+        
+        <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+            <h2 class="text-lg font-bold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="database" class="w-5 h-5 text-blue-600"></i> Tambah Data Master 1</h2>
+            <form id="form-master" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nama Troli</label><input type="text" id="i-troli" class="w-full p-2 border rounded uppercase" placeholder="T-01" required></div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Mesin</label><input type="text" id="i-mesin" class="w-full p-2 border rounded uppercase" placeholder="MPL 01" required></div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nama Item</label><input type="text" id="i-item" class="w-full p-2 border rounded uppercase" placeholder="GLOSSY..." required></div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Grade</label><input type="text" id="i-grade" class="w-full p-2 border rounded uppercase" placeholder="A" required></div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Dus</label><input type="text" id="i-dus" class="w-full p-2 border rounded uppercase" placeholder="POLOS" required></div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">PO</label><input type="text" id="i-po" class="w-full p-2 border rounded uppercase" placeholder="MADIUN"></div>
+                <div class="md:col-span-3 lg:col-span-6 flex justify-end mt-2">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold shadow transition flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Simpan Data</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md border overflow-hidden">
+            <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
+                <h3 class="font-bold text-gray-700">Daftar Isi Master_1</h3>
+                <span id="data-count" class="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">0 Data</span>
+            </div>
+            <div class="overflow-x-auto w-full">
+                <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead>
+                        <tr class="bg-slate-800 text-white uppercase text-xs">
+                            <th class="p-3 w-10">No</th>
+                            <th class="p-3">Troli</th>
+                            <th class="p-3">Mesin</th>
+                            <th class="p-3">Nama Item</th>
+                            <th class="p-3">Grade</th>
+                            <th class="p-3">Dus</th>
+                            <th class="p-3">PO</th>
+                            <th class="p-3 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-master">
+                        <tr><td colspan="8" class="text-center p-4">Memuat data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+        
+        // MASUKKAN KUNCI SUPABASE ANDA DI SINI
+        const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        window.onload = async () => {
+            if (!localStorage.getItem('user_session')) { window.location.href = 'index.html'; return; }
+            await loadMasterData();
+        };
+
+        async function loadMasterData() {
+            const tbody = document.getElementById('tbody-master');
+            const { data, error } = await db.from('master_1').select('*').order('id', { ascending: false });
+            
+            if (error) { tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-500">Error: ${error.message}</td></tr>`; return; }
+            
+            document.getElementById('data-count').innerText = `${data.length} Data`;
+            tbody.innerHTML = '';
+            
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center p-4 text-gray-500">Data Master kosong.</td></tr>`;
+                return;
+            }
+
+            data.forEach((r, i) => {
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-blue-50 transition">
+                        <td class="p-3 font-bold text-gray-500">${i+1}</td>
+                        <td class="p-3 font-bold">${r.nama_troli || '-'}</td>
+                        <td class="p-3">${r.mesin || '-'}</td>
+                        <td class="p-3">${r.nama_item || '-'}</td>
+                        <td class="p-3">${r.grade || '-'}</td>
+                        <td class="p-3">${r.dus || '-'}</td>
+                        <td class="p-3">${r.po || '-'}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="hapusMaster(${r.id})" class="text-red-500 hover:text-red-700 bg-red-100 p-1.5 rounded cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            lucide.createIcons();
+        }
+
+        document.getElementById('form-master').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                nama_troli: document.getElementById('i-troli').value.toUpperCase(),
+                mesin: document.getElementById('i-mesin').value.toUpperCase(),
+                nama_item: document.getElementById('i-item').value.toUpperCase(),
+                grade: document.getElementById('i-grade').value.toUpperCase(),
+                dus: document.getElementById('i-dus').value.toUpperCase(),
+                po: document.getElementById('i-po').value.toUpperCase()
+            };
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerHTML = 'Menyimpan...'; btn.disabled = true;
+
+            const { error } = await db.from('master_1').insert([payload]);
+            if(error) alert("Gagal Simpan: " + error.message);
+            else {
+                document.getElementById('form-master').reset();
+                await loadMasterData();
+            }
+            btn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Simpan Data'; btn.disabled = false;
+            lucide.createIcons();
+        });
+
+        window.hapusMaster = async (id) => {
+            if(!confirm("Yakin ingin menghapus data master ini?")) return;
+            const { error } = await db.from('master_1').delete().eq('id', id);
+            if(error) alert("Gagal Hapus: " + error.message);
+            else await loadMasterData();
+        };
+    </script>
+</body>
+</html>
