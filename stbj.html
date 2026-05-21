@@ -3,311 +3,393 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Stock Control - STBJ</title>
+    <title>WMS - STBJ System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style> .table-container { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; } </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .table-container { scrollbar-width: thin; }
+        .header-green { background-color: #22c55e !important; color: white !important; }
+        .header-black { background-color: #000000 !important; color: white !important; }
+        body { transition: all 0.3s ease; }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans text-gray-800">
+<body id="app-body" class="bg-gray-50 min-h-screen font-sans text-gray-800">
 
-    <header class="bg-white shadow-sm px-4 py-3 flex items-center gap-3 sticky top-0 z-40">
-        <button onclick="window.location.href='menu.html'" class="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition"><i data-lucide="arrow-left" class="w-5 h-5 text-gray-700"></i></button>
-        <h1 class="font-bold text-lg text-blue-700 uppercase tracking-wide">Menu STBJ</h1>
+    <header class="bg-white shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-40">
+        <div class="flex items-center gap-3">
+            <button onclick="window.location.href='menu.html'" class="p-2 bg-gray-100 rounded-full"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+            <h1 class="font-bold text-lg text-blue-700 uppercase">Menu STBJ</h1>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="window.location.href='hasil_stbj.html'" class="hidden md:flex items-center gap-2 bg-white border-2 border-blue-600 text-blue-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-50">
+                <i data-lucide="file-text" class="w-4 h-4"></i> Laporan Hasil STBJ
+            </button>
+            <button id="btn-undo" onclick="undoDelete()" class="p-2 bg-orange-100 text-orange-600 rounded-lg border border-orange-200" title="Undo Hapus">
+                <i data-lucide="undo-2" class="w-5 h-5"></i>
+            </button>
+        </div>
     </header>
 
-    <main class="p-4 md:p-6 max-w-[95%] mx-auto">
+    <main class="p-4 max-w-[98%] mx-auto">
         <div id="view-menu" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div onclick="bukaScanItem()" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer flex items-center gap-4 transition active:scale-95">
-                <div class="bg-blue-100 p-3 rounded-lg"><i data-lucide="scan-barcode" class="w-8 h-8 text-blue-600"></i></div>
-                <div><h3 class="font-bold text-lg">Scan per item</h3><p class="text-xs text-gray-500">Scan per dus atau ketik qrcode</p></div>
+            <div onclick="switchView('scan')" class="bg-white p-6 rounded-xl border-2 border-transparent hover:border-blue-500 cursor-pointer flex items-center gap-4 shadow-sm">
+                <div class="bg-blue-100 p-4 rounded-full text-blue-600"><i data-lucide="scan-barcode"></i></div>
+                <div><h3 class="font-bold text-xl">Scan per item</h3><p class="text-sm opacity-60">Scan per dus atau ketik qrcode</p></div>
             </div>
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer flex items-center gap-4 transition active:scale-95">
-                <div class="bg-emerald-100 p-3 rounded-lg"><i data-lucide="file-down" class="w-8 h-8 text-emerald-600"></i></div>
-                <div><h3 class="font-bold text-lg">Import CSV</h3><p class="text-xs text-gray-500">Masukkan file daftar barcode utk diterjemahkan</p></div>
-            </div>
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer flex items-center gap-4 transition active:scale-95">
-                <div class="bg-purple-100 p-3 rounded-lg"><i data-lucide="upload-cloud" class="w-8 h-8 text-purple-600"></i></div>
-                <div><h3 class="font-bold text-lg">Upload file QC & STBJ</h3><p class="text-xs text-gray-500">Download file qc, upload, dan centang satu2</p></div>
-            </div>
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer flex items-center gap-4 transition active:scale-95">
-                <div class="bg-orange-100 p-3 rounded-lg"><i data-lucide="file-text" class="w-8 h-8 text-orange-600"></i></div>
-                <div><h3 class="font-bold text-lg">STBJ Lembaran</h3><p class="text-xs text-gray-500">Input lembaran</p></div>
+            <div onclick="switchView('import')" class="bg-white p-6 rounded-xl border-2 border-transparent hover:border-emerald-500 cursor-pointer flex items-center gap-4 shadow-sm">
+                <div class="bg-emerald-100 p-4 rounded-full text-emerald-600"><i data-lucide="file-up"></i></div>
+                <div><h3 class="font-bold text-xl">Import CSV</h3><p class="text-sm opacity-60">Upload file daftar barcode</p></div>
             </div>
         </div>
 
         <div id="view-scan" class="hidden space-y-4">
-            <div class="flex justify-between items-center mb-2">
-                <h2 class="font-bold text-xl flex items-center gap-2"><i data-lucide="scan-barcode" class="w-6 h-6 text-blue-600"></i> Scan Per Item</h2>
-                <button onclick="kembaliKeMenu()" class="text-sm font-bold text-gray-500 hover:text-gray-800 bg-gray-200 px-3 py-1 rounded-md transition">Kembali</button>
-            </div>
-
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Pilih Troli</label>
-                    <select id="select-troli" class="w-full p-3 border-2 border-blue-200 rounded-lg outline-none focus:border-blue-500 bg-blue-50 text-blue-800 font-bold text-sm">
-                        <option value="">-- Memuat Data Master... --</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1 flex justify-between">
-                        <span>Input QR Code</span>
-                        <span id="alert-dup" class="text-red-500 hidden animate-pulse bg-red-100 px-2 rounded">Duplikat dihapus otomatis!</span>
-                    </label>
-                    <form id="form-scan" class="flex gap-2">
-                        <input type="text" id="input-qrcode" class="flex-1 p-3 border-2 border-gray-300 rounded-lg outline-none focus:border-blue-500 text-sm" placeholder="Scan kode..." autocomplete="off">
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 rounded-lg font-bold shadow-md transition flex items-center gap-2"><i data-lucide="corner-down-left" class="w-5 h-5"></i></button>
-                    </form>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Pilih Troli</label>
+                        <select id="select-troli" class="w-full p-3 border-2 rounded-lg bg-blue-50 font-bold outline-none border-blue-200"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1 flex justify-between">Input QR <span id="dup-notif" class="text-red-500 hidden">Duplikat Dihapus!</span></label>
+                        <form id="form-scan" class="flex gap-2">
+                            <input type="text" id="input-qrcode" class="flex-1 p-3 border-2 rounded-lg outline-none border-gray-300" placeholder="Tap & Scan...">
+                            <button type="submit" class="bg-blue-600 text-white px-6 rounded-lg font-bold"><i data-lucide="plus"></i></button>
+                        </form>
+                    </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
-                <div class="table-container overflow-x-auto w-full">
-                    <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-stbj">
+            <div class="bg-white rounded-xl shadow-md border overflow-hidden">
+                <div class="table-container overflow-x-auto">
+                    <table class="w-full text-left text-sm whitespace-nowrap" id="table-stbj">
                         <thead>
-                            <tr class="bg-slate-800 text-white uppercase text-xs font-bold" id="tr-header">
-                                <th class="p-3 w-10 text-center"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></th>
-                                <th class="p-3 w-12 text-center">No</th>
-                                <th class="p-3">Troli</th>
-                                <th class="p-3 border-r border-slate-600">Text QRCode</th>
+                            <tr class="text-white uppercase font-bold text-[11px]">
+                                <th class="p-3 header-black w-10 text-center"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></th>
+                                <th class="p-3 header-black w-12">No</th>
+                                <th class="p-3 header-black">Troli</th>
+                                <th class="p-3 header-black border-r border-gray-700">Text QR Code</th>
+                                <th class="p-3 header-green">Tgl Produksi</th>
+                                <th class="p-3 header-green">Mesin</th>
+                                <th class="p-3 header-green">Shift</th>
+                                <th class="p-3 bg-blue-600">Jenis Item</th>
+                                <th class="p-3 header-green">Nama Item</th>
+                                <th class="p-3 header-green">Pjg</th>
+                                <th class="p-3 header-green">Grade</th>
+                                <th class="p-3 header-green">Dus</th>
+                                <th class="p-3 header-green">Shading</th>
+                                <th class="p-3 header-green">PO</th>
+                                <th class="p-3 header-green">Keterangan</th>
                             </tr>
                         </thead>
                         <tbody id="tbody-stbj"></tbody>
                     </table>
                 </div>
-                <div id="empty-state" class="p-8 text-center text-gray-400">
-                    <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
-                    <p class="text-sm">Belum ada QR Code.</p>
-                </div>
             </div>
 
-            <div class="pt-2 pb-10">
-                <button id="btn-terjemahkan" class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2 text-lg disabled:opacity-50" disabled>
-                    <i data-lucide="cpu" class="w-6 h-6"></i> TERJEMAHKAN QR CODE
+            <div class="flex flex-col gap-3 pb-20">
+                <button id="btn-translate" onclick="translateAll()" class="w-full py-4 bg-emerald-500 text-white font-black rounded-xl shadow-lg flex items-center justify-center gap-2 text-lg">
+                    <i data-lucide="cpu"></i> TERJEMAHKAN QR CODE
                 </button>
+                <button id="btn-save" onclick="saveToSupabase()" class="w-full py-4 bg-blue-700 text-white font-black rounded-xl shadow-lg flex items-center justify-center gap-2 text-lg hidden">
+                    <i data-lucide="save"></i> SAVE DATA KE DATABASE
+                </button>
+            </div>
+        </div>
+
+        <div id="view-import" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Import CSV / Excel</h2>
+                <button onclick="processImportToTable()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold shadow-lg">Format ke Tabel</button>
+            </div>
+            <div class="bg-white/40 backdrop-blur-md p-6 rounded-3xl border-2 border-white shadow-xl">
+                <div id="import-rows" class="grid grid-cols-1 gap-3 max-h-[60vh] overflow-y-auto pr-2">
+                    </div>
             </div>
         </div>
     </main>
 
     <script>
-        lucide.createIcons();
-
-        // KONEKSI SUPABASE
-        const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
+        // -- SETUP SUPABASE --
+        const SUPABASE_URL = 'ISI_URL';
+        const SUPABASE_KEY = 'ISI_KEY';
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let masterData = { mesin: [], item: [], dus: [], po: [] };
-        let kamusKaidah = []; 
+        let masterData = { item: [], rules: [], troli: [] };
+        let deleteStack = [];
         let isTranslated = false;
-        
-        // Variabel untuk mengatasi bug Hapus Baris
-        let globalRowId = 0; 
-        let rowCount = 0; 
-
-        const viewMenu = document.getElementById('view-menu'), viewScan = document.getElementById('view-scan');
-        const inputQr = document.getElementById('input-qrcode'), selectTroli = document.getElementById('select-troli');
-        const tbody = document.getElementById('tbody-stbj'), emptyState = document.getElementById('empty-state');
-        const btnTerjemahkan = document.getElementById('btn-terjemahkan');
+        let importConfigs = [];
 
         window.onload = async () => {
-            if (!localStorage.getItem('user_session')) { window.location.href = 'index.html'; return; }
-            await loadData();
+            lucide.createIcons();
+            applyUserTheme();
+            await loadInitialData();
+            generateImportRows();
         };
 
-        function bukaScanItem() { viewMenu.classList.add('hidden'); viewScan.classList.remove('hidden'); inputQr.focus(); }
-        function kembaliKeMenu() { viewScan.classList.add('hidden'); viewMenu.classList.remove('hidden'); }
-
-        async function loadData() {
-            // Ambil Master 1
-            const { data: mData } = await db.from('master_1').select('*');
-            selectTroli.innerHTML = '<option value="">-- Pilih Troli --</option>';
-            if(mData) {
-                mData.forEach(row => {
-                    if(row.nama_troli && !selectTroli.querySelector(`option[value="${row.nama_troli}"]`)) selectTroli.innerHTML += `<option value="${row.nama_troli}">${row.nama_troli}</option>`;
-                    if(row.mesin && !masterData.mesin.includes(row.mesin)) masterData.mesin.push(row.mesin);
-                    if(row.nama_item && !masterData.item.includes(row.nama_item)) masterData.item.push(row.nama_item);
-                    if(row.dus && !masterData.dus.includes(row.dus)) masterData.dus.push(row.dus);
-                    if(row.po && !masterData.po.includes(row.po)) masterData.po.push(row.po);
-                });
-            }
-            // Ambil Kamus QR
-            const { data: rData } = await db.from('qr_rules').select('*');
-            if(rData) kamusKaidah = rData;
+        function applyUserTheme() {
+            const savedBg = localStorage.getItem('app_bg') || 'light';
+            document.body.setAttribute('data-bg', savedBg);
+            // Tambahkan logika UI Glass/Formal sesuai setting
         }
 
-        // FUNGSI INPUT BARCODE
-        document.getElementById('form-scan').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const rawInput = inputQr.value.trim();
-            const troliDipilih = selectTroli.value;
-            if(!troliDipilih) { alert("Pilih Nama Troli terlebih dahulu!"); inputQr.focus(); return; }
-            if(!rawInput) return;
-
-            const existingQRs = Array.from(document.querySelectorAll('.qr-text')).map(el => el.innerText);
-            const qrList = rawInput.split(/[\r\n;]+/).map(q => q.trim()).filter(q => q !== '');
+        async function loadInitialData() {
+            const { data: troli } = await db.from('master_1').select('nama_troli');
+            const { data: item } = await db.from('master_1').select('nama_item');
+            const { data: rules } = await db.from('qr_rules').select('*');
             
-            let adaDuplikat = false;
-            qrList.forEach(qrCode => {
-                if(existingQRs.includes(qrCode)) {
-                    adaDuplikat = true;
-                } else {
-                    tambahkanBaris(troliDipilih, qrCode);
-                    existingQRs.push(qrCode); 
-                }
-            });
-            
-            if(adaDuplikat) {
-                document.getElementById('alert-dup').classList.remove('hidden');
-                setTimeout(() => document.getElementById('alert-dup').classList.add('hidden'), 2000);
-            }
-            inputQr.value = ''; inputQr.focus(); cekEmptyState();
-        });
+            masterData.troli = troli || [];
+            masterData.item = item?.map(i => i.nama_item) || [];
+            masterData.rules = rules || [];
 
-        // ------------------------------------------------------------------
-        // REVERSE-ENGINEERING
-        // ------------------------------------------------------------------
-        function buatKodeMesin(namaMesin) { try { let kata = namaMesin.split(' '); return kata[0].slice(-1) + parseInt(kata[1], 10); } catch(e) { return namaMesin; } }
+            const sel = document.getElementById('select-troli');
+            sel.innerHTML = '<option value="">-- Pilih Troli --</option>';
+            masterData.troli.forEach(t => sel.innerHTML += `<option value="${t.nama_troli}">${t.nama_troli}</option>`);
+        }
 
-        function buatKodeItem(namaItem) {
-            let words = namaItem.toUpperCase().split(/\s+/);
-            let res = "";
-            for(let w of words) {
-                let rule = kamusKaidah.find(r => r.kata_asli === w);
-                if (rule) res += rule.kode;
-                else if(w.match(/^[0-9]+$/)) res += w;
-                else {
-                    let hurufSaja = w.replace(/[^A-Z]/g, '');
-                    if(hurufSaja.length > 0) res += hurufSaja.charAt(0);
+        function switchView(view) {
+            document.getElementById('view-menu').classList.add('hidden');
+            document.getElementById('view-scan').classList.toggle('hidden', view !== 'scan');
+            document.getElementById('view-import').classList.toggle('hidden', view !== 'import');
+        }
+
+        // -- ALGORITMA PENERJEMAH (Fix N114 -> NUT 114) --
+        function translateBarcode(barcode) {
+            const parts = barcode.split('/');
+            if (parts.length < 4) return null;
+
+            let res = { qrcode: barcode, nama_item: parts[0], shading: parts[1] };
+
+            // Bagian 1: Nama Item Translation
+            let rawItem = parts[0];
+            // Urutkan rules dari yang terpanjang agar tidak salah matching (misal GLSY vs G)
+            const sortedRules = [...masterData.rules].sort((a, b) => b.kode.length - a.kode.length);
+            for (let rule of sortedRules) {
+                if (rawItem.startsWith(rule.kode)) {
+                    // Cek jika setelah kode adalah angka
+                    let remainder = rawItem.substring(rule.kode.length);
+                    res.nama_item = rule.kata_asli + (remainder ? " " + remainder : "");
+                    break;
                 }
             }
+
+            // Bagian 3: Jenis, Pjg, Grade, Dus
+            const p2 = parts[2];
+            const kodeJenis = p2.slice(-1);
+            res.jenis_item = kodeJenis === 'P' ? 'Plafon' : (kodeJenis === 'L' ? 'List' : (kodeJenis === 'W' ? 'WPC' : kodeJenis));
+            
+            const matchPjg = p2.match(/^\d+/);
+            if (matchPjg) {
+                let p = matchPjg[0];
+                res.pjg = p.length === 2 ? `${p[0]}.${p[1]}M` : `${p}M`;
+                
+                let gradeChar = p2.charAt(p.length);
+                res.grade = gradeChar === 'A' ? 'A' : (gradeChar === 'B' ? 'Bagus' : gradeChar);
+                res.dus = p2.substring(p.length + 1, p2.length - 1);
+            }
+
+            // Bagian 4: Tanggal, Mesin, Shift, PO
+            const p3 = parts[3];
+            if (p3.length >= 5) {
+                const dayOfYear = parseInt(p3.substring(0, 3));
+                const yearRev = p3.substring(3, 5);
+                const realYear = parseInt('20' + yearRev.split('').reverse().join(''));
+                const date = new Date(realYear, 0); date.setDate(dayOfYear);
+                res.tgl_produksi = date.toLocaleDateString('id-ID');
+                
+                let mCode = p3.substring(5, 7);
+                res.mesin = mCode === 'L1' ? 'MPL 01' : (mCode === 'S1' ? 'MPS 01' : mCode);
+                res.shift = p3.substring(7, 8);
+                res.po = p3.substring(8);
+            }
+
             return res;
         }
 
-        function jalankanPenerjemah(barcode) {
-            const parts = barcode.split('/');
-            let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', pjg: '-', grade: '-', dus: '-', shading: '-', po: '-' };
-            try {
-                if (parts.length >= 4) {
-                    let rawItemCode = parts[0]; 
-                    data.namaItem = rawItemCode; 
-                    for(let i=0; i<masterData.item.length; i++) {
-                        if(buatKodeItem(masterData.item[i]) === rawItemCode) { data.namaItem = masterData.item[i]; break; }
-                    }
+        // -- MANAJEMEN TABEL --
+        document.getElementById('form-scan').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const input = document.getElementById('input-qrcode');
+            const troli = document.getElementById('select-troli').value;
+            if (!troli) return alert("Pilih Troli!");
+            
+            const codes = input.value.split(';').map(c => c.trim()).filter(c => c);
+            const existing = Array.from(document.querySelectorAll('.qr-val')).map(td => td.innerText);
 
-                    data.shading = parts[1];
-
-                    const p2 = parts[2];
-                    if (p2.length > 0) {
-                        const kodeJenis = p2.slice(-1);
-                        if (kodeJenis === 'P') data.jenisItem = 'Plafon'; else if (kodeJenis === 'L') data.jenisItem = 'List'; else if (kodeJenis === 'W') data.jenisItem = 'WPC'; else data.jenisItem = kodeJenis;
-
-                        const matchPjg = p2.match(/^\d+/);
-                        if (matchPjg) {
-                            let angkaPjg = matchPjg[0];
-                            data.pjg = angkaPjg.length === 2 ? `${angkaPjg[0]}.${angkaPjg[1]}M` : `${angkaPjg}M`;
-                            let startIndex = angkaPjg.length;
-                            if (startIndex < p2.length - 1) {
-                                let kodeGrade = p2.charAt(startIndex);
-                                if (kodeGrade === 'B') data.grade = 'Bagus'; else if (kodeGrade === 'A') data.grade = 'A'; else data.grade = kodeGrade;
-                                let rawDusCode = p2.substring(startIndex + 1, p2.length - 1);
-                                data.dus = rawDusCode;
-                                for(let i=0; i<masterData.dus.length; i++) { let expectedCode = masterData.dus[i].charAt(0).toUpperCase() + (i + 1); if(expectedCode === rawDusCode) { data.dus = masterData.dus[i]; break; } }
-                            }
-                        }
-                    }
-
-                    const p3 = parts[3];
-                    if (p3.length >= 5) {
-                        const dayOfYear = parseInt(p3.substring(0, 3)); const yearRev = p3.substring(3, 5); const realYear = parseInt('20' + yearRev.split('').reverse().join(''));
-                        const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
-                        const dd = String(dateObj.getDate()).padStart(2, '0'); const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-                        data.tglProduksi = `${dd}/${mm}/${dateObj.getFullYear()}`;
-
-                        if (p3.length >= 8) {
-                            let rawMesinCode = p3.substring(5, 7); data.mesin = rawMesinCode;
-                            for(let i=0; i<masterData.mesin.length; i++) { if(buatKodeMesin(masterData.mesin[i]) === rawMesinCode) { data.mesin = masterData.mesin[i]; break; } }
-                            data.shift = p3.substring(7, 8);
-                            let rawPO = p3.substring(8); if(rawPO) { let poIndex = parseInt(rawPO) - 1; data.po = masterData.po[poIndex] || rawPO; }
-                        }
-                    }
+            codes.forEach(code => {
+                if (existing.includes(code)) {
+                    document.getElementById('dup-notif').classList.remove('hidden');
+                    setTimeout(() => document.getElementById('dup-notif').classList.add('hidden'), 2000);
+                    return;
                 }
-            } catch (err) {}
-            return data;
-        }
-
-        // --- RENDER TABEL ---
-        function _generateKolomTerjemahan(h) {
-            return `
-                <td class="p-3 text-gray-700">${h.tglProduksi}</td><td class="p-3 text-gray-700">${h.mesin}</td><td class="p-3 text-gray-700">${h.shift}</td>
-                <td class="p-3 text-blue-700 font-bold bg-blue-50/50">${h.jenisItem}</td><td class="p-3 font-semibold">${h.namaItem}</td>
-                <td class="p-3 text-gray-700 font-bold">${h.pjg}</td><td class="p-3 text-gray-700 font-bold">${h.grade}</td><td class="p-3 text-gray-700">${h.dus}</td>
-                <td class="p-3 text-gray-700">${h.shading}</td><td class="p-3 text-gray-700 font-bold">${h.po}</td>
-                <td class="p-2 min-w-[150px]"><input type="text" class="w-full p-2 border border-gray-300 rounded text-xs outline-none focus:border-blue-500 uppercase font-semibold text-gray-800 bg-white" oninput="this.value = this.value.toUpperCase()" placeholder="Ketik Ket..."></td>
-            `;
-        }
-
-        function tambahkanBaris(troli, qrcode) {
-            // FIX BUG TOMBOL HAPUS: Gunakan globalRowId yang terus bertambah, tidak pernah mundur.
-            globalRowId++; 
-            
-            const tr = document.createElement('tr'); 
-            tr.className = "border-b border-gray-200 hover:bg-blue-50 transition"; 
-            tr.id = `row-${globalRowId}`;
-
-            let htmlString = `
-                <td class="p-3 text-center">
-                    <button onclick="hapusBaris('row-${globalRowId}')" class="text-red-500 hover:bg-red-200 p-1.5 rounded-md cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                </td>
-                <td class="p-3 text-center font-bold text-gray-500 row-number"></td>
-                <td class="p-3 font-semibold text-blue-700">${troli}</td>
-                <td class="p-3 font-mono text-gray-800 qr-text border-r border-slate-300">${qrcode}</td>
-            `;
-
-            if(isTranslated) htmlString += _generateKolomTerjemahan(jalankanPenerjemah(qrcode));
-            tr.innerHTML = htmlString; 
-            
-            tbody.prepend(tr); 
-            lucide.createIcons(); 
-            updateNomorUrut();
-        }
-
-        btnTerjemahkan.addEventListener('click', () => {
-            if(isTranslated) return;
-            const trHeader = document.getElementById('tr-header'); const newHeaders = ['Tgl Produksi', 'Mesin', 'Shift', 'Jenis Item', 'Nama Item', 'Pjg', 'Grade', 'Dus', 'Shading', 'PO', 'Keterangan'];
-            newHeaders.forEach(headText => { const th = document.createElement('th'); th.className = headText === 'Jenis Item' ? "p-3 bg-blue-600 text-white whitespace-nowrap" : "p-3 bg-slate-700 text-white whitespace-nowrap border-l border-slate-600"; th.innerText = headText; trHeader.appendChild(th); });
-            const rows = tbody.querySelectorAll('tr'); rows.forEach(tr => { const qrText = tr.querySelector('.qr-text').innerText; const hasil = jalankanPenerjemah(qrText); tr.insertAdjacentHTML('beforeend', _generateKolomTerjemahan(hasil)); });
-            isTranslated = true; btnTerjemahkan.innerHTML = `<i data-lucide="check-circle" class="w-6 h-6"></i> TERJEMAHAN SELESAI`; btnTerjemahkan.classList.replace('bg-emerald-600', 'bg-slate-700'); btnTerjemahkan.disabled = true; lucide.createIcons();
+                addRow(troli, code);
+            });
+            input.value = '';
         });
 
-        // FUNGSI HAPUS BARIS YANG SUDAH DIPERBAIKI
-        window.hapusBaris = (rowId) => { 
-            const rowElement = document.getElementById(rowId);
-            if(rowElement) {
-                rowElement.remove(); 
-                updateNomorUrut(); 
-                cekEmptyState(); 
-                inputQr.focus(); 
-            }
-        };
-
-        function updateNomorUrut() { 
-            const rows = tbody.querySelectorAll('tr'); 
-            let counter = rows.length; 
-            rows.forEach(tr => { 
-                tr.querySelector('.row-number').innerText = counter; 
-                counter--; 
-            }); 
+        function addRow(troli, code) {
+            const tbody = document.getElementById('tbody-stbj');
+            const tr = document.createElement('tr');
+            tr.className = "border-b hover:bg-gray-50 row-item";
+            tr.innerHTML = `
+                <td class="p-3 text-center"><button onclick="deleteRow(this)" class="text-red-500"><i data-lucide="trash"></i></button></td>
+                <td class="p-3 font-bold no-cell"></td>
+                <td class="p-3 troli-cell">${troli}</td>
+                <td class="p-3 font-mono qr-val border-r border-gray-200">${code}</td>
+                <td colspan="11" class="p-3 text-center italic text-gray-400">Menunggu Terjemahan...</td>
+            `;
+            tbody.prepend(tr);
+            lucide.createIcons();
+            updateNumbers();
         }
 
-        function cekEmptyState() { 
-            if(tbody.children.length > 0) { 
-                emptyState.classList.add('hidden'); 
-                if(!isTranslated) btnTerjemahkan.disabled = false; 
-            } else { 
-                emptyState.classList.remove('hidden'); 
-                btnTerjemahkan.disabled = true; 
-            } 
+        function deleteRow(btn) {
+            const row = btn.closest('tr');
+            deleteStack.push({ parent: row.parentNode, html: row.outerHTML, index: Array.from(row.parentNode.children).indexOf(row) });
+            row.remove();
+            updateNumbers();
+        }
+
+        function undoDelete() {
+            if (deleteStack.length === 0) return;
+            const last = deleteStack.pop();
+            const temp = document.createElement('tbody');
+            temp.innerHTML = last.html;
+            last.parent.insertBefore(temp.firstChild, last.parent.children[last.index]);
+            lucide.createIcons();
+            updateNumbers();
+        }
+
+        function updateNumbers() {
+            const rows = document.querySelectorAll('.row-item');
+            rows.forEach((row, i) => row.querySelector('.no-cell').innerText = rows.length - i);
+        }
+
+        function translateAll() {
+            const rows = document.querySelectorAll('.row-item');
+            rows.forEach(row => {
+                const qr = row.querySelector('.qr-val').innerText;
+                const troli = row.querySelector('.troli-cell').innerText;
+                const d = translateBarcode(qr);
+                if (!d) return;
+
+                row.innerHTML = `
+                    <td class="p-3 text-center"><button onclick="deleteRow(this)" class="text-red-500"><i data-lucide="trash"></i></button></td>
+                    <td class="p-3 font-bold no-cell"></td>
+                    <td class="p-3 troli-cell">${troli}</td>
+                    <td class="p-3 font-mono qr-val border-r border-gray-200">${qr}</td>
+                    <td class="p-3">${d.tgl_produksi || '-'}</td>
+                    <td class="p-3">${d.mesin || '-'}</td>
+                    <td class="p-3">${d.shift || '-'}</td>
+                    <td class="p-3 font-bold text-blue-700">${d.jenis_item || '-'}</td>
+                    <td class="p-3 font-bold">${d.nama_item || '-'}</td>
+                    <td class="p-3 font-bold">${d.pjg || '-'}</td>
+                    <td class="p-3">${d.grade || '-'}</td>
+                    <td class="p-3">${d.dus || '-'}</td>
+                    <td class="p-3">${d.shading || '-'}</td>
+                    <td class="p-3 font-bold">${d.po || '-'}</td>
+                    <td class="p-2"><input type="text" class="w-full p-1 border rounded uppercase ket-input" placeholder="..."></td>
+                `;
+            });
+            isTranslated = true;
+            document.getElementById('btn-save').classList.remove('hidden');
+            updateNumbers();
+            lucide.createIcons();
+        }
+
+        async function saveToSupabase() {
+            const rows = document.querySelectorAll('.row-item');
+            const dataToSave = [];
+            const user = JSON.parse(localStorage.getItem('user_session'));
+
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const qr = row.querySelector('.qr-val').innerText;
+                const d = translateBarcode(qr);
+                dataToSave.push({
+                    troli: row.querySelector('.troli-cell').innerText,
+                    qrcode: qr,
+                    tgl_produksi: cells[4].innerText,
+                    mesin: cells[5].innerText,
+                    shift: cells[6].innerText,
+                    jenis_item: cells[7].innerText,
+                    nama_item: cells[8].innerText,
+                    pjg: cells[9].innerText,
+                    grade: cells[10].innerText,
+                    dus: cells[11].innerText,
+                    shading: cells[12].innerText,
+                    po: cells[13].innerText,
+                    keterangan: row.querySelector('.ket-input').value.toUpperCase(),
+                    pic_input: user.username
+                });
+            });
+
+            const { error } = await db.from('hasil_stbj').insert(dataToSave);
+            if (error) alert("Error: " + error.message);
+            else {
+                alert("Berhasil simpan " + dataToSave.length + " data!");
+                document.getElementById('tbody-stbj').innerHTML = '';
+                switchView('menu');
+            }
+        }
+
+        // -- LOGIKA IMPORT CSV (No. 10) --
+        function generateImportRows() {
+            const container = document.getElementById('import-rows');
+            for (let i = 1; i <= 40; i++) {
+                container.innerHTML += `
+                    <div class="flex flex-wrap items-center gap-2 p-2 bg-white/60 rounded-xl border border-white">
+                        <button onclick="pickTroliImport(${i})" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold w-24">Pilih Troli</button>
+                        <div class="flex flex-col flex-1 gap-1">
+                            <div id="troli-box-${i}" class="bg-white p-2 rounded border text-[10px] font-bold h-8 flex items-center">Troli...</div>
+                            <div id="file-box-${i}" class="bg-white p-2 rounded border text-[10px] italic h-8 flex items-center">File...</div>
+                        </div>
+                        <input type="file" id="file-input-${i}" class="hidden" onchange="handleFileSelect(this, ${i})">
+                        <button onclick="document.getElementById('file-input-${i}').click()" class="bg-emerald-500 text-white p-2 rounded-lg"><i data-lucide="upload" class="w-4 h-4"></i></button>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        function pickTroliImport(idx) {
+            const name = prompt("Masukkan Nama Troli (T-01, dll):");
+            if (name) {
+                document.getElementById(`troli-box-${idx}`).innerText = name.toUpperCase();
+                if (!importConfigs[idx]) importConfigs[idx] = {};
+                importConfigs[idx].troli = name.toUpperCase();
+            }
+        }
+
+        function handleFileSelect(input, idx) {
+            const file = input.files[0];
+            if (!file) return;
+            document.getElementById(`file-box-${idx}`).innerText = file.name;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
+                
+                // Ambil kolom ke-3 (index 2)
+                const qrCodes = rows.slice(1).map(r => r[2]).filter(c => c);
+                if (!importConfigs[idx]) importConfigs[idx] = {};
+                importConfigs[idx].codes = qrCodes;
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processImportToTable() {
+            switchView('scan');
+            importConfigs.forEach(conf => {
+                if (conf && conf.troli && conf.codes) {
+                    conf.codes.forEach(code => addRow(conf.troli, code));
+                }
+            });
+            importConfigs = []; // Reset
         }
     </script>
 </body>
