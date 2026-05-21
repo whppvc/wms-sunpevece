@@ -56,7 +56,10 @@
                 <label class="block text-sm font-bold text-white/90 mb-2 ml-1">Password</label>
                 <div class="relative">
                     <i data-lucide="lock" class="absolute left-4 top-4 w-5 h-5 text-gray-400"></i>
-                    <input type="password" id="password" class="w-full py-4 pl-12 pr-4 bg-white/90 border-0 rounded-xl outline-none text-black focus:ring-4 focus:ring-blue-300 transition shadow-inner" placeholder="Masukkan password" required>
+                    <input type="password" id="password" class="w-full py-4 pl-12 pr-12 bg-white/90 border-0 rounded-xl outline-none text-black focus:ring-4 focus:ring-blue-300 transition shadow-inner" placeholder="Masukkan password" required>
+                    <button type="button" id="btn-toggle-pass" class="absolute right-4 top-4 text-gray-400 hover:text-blue-600 transition cursor-pointer">
+                        <i data-lucide="eye" id="icon-eye" class="w-6 h-6"></i>
+                    </button>
                 </div>
             </div>
             <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-xl shadow-[0_4px_14px_0_rgba(37,99,235,0.39)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.23)] transition-all mt-6 text-lg flex items-center justify-center gap-2">
@@ -67,15 +70,28 @@
     </div>
 
     <script>
-        // Inisialisasi icon Lucide
         lucide.createIcons();
-
-        // KONEKSI SUPABASE
+        
+        // MASUKKAN KUNCI SUPABASE ANDA DI SINI
         const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // LOGIKA UI
+        // Fungsi Lihat/Sembunyikan Password
+        document.getElementById('btn-toggle-pass').addEventListener('click', () => {
+            const passInput = document.getElementById('password');
+            const iconEye = document.getElementById('icon-eye');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                iconEye.setAttribute('data-lucide', 'eye-off');
+            } else {
+                passInput.type = 'password';
+                iconEye.setAttribute('data-lucide', 'eye');
+            }
+            lucide.createIcons();
+        });
+
+        // LOGIKA UI LAINNYA
         document.getElementById('btn-setting').addEventListener('click', () => document.getElementById('popup-setting').classList.remove('hidden'));
         document.getElementById('btn-batal-setting').addEventListener('click', () => { document.getElementById('popup-setting').classList.add('hidden'); document.getElementById('input-pass-setting').value = ''; document.getElementById('error-setting').classList.add('hidden'); });
         document.getElementById('btn-masuk-setting').addEventListener('click', () => {
@@ -83,7 +99,6 @@
             else document.getElementById('error-setting').classList.remove('hidden');
         });
 
-        // LOGIKA LOGIN
         document.getElementById('form-login').addEventListener('submit', async (e) => {
             e.preventDefault();
             const userVal = document.getElementById('username').value;
@@ -91,7 +106,6 @@
             const errorLogin = document.getElementById('error-login');
             
             const { data, error } = await db.from('app_users').select('*').eq('username', userVal).eq('password', passVal).single();
-            
             if (error || !data) errorLogin.classList.remove('hidden');
             else {
                 errorLogin.classList.add('hidden');
@@ -99,7 +113,6 @@
                 window.location.href = 'menu.html';
             }
         });
-
         window.onload = () => { if(localStorage.getItem('user_session')) window.location.href = 'menu.html'; };
     </script>
 </body>
