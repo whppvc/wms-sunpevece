@@ -10,7 +10,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .table-container { scrollbar-width: thin; }
-        /* Pewarnaan Header Tabel Spesifik */
         .header-green { background-color: #15803d !important; color: white !important; }
         .header-black { background-color: #1e293b !important; color: white !important; }
         .header-blue { background-color: #2563eb !important; color: white !important; }
@@ -30,14 +29,13 @@
             <button onclick="window.location.href='hasil_stbj.html'" class="hidden md:flex items-center gap-2 bg-white border-2 border-blue-600 text-blue-700 px-4 py-1.5 rounded-lg font-bold text-sm hover:bg-blue-50 transition cursor-pointer">
                 <i data-lucide="file-text" class="w-4 h-4"></i> Laporan Hasil STBJ
             </button>
-            <button id="btn-undo" onclick="undoDelete()" class="p-2 bg-orange-100 text-orange-600 rounded-lg border border-orange-200 hover:bg-orange-200 transition cursor-pointer" title="Undo Hapus Baris">
-                <i data-lucide="undo-2" class="w-5 h-5"></i>
+            <button id="btn-undo" onclick="undoDelete()" class="px-4 py-1.5 bg-orange-100 text-orange-700 font-bold rounded-lg border border-orange-200 hover:bg-orange-200 transition cursor-pointer tracking-wider text-sm">
+                UNDO
             </button>
         </div>
     </header>
 
     <main class="p-4 md:p-6 max-w-[98%] mx-auto">
-        
         <div id="view-menu" class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div onclick="switchView('scan')" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer flex items-center gap-4 transition active:scale-95">
                 <div class="bg-blue-100 p-3 rounded-lg"><i data-lucide="scan-barcode" class="w-8 h-8 text-blue-600"></i></div>
@@ -59,24 +57,22 @@
 
         <div id="view-scan" class="hidden space-y-4">
             
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Pilih Troli</label>
-                        <select id="select-troli" class="w-full p-3 border-2 border-blue-200 rounded-lg bg-blue-50 text-blue-800 font-bold text-sm outline-none">
-                            <option value="">-- Memuat Troli... --</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 uppercase mb-1 flex justify-between">
-                            <span>Input QR Code</span>
-                            <span id="dup-notif" class="text-red-500 hidden animate-pulse font-bold bg-red-100 px-2 rounded">Duplikat Dihapus!</span>
-                        </label>
-                        <form id="form-scan" class="flex gap-2">
-                            <input type="text" id="input-qrcode" class="flex-1 p-3 border-2 border-gray-300 rounded-lg outline-none focus:border-blue-500 text-sm" placeholder="Scan atau ketik kode..." autocomplete="off">
-                            <button type="submit" class="bg-blue-600 text-white px-5 rounded-lg font-bold shadow-md cursor-pointer"><i data-lucide="corner-down-left"></i></button>
-                        </form>
-                    </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Pilih Troli</label>
+                    <select id="select-troli" class="w-full p-3 border-2 border-blue-200 rounded-lg bg-blue-50 text-blue-800 font-bold text-sm outline-none">
+                        <option value="">-- Memuat Troli... --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1 flex justify-between">
+                        <span>Input QR Code</span>
+                        <span id="dup-notif" class="text-red-500 hidden animate-pulse font-bold bg-red-100 px-2 rounded">Duplikat Dihapus!</span>
+                    </label>
+                    <form id="form-scan" class="flex gap-2">
+                        <input type="text" id="input-qrcode" class="flex-1 p-3 border-2 border-gray-300 rounded-lg outline-none focus:border-blue-500 text-sm" placeholder="Scan atau ketik kode..." autocomplete="off">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 rounded-lg font-bold shadow-md cursor-pointer transition"><i data-lucide="corner-down-left"></i></button>
+                    </form>
                 </div>
             </div>
 
@@ -89,7 +85,6 @@
                                 <th class="p-3 header-black w-12 text-center">No</th>
                                 <th class="p-3 header-black">Troli</th>
                                 <th class="p-3 header-black border-r border-gray-600">Text QRCode</th>
-                                
                                 <th class="p-3 header-green hidden-col">Tgl Produksi</th>
                                 <th class="p-3 header-green hidden-col">Mesin</th>
                                 <th class="p-3 header-green hidden-col">Shift</th>
@@ -123,27 +118,21 @@
                 <h2 class="font-bold text-xl flex items-center gap-2"><i data-lucide="file-down" class="w-6 h-6 text-emerald-600"></i> Import Data</h2>
                 <button onclick="processImportToTable()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold shadow-md cursor-pointer transition">Format ke Tabel</button>
             </div>
-            
             <div class="bg-white/50 backdrop-blur-md p-4 md:p-6 rounded-3xl border-2 border-white shadow-xl">
-                <div id="import-rows" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[65vh] overflow-y-auto pr-2">
-                    </div>
+                <div id="import-rows" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[65vh] overflow-y-auto pr-2"></div>
             </div>
         </div>
     </main>
 
     <script>
-        // =================================================================
         // MASUKKAN KUNCI SUPABASE ANDA DI SINI
-        // =================================================================
         const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // VARIABEL GLOBAL
         let masterData = { item: [], rules: [], troli: [] };
-        let importConfigs = []; // Untuk simpan file excel yg diupload
-        let deleteStack = [];   // Untuk fitur Undo
-        
+        let importConfigs = []; 
+        let deleteStack = [];   
         let isTranslated = false;
         let globalRowId = 0;
 
@@ -167,7 +156,6 @@
         }
 
         async function loadInitialData() {
-            // Load Troli & Item dari master_1
             const { data: mData } = await db.from('master_1').select('nama_troli, nama_item');
             if(mData) {
                 const sel = document.getElementById('select-troli');
@@ -177,61 +165,44 @@
                     if(r.nama_item && !masterData.item.includes(r.nama_item)) { masterData.item.push(r.nama_item); }
                 });
             }
-            // Load Kamus Aturan
             const { data: rules } = await db.from('qr_rules').select('*');
             if(rules) masterData.rules = rules;
         }
 
-        // =================================================================
-        // ALGORITMA PENERJEMAH (N114 -> NUT 114) DIPERBAIKI!
-        // =================================================================
         function translateBarcode(barcode) {
             const parts = barcode.split('/');
             let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', pjg: '-', grade: '-', dus: '-', shading: '-', po: '-' };
 
             if (parts.length < 4) return data;
 
-            // 1. NAMA ITEM (Logika N114 -> NUT 114)
             let rawItem = parts[0];
-            let resItem = rawItem; // Default jika gagal
+            let resItem = rawItem; 
 
-            // Ambil huruf di depan (Misal 'N' dari 'N114')
             let matchHuruf = rawItem.match(/^[A-Z]+/i); 
-            // Ambil sisa karakter di belakang (Misal '114' dari 'N114')
             let matchSisa = rawItem.replace(/^[A-Z]+/i, '').trim(); 
 
             if (matchHuruf) {
                 let huruf = matchHuruf[0].toUpperCase();
-                // Cari huruf tersebut di kolom 'kode' tabel aturan
                 let rule = masterData.rules.find(r => r.kode === huruf);
-                if (rule) {
-                    // Gabungkan Kata Asli + Sisa (NUT + 114)
-                    resItem = rule.kata_asli + (matchSisa ? " " + matchSisa : "");
-                }
+                if (rule) resItem = rule.kata_asli + (matchSisa ? " " + matchSisa : "");
             }
             data.namaItem = resItem;
-
-            // 2. SHADING
             data.shading = parts[1];
 
-            // 3. PANJANG, GRADE, DUS, JENIS
             const p2 = parts[2];
             if (p2.length > 0) {
                 const kodeJenis = p2.slice(-1);
                 data.jenisItem = kodeJenis === 'P' ? 'Plafon' : (kodeJenis === 'L' ? 'List' : (kodeJenis === 'W' ? 'WPC' : kodeJenis));
-
                 const matchPjg = p2.match(/^\d+/);
                 if (matchPjg) {
                     let angka = matchPjg[0];
                     data.pjg = angka.length === 2 ? `${angka[0]}.${angka[1]}M` : `${angka}M`;
-                    
                     let gradeChar = p2.charAt(angka.length);
                     data.grade = gradeChar === 'B' ? 'Bagus' : (gradeChar === 'A' ? 'A' : gradeChar);
                     data.dus = p2.substring(angka.length + 1, p2.length - 1);
                 }
             }
 
-            // 4. TANGGAL, MESIN, SHIFT, PO
             const p3 = parts[3];
             if (p3.length >= 5) {
                 const dayOfYear = parseInt(p3.substring(0, 3));
@@ -244,11 +215,9 @@
 
                 if (p3.length >= 8) {
                     let mc = p3.substring(5, 7);
-                    // Pengecualian manual jika tidak ada di database:
                     if (mc === 'L1') data.mesin = 'MPL 01';
                     else if (mc === 'S1') data.mesin = 'MPS 01';
                     else data.mesin = mc;
-
                     data.shift = p3.substring(7, 8);
                     data.po = p3.substring(8);
                 }
@@ -256,15 +225,8 @@
             return data;
         }
 
-        // =================================================================
-        // MANAJEMEN TABEL SCAN
-        // =================================================================
-        function hideTranslateColumns() {
-            document.querySelectorAll('.hidden-col').forEach(el => el.classList.add('hidden'));
-        }
-        function showTranslateColumns() {
-            document.querySelectorAll('.hidden-col').forEach(el => el.classList.remove('hidden'));
-        }
+        function hideTranslateColumns() { document.querySelectorAll('.hidden-col').forEach(el => el.classList.add('hidden')); }
+        function showTranslateColumns() { document.querySelectorAll('.hidden-col').forEach(el => el.classList.remove('hidden')); }
 
         document.getElementById('form-scan').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -296,31 +258,11 @@
                 <td class="p-3 troli-cell font-bold text-blue-800">${troli}</td>
                 <td class="p-3 font-mono qr-val border-r border-gray-300">${code}</td>
             `;
-
             if(d) {
-                html += `
-                    <td class="p-3 text-gray-700 font-medium col-tgl">${d.tglProduksi}</td>
-                    <td class="p-3 text-gray-700 font-medium col-mesin">${d.mesin}</td>
-                    <td class="p-3 text-gray-700 font-medium col-shift">${d.shift}</td>
-                    <td class="p-3 font-bold text-blue-700 bg-blue-50/50 col-jenis">${d.jenisItem}</td>
-                    <td class="p-3 font-bold text-gray-900 col-nama">${d.namaItem}</td>
-                    <td class="p-3 text-gray-700 font-bold col-pjg">${d.pjg}</td>
-                    <td class="p-3 text-gray-700 font-bold col-grade">${d.grade}</td>
-                    <td class="p-3 text-gray-700 col-dus">${d.dus}</td>
-                    <td class="p-3 text-gray-700 col-shading">${d.shading}</td>
-                    <td class="p-3 text-gray-700 font-bold col-po">${d.po}</td>
-                    <td class="p-2 min-w-[150px]"><input type="text" class="w-full p-2 border rounded outline-none uppercase text-xs font-bold ket-input" oninput="this.value = this.value.toUpperCase()"></td>
-                `;
+                html += `<td class="p-3 text-gray-700 font-medium col-tgl">${d.tglProduksi}</td><td class="p-3 text-gray-700 font-medium col-mesin">${d.mesin}</td><td class="p-3 text-gray-700 font-medium col-shift">${d.shift}</td><td class="p-3 font-bold text-blue-700 bg-blue-50/50 col-jenis">${d.jenisItem}</td><td class="p-3 font-bold text-gray-900 col-nama">${d.namaItem}</td><td class="p-3 text-gray-700 font-bold col-pjg">${d.pjg}</td><td class="p-3 text-gray-700 font-bold col-grade">${d.grade}</td><td class="p-3 text-gray-700 col-dus">${d.dus}</td><td class="p-3 text-gray-700 col-shading">${d.shading}</td><td class="p-3 text-gray-700 font-bold col-po">${d.po}</td><td class="p-2 min-w-[150px]"><input type="text" class="w-full p-2 border rounded outline-none uppercase text-xs font-bold ket-input" oninput="this.value = this.value.toUpperCase()"></td>`;
             } else if (isTranslated) {
-                // Baris baru masuk setelah diterjemahkan
                 const td = translateBarcode(code);
-                html += `
-                    <td class="p-3 col-tgl">${td.tglProduksi}</td><td class="p-3 col-mesin">${td.mesin}</td><td class="p-3 col-shift">${td.shift}</td>
-                    <td class="p-3 font-bold text-blue-700 bg-blue-50/50 col-jenis">${td.jenisItem}</td><td class="p-3 font-bold col-nama">${td.namaItem}</td>
-                    <td class="p-3 font-bold col-pjg">${td.pjg}</td><td class="p-3 font-bold col-grade">${td.grade}</td><td class="p-3 col-dus">${td.dus}</td>
-                    <td class="p-3 col-shading">${td.shading}</td><td class="p-3 font-bold col-po">${td.po}</td>
-                    <td class="p-2 min-w-[150px]"><input type="text" class="w-full p-2 border rounded outline-none uppercase text-xs font-bold ket-input"></td>
-                `;
+                html += `<td class="p-3 col-tgl">${td.tglProduksi}</td><td class="p-3 col-mesin">${td.mesin}</td><td class="p-3 col-shift">${td.shift}</td><td class="p-3 font-bold text-blue-700 bg-blue-50/50 col-jenis">${td.jenisItem}</td><td class="p-3 font-bold col-nama">${td.namaItem}</td><td class="p-3 font-bold col-pjg">${td.pjg}</td><td class="p-3 font-bold col-grade">${td.grade}</td><td class="p-3 col-dus">${td.dus}</td><td class="p-3 col-shading">${td.shading}</td><td class="p-3 font-bold col-po">${td.po}</td><td class="p-2 min-w-[150px]"><input type="text" class="w-full p-2 border rounded outline-none uppercase text-xs font-bold ket-input"></td>`;
             }
             return html;
         }
@@ -331,42 +273,27 @@
             tr.className = "border-b border-gray-200 hover:bg-gray-100 transition row-item";
             tr.id = `row-${globalRowId}`;
             tr.innerHTML = _buildRowHTML(globalRowId, troli, code);
-            
             document.getElementById('tbody-stbj').prepend(tr);
             lucide.createIcons();
             updateRowNumbers();
-            document.getElementById('empty-state').classList.add('hidden');
             if(!isTranslated) document.getElementById('btn-translate').disabled = false;
         }
 
-        // FITUR UNDO (Permintaan No 2)
         function deleteRow(btn) {
             const tr = btn.closest('tr');
-            // Simpan ke memory untuk Undo
             deleteStack.push({ parent: tr.parentNode, html: tr.outerHTML, nextSibling: tr.nextSibling });
             tr.remove();
             updateRowNumbers();
-            if(document.querySelectorAll('.row-item').length === 0) document.getElementById('empty-state').classList.remove('hidden');
         }
 
         function undoDelete() {
             if(deleteStack.length === 0) return alert("Tidak ada data yang bisa di-undo.");
             const lastData = deleteStack.pop();
-            
-            const tempDiv = document.createElement('tbody');
-            tempDiv.innerHTML = lastData.html;
+            const tempDiv = document.createElement('tbody'); tempDiv.innerHTML = lastData.html;
             const restoredTr = tempDiv.firstChild;
-
-            // Kembalikan ke posisi semula
-            if (lastData.nextSibling) {
-                lastData.parent.insertBefore(restoredTr, lastData.nextSibling);
-            } else {
-                lastData.parent.appendChild(restoredTr);
-            }
-            
-            lucide.createIcons();
-            updateRowNumbers();
-            document.getElementById('empty-state').classList.add('hidden');
+            if (lastData.nextSibling) lastData.parent.insertBefore(restoredTr, lastData.nextSibling);
+            else lastData.parent.appendChild(restoredTr);
+            lucide.createIcons(); updateRowNumbers();
         }
 
         function updateRowNumbers() {
@@ -379,167 +306,88 @@
             if (isTranslated) return;
             const rows = document.querySelectorAll('.row-item');
             showTranslateColumns();
-            
             rows.forEach(tr => {
                 const troli = tr.querySelector('.troli-cell').innerText;
                 const qr = tr.querySelector('.qr-val').innerText;
                 const h = translateBarcode(qr);
                 tr.innerHTML = _buildRowHTML(tr.id, troli, qr, h);
             });
-
             isTranslated = true;
-            
-            // Ubah Tombol Translate & Munculkan Tombol Save
             const btnT = document.getElementById('btn-translate');
             btnT.innerHTML = `<i data-lucide="check-circle" class="w-6 h-6"></i> TERJEMAHAN SELESAI`;
-            btnT.classList.replace('bg-emerald-600', 'bg-slate-700');
-            btnT.disabled = true;
-            
-            document.getElementById('btn-save').classList.remove('hidden');
-            document.getElementById('btn-save').classList.add('flex');
-            lucide.createIcons();
-            updateRowNumbers();
+            btnT.classList.replace('bg-emerald-600', 'bg-slate-700'); btnT.disabled = true;
+            document.getElementById('btn-save').classList.remove('hidden'); document.getElementById('btn-save').classList.add('flex');
+            lucide.createIcons(); updateRowNumbers();
         }
 
-        // FITUR SAVE (Permintaan No 6)
         async function saveToSupabase() {
             const btnSave = document.getElementById('btn-save');
             btnSave.innerHTML = "Menyimpan..."; btnSave.disabled = true;
-
             const rows = document.querySelectorAll('.row-item');
             const dataToSave = [];
             const user = JSON.parse(localStorage.getItem('user_session'));
 
             rows.forEach(row => {
                 dataToSave.push({
-                    troli: row.querySelector('.troli-cell').innerText,
-                    qrcode: row.querySelector('.qr-val').innerText,
-                    tgl_produksi: row.querySelector('.col-tgl').innerText,
-                    mesin: row.querySelector('.col-mesin').innerText,
-                    shift: row.querySelector('.col-shift').innerText,
-                    jenis_item: row.querySelector('.col-jenis').innerText,
-                    nama_item: row.querySelector('.col-nama').innerText,
-                    pjg: row.querySelector('.col-pjg').innerText,
-                    grade: row.querySelector('.col-grade').innerText,
-                    dus: row.querySelector('.col-dus').innerText,
-                    shading: row.querySelector('.col-shading').innerText,
-                    po: row.querySelector('.col-po').innerText,
-                    keterangan: row.querySelector('.ket-input').value,
-                    pic_input: user.username
+                    troli: row.querySelector('.troli-cell').innerText, qrcode: row.querySelector('.qr-val').innerText, tgl_produksi: row.querySelector('.col-tgl').innerText,
+                    mesin: row.querySelector('.col-mesin').innerText, shift: row.querySelector('.col-shift').innerText, jenis_item: row.querySelector('.col-jenis').innerText,
+                    nama_item: row.querySelector('.col-nama').innerText, pjg: row.querySelector('.col-pjg').innerText, grade: row.querySelector('.col-grade').innerText,
+                    dus: row.querySelector('.col-dus').innerText, shading: row.querySelector('.col-shading').innerText, po: row.querySelector('.col-po').innerText,
+                    keterangan: row.querySelector('.ket-input').value, pic_input: user.username
                 });
             });
 
             const { error } = await db.from('hasil_stbj').insert(dataToSave);
-            
-            if (error) {
-                alert("Gagal menyimpan ke Database: " + error.message);
-                btnSave.innerHTML = `<i data-lucide="save"></i> SAVE DATA`; btnSave.disabled = false;
-            } else {
+            if (error) { alert("Gagal menyimpan ke Database: " + error.message); btnSave.innerHTML = `<i data-lucide="save"></i> SAVE DATA`; btnSave.disabled = false; } 
+            else {
                 alert("Berhasil menyimpan " + dataToSave.length + " baris data!");
-                document.getElementById('tbody-stbj').innerHTML = ''; // Kosongkan tabel
-                document.getElementById('empty-state').classList.remove('hidden');
-                btnSave.classList.add('hidden'); // Sembunyikan tombol save
-                window.location.href = 'hasil_stbj.html'; // Pindah otomatis ke laporan
+                document.getElementById('tbody-stbj').innerHTML = ''; btnSave.classList.add('hidden'); window.location.href = 'hasil_stbj.html';
             }
         }
 
-        // =================================================================
-        // FITUR IMPORT CSV (Permintaan No 10)
-        // =================================================================
         function generateImportRows() {
             const container = document.getElementById('import-rows');
             for (let i = 1; i <= 40; i++) {
                 container.innerHTML += `
                     <div class="flex items-center gap-2 p-2 bg-white/70 rounded-xl border border-white shadow-sm hover:shadow-md transition">
                         <button onclick="pickTroliImport(${i})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-3 rounded-lg text-xs font-bold w-24">Pilih Troli</button>
-                        <div class="flex flex-col flex-1 gap-1">
-                            <div id="troli-box-${i}" class="bg-white p-2 rounded border border-blue-200 text-xs font-bold h-8 flex items-center text-blue-700 shadow-inner">Troli...</div>
-                            <div id="file-box-${i}" class="bg-white p-2 rounded border border-gray-200 text-[10px] italic h-8 flex items-center text-gray-500 overflow-hidden truncate">File CSV/Excel...</div>
-                        </div>
+                        <div class="flex flex-col flex-1 gap-1"><div id="troli-box-${i}" class="bg-white p-2 rounded border border-blue-200 text-xs font-bold h-8 flex items-center text-blue-700 shadow-inner">Troli...</div><div id="file-box-${i}" class="bg-white p-2 rounded border border-gray-200 text-[10px] italic h-8 flex items-center text-gray-500 overflow-hidden truncate">File CSV/Excel...</div></div>
                         <input type="file" id="file-input-${i}" class="hidden" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onchange="handleFileSelect(this, ${i})">
                         <button onclick="document.getElementById('file-input-${i}').click()" class="bg-emerald-500 hover:bg-emerald-600 text-white p-3 rounded-lg shadow-sm"><i data-lucide="upload" class="w-4 h-4"></i></button>
-                    </div>
-                `;
+                    </div>`;
             }
             lucide.createIcons();
         }
 
         function pickTroliImport(idx) {
             let optionsHTML = masterData.troli.map(t => `<option value="${t}">${t}</option>`).join('');
-            
-            // Buat dialog sederhana
-            const div = document.createElement('div');
-            div.className = "fixed inset-0 bg-black/50 z-50 flex items-center justify-center";
-            div.innerHTML = `
-                <div class="bg-white p-6 rounded-xl w-80 shadow-2xl">
-                    <h3 class="font-bold mb-4">Pilih Troli untuk Baris ${idx}</h3>
-                    <select id="dialog-select" class="w-full p-2 border rounded mb-4 font-bold outline-none border-blue-300">
-                        ${optionsHTML}
-                    </select>
-                    <div class="flex justify-end gap-2">
-                        <button onclick="this.parentElement.parentElement.parentElement.remove()" class="px-4 py-2 bg-gray-200 rounded font-bold">Batal</button>
-                        <button id="dialog-ok" class="px-4 py-2 bg-blue-600 text-white rounded font-bold">Pilih</button>
-                    </div>
-                </div>
-            `;
+            const div = document.createElement('div'); div.className = "fixed inset-0 bg-black/50 z-50 flex items-center justify-center";
+            div.innerHTML = `<div class="bg-white p-6 rounded-xl w-80 shadow-2xl"><h3 class="font-bold mb-4">Pilih Troli untuk Baris ${idx}</h3><select id="dialog-select" class="w-full p-2 border rounded mb-4 font-bold outline-none border-blue-300">${optionsHTML}</select><div class="flex justify-end gap-2"><button onclick="this.parentElement.parentElement.parentElement.remove()" class="px-4 py-2 bg-gray-200 rounded font-bold">Batal</button><button id="dialog-ok" class="px-4 py-2 bg-blue-600 text-white rounded font-bold">Pilih</button></div></div>`;
             document.body.appendChild(div);
-
-            document.getElementById('dialog-ok').onclick = () => {
-                const name = document.getElementById('dialog-select').value;
-                document.getElementById(`troli-box-${idx}`).innerText = name.toUpperCase();
-                if (!importConfigs[idx]) importConfigs[idx] = {};
-                importConfigs[idx].troli = name.toUpperCase();
-                div.remove();
-            };
+            document.getElementById('dialog-ok').onclick = () => { const name = document.getElementById('dialog-select').value; document.getElementById(`troli-box-${idx}`).innerText = name.toUpperCase(); if (!importConfigs[idx]) importConfigs[idx] = {}; importConfigs[idx].troli = name.toUpperCase(); div.remove(); };
         }
 
         function handleFileSelect(input, idx) {
-            const file = input.files[0];
-            if (!file) return;
+            const file = input.files[0]; if (!file) return;
             document.getElementById(`file-box-${idx}`).innerText = file.name;
-            
             const reader = new FileReader();
             reader.onload = (e) => {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                
-                // Ambil data (header di row 1)
-                const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
-                
-                // Ambil kolom ke-3 (index 2) dari excel
+                const data = new Uint8Array(e.target.result); const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]]; const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
                 const qrCodes = rows.slice(1).map(r => r[2]).filter(c => c && String(c).trim() !== '');
-                
-                if (!importConfigs[idx]) importConfigs[idx] = {};
-                importConfigs[idx].codes = qrCodes;
-                
-                alert(`Berhasil membaca ${qrCodes.length} QR Code dari file ${file.name}`);
+                if (!importConfigs[idx]) importConfigs[idx] = {}; importConfigs[idx].codes = qrCodes; alert(`Berhasil membaca ${qrCodes.length} QR Code.`);
             };
             reader.readAsArrayBuffer(file);
         }
 
         function processImportToTable() {
-            // Cek apakah ada data yang siap diformat
             let hasData = importConfigs.some(c => c && c.troli && c.codes && c.codes.length > 0);
-            if(!hasData) return alert("Anda belum memasukkan Troli atau File Excel/CSV dengan benar.");
-
+            if(!hasData) return alert("Anda belum memasukkan Troli atau File dengan benar.");
             switchView('scan');
-            
             const existingQRs = Array.from(document.querySelectorAll('.qr-val')).map(td => td.innerText);
             let dupCount = 0;
-
-            importConfigs.forEach(conf => {
-                if (conf && conf.troli && conf.codes) {
-                    conf.codes.forEach(code => {
-                        let c = String(code).trim();
-                        if(existingQRs.includes(c)) dupCount++;
-                        else { addRow(conf.troli, c); existingQRs.push(c); }
-                    });
-                }
-            });
-
-            importConfigs = []; // Reset config setelah import
-            if(dupCount > 0) alert(`Format selesai! Ditemukan ${dupCount} data duplikat yang otomatis dihapus.`);
+            importConfigs.forEach(conf => { if (conf && conf.troli && conf.codes) { conf.codes.forEach(code => { let c = String(code).trim(); if(existingQRs.includes(c)) dupCount++; else { addRow(conf.troli, c); existingQRs.push(c); } }); } });
+            importConfigs = []; if(dupCount > 0) alert(`Selesai! Ditemukan ${dupCount} duplikat yang otomatis dihapus.`);
         }
     </script>
 </body>
