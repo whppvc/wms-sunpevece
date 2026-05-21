@@ -49,7 +49,12 @@
             flex-direction: column; box-shadow: 0 8px 32px 0 rgba(0,0,0,0.05);
         }
         body[data-ui="glass"] .menu-card .menu-icon { color: var(--theme-main); }
-
+        /* Perbaikan No. 9: Dark + Glass agar tulisan hitam */
+        body[data-bg="dark"][data-ui="glass"] .menu-card { color: #000000 !important; }
+        body[data-bg="dark"][data-ui="glass"] .menu-icon { color: #000000 !important; }
+        
+        /* Pastikan bg teraplikasi ke seluruh elemen */
+        body { transition: background 0.3s ease, color 0.3s ease; }
         /* Opsi Background Web */
         body[data-bg="dark"] { --bg-color: #0f172a; --card-bg: #1e293b; --text-main: #f8fafc; }
         body[data-bg="grey"] { --bg-color: #e2e8f0; --card-bg: #f8fafc; --text-main: #0f172a; }
@@ -167,7 +172,7 @@
             { id: 'riwayat_konversi', title: 'Riwayat konversi', icon: 'refresh-cw' },
             { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers' },
             { id: 'laporan_mingguan', title: 'Laporan mingguan', icon: 'calendar-days' },
-            { id: 'nama_item', title: 'Nama item', icon: 'tag' },
+            { id: 'data_control', title: 'Data Control', icon: 'database', redirect: 'data_control.html' },
             { id: 'kartu_stok_admin', title: 'Kartu stok (khusus admin)', icon: 'database' },
             { id: 'kelola_pengiriman', title: 'Kelola pengiriman', icon: 'truck' },
             { id: 'input_keluar', title: 'Input keluar', icon: 'log-out' },
