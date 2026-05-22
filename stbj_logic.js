@@ -86,7 +86,7 @@ function translateBarcode(barcode) {
         data.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
 
         if (p3.length >= 8) {
-            let mc = p3.substring(5, 7);
+            let mc = p3.substring(5, 8);
             data.mesin = mc; 
             for(let m of masterData.mesin) {
                 let w = m.split(' ');
