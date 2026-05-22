@@ -90,7 +90,7 @@ function translateBarcode(barcode) {
             data.mesin = mc; 
             for(let m of masterData.mesin) {
                 let w = m.split(' ');
-                if(w.length >= 2 && (w[0].slice(-1) + parseInt(w[1], 10)) === mc) { data.mesin = m; break; }
+                if(w.length >= 2 && (w[0].slice(-2) + parseInt(w[1], 10)) === mc) { data.mesin = m; break; }
             }
             data.shift = p3.substring(7, 8);
             
