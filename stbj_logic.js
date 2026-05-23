@@ -23,61 +23,77 @@ function switchView(view) {
     document.getElementById('view-import').classList.toggle('hidden', view !== 'import');
 }
 
-// AMBIL DATA MASTER
+// AMBIL DATA MASTER (Diperbarui untuk Master_2)
 async function loadInitialData() {
-    const { data: mData } = await db.from('master_1').select('*').order('id', { ascending: true });
-    if(mData) {
-        masterData.troli = mData.map(r => r.nama_troli).filter(x => x && x.trim() !== '');
-        masterData.mesin = mData.map(r => r.mesin).filter(x => x && x.trim() !== '');
-        masterData.dus = mData.map(r => r.dus).filter(x => x && x.trim() !== '');
-        masterData.po = mData.map(r => r.po).filter(x => x && x.trim() !== '');
+    // 1. Ambil Troli dari master_1 (karena troli tidak ada di master_2 berdasarkan info Anda)
+    const { data: mData1 } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
+    if(mData1) {
+        masterData.troli = mData1.map(r => r.nama_troli).filter(x => x && x.trim() !== '');
+        // Hapus duplikat nama troli
+        masterData.troli = [...new Set(masterData.troli)]; 
         
         const sel = document.getElementById('select-troli');
-        sel.innerHTML = '<option value="">-- Pilih Troli --</option>';
-        masterData.troli.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
+        if(sel) {
+            sel.innerHTML = '<option value="">-- Pilih Troli --</option>';
+            masterData.troli.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
+        }
     }
-    const { data: rules } = await db.from('qr_rules').select('*');
-    if(rules) masterData.rules = rules;
+
+    // 2. Ambil seluruh "Kamus Terjemahan" dari master_2
+    const { data: mData2 } = await db.from('master_2').select('*');
+    if(mData2) {
+        masterData.kamus = mData2; // Simpan seluruh isi master_2 ke dalam memori
+    }
 }
 
-// ALGORITMA PENERJEMAH (KAIDAH DUS, PO, MESIN)
+// ALGORITMA PENERJEMAH (Diperbarui mengikuti Kamus master_2 & Huruf Depan)
 function translateBarcode(barcode) {
     const parts = barcode.split('/');
-    let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', pjg: '-', grade: '-', dus: '-', shading: '-', po: '-' };
+    let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-' };
+    
     if (parts.length < 4) return data;
 
+    // --- 1. JENIS ITEM (Cek Huruf Paling Pertama dari QR Code) ---
+    const hurufDepan = barcode.charAt(0).toUpperCase();
+    if (hurufDepan === 'P') data.jenisItem = 'Plafon';
+    else if (hurufDepan === 'L') data.jenisItem = 'List';
+    else if (hurufDepan === 'W') data.jenisItem = 'WPC';
+    else data.jenisItem = hurufDepan; // Fallback jika kode aneh
+
+    // --- 2. NAMA ITEM (parts[0]) ---
     let rawItem = parts[0];
-    let matchHuruf = rawItem.match(/^[A-Z]+/i); 
-    let matchSisa = rawItem.replace(/^[A-Z]+/i, '').trim(); 
-    if (matchHuruf) {
-        let rule = masterData.rules.find(r => r.kode === matchHuruf[0].toUpperCase());
-        data.namaItem = rule ? rule.kata_asli + (matchSisa ? " " + matchSisa : "") : rawItem;
-    } else data.namaItem = rawItem;
-    
+    let cariItem = masterData.kamus.find(m => m.kode_nama_item === rawItem);
+    data.namaItem = cariItem && cariItem.nama_item ? cariItem.nama_item : rawItem;
+
+    // --- 3. SHADING (parts[1]) ---
     data.shading = parts[1];
 
+    // --- 4. PANJANG, GRADE, DUS (parts[2]) ---
     const p2 = parts[2];
     if (p2.length > 0) {
-        const kodeJenis = p2.slice(-1);
-        data.jenisItem = kodeJenis === 'P' ? 'Plafon' : (kodeJenis === 'L' ? 'List' : (kodeJenis === 'W' ? 'WPC' : kodeJenis));
         const matchPjg = p2.match(/^\d+/);
         if (matchPjg) {
             let angka = matchPjg[0];
-            data.pjg = angka.length === 2 ? `${angka[0]}.${angka[1]}M` : `${angka}M`;
-            let gradeChar = p2.charAt(angka.length);
-            data.grade = gradeChar === 'B' ? 'Bagus' : (gradeChar === 'A' ? 'A' : gradeChar);
+            data.panjang = angka.length === 2 ? `${angka[0]}.${angka[1]}M` : `${angka}M`;
             
-            let rawDus = p2.substring(angka.length + 1, p2.length - 1);
-            data.dus = rawDus; 
-            let mDus = rawDus.match(/^([A-Z]+)(\d+)$/i);
-            if(mDus) {
-                let rowIdx = parseInt(mDus[2], 10) - 1; 
-                let targetDus = masterData.dus[rowIdx];
-                if(targetDus && targetDus.toUpperCase().startsWith(mDus[1].toUpperCase())) data.dus = targetDus;
+            let sisaP2 = p2.substring(angka.length); // Sisa string setelah angka panjang diambil
+            if (sisaP2.length > 0) {
+                // Ambil 1 huruf pertama sebagai kode grade
+                let rawGrade = sisaP2.charAt(0);
+                let cariGrade = masterData.kamus.find(m => m.kode_grade === rawGrade);
+                data.grade = cariGrade && cariGrade.grade ? cariGrade.grade : rawGrade;
+                
+                // Sisa huruf di belakangnya adalah kode dus
+                let rawDus = sisaP2.substring(1);
+                if(rawDus) {
+                    let cariDus = masterData.kamus.find(m => m.kode_dus === rawDus);
+                    data.dus = cariDus && cariDus.dus ? cariDus.dus : rawDus;
+                }
             }
         }
     }
 
+    // --- 5. TGL PRODUKSI, MESIN, SHIFT, PO (parts[3]) ---
     const p3 = parts[3];
     if (p3.length >= 5) {
         const dayOfYear = parseInt(p3.substring(0, 3));
@@ -86,21 +102,22 @@ function translateBarcode(barcode) {
         data.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
 
         if (p3.length >= 8) {
-            let mc = p3.substring(5, 8);
-            data.mesin = mc; 
-            for(let m of masterData.mesin) {
-                let w = m.split(' ');
-                if(w.length >= 2 && (w[0].slice(-2) + parseInt(w[1], 10)) === mc) { data.mesin = m; break; }
-            }
-            data.shift = p3.substring(7, 8);
+            let rawMesin = p3.substring(5, 7);
+            let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin);
+            data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
+
+            let rawShift = p3.substring(7, 8);
+            let cariShift = masterData.kamus.find(m => m.kode_shift === rawShift);
+            data.shift = cariShift && cariShift.shift ? cariShift.shift : rawShift;
             
             let rawPO = p3.substring(8);
             if(rawPO) {
-                let poIdx = parseInt(rawPO, 10) - 1;
-                data.po = masterData.po[poIdx] || rawPO;
+                let cariPO = masterData.kamus.find(m => m.kode_po === rawPO);
+                data.po = cariPO && cariPO.po ? cariPO.po : rawPO;
             }
         }
     }
+    
     return data;
 }
 
