@@ -8,174 +8,140 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* Variabel CSS Dinamis */
-        :root { 
-            --bg-color: #f8fafc; 
-            --card-bg: #ffffff; 
-            --text-main: #1f2937;
-            --theme-light: #eff6ff;
-            --theme-main: #2563eb; 
-            --theme-hover: #1d4ed8;
-        }
-
-        body { background: var(--bg-color); color: var(--text-main); transition: background 0.3s ease, color 0.3s ease; }
+        :root { --bg-main: #f8fafc; --bg-box: #ffffff; --text-main: #1f2937; --border-color: #e2e8f0; --theme-main: #2563eb; --theme-hover: #1d4ed8; --theme-light: #eff6ff;}
+        body[data-bg="dark"] { --bg-main: #0f172a; --bg-box: #1e293b; --text-main: #f8fafc; --border-color: #334155; }
+        body[data-bg="grey"] { --bg-main: #e2e8f0; --bg-box: #f1f5f9; --text-main: #0f172a; --border-color: #cbd5e1; }
+        body { background-color: var(--bg-main); color: var(--text-main); transition: background 0.3s ease, color 0.3s ease; display: flex; flex-direction: column; min-height: 100vh;}
         
-        .header-dynamic { background: var(--card-bg); border-bottom: 1px solid rgba(128,128,128,0.2); }
-        .card-dynamic { background: var(--card-bg); border: 1px solid rgba(128,128,128,0.2); }
+        .card-dynamic { background-color: var(--bg-box); border-color: var(--border-color); }
         .text-theme { color: var(--theme-main); }
         .bg-theme { background-color: var(--theme-main); color: #fff; }
         .bg-theme:hover { background-color: var(--theme-hover); }
-        
-        /* Desain UI: Modern (Kotak Warna Penuh Bergradasi) */
-        body[data-ui="modern"] .menu-card { 
-            background: linear-gradient(135deg, var(--theme-main), var(--theme-hover)); 
-            color: white; border: none; flex-direction: column; 
-        }
+
+        body[data-ui="modern"] .menu-card { background: linear-gradient(135deg, var(--theme-main), var(--theme-hover)); color: white; border: none; flex-direction: column; }
         body[data-ui="modern"] .menu-card .menu-icon { color: white; }
-
-        /* Desain UI: Formal (Kotak Putih/Gelap, Garis Samping, Icon Tema) */
-        body[data-ui="formal"] .menu-card { 
-            background: var(--card-bg); color: var(--text-main); 
-            border-left: 6px solid var(--theme-main); 
-            flex-direction: row; align-items: center; justify-content: flex-start; gap: 1.5rem; 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
+        body[data-ui="formal"] .menu-card { background: var(--bg-box); border: 1px solid var(--border-color); border-left: 6px solid var(--theme-main); flex-direction: row; align-items: center; justify-content: flex-start; gap: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         body[data-ui="formal"] .menu-card .menu-icon { color: var(--theme-main); }
-        
-        /* Desain UI: Glass (Transparan Elegan) */
-        body[data-ui="glass"] .menu-card { 
-            background: var(--theme-light); backdrop-filter: blur(10px); 
-            border: 1px solid var(--theme-main); color: var(--text-main);
-            flex-direction: column; box-shadow: 0 8px 32px 0 rgba(0,0,0,0.05);
-        }
+        body[data-ui="glass"] .menu-card { background: var(--theme-light); backdrop-filter: blur(10px); border: 1px solid var(--theme-main); flex-direction: column; box-shadow: 0 8px 32px 0 rgba(0,0,0,0.05); }
         body[data-ui="glass"] .menu-card .menu-icon { color: var(--theme-main); }
-
-        /* Opsi Background Web */
-        body[data-bg="dark"] { --bg-color: #0f172a; --card-bg: #1e293b; --text-main: #f8fafc; }
-        body[data-bg="grey"] { --bg-color: #e2e8f0; --card-bg: #f8fafc; --text-main: #0f172a; }
-        body[data-bg="light"] { --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #0f172a; }
-
-        /* FIX: Tulisan hitam di mode Dark + Glass */
         body[data-bg="dark"][data-ui="glass"] .menu-card { color: #000000 !important; }
         body[data-bg="dark"][data-ui="glass"] .menu-icon { color: #000000 !important; }
     </style>
 </head>
-<body id="app-body" data-bg="light" data-ui="formal" class="min-h-screen font-sans">
+<body id="app-body" data-bg="light" data-ui="formal" class="font-sans">
 
-    <header class="header-dynamic shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-40 transition-colors">
+    <nav class="card-dynamic shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b">
         <div class="flex items-center">
             <img src="sunpevece.png" alt="Logo" class="h-10 object-contain mr-3" onerror="this.style.display='none'">
-            <span class="font-bold text-lg hidden sm:inline">PORTAL WMS</span>
+            <div class="flex flex-col">
+                <span class="font-extrabold text-lg tracking-wide leading-tight text-blue-700">PORTAL WMS</span>
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider hidden sm:block">PT Sunpevece Indodeli</span>
+            </div>
         </div>
         
         <div class="flex items-center gap-4">
-            <button id="btn-pesan" class="p-2 hover:bg-gray-200/50 rounded-full relative transition">
-                <i data-lucide="bell" class="w-6 h-6"></i>
-                <span id="badge-pesan" class="absolute top-1 right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">1</span>
-            </button>
-
             <div class="relative flex items-center">
-                <div id="search-box" class="hidden md:flex items-center card-dynamic rounded-full px-4 py-2 mr-2">
-                    <input type="text" id="input-search" class="bg-transparent text-sm outline-none w-40 lg:w-56" placeholder="Cari menu...">
+                <div id="search-box" class="hidden md:flex items-center border border-gray-300 rounded-full px-4 py-1.5 mr-2 bg-black/5">
+                    <input type="text" id="input-search" class="bg-transparent text-sm outline-none w-40 lg:w-56 font-medium" placeholder="Cari menu...">
                 </div>
-                <button id="btn-search-toggle" class="p-2 hover:bg-gray-200/50 rounded-full transition">
-                    <i data-lucide="search" class="w-6 h-6"></i>
-                </button>
+                <button id="btn-search-toggle" class="p-2 hover:bg-black/10 rounded-full transition"><i data-lucide="search" class="w-5 h-5"></i></button>
             </div>
-
+            
             <div class="relative">
-                <button id="btn-profile" class="w-10 h-10 bg-theme font-bold rounded-full flex items-center justify-center shadow-md border-2 border-white transition">
+                <button id="btn-profile" class="w-10 h-10 bg-theme font-bold rounded-full flex items-center justify-center shadow-md border-2 border-white transition active:scale-95">
                     <span id="profile-initial">U</span>
                 </button>
-                <div id="profile-menu" class="hidden absolute right-0 mt-2 w-56 card-dynamic rounded-xl shadow-xl py-2 z-50">
-                    <div class="px-4 py-2 border-b border-gray-200/20 text-xs font-bold mb-1" id="user-role-display">Role: User</div>
-                    <button id="btn-modal-pass" class="block w-full text-left px-4 py-2.5 hover:bg-gray-500/10 text-sm flex items-center gap-2"><i data-lucide="key-round" class="w-4 h-4 text-theme"></i> Ganti Password</button>
-                    <button id="btn-modal-ui" class="block w-full text-left px-4 py-2.5 hover:bg-gray-500/10 text-sm flex items-center gap-2"><i data-lucide="palette" class="w-4 h-4 text-theme"></i> Desain & Tema</button>
-                    <button id="btn-logout" class="block w-full text-left px-4 py-2.5 hover:bg-red-500/10 text-red-600 font-semibold text-sm border-t border-gray-200/20 mt-1 flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> Logout</button>
+                <div id="profile-menu" class="hidden absolute right-0 mt-2 w-56 card-dynamic rounded-xl shadow-xl py-2 z-50 border">
+                    <div class="px-4 py-2 border-b border-gray-200/20 text-xs font-bold mb-1 opacity-70" id="user-role-display">Role: User</div>
+                    <button id="btn-modal-pass" class="w-full text-left px-4 py-2.5 hover:bg-black/5 text-sm flex items-center gap-2"><i data-lucide="key-round" class="w-4 h-4 text-theme"></i> Ganti Password</button>
+                    <button id="btn-modal-ui" class="w-full text-left px-4 py-2.5 hover:bg-black/5 text-sm flex items-center gap-2"><i data-lucide="palette" class="w-4 h-4 text-theme"></i> Desain & Tema</button>
+                    <button id="btn-logout" class="w-full text-left px-4 py-2.5 hover:bg-red-500/10 text-red-600 font-bold text-sm border-t border-gray-200/20 mt-1 flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> Logout</button>
                 </div>
             </div>
         </div>
-    </header>
+    </nav>
+
+    <main class="w-full max-w-7xl mx-auto p-4 md:p-8 flex-grow">
+        <header class="mb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4 border-b border-gray-200/50 pb-4">
+            <div>
+                <h2 class="text-2xl font-black flex items-center gap-2"><i data-lucide="layout-dashboard" class="w-7 h-7 text-blue-600"></i> Dashboard Utama</h2>
+                <p class="text-sm opacity-60 mt-1">Pilih modul aplikasi untuk melanjutkan operasi.</p>
+            </div>
+        </header>
+
+        <div id="menu-grid" class="grid grid-cols-1 gap-4">
+            <div class="col-span-full p-10 flex flex-col items-center justify-center opacity-50">
+                <i data-lucide="loader-2" class="animate-spin w-8 h-8 mb-2 text-theme"></i>
+                <p class="font-bold">Menyelaraskan Modul...</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="w-full text-center py-5 border-t border-gray-200/50 mt-auto">
+        <p class="text-xs font-bold opacity-40 uppercase tracking-widest">Sistem Kontrol Gudang &copy; 2026 PT Sunpevece Indodeli</p>
+    </footer>
 
     <div id="popup-password" class="hidden fixed inset-0 flex items-center justify-center bg-black/60 z-50 px-4 backdrop-blur-sm">
-        <div class="card-dynamic p-6 rounded-2xl shadow-2xl w-full max-w-sm">
+        <div class="card-dynamic p-6 rounded-2xl shadow-2xl w-full max-w-sm border">
             <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i data-lucide="lock" class="text-theme"></i> Ganti Password</h3>
             <form id="form-password" class="space-y-4">
-                <input type="password" id="input-new-pass" class="w-full p-3 border rounded-lg outline-none focus:ring-2 bg-transparent" placeholder="Ketik Password Baru" required>
+                <input type="password" id="input-new-pass" class="w-full p-3 border rounded-lg outline-none focus:border-blue-500 bg-transparent" placeholder="Ketik Password Baru" required>
                 <div class="flex gap-2">
                     <button type="button" id="btn-close-pass" class="w-1/2 py-2 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300">Batal</button>
-                    <button type="submit" class="w-1/2 py-2 bg-theme font-bold rounded-lg shadow">Simpan</button>
+                    <button type="submit" class="w-1/2 py-2 bg-theme font-bold rounded-lg shadow text-white">Simpan</button>
                 </div>
             </form>
         </div>
     </div>
 
     <div id="popup-ui" class="hidden fixed inset-0 flex items-center justify-center bg-black/60 z-50 px-4 backdrop-blur-sm">
-        <div class="card-dynamic p-6 rounded-2xl shadow-2xl w-full max-w-md">
+        <div class="card-dynamic p-6 rounded-2xl shadow-2xl w-full max-w-md border">
             <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i data-lucide="brush" class="text-theme"></i> Desain Antarmuka</h3>
-            
-            <div class="mb-5">
-                <label class="block text-xs font-bold uppercase opacity-60 mb-2">Pilih Warna Utama (Tema)</label>
-                <div class="grid grid-cols-4 gap-2">
-                    <button onclick="setTheme('#2563eb', '#1d4ed8', '#eff6ff')" class="h-10 rounded-lg bg-blue-600 hover:ring-2 ring-blue-300 transition" title="Biru"></button>
-                    <button onclick="setTheme('#10b981', '#059669', '#ecfdf5')" class="h-10 rounded-lg bg-emerald-500 hover:ring-2 ring-emerald-300 transition" title="Hijau"></button>
-                    <button onclick="setTheme('#f97316', '#ea580c', '#fff7ed')" class="h-10 rounded-lg bg-orange-500 hover:ring-2 ring-orange-300 transition" title="Oranye"></button>
-                    <button onclick="setTheme('#8b5cf6', '#7c3aed', '#f5f3ff')" class="h-10 rounded-lg bg-purple-500 hover:ring-2 ring-purple-300 transition" title="Ungu"></button>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase opacity-60 mb-2">Tema Warna</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button onclick="setTheme('#2563eb', '#1d4ed8', '#eff6ff')" class="h-10 rounded-lg bg-blue-600 hover:ring-2 ring-blue-300"></button>
+                        <button onclick="setTheme('#10b981', '#059669', '#ecfdf5')" class="h-10 rounded-lg bg-emerald-500 hover:ring-2 ring-emerald-300"></button>
+                        <button onclick="setTheme('#f97316', '#ea580c', '#fff7ed')" class="h-10 rounded-lg bg-orange-500 hover:ring-2 ring-orange-300"></button>
+                        <button onclick="setTheme('#8b5cf6', '#7c3aed', '#f5f3ff')" class="h-10 rounded-lg bg-purple-500 hover:ring-2 ring-purple-300"></button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase opacity-60 mb-2">Latar Belakang</label>
+                    <div class="grid grid-cols-3 gap-2 text-sm">
+                        <button onclick="setBg('light')" class="py-2 border rounded font-bold bg-white text-gray-800">Light</button>
+                        <button onclick="setBg('grey')" class="py-2 border rounded font-bold bg-gray-200 text-gray-800">Grey</button>
+                        <button onclick="setBg('dark')" class="py-2 border rounded font-bold bg-slate-800 text-white">Dark</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase opacity-60 mb-2">Gaya Menu (UI)</label>
+                    <div class="flex flex-col gap-2 text-sm">
+                        <button onclick="setUI('modern')" class="py-2 border rounded font-bold text-left px-4 hover:bg-black/5">Modern (Gradasi)</button>
+                        <button onclick="setUI('formal')" class="py-2 border rounded font-bold text-left px-4 hover:bg-black/5">Formal (Garis Bersih)</button>
+                        <button onclick="setUI('glass')" class="py-2 border rounded font-bold text-left px-4 hover:bg-black/5">Glass (Transparan)</button>
+                    </div>
                 </div>
             </div>
-
-            <div class="mb-5">
-                <label class="block text-xs font-bold uppercase opacity-60 mb-2">Pilih Latar Belakang</label>
-                <div class="grid grid-cols-3 gap-2 text-sm">
-                    <button onclick="setBg('light')" class="py-2 border border-gray-300 rounded font-bold bg-white text-gray-800 hover:bg-gray-50">Light</button>
-                    <button onclick="setBg('grey')" class="py-2 border border-gray-400 rounded font-bold bg-gray-200 text-gray-800 hover:bg-gray-300">Grey</button>
-                    <button onclick="setBg('dark')" class="py-2 border border-gray-600 rounded font-bold bg-slate-800 text-white hover:bg-slate-700">Dark</button>
-                </div>
-            </div>
-
-            <div class="mb-5">
-                <label class="block text-xs font-bold uppercase opacity-60 mb-2">Pilih Gaya Menu (UI)</label>
-                <div class="flex flex-col gap-2 text-sm">
-                    <button onclick="setUI('modern')" class="py-2 border border-gray-200 rounded font-bold text-left px-4 hover:bg-gray-500/10 flex items-center gap-2"><i data-lucide="layout-grid" class="w-4 h-4 text-theme"></i> Modern (Gradasi)</button>
-                    <button onclick="setUI('formal')" class="py-2 border border-gray-200 rounded font-bold text-left px-4 hover:bg-gray-500/10 flex items-center gap-2"><i data-lucide="list" class="w-4 h-4 text-theme"></i> Formal (Baris Bersih)</button>
-                    <button onclick="setUI('glass')" class="py-2 border border-gray-200 rounded font-bold text-left px-4 hover:bg-gray-500/10 flex items-center gap-2"><i data-lucide="sparkles" class="w-4 h-4 text-theme"></i> Glass (Kotak Elegan)</button>
-                </div>
-            </div>
-
-            <button id="btn-close-ui" class="w-full py-2 mt-2 bg-gray-200 text-gray-800 font-bold rounded-lg hover:bg-gray-300 transition">Tutup Pengaturan</button>
+            <button id="btn-close-ui" class="w-full py-3 mt-4 bg-gray-200 text-gray-800 font-bold rounded-lg hover:bg-gray-300">Tutup Pengaturan</button>
         </div>
     </div>
 
-    <main class="max-w-7xl mx-auto p-6 md:p-8 relative z-10">
-        <div id="menu-grid" class="grid grid-cols-1 gap-4">
-            <p class="text-theme font-bold animate-pulse col-span-full flex items-center gap-2"><i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> Menyelaraskan Data...</p>
-        </div>
-    </main>
-
     <script>
-        // KONEKSI SUPABASE
         const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // DATA MASTER DENGAN NAMA IKON DARI LUCIDE
         const masterMenus = [
             { id: 'stbj', title: 'Stbj', icon: 'clipboard-check', redirect: 'stbj.html' },
-            { id: 'hasil_stbj', title: 'Hasil Stbj', icon: 'file-spreadsheet', redirect: 'hasil_stbj.html' },
+            { id: 'hasil_stbj', title: 'Hasil Laporan Stbj', icon: 'file-spreadsheet', redirect: 'hasil_stbj.html' },
             { id: 'scan_input', title: 'Scan & Input', icon: 'scan-barcode' },
+            { id: 'data_control', title: 'Data Control', icon: 'settings-2', redirect: 'data_control.html' },
+            // Menu statis lainnya di sini...
             { id: 'langsir', title: 'Langsir', icon: 'arrow-right-left' },
             { id: 'riwayat_langsir', title: 'Riwayat Langsir', icon: 'history' },
-            { id: 'riwayat_pindah', title: 'Riwayat Pindah area', icon: 'map-pin' },
-            { id: 'riwayat_masuk', title: 'Riwayat Masuk/retur', icon: 'package-plus' },
-            { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'package-minus' },
-            { id: 'riwayat_konversi', title: 'Riwayat konversi', icon: 'refresh-cw' },
-            { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers' },
-            { id: 'laporan_mingguan', title: 'Laporan mingguan', icon: 'calendar-days' },
-            { id: 'data_control', title: 'Data Control', icon: 'database', redirect: 'data_control.html' }, // Re-enabled Data Control
-            { id: 'kartu_stok_admin', title: 'Kartu stok (khusus admin)', icon: 'database' },
-            { id: 'kelola_pengiriman', title: 'Kelola pengiriman', icon: 'truck' },
-            { id: 'input_keluar', title: 'Input keluar', icon: 'log-out' },
-            { id: 'absen', title: 'Absen', icon: 'user-check' }
+            { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers' }
         ];
 
         let currentUser = null;
@@ -184,128 +150,68 @@
             lucide.createIcons();
             const sessionData = localStorage.getItem('user_session');
             if (!sessionData) { window.location.href = 'index.html'; return; }
+            
             currentUser = JSON.parse(sessionData);
-            document.getElementById('profile-initial').innerText = currentUser.username.toUpperCase();
+            document.getElementById('profile-initial').innerText = currentUser.username.charAt(0).toUpperCase();
             document.getElementById('user-role-display').innerText = "Role: " + currentUser.role;
             
             loadPreferences();
             await fetchMenus();
         };
 
-        // AMBIL MENU SESUAI AKSES DAN URUTAN DARI DATABASE
         async function fetchMenus() {
             const grid = document.getElementById('menu-grid');
             const { data: aksesData, error } = await db.from('menu_access').select('*').order('sort_order', { ascending: true });
             
             grid.innerHTML = '';
-            if(error) { grid.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`; return; }
+            if(error) { grid.innerHTML = `<p class="text-red-500 font-bold p-4">Error: ${error.message}</p>`; return; }
 
             aksesData.forEach(akses => {
                 let allowed = akses.allowed_users ? akses.allowed_users.split(',').map(s=>s.trim()) : [];
                 if (currentUser.role === 'Creator' || allowed.includes(currentUser.username)) {
-                    
                     let menuAsli = masterMenus.find(m => m.id === akses.menu_id);
                     if(!menuAsli) return;
 
                     const card = document.createElement('div');
-                    card.className = `menu-card p-6 rounded-2xl transition-all duration-300 cursor-pointer flex group w-full`;
+                    card.className = `menu-card p-6 rounded-2xl transition-all duration-300 cursor-pointer flex group w-full hover:-translate-y-1 active:scale-95`;
                     card.setAttribute('data-title', menuAsli.title.toLowerCase());
                     
                     card.innerHTML = `
-                        <div class="menu-icon mb-2 group-hover:scale-110 transition-transform">
-                            <i data-lucide="${menuAsli.icon}" class="w-10 h-10"></i>
-                        </div>
+                        <div class="menu-icon mb-2 group-hover:scale-110 transition-transform"><i data-lucide="${menuAsli.icon}" class="w-10 h-10"></i></div>
                         <div class="font-bold text-lg tracking-wide">${menuAsli.title}</div>
                     `;
-                    
-                    // LOGIKA REDIRECT
-                    card.onclick = () => { 
-                        if(menuAsli.redirect) window.location.href = menuAsli.redirect; 
-                        else alert('Menu ' + menuAsli.title + ' sedang dikembangkan.'); 
-                    };
-                    
+                    card.onclick = () => { if(menuAsli.redirect) window.location.href = menuAsli.redirect; else alert(menuAsli.title + ' sedang dikembangkan.'); };
                     grid.appendChild(card);
                 }
             });
             lucide.createIcons();
         }
 
-        // MANAJEMEN TAMPILAN (TEMA, BG, UI)
+        // TEMA DAN UI
         const body = document.getElementById('app-body');
-        
-        function setTheme(mainHex, hoverHex, lightHex) {
-            document.documentElement.style.setProperty('--theme-main', mainHex);
-            document.documentElement.style.setProperty('--theme-hover', hoverHex);
-            document.documentElement.style.setProperty('--theme-light', lightHex);
-            
-            localStorage.setItem('app_theme_main', mainHex);
-            localStorage.setItem('app_theme_hover', hoverHex);
-            localStorage.setItem('app_theme_light', lightHex);
-        }
+        function setTheme(main, hover, light) { document.documentElement.style.setProperty('--theme-main', main); document.documentElement.style.setProperty('--theme-hover', hover); document.documentElement.style.setProperty('--theme-light', light); localStorage.setItem('app_theme_main', main); localStorage.setItem('app_theme_hover', hover); localStorage.setItem('app_theme_light', light); }
+        function setBg(bgType) { body.setAttribute('data-bg', bgType); localStorage.setItem('app_bg', bgType); }
+        function setUI(uiType) { body.setAttribute('data-ui', uiType); localStorage.setItem('app_ui', uiType); const grid = document.getElementById('menu-grid'); if(uiType === 'formal') { grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'; } else { grid.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6'; } }
+        function loadPreferences() { setTheme(localStorage.getItem('app_theme_main') || '#2563eb', localStorage.getItem('app_theme_hover') || '#1d4ed8', localStorage.getItem('app_theme_light') || '#eff6ff'); setBg(localStorage.getItem('app_bg') || 'light'); setUI(localStorage.getItem('app_ui') || 'formal'); }
 
-        function setBg(bgType) {
-            body.setAttribute('data-bg', bgType);
-            localStorage.setItem('app_bg', bgType);
-        }
+        // MODALS & EVENT LISTENER
+        document.getElementById('btn-modal-ui').addEventListener('click', () => { document.getElementById('profile-menu').classList.add('hidden'); document.getElementById('popup-ui').classList.remove('hidden'); });
+        document.getElementById('btn-close-ui').addEventListener('click', () => document.getElementById('popup-ui').classList.add('hidden'));
+        document.getElementById('btn-modal-pass').addEventListener('click', () => { document.getElementById('profile-menu').classList.add('hidden'); document.getElementById('popup-password').classList.remove('hidden'); });
+        document.getElementById('btn-close-pass').addEventListener('click', () => document.getElementById('popup-password').classList.add('hidden'));
 
-        function setUI(uiType) {
-            body.setAttribute('data-ui', uiType);
-            localStorage.setItem('app_ui', uiType);
-            
-            const grid = document.getElementById('menu-grid');
-            if(uiType === 'formal') { grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'; } 
-            else { grid.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6'; }
-        }
-
-        function loadPreferences() {
-            const main = localStorage.getItem('app_theme_main') || '#2563eb';
-            const hover = localStorage.getItem('app_theme_hover') || '#1d4ed8';
-            const light = localStorage.getItem('app_theme_light') || '#eff6ff';
-            setTheme(main, hover, light);
-            setBg(localStorage.getItem('app_bg') || 'light');
-            setUI(localStorage.getItem('app_ui') || 'formal');
-        }
-
-        // UI Event Listeners
-        const popupUI = document.getElementById('popup-ui');
-        document.getElementById('btn-modal-ui').addEventListener('click', () => { document.getElementById('profile-menu').classList.add('hidden'); popupUI.classList.remove('hidden'); });
-        document.getElementById('btn-close-ui').addEventListener('click', () => popupUI.classList.add('hidden'));
-
-        // GANTI PASSWORD & FUNGSI LAINNYA
-        const popupPassword = document.getElementById('popup-password');
-        document.getElementById('btn-modal-pass').addEventListener('click', () => { document.getElementById('profile-menu').classList.add('hidden'); popupPassword.classList.remove('hidden'); });
-        document.getElementById('btn-close-pass').addEventListener('click', () => { popupPassword.classList.add('hidden'); document.getElementById('input-new-pass').value = ''; });
-
-        document.getElementById('form-password').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const newPass = document.getElementById('input-new-pass').value;
-            const { error } = await db.from('app_users').update({ password: newPass }).eq('id', currentUser.id);
-            
-            if(error) { alert("Gagal: " + error.message); } 
-            else {
-                currentUser.password = newPass;
-                localStorage.setItem('user_session', JSON.stringify(currentUser));
-                alert("Password diperbarui!");
-                popupPassword.classList.add('hidden'); document.getElementById('input-new-pass').value = '';
-            }
-        });
-
-        // Toggle Profile
+        // PROFILE DROPDOWN & LOGOUT
         const btnProfile = document.getElementById('btn-profile'), profileMenu = document.getElementById('profile-menu');
         btnProfile.addEventListener('click', () => profileMenu.classList.toggle('hidden'));
         window.addEventListener('click', (e) => { if (!btnProfile.contains(e.target) && !profileMenu.contains(e.target)) profileMenu.classList.add('hidden'); });
-        
-        // Logout
         document.getElementById('btn-logout').addEventListener('click', () => { localStorage.clear(); window.location.href = 'index.html'; });
 
-        // Search Fitur
+        // SEARCH
         const btnSearchToggle = document.getElementById('btn-search-toggle'), searchBox = document.getElementById('search-box'), inputSearch = document.getElementById('input-search');
         btnSearchToggle.addEventListener('click', () => { searchBox.classList.toggle('hidden'); if(!searchBox.classList.contains('hidden')) inputSearch.focus(); });
         inputSearch.addEventListener('input', (e) => {
-            const keyword = e.target.value.toLowerCase();
-            document.querySelectorAll('#menu-grid > div').forEach(card => {
-                card.classList.toggle('hidden', !card.getAttribute('data-title').includes(keyword));
-            });
+            const kw = e.target.value.toLowerCase();
+            document.querySelectorAll('#menu-grid > div').forEach(card => card.classList.toggle('hidden', !card.getAttribute('data-title').includes(kw)));
         });
     </script>
 </body>
