@@ -3,130 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Control System - Menu</title>
+    <title>WMS - Dashboard Utama</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --bg-main: #f8fafc; --bg-box: #ffffff; --text-main: #1f2937; --border-color: #e2e8f0; --theme-main: #2563eb; --theme-hover: #1d4ed8; --theme-light: #eff6ff;}
+        :root { --bg-main: #f8fafc; --bg-box: #ffffff; --text-main: #1f2937; --border-color: #e2e8f0; --theme-main: #2563eb; --theme-hover: #1d4ed8;}
         body[data-bg="dark"] { --bg-main: #0f172a; --bg-box: #1e293b; --text-main: #f8fafc; --border-color: #334155; }
         body[data-bg="grey"] { --bg-main: #e2e8f0; --bg-box: #f1f5f9; --text-main: #0f172a; --border-color: #cbd5e1; }
-        body { background-color: var(--bg-main); color: var(--text-main); transition: background 0.3s ease, color 0.3s ease; display: flex; flex-direction: column; min-height: 100vh;}
-        
+        body { background-color: var(--bg-main); color: var(--text-main); transition: background 0.3s ease; min-height: 100vh;}
         .card-dynamic { background-color: var(--bg-box); border-color: var(--border-color); }
-        .text-theme { color: var(--theme-main); }
         .bg-theme { background-color: var(--theme-main); color: #fff; }
-        .bg-theme:hover { background-color: var(--theme-hover); }
-
-        body[data-ui="modern"] .menu-card { background: linear-gradient(135deg, var(--theme-main), var(--theme-hover)); color: white; border: none; flex-direction: column; }
-        body[data-ui="modern"] .menu-card .menu-icon { color: white; }
+        
         body[data-ui="formal"] .menu-card { background: var(--bg-box); border: 1px solid var(--border-color); border-left: 6px solid var(--theme-main); flex-direction: row; align-items: center; justify-content: flex-start; gap: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        body[data-ui="formal"] .menu-card .menu-icon { color: var(--theme-main); }
-        body[data-ui="glass"] .menu-card { background: var(--theme-light); backdrop-filter: blur(10px); border: 1px solid var(--theme-main); flex-direction: column; box-shadow: 0 8px 32px 0 rgba(0,0,0,0.05); }
-        body[data-ui="glass"] .menu-card .menu-icon { color: var(--theme-main); }
-        body[data-bg="dark"][data-ui="glass"] .menu-card { color: #000000 !important; }
-        body[data-bg="dark"][data-ui="glass"] .menu-icon { color: #000000 !important; }
+        body[data-ui="modern"] .menu-card { background: linear-gradient(135deg, var(--theme-main), var(--theme-hover)); color: white; border: none; flex-direction: column; }
     </style>
 </head>
 <body id="app-body" data-bg="light" data-ui="formal" class="font-sans">
 
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 z-[60] hidden backdrop-blur-sm transition-all"></div>
+    <div id="sidebar-menu" class="fixed top-0 left-0 h-full w-64 card-dynamic shadow-2xl z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col border-r">
+        <div class="p-5 border-b flex justify-between items-center bg-blue-50/50">
+            <h2 class="font-black text-blue-700 text-lg flex items-center gap-2"><i data-lucide="layers" class="w-5 h-5"></i> WMS Menu</h2>
+            <button onclick="toggleSidebar()" class="p-2 text-gray-500 hover:text-red-500 rounded-full bg-white shadow-sm cursor-pointer transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="p-4 flex flex-col gap-2 overflow-y-auto flex-grow">
+            <a href="menu.html" class="flex items-center gap-3 p-3 rounded-xl bg-blue-600 text-white font-bold shadow-md"><i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard</a>
+            <a href="stbj.html" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 font-bold text-gray-600 transition"><i data-lucide="scan-barcode" class="w-5 h-5"></i> Scan STBJ</a>
+            <a href="hasil_stbj.html" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 font-bold text-gray-600 transition"><i data-lucide="file-spreadsheet" class="w-5 h-5"></i> Laporan STBJ</a>
+            <a href="data_control.html" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 font-bold text-gray-600 transition"><i data-lucide="settings-2" class="w-5 h-5"></i> Data Control</a>
+        </div>
+        <div class="p-4 border-t">
+            <button onclick="localStorage.clear(); window.location.href='index.html'" class="w-full py-3 bg-red-50 text-red-600 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition shadow-sm"><i data-lucide="log-out" class="w-4 h-4"></i> LOGOUT</button>
+        </div>
+    </div>
+
     <nav class="card-dynamic shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b">
-        <div class="flex items-center">
-            <img src="sunpevece.png" alt="Logo" class="h-10 object-contain mr-3" onerror="this.style.display='none'">
-            <div class="flex flex-col">
+        <div class="flex items-center gap-3">
+            <button onclick="toggleSidebar()" class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full transition cursor-pointer active:scale-95 shadow-inner">
+                <i data-lucide="menu" class="w-5 h-5"></i>
+            </button>
+            <div class="flex flex-col ml-1">
                 <span class="font-extrabold text-lg tracking-wide leading-tight text-blue-700">PORTAL WMS</span>
-                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider hidden sm:block">PT Sunpevece Indodeli</span>
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider hidden md:block">Dashboard Utama</span>
             </div>
         </div>
         
         <div class="flex items-center gap-4">
-            <div class="relative flex items-center">
-                <div id="search-box" class="hidden md:flex items-center border border-gray-300 rounded-full px-4 py-1.5 mr-2 bg-black/5">
-                    <input type="text" id="input-search" class="bg-transparent text-sm outline-none w-40 lg:w-56 font-medium" placeholder="Cari menu...">
-                </div>
-                <button id="btn-search-toggle" class="p-2 hover:bg-black/10 rounded-full transition"><i data-lucide="search" class="w-5 h-5"></i></button>
-            </div>
-            
-            <div class="relative">
-                <button id="btn-profile" class="w-10 h-10 bg-theme font-bold rounded-full flex items-center justify-center shadow-md border-2 border-white transition active:scale-95">
-                    <span id="profile-initial">U</span>
-                </button>
-                <div id="profile-menu" class="hidden absolute right-0 mt-2 w-56 card-dynamic rounded-xl shadow-xl py-2 z-50 border">
-                    <div class="px-4 py-2 border-b border-gray-200/20 text-xs font-bold mb-1 opacity-70" id="user-role-display">Role: User</div>
-                    <button id="btn-modal-pass" class="w-full text-left px-4 py-2.5 hover:bg-black/5 text-sm flex items-center gap-2"><i data-lucide="key-round" class="w-4 h-4 text-theme"></i> Ganti Password</button>
-                    <button id="btn-modal-ui" class="w-full text-left px-4 py-2.5 hover:bg-black/5 text-sm flex items-center gap-2"><i data-lucide="palette" class="w-4 h-4 text-theme"></i> Desain & Tema</button>
-                    <button id="btn-logout" class="w-full text-left px-4 py-2.5 hover:bg-red-500/10 text-red-600 font-bold text-sm border-t border-gray-200/20 mt-1 flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> Logout</button>
-                </div>
+            <div class="relative flex items-center gap-3">
+                <span class="text-xs font-bold text-gray-600 hidden md:block" id="user-display">User</span>
+                <button class="w-10 h-10 bg-blue-600 font-bold rounded-full flex items-center justify-center text-white shadow-md border-2 border-blue-200 transition cursor-pointer" id="profile-initial">U</button>
             </div>
         </div>
     </nav>
 
-    <main class="w-full max-w-7xl mx-auto p-4 md:p-8 flex-grow">
-        <header class="mb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4 border-b border-gray-200/50 pb-4">
-            <div>
-                <h2 class="text-2xl font-black flex items-center gap-2"><i data-lucide="layout-dashboard" class="w-7 h-7 text-blue-600"></i> Dashboard Utama</h2>
-                <p class="text-sm opacity-60 mt-1">Pilih modul aplikasi untuk melanjutkan operasi.</p>
-            </div>
+    <main class="w-full max-w-7xl mx-auto p-4 md:p-8">
+        <header class="mb-6 border-b border-gray-200/50 pb-4">
+            <h2 class="text-2xl font-black flex items-center gap-2"><i data-lucide="layout-dashboard" class="w-7 h-7 text-blue-600"></i> Dashboard Utama</h2>
         </header>
 
         <div id="menu-grid" class="grid grid-cols-1 gap-4">
             <div class="col-span-full p-10 flex flex-col items-center justify-center opacity-50">
-                <i data-lucide="loader-2" class="animate-spin w-8 h-8 mb-2 text-theme"></i>
-                <p class="font-bold">Menyelaraskan Modul...</p>
+                <i data-lucide="loader-2" class="animate-spin w-8 h-8 mb-2 text-blue-600"></i>
+                <p class="font-bold">Menyelaraskan Menu...</p>
             </div>
         </div>
     </main>
-
-    <footer class="w-full text-center py-5 border-t border-gray-200/50 mt-auto">
-        <p class="text-xs font-bold opacity-40 uppercase tracking-widest">Sistem Kontrol Gudang &copy; 2026 PT Sunpevece Indodeli</p>
-    </footer>
-
-    <div id="popup-password" class="hidden fixed inset-0 flex items-center justify-center bg-black/60 z-50 px-4 backdrop-blur-sm">
-        <div class="card-dynamic p-6 rounded-2xl shadow-2xl w-full max-w-sm border">
-            <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i data-lucide="lock" class="text-theme"></i> Ganti Password</h3>
-            <form id="form-password" class="space-y-4">
-                <input type="password" id="input-new-pass" class="w-full p-3 border rounded-lg outline-none focus:border-blue-500 bg-transparent" placeholder="Ketik Password Baru" required>
-                <div class="flex gap-2">
-                    <button type="button" id="btn-close-pass" class="w-1/2 py-2 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300">Batal</button>
-                    <button type="submit" class="w-1/2 py-2 bg-theme font-bold rounded-lg shadow text-white">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="popup-ui" class="hidden fixed inset-0 flex items-center justify-center bg-black/60 z-50 px-4 backdrop-blur-sm">
-        <div class="card-dynamic p-6 rounded-2xl shadow-2xl w-full max-w-md border">
-            <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i data-lucide="brush" class="text-theme"></i> Desain Antarmuka</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase opacity-60 mb-2">Tema Warna</label>
-                    <div class="grid grid-cols-4 gap-2">
-                        <button onclick="setTheme('#2563eb', '#1d4ed8', '#eff6ff')" class="h-10 rounded-lg bg-blue-600 hover:ring-2 ring-blue-300"></button>
-                        <button onclick="setTheme('#10b981', '#059669', '#ecfdf5')" class="h-10 rounded-lg bg-emerald-500 hover:ring-2 ring-emerald-300"></button>
-                        <button onclick="setTheme('#f97316', '#ea580c', '#fff7ed')" class="h-10 rounded-lg bg-orange-500 hover:ring-2 ring-orange-300"></button>
-                        <button onclick="setTheme('#8b5cf6', '#7c3aed', '#f5f3ff')" class="h-10 rounded-lg bg-purple-500 hover:ring-2 ring-purple-300"></button>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase opacity-60 mb-2">Latar Belakang</label>
-                    <div class="grid grid-cols-3 gap-2 text-sm">
-                        <button onclick="setBg('light')" class="py-2 border rounded font-bold bg-white text-gray-800">Light</button>
-                        <button onclick="setBg('grey')" class="py-2 border rounded font-bold bg-gray-200 text-gray-800">Grey</button>
-                        <button onclick="setBg('dark')" class="py-2 border rounded font-bold bg-slate-800 text-white">Dark</button>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase opacity-60 mb-2">Gaya Menu (UI)</label>
-                    <div class="flex flex-col gap-2 text-sm">
-                        <button onclick="setUI('modern')" class="py-2 border rounded font-bold text-left px-4 hover:bg-black/5">Modern (Gradasi)</button>
-                        <button onclick="setUI('formal')" class="py-2 border rounded font-bold text-left px-4 hover:bg-black/5">Formal (Garis Bersih)</button>
-                        <button onclick="setUI('glass')" class="py-2 border rounded font-bold text-left px-4 hover:bg-black/5">Glass (Transparan)</button>
-                    </div>
-                </div>
-            </div>
-            <button id="btn-close-ui" class="w-full py-3 mt-4 bg-gray-200 text-gray-800 font-bold rounded-lg hover:bg-gray-300">Tutup Pengaturan</button>
-        </div>
-    </div>
 
     <script>
         const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
@@ -138,7 +80,6 @@
             { id: 'hasil_stbj', title: 'Hasil Laporan Stbj', icon: 'file-spreadsheet', redirect: 'hasil_stbj.html' },
             { id: 'scan_input', title: 'Scan & Input', icon: 'scan-barcode' },
             { id: 'data_control', title: 'Data Control', icon: 'settings-2', redirect: 'data_control.html' },
-            // Menu statis lainnya di sini...
             { id: 'langsir', title: 'Langsir', icon: 'arrow-right-left' },
             { id: 'riwayat_langsir', title: 'Riwayat Langsir', icon: 'history' },
             { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers' }
@@ -150,12 +91,11 @@
             lucide.createIcons();
             const sessionData = localStorage.getItem('user_session');
             if (!sessionData) { window.location.href = 'index.html'; return; }
-            
             currentUser = JSON.parse(sessionData);
             document.getElementById('profile-initial').innerText = currentUser.username.charAt(0).toUpperCase();
-            document.getElementById('user-role-display').innerText = "Role: " + currentUser.role;
+            document.getElementById('user-display').innerText = currentUser.username;
             
-            loadPreferences();
+            setBg(localStorage.getItem('app_bg') || 'light');
             await fetchMenus();
         };
 
@@ -174,12 +114,7 @@
 
                     const card = document.createElement('div');
                     card.className = `menu-card p-6 rounded-2xl transition-all duration-300 cursor-pointer flex group w-full hover:-translate-y-1 active:scale-95`;
-                    card.setAttribute('data-title', menuAsli.title.toLowerCase());
-                    
-                    card.innerHTML = `
-                        <div class="menu-icon mb-2 group-hover:scale-110 transition-transform"><i data-lucide="${menuAsli.icon}" class="w-10 h-10"></i></div>
-                        <div class="font-bold text-lg tracking-wide">${menuAsli.title}</div>
-                    `;
+                    card.innerHTML = `<div class="menu-icon mb-2 group-hover:scale-110 transition-transform"><i data-lucide="${menuAsli.icon}" class="w-10 h-10"></i></div><div class="font-bold text-lg tracking-wide">${menuAsli.title}</div>`;
                     card.onclick = () => { if(menuAsli.redirect) window.location.href = menuAsli.redirect; else alert(menuAsli.title + ' sedang dikembangkan.'); };
                     grid.appendChild(card);
                 }
@@ -187,32 +122,15 @@
             lucide.createIcons();
         }
 
-        // TEMA DAN UI
-        const body = document.getElementById('app-body');
-        function setTheme(main, hover, light) { document.documentElement.style.setProperty('--theme-main', main); document.documentElement.style.setProperty('--theme-hover', hover); document.documentElement.style.setProperty('--theme-light', light); localStorage.setItem('app_theme_main', main); localStorage.setItem('app_theme_hover', hover); localStorage.setItem('app_theme_light', light); }
-        function setBg(bgType) { body.setAttribute('data-bg', bgType); localStorage.setItem('app_bg', bgType); }
-        function setUI(uiType) { body.setAttribute('data-ui', uiType); localStorage.setItem('app_ui', uiType); const grid = document.getElementById('menu-grid'); if(uiType === 'formal') { grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'; } else { grid.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6'; } }
-        function loadPreferences() { setTheme(localStorage.getItem('app_theme_main') || '#2563eb', localStorage.getItem('app_theme_hover') || '#1d4ed8', localStorage.getItem('app_theme_light') || '#eff6ff'); setBg(localStorage.getItem('app_bg') || 'light'); setUI(localStorage.getItem('app_ui') || 'formal'); }
-
-        // MODALS & EVENT LISTENER
-        document.getElementById('btn-modal-ui').addEventListener('click', () => { document.getElementById('profile-menu').classList.add('hidden'); document.getElementById('popup-ui').classList.remove('hidden'); });
-        document.getElementById('btn-close-ui').addEventListener('click', () => document.getElementById('popup-ui').classList.add('hidden'));
-        document.getElementById('btn-modal-pass').addEventListener('click', () => { document.getElementById('profile-menu').classList.add('hidden'); document.getElementById('popup-password').classList.remove('hidden'); });
-        document.getElementById('btn-close-pass').addEventListener('click', () => document.getElementById('popup-password').classList.add('hidden'));
-
-        // PROFILE DROPDOWN & LOGOUT
-        const btnProfile = document.getElementById('btn-profile'), profileMenu = document.getElementById('profile-menu');
-        btnProfile.addEventListener('click', () => profileMenu.classList.toggle('hidden'));
-        window.addEventListener('click', (e) => { if (!btnProfile.contains(e.target) && !profileMenu.contains(e.target)) profileMenu.classList.add('hidden'); });
-        document.getElementById('btn-logout').addEventListener('click', () => { localStorage.clear(); window.location.href = 'index.html'; });
-
-        // SEARCH
-        const btnSearchToggle = document.getElementById('btn-search-toggle'), searchBox = document.getElementById('search-box'), inputSearch = document.getElementById('input-search');
-        btnSearchToggle.addEventListener('click', () => { searchBox.classList.toggle('hidden'); if(!searchBox.classList.contains('hidden')) inputSearch.focus(); });
-        inputSearch.addEventListener('input', (e) => {
-            const kw = e.target.value.toLowerCase();
-            document.querySelectorAll('#menu-grid > div').forEach(card => card.classList.toggle('hidden', !card.getAttribute('data-title').includes(kw)));
-        });
+        function setBg(bgType) { document.body.setAttribute('data-bg', bgType); }
+        
+        // FUNGSI SIDEBAR MENU
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar-menu');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
     </script>
 </body>
 </html>
