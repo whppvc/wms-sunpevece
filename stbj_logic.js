@@ -3,119 +3,88 @@ const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// VARIABEL GLOBAL
 let masterData = { item: [], rules: [], troli: [], mesin: [], dus: [], po: [] };
-let importConfigs = [], deleteStack = [], isTranslated = false, globalRowId = 0;
+let importConfigs = [], deleteStack = [], globalRowId = 0;
 
-// SAAT HALAMAN DIMUAT
 window.onload = async () => {
     lucide.createIcons();
     document.body.setAttribute('data-bg', localStorage.getItem('app_bg') || 'light');
-    hideTranslateColumns();
     await loadInitialData();
     generateImportRows();
 };
 
-// NAVIGASI MENU
 function switchView(view) {
     document.getElementById('view-menu').classList.add('hidden');
     document.getElementById('view-scan').classList.toggle('hidden', view !== 'scan');
     document.getElementById('view-import').classList.toggle('hidden', view !== 'import');
 }
 
-// AMBIL DATA MASTER (Diperbarui untuk Master_2)
 async function loadInitialData() {
-    // 1. Ambil Troli dari master_1 (karena troli tidak ada di master_2 berdasarkan info Anda)
     const { data: mData1 } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
     if(mData1) {
-        masterData.troli = mData1.map(r => r.nama_troli).filter(x => x && x.trim() !== '');
-        // Hapus duplikat nama troli
-        masterData.troli = [...new Set(masterData.troli)]; 
-        
+        masterData.troli = [...new Set(mData1.map(r => r.nama_troli).filter(x => x && x.trim() !== ''))]; 
         const sel = document.getElementById('select-troli');
         if(sel) {
             sel.innerHTML = '<option value="">-- Pilih Troli --</option>';
             masterData.troli.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
         }
     }
-
-    // 2. Ambil seluruh "Kamus Terjemahan" dari master_2
     const { data: mData2 } = await db.from('master_2').select('*');
-    if(mData2) {
-        masterData.kamus = mData2; // Simpan seluruh isi master_2 ke dalam memori
-    }
+    if(mData2) masterData.kamus = mData2; 
 }
 
-// ALGORITMA PENERJEMAH (Kaidah Baru: Susunan Tepat Berdasarkan Posisi Digit)
 function translateBarcode(barcode) {
     const parts = barcode.split('/');
     let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-' };
     
     if (parts.length < 4) return data;
 
-    // --- 1. JENIS ITEM (Berdasarkan Huruf Depan QR Code) ---
     const hurufDepan = barcode.charAt(0).toUpperCase();
     if (hurufDepan === 'P') data.jenisItem = 'Plafon';
     else if (hurufDepan === 'L') data.jenisItem = 'List';
     else if (hurufDepan === 'W') data.jenisItem = 'WPC';
     else data.jenisItem = hurufDepan;
 
-    // --- 2. NAMA ITEM ([kode_nama_item] sebelum '/' pertama) ---
     let rawItem = parts[0];
     let cariItem = masterData.kamus.find(m => m.kode_nama_item === rawItem);
     data.namaItem = cariItem && cariItem.nama_item ? cariItem.nama_item : rawItem;
 
-    // --- 3. SHADING (Antara '/' pertama dan kedua) ---
     data.shading = parts[1];
 
-    // --- 4. PANJANG, GRADE, DUS (Antara '/' kedua dan ketiga) ---
     const p2 = parts[2];
     if (p2 && p2.length >= 4) {
-        // Cek apakah panjang deret ini 5 karakter atau 4 karakter
         let digitPjg = (p2.length === 5) ? 2 : 1;
-        
-        // [kode pjg]: Ambil 1 atau 2 digit pertama
         let rawPjg = p2.substring(0, digitPjg);
-        if (digitPjg === 1) {
-            data.panjang = rawPjg + "M"; // misal: 4 -> 4M
-        } else {
-            data.panjang = rawPjg[0] + "." + rawPjg[1] + "M"; // misal: 45 -> 4.5M
-        }
+        if (digitPjg === 1) data.panjang = rawPjg + "M"; 
+        else data.panjang = rawPjg[0] + "." + rawPjg[1] + "M"; 
 
-        // [kode_grade]: 1 digit setelah kode panjang (1=BAGUS, 2=A)
         let rawGrade = p2.substring(digitPjg, digitPjg + 1);
         if (rawGrade === '1') data.grade = 'BAGUS';
         else if (rawGrade === '2') data.grade = 'A';
         else data.grade = rawGrade;
 
-        // [kode_dus]: 2 digit terakhir sebelum '/' ketiga
         let rawDus = p2.substring(p2.length - 2); 
         let cariDus = masterData.kamus.find(m => m.kode_dus === rawDus);
         data.dus = cariDus && cariDus.dus ? cariDus.dus : rawDus;
     }
 
-    // --- 5. TGL PRODUKSI, MESIN, SHIFT, PO (Antara '/' ketiga dan keempat) ---
     const p3 = parts[3];
     if (p3.length >= 5) {
-        // [kode tgl produksi]: 5 digit pertama 
         const dayOfYear = parseInt(p3.substring(0, 3));
         const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
         const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
         data.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
 
-        // [kode_mesin]: 2 digit (Plafon) atau 3 digit (Lis/WPC)
         let lenMesin = (data.jenisItem === 'Plafon') ? 2 : 3;
         let rawMesin = p3.substring(5, 5 + lenMesin);
         let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin);
         data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
 
-        // [kode_shift]: 2 digit setelah kode mesin
         let startShift = 5 + lenMesin;
         let rawShift = p3.substring(startShift, startShift + 2);
         let cariShift = masterData.kamus.find(m => m.kode_shift === rawShift);
         data.shift = cariShift && cariShift.shift ? cariShift.shift : rawShift;
         
-        // [kode_po]: Sisa digit di akhir bagian p3 (Diawali huruf P)
         let startPO = startShift + 2;
         let rawPO = p3.substring(startPO); 
         let cariPO = masterData.kamus.find(m => m.kode_po === rawPO);
@@ -125,11 +94,7 @@ function translateBarcode(barcode) {
     return data;
 }
 
-// MANAJEMEN KOLOM TABEL
-function hideTranslateColumns() { document.querySelectorAll('.hidden-col').forEach(el => el.classList.add('hidden')); }
-function showTranslateColumns() { document.querySelectorAll('.hidden-col').forEach(el => el.classList.remove('hidden')); }
-
-// EVENT LISTENER SCAN BARCODE
+// PEMISAH SPASI DAN TITIK KOMA
 document.addEventListener('DOMContentLoaded', () => {
     const formScan = document.getElementById('form-scan');
     if(formScan) {
@@ -140,7 +105,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if(!troli || !rawInput) return;
             
             const existingQRs = Array.from(document.querySelectorAll('.qr-val')).map(td => td.innerText);
-            const codes = rawInput.split(/[\r\n;]+/).map(q => q.trim()).filter(q => q);
+            // REGEX: Memecah berdasarkan spasi ( ), Enter (\n), atau titik koma (;)
+            const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
             let hasDuplicate = false;
             
             codes.forEach(code => {
@@ -157,24 +123,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// TAMBAH BARIS KE TABEL
+// OTOMATIS TERJEMAH SAAT BARIS DITAMBAHKAN
 function addRow(troli, code) {
     globalRowId++;
-    const tr = document.createElement('tr'); tr.className = "border-b border-inherit hover:bg-black/5 transition row-item"; tr.id = `row-${globalRowId}`;
-    let html = `<td class="p-3 text-center"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 cursor-pointer"><i data-lucide="trash-2"></i></button></td><td class="p-3 font-bold no-cell text-center"></td><td class="p-3 troli-cell font-bold text-blue-600">${troli}</td><td class="p-3 font-mono qr-val border-r border-inherit">${code}</td>`;
+    const tr = document.createElement('tr'); 
+    tr.className = "border-b border-inherit hover:bg-black/5 transition row-item"; 
+    tr.id = `row-${globalRowId}`;
     
-    if (isTranslated) {
-        const td = translateBarcode(code);
-        // FIX: Mengubah td.pjg menjadi td.panjang di bawah ini
-        html += `<td class="p-3 col-tgl">${td.tglProduksi}</td><td class="p-3 col-mesin">${td.mesin}</td><td class="p-3 col-shift">${td.shift}</td><td class="p-3 font-bold text-blue-700 col-jenis">${td.jenisItem}</td><td class="p-3 font-bold col-nama">${td.namaItem}</td><td class="p-3 font-bold col-pjg">${td.panjang}</td><td class="p-3 font-bold col-grade">${td.grade}</td><td class="p-3 col-dus">${td.dus}</td><td class="p-3 col-shading">${td.shading}</td><td class="p-3 font-bold col-po">${td.po}</td><td class="p-2"><input type="text" class="input-dynamic w-full p-2 border rounded outline-none uppercase text-xs font-bold ket-input"></td>`;
-    }
+    const td = translateBarcode(code); // Langsung terjemah
+    
+    let html = `<td class="p-3 text-center"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 cursor-pointer"><i data-lucide="trash-2"></i></button></td>
+        <td class="p-3 font-bold no-cell text-center"></td>
+        <td class="p-3 troli-cell font-bold text-blue-600">${troli}</td>
+        <td class="p-3 font-mono font-bold text-black qr-val border-r border-inherit">${code}</td>
+        <td class="p-3 col-tgl">${td.tglProduksi}</td>
+        <td class="p-3 col-mesin">${td.mesin}</td>
+        <td class="p-3 col-shift">${td.shift}</td>
+        <td class="p-3 font-bold text-blue-700 col-jenis">${td.jenisItem}</td>
+        <td class="p-3 font-bold col-nama">${td.namaItem}</td>
+        <td class="p-3 font-bold col-pjg">${td.panjang}</td>
+        <td class="p-3 font-bold col-grade">${td.grade}</td>
+        <td class="p-3 col-dus">${td.dus}</td>
+        <td class="p-3 col-shading">${td.shading}</td>
+        <td class="p-3 font-bold col-po">${td.po}</td>
+        <td class="p-2"><input type="text" class="input-dynamic w-full p-2 border rounded outline-none uppercase text-xs font-bold ket-input"></td>`;
     
     tr.innerHTML = html; document.getElementById('tbody-stbj').prepend(tr);
     lucide.createIcons(); updateRowNumbers();
-    if(!isTranslated) document.getElementById('btn-translate').disabled = false;
 }
 
-// HAPUS & UNDO
 function deleteRow(btn) {
     const tr = btn.closest('tr'); deleteStack.push({ parent: tr.parentNode, html: tr.outerHTML, nextSibling: tr.nextSibling });
     tr.remove(); updateRowNumbers();
@@ -191,50 +168,94 @@ function updateRowNumbers() {
     const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; });
 }
 
-// TERJEMAHKAN SEMUA
-function translateAll() {
-    if (isTranslated) return; showTranslateColumns();
-    document.querySelectorAll('.row-item').forEach(tr => {
-        const qr = tr.querySelector('.qr-val').innerText, td = translateBarcode(qr);
-        // FIX: Mengubah td.pjg menjadi td.panjang di bawah ini
-        tr.insertAdjacentHTML('beforeend', `<td class="p-3 col-tgl">${td.tglProduksi}</td><td class="p-3 col-mesin">${td.mesin}</td><td class="p-3 col-shift">${td.shift}</td><td class="p-3 font-bold text-blue-700 col-jenis">${td.jenisItem}</td><td class="p-3 font-bold col-nama">${td.namaItem}</td><td class="p-3 font-bold col-pjg">${td.panjang}</td><td class="p-3 font-bold col-grade">${td.grade}</td><td class="p-3 col-dus">${td.dus}</td><td class="p-3 col-shading">${td.shading}</td><td class="p-3 font-bold col-po">${td.po}</td><td class="p-2"><input type="text" class="input-dynamic w-full p-2 border rounded outline-none uppercase text-xs font-bold ket-input"></td>`);
-    });
-    
-    isTranslated = true;
-    document.getElementById('btn-translate').innerHTML = `<i data-lucide="check-circle"></i> Selesai`;
-    document.getElementById('btn-translate').classList.replace('bg-emerald-600', 'bg-slate-700');
-    document.getElementById('btn-save').classList.remove('hidden'); document.getElementById('btn-save').classList.add('flex');
-    lucide.createIcons();
-}
-
-// SAVE KE DATABASE
+// LOGIKA SAVE CANGGIH & ANTI DUPLIKAT SUPABASE
 async function saveToSupabase() {
-    const btnSave = document.getElementById('btn-save'); btnSave.innerHTML = "Menyimpan..."; btnSave.disabled = true;
-    const dataToSave = [], user = JSON.parse(localStorage.getItem('user_session'));
+    const btnSave = document.getElementById('btn-save'); 
+    const originalText = btnSave.innerHTML;
+    
+    // Animasi tanpa men-disable secara permanen
+    btnSave.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-6 h-6"></i> MENYIMPAN...'; 
+    btnSave.disabled = true;
 
-    document.querySelectorAll('.row-item').forEach(row => {
-        dataToSave.push({
-            troli: row.querySelector('.troli-cell').innerText,
-            qrcode: row.querySelector('.qr-val').innerText,
-            tgl_produksi: row.querySelector('.col-tgl').innerText,
-            mesin: row.querySelector('.col-mesin').innerText,
-            shift: row.querySelector('.col-shift').innerText,
-            jenis_item: row.querySelector('.col-jenis').innerText,
-            nama_item: row.querySelector('.col-nama').innerText,
-            panjang: row.querySelector('.col-pjg').innerText,
-            grade: row.querySelector('.col-grade').innerText,
-            dus: row.querySelector('.col-dus').innerText,
-            shading: row.querySelector('.col-shading').innerText,
-            po: row.querySelector('.col-po').innerText,
-            keterangan: row.querySelector('.ket-input').value.toUpperCase(),
-            pic_input: user.username,
-            status: 'STBJ'
-        });
+    const rows = document.querySelectorAll('.row-item');
+    if(rows.length === 0) {
+        alert("Tidak ada data untuk disimpan.");
+        btnSave.innerHTML = originalText; btnSave.disabled = false; return;
+    }
+
+    const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
+    let allQRCodes = [];
+    let rowMap = {}; 
+
+    rows.forEach(row => {
+        const qr = row.querySelector('.qr-val').innerText;
+        allQRCodes.push(qr);
+        rowMap[qr] = row;
+        // Bersihkan warna merah (jika user nge-save ulang)
+        row.classList.remove('bg-red-200', 'hover:bg-red-300', 'text-red-900');
     });
 
-    const { error } = await db.from('hasil_stbj').insert(dataToSave);
-    if (error) { alert("Gagal Simpan: " + error.message); btnSave.innerHTML = "SAVE DATA HASIL STBJ"; btnSave.disabled = false; } 
-    else { alert("Berhasil simpan!"); window.location.href = 'hasil_stbj.html'; }
+    // Cek Duplikat ke Supabase secara massal
+    const { data: existingData, error: checkError } = await db.from('hasil_stbj').select('qrcode').in('qrcode', allQRCodes);
+
+    if (checkError) {
+        alert("Gagal menghubungi server: " + checkError.message);
+        btnSave.innerHTML = originalText; btnSave.disabled = false; return;
+    }
+
+    const existingQRs = existingData.map(d => d.qrcode);
+    const dataToSave = [];
+    let duplikatCount = 0;
+    let masukCount = 0;
+
+    rows.forEach(row => {
+        const qr = row.querySelector('.qr-val').innerText;
+        if (existingQRs.includes(qr)) {
+            // MERAHKAN BARIS JIKA DUPLIKAT
+            row.classList.add('bg-red-200', 'hover:bg-red-300', 'text-red-900');
+            duplikatCount++;
+        } else {
+            // JIKA BELUM ADA, SIAPKAN UNTUK DISIMPAN
+            dataToSave.push({
+                troli: row.querySelector('.troli-cell').innerText,
+                qrcode: qr,
+                tgl_produksi: row.querySelector('.col-tgl').innerText,
+                mesin: row.querySelector('.col-mesin').innerText,
+                shift: row.querySelector('.col-shift').innerText,
+                jenis_item: row.querySelector('.col-jenis').innerText,
+                nama_item: row.querySelector('.col-nama').innerText,
+                panjang: row.querySelector('.col-pjg').innerText,
+                grade: row.querySelector('.col-grade').innerText,
+                dus: row.querySelector('.col-dus').innerText,
+                shading: row.querySelector('.col-shading').innerText,
+                po: row.querySelector('.col-po').innerText,
+                keterangan: row.querySelector('.ket-input').value.toUpperCase(),
+                pic_input: user.username,
+                status: 'STBJ'
+            });
+            masukCount++;
+        }
+    });
+
+    if (dataToSave.length > 0) {
+        const { error: insertError } = await db.from('hasil_stbj').insert(dataToSave);
+        if (insertError) {
+            alert("Gagal Simpan ke Supabase: " + insertError.message);
+        } else {
+            // BERSIHKAN DATA YANG SUKSES DARI LAYAR
+            dataToSave.forEach(d => {
+                if(rowMap[d.qrcode]) rowMap[d.qrcode].remove();
+            });
+            updateRowNumbers();
+        }
+    }
+
+    btnSave.innerHTML = originalText; 
+    btnSave.disabled = false;
+    lucide.createIcons();
+
+    // MUNCULKAN POP-UP HASIL
+    alert(`PROSES SELESAI!\n✅ Berhasil disimpan: ${masukCount} data\n❌ Ditolak (Sudah ada di database): ${duplikatCount} data`);
 }
 
 // LOGIKA IMPORT CSV
