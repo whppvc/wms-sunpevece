@@ -4,102 +4,142 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WMS - Laporan Hasil STBJ</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
+        /* Variabel Tema */
         :root { --bg-main: #f8fafc; --bg-box: #ffffff; --text-main: #1f2937; --border-color: #e2e8f0; }
         body[data-bg="dark"] { --bg-main: #0f172a; --bg-box: #1e293b; --text-main: #f8fafc; --border-color: #334155; }
         body[data-bg="grey"] { --bg-main: #e2e8f0; --bg-box: #f1f5f9; --text-main: #0f172a; --border-color: #cbd5e1; }
-        body { background-color: var(--bg-main); color: var(--text-main); transition: all 0.3s ease; }
+        body { background-color: var(--bg-main); color: var(--text-main); transition: all 0.3s ease; display: flex; flex-direction: column; min-height: 100vh; }
+        
         .card-dynamic { background-color: var(--bg-box); border-color: var(--border-color); }
         .table-container { scrollbar-width: thin; }
-        /* Tampilan input filter */
-        .filter-input { width: 100%; margin-top: 4px; padding: 2px 4px; font-size: 10px; color: black; border-radius: 4px; border: 1px solid #ccc; outline: none; font-weight: normal; }
+        
+        /* Desain Filter Input yang Diperbesar & Dipercantik */
+        .filter-input { 
+            width: 100%; 
+            margin-top: 6px; 
+            padding: 6px 8px; 
+            font-size: 12px; /* Ukuran dibesarkan dari 10px */
+            color: #1f2937; 
+            background-color: #f8fafc;
+            border-radius: 6px; 
+            border: 1px solid #cbd5e1; 
+            outline: none; 
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .filter-input:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
     </style>
 </head>
-<body class="min-h-screen font-sans">
+<body id="app-body" class="font-sans">
 
-    <header class="card-dynamic shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b">
+    <nav class="card-dynamic shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-50 border-b">
         <div class="flex items-center gap-3">
-            <button onclick="history.back()" class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full transition cursor-pointer"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
-            <h1 class="font-bold text-lg text-blue-600 uppercase tracking-wide">Hasil Laporan STBJ</h1>
+            <button onclick="history.back()" class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full transition cursor-pointer active:scale-95">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </button>
+            <div class="flex flex-col">
+                <h1 class="font-extrabold text-lg text-blue-700 tracking-wide leading-tight">PORTAL WMS</h1>
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hasil Laporan STBJ</span>
+            </div>
         </div>
         <div class="flex gap-2">
-            <button onclick="salinData()" class="px-4 py-1.5 bg-emerald-100 text-emerald-700 font-bold rounded-lg border border-emerald-200 hover:bg-emerald-200 transition cursor-pointer text-sm flex items-center gap-2"><i data-lucide="copy" class="w-4 h-4"></i> SALIN</button>
-            <button onclick="holdData()" class="px-4 py-1.5 bg-amber-100 text-amber-700 font-bold rounded-lg border border-amber-200 hover:bg-amber-200 transition cursor-pointer text-sm flex items-center gap-2"><i data-lucide="pause-circle" class="w-4 h-4"></i> HOLD</button>
+            <button onclick="salinData()" class="px-4 py-2 bg-emerald-100 text-emerald-700 font-bold rounded-lg border border-emerald-200 hover:bg-emerald-200 transition cursor-pointer text-xs md:text-sm flex items-center gap-2 shadow-sm active:scale-95">
+                <i data-lucide="copy" class="w-4 h-4"></i> <span class="hidden md:inline">SALIN DATA</span>
+            </button>
+            <button onclick="holdData()" class="px-4 py-2 bg-amber-100 text-amber-700 font-bold rounded-lg border border-amber-200 hover:bg-amber-200 transition cursor-pointer text-xs md:text-sm flex items-center gap-2 shadow-sm active:scale-95">
+                <i data-lucide="pause-circle" class="w-4 h-4"></i> <span class="hidden md:inline">HOLD DATA</span>
+            </button>
         </div>
-    </header>
+    </nav>
 
-    <main class="p-4 md:p-8 max-w-[98%] mx-auto">
-        <div class="card-dynamic rounded-xl shadow-md border overflow-hidden">
-            <div class="table-container overflow-x-auto w-full max-h-[80vh]">
+    <main class="p-4 md:p-6 w-full max-w-[98%] mx-auto flex-grow">
+        
+        <div class="mb-4 flex justify-between items-end">
+            <div>
+                <h2 class="text-xl font-bold flex items-center gap-2"><i data-lucide="database" class="w-6 h-6 text-blue-600"></i> Database STBJ</h2>
+                <p class="text-xs opacity-60 mt-1">Daftar riwayat barang jadi yang telah discan dan masuk ke sistem.</p>
+            </div>
+            <span id="badge-total" class="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md">Memuat...</span>
+        </div>
+
+        <div class="card-dynamic rounded-2xl shadow-lg border overflow-hidden">
+            <div class="table-container overflow-x-auto w-full max-h-[75vh]">
                 <table class="w-full text-left text-sm whitespace-nowrap">
-                    <thead class="bg-blue-700 text-white uppercase text-[11px] sticky top-0 z-10 shadow">
+                    <thead class="bg-slate-800 text-white uppercase text-[11px] sticky top-0 z-10 shadow-md tracking-wider">
                         <tr>
-                            <th class="p-3 text-center align-top"><input type="checkbox" id="check-all" onclick="toggleAll(this)" class="w-4 h-4 cursor-pointer mt-1"></th>
+                            <th class="p-3 text-center align-top"><input type="checkbox" id="check-all" onclick="toggleAll(this)" class="w-4 h-4 cursor-pointer mt-1 rounded text-blue-600"></th>
                             <th class="p-3 text-center align-top">No</th>
-                            <th class="p-3 align-top">
-                                <div class="flex justify-between items-center">Text QR Code <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100"></i></button></div>
-                                <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Cari QR...">
+                            <th class="p-3 align-top min-w-[200px]">
+                                <div class="flex justify-between items-center text-blue-300">Text QR Code <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div>
+                                <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Ketik QR Code...">
                             </th>
                             <th class="p-3 align-top">
-                                <div class="flex justify-between items-center">Tgl Produksi <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100"></i></button></div>
+                                <div class="flex justify-between items-center">Tgl Produksi <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100 transition"></i></button></div>
                                 <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Cari Tgl...">
                             </th>
                             <th class="p-3 align-top">
-                                <div class="flex justify-between items-center">Mesin <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100"></i></button></div>
+                                <div class="flex justify-between items-center">Mesin <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100 transition"></i></button></div>
                                 <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Cari Mesin...">
                             </th>
                             <th class="p-3 align-top">
-                                <div class="flex justify-between items-center">Shift <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100"></i></button></div>
+                                <div class="flex justify-between items-center">Shift <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100 transition"></i></button></div>
                                 <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Cari Shift...">
                             </th>
-                            <th class="p-3 align-top bg-blue-900">
-                                <div class="flex justify-between items-center">Jenis Item <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100"></i></button></div>
+                            <th class="p-3 align-top bg-slate-700">
+                                <div class="flex justify-between items-center">Jenis Item <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100 transition"></i></button></div>
                                 <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Cari Jenis...">
                             </th>
-                            <th class="p-3 align-top bg-blue-800">
-                                <div class="flex justify-between items-center">Nama Item <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100"></i></button></div>
-                                <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Cari Nama...">
+                            <th class="p-3 align-top bg-slate-700">
+                                <div class="flex justify-between items-center text-emerald-300">Nama Item <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div>
+                                <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Cari Nama Item...">
                             </th>
                             <th class="p-3 align-top">
-                                <div class="flex justify-between items-center">Panjang <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100"></i></button></div>
-                                <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Cari Panjang...">
+                                <div class="flex justify-between items-center">Panjang <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100 transition"></i></button></div>
+                                <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Cari Pjg...">
                             </th>
                             <th class="p-3 align-top">
-                                <div class="flex justify-between items-center">Grade <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100"></i></button></div>
+                                <div class="flex justify-between items-center">Grade <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100 transition"></i></button></div>
                                 <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Cari Grade...">
                             </th>
                             <th class="p-3 align-top">
-                                <div class="flex justify-between items-center">Dus <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100"></i></button></div>
+                                <div class="flex justify-between items-center">Dus <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100 transition"></i></button></div>
                                 <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Cari Dus...">
                             </th>
                             <th class="p-3 align-top">
-                                <div class="flex justify-between items-center">Shading <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100"></i></button></div>
+                                <div class="flex justify-between items-center">Shading <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100 transition"></i></button></div>
                                 <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Cari Shading...">
                             </th>
                             <th class="p-3 align-top">
-                                <div class="flex justify-between items-center">PO <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100"></i></button></div>
+                                <div class="flex justify-between items-center text-amber-300">PO <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div>
                                 <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Cari PO...">
                             </th>
                             <th class="p-3 align-top">
-                                <div class="flex justify-between items-center">Keterangan <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100"></i></button></div>
-                                <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Cari Ket...">
+                                <div class="flex justify-between items-center">Keterangan <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100 transition"></i></button></div>
+                                <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Keterangan...">
                             </th>
-                            <th class="p-3 align-top">
-                                <div class="flex justify-between items-center">Status <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100"></i></button></div>
-                                <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Cari Status...">
+                            <th class="p-3 align-top text-center">
+                                <div class="flex justify-center items-center gap-1">Status <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 opacity-70 hover:opacity-100 transition"></i></button></div>
+                                <input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Status...">
                             </th>
                         </tr>
                     </thead>
                     <tbody id="data-body">
-                        <tr><td colspan="15" class="text-center p-6"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-blue-500"></i> Memuat Laporan...</td></tr>
+                        <tr><td colspan="15" class="text-center p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-blue-500"></i><p class="font-bold text-gray-500">Memuat Laporan...</p></td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </main>
+
+    <footer class="w-full text-center py-5 border-t border-gray-200/50 mt-auto backdrop-blur-sm">
+        <p class="text-xs font-bold opacity-40 uppercase tracking-widest">Sistem Kontrol Gudang &copy; 2026 PT Sunpevece Indodeli</p>
+    </footer>
 
     <script>
         lucide.createIcons();
@@ -113,23 +153,34 @@
         window.onload = async () => {
             const { data, error } = await db.from('hasil_stbj').select('*').order('created_at', {ascending: false});
             const tbody = document.getElementById('data-body');
+            const badge = document.getElementById('badge-total');
             
-            if(error) { tbody.innerHTML = `<tr><td colspan="15" class="text-center p-4 text-red-500">Error: ${error.message}</td></tr>`; return; }
-            if(data.length === 0) { tbody.innerHTML = `<tr><td colspan="15" class="text-center p-8 opacity-50">Belum ada data STBJ yang tersimpan.</td></tr>`; return; }
+            if(error) { 
+                tbody.innerHTML = `<tr><td colspan="15" class="text-center p-6 text-red-500 font-bold bg-red-50">Error: ${error.message}</td></tr>`; 
+                badge.innerText = "Error";
+                return; 
+            }
+            
+            badge.innerText = `${data.length} Total Data`;
+
+            if(data.length === 0) { 
+                tbody.innerHTML = `<tr><td colspan="15" class="text-center p-10 opacity-50"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2"></i> Belum ada data STBJ yang tersimpan.</td></tr>`; 
+                lucide.createIcons();
+                return; 
+            }
 
             tbody.innerHTML = '';
             data.forEach((r, i) => {
-                // Konfigurasi Warna Status
                 let statusColor = 'bg-emerald-100 text-emerald-700 border-emerald-300';
                 if(r.status === 'HOLD') statusColor = 'bg-amber-100 text-amber-700 border-amber-300';
 
                 tbody.innerHTML += `
-                    <tr class="border-b border-inherit hover:bg-blue-500/10 transition data-row">
-                        <td class="p-3 text-center"><input type="checkbox" data-id="${r.id}" class="row-check w-4 h-4 cursor-pointer"></td>
+                    <tr class="border-b border-inherit hover:bg-blue-50 transition data-row">
+                        <td class="p-3 text-center"><input type="checkbox" data-id="${r.id}" class="row-check w-4 h-4 cursor-pointer accent-blue-600"></td>
                         <td class="p-3 text-center font-bold opacity-50">${i+1}</td>
-                        <td class="p-3 font-mono text-xs opacity-70">${r.qrcode || '-'}</td>
+                        <td class="p-3 font-mono text-sm font-extrabold text-blue-800 tracking-wider">${r.qrcode || '-'}</td>
                         <td class="p-3 font-semibold">${r.tgl_produksi || '-'}</td>
-                        <td class="p-3">${r.mesin || '-'}</td>
+                        <td class="p-3 font-medium">${r.mesin || '-'}</td>
                         <td class="p-3">${r.shift || '-'}</td>
                         <td class="p-3 font-bold text-blue-600">${r.jenis_item || '-'}</td>
                         <td class="p-3 font-bold text-lg">${r.nama_item || '-'}</td>
@@ -137,33 +188,36 @@
                         <td class="p-3 font-semibold">${r.grade || '-'}</td>
                         <td class="p-3">${r.dus || '-'}</td>
                         <td class="p-3">${r.shading || '-'}</td>
-                        <td class="p-3 font-bold">${r.po || '-'}</td>
+                        <td class="p-3 font-bold text-amber-700">${r.po || '-'}</td>
                         <td class="p-3 text-orange-500 font-medium">${r.keterangan || '-'}</td>
-                        <td class="p-3"><span class="${statusColor} px-3 py-1 rounded-full font-bold text-[10px] uppercase border">${r.status || 'STBJ'}</span></td>
+                        <td class="p-3 text-center"><span class="${statusColor} px-3 py-1 rounded-full font-bold text-[10px] uppercase border shadow-sm">${r.status || 'STBJ'}</span></td>
                     </tr>
                 `;
             });
+            lucide.createIcons();
         };
 
-        // FUNGSI HOLD (Ubah Status di Database)
         async function holdData() {
             const rows = document.querySelectorAll('.row-check:checked');
             if(rows.length === 0) return alert("Centang minimal satu baris untuk di-HOLD.");
-            
             if(!confirm(`Yakin ingin mengubah status ${rows.length} data terpilih menjadi HOLD?`)) return;
 
             const ids = Array.from(rows).map(cb => cb.getAttribute('data-id'));
             
+            const btn = document.activeElement;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> PROSES...';
+            
             const { error } = await db.from('hasil_stbj').update({ status: 'HOLD' }).in('id', ids);
+            
             if(error) {
                 alert("Gagal update: " + error.message);
+                btn.innerHTML = originalText;
             } else {
-                alert("Status berhasil diubah menjadi HOLD!");
-                location.reload(); // Refresh halaman agar data baru terlihat
+                location.reload();
             }
         }
 
-        // FUNGSI COPY DATA
         function salinData() {
             const rows = document.querySelectorAll('.row-check:checked');
             if(rows.length === 0) return alert("Centang minimal satu baris untuk disalin.");
@@ -178,7 +232,6 @@
         
         function toggleAll(source) { document.querySelectorAll('.row-check').forEach(cb => cb.checked = source.checked); }
 
-        // FUNGSI FILTER MURNI VANILLA JS
         function toggleFilter(btn) {
             const inputField = btn.parentElement.nextElementSibling;
             inputField.classList.toggle('hidden');
@@ -194,7 +247,6 @@
                 inputs.forEach((input, index) => {
                     const kataKunci = input.value.toLowerCase();
                     if (kataKunci) {
-                        // +2 karena index 0 = checkbox, index 1 = No
                         const isiSel = row.children[index + 2].innerText.toLowerCase();
                         if (!isiSel.includes(kataKunci)) {
                             tampilkan = false;
