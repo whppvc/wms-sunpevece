@@ -13,25 +13,40 @@
         :root { --bg-main: #f8fafc; --bg-box: #ffffff; --text-main: #1f2937; --border-color: #e2e8f0; }
         body[data-bg="dark"] { --bg-main: #0f172a; --bg-box: #1e293b; --text-main: #f8fafc; --border-color: #334155; }
         body[data-bg="grey"] { --bg-main: #e2e8f0; --bg-box: #f1f5f9; --text-main: #0f172a; --border-color: #cbd5e1; }
-        body { background-color: var(--bg-main); color: var(--text-main); transition: all 0.3s ease; }
+        body { background-color: var(--bg-main); color: var(--text-main); transition: all 0.3s ease; display: flex; flex-direction: column; min-height: 100vh; }
         .card-dynamic { background-color: var(--bg-box); border-color: var(--border-color); }
         .input-dynamic { background-color: var(--bg-main); color: var(--text-main); border-color: var(--border-color); }
     </style>
 </head>
-<body id="app-body" class="min-h-screen font-sans">
+<body id="app-body" class="font-sans">
 
-    <header class="card-dynamic shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b">
-        <div class="flex items-center gap-3">
-            <button onclick="history.back()" class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full transition cursor-pointer active:scale-95"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
-            <h1 class="font-bold text-lg text-blue-600 uppercase tracking-wide">Data Control</h1>
+    <nav class="card-dynamic shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-50 border-b">
+        <div class="flex items-center gap-4">
+            <button onclick="history.back()" class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full transition cursor-pointer active:scale-95">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </button>
+            <div class="flex flex-col">
+                <h1 class="font-extrabold text-lg text-blue-700 tracking-wide leading-tight">PORTAL WMS</h1>
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Data Control Area</span>
+            </div>
         </div>
-    </header>
+        <div>
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-md">U</div>
+        </div>
+    </nav>
 
-    <main class="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
+    <main class="p-4 md:p-8 max-w-5xl mx-auto flex-grow flex flex-col gap-6 w-full">
         
-        <div class="card-dynamic p-5 rounded-xl shadow-sm border flex flex-col md:flex-row gap-4 items-center justify-between">
+        <header class="flex flex-col md:flex-row md:justify-between md:items-end gap-4 border-b border-gray-200/50 pb-4">
+            <div>
+                <h2 class="text-2xl font-black flex items-center gap-2"><i data-lucide="settings-2" class="w-7 h-7 text-blue-600"></i> Data Control (Master)</h2>
+                <p class="text-sm opacity-60 mt-1">Pusat pengaturan tabel referensi WMS.</p>
+            </div>
+        </header>
+
+        <div class="card-dynamic p-6 rounded-2xl shadow-sm border flex flex-col md:flex-row gap-4 items-center justify-between">
             <div class="w-full md:w-1/2">
-                <label class="block text-xs font-bold uppercase mb-1 opacity-70">Pilih Kategori Tabel</label>
+                <label class="block text-xs font-bold uppercase mb-2 opacity-70">Pilih Kategori Tabel Master</label>
                 <select id="kategori-select" onchange="loadDataKategori()" class="input-dynamic w-full p-3 border-2 border-blue-400 rounded-lg font-bold text-blue-600 outline-none cursor-pointer transition">
                     <option value="nama_troli">Tabel: Nama Troli</option>
                     <option value="mesin">Tabel: Mesin</option>
@@ -43,34 +58,41 @@
                     <option value="po">Tabel: PO</option>
                 </select>
             </div>
-            <div class="w-full md:w-1/2 flex gap-2">
-                <input type="text" id="input-baru" class="input-dynamic flex-1 p-3 border-2 rounded-lg font-bold uppercase outline-none focus:border-blue-500 transition" placeholder="Ketik Data Baru..." autocomplete="off">
-                <button id="btn-tambah" onclick="tambahData()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 rounded-lg font-bold shadow transition flex items-center justify-center gap-2 cursor-pointer active:scale-95"><i data-lucide="plus" class="w-5 h-5"></i></button>
+            <div class="w-full md:w-1/2 flex gap-2 items-end">
+                <div class="flex-1">
+                    <label class="block text-xs font-bold uppercase mb-2 opacity-70">Tambah Data Baru</label>
+                    <input type="text" id="input-baru" class="input-dynamic w-full p-3 border-2 rounded-lg font-bold uppercase outline-none focus:border-blue-500 transition" placeholder="Ketik Data..." autocomplete="off">
+                </div>
+                <button id="btn-tambah" onclick="tambahData()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold shadow transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 h-[52px]">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                </button>
             </div>
         </div>
 
-        <div class="card-dynamic rounded-xl shadow-sm border overflow-hidden">
+        <div class="card-dynamic rounded-2xl shadow-md border overflow-hidden">
             <div class="p-4 border-b border-inherit flex justify-between items-center bg-black/5">
-                <h3 class="font-bold uppercase tracking-wider" id="tabel-judul">Daftar Data</h3>
-                <span id="data-count" class="text-xs font-bold bg-blue-100 text-blue-700 px-3 py-1 rounded-full border border-blue-200">0 Data</span>
+                <h3 class="font-bold uppercase tracking-wider flex items-center gap-2"><i data-lucide="list" class="w-4 h-4"></i> <span id="tabel-judul">Daftar Data</span></h3>
+                <span id="data-count" class="text-xs font-bold bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full border border-blue-200 shadow-sm">0 Baris</span>
             </div>
-            <div class="overflow-x-auto w-full max-h-[60vh]">
+            <div class="overflow-x-auto w-full max-h-[50vh]">
                 <table class="w-full text-left text-sm whitespace-nowrap">
                     <thead class="bg-blue-600 text-white uppercase text-xs sticky top-0 z-10">
                         <tr>
-                            <th class="p-3 w-12 text-center">Urutan</th>
-                            <th class="p-3">Nilai Data</th>
-                            <th class="p-3 w-20 text-center">Aksi</th>
+                            <th class="p-3 w-16 text-center">Urutan</th>
+                            <th class="p-3">Nilai Data Rekam</th>
+                            <th class="p-3 w-24 text-center">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody id="tbody-master">
-                        </tbody>
+                    <tbody id="tbody-master"></tbody>
                 </table>
             </div>
         </div>
     </main>
 
-    <script src="data_control_logic.js"></script>
+    <footer class="w-full text-center py-5 border-t border-gray-200/50 mt-auto">
+        <p class="text-xs font-bold opacity-40 uppercase tracking-widest">Sistem Kontrol Gudang &copy; 2026 PT Sunpevece Indodeli</p>
+    </footer>
 
+    <script src="data_control_logic.js"></script>
 </body>
 </html>
