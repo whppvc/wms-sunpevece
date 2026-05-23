@@ -46,76 +46,73 @@ async function loadInitialData() {
     }
 }
 
-// ALGORITMA PENERJEMAH (Diperbarui mengikuti Kamus master_2 & Huruf Depan)
+// ALGORITMA PENERJEMAH (Kaidah Baru: Susunan Tepat Berdasarkan Posisi Digit)
 function translateBarcode(barcode) {
     const parts = barcode.split('/');
     let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-' };
     
     if (parts.length < 4) return data;
 
-    // --- 1. JENIS ITEM (Cek Huruf Paling Pertama dari QR Code) ---
+    // --- 1. JENIS ITEM (Berdasarkan Huruf Depan QR Code) ---
     const hurufDepan = barcode.charAt(0).toUpperCase();
     if (hurufDepan === 'P') data.jenisItem = 'Plafon';
     else if (hurufDepan === 'L') data.jenisItem = 'List';
     else if (hurufDepan === 'W') data.jenisItem = 'WPC';
-    else data.jenisItem = hurufDepan; // Fallback jika kode aneh
+    else data.jenisItem = hurufDepan;
 
-    // --- 2. NAMA ITEM (parts[0]) ---
+    // --- 2. NAMA ITEM ([kode_nama_item] sebelum '/' pertama) ---
     let rawItem = parts[0];
     let cariItem = masterData.kamus.find(m => m.kode_nama_item === rawItem);
     data.namaItem = cariItem && cariItem.nama_item ? cariItem.nama_item : rawItem;
 
-    // --- 3. SHADING (parts[1]) ---
+    // --- 3. SHADING (Antara '/' pertama dan kedua) ---
     data.shading = parts[1];
 
-    // --- 4. PANJANG, GRADE, DUS (parts[2]) ---
+    // --- 4. PANJANG, GRADE, DUS (Antara '/' kedua dan ketiga) ---
     const p2 = parts[2];
-    if (p2.length > 0) {
-        const matchPjg = p2.match(/^\d+/);
-        if (matchPjg) {
-            let angka = matchPjg[0];
-            data.panjang = angka.length === 2 ? `${angka[0]}.${angka[1]}M` : `${angka}M`;
-            
-            let sisaP2 = p2.substring(angka.length); // Sisa string setelah angka panjang diambil
-            if (sisaP2.length > 0) {
-                // Ambil 1 huruf pertama sebagai kode grade
-                let rawGrade = sisaP2.charAt(0);
-                let cariGrade = masterData.kamus.find(m => m.kode_grade === rawGrade);
-                data.grade = cariGrade && cariGrade.grade ? cariGrade.grade : rawGrade;
-                
-                // Sisa huruf di belakangnya adalah kode dus
-                let rawDus = sisaP2.substring(1);
-                if(rawDus) {
-                    let cariDus = masterData.kamus.find(m => m.kode_dus === rawDus);
-                    data.dus = cariDus && cariDus.dus ? cariDus.dus : rawDus;
-                }
-            }
-        }
+    if (p2.length >= 4) {
+        // [kode pjg]: 1 digit pertama (Langsung tambah 'M')
+        let rawPjg = p2.substring(0, 1);
+        data.panjang = rawPjg + "M";
+
+        // [kode_grade]: 1 digit setelah pjg (1=BAGUS, 2=A)
+        let rawGrade = p2.substring(1, 2);
+        if (rawGrade === '1') data.grade = 'BAGUS';
+        else if (rawGrade === '2') data.grade = 'A';
+        else data.grade = rawGrade;
+
+        // [kode_dus]: 2 digit terakhir sebelum '/' ketiga
+        let rawDus = p2.substring(p2.length - 2); 
+        let cariDus = masterData.kamus.find(m => m.kode_dus === rawDus);
+        data.dus = cariDus && cariDus.dus ? cariDus.dus : rawDus;
     }
 
-    // --- 5. TGL PRODUKSI, MESIN, SHIFT, PO (parts[3]) ---
+    // --- 5. TGL PRODUKSI, MESIN, SHIFT, PO (Antara '/' ketiga dan keempat) ---
     const p3 = parts[3];
     if (p3.length >= 5) {
+        // [kode tgl produksi]: 5 digit pertama 
         const dayOfYear = parseInt(p3.substring(0, 3));
         const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
         const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
         data.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
 
-        if (p3.length >= 8) {
-            let rawMesin = p3.substring(5, 7);
-            let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin);
-            data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
+        // [kode_mesin]: 2 digit (Plafon) atau 3 digit (Lis/WPC)
+        let lenMesin = (data.jenisItem === 'Plafon') ? 2 : 3;
+        let rawMesin = p3.substring(5, 5 + lenMesin);
+        let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin);
+        data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
 
-            let rawShift = p3.substring(7, 8);
-            let cariShift = masterData.kamus.find(m => m.kode_shift === rawShift);
-            data.shift = cariShift && cariShift.shift ? cariShift.shift : rawShift;
-            
-            let rawPO = p3.substring(8);
-            if(rawPO) {
-                let cariPO = masterData.kamus.find(m => m.kode_po === rawPO);
-                data.po = cariPO && cariPO.po ? cariPO.po : rawPO;
-            }
-        }
+        // [kode_shift]: 2 digit setelah kode mesin
+        let startShift = 5 + lenMesin;
+        let rawShift = p3.substring(startShift, startShift + 2);
+        let cariShift = masterData.kamus.find(m => m.kode_shift === rawShift);
+        data.shift = cariShift && cariShift.shift ? cariShift.shift : rawShift;
+        
+        // [kode_po]: Sisa digit di akhir bagian p3 (Diawali huruf P)
+        let startPO = startShift + 2;
+        let rawPO = p3.substring(startPO); 
+        let cariPO = masterData.kamus.find(m => m.kode_po === rawPO);
+        data.po = cariPO && cariPO.po ? cariPO.po : rawPO;
     }
     
     return data;
