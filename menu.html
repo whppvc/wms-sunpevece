@@ -14,7 +14,6 @@
         body { background-color: var(--bg-main); color: var(--text-main); transition: background 0.3s ease; min-height: 100vh;}
         .card-dynamic { background-color: var(--bg-box); border-color: var(--border-color); }
         .bg-theme { background-color: var(--theme-main); color: #fff; }
-        
         body[data-ui="formal"] .menu-card { background: var(--bg-box); border: 1px solid var(--border-color); border-left: 6px solid var(--theme-main); flex-direction: row; align-items: center; justify-content: flex-start; gap: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         body[data-ui="modern"] .menu-card { background: linear-gradient(135deg, var(--theme-main), var(--theme-hover)); color: white; border: none; flex-direction: column; }
     </style>
@@ -33,35 +32,28 @@
             <a href="hasil_stbj.html" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 font-bold text-gray-600 transition"><i data-lucide="file-spreadsheet" class="w-5 h-5"></i> Laporan STBJ</a>
             <a href="data_control.html" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 font-bold text-gray-600 transition"><i data-lucide="settings-2" class="w-5 h-5"></i> Data Control</a>
         </div>
-        <div class="p-4 border-t">
-            <button onclick="localStorage.clear(); window.location.href='index.html'" class="w-full py-3 bg-red-50 text-red-600 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition shadow-sm"><i data-lucide="log-out" class="w-4 h-4"></i> LOGOUT</button>
-        </div>
     </div>
 
     <nav class="card-dynamic shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b">
         <div class="flex items-center gap-3">
-            <button onclick="toggleSidebar()" class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full transition cursor-pointer active:scale-95 shadow-inner">
-                <i data-lucide="menu" class="w-5 h-5"></i>
-            </button>
+            <button onclick="toggleSidebar()" class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full transition cursor-pointer active:scale-95 shadow-inner"><i data-lucide="menu" class="w-5 h-5"></i></button>
             <div class="flex flex-col ml-1">
                 <span class="font-extrabold text-lg tracking-wide leading-tight text-blue-700">PORTAL WMS</span>
-                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider hidden md:block">Dashboard Utama</span>
             </div>
         </div>
         
         <div class="flex items-center gap-4">
-            <div class="relative flex items-center gap-3">
-                <span class="text-xs font-bold text-gray-600 hidden md:block" id="user-display">User</span>
-                <button class="w-10 h-10 bg-blue-600 font-bold rounded-full flex items-center justify-center text-white shadow-md border-2 border-blue-200 transition cursor-pointer" id="profile-initial">U</button>
+            <div class="relative">
+                <button id="btn-profile" class="w-10 h-10 bg-blue-600 font-bold rounded-full flex items-center justify-center text-white shadow-md border-2 border-blue-200 cursor-pointer" id="profile-initial">U</button>
+                <div id="profile-menu" class="hidden absolute right-0 mt-2 w-48 card-dynamic rounded-xl shadow-xl py-2 z-50 border">
+                    <div class="px-4 py-2 border-b border-gray-200/20 text-xs font-bold mb-1 opacity-70" id="user-role-display">Role: User</div>
+                    <button onclick="localStorage.clear(); window.location.href='index.html'" class="w-full text-left px-4 py-2 hover:bg-red-500/10 text-red-600 font-bold text-sm flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> Logout</button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <main class="w-full max-w-7xl mx-auto p-4 md:p-8">
-        <header class="mb-6 border-b border-gray-200/50 pb-4">
-            <h2 class="text-2xl font-black flex items-center gap-2"><i data-lucide="layout-dashboard" class="w-7 h-7 text-blue-600"></i> Dashboard Utama</h2>
-        </header>
-
+    <main class="w-full max-w-7xl mx-auto p-4 md:p-8 pt-8">
         <div id="menu-grid" class="grid grid-cols-1 gap-4">
             <div class="col-span-full p-10 flex flex-col items-center justify-center opacity-50">
                 <i data-lucide="loader-2" class="animate-spin w-8 h-8 mb-2 text-blue-600"></i>
@@ -93,9 +85,9 @@
             if (!sessionData) { window.location.href = 'index.html'; return; }
             currentUser = JSON.parse(sessionData);
             document.getElementById('profile-initial').innerText = currentUser.username.charAt(0).toUpperCase();
-            document.getElementById('user-display').innerText = currentUser.username;
+            document.getElementById('user-role-display').innerText = "Role: " + currentUser.role;
             
-            setBg(localStorage.getItem('app_bg') || 'light');
+            document.body.setAttribute('data-bg', localStorage.getItem('app_bg') || 'light');
             await fetchMenus();
         };
 
@@ -104,14 +96,13 @@
             const { data: aksesData, error } = await db.from('menu_access').select('*').order('sort_order', { ascending: true });
             
             grid.innerHTML = '';
-            if(error) { grid.innerHTML = `<p class="text-red-500 font-bold p-4">Error: ${error.message}</p>`; return; }
+            if(error) return;
 
             aksesData.forEach(akses => {
                 let allowed = akses.allowed_users ? akses.allowed_users.split(',').map(s=>s.trim()) : [];
                 if (currentUser.role === 'Creator' || allowed.includes(currentUser.username)) {
                     let menuAsli = masterMenus.find(m => m.id === akses.menu_id);
                     if(!menuAsli) return;
-
                     const card = document.createElement('div');
                     card.className = `menu-card p-6 rounded-2xl transition-all duration-300 cursor-pointer flex group w-full hover:-translate-y-1 active:scale-95`;
                     card.innerHTML = `<div class="menu-icon mb-2 group-hover:scale-110 transition-transform"><i data-lucide="${menuAsli.icon}" class="w-10 h-10"></i></div><div class="font-bold text-lg tracking-wide">${menuAsli.title}</div>`;
@@ -122,15 +113,16 @@
             lucide.createIcons();
         }
 
-        function setBg(bgType) { document.body.setAttribute('data-bg', bgType); }
-        
-        // FUNGSI SIDEBAR MENU
         function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar-menu');
-            const overlay = document.getElementById('sidebar-overlay');
-            sidebar.classList.toggle('-translate-x-full');
-            overlay.classList.toggle('hidden');
+            document.getElementById('sidebar-menu').classList.toggle('-translate-x-full');
+            document.getElementById('sidebar-overlay').classList.toggle('hidden');
         }
+
+        // LOGIKA PROFIL DROPDOWN
+        const btnProfile = document.getElementById('btn-profile');
+        const profileMenu = document.getElementById('profile-menu');
+        btnProfile.addEventListener('click', (e) => { e.stopPropagation(); profileMenu.classList.toggle('hidden'); });
+        window.addEventListener('click', (e) => { if (!btnProfile.contains(e.target) && !profileMenu.contains(e.target)) profileMenu.classList.add('hidden'); });
     </script>
 </body>
 </html>
