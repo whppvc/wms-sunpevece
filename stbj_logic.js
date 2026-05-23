@@ -162,10 +162,13 @@ function addRow(troli, code) {
     globalRowId++;
     const tr = document.createElement('tr'); tr.className = "border-b border-inherit hover:bg-black/5 transition row-item"; tr.id = `row-${globalRowId}`;
     let html = `<td class="p-3 text-center"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 cursor-pointer"><i data-lucide="trash-2"></i></button></td><td class="p-3 font-bold no-cell text-center"></td><td class="p-3 troli-cell font-bold text-blue-600">${troli}</td><td class="p-3 font-mono qr-val border-r border-inherit">${code}</td>`;
+    
     if (isTranslated) {
         const td = translateBarcode(code);
-        html += `<td class="p-3 col-tgl">${td.tglProduksi}</td><td class="p-3 col-mesin">${td.mesin}</td><td class="p-3 col-shift">${td.shift}</td><td class="p-3 font-bold text-blue-700 col-jenis">${td.jenisItem}</td><td class="p-3 font-bold col-nama">${td.namaItem}</td><td class="p-3 font-bold col-pjg">${td.pjg}</td><td class="p-3 font-bold col-grade">${td.grade}</td><td class="p-3 col-dus">${td.dus}</td><td class="p-3 col-shading">${td.shading}</td><td class="p-3 font-bold col-po">${td.po}</td><td class="p-2"><input type="text" class="input-dynamic w-full p-2 border rounded outline-none uppercase text-xs font-bold ket-input"></td>`;
+        // FIX: Mengubah td.pjg menjadi td.panjang di bawah ini
+        html += `<td class="p-3 col-tgl">${td.tglProduksi}</td><td class="p-3 col-mesin">${td.mesin}</td><td class="p-3 col-shift">${td.shift}</td><td class="p-3 font-bold text-blue-700 col-jenis">${td.jenisItem}</td><td class="p-3 font-bold col-nama">${td.namaItem}</td><td class="p-3 font-bold col-pjg">${td.panjang}</td><td class="p-3 font-bold col-grade">${td.grade}</td><td class="p-3 col-dus">${td.dus}</td><td class="p-3 col-shading">${td.shading}</td><td class="p-3 font-bold col-po">${td.po}</td><td class="p-2"><input type="text" class="input-dynamic w-full p-2 border rounded outline-none uppercase text-xs font-bold ket-input"></td>`;
     }
+    
     tr.innerHTML = html; document.getElementById('tbody-stbj').prepend(tr);
     lucide.createIcons(); updateRowNumbers();
     if(!isTranslated) document.getElementById('btn-translate').disabled = false;
@@ -193,8 +196,10 @@ function translateAll() {
     if (isTranslated) return; showTranslateColumns();
     document.querySelectorAll('.row-item').forEach(tr => {
         const qr = tr.querySelector('.qr-val').innerText, td = translateBarcode(qr);
-        tr.insertAdjacentHTML('beforeend', `<td class="p-3 col-tgl">${td.tglProduksi}</td><td class="p-3 col-mesin">${td.mesin}</td><td class="p-3 col-shift">${td.shift}</td><td class="p-3 font-bold text-blue-700 col-jenis">${td.jenisItem}</td><td class="p-3 font-bold col-nama">${td.namaItem}</td><td class="p-3 font-bold col-pjg">${td.pjg}</td><td class="p-3 font-bold col-grade">${td.grade}</td><td class="p-3 col-dus">${td.dus}</td><td class="p-3 col-shading">${td.shading}</td><td class="p-3 font-bold col-po">${td.po}</td><td class="p-2"><input type="text" class="input-dynamic w-full p-2 border rounded outline-none uppercase text-xs font-bold ket-input"></td>`);
+        // FIX: Mengubah td.pjg menjadi td.panjang di bawah ini
+        tr.insertAdjacentHTML('beforeend', `<td class="p-3 col-tgl">${td.tglProduksi}</td><td class="p-3 col-mesin">${td.mesin}</td><td class="p-3 col-shift">${td.shift}</td><td class="p-3 font-bold text-blue-700 col-jenis">${td.jenisItem}</td><td class="p-3 font-bold col-nama">${td.namaItem}</td><td class="p-3 font-bold col-pjg">${td.panjang}</td><td class="p-3 font-bold col-grade">${td.grade}</td><td class="p-3 col-dus">${td.dus}</td><td class="p-3 col-shading">${td.shading}</td><td class="p-3 font-bold col-po">${td.po}</td><td class="p-2"><input type="text" class="input-dynamic w-full p-2 border rounded outline-none uppercase text-xs font-bold ket-input"></td>`);
     });
+    
     isTranslated = true;
     document.getElementById('btn-translate').innerHTML = `<i data-lucide="check-circle"></i> Selesai`;
     document.getElementById('btn-translate').classList.replace('bg-emerald-600', 'bg-slate-700');
