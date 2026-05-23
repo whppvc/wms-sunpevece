@@ -70,13 +70,20 @@ function translateBarcode(barcode) {
 
     // --- 4. PANJANG, GRADE, DUS (Antara '/' kedua dan ketiga) ---
     const p2 = parts[2];
-    if (p2.length >= 4) {
-        // [kode pjg]: 1 digit pertama (Langsung tambah 'M')
-        let rawPjg = p2.substring(0, 1);
-        data.panjang = rawPjg + "M";
+    if (p2 && p2.length >= 4) {
+        // Cek apakah panjang deret ini 5 karakter atau 4 karakter
+        let digitPjg = (p2.length === 5) ? 2 : 1;
+        
+        // [kode pjg]: Ambil 1 atau 2 digit pertama
+        let rawPjg = p2.substring(0, digitPjg);
+        if (digitPjg === 1) {
+            data.panjang = rawPjg + "M"; // misal: 4 -> 4M
+        } else {
+            data.panjang = rawPjg[0] + "." + rawPjg[1] + "M"; // misal: 45 -> 4.5M
+        }
 
-        // [kode_grade]: 1 digit setelah pjg (1=BAGUS, 2=A)
-        let rawGrade = p2.substring(1, 2);
+        // [kode_grade]: 1 digit setelah kode panjang (1=BAGUS, 2=A)
+        let rawGrade = p2.substring(digitPjg, digitPjg + 1);
         if (rawGrade === '1') data.grade = 'BAGUS';
         else if (rawGrade === '2') data.grade = 'A';
         else data.grade = rawGrade;
