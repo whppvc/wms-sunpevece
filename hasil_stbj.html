@@ -14,10 +14,15 @@
         body { background-color: var(--bg-main); color: var(--text-main); transition: all 0.3s ease; min-height: 100vh; }
         .card-dynamic { background-color: var(--bg-box); border-color: var(--border-color); }
         .table-container { scrollbar-width: thin; }
-        .filter-input { width: 100%; margin-top: 6px; padding: 6px 8px; font-size: 12px; color: #1f2937; background-color: #f8fafc; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-weight: 500;}
-        .filter-input:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
+        .input-dynamic { background-color: var(--bg-main); color: var(--text-main); border-color: var(--border-color); }
         .mode-btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: bold; transition: all 0.3s ease; cursor: pointer; color: var(--text-main); opacity: 0.6; }
         .mode-btn.active { background-color: #2563eb; color: white; opacity: 1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        
+        /* WARNA TABEL SESUAI GAMBAR */
+        .hdr-black { background-color: #1e293b !important; color: white !important; }
+        .hdr-green { background-color: #15803d !important; color: white !important; }
+        .hdr-blue { background-color: #2563eb !important; color: white !important; }
+        .hdr-orange { background-color: #f97316 !important; color: white !important; }
     </style>
 </head>
 <body id="app-body" class="font-sans">
@@ -34,56 +39,66 @@
             <a href="hasil_stbj.html" class="flex items-center gap-3 p-3 rounded-xl bg-blue-600 text-white font-bold shadow-md"><i data-lucide="file-spreadsheet" class="w-5 h-5"></i> Laporan STBJ</a>
             <a href="data_control.html" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 font-bold text-gray-600 transition"><i data-lucide="settings-2" class="w-5 h-5"></i> Data Control</a>
         </div>
-        <div class="p-4 border-t">
-            <button onclick="localStorage.clear(); window.location.href='index.html'" class="w-full py-3 bg-red-50 text-red-600 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition shadow-sm"><i data-lucide="log-out" class="w-4 h-4"></i> LOGOUT</button>
-        </div>
     </div>
 
     <nav class="card-dynamic shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b">
         <div class="flex items-center gap-3">
-            <button onclick="toggleSidebar()" class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full transition cursor-pointer active:scale-95 shadow-inner">
-                <i data-lucide="menu" class="w-5 h-5"></i>
-            </button>
-            <button onclick="history.back()" class="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition cursor-pointer active:scale-95" title="Kembali">
-                <i data-lucide="arrow-left" class="w-5 h-5"></i>
-            </button>
+            <button onclick="toggleSidebar()" class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full transition cursor-pointer active:scale-95 shadow-inner"><i data-lucide="menu" class="w-5 h-5"></i></button>
+            <button onclick="history.back()" class="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition cursor-pointer active:scale-95"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
             <div class="flex flex-col ml-1">
                 <span class="font-extrabold text-lg tracking-wide leading-tight text-blue-700">PORTAL WMS</span>
-                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider hidden md:block">Hasil Laporan STBJ</span>
             </div>
         </div>
         <div class="flex items-center gap-4">
-            <div class="relative flex items-center gap-3">
-                <span class="text-xs font-bold text-gray-600 hidden md:block" id="user-display">User</span>
-                <button class="w-10 h-10 bg-blue-600 font-bold rounded-full flex items-center justify-center text-white shadow-md border-2 border-blue-200" id="profile-initial">U</button>
+            <div class="relative">
+                <button id="btn-profile" class="w-10 h-10 bg-blue-600 font-bold rounded-full flex items-center justify-center text-white shadow-md border-2 border-blue-200 cursor-pointer" id="profile-initial">U</button>
+                <div id="profile-menu" class="hidden absolute right-0 mt-2 w-48 card-dynamic rounded-xl shadow-xl py-2 z-50 border">
+                    <div class="px-4 py-2 border-b border-gray-200/20 text-xs font-bold mb-1 opacity-70" id="user-role-display">Role: User</div>
+                    <button onclick="localStorage.clear(); window.location.href='index.html'" class="w-full text-left px-4 py-2 hover:bg-red-500/10 text-red-600 font-bold text-sm flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> Logout</button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <main class="p-4 md:p-6 w-full max-w-[98%] mx-auto flex-grow">
+    <main class="p-4 md:p-6 w-full max-w-[98%] mx-auto flex-grow pt-6">
         
-        <header class="mb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4 border-b border-gray-200/50 pb-4">
-            <h2 class="text-2xl font-black flex items-center gap-2"><i data-lucide="database" class="w-7 h-7 text-blue-600"></i> Laporan STBJ</h2>
-            
-            <div class="flex flex-col md:flex-row gap-4 items-center">
-                <div class="flex bg-gray-200/50 p-1.5 rounded-xl border border-gray-200 shadow-inner">
-                    <button id="btn-mode-1" onclick="switchMode(1)" class="mode-btn active">Mode 1: Riwayat</button>
-                    <button id="btn-mode-2" onclick="switchMode(2)" class="mode-btn">Mode 2: Stok / Qty</button>
-                    <button id="btn-mode-3" onclick="switchMode(3)" class="mode-btn">Mode 3 (Tahap Tes)</button>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="downloadCSV()" class="p-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg border font-bold transition active:scale-95" title="Download CSV"><i data-lucide="download" class="w-5 h-5"></i></button>
-                    <button onclick="salinData()" class="p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg border font-bold transition active:scale-95" title="Copy Data"><i data-lucide="copy" class="w-5 h-5"></i></button>
-                    <button onclick="holdData()" class="p-2 bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-lg border font-bold transition active:scale-95" title="Hold Data"><i data-lucide="pause-circle" class="w-5 h-5"></i></button>
-                    <button onclick="hapusData()" class="p-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg border font-bold transition active:scale-95" title="Hapus Baris"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
-                </div>
+        <div class="mb-4 flex flex-col lg:flex-row lg:justify-between lg:items-end gap-4 border-b border-gray-200/50 pb-4">
+            <div class="flex bg-gray-200/50 p-1.5 rounded-xl border border-gray-200 shadow-inner">
+                <button id="btn-mode-1" onclick="switchMode(1)" class="mode-btn active">Mode 1: Riwayat</button>
+                <button id="btn-mode-2" onclick="switchMode(2)" class="mode-btn">Mode 2: Stok / Qty</button>
+                <button id="btn-mode-3" onclick="switchMode(3)" class="mode-btn">Mode 3 (Tes)</button>
             </div>
-        </header>
+            <div class="flex gap-2">
+                <button onclick="downloadCSV()" class="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg border font-bold transition active:scale-95 flex items-center gap-2 text-sm shadow-sm"><i data-lucide="download" class="w-4 h-4"></i> CSV</button>
+                <button onclick="salinData()" class="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg border font-bold transition active:scale-95 flex items-center gap-2 text-sm shadow-sm"><i data-lucide="copy" class="w-4 h-4"></i> Copy</button>
+                <button onclick="holdData()" class="px-4 py-2 bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-lg border font-bold transition active:scale-95 flex items-center gap-2 text-sm shadow-sm"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold</button>
+                <button onclick="hapusData()" class="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg border font-bold transition active:scale-95 flex items-center gap-2 text-sm shadow-sm"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus</button>
+            </div>
+        </div>
 
-        <div class="card-dynamic rounded-2xl shadow-lg border overflow-hidden relative">
-            <div class="table-container overflow-x-auto w-full max-h-[75vh]">
+        <div class="card-dynamic p-4 rounded-xl shadow-sm mb-4 border">
+            <h3 class="text-xs font-bold opacity-60 uppercase mb-3 flex items-center gap-2"><i data-lucide="filter" class="w-4 h-4"></i> Filter Tabel</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                <input type="text" id="flt-qr" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="QR Code...">
+                <input type="text" id="flt-tgl" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="Tanggal...">
+                <input type="text" id="flt-mesin" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="Mesin...">
+                <input type="text" id="flt-shift" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="Shift...">
+                <input type="text" id="flt-jenis" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="Jenis Item...">
+                <input type="text" id="flt-nama" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="Nama Item...">
+                <input type="text" id="flt-pjg" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="Panjang...">
+                <input type="text" id="flt-grade" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="Grade...">
+                <input type="text" id="flt-dus" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="Dus...">
+                <input type="text" id="flt-shading" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="Shading...">
+                <input type="text" id="flt-po" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="PO...">
+                <input type="text" id="flt-ket" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="Keterangan...">
+                <input type="text" id="flt-status" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="Status...">
+            </div>
+        </div>
+
+        <div class="card-dynamic rounded-xl shadow-md border overflow-hidden relative">
+            <div class="table-container overflow-x-auto w-full max-h-[60vh]">
                 <table class="w-full text-left text-sm whitespace-nowrap" id="main-table">
-                    <thead id="table-head" class="bg-slate-800 text-white uppercase text-[11px] sticky top-0 z-10 shadow-md tracking-wider"></thead>
+                    <thead id="table-head" class="uppercase text-[11px] sticky top-0 z-10 shadow-sm tracking-wider"></thead>
                     <tbody id="data-body">
                         <tr><td class="text-center p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-blue-500"></i><p class="font-bold text-gray-500">Memuat Database...</p></td></tr>
                     </tbody>
@@ -97,14 +112,19 @@
         document.body.setAttribute('data-bg', localStorage.getItem('app_bg') || 'light');
         const userSession = JSON.parse(localStorage.getItem('user_session'));
         if(userSession) {
-            document.getElementById('user-display').innerText = userSession.username;
+            document.getElementById('user-role-display').innerText = "Role: " + userSession.role;
             document.getElementById('profile-initial').innerText = userSession.username.charAt(0).toUpperCase();
         }
 
+        // FUNGSI PROFIL & SIDEBAR
         function toggleSidebar() {
             document.getElementById('sidebar-menu').classList.toggle('-translate-x-full');
             document.getElementById('sidebar-overlay').classList.toggle('hidden');
         }
+        const btnProfile = document.getElementById('btn-profile');
+        const profileMenu = document.getElementById('profile-menu');
+        btnProfile.addEventListener('click', (e) => { e.stopPropagation(); profileMenu.classList.toggle('hidden'); });
+        window.addEventListener('click', (e) => { if (!btnProfile.contains(e.target) && !profileMenu.contains(e.target)) profileMenu.classList.add('hidden'); });
 
         const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
@@ -132,7 +152,7 @@
             const tbody = document.getElementById('data-body');
             
             if(globalData.length === 0) { 
-                thead.innerHTML = '<tr><th class="p-3 text-center">Data Kosong</th></tr>';
+                thead.innerHTML = '<tr><th class="p-3 text-center hdr-black">Data Kosong</th></tr>';
                 tbody.innerHTML = `<tr><td class="text-center p-10 opacity-50"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2"></i> Belum ada data.</td></tr>`; 
                 lucide.createIcons(); return; 
             }
@@ -140,21 +160,21 @@
             if (mode === 1) {
                 thead.innerHTML = `
                     <tr>
-                        <th class="p-3 text-center align-top"><input type="checkbox" onclick="toggleAll(this)" class="w-4 h-4 mt-1 cursor-pointer"></th>
-                        <th class="p-3 text-center align-top">No</th>
-                        <th class="p-3 align-top min-w-[200px]"><div class="flex justify-between items-center text-blue-300">Text QR Code <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div><input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Ketik QR Code..."></th>
-                        <th class="p-3 align-top"><div class="flex justify-between items-center">Tgl Produksi <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div><input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Tgl..."></th>
-                        <th class="p-3 align-top"><div class="flex justify-between items-center">Mesin <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div><input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Mesin..."></th>
-                        <th class="p-3 align-top"><div class="flex justify-between items-center">Shift <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div><input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Shift..."></th>
-                        <th class="p-3 align-top bg-slate-700"><div class="flex justify-between items-center">Jenis Item <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div><input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Jenis..."></th>
-                        <th class="p-3 align-top bg-slate-700"><div class="flex justify-between items-center text-emerald-300">Nama Item <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div><input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Nama Item..."></th>
-                        <th class="p-3 align-top"><div class="flex justify-between items-center">Panjang <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div><input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Pjg..."></th>
-                        <th class="p-3 align-top"><div class="flex justify-between items-center">Grade <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div><input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Grade..."></th>
-                        <th class="p-3 align-top"><div class="flex justify-between items-center">Dus <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div><input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Dus..."></th>
-                        <th class="p-3 align-top"><div class="flex justify-between items-center">Shading <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div><input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Shading..."></th>
-                        <th class="p-3 align-top"><div class="flex justify-between items-center text-amber-300">PO <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div><input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="PO..."></th>
-                        <th class="p-3 align-top"><div class="flex justify-between items-center">Keterangan <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div><input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Ket..."></th>
-                        <th class="p-3 align-top text-center"><div class="flex justify-center items-center gap-1">Status <button onclick="toggleFilter(this)"><i data-lucide="filter" class="w-3 h-3 hover:text-white transition"></i></button></div><input type="text" class="filter-input hidden" oninput="saringTabel()" placeholder="Status..."></th>
+                        <th class="p-3 hdr-black text-center"><input type="checkbox" onclick="toggleAll(this)" class="w-4 h-4 mt-1 cursor-pointer"></th>
+                        <th class="p-3 hdr-black text-center">No</th>
+                        <th class="p-3 hdr-black">Text QR Code</th>
+                        <th class="p-3 hdr-green">Tgl Produksi</th>
+                        <th class="p-3 hdr-green">Mesin</th>
+                        <th class="p-3 hdr-green">Shift</th>
+                        <th class="p-3 hdr-blue">Jenis Item</th>
+                        <th class="p-3 hdr-green">Nama Item</th>
+                        <th class="p-3 hdr-green">Pjg</th>
+                        <th class="p-3 hdr-green">Grade</th>
+                        <th class="p-3 hdr-green">Dus</th>
+                        <th class="p-3 hdr-green">Shading</th>
+                        <th class="p-3 hdr-green">PO</th>
+                        <th class="p-3 hdr-orange">Keterangan</th>
+                        <th class="p-3 hdr-black text-center">Status</th>
                     </tr>
                 `;
                 tbody.innerHTML = '';
@@ -164,19 +184,19 @@
                         <tr class="border-b border-inherit hover:bg-blue-50 transition data-row">
                             <td class="p-3 text-center"><input type="checkbox" data-ids="${r.id}" class="row-check w-4 h-4 cursor-pointer"></td>
                             <td class="p-3 text-center font-bold opacity-50">${i+1}</td>
-                            <td class="p-3 font-mono text-sm font-extrabold text-blue-800 tracking-wider">${r.qrcode || '-'}</td>
-                            <td class="p-3 font-semibold">${r.tgl_produksi || '-'}</td>
-                            <td class="p-3 font-medium">${r.mesin || '-'}</td>
-                            <td class="p-3">${r.shift || '-'}</td>
-                            <td class="p-3 font-bold text-blue-600">${r.jenis_item || '-'}</td>
-                            <td class="p-3 font-bold text-base">${r.nama_item || '-'}</td>
-                            <td class="p-3 font-bold">${r.panjang || '-'}</td>
-                            <td class="p-3 font-semibold">${r.grade || '-'}</td>
-                            <td class="p-3">${r.dus || '-'}</td>
-                            <td class="p-3">${r.shading || '-'}</td>
-                            <td class="p-3 font-bold text-amber-700">${r.po || '-'}</td>
-                            <td class="p-3 text-orange-500 font-medium">${r.keterangan || '-'}</td>
-                            <td class="p-3 text-center"><span class="${stColor} px-3 py-1 rounded-full font-bold text-[10px] uppercase border shadow-sm">${r.status || 'STBJ'}</span></td>
+                            <td class="p-3 font-mono text-sm font-extrabold text-blue-800 tracking-wider col-qr">${r.qrcode || '-'}</td>
+                            <td class="p-3 font-semibold col-tgl">${r.tgl_produksi || '-'}</td>
+                            <td class="p-3 font-medium col-mesin">${r.mesin || '-'}</td>
+                            <td class="p-3 col-shift">${r.shift || '-'}</td>
+                            <td class="p-3 font-bold text-blue-600 col-jenis">${r.jenis_item || '-'}</td>
+                            <td class="p-3 font-bold text-base col-nama">${r.nama_item || '-'}</td>
+                            <td class="p-3 font-bold col-pjg">${r.panjang || '-'}</td>
+                            <td class="p-3 font-semibold col-grade">${r.grade || '-'}</td>
+                            <td class="p-3 col-dus">${r.dus || '-'}</td>
+                            <td class="p-3 col-shading">${r.shading || '-'}</td>
+                            <td class="p-3 font-bold text-amber-700 col-po">${r.po || '-'}</td>
+                            <td class="p-3 text-orange-500 font-medium col-ket">${r.keterangan || '-'}</td>
+                            <td class="p-3 text-center col-status"><span class="${stColor} px-3 py-1 rounded-full font-bold text-[10px] uppercase border shadow-sm">${r.status || 'STBJ'}</span></td>
                         </tr>
                     `;
                 });
@@ -184,21 +204,21 @@
             } else if (mode === 2) {
                 thead.innerHTML = `
                     <tr>
-                        <th class="p-3 text-center"><input type="checkbox" onclick="toggleAll(this)" class="w-4 h-4 cursor-pointer"></th>
-                        <th class="p-3 text-center">No</th>
-                        <th class="p-3 bg-blue-700 text-white font-black text-center">QTY</th>
-                        <th class="p-3">Tgl Produksi</th>
-                        <th class="p-3">Mesin</th>
-                        <th class="p-3">Shift</th>
-                        <th class="p-3 bg-slate-700">Jenis Item</th>
-                        <th class="p-3 bg-slate-700 text-emerald-300">Nama Item</th>
-                        <th class="p-3">Panjang</th>
-                        <th class="p-3">Grade</th>
-                        <th class="p-3">Dus</th>
-                        <th class="p-3">Shading</th>
-                        <th class="p-3 text-amber-300">PO</th>
-                        <th class="p-3">Keterangan</th>
-                        <th class="p-3 text-center">Status</th>
+                        <th class="p-3 hdr-black text-center"><input type="checkbox" onclick="toggleAll(this)" class="w-4 h-4 mt-1 cursor-pointer"></th>
+                        <th class="p-3 hdr-black text-center">No</th>
+                        <th class="p-3 hdr-black text-center">QTY</th>
+                        <th class="p-3 hdr-green">Tgl Produksi</th>
+                        <th class="p-3 hdr-green">Mesin</th>
+                        <th class="p-3 hdr-green">Shift</th>
+                        <th class="p-3 hdr-blue">Jenis Item</th>
+                        <th class="p-3 hdr-green">Nama Item</th>
+                        <th class="p-3 hdr-green">Pjg</th>
+                        <th class="p-3 hdr-green">Grade</th>
+                        <th class="p-3 hdr-green">Dus</th>
+                        <th class="p-3 hdr-green">Shading</th>
+                        <th class="p-3 hdr-green">PO</th>
+                        <th class="p-3 hdr-orange">Keterangan</th>
+                        <th class="p-3 hdr-black text-center">Status</th>
                     </tr>
                 `;
                 
@@ -219,49 +239,59 @@
                             <td class="p-3 text-center"><input type="checkbox" data-ids="${r.ids.join(',')}" class="row-check w-4 h-4 cursor-pointer"></td>
                             <td class="p-3 text-center font-bold opacity-50">${i++}</td>
                             <td class="p-3 text-center"><span class="bg-blue-600 text-white px-3 py-1 rounded-lg font-black text-sm">${r.qty}</span></td>
-                            <td class="p-3 font-semibold">${r.tgl_produksi || '-'}</td>
-                            <td class="p-3 font-medium">${r.mesin || '-'}</td>
-                            <td class="p-3">${r.shift || '-'}</td>
-                            <td class="p-3 font-bold text-blue-600">${r.jenis_item || '-'}</td>
-                            <td class="p-3 font-bold text-base">${r.nama_item || '-'}</td>
-                            <td class="p-3 font-bold">${r.panjang || '-'}</td>
-                            <td class="p-3 font-semibold">${r.grade || '-'}</td>
-                            <td class="p-3">${r.dus || '-'}</td>
-                            <td class="p-3">${r.shading || '-'}</td>
-                            <td class="p-3 font-bold text-amber-700">${r.po || '-'}</td>
-                            <td class="p-3 text-orange-500 font-medium">${r.keterangan || '-'}</td>
-                            <td class="p-3 text-center"><span class="${stColor} px-3 py-1 rounded-full font-bold text-[10px] uppercase border shadow-sm">${r.status || 'STBJ'}</span></td>
+                            <td class="p-3 font-semibold col-tgl">${r.tgl_produksi || '-'}</td>
+                            <td class="p-3 font-medium col-mesin">${r.mesin || '-'}</td>
+                            <td class="p-3 col-shift">${r.shift || '-'}</td>
+                            <td class="p-3 font-bold text-blue-600 col-jenis">${r.jenis_item || '-'}</td>
+                            <td class="p-3 font-bold text-base col-nama">${r.nama_item || '-'}</td>
+                            <td class="p-3 font-bold col-pjg">${r.panjang || '-'}</td>
+                            <td class="p-3 font-semibold col-grade">${r.grade || '-'}</td>
+                            <td class="p-3 col-dus">${r.dus || '-'}</td>
+                            <td class="p-3 col-shading">${r.shading || '-'}</td>
+                            <td class="p-3 font-bold text-amber-700 col-po">${r.po || '-'}</td>
+                            <td class="p-3 text-orange-500 font-medium col-ket">${r.keterangan || '-'}</td>
+                            <td class="p-3 text-center col-status"><span class="${stColor} px-3 py-1 rounded-full font-bold text-[10px] uppercase border shadow-sm">${r.status || 'STBJ'}</span></td>
                         </tr>
                     `;
                 });
             } else {
-                thead.innerHTML = '<tr><th class="p-3 text-center">Mode 3</th></tr>';
+                thead.innerHTML = '<tr><th class="p-3 text-center hdr-black">Mode 3</th></tr>';
                 tbody.innerHTML = '<tr><td class="p-10 text-center opacity-50 font-bold">Menu sedang dikembangkan...</td></tr>';
             }
             lucide.createIcons();
+            saringTabel(); // Terapkan ulang filter jika ada yang masih terketik
         }
 
-        function toggleFilter(btn) {
-            const inputField = btn.parentElement.nextElementSibling;
-            inputField.classList.toggle('hidden');
-            if(!inputField.classList.contains('hidden')) inputField.focus();
-        }
-
+        // LOGIKA FILTER MENGGUNAKAN CLASS
         function saringTabel() {
-            const inputs = document.querySelectorAll('.filter-input');
-            const rows = document.querySelectorAll('.data-row');
+            const filters = {
+                qr: document.getElementById('flt-qr').value.toLowerCase(),
+                tgl: document.getElementById('flt-tgl').value.toLowerCase(),
+                mesin: document.getElementById('flt-mesin').value.toLowerCase(),
+                shift: document.getElementById('flt-shift').value.toLowerCase(),
+                jenis: document.getElementById('flt-jenis').value.toLowerCase(),
+                nama: document.getElementById('flt-nama').value.toLowerCase(),
+                pjg: document.getElementById('flt-pjg').value.toLowerCase(),
+                grade: document.getElementById('flt-grade').value.toLowerCase(),
+                dus: document.getElementById('flt-dus').value.toLowerCase(),
+                shading: document.getElementById('flt-shading').value.toLowerCase(),
+                po: document.getElementById('flt-po').value.toLowerCase(),
+                ket: document.getElementById('flt-ket').value.toLowerCase(),
+                status: document.getElementById('flt-status').value.toLowerCase()
+            };
 
+            const rows = document.querySelectorAll('.data-row');
             rows.forEach(row => {
-                let tampilkan = true;
-                inputs.forEach((input, index) => {
-                    const kataKunci = input.value.toLowerCase();
-                    if (kataKunci) {
-                        const offset = currentMode === 1 ? 2 : 2; 
-                        const isiSel = row.children[index + offset].innerText.toLowerCase();
-                        if (!isiSel.includes(kataKunci)) tampilkan = false;
+                let show = true;
+                for(let key in filters) {
+                    if(filters[key] !== '') {
+                        const cell = row.querySelector('.col-' + key);
+                        if(cell && !cell.innerText.toLowerCase().includes(filters[key])) {
+                            show = false; break;
+                        }
                     }
-                });
-                row.style.display = tampilkan ? '' : 'none';
+                }
+                row.style.display = show ? '' : 'none';
             });
         }
 
@@ -273,31 +303,21 @@
             });
             return ids;
         }
-
         async function hapusData() {
             const ids = getSelectedIds();
             if(ids.length === 0) return alert("Pilih minimal satu baris untuk dihapus.");
             if(!confirm(`Yakin ingin MENGHAPUS PERMANEN ${ids.length} item dari database?`)) return;
-            
             const { error } = await db.from('hasil_stbj').delete().in('id', ids);
-            if(error) alert("Gagal Hapus: " + error.message);
-            else location.reload();
+            if(error) alert("Gagal Hapus: " + error.message); else location.reload();
         }
-
         async function holdData() {
             const ids = getSelectedIds();
             if(ids.length === 0) return alert("Pilih minimal satu baris untuk di-HOLD.");
             if(!confirm(`Ubah status ${ids.length} item menjadi HOLD?`)) return;
-            
             const { error } = await db.from('hasil_stbj').update({ status: 'HOLD' }).in('id', ids);
-            if(error) alert("Gagal update: " + error.message);
-            else location.reload();
+            if(error) alert("Gagal update: " + error.message); else location.reload();
         }
-
-        function salinData() {
-            alert("Fitur blok & salin aktif. Tekan CTRL+C atau gunakan tombol Download CSV.");
-        }
-
+        function salinData() { alert("Fitur blok & salin aktif. Tekan CTRL+C atau gunakan tombol Download CSV."); }
         function downloadCSV() {
             let csv = [];
             const rows = document.querySelectorAll("#main-table tr");
@@ -309,11 +329,8 @@
             }
             let csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
             let link = document.createElement("a");
-            link.href = window.URL.createObjectURL(csvFile);
-            link.download = `Laporan_STBJ_Mode${currentMode}.csv`;
-            link.click();
+            link.href = window.URL.createObjectURL(csvFile); link.download = `Laporan_STBJ_Mode${currentMode}.csv`; link.click();
         }
-
         function toggleAll(source) { document.querySelectorAll('.row-check').forEach(cb => cb.checked = source.checked); }
     </script>
 </body>
