@@ -69,7 +69,7 @@
                         <span id="dup-notif" class="text-red-500 hidden animate-pulse bg-red-100 px-2 rounded">Duplikat Dihapus!</span>
                     </label>
                     <form id="form-scan" class="flex gap-2">
-                        <input type="text" id="input-qrcode" class="input-dynamic flex-1 p-3 border-2 rounded-lg outline-none focus:border-blue-500" placeholder="Scan atau ketik..." autocomplete="off">
+                        <input type="text" id="input-qrcode" class="input-dynamic flex-1 p-3 border-2 rounded-lg outline-none focus:border-blue-500 font-bold" placeholder="Scan atau ketik (bisa pakai spasi)..." autocomplete="off">
                         <button type="submit" class="bg-blue-600 text-white px-6 rounded-lg font-bold shadow-md cursor-pointer"><i data-lucide="corner-down-left"></i></button>
                     </form>
                 </div>
@@ -84,17 +84,17 @@
                                 <th class="p-3 header-black w-12 text-center">No</th>
                                 <th class="p-3 header-black">Troli</th>
                                 <th class="p-3 header-black border-r border-gray-600">Text QRCode</th>
-                                <th class="p-3 header-green hidden-col">Tgl Produksi</th>
-                                <th class="p-3 header-green hidden-col">Mesin</th>
-                                <th class="p-3 header-green hidden-col">Shift</th>
-                                <th class="p-3 header-blue hidden-col">Jenis Item</th>
-                                <th class="p-3 header-green hidden-col">Nama Item</th>
-                                <th class="p-3 header-green hidden-col">Pjg</th>
-                                <th class="p-3 header-green hidden-col">Grade</th>
-                                <th class="p-3 header-green hidden-col">Dus</th>
-                                <th class="p-3 header-green hidden-col">Shading</th>
-                                <th class="p-3 header-green hidden-col">PO</th>
-                                <th class="p-3 header-green hidden-col">Keterangan</th>
+                                <th class="p-3 header-green">Tgl Produksi</th>
+                                <th class="p-3 header-green">Mesin</th>
+                                <th class="p-3 header-green">Shift</th>
+                                <th class="p-3 header-blue">Jenis Item</th>
+                                <th class="p-3 header-green">Nama Item</th>
+                                <th class="p-3 header-green">Pjg</th>
+                                <th class="p-3 header-green">Grade</th>
+                                <th class="p-3 header-green">Dus</th>
+                                <th class="p-3 header-green">Shading</th>
+                                <th class="p-3 header-green">PO</th>
+                                <th class="p-3 header-green">Keterangan</th>
                             </tr>
                         </thead>
                         <tbody id="tbody-stbj"></tbody>
@@ -103,11 +103,8 @@
             </div>
 
             <div class="flex flex-col gap-3 pb-16 pt-2">
-                <button id="btn-translate" onclick="translateAll()" class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl shadow-lg flex items-center justify-center gap-2 text-lg uppercase tracking-wide cursor-pointer transition active:scale-95">
-                    <i data-lucide="cpu" class="w-6 h-6"></i> Terjemahkan QR Code
-                </button>
-                <button id="btn-save" onclick="saveToSupabase()" class="w-full py-4 bg-blue-700 text-white font-black rounded-xl shadow-lg hidden items-center justify-center gap-2 text-lg uppercase tracking-wide cursor-pointer transition active:scale-95">
-                    <i data-lucide="save" class="w-6 h-6"></i> Save Data Hasil STBJ
+                <button id="btn-save" onclick="saveToSupabase()" class="w-full py-4 bg-blue-700 hover:bg-blue-800 text-white font-black rounded-xl shadow-lg flex items-center justify-center gap-2 text-lg uppercase tracking-wide cursor-pointer transition active:scale-95">
+                    <i data-lucide="save" class="w-6 h-6"></i> SAVE DATA HASIL STBJ
                 </button>
             </div>
         </div>
@@ -124,6 +121,5 @@
     </main>
 
     <script src="stbj_logic.js"></script>
-
 </body>
 </html>
