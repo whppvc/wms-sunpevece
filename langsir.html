@@ -10,82 +10,84 @@
     <style>
         .table-container { scrollbar-width: thin; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .hdr-main { background-color: #1e293b !important; color: white !important; }
-        .hdr-sub { background-color: #f1f5f9 !important; color: #334155 !important; }
+        /* STANDARISASI HEADER TABEL */
+        .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center; border: 1px solid #334155; }
     </style>
 </head>
-<body class="font-sans antialiased text-slate-800 bg-slate-50 flex flex-col min-h-screen">
+<body class="font-sans">
 
-    <main class="p-4 md:p-6 w-full max-w-[98%] mx-auto flex flex-col gap-4 pt-4">
-
+    <div class="w-full">
         <div id="view-scan" class="space-y-4">
+            
             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <div class="flex flex-col md:flex-row gap-4 relative">
                     <div class="w-full md:w-1/4">
                         <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Pilih Troli</label>
-                        <select id="select-troli" class="w-full p-3 border border-slate-300 rounded font-bold outline-none focus:border-blue-500 text-slate-800 cursor-pointer"></select>
+                        <select id="select-troli" class="w-full p-3 border border-slate-300 rounded-lg font-bold outline-none focus:border-slate-800 text-slate-800 cursor-pointer bg-slate-50"></select>
                     </div>
                     <div class="w-full md:w-1/4">
                         <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Pilih Area</label>
-                        <select id="select-area" class="w-full p-3 border border-slate-300 rounded font-bold outline-none focus:border-blue-500 text-slate-800 cursor-pointer">
-                            <option value="">-- Area --</option>
+                        <select id="select-area" class="w-full p-3 border border-slate-300 rounded-lg font-bold outline-none focus:border-slate-800 text-slate-800 cursor-pointer bg-slate-50">
+                            <option value="">-- Memuat Area --</option>
                         </select>
                     </div>
                     <div class="w-full md:w-2/4 relative">
                         <button onclick="undoDelete()" class="absolute -top-7 right-0 px-3 py-1 bg-slate-200 text-slate-700 font-bold rounded border border-slate-300 hover:bg-slate-300 transition cursor-pointer text-xs flex items-center gap-1 active:scale-95"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> UNDO HAPUS</button>
                         <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Scan Fisik Kardus</label>
                         <form id="form-scan" class="flex gap-2">
-                            <input type="text" id="input-qrcode" class="flex-1 p-3 border border-slate-300 rounded outline-none focus:border-blue-500 font-bold text-slate-800 text-lg" placeholder="Arahkan scanner..." autocomplete="off">
-                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-8 rounded font-bold shadow-sm cursor-pointer transition active:scale-95 flex items-center gap-2"><i data-lucide="plus-square"></i> ADD</button>
+                            <input type="text" id="input-qrcode" class="flex-1 p-3 border border-slate-300 rounded-lg outline-none focus:border-slate-800 font-black text-slate-800 text-lg bg-slate-50" placeholder="Arahkan scanner..." autocomplete="off">
+                            <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-8 rounded-lg font-bold shadow-md cursor-pointer transition active:scale-95 flex items-center gap-2"><i data-lucide="plus-square"></i> ADD</button>
                         </form>
                     </div>
                 </div>
             </div>
 
             <div class="flex justify-end gap-2 mt-2">
-                <button onclick="validasiSTBJ()" class="px-5 py-2.5 bg-white text-slate-700 font-bold rounded border border-slate-300 hover:bg-slate-100 transition cursor-pointer text-sm flex items-center gap-2 active:scale-95"><i data-lucide="shield-check" class="w-4 h-4"></i> VALIDASI STBJ</button>
-                <button onclick="cekGudang()" class="px-5 py-2.5 bg-white text-slate-700 font-bold rounded border border-slate-300 hover:bg-slate-100 transition cursor-pointer text-sm flex items-center gap-2 active:scale-95"><i data-lucide="search" class="w-4 h-4"></i> CEK GUDANG</button>
+                <button onclick="validasiSTBJ()" class="px-5 py-2.5 bg-white text-slate-800 font-black rounded-lg border-2 border-slate-800 hover:bg-slate-100 transition cursor-pointer text-sm flex items-center gap-2 active:scale-95 uppercase tracking-wide"><i data-lucide="shield-check" class="w-5 h-5"></i> VALIDASI STBJ</button>
+                <button onclick="cekGudang()" class="px-5 py-2.5 bg-slate-800 text-white font-black rounded-lg border-2 border-slate-800 hover:bg-slate-900 transition cursor-pointer text-sm flex items-center gap-2 active:scale-95 uppercase tracking-wide"><i data-lucide="search" class="w-5 h-5"></i> CEK GUDANG</button>
             </div>
 
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="table-container overflow-x-auto w-full max-h-[50vh]">
-                    <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-langsir">
+                    <table class="w-full border-collapse text-sm whitespace-nowrap" id="table-langsir">
                         <thead class="sticky top-0 z-10 shadow-sm">
                             <tr class="uppercase text-[11px] font-bold tracking-wider">
-                                <th class="p-3 hdr-main w-10 text-center"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></th>
-                                <th class="p-3 hdr-main w-12 text-center">No</th>
-                                <th class="p-3 bg-blue-100 text-blue-900 text-center border-r border-blue-200">Status</th>
-                                <th class="p-3 hdr-sub">Troli</th>
-                                <th class="p-3 hdr-sub">Area</th>
-                                <th class="p-3 hdr-main border-r border-slate-600">Text QRCode</th>
-                                <th class="p-3 hdr-sub">Tgl Produksi</th>
-                                <th class="p-3 hdr-sub">Mesin</th>
-                                <th class="p-3 hdr-sub border-r border-slate-300">Shift</th>
-                                <th class="p-3 bg-white font-black text-blue-700">Jenis Item</th>
-                                <th class="p-3 bg-white text-slate-800">Nama Item</th>
-                                <th class="p-3 bg-white text-slate-800">Pjg</th>
-                                <th class="p-3 bg-white text-slate-800">Grade</th>
-                                <th class="p-3 bg-white border-r border-slate-300">Dus</th>
-                                <th class="p-3 hdr-sub">Shading</th>
-                                <th class="p-3 bg-slate-200 text-slate-900 text-center font-black">PO Awal</th>
+                                <th class="p-3 hdr-std w-10"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></th>
+                                <th class="p-3 hdr-std w-12">No</th>
+                                <th class="p-3 hdr-std">Status</th>
+                                <th class="p-3 hdr-std">Troli</th>
+                                <th class="p-3 hdr-std">Area</th>
+                                <th class="p-3 hdr-std">Text QRCode</th>
+                                <th class="p-3 hdr-std">Tgl Produksi</th>
+                                <th class="p-3 hdr-std">Mesin</th>
+                                <th class="p-3 hdr-std">Shift</th>
+                                <th class="p-3 hdr-std">Jenis Item</th>
+                                <th class="p-3 hdr-std">Nama Item</th>
+                                <th class="p-3 hdr-std">Pjg</th>
+                                <th class="p-3 hdr-std">Grade</th>
+                                <th class="p-3 hdr-std">Dus</th>
+                                <th class="p-3 hdr-std">Shading</th>
+                                <th class="p-3 hdr-std">PO Awal</th>
                             </tr>
                         </thead>
-                        <tbody id="tbody-langsir"></tbody>
+                        <tbody id="tbody-langsir" class="text-center text-slate-700"></tbody>
                     </table>
                 </div>
             </div>
             
             <div class="pt-2">
-                <button id="btn-save" onclick="saveToSupabase()" class="w-full py-3.5 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded shadow-md flex items-center justify-center gap-2 text-base tracking-wide cursor-pointer transition active:scale-95"><i data-lucide="save" class="w-5 h-5"></i> SIMPAN KE GUDANG</button>
+                <button id="btn-save" onclick="saveToSupabase()" class="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-base tracking-widest cursor-pointer transition active:scale-95 uppercase"><i data-lucide="save" class="w-5 h-5"></i> SIMPAN DATA KE GUDANG</button>
             </div>
         </div>
-    </main>
+    </div>
 
     <script src="global.js"></script>
     <script src="langsir_logic.js"></script>
     <script>
-        window.addEventListener('DOMContentLoaded', () => { 
-            initModernTopBar({ id: 'langsir', title: 'LANGSIR', url: 'langsir.html' }); 
+        document.addEventListener('DOMContentLoaded', () => { 
+            initModernLayout({ id: 'langsir', title: 'LANGSIR', url: 'langsir.html' }); 
+            // Pastikan tarik data Troli berjalan aman
+            if(typeof window.loadInitialData === 'function') window.loadInitialData();
         });
     </script>
 </body>
