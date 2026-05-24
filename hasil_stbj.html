@@ -18,7 +18,6 @@
         .mode-btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: bold; transition: all 0.3s ease; cursor: pointer; color: var(--text-main); opacity: 0.6; }
         .mode-btn.active { background-color: #2563eb; color: white; opacity: 1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         
-        /* WARNA TABEL SESUAI GAMBAR */
         .hdr-black { background-color: #1e293b !important; color: white !important; }
         .hdr-green { background-color: #15803d !important; color: white !important; }
         .hdr-blue { background-color: #2563eb !important; color: white !important; }
@@ -37,6 +36,7 @@
             <a href="menu.html" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 font-bold text-gray-600 transition"><i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard</a>
             <a href="stbj.html" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 font-bold text-gray-600 transition"><i data-lucide="scan-barcode" class="w-5 h-5"></i> Scan STBJ</a>
             <a href="hasil_stbj.html" class="flex items-center gap-3 p-3 rounded-xl bg-blue-600 text-white font-bold shadow-md"><i data-lucide="file-spreadsheet" class="w-5 h-5"></i> Laporan STBJ</a>
+            <a href="langsir.html" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 font-bold text-gray-600 transition"><i data-lucide="log-in" class="w-5 h-5"></i> Langsir</a>
             <a href="data_control.html" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 font-bold text-gray-600 transition"><i data-lucide="settings-2" class="w-5 h-5"></i> Data Control</a>
         </div>
     </div>
@@ -121,28 +121,29 @@
             document.getElementById('user-role-display').innerText = "Role: " + userSession.role;
         }
 
-        function toggleSidebar() {
-            document.getElementById('sidebar-menu').classList.toggle('-translate-x-full');
-            document.getElementById('sidebar-overlay').classList.toggle('hidden');
-        }
+        function toggleSidebar() { document.getElementById('sidebar-menu').classList.toggle('-translate-x-full'); document.getElementById('sidebar-overlay').classList.toggle('hidden'); }
         
         const btnProfile = document.getElementById('btn-profile');
         const profileMenu = document.getElementById('profile-menu');
         btnProfile.addEventListener('click', (e) => { e.stopPropagation(); profileMenu.classList.toggle('hidden'); });
         window.addEventListener('click', (e) => { if (!btnProfile.contains(e.target) && !profileMenu.contains(e.target)) profileMenu.classList.add('hidden'); });
 
-        const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
+        const SUPABASE_URL = 'ISI_URL_SUPABASE_ANDA_DISINI';
+        const SUPABASE_KEY = 'ISI_ANON_KEY_SUPABASE_ANDA_DISINI';
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let globalData = [];
         let currentMode = 1;
 
         window.onload = async () => {
-            const { data, error } = await db.from('hasil_stbj').select('*').order('created_at', {ascending: false});
-            if(error) { alert("Error: " + error.message); return; }
-            globalData = data || [];
-            renderTable(currentMode);
+            try {
+                const { data, error } = await db.from('hasil_stbj').select('*').order('created_at', {ascending: false});
+                if(error) throw error;
+                globalData = data || [];
+                renderTable(currentMode);
+            } catch (err) {
+                document.getElementById('data-body').innerHTML = `<tr><td class="p-10 text-center text-red-500 font-bold">Error Memuat Data: ${err.message}</td></tr>`;
+            }
         };
 
         function switchMode(mode) {
@@ -161,6 +162,8 @@
                 tbody.innerHTML = `<tr><td class="text-center p-10 opacity-50"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2"></i> Belum ada data.</td></tr>`; 
                 lucide.createIcons(); return; 
             }
+
+            let htmlContent = ''; // OPTIMISASI: Kumpulkan HTML di variabel dulu (Massive Speedup)
 
             if (mode === 1) {
                 thead.innerHTML = `
@@ -182,158 +185,8 @@
                         <th class="p-3 hdr-black text-center">Status</th>
                     </tr>
                 `;
-                tbody.innerHTML = '';
+                
                 globalData.forEach((r, i) => {
                     let stColor = r.status === 'HOLD' ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-emerald-100 text-emerald-700 border-emerald-300';
-                    tbody.innerHTML += `
-                        <tr class="border-b border-inherit hover:bg-blue-50 transition data-row">
-                            <td class="p-3 text-center"><input type="checkbox" data-ids="${r.id}" class="row-check w-4 h-4 cursor-pointer"></td>
-                            <td class="p-3 text-center font-bold opacity-50">${i+1}</td>
-                            <td class="p-3 font-mono text-sm font-extrabold text-blue-800 tracking-wider col-qr">${r.qrcode || '-'}</td>
-                            <td class="p-3 font-semibold col-tgl">${r.tgl_produksi || '-'}</td>
-                            <td class="p-3 font-medium col-mesin">${r.mesin || '-'}</td>
-                            <td class="p-3 col-shift">${r.shift || '-'}</td>
-                            <td class="p-3 font-bold text-blue-600 col-jenis">${r.jenis_item || '-'}</td>
-                            <td class="p-3 font-bold text-base col-nama">${r.nama_item || '-'}</td>
-                            <td class="p-3 font-bold col-pjg">${r.panjang || '-'}</td>
-                            <td class="p-3 font-semibold col-grade">${r.grade || '-'}</td>
-                            <td class="p-3 col-dus">${r.dus || '-'}</td>
-                            <td class="p-3 col-shading">${r.shading || '-'}</td>
-                            <td class="p-3 font-bold text-amber-700 col-po">${r.po || '-'}</td>
-                            <td class="p-3 text-orange-500 font-medium col-ket">${r.keterangan || '-'}</td>
-                            <td class="p-3 text-center col-status"><span class="${stColor} px-3 py-1 rounded-full font-bold text-[10px] uppercase border shadow-sm">${r.status || 'STBJ'}</span></td>
-                        </tr>
-                    `;
-                });
-
-            } else if (mode === 2) {
-                thead.innerHTML = `
-                    <tr>
-                        <th class="p-3 hdr-black text-center"><input type="checkbox" onclick="toggleAll(this)" class="w-4 h-4 mt-1 cursor-pointer"></th>
-                        <th class="p-3 hdr-black text-center">No</th>
-                        <th class="p-3 hdr-green">Tgl Produksi</th>
-                        <th class="p-3 hdr-green">Mesin</th>
-                        <th class="p-3 hdr-green">Shift</th>
-                        <th class="p-3 hdr-blue border-l border-r border-blue-400">Jenis Item</th>
-                        <th class="p-3 hdr-green">Nama Item</th>
-                        <th class="p-3 hdr-green">Pjg</th>
-                        <th class="p-3 hdr-green">Grade</th>
-                        <th class="p-3 hdr-green">Dus</th>
-                        <th class="p-3 hdr-green">Shading</th>
-                        <th class="p-3 hdr-black text-center border-l border-r border-gray-600">QTY</th>
-                        <th class="p-3 hdr-green border-r border-green-600">PO</th>
-                        <th class="p-3 hdr-orange border-r border-orange-400">Keterangan</th>
-                        <th class="p-3 hdr-black text-center">Status</th>
-                    </tr>
-                `;
-                
-                let grouped = {};
-                globalData.forEach(r => {
-                    let key = `${r.tgl_produksi}|${r.mesin}|${r.shift}|${r.jenis_item}|${r.nama_item}|${r.panjang}|${r.grade}|${r.dus}|${r.shading}|${r.po}|${r.keterangan}|${r.status}`;
-                    if(!grouped[key]) grouped[key] = { ...r, qty: 0, ids: [] };
-                    grouped[key].qty += 1;
-                    grouped[key].ids.push(r.id); 
-                });
-
-                tbody.innerHTML = '';
-                let i = 1;
-                Object.values(grouped).forEach(r => {
-                    let stColor = r.status === 'HOLD' ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-emerald-100 text-emerald-700 border-emerald-300';
-                    tbody.innerHTML += `
-                        <tr class="border-b border-inherit hover:bg-blue-50 transition data-row">
-                            <td class="p-3 text-center"><input type="checkbox" data-ids="${r.ids.join(',')}" class="row-check w-4 h-4 cursor-pointer"></td>
-                            <td class="p-3 text-center font-bold opacity-50">${i++}</td>
-                            <td class="p-3 font-semibold col-tgl">${r.tgl_produksi || '-'}</td>
-                            <td class="p-3 font-medium col-mesin">${r.mesin || '-'}</td>
-                            <td class="p-3 col-shift">${r.shift || '-'}</td>
-                            <td class="p-3 font-bold text-blue-600 col-jenis">${r.jenis_item || '-'}</td>
-                            <td class="p-3 font-bold text-base col-nama">${r.nama_item || '-'}</td>
-                            <td class="p-3 font-bold col-pjg">${r.panjang || '-'}</td>
-                            <td class="p-3 font-semibold col-grade">${r.grade || '-'}</td>
-                            <td class="p-3 col-dus">${r.dus || '-'}</td>
-                            <td class="p-3 col-shading">${r.shading || '-'}</td>
-                            <td class="p-3 text-center font-bold text-base text-black bg-gray-100/50">${r.qty}</td>
-                            <td class="p-3 font-bold text-amber-700 col-po">${r.po || '-'}</td>
-                            <td class="p-3 text-orange-500 font-medium col-ket">${r.keterangan || '-'}</td>
-                            <td class="p-3 text-center col-status"><span class="${stColor} px-3 py-1 rounded-full font-bold text-[10px] uppercase border shadow-sm">${r.status || 'STBJ'}</span></td>
-                        </tr>
-                    `;
-                });
-            }
-            } else {
-                thead.innerHTML = '<tr><th class="p-3 text-center hdr-black">Mode 3</th></tr>';
-                tbody.innerHTML = '<tr><td class="p-10 text-center opacity-50 font-bold">Menu sedang dikembangkan...</td></tr>';
-            }
-            lucide.createIcons();
-            saringTabel();
-        }
-
-        function saringTabel() {
-            const filters = {
-                qr: document.getElementById('flt-qr').value.toLowerCase(),
-                tgl: document.getElementById('flt-tgl').value.toLowerCase(),
-                mesin: document.getElementById('flt-mesin').value.toLowerCase(),
-                shift: document.getElementById('flt-shift').value.toLowerCase(),
-                jenis: document.getElementById('flt-jenis').value.toLowerCase(),
-                nama: document.getElementById('flt-nama').value.toLowerCase(),
-                pjg: document.getElementById('flt-pjg').value.toLowerCase(),
-                grade: document.getElementById('flt-grade').value.toLowerCase(),
-                dus: document.getElementById('flt-dus').value.toLowerCase(),
-                shading: document.getElementById('flt-shading').value.toLowerCase(),
-                po: document.getElementById('flt-po').value.toLowerCase(),
-                ket: document.getElementById('flt-ket').value.toLowerCase(),
-                status: document.getElementById('flt-status').value.toLowerCase()
-            };
-
-            const rows = document.querySelectorAll('.data-row');
-            rows.forEach(row => {
-                let show = true;
-                for(let key in filters) {
-                    if(filters[key] !== '') {
-                        const cell = row.querySelector('.col-' + key);
-                        if(cell && !cell.innerText.toLowerCase().includes(filters[key])) {
-                            show = false; break;
-                        }
-                    }
-                }
-                row.style.display = show ? '' : 'none';
-            });
-        }
-
-        function getSelectedIds() {
-            let ids = [];
-            document.querySelectorAll('.row-check:checked').forEach(cb => { ids = ids.concat(cb.getAttribute('data-ids').split(',')); });
-            return ids;
-        }
-        async function hapusData() {
-            const ids = getSelectedIds();
-            if(ids.length === 0) return alert("Pilih minimal satu baris untuk dihapus.");
-            if(!confirm(`Yakin ingin MENGHAPUS PERMANEN ${ids.length} item dari database?`)) return;
-            const { error } = await db.from('hasil_stbj').delete().in('id', ids);
-            if(error) alert("Gagal Hapus: " + error.message); else location.reload();
-        }
-        async function holdData() {
-            const ids = getSelectedIds();
-            if(ids.length === 0) return alert("Pilih minimal satu baris untuk di-HOLD.");
-            if(!confirm(`Ubah status ${ids.length} item menjadi HOLD?`)) return;
-            const { error } = await db.from('hasil_stbj').update({ status: 'HOLD' }).in('id', ids);
-            if(error) alert("Gagal update: " + error.message); else location.reload();
-        }
-        function salinData() { alert("Fitur blok & salin aktif. Tekan CTRL+C atau gunakan tombol Download CSV."); }
-        function downloadCSV() {
-            let csv = [];
-            const rows = document.querySelectorAll("#main-table tr");
-            for (let i = 0; i < rows.length; i++) {
-                if(rows[i].style.display === 'none') continue;
-                let row = [], cols = rows[i].querySelectorAll("td, th");
-                for (let j = 1; j < cols.length; j++) row.push('"' + cols[j].innerText.replace(/"/g, '""') + '"');
-                csv.push(row.join(","));
-            }
-            let csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
-            let link = document.createElement("a");
-            link.href = window.URL.createObjectURL(csvFile); link.download = `Laporan_STBJ_Mode${currentMode}.csv`; link.click();
-        }
-        function toggleAll(source) { document.querySelectorAll('.row-check').forEach(cb => cb.checked = source.checked); }
-    </script>
-</body>
-</html>
+                    htmlContent += `
+                        <tr class="border-b border-inherit hover
