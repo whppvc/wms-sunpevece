@@ -11,7 +11,10 @@
 <body class="font-sans">
     <div class="w-full">
         <div class="bg-white p-5 rounded-xl shadow-sm mb-4 border border-slate-200">
-            <input type="text" id="flt-qr" oninput="saringTabel()" class="w-full p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Pencarian QR Code...">
+            <div class="flex items-center gap-3">
+                <i data-lucide="search" class="text-slate-400 w-5 h-5"></i>
+                <input type="text" id="flt-qr" oninput="saringTabel()" class="w-full p-2 text-sm border-b-2 border-slate-200 font-bold outline-none focus:border-slate-800 transition" placeholder="Ketik QR Code untuk mencari...">
+            </div>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
@@ -20,12 +23,14 @@
                     <thead class="sticky top-0 z-10 shadow-sm">
                         <tr>
                             <th class="hdr-std w-12">No</th>
-                            <th class="hdr-std">Tgl Masuk STBJ</th>
-                            <th class="hdr-std border-r border-slate-500">QRCode</th>
+                            <th class="hdr-std border-r border-slate-500">Tgl Scan STBJ</th>
+                            <th class="hdr-std border-r border-slate-500">QRCode Tersimpan</th>
                             <th class="hdr-std">User / PIC</th>
                         </tr>
                     </thead>
-                    <tbody id="data-body" class="text-center text-slate-700"><tr><td colspan="4" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-slate-500"></i><p class="font-bold text-slate-500">Memuat Data...</p></td></tr></tbody>
+                    <tbody id="data-body" class="text-center text-slate-700">
+                        <tr><td colspan="4" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-slate-500"></i><p class="font-bold text-slate-500">Memuat Data Database...</p></td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -33,11 +38,61 @@
 
     <script src="global.js"></script>
     <script>
+        let globalData = [];
+
         document.addEventListener('DOMContentLoaded', () => {
             initModernLayout({ id: 'hasil_stbj', title: 'HASIL STBJ', url: 'hasil_stbj.html' });
-            // setTimeout(() => loadData(), 200);
+            setTimeout(() => { loadData(); }, 300);
         });
-        // Logika loadData untuk hasil STBJ di sini.
+
+        async function loadData() {
+            try {
+                // Tarik data dari database Supabase
+                const { data, error } = await db.from('hasil_stbj').select('*').order('created_at', {ascending: false}).limit(500);
+                if(error) throw error;
+                
+                globalData = data || [];
+                renderTable();
+            } catch (err) {
+                document.getElementById('data-body').innerHTML = `<tr><td colspan="4" class="p-10 text-center text-red-500 font-bold">Error Memuat Data: ${err.message}</td></tr>`;
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('data-body');
+            if(globalData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-10 text-center text-slate-400 font-bold">Belum ada data STBJ di database.</td></tr>`;
+                return;
+            }
+            
+            let html = '';
+            globalData.forEach((r, i) => {
+                const dateObj = new Date(r.created_at);
+                const dateStr = dateObj.toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                
+                html += `
+                    <tr class="border-b border-slate-200 hover:bg-slate-50 transition data-row">
+                        <td class="p-3 font-bold text-center border-r border-slate-200 text-slate-500">${i+1}</td>
+                        <td class="p-3 font-bold text-center border-r border-slate-200 text-slate-800">${dateStr}</td>
+                        <td class="p-3 font-mono font-bold text-slate-900 col-qr bg-slate-50 border-r border-slate-200 tracking-wider">${r.qrcode}</td>
+                        <td class="p-3 font-bold text-slate-600 text-center uppercase">${r.pic_input || '-'}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function saringTabel() {
+            const filterQR = document.getElementById('flt-qr').value.toLowerCase();
+            document.querySelectorAll('.data-row').forEach(row => {
+                const cellQR = row.querySelector('.col-qr');
+                if(cellQR && cellQR.innerText.toLowerCase().includes(filterQR)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
     </script>
 </body>
 </html>
