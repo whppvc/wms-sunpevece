@@ -2,88 +2,76 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WMS - Barang Keluar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        .table-container { scrollbar-width: thin; }
-        .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .hdr-main { background-color: #1e293b !important; color: white !important; }
-        .hdr-sub { background-color: #f1f5f9 !important; color: #334155 !important; }
-    </style>
 </head>
-<body class="font-sans antialiased text-slate-800 bg-slate-50 flex flex-col min-h-screen">
-
-    <main class="p-4 md:p-6 w-full max-w-[98%] mx-auto flex flex-col gap-4 pt-4">
-
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 relative">
+<body class="font-sans">
+    <div class="w-full">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 relative mb-4">
             <button onclick="undoDelete()" class="absolute top-4 right-6 px-4 py-1.5 bg-slate-200 text-slate-700 font-bold rounded border border-slate-300 hover:bg-slate-300 transition cursor-pointer text-xs flex items-center gap-1 active:scale-95"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> UNDO</button>
             <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Scan Fisik Kardus Keluar</label>
             <form id="form-scan" class="flex gap-3">
-                <input type="text" id="input-qrcode" class="flex-1 p-3 border border-slate-300 rounded outline-none focus:border-blue-500 font-bold text-slate-800 text-lg" placeholder="Arahkan scanner ke kardus..." autocomplete="off">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-8 rounded font-bold shadow-sm cursor-pointer transition active:scale-95 flex items-center gap-2"><i data-lucide="corner-down-left"></i> ENTER</button>
+                <input type="text" id="input-qrcode" class="flex-1 p-3 border border-slate-300 rounded outline-none focus:border-slate-800 font-bold text-slate-800 text-lg bg-slate-50" placeholder="Arahkan scanner ke kardus..." autocomplete="off">
+                <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-8 rounded font-bold shadow-sm cursor-pointer transition active:scale-95 flex items-center gap-2"><i data-lucide="corner-down-left"></i> ENTER</button>
             </form>
         </div>
 
-        <div class="flex justify-end mt-2">
-            <button onclick="crossCekOutbound()" id="btn-crosscek" class="px-5 py-2.5 bg-white text-slate-700 font-bold rounded border border-slate-300 hover:bg-slate-100 transition cursor-pointer text-sm flex items-center gap-2 active:scale-95"><i data-lucide="scan-search" class="w-4 h-4"></i> VALIDASI FISIK GUDANG</button>
+        <div class="flex justify-end mt-2 mb-4">
+            <button onclick="crossCekOutbound()" id="btn-crosscek" class="px-5 py-2.5 bg-white text-slate-800 font-black rounded border-2 border-slate-800 hover:bg-slate-100 transition cursor-pointer text-sm flex items-center gap-2 active:scale-95 uppercase tracking-wide"><i data-lucide="scan-search" class="w-4 h-4"></i> VALIDASI FISIK GUDANG</button>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="table-container overflow-x-auto w-full max-h-[50vh]">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
+            <div class="overflow-x-auto w-full max-h-[50vh] hide-scrollbar">
                 <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-keluar">
                     <thead class="sticky top-0 z-10 shadow-sm">
-                        <tr class="uppercase text-[11px] font-bold tracking-wider">
-                            <th class="p-3 hdr-main w-10 text-center"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></th>
-                            <th class="p-3 hdr-main w-12 text-center">No</th>
-                            <th class="p-3 bg-blue-100 text-blue-900 text-center border-r border-blue-200">Status Fisik</th>
-                            <th class="p-3 hdr-main text-blue-300">Lokasi Auto</th>
-                            <th class="p-3 hdr-main border-r border-slate-600">Text QRCode</th>
-                            <th class="p-3 hdr-sub">Tgl Produksi</th>
-                            <th class="p-3 hdr-sub">Mesin</th>
-                            <th class="p-3 hdr-sub border-r border-slate-300">Shift</th>
-                            <th class="p-3 bg-white font-black text-blue-700">Jenis Item</th>
-                            <th class="p-3 bg-white text-slate-800">Nama Item</th>
-                            <th class="p-3 bg-white text-slate-800">Pjg</th>
-                            <th class="p-3 bg-white text-slate-800">Grade</th>
-                            <th class="p-3 bg-white border-r border-slate-300">Dus</th>
-                            <th class="p-3 hdr-sub">Shading</th>
-                            <th class="p-3 bg-slate-200 text-slate-900 text-center font-black">PO Bawaan</th>
+                        <tr>
+                            <th class="hdr-std w-10"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></th>
+                            <th class="hdr-std w-12">No</th>
+                            <th class="hdr-std">Status Fisik</th>
+                            <th class="hdr-std">Lokasi Auto</th>
+                            <th class="hdr-std">Text QRCode</th>
+                            <th class="hdr-std">Tgl Produksi</th>
+                            <th class="hdr-std">Mesin</th>
+                            <th class="hdr-std">Shift</th>
+                            <th class="hdr-std">Jenis Item</th>
+                            <th class="hdr-std">Nama Item</th>
+                            <th class="hdr-std">Pjg</th>
+                            <th class="hdr-std">Grade</th>
+                            <th class="hdr-std">Dus</th>
+                            <th class="hdr-std">Shading</th>
+                            <th class="hdr-std">PO Bawaan</th>
                         </tr>
                     </thead>
-                    <tbody id="tbody-keluar"></tbody>
+                    <tbody id="tbody-keluar" class="text-center text-slate-700"></tbody>
                 </table>
             </div>
         </div>
         
-        <div class="pt-2">
-            <button id="btn-proses-keluar" onclick="bukaModalKeluar()" class="w-full py-3.5 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded shadow-md flex items-center justify-center gap-2 text-base tracking-wide cursor-pointer transition active:scale-95"><i data-lucide="truck-fast" class="w-5 h-5"></i> PROSES PENGELUARAN BARANG</button>
+        <div class="pt-4">
+            <button id="btn-proses-keluar" onclick="bukaModalKeluar()" class="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-base tracking-widest cursor-pointer transition active:scale-95 uppercase"><i data-lucide="truck-fast" class="w-5 h-5"></i> PROSES PENGELUARAN BARANG</button>
         </div>
-    </main>
+    </div>
 
-    <div id="modal-keluar" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm transition-opacity">
+    <div id="modal-keluar" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-xl shadow-xl w-full max-w-md border border-slate-200">
-            <h3 class="text-xl font-black mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="package-minus" class="text-blue-600"></i> Tujuan Kirim</h3>
+            <h3 class="text-xl font-black mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="package-minus" class="text-slate-600"></i> Tujuan Kirim</h3>
             <p class="text-xs font-semibold text-slate-500 mb-6">Pilih PO untuk memotong saldo Kartu Stok virtual.</p>
-            
             <div class="space-y-4 mb-6">
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">PO Target</label>
-                    <select id="out-po-target" class="w-full p-3 border border-slate-300 rounded outline-none focus:border-blue-500 font-bold text-blue-700 uppercase cursor-pointer">
-                        <option value="">-- MEMUAT PO... --</option>
-                    </select>
+                    <select id="out-po-target" class="w-full p-3 border border-slate-300 rounded outline-none focus:border-slate-800 font-bold text-slate-800 uppercase cursor-pointer bg-slate-50"><option value="">-- MEMUAT PO... --</option></select>
                 </div>
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Keterangan / Supir / Nopol</label>
-                    <input type="text" id="out-keterangan" class="w-full p-3 border border-slate-300 rounded outline-none focus:border-blue-500 font-bold text-slate-800" placeholder="Cth: BM 1234 XX, Supir Budi...">
+                    <input type="text" id="out-keterangan" class="w-full p-3 border border-slate-300 rounded outline-none focus:border-slate-800 font-bold text-slate-800 bg-slate-50" placeholder="Cth: BM 1234 XX, Supir Budi...">
                 </div>
             </div>
-
             <div class="flex gap-2">
                 <button type="button" onclick="document.getElementById('modal-keluar').classList.add('hidden')" class="w-1/3 py-2.5 bg-slate-200 text-slate-700 font-bold rounded hover:bg-slate-300 transition cursor-pointer">BATAL</button>
-                <button type="button" onclick="eksekusiKeluar()" id="btn-eksekusi" class="w-2/3 py-2.5 bg-blue-600 font-bold rounded shadow-sm text-white hover:bg-blue-700 transition flex justify-center items-center gap-2 cursor-pointer active:scale-95"><i data-lucide="check-circle" class="w-4 h-4"></i> EKSEKUSI</button>
+                <button type="button" onclick="eksekusiKeluar()" id="btn-eksekusi" class="w-2/3 py-2.5 bg-slate-800 font-bold rounded shadow-sm text-white hover:bg-slate-900 transition flex justify-center items-center gap-2 cursor-pointer active:scale-95"><i data-lucide="check-circle" class="w-4 h-4"></i> EKSEKUSI</button>
             </div>
         </div>
     </div>
@@ -91,8 +79,9 @@
     <script src="global.js"></script>
     <script src="keluar_logic.js"></script>
     <script>
-        window.addEventListener('DOMContentLoaded', () => { 
-            initModernTopBar({ id: 'keluar', title: 'BARANG KELUAR', url: 'keluar.html' }); 
+        document.addEventListener('DOMContentLoaded', () => { 
+            initModernLayout({ id: 'keluar', title: 'BARANG KELUAR', url: 'keluar.html' }); 
+            setTimeout(() => { if(typeof loadInitialOutboundData === 'function') loadInitialOutboundData(); }, 200);
         });
     </script>
 </body>
