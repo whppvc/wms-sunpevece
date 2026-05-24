@@ -86,11 +86,19 @@
         </div>
     </main>
 
-    <script src="global.js"></script>
+   <script src="global.js"></script>
     <script src="langsir_logic.js"></script>
     <script>
         const PAGE_META = { id: 'langsir', title: 'LANGSIR', url: 'langsir.html' };
-        window.addEventListener('DOMContentLoaded', () => { initModernTopBar(PAGE_META); });
+        
+        // Menggunakan addEventListener agar tidak bertabrakan
+        window.addEventListener('DOMContentLoaded', async () => { 
+            initModernTopBar(PAGE_META); 
+            // Panggil fungsi tarik data troli/area di sini secara paksa
+            if(typeof loadInitialData === 'function') {
+                await loadInitialData();
+            }
+        });
     </script>
 </body>
 </html>
