@@ -1,4 +1,3 @@
-// KONEKSI SUPABASE
 const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -12,17 +11,13 @@ window.onload = async () => {
     await loadInitialData();
 };
 
-// PERBAIKAN FATAL: Penggunaan kelas hidden
 function switchView(view) {
     document.getElementById('view-menu').classList.add('hidden');
-    // Jika view yang dipilih adalah 'scan', maka hidden = false (tampilkan view-scan)
     document.getElementById('view-scan').classList.toggle('hidden', view !== 'scan');
-    // Jika view yang dipilih adalah 'ambil', maka hidden = false (tampilkan view-ambil)
     document.getElementById('view-ambil').classList.toggle('hidden', view !== 'ambil');
 }
 
 async function loadInitialData() {
-    // Load Troli
     const { data: mData1 } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
     if(mData1) {
         masterData.troli = [...new Set(mData1.map(r => r.nama_troli).filter(x => x && x.trim() !== ''))]; 
@@ -33,7 +28,6 @@ async function loadInitialData() {
         }
     }
     
-    // Load Area
     const { data: mDataArea } = await db.from('master_area').select('nama_area').order('id', { ascending: true });
     if(mDataArea) {
         masterData.area = [...new Set(mDataArea.map(r => r.nama_area).filter(x => x && x.trim() !== ''))]; 
@@ -43,7 +37,6 @@ async function loadInitialData() {
         }
     }
 
-    // Load Kamus
     const { data: mData2 } = await db.from('master_2').select('*');
     if(mData2) masterData.kamus = mData2; 
 }
@@ -69,8 +62,7 @@ function translateBarcode(barcode) {
     if (p2 && p2.length >= 4) {
         let digitPjg = (p2.length === 5) ? 2 : 1;
         let rawPjg = p2.substring(0, digitPjg);
-        if (digitPjg === 1) data.panjang = rawPjg + "M"; 
-        else data.panjang = rawPjg[0] + "." + rawPjg[1] + "M"; 
+        data.panjang = (digitPjg === 1) ? rawPjg + "M" : rawPjg[0] + "." + rawPjg[1] + "M"; 
 
         let rawGrade = p2.substring(digitPjg, digitPjg + 1);
         if (rawGrade === '1') data.grade = 'BAGUS';
@@ -84,23 +76,19 @@ function translateBarcode(barcode) {
 
     const p3 = parts[3];
     if (p3.length >= 5) {
-        // 1. Ekstrak Tanggal (5 digit pertama)
         const dayOfYear = parseInt(p3.substring(0, 3));
         const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
         const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
         data.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
 
-        // 2. Ekstrak Sisa Kode (Mesin, Shift, PO)
-        let sisaString = p3.substring(5); // Ambil sisa teks setelah 5 digit tanggal
-        
-        // 3. Gunakan Regex untuk menangkap teks berdasarkan awalan C, S, dan P
-        // Penjelasan: (C.*?) ambil C beserta apapun setelahnya sampai ketemu S
+        let sisaString = p3.substring(5); 
+        // REGEX ANTI-BUG UNTUK MESIN, SHIFT, PO
         let match = sisaString.match(/(C.*?)(S.*?)(P.*)/);
         
         if (match) {
-            let rawMesin = match[1]; // Hasil: C12, C1, dst.
-            let rawShift = match[2]; // Hasil: S1, S2, dst.
-            let rawPO = match[3];    // Hasil: P4, P24, dst.
+            let rawMesin = match[1]; 
+            let rawShift = match[2]; 
+            let rawPO = match[3];    
 
             let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin);
             data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
@@ -111,16 +99,12 @@ function translateBarcode(barcode) {
             let cariPO = masterData.kamus.find(m => m.kode_po === rawPO);
             data.po = cariPO && cariPO.po ? cariPO.po : rawPO;
         } else {
-            // Jika format barcode tidak memiliki unsur C, S, dan P yang berurutan
-            data.mesin = "FORMAT SALAH";
-            data.shift = "FORMAT SALAH";
-            data.po = "FORMAT SALAH";
+            data.mesin = "FORMAT SALAH"; data.shift = "FORMAT SALAH"; data.po = "FORMAT SALAH";
         }
     }
     return data;
 }
 
-// PEMISAH SPASI DAN TITIK KOMA PADA INPUT SCAN
 document.addEventListener('DOMContentLoaded', () => {
     const formScan = document.getElementById('form-scan');
     if(formScan) {
@@ -130,10 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const troli = document.getElementById('select-troli').value;
             const area = document.getElementById('select-area').value;
             
-            if(!troli || !area || !rawInput) {
-                alert("Pilih Troli, Area, dan isi QR Code terlebih dahulu!");
-                return;
-            }
+            if(!troli || !area || !rawInput) return alert("Pilih Troli, Area, dan isi QR Code terlebih dahulu!");
             
             const existingQRs = Array.from(document.querySelectorAll('.qr-val')).map(td => td.innerText);
             const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
@@ -150,7 +131,6 @@ function addRow(troli, area, code) {
     globalRowId++;
     const tr = document.createElement('tr'); 
     tr.className = "border-b border-inherit hover:bg-black/5 transition row-item"; 
-    
     const td = translateBarcode(code); 
     
     let html = `
@@ -192,13 +172,11 @@ function updateRowNumbers() {
     const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; });
 }
 
-// CROSSCEK DATA KE HASIL_STBJ
 async function crossCekSTBJ() {
     const rows = document.querySelectorAll('.row-item');
     if(rows.length === 0) return alert("Belum ada data untuk di cek.");
 
     const allQRCodes = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
-    
     const { data: stbjData, error } = await db.from('hasil_stbj').select('qrcode').in('qrcode', allQRCodes);
     if(error) return alert("Gagal koneksi ke server: " + error.message);
 
@@ -215,53 +193,85 @@ async function crossCekSTBJ() {
     });
 }
 
-// SIMPAN DATA LANGSIR KE DATABASE
+// ==========================================
+// LOGIKA SAVE SISTEM DECOUPLED INVENTORY
+// ==========================================
 async function saveToSupabase() {
     const btnSave = document.getElementById('btn-save'); 
     const originalText = btnSave.innerHTML;
     
-    btnSave.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-6 h-6"></i> MENYIMPAN...'; 
+    btnSave.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-6 h-6"></i> MEMPROSES DATA...'; 
     btnSave.disabled = true;
 
     const rows = document.querySelectorAll('.row-item');
-    if(rows.length === 0) {
-        alert("Tidak ada data untuk disimpan.");
+    if(rows.length === 0) { alert("Tidak ada data."); btnSave.innerHTML = originalText; btnSave.disabled = false; return; }
+
+    const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
+    
+    let arrFisikQR = []; // Untuk tabel stok_qr
+    let mapVirtual = {}; // Untuk tabel stok_global
+
+    // 1. Kumpulkan Data
+    rows.forEach(row => {
+        let area = row.querySelector('.area-cell').innerText;
+        let qr = row.querySelector('.qr-val').innerText;
+        let jenis = row.querySelector('.col-jenis').innerText;
+        let nama = row.querySelector('.col-nama').innerText;
+        let pjg = row.querySelector('.col-pjg').innerText;
+        let grade = row.querySelector('.col-grade').innerText;
+        let dus = row.querySelector('.col-dus').innerText;
+        let shading = row.querySelector('.col-shading').innerText;
+        let po = row.querySelector('.col-po').innerText;
+        
+        // Buat ID Unik (SKU_KEY) agar bisa di-Upsert otomatis oleh database
+        let id_sku = `${area}_${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}_${po}`;
+
+        // Data Fisik QR
+        arrFisikQR.push({ qrcode: qr, area: area, id_sku: id_sku, pic_input: user.username });
+
+        // Kalkulasi Agregasi Virtual
+        if(!mapVirtual[id_sku]) {
+            mapVirtual[id_sku] = { 
+                id_sku: id_sku, area: area, jenis_item: jenis, nama_item: nama, 
+                panjang: pjg, grade: grade, dus: dus, shading: shading, po_aktual: po, qty: 0 
+            };
+        }
+        mapVirtual[id_sku].qty += 1;
+    });
+
+    // 2. SIMPAN KE TABEL FISIK (stok_qr)
+    const { error: errQR } = await db.from('stok_qr').insert(arrFisikQR);
+    if (errQR) {
+        alert("Gagal menyimpan fisik QR (Mungkin ada QR ganda/sudah discan sebelumnya).\nDetail: " + errQR.message);
         btnSave.innerHTML = originalText; btnSave.disabled = false; return;
     }
 
-    const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
-    const dataToSave = [];
-
-    rows.forEach(row => {
-        dataToSave.push({
-            troli: row.querySelector('.troli-cell').innerText,
-            area: row.querySelector('.area-cell').innerText,
-            qrcode: row.querySelector('.qr-val').innerText,
-            tgl_produksi: row.querySelector('.col-tgl').innerText,
-            mesin: row.querySelector('.col-mesin').innerText,
-            shift: row.querySelector('.col-shift').innerText,
-            jenis_item: row.querySelector('.col-jenis').innerText,
-            nama_item: row.querySelector('.col-nama').innerText,
-            panjang: row.querySelector('.col-pjg').innerText,
-            grade: row.querySelector('.col-grade').innerText,
-            dus: row.querySelector('.col-dus').innerText,
-            shading: row.querySelector('.col-shading').innerText,
-            po: row.querySelector('.col-po').innerText,
-            keterangan: row.querySelector('.ket-input').value.toUpperCase(),
-            pic_input: user.username,
-            activity: 'Langsir'
-        });
+    // 3. UPDATE TABEL VIRTUAL (stok_global)
+    // Ambil data lama dulu untuk ditambahkan
+    let skuKeys = Object.keys(mapVirtual);
+    const { data: oldData } = await db.from('stok_global').select('id_sku, qty').in('id_sku', skuKeys);
+    
+    let arrVirtualUpdate = [];
+    skuKeys.forEach(key => {
+        let existing = oldData ? oldData.find(d => d.id_sku === key) : null;
+        let qtySekarang = existing ? existing.qty : 0;
+        let dataBaru = { ...mapVirtual[key], qty: qtySekarang + mapVirtual[key].qty }; // Tambahkan saldo lama + saldo baru
+        arrVirtualUpdate.push(dataBaru);
     });
 
-    const { error: insertError } = await db.from('hasil_langsir').insert(dataToSave);
-    
-    if (insertError) {
-        alert("Gagal Simpan ke Supabase: " + insertError.message);
-    } else {
-        alert(`BERHASIL!\n${dataToSave.length} data Langsir telah disimpan.`);
-        document.getElementById('tbody-langsir').innerHTML = '';
-    }
+    const { error: errGlobal } = await db.from('stok_global').upsert(arrVirtualUpdate);
+    if(errGlobal) { alert("Peringatan: Gagal update Kartu Stok Virtual: " + errGlobal.message); }
 
+    // 4. CATAT LOG MUTASI
+    const { error: errLog } = await db.from('log_mutasi').insert([{
+        aktifitas: 'LANGSIR IN',
+        detail: `Masuk ${arrFisikQR.length} Dus via Langsir Scan per Dus.`,
+        pic: user.username
+    }]);
+
+    alert(`BERHASIL!\n${arrFisikQR.length} kardus berhasil didaftarkan ke Gudang.`);
+    document.getElementById('tbody-langsir').innerHTML = ''; // Bersihkan layar
+    
     btnSave.innerHTML = originalText; 
     btnSave.disabled = false;
     lucide.createIcons();
