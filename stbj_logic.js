@@ -70,27 +70,39 @@ function translateBarcode(barcode) {
 
     const p3 = parts[3];
     if (p3.length >= 5) {
+        // 1. Ekstrak Tanggal (5 digit pertama)
         const dayOfYear = parseInt(p3.substring(0, 3));
         const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
         const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
         data.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
 
-        let lenMesin = (data.jenisItem === 'Plafon') ? 2 : 3;
-        let rawMesin = p3.substring(5, 5 + lenMesin);
-        let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin);
-        data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
-
-        let startShift = 5 + lenMesin;
-        let rawShift = p3.substring(startShift, startShift + 2);
-        let cariShift = masterData.kamus.find(m => m.kode_shift === rawShift);
-        data.shift = cariShift && cariShift.shift ? cariShift.shift : rawShift;
+        // 2. Ekstrak Sisa Kode (Mesin, Shift, PO)
+        let sisaString = p3.substring(5); // Ambil sisa teks setelah 5 digit tanggal
         
-        let startPO = startShift + 2;
-        let rawPO = p3.substring(startPO); 
-        let cariPO = masterData.kamus.find(m => m.kode_po === rawPO);
-        data.po = cariPO && cariPO.po ? cariPO.po : rawPO;
+        // 3. Gunakan Regex untuk menangkap teks berdasarkan awalan C, S, dan P
+        // Penjelasan: (C.*?) ambil C beserta apapun setelahnya sampai ketemu S
+        let match = sisaString.match(/(C.*?)(S.*?)(P.*)/);
+        
+        if (match) {
+            let rawMesin = match[1]; // Hasil: C12, C1, dst.
+            let rawShift = match[2]; // Hasil: S1, S2, dst.
+            let rawPO = match[3];    // Hasil: P4, P24, dst.
+
+            let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin);
+            data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
+
+            let cariShift = masterData.kamus.find(m => m.kode_shift === rawShift);
+            data.shift = cariShift && cariShift.shift ? cariShift.shift : rawShift;
+            
+            let cariPO = masterData.kamus.find(m => m.kode_po === rawPO);
+            data.po = cariPO && cariPO.po ? cariPO.po : rawPO;
+        } else {
+            // Jika format barcode tidak memiliki unsur C, S, dan P yang berurutan
+            data.mesin = "FORMAT SALAH";
+            data.shift = "FORMAT SALAH";
+            data.po = "FORMAT SALAH";
+        }
     }
-    
     return data;
 }
 
