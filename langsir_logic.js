@@ -1,19 +1,14 @@
 let masterData = { kamus: [], troli: [], area: [] };
 let deleteStack = [], globalRowId = 0;
 
-window.onload = async () => {
-    lucide.createIcons();
-    document.body.setAttribute('data-bg', localStorage.getItem('app_bg') || 'light');
+// PASTIKAN FUNGSI INI BERJALAN SAAT HALAMAN DIMUAT
+document.addEventListener('DOMContentLoaded', async () => {
     await loadInitialData();
-};
+});
 
-// ==========================================
-// INISIALISASI DATA AWAL (TROLI, AREA, KAMUS)
-// ==========================================
 async function loadInitialData() {
     try {
-        console.log("Menarik data Troli dan Area...");
-        
+        console.log("Menarik data master...");
         const { data: mData1 } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
         if(mData1) {
             masterData.troli = [...new Set(mData1.map(r => r.nama_troli).filter(x => x && x.trim() !== ''))]; 
@@ -36,10 +31,7 @@ async function loadInitialData() {
 
         const { data: mData2 } = await db.from('master_2').select('*');
         if(mData2) masterData.kamus = mData2; 
-        
-    } catch (e) {
-        console.error("Gagal memuat data master:", e);
-    }
+    } catch (e) { console.error("Error:", e); }
 }
 
 // Jadikan fungsi global agar bisa dipanggil dari HTML
