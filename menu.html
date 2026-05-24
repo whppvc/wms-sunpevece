@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WMS - Dashboard</title>
+    <title>WMS - Menu Utama</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -16,53 +16,61 @@
     <main class="p-4 md:p-6 w-full max-w-6xl mx-auto flex-grow pt-6">
         <header class="mb-6 border-b border-slate-200 pb-4">
             <h2 class="text-2xl font-black text-slate-800 tracking-tight">MENU UTAMA WMS</h2>
-            <p class="text-sm font-semibold text-slate-500 mt-1">Pilih menu untuk memulai aktivitas gudang.</p>
+            <p class="text-sm font-semibold text-slate-500 mt-1">Sistem Manajemen Logistik Terintegrasi</p>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            <div onclick="window.location.href='langsir.html'" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md hover:border-amber-400 transition-all cursor-pointer group relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-24 h-24 bg-amber-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
-                <div class="flex items-start justify-between">
-                    <div>
-                        <p class="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-1">Inbound</p>
-                        <h3 class="text-lg font-black text-slate-800 group-hover:text-amber-600 transition">Langsir (Masuk)</h3>
-                    </div>
-                    <div class="bg-amber-100 p-3 rounded-xl text-amber-600 shadow-sm"><i data-lucide="log-in" class="w-5 h-5"></i></div>
-                </div>
-            </div>
-
-            <div onclick="window.location.href='keluar.html'" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md hover:border-rose-400 transition-all cursor-pointer group relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-24 h-24 bg-rose-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
-                <div class="flex items-start justify-between">
-                    <div>
-                        <p class="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-1">Outbound</p>
-                        <h3 class="text-lg font-black text-slate-800 group-hover:text-rose-600 transition">Kirim Barang</h3>
-                    </div>
-                    <div class="bg-rose-100 p-3 rounded-xl text-rose-700 shadow-sm"><i data-lucide="truck" class="w-5 h-5"></i></div>
-                </div>
-            </div>
-
-            <div onclick="window.location.href='kartu_stok.html'" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md hover:border-blue-400 transition-all cursor-pointer group relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
-                <div class="flex items-start justify-between">
-                    <div>
-                        <p class="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-1">Inventory</p>
-                        <h3 class="text-lg font-black text-slate-800 group-hover:text-blue-600 transition">Kartu Stok & PO</h3>
-                    </div>
-                    <div class="bg-blue-100 p-3 rounded-xl text-blue-600 shadow-sm"><i data-lucide="layers" class="w-5 h-5"></i></div>
-                </div>
-            </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             
-            <div onclick="window.location.href='opname.html'" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md hover:border-purple-400 transition-all cursor-pointer group relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-24 h-24 bg-purple-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
-                <div class="flex items-start justify-between">
-                    <div>
-                        <p class="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-1">Audit</p>
-                        <h3 class="text-lg font-black text-slate-800 group-hover:text-purple-600 transition">Stock Opname</h3>
-                    </div>
-                    <div class="bg-purple-100 p-3 rounded-xl text-purple-700 shadow-sm"><i data-lucide="clipboard-check" class="w-5 h-5"></i></div>
-                </div>
+            <div onclick="window.location.href='langsir.html'" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-blue-500 hover:shadow-md transition cursor-pointer text-center group">
+                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition"><i data-lucide="log-in" class="w-6 h-6"></i></div>
+                <h3 class="font-bold text-slate-800 text-sm">Langsir Gudang</h3>
             </div>
+
+            <div onclick="window.location.href='riwayat_langsir.html'" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-blue-500 hover:shadow-md transition cursor-pointer text-center group">
+                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition"><i data-lucide="history" class="w-6 h-6"></i></div>
+                <h3 class="font-bold text-slate-800 text-sm">Riwayat Langsir</h3>
+            </div>
+
+            <div onclick="window.location.href='stbj.html'" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-blue-500 hover:shadow-md transition cursor-pointer text-center group">
+                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition"><i data-lucide="shield-check" class="w-6 h-6"></i></div>
+                <h3 class="font-bold text-slate-800 text-sm">Scan STBJ</h3>
+            </div>
+
+            <div onclick="window.location.href='hasil_stbj.html'" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-blue-500 hover:shadow-md transition cursor-pointer text-center group">
+                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition"><i data-lucide="clipboard-list" class="w-6 h-6"></i></div>
+                <h3 class="font-bold text-slate-800 text-sm">Hasil STBJ</h3>
+            </div>
+
+            <div onclick="window.location.href='kartu_stok.html'" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-blue-500 hover:shadow-md transition cursor-pointer text-center group">
+                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition"><i data-lucide="layers" class="w-6 h-6"></i></div>
+                <h3 class="font-bold text-slate-800 text-sm">Kartu Stok & PO</h3>
+            </div>
+
+            <div onclick="window.location.href='riwayat_mutasi.html'" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-blue-500 hover:shadow-md transition cursor-pointer text-center group">
+                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition"><i data-lucide="arrow-right-left" class="w-6 h-6"></i></div>
+                <h3 class="font-bold text-slate-800 text-sm">Riwayat Mutasi PO</h3>
+            </div>
+
+            <div onclick="window.location.href='opname.html'" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-blue-500 hover:shadow-md transition cursor-pointer text-center group">
+                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition"><i data-lucide="clipboard-check" class="w-6 h-6"></i></div>
+                <h3 class="font-bold text-slate-800 text-sm">Stock Opname</h3>
+            </div>
+
+            <div onclick="window.location.href='keluar.html'" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-blue-500 hover:shadow-md transition cursor-pointer text-center group">
+                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition"><i data-lucide="truck" class="w-6 h-6"></i></div>
+                <h3 class="font-bold text-slate-800 text-sm">Kirim Barang Keluar</h3>
+            </div>
+
+            <div onclick="window.location.href='riwayat_keluar.html'" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-blue-500 hover:shadow-md transition cursor-pointer text-center group">
+                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition"><i data-lucide="truck-fast" class="w-6 h-6"></i></div>
+                <h3 class="font-bold text-slate-800 text-sm">Riwayat Keluar</h3>
+            </div>
+
+            <div onclick="if(confirm('Yakin ingin keluar aplikasi?')) { localStorage.removeItem('user_session'); window.location.href='index.html'; }" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-red-500 hover:shadow-md transition cursor-pointer text-center group">
+                <div class="bg-red-50 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-red-600 mb-3 group-hover:bg-red-600 group-hover:text-white transition"><i data-lucide="power" class="w-6 h-6"></i></div>
+                <h3 class="font-bold text-red-600 text-sm">Keluar Aplikasi</h3>
+            </div>
+
         </div>
     </main>
 
