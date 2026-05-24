@@ -211,7 +211,6 @@
                     <tr>
                         <th class="p-3 hdr-black text-center"><input type="checkbox" onclick="toggleAll(this)" class="w-4 h-4 mt-1 cursor-pointer"></th>
                         <th class="p-3 hdr-black text-center">No</th>
-                        <th class="p-3 hdr-black text-center border-r border-gray-600">QTY</th>
                         <th class="p-3 hdr-green">Tgl Produksi</th>
                         <th class="p-3 hdr-green">Mesin</th>
                         <th class="p-3 hdr-green">Shift</th>
@@ -221,6 +220,7 @@
                         <th class="p-3 hdr-green">Grade</th>
                         <th class="p-3 hdr-green">Dus</th>
                         <th class="p-3 hdr-green">Shading</th>
+                        <th class="p-3 hdr-black text-center border-l border-r border-gray-600">QTY</th>
                         <th class="p-3 hdr-green border-r border-green-600">PO</th>
                         <th class="p-3 hdr-orange border-r border-orange-400">Keterangan</th>
                         <th class="p-3 hdr-black text-center">Status</th>
@@ -243,7 +243,6 @@
                         <tr class="border-b border-inherit hover:bg-blue-50 transition data-row">
                             <td class="p-3 text-center"><input type="checkbox" data-ids="${r.ids.join(',')}" class="row-check w-4 h-4 cursor-pointer"></td>
                             <td class="p-3 text-center font-bold opacity-50">${i++}</td>
-                            <td class="p-3 text-center"><span class="bg-blue-600 text-white px-3 py-1 rounded-lg font-black text-sm">${r.qty}</span></td>
                             <td class="p-3 font-semibold col-tgl">${r.tgl_produksi || '-'}</td>
                             <td class="p-3 font-medium col-mesin">${r.mesin || '-'}</td>
                             <td class="p-3 col-shift">${r.shift || '-'}</td>
@@ -253,12 +252,14 @@
                             <td class="p-3 font-semibold col-grade">${r.grade || '-'}</td>
                             <td class="p-3 col-dus">${r.dus || '-'}</td>
                             <td class="p-3 col-shading">${r.shading || '-'}</td>
+                            <td class="p-3 text-center font-bold text-base text-black bg-gray-100/50">${r.qty}</td>
                             <td class="p-3 font-bold text-amber-700 col-po">${r.po || '-'}</td>
                             <td class="p-3 text-orange-500 font-medium col-ket">${r.keterangan || '-'}</td>
                             <td class="p-3 text-center col-status"><span class="${stColor} px-3 py-1 rounded-full font-bold text-[10px] uppercase border shadow-sm">${r.status || 'STBJ'}</span></td>
                         </tr>
                     `;
                 });
+            }
             } else {
                 thead.innerHTML = '<tr><th class="p-3 text-center hdr-black">Mode 3</th></tr>';
                 tbody.innerHTML = '<tr><td class="p-10 text-center opacity-50 font-bold">Menu sedang dikembangkan...</td></tr>';
