@@ -7,49 +7,69 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
 </head>
-<body class="font-sans antialiased text-slate-800 bg-slate-50">
+<body class="font-sans antialiased text-slate-800 bg-slate-50 flex flex-col min-h-screen">
+    
+    <main class="p-4 md:p-6 w-full max-w-6xl mx-auto flex-grow pt-6">
+        <header class="mb-6 border-b border-slate-200 pb-4">
+            <h2 class="text-2xl font-black text-slate-800 tracking-tight">Modul Operasional WMS</h2>
+            <p class="text-sm font-semibold text-slate-500 mt-1">Pilih menu untuk memulai aktivitas gudang.</p>
+        </header>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div onclick="window.location.href='langsir.html'" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-lg hover:border-emerald-300 transition-all cursor-pointer group">
-            <div class="flex items-start justify-between">
-                <div>
-                    <p class="text-slate-500 font-bold text-xs uppercase tracking-wider mb-1">Inbound</p>
-                    <h3 class="text-xl font-black text-slate-800 group-hover:text-emerald-600 transition">Langsir Gudang</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div onclick="window.location.href='langsir.html'" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md hover:border-amber-400 transition-all cursor-pointer group relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-amber-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-1">Inbound</p>
+                        <h3 class="text-lg font-black text-slate-800 group-hover:text-amber-600 transition">Langsir (Masuk)</h3>
+                    </div>
+                    <div class="bg-amber-100 p-3 rounded-xl text-amber-600 shadow-sm"><i data-lucide="log-in" class="w-5 h-5"></i></div>
                 </div>
-                <div class="bg-emerald-100 p-3 rounded-xl text-emerald-600"><i data-lucide="log-in" class="w-6 h-6"></i></div>
             </div>
-            <p class="text-sm text-slate-500 mt-4">Penerimaan barang jadi dari produksi ke dalam gudang fisik.</p>
-        </div>
 
-        <div onclick="window.location.href='keluar.html'" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-lg hover:border-rose-300 transition-all cursor-pointer group">
-            <div class="flex items-start justify-between">
-                <div>
-                    <p class="text-slate-500 font-bold text-xs uppercase tracking-wider mb-1">Outbound</p>
-                    <h3 class="text-xl font-black text-slate-800 group-hover:text-rose-600 transition">Pengiriman Keluar</h3>
+            <div onclick="window.location.href='keluar.html'" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md hover:border-rose-400 transition-all cursor-pointer group relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-rose-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-1">Outbound</p>
+                        <h3 class="text-lg font-black text-slate-800 group-hover:text-rose-600 transition">Kirim Barang</h3>
+                    </div>
+                    <div class="bg-rose-100 p-3 rounded-xl text-rose-700 shadow-sm"><i data-lucide="truck" class="w-5 h-5"></i></div>
                 </div>
-                <div class="bg-rose-100 p-3 rounded-xl text-rose-600"><i data-lucide="truck" class="w-6 h-6"></i></div>
             </div>
-            <p class="text-sm text-slate-500 mt-4">Pemotongan stok fisik & virtual berdasarkan PO tujuan.</p>
-        </div>
 
-        <div onclick="window.location.href='kartu_stok.html'" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group">
-            <div class="flex items-start justify-between">
-                <div>
-                    <p class="text-slate-500 font-bold text-xs uppercase tracking-wider mb-1">Inventory</p>
-                    <h3 class="text-xl font-black text-slate-800 group-hover:text-blue-600 transition">Kartu Stok & Mutasi</h3>
+            <div onclick="window.location.href='kartu_stok.html'" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md hover:border-blue-400 transition-all cursor-pointer group relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-1">Inventory</p>
+                        <h3 class="text-lg font-black text-slate-800 group-hover:text-blue-600 transition">Kartu Stok & PO</h3>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-xl text-blue-600 shadow-sm"><i data-lucide="layers" class="w-5 h-5"></i></div>
                 </div>
-                <div class="bg-blue-100 p-3 rounded-xl text-blue-600"><i data-lucide="layers" class="w-6 h-6"></i></div>
             </div>
-            <p class="text-sm text-slate-500 mt-4">Pantau saldo virtual dan alokasi pergantian PO aktual.</p>
+            
+            <div onclick="window.location.href='opname.html'" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md hover:border-purple-400 transition-all cursor-pointer group relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-purple-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-1">Audit</p>
+                        <h3 class="text-lg font-black text-slate-800 group-hover:text-purple-600 transition">Stock Opname</h3>
+                    </div>
+                    <div class="bg-purple-100 p-3 rounded-xl text-purple-700 shadow-sm"><i data-lucide="clipboard-check" class="w-5 h-5"></i></div>
+                </div>
+            </div>
         </div>
-    </div>
+    </main>
 
     <script src="global.js"></script>
     <script>
-        // Panggil Mesin UI saat halaman dimuat
         window.addEventListener('DOMContentLoaded', () => {
-            initModernLayout('dashboard', 'Dashboard Utama');
+            initModernTopBar({ id: 'dashboard', title: 'DASHBOARD', url: 'menu.html' });
         });
     </script>
 </body>
