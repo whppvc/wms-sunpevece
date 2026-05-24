@@ -7,155 +7,97 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        :root { --bg-main: #f8fafc; --bg-box: #ffffff; --text-main: #1f2937; --border-color: #e2e8f0; }
-        body[data-bg="dark"] { --bg-main: #0f172a; --bg-box: #1e293b; --text-main: #f8fafc; --border-color: #334155; }
-        body { background-color: var(--bg-main); color: var(--text-main); transition: all 0.3s ease; min-height: 100vh; }
-        .card-dynamic { background-color: var(--bg-box); border-color: var(--border-color); }
-        .input-dynamic { background-color: var(--bg-main); color: var(--text-main); border-color: var(--border-color); }
-        .table-container { scrollbar-width: thin; }
-        .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .hdr-black { background-color: #1e293b !important; color: white !important; }
-        .hdr-green { background-color: #15803d !important; color: white !important; }
-        .hdr-blue { background-color: #2563eb !important; color: white !important; }
-    </style>
 </head>
-<body id="app-body" class="font-sans">
-
-    <div class="sticky top-0 z-40 w-full flex flex-col shadow-md">
-        <nav class="card-dynamic px-4 py-3 flex items-center justify-between border-b">
-            <div class="flex items-center gap-3">
-                <button onclick="window.location.href='menu.html'" class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full transition cursor-pointer active:scale-95 shadow-inner"><i data-lucide="home" class="w-5 h-5"></i></button>
-                <div class="flex flex-col ml-1"><span class="font-extrabold text-lg tracking-wide leading-tight text-blue-700">PORTAL WMS</span></div>
-            </div>
-        </nav>
-        <div id="tab-bar" class="w-full bg-[#0f172a] text-gray-400 flex overflow-x-auto text-[11px] font-black hide-scrollbar tracking-wider"></div>
-    </div>
-
-    <main class="p-4 md:p-6 w-full max-w-[98%] mx-auto flex-grow pt-6">
-        <header class="mb-4 flex flex-col md:flex-row md:justify-between md:items-center gap-4 border-b border-gray-200/50 pb-4">
-            <div class="flex items-center gap-3">
-                <div class="bg-indigo-100 p-2.5 rounded-xl"><i data-lucide="history" class="w-7 h-7 text-indigo-600"></i></div>
-                <h2 class="text-2xl font-black text-indigo-700">Riwayat Langsir</h2>
-            </div>
-            <button onclick="loadData()" class="px-4 py-2 bg-indigo-100 text-indigo-700 font-bold rounded-lg border border-indigo-200 hover:bg-indigo-200 transition cursor-pointer text-sm flex items-center gap-2 shadow-sm active:scale-95"><i data-lucide="refresh-cw" class="w-4 h-4"></i> REFRESH DATA</button>
-        </header>
-
-        <div class="card-dynamic p-4 rounded-xl shadow-sm mb-4 border">
-            <h3 class="text-xs font-bold opacity-60 uppercase mb-3 flex items-center gap-2 text-indigo-600"><i data-lucide="search" class="w-4 h-4"></i> Pencarian Cepat</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                <input type="text" id="flt-qr" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none" placeholder="QR Code...">
-                <input type="text" id="flt-area" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none" placeholder="Area...">
-                <input type="text" id="flt-jenis" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none" placeholder="Jenis Item...">
-                <input type="text" id="flt-nama" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none" placeholder="Nama Item...">
-                <input type="text" id="flt-po" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none" placeholder="PO (Barcode)...">
-                <input type="text" id="flt-pic" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none" placeholder="PIC Input...">
+<body class="font-sans">
+    <div class="w-full">
+        <div class="bg-white p-5 rounded-xl shadow-sm mb-4 border border-slate-200">
+            <h3 class="text-xs font-black opacity-60 uppercase mb-3 flex items-center gap-2 text-slate-600"><i data-lucide="filter" class="w-4 h-4"></i> Filter Riwayat Fisik Masuk</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                <input type="text" id="flt-qr" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-400" placeholder="QR Code...">
+                <input type="text" id="flt-area" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Area...">
+                <input type="text" id="flt-jenis" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Jenis Item...">
+                <input type="text" id="flt-nama" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Nama Item...">
+                <input type="text" id="flt-po" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="PO Awal...">
+                <input type="text" id="flt-pic" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="User / PIC...">
             </div>
         </div>
 
-        <div class="card-dynamic rounded-xl shadow-md border overflow-hidden relative">
-            <div class="table-container overflow-x-auto w-full max-h-[60vh]">
-                <table class="w-full text-left text-sm whitespace-nowrap" id="main-table">
-                    <thead class="uppercase text-[11px] sticky top-0 z-10 shadow-sm tracking-wider">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
+            <div class="overflow-x-auto w-full max-h-[60vh] hide-scrollbar">
+                <table class="w-full border-collapse text-sm whitespace-nowrap">
+                    <thead class="sticky top-0 z-10 shadow-sm">
                         <tr>
-                            <th class="p-3 hdr-black text-center w-12">No</th>
-                            <th class="p-3 bg-indigo-900 text-white border-r border-indigo-700"><i data-lucide="clock" class="w-4 h-4 inline mr-1"></i> Timestamp</th>
-                            <th class="p-3 hdr-black">Area</th>
-                            <th class="p-3 hdr-black border-r border-gray-600">QR CODE</th>
-                            <th class="p-3 hdr-blue border-l border-blue-400">Jenis Item</th>
-                            <th class="p-3 hdr-green">Nama Item</th>
-                            <th class="p-3 hdr-green">Pjg</th>
-                            <th class="p-3 hdr-green">Grade</th>
-                            <th class="p-3 hdr-green">Dus</th>
-                            <th class="p-3 hdr-green border-r border-green-600">Shading</th>
-                            <th class="p-3 bg-gray-200 text-gray-700 text-center">PO Awal</th>
-                            <th class="p-3 hdr-black text-center border-l border-gray-600">PIC Input</th>
+                            <th class="hdr-std w-12">No</th>
+                            <th class="hdr-std border-r border-slate-500">Tgl Masuk</th>
+                            <th class="hdr-std">Area</th>
+                            <th class="hdr-std border-r border-slate-500">QRCode</th>
+                            <th class="hdr-std">Jenis</th>
+                            <th class="hdr-std">Nama Item</th>
+                            <th class="hdr-std">Pjg</th>
+                            <th class="hdr-std">Grade</th>
+                            <th class="hdr-std">Dus</th>
+                            <th class="hdr-std border-r border-slate-500">Shading</th>
+                            <th class="hdr-std bg-slate-900 border-r border-slate-500 text-orange-400">PO Awal</th>
+                            <th class="hdr-std">User / PIC</th>
                         </tr>
                     </thead>
-                    <tbody id="data-body"><tr><td colspan="12" class="text-center p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-indigo-500"></i><p class="font-bold text-gray-500">Menarik Data Sejarah...</p></td></tr></tbody>
+                    <tbody id="data-body" class="text-center text-slate-700"><tr><td colspan="12" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-slate-500"></i><p class="font-bold text-slate-500">Memuat Data...</p></td></tr></tbody>
                 </table>
             </div>
         </div>
-    </main>
+    </div>
 
-   <script src="global.js"></script>
-
+    <script src="global.js"></script>
     <script>
-        const PAGE_META = { id: 'riwayat_langsir', title: 'RIWAYAT LANGSIR', url: 'riwayat_langsir.html' };
         let globalData = [];
         let currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: ''};
 
-        window.onload = async () => {
-            initGlobalTabs(PAGE_META);
-            document.getElementById('flt-pic').value = currentUser.username; 
-            await loadData();
-        };
+        document.addEventListener('DOMContentLoaded', () => {
+            initModernLayout({ id: 'riwayat_langsir', title: 'RIWAYAT LANGSIR', url: 'riwayat_langsir.html' });
+            setTimeout(async () => {
+                document.getElementById('flt-pic').value = currentUser.username;
+                await loadData();
+            }, 200);
+        });
 
         async function loadData() {
-            document.getElementById('data-body').innerHTML = `<tr><td colspan="12" class="text-center p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-indigo-500"></i><p class="font-bold text-gray-500">Membaca Database Gudang...</p></td></tr>`;
-            lucide.createIcons();
             try {
                 const { data, error } = await db.from('stok_qr').select('*').order('created_at', {ascending: false}).limit(500);
-                if(error) throw error;
-                globalData = data || []; renderTable();
-            } catch (err) {
-                document.getElementById('data-body').innerHTML = `<tr><td colspan="12" class="p-10 text-center text-red-500 font-bold">Error Memuat Data: ${err.message}</td></tr>`;
-            }
+                if(error) throw error; globalData = data || []; renderTable();
+            } catch (err) { document.getElementById('data-body').innerHTML = `<tr><td colspan="12" class="p-10 text-center text-red-500 font-bold">Error: ${err.message}</td></tr>`; }
         }
 
-        function formatTanggal(isoString) {
-            if(!isoString) return '-';
-            return new Date(isoString).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        }
+        function formatTanggal(isoString) { if(!isoString) return '-'; return new Date(isoString).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
 
         function renderTable() {
             const tbody = document.getElementById('data-body');
-            if(globalData.length === 0) { 
-                tbody.innerHTML = `<tr><td colspan="12" class="text-center p-10 opacity-50"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2"></i> Belum ada data masuk.</td></tr>`; 
-                lucide.createIcons(); return; 
-            }
-            let htmlContent = ''; 
+            if(globalData.length === 0) { tbody.innerHTML = `<tr><td colspan="12" class="text-center p-10 text-slate-500 font-bold">Belum ada data.</td></tr>`; lucide.createIcons(); return; }
+            let html = ''; 
             globalData.forEach((r, i) => {
-                const parts = r.id_sku.split('_');
-                const jenis = parts[1] || '-'; const nama = parts[2] || '-'; const pjg = parts[3] || '-';
-                const grade = parts[4] || '-'; const dus = parts[5] || '-'; const shading = parts[6] || '-';
-                const poBawaan = parts[7] || '-';
-
-                htmlContent += `
-                    <tr class="border-b border-inherit hover:bg-indigo-50 transition data-row">
-                        <td class="p-3 text-center font-bold opacity-50">${i+1}</td>
-                        <td class="p-3 font-bold text-indigo-700 bg-indigo-50/50">${formatTanggal(r.created_at)}</td>
-                        <td class="p-3 font-bold text-emerald-700 col-area">${r.area}</td>
-                        <td class="p-3 font-mono font-bold text-black border-r border-gray-200 col-qr">${r.qrcode}</td>
-                        <td class="p-3 font-bold text-blue-600 col-jenis">${jenis}</td>
-                        <td class="p-3 font-bold col-nama">${nama}</td>
-                        <td class="p-3 font-bold opacity-70">${pjg}</td>
-                        <td class="p-3 font-semibold">${grade}</td>
-                        <td class="p-3">${dus}</td>
-                        <td class="p-3 font-medium">${shading}</td>
-                        <td class="p-3 font-bold text-center text-gray-500 bg-gray-100 col-po">${poBawaan}</td>
-                        <td class="p-3 text-center font-bold text-xs uppercase col-pic">${r.pic_input}</td>
-                    </tr>
-                `;
+                const parts = r.id_sku.split('_'); const jenis = parts[1] || '-'; const nama = parts[2] || '-'; const pjg = parts[3] || '-'; const grade = parts[4] || '-'; const dus = parts[5] || '-'; const shading = parts[6] || '-'; const po = parts[7] || '-';
+                html += `
+                    <tr class="border-b border-slate-200 hover:bg-slate-100 transition data-row">
+                        <td class="p-3 font-bold text-slate-400">${i+1}</td>
+                        <td class="p-3 font-black text-slate-800 border-r border-slate-200">${formatTanggal(r.created_at)}</td>
+                        <td class="p-3 font-black text-emerald-600 col-area">${r.area}</td>
+                        <td class="p-3 font-mono font-bold text-slate-900 border-r border-slate-200 col-qr bg-slate-50">${r.qrcode}</td>
+                        <td class="p-3 font-bold text-blue-700 col-jenis">${jenis}</td>
+                        <td class="p-3 font-bold text-slate-800 text-left col-nama">${nama}</td>
+                        <td class="p-3 font-bold text-slate-500 col-pjg">${pjg}</td>
+                        <td class="p-3 font-semibold text-slate-800 col-grade">${grade}</td>
+                        <td class="p-3 text-slate-800 col-dus">${dus}</td>
+                        <td class="p-3 font-medium text-slate-600 col-shading border-r border-slate-200">${shading}</td>
+                        <td class="p-3 font-black text-orange-600 bg-orange-50/50 col-po border-r border-slate-200">${po}</td>
+                        <td class="p-3 font-bold text-[10px] uppercase col-pic">${r.pic_input}</td>
+                    </tr>`;
             });
-            tbody.innerHTML = htmlContent;
-            lucide.createIcons(); saringTabel();
+            tbody.innerHTML = html; lucide.createIcons(); saringTabel();
         }
 
         function saringTabel() {
-            const filters = {
-                qr: document.getElementById('flt-qr').value.toLowerCase(), area: document.getElementById('flt-area').value.toLowerCase(),
-                jenis: document.getElementById('flt-jenis').value.toLowerCase(), nama: document.getElementById('flt-nama').value.toLowerCase(),
-                po: document.getElementById('flt-po').value.toLowerCase(), pic: document.getElementById('flt-pic').value.toLowerCase()
-            };
+            const filters = { qr: document.getElementById('flt-qr').value.toLowerCase(), area: document.getElementById('flt-area').value.toLowerCase(), jenis: document.getElementById('flt-jenis').value.toLowerCase(), nama: document.getElementById('flt-nama').value.toLowerCase(), po: document.getElementById('flt-po').value.toLowerCase(), pic: document.getElementById('flt-pic').value.toLowerCase() };
             document.querySelectorAll('.data-row').forEach(row => {
-                let show = true;
-                for(let key in filters) {
-                    if(filters[key] !== '') {
-                        const cell = row.querySelector('.col-' + key);
-                        if(cell && !cell.innerText.toLowerCase().includes(filters[key])) { show = false; break; }
-                    }
-                }
+                let show = true; for(let key in filters) { if(filters[key] !== '') { const cell = row.querySelector('.col-' + key); if(cell && !cell.innerText.toLowerCase().includes(filters[key])) { show = false; break; } } }
                 row.style.display = show ? '' : 'none';
             });
         }
