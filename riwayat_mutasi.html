@@ -3,89 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS - Riwayat Mutasi PO</title>
+    <title>WMS - Riwayat Mutasi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        :root { --bg-main: #f8fafc; --bg-box: #ffffff; --text-main: #1f2937; --border-color: #e2e8f0; }
-        body[data-bg="dark"] { --bg-main: #0f172a; --bg-box: #1e293b; --text-main: #f8fafc; --border-color: #334155; }
-        body { background-color: var(--bg-main); color: var(--text-main); transition: all 0.3s ease; min-height: 100vh; }
-        .card-dynamic { background-color: var(--bg-box); border-color: var(--border-color); }
-        .input-dynamic { background-color: var(--bg-main); color: var(--text-main); border-color: var(--border-color); }
-    </style>
 </head>
-<body id="app-body" class="font-sans">
-
-    <div class="sticky top-0 z-40 w-full flex flex-col shadow-md">
-        <nav class="card-dynamic px-4 py-3 flex items-center justify-between border-b">
-            <div class="flex items-center gap-3">
-                <button onclick="window.location.href='menu.html'" class="p-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-full transition cursor-pointer active:scale-95 shadow-inner"><i data-lucide="home" class="w-5 h-5"></i></button>
-                <div class="flex flex-col ml-1"><span class="font-extrabold text-lg tracking-wide leading-tight text-orange-600">PORTAL WMS</span></div>
-            </div>
-        </nav>
-        <div id="tab-bar" class="w-full bg-[#0f172a] text-gray-400 flex overflow-x-auto text-[11px] font-black hide-scrollbar tracking-wider"></div>
-    </div>
-
-    <main class="p-4 md:p-6 w-full max-w-6xl mx-auto flex-grow pt-6">
-        <header class="mb-4 flex flex-col md:flex-row md:justify-between md:items-center gap-4 border-b border-gray-200/50 pb-4">
-            <div class="flex items-center gap-3">
-                <div class="bg-orange-100 p-2.5 rounded-xl"><i data-lucide="arrow-right-left" class="w-7 h-7 text-orange-600"></i></div>
-                <div>
-                    <h2 class="text-2xl font-black text-orange-600">Riwayat Mutasi & Ganti PO</h2>
-                    <p class="text-xs font-bold opacity-60">Log Perubahan PO secara Virtual oleh PPC/CS</p>
-                </div>
-            </div>
-            <button onclick="loadData()" class="px-4 py-2 bg-orange-100 text-orange-700 font-bold rounded-lg border border-orange-200 hover:bg-orange-200 transition cursor-pointer text-sm flex items-center gap-2 shadow-sm active:scale-95"><i data-lucide="refresh-cw" class="w-4 h-4"></i> REFRESH DATA</button>
-        </header>
-
-        <div class="card-dynamic rounded-xl shadow-md border overflow-hidden">
-            <div class="overflow-x-auto w-full max-h-[70vh]">
+<body class="font-sans">
+    <div class="w-full">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
+            <div class="overflow-x-auto w-full max-h-[70vh] hide-scrollbar">
                 <table class="w-full text-left text-sm whitespace-nowrap">
-                    <thead class="uppercase text-[11px] sticky top-0 z-10 shadow-sm tracking-wider">
+                    <thead class="sticky top-0 z-10 shadow-sm">
                         <tr>
-                            <th class="p-4 bg-[#1e293b] text-white text-center w-12">No</th>
-                            <th class="p-4 bg-orange-600 text-white border-r border-orange-700"><i data-lucide="calendar-clock" class="w-4 h-4 inline mr-1"></i> Waktu Eksekusi</th>
-                            <th class="p-4 bg-[#1e293b] text-orange-300 border-r border-gray-600">Eksekutor (CS/Admin)</th>
-                            <th class="p-4 bg-[#1e293b] text-white">Detail Perubahan PO Virtual</th>
+                            <th class="hdr-std w-12">No</th>
+                            <th class="hdr-std border-r border-slate-500">Waktu Eksekusi</th>
+                            <th class="hdr-std border-r border-slate-500">Eksekutor (CS/Admin)</th>
+                            <th class="hdr-std text-left pl-4">Detail Perubahan PO Virtual</th>
                         </tr>
                     </thead>
-                    <tbody id="data-body"><tr><td colspan="4" class="text-center p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-orange-500"></i><p class="font-bold text-gray-500">Membaca Sejarah...</p></td></tr></tbody>
+                    <tbody id="data-body"><tr><td colspan="4" class="text-center p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-slate-500"></i><p class="font-bold text-slate-500">Memuat Riwayat...</p></td></tr></tbody>
                 </table>
             </div>
         </div>
-    </main>
+    </div>
 
     <script src="global.js"></script>
-
     <script>
-        const PAGE_META = { id: 'riwayat_mutasi', title: 'RIWAYAT MUTASI', url: 'riwayat_mutasi.html' };
-        
-        window.onload = () => { 
-            initGlobalTabs(PAGE_META); 
-            loadData(); 
-        };
+        document.addEventListener('DOMContentLoaded', () => {
+            initModernLayout({ id: 'riwayat_mutasi', title: 'RIWAYAT MUTASI', url: 'riwayat_mutasi.html' });
+            setTimeout(() => { loadData(); }, 200);
+        });
 
         async function loadData() {
             try {
-                const { data, error } = await db.from('log_mutasi').select('*').eq('aktifitas', 'GANTI PO (CS)').order('waktu', {ascending: false}).limit(200);
+                // BUG FIX: Menggunakan 'created_at' bukan 'waktu'
+                const { data, error } = await db.from('log_mutasi').select('*').eq('aktifitas', 'GANTI PO (CS)').order('created_at', {ascending: false}).limit(200);
                 if(error) throw error;
                 
                 const tbody = document.getElementById('data-body');
                 if(!data || data.length === 0) { 
-                    tbody.innerHTML = `<tr><td colspan="4" class="text-center p-10 opacity-50"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2"></i> Belum ada riwayat mutasi PO.</td></tr>`; 
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center p-10 text-slate-500 font-bold">Belum ada riwayat mutasi PO.</td></tr>`; 
                     lucide.createIcons(); return; 
                 }
 
                 let html = ''; 
                 data.forEach((r, i) => {
-                    const date = new Date(r.waktu).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    const date = new Date(r.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
                     html += `
-                        <tr class="border-b border-inherit hover:bg-orange-50 transition">
-                            <td class="p-4 text-center font-bold opacity-50">${i+1}</td>
-                            <td class="p-4 font-black text-orange-700 bg-orange-50/50">${date}</td>
-                            <td class="p-4 font-bold text-gray-700 uppercase">${r.pic}</td>
-                            <td class="p-4 font-medium text-orange-900 whitespace-normal min-w-[300px] leading-relaxed"><i data-lucide="info" class="w-4 h-4 inline mr-1 opacity-50"></i>${r.detail}</td>
+                        <tr class="border-b border-slate-200 hover:bg-slate-100 transition">
+                            <td class="p-4 text-center font-bold text-slate-400">${i+1}</td>
+                            <td class="p-4 text-center font-black text-slate-700 border-r border-slate-200">${date}</td>
+                            <td class="p-4 text-center font-bold text-slate-700 uppercase border-r border-slate-200">${r.pic}</td>
+                            <td class="p-4 font-medium text-slate-800 whitespace-normal min-w-[300px] leading-relaxed">${r.detail}</td>
                         </tr>
                     `;
                 });
