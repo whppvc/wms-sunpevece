@@ -72,7 +72,7 @@
         async function loadData() {
             try {
                 // Filter hanya data KIRIM OUT
-                const { data, error } = await db.from('log_mutasi').select('*').eq('aktifitas', 'KIRIM OUT').order('waktu', {ascending: false}).limit(200);
+                const { data, error } = await db.from('log_mutasi').select('*').eq('aktifitas', 'KIRIM OUT').order('created_at', {ascending: false}).limit(200);
                 if(error) throw error;
                 
                 const tbody = document.getElementById('data-body');
