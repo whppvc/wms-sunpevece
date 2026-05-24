@@ -1,14 +1,10 @@
 let masterData = { kamus: [], troli: [], area: [] };
 let deleteStack = [], globalRowId = 0;
 
-// PASTIKAN FUNGSI INI BERJALAN SAAT HALAMAN DIMUAT
-document.addEventListener('DOMContentLoaded', async () => {
-    await loadInitialData();
-});
-
+// FUNGSI TARIK DATA (TIDAK PERLU addEventListener lagi di sini, dipanggil dari HTML)
 async function loadInitialData() {
     try {
-        console.log("Menarik data master...");
+        console.log("Menarik data master Troli & Area...");
         const { data: mData1 } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
         if(mData1) {
             masterData.troli = [...new Set(mData1.map(r => r.nama_troli).filter(x => x && x.trim() !== ''))]; 
@@ -31,11 +27,14 @@ async function loadInitialData() {
 
         const { data: mData2 } = await db.from('master_2').select('*');
         if(mData2) masterData.kamus = mData2; 
-    } catch (e) { console.error("Error:", e); }
+        console.log("Data berhasil ditarik.");
+    } catch (e) { console.error("Error muat data:", e); }
 }
 
-// Jadikan fungsi global agar bisa dipanggil dari HTML
+// Global expose
 window.loadInitialData = loadInitialData;
+
+// ... (Kode translateBarcode, addRow, dan saveToSupabase di bawah tetap sama) ...
 
 function translateBarcode(barcode) {
     const parts = barcode.split('/');
