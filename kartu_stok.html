@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS - Kartu Stok Gudang</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --bg-main: #f8fafc; --bg-box: #ffffff; --text-main: #1f2937; --border-color: #e2e8f0; }
+        body[data-bg="dark"] { --bg-main: #0f172a; --bg-box: #1e293b; --text-main: #f8fafc; --border-color: #334155; }
+        body { background-color: var(--bg-main); color: var(--text-main); transition: all 0.3s ease; min-height: 100vh; }
+        .card-dynamic { background-color: var(--bg-box); border-color: var(--border-color); }
+        .input-dynamic { background-color: var(--bg-main); color: var(--text-main); border-color: var(--border-color); }
+        .table-container { scrollbar-width: thin; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .hdr-black { background-color: #1e293b !important; color: white !important; }
+        .hdr-green { background-color: #15803d !important; color: white !important; }
+        .hdr-blue { background-color: #2563eb !important; color: white !important; }
+    </style>
+</head>
+<body id="app-body" class="font-sans">
+
+    <div class="sticky top-0 z-40 w-full flex flex-col shadow-md">
+        <nav class="card-dynamic px-4 py-3 flex items-center justify-between border-b">
+            <div class="flex items-center gap-3">
+                <button onclick="window.location.href='menu.html'" class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full transition cursor-pointer active:scale-95 shadow-inner"><i data-lucide="home" class="w-5 h-5"></i></button>
+                <div class="flex flex-col ml-1"><span class="font-extrabold text-lg tracking-wide leading-tight text-blue-700">PORTAL WMS</span></div>
+            </div>
+        </nav>
+        <div id="tab-bar" class="w-full bg-[#0f172a] text-gray-400 flex overflow-x-auto text-[11px] font-black hide-scrollbar tracking-wider"></div>
+    </div>
+
+    <main class="p-4 md:p-6 w-full max-w-[98%] mx-auto flex-grow pt-6">
+        <header class="mb-4 flex flex-col md:flex-row md:justify-between md:items-end gap-4 border-b border-gray-200/50 pb-4">
+            <h2 class="text-2xl font-black flex items-center gap-2"><i data-lucide="layers" class="w-7 h-7 text-blue-600"></i> Kartu Stok & Alokasi PO</h2>
+        </header>
+
+        <div class="card-dynamic p-4 rounded-xl shadow-sm mb-4 border">
+            <h3 class="text-xs font-bold opacity-60 uppercase mb-3 flex items-center gap-2 text-blue-600"><i data-lucide="filter" class="w-4 h-4"></i> Filter Stok</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                <input type="text" id="flt-area" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none" placeholder="Area...">
+                <input type="text" id="flt-jenis" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none" placeholder="Jenis Item...">
+                <input type="text" id="flt-nama" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none" placeholder="Nama Item...">
+                <input type="text" id="flt-pjg" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none" placeholder="Panjang...">
+                <input type="text" id="flt-grade" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none" placeholder="Grade...">
+                <input type="text" id="flt-shading" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none" placeholder="Shading...">
+                <input type="text" id="flt-po" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none" placeholder="PO Aktual...">
+            </div>
+        </div>
+
+        <div class="card-dynamic rounded-xl shadow-md border overflow-hidden relative">
+            <div class="table-container overflow-x-auto w-full max-h-[60vh]">
+                <table class="w-full text-left text-sm whitespace-nowrap" id="main-table">
+                    <thead class="uppercase text-[11px] sticky top-0 z-10 shadow-sm tracking-wider">
+                        <tr>
+                            <th class="p-3 hdr-black text-center w-12">No</th>
+                            <th class="p-3 hdr-black text-center">Aksi (CS)</th>
+                            <th class="p-3 hdr-black">Area</th>
+                            <th class="p-3 hdr-blue border-l border-blue-400">Jenis Item</th>
+                            <th class="p-3 hdr-green">Nama Item</th>
+                            <th class="p-3 hdr-green">Pjg</th>
+                            <th class="p-3 hdr-green">Grade</th>
+                            <th class="p-3 hdr-green">Dus</th>
+                            <th class="p-3 hdr-green border-r border-green-600">Shading</th>
+                            <th class="p-3 hdr-orange text-center">PO AKTUAL</th>
+                            <th class="p-3 hdr-black text-center border-l border-gray-600 text-base">QTY (DUS)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-body"><tr><td class="text-center p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-blue-500"></i><p class="font-bold text-gray-500">Memuat Stok...</p></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="modal-mutasi" class="hidden fixed inset-0 flex items-center justify-center bg-black/70 z-[80] px-4 backdrop-blur-sm">
+        <div class="card-dynamic p-6 rounded-2xl shadow-2xl w-full max-w-lg border">
+            <h3 class="text-xl font-black mb-1 flex items-center gap-2 text-blue-700"><i data-lucide="arrow-right-left"></i> Mutasi / Ganti PO</h3>
+            <p class="text-xs opacity-60 mb-6 font-bold">Pindahkan alokasi kuantiti ke PO lain tanpa mengubah fisik QR Code.</p>
+            
+            <div class="space-y-4 bg-gray-50/50 p-4 rounded-xl border border-gray-200 mb-4 text-sm">
+                <input type="hidden" id="mut-sku">
+                <input type="hidden" id="mut-area">
+                <input type="hidden" id="mut-jenis">
+                <input type="hidden" id="mut-nama">
+                <input type="hidden" id="mut-pjg">
+                <input type="hidden" id="mut-grade">
+                <input type="hidden" id="mut-dus">
+                <input type="hidden" id="mut-shading">
+
+                <div class="flex justify-between border-b pb-2"><span class="font-bold opacity-60">Item:</span> <span id="lbl-item" class="font-black text-right"></span></div>
+                <div class="flex justify-between border-b pb-2"><span class="font-bold opacity-60">Lokasi Area:</span> <span id="lbl-area" class="font-black text-right text-emerald-600"></span></div>
+                <div class="flex justify-between border-b pb-2"><span class="font-bold opacity-60">PO Sumber Saat Ini:</span> <span id="lbl-po" class="font-black text-right text-orange-600"></span></div>
+                <div class="flex justify-between"><span class="font-bold opacity-60">Sisa Qty Bisa Dipindah:</span> <span id="lbl-qty" class="font-black text-right text-blue-600 text-lg"></span></div>
+            </div>
+
+            <div class="flex gap-4 mb-6">
+                <div class="w-2/3">
+                    <label class="block text-xs font-bold uppercase mb-2 opacity-70">Ubah Menjadi PO Tujuan</label>
+                    <input type="text" id="mut-po-baru" class="input-dynamic w-full p-3 border-2 rounded-lg outline-none focus:border-blue-500 font-black uppercase text-blue-700" placeholder="Ketik PO (Cth: MAKASSAR)..." autocomplete="off">
+                </div>
+                <div class="w-1/3">
+                    <label class="block text-xs font-bold uppercase mb-2 opacity-70">Qty Dipindah</label>
+                    <input type="number" id="mut-qty-pindah" min="1" class="input-dynamic w-full p-3 border-2 rounded-lg outline-none focus:border-blue-500 font-black text-center text-lg" placeholder="0">
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button type="button" onclick="tutupModal()" class="w-1/3 py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition">Batal</button>
+                <button type="button" onclick="eksekusiMutasi()" id="btn-eksekusi" class="w-2/3 py-3 bg-blue-600 font-black rounded-xl shadow-lg text-white hover:bg-blue-700 transition flex justify-center items-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i> EKSEKUSI MUTASI</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PAGE_META = { id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' };
+        lucide.createIcons(); document.body.setAttribute('data-bg', localStorage.getItem('app_bg') || 'light');
+
+        const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let globalData = [];
+
+        window.onload = async () => {
+            initTabs();
+            await loadData();
+        };
+
+        function initTabs() {
+            let tabs = JSON.parse(localStorage.getItem('wms_tabs')) || [];
+            if(!tabs.find(t => t.id === 'dashboard')) tabs.unshift({id: 'dashboard', title: 'DASHBOARD', url: 'menu.html'});
+            if(!tabs.find(t => t.id === PAGE_META.id)) { tabs.push(PAGE_META); localStorage.setItem('wms_tabs', JSON.stringify(tabs)); }
+            const tabBar = document.getElementById('tab-bar'); tabBar.innerHTML = '';
+            tabs.forEach(tab => {
+                const isActive = tab.id === PAGE_META.id;
+                const bg = isActive ? 'bg-blue-600 text-white shadow-inner' : 'hover:bg-slate-800 border-r border-slate-700';
+                const closeBtn = tab.id === 'dashboard' ? '' : `<button onclick="closeTab(event, '${tab.id}')" class="ml-2 hover:text-red-400 transition"><i data-lucide="x" class="w-3 h-3"></i></button>`;
+                tabBar.innerHTML += `<div onclick="window.location.href='${tab.url}'" class="flex items-center px-5 py-2.5 cursor-pointer transition whitespace-nowrap border-b-2 ${isActive ? 'border-white' : 'border-transparent hover:border-slate-500'} ${bg}"><span>${tab.title}</span>${closeBtn}</div>`;
+            });
+            lucide.createIcons();
+        }
+        function closeTab(e, id) {
+            e.stopPropagation(); let tabs = JSON.parse(localStorage.getItem('wms_tabs')) || [];
+            tabs = tabs.filter(t => t.id !== id); localStorage.setItem('wms_tabs', JSON.stringify(tabs));
+            if(PAGE_META.id === id) { window.location.href = tabs[tabs.length-1].url; } else { initTabs(); }
+        }
+
+        async function loadData() {
+            try {
+                // Hanya memanggil stok yang lebih dari 0
+                const { data, error } = await db.from('stok_global').select('*').gt('qty', 0).order('area', {ascending: true});
+                if(error) throw error;
+                globalData = data || []; renderTable();
+            } catch (err) {
+                document.getElementById('data-body').innerHTML = `<tr><td class="p-10 text-center text-red-500 font-bold">Error Memuat Data: ${err.message}</td></tr>`;
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('data-body');
+            if(globalData.length === 0) { 
+                tbody.innerHTML = `<tr><td colspan="11" class="text-center p-10 opacity-50"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2"></i> Gudang Kosong.</td></tr>`; 
+                lucide.createIcons(); return; 
+            }
+
+            let htmlContent = ''; 
+            globalData.forEach((r, i) => {
+                // Konversi seluruh objek JSON menjadi string aman untuk ditaruh di tombol
+                const amanData = JSON.stringify(r).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+                htmlContent += `
+                    <tr class="border-b border-inherit hover:bg-blue-50 transition data-row">
+                        <td class="p-3 text-center font-bold opacity-50">${i+1}</td>
+                        <td class="p-2 text-center">
+                            <button onclick="bukaModalMutasi('${amanData}')" class="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold rounded-lg border border-orange-300 text-xs shadow-sm flex items-center justify-center gap-1 mx-auto transition cursor-pointer active:scale-95">
+                                <i data-lucide="edit-3" class="w-3 h-3"></i> GANTI PO
+                            </button>
+                        </td>
+                        <td class="p-3 font-bold text-emerald-700 col-area">${r.area}</td>
+                        <td class="p-3 font-bold text-blue-600 col-jenis">${r.jenis_item}</td>
+                        <td class="p-3 font-bold col-nama">${r.nama_item}</td>
+                        <td class="p-3 font-bold opacity-70 col-pjg">${r.panjang}</td>
+                        <td class="p-3 font-semibold col-grade">${r.grade}</td>
+                        <td class="p-3 col-dus">${r.dus}</td>
+                        <td class="p-3 font-medium col-shading">${r.shading}</td>
+                        <td class="p-3 font-black text-center text-orange-600 bg-orange-50/50 col-po border-x border-orange-100">${r.po_aktual}</td>
+                        <td class="p-3 text-center font-black text-lg bg-gray-100/50 col-qty">${r.qty}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = htmlContent;
+            lucide.createIcons(); saringTabel();
+        }
+
+        function saringTabel() {
+            const filters = {
+                area: document.getElementById('flt-area').value.toLowerCase(), jenis: document.getElementById('flt-jenis').value.toLowerCase(),
+                nama: document.getElementById('flt-nama').value.toLowerCase(), pjg: document.getElementById('flt-pjg').value.toLowerCase(),
+                grade: document.getElementById('flt-grade').value.toLowerCase(), shading: document.getElementById('flt-shading').value.toLowerCase(),
+                po: document.getElementById('flt-po').value.toLowerCase()
+            };
+            const rows = document.querySelectorAll('.data-row');
+            rows.forEach(row => {
+                let show = true;
+                for(let key in filters) {
+                    if(filters[key] !== '') {
+                        const cell = row.querySelector('.col-' + key);
+                        if(cell && !cell.innerText.toLowerCase().includes(filters[key])) { show = false; break; }
+                    }
+                }
+                row.style.display = show ? '' : 'none';
+            });
+        }
+
+        // --- SISTEM MODAL MUTASI PO ---
+        function bukaModalMutasi(jsonString) {
+            const data = JSON.parse(jsonString);
+            document.getElementById('mut-sku').value = data.id_sku;
+            document.getElementById('mut-area').value = data.area;
+            document.getElementById('mut-jenis').value = data.jenis_item;
+            document.getElementById('mut-nama').value = data.nama_item;
+            document.getElementById('mut-pjg').value = data.panjang;
+            document.getElementById('mut-grade').value = data.grade;
+            document.getElementById('mut-dus').value = data.dus;
+            document.getElementById('mut-shading').value = data.shading;
+
+            document.getElementById('lbl-item').innerText = `${data.jenis_item} ${data.nama_item} - ${data.panjang} (${data.grade})`;
+            document.getElementById('lbl-area').innerText = data.area;
+            document.getElementById('lbl-po').innerText = data.po_aktual;
+            document.getElementById('lbl-qty').innerText = data.qty + " Dus";
+            
+            document.getElementById('mut-qty-pindah').max = data.qty;
+            document.getElementById('mut-qty-pindah').value = '';
+            document.getElementById('mut-po-baru').value = '';
+
+            document.getElementById('modal-mutasi').classList.remove('hidden');
+        }
+
+        function tutupModal() { document.getElementById('modal-mutasi').classList.add('hidden'); }
+
+        async function eksekusiMutasi() {
+            const poBaru = document.getElementById('mut-po-baru').value.trim().toUpperCase();
+            const qtyPindah = parseInt(document.getElementById('mut-qty-pindah').value);
+            const skuLama = document.getElementById('mut-sku').value;
+            const maxQty = parseInt(document.getElementById('mut-qty-pindah').max);
+            const poLama = document.getElementById('lbl-po').innerText;
+
+            if(!poBaru) return alert("Ketik PO Tujuan terlebih dahulu!");
+            if(poBaru === poLama) return alert("PO Tujuan tidak boleh sama dengan PO Sumber!");
+            if(!qtyPindah || qtyPindah <= 0 || qtyPindah > maxQty) return alert(`Qty tidak valid! (Maksimal ${maxQty})`);
+
+            const btnEks = document.getElementById('btn-eksekusi');
+            btnEks.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btnEks.disabled = true;
+
+            const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
+            
+            // 1. Buat ID SKU Baru untuk Target PO
+            const area = document.getElementById('mut-area').value;
+            const jenis = document.getElementById('mut-jenis').value;
+            const nama = document.getElementById('mut-nama').value;
+            const pjg = document.getElementById('mut-pjg').value;
+            const grade = document.getElementById('mut-grade').value;
+            const dus = document.getElementById('mut-dus').value;
+            const shading = document.getElementById('mut-shading').value;
+
+            const skuBaru = `${area}_${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}_${poBaru}`;
+
+            // 2. Kurangi Saldo SKU Lama di DB
+            const { data: dbLama } = await db.from('stok_global').select('qty').eq('id_sku', skuLama).single();
+            await db.from('stok_global').update({ qty: dbLama.qty - qtyPindah }).eq('id_sku', skuLama);
+
+            // 3. Tambahkan/Buat Saldo SKU Baru (Upsert) di DB
+            const { data: dbBaru } = await db.from('stok_global').select('qty').eq('id_sku', skuBaru).single();
+            let qtyTarget = dbBaru ? dbBaru.qty + qtyPindah : qtyPindah;
+
+            await db.from('stok_global').upsert({
+                id_sku: skuBaru, area: area, jenis_item: jenis, nama_item: nama,
+                panjang: pjg, grade: grade, dus: dus, shading: shading, po_aktual: poBaru, qty: qtyTarget
+            });
+
+            // 4. Catat Log Mutasi
+            await db.from('log_mutasi').insert([{
+                aktifitas: 'GANTI PO (CS)',
+                detail: `Mutasi ${qtyPindah} Dus [${nama}]. Dari PO: ${poLama} -> PO: ${poBaru}. Lokasi: ${area}.`,
+                pic: user.username
+            }]);
+
+            alert("Mutasi PO Berhasil!");
+            tutupModal();
+            await loadData(); // Refresh tabel
+
+            btnEks.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> EKSEKUSI MUTASI'; btnEks.disabled = false;
+        }
+    </script>
+</body>
+</html>
