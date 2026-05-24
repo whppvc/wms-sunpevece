@@ -184,7 +184,7 @@ function bukaModalKeluar() {
 }
 
 // =====================================
-// EKSEKUSI PEMOTONGAN SALDO VIRTUAL
+// EKSEKUSI PEMOTONGAN VIA RPC (TRANSAKSI AMAN)
 // =====================================
 async function eksekusiKeluar() {
     const poTarget = document.getElementById('out-po-target').value;
@@ -197,79 +197,52 @@ async function eksekusiKeluar() {
     const rows = document.querySelectorAll('.row-item');
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
     
-    let qrToDelete = [];
+    let qrList = [];
     let requiredMap = {};
 
-    // 1. Kumpulkan Tagihan Pemotongan berdasarkan Area & Spesifikasi Barang
+    // 1. Kumpulkan Tagihan
     rows.forEach(row => {
         let area = row.querySelector('.area-cell').innerText;
         let qr = row.querySelector('.qr-val').innerText;
-        let jenis = row.querySelector('.col-jenis').innerText;
-        let nama = row.querySelector('.col-nama').innerText;
-        let pjg = row.querySelector('.col-pjg').innerText;
-        let grade = row.querySelector('.col-grade').innerText;
-        let dus = row.querySelector('.col-dus').innerText;
-        let shading = row.querySelector('.col-shading').innerText;
+        let jenis = row.querySelector('.col-jenis').innerText; let nama = row.querySelector('.col-nama').innerText;
+        let pjg = row.querySelector('.col-pjg').innerText; let grade = row.querySelector('.col-grade').innerText;
+        let dus = row.querySelector('.col-dus').innerText; let shading = row.querySelector('.col-shading').innerText;
         
-        qrToDelete.push(qr);
-
-        // Bentuk "id_sku" Virtual yang ditarget (Sesuai PO Modal)
+        qrList.push(qr);
         let virtual_sku = `${area}_${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}_${poTarget}`;
         
         if(!requiredMap[virtual_sku]) requiredMap[virtual_sku] = 0;
         requiredMap[virtual_sku] += 1;
     });
 
-    // 2. Cek Saldo Kartu Stok CS (stok_global)
-    let skuKeys = Object.keys(requiredMap);
-    const { data: globalData, error: errCek } = await db.from('stok_global').select('id_sku, qty').in('id_sku', skuKeys);
-    
-    if (errCek) { alert("Error sistem."); btnEks.disabled = false; return; }
-
-    // 3. Verifikasi apakah Saldo Cukup untuk SETIAP tipe barang yang dipindai
-    let errorLacking = null;
-    let updatePayload = [];
-
-    for(let sku of skuKeys) {
-        let butuh = requiredMap[sku];
-        let foundDb = globalData ? globalData.find(d => d.id_sku === sku) : null;
-        let saldoAktif = foundDb ? foundDb.qty : 0;
-
-        if (saldoAktif < butuh) {
-            // Pecah nama sku untuk pesan error
-            let parts = sku.split('_');
-            errorLacking = `SALDO KARTU STOK KURANG!\nItem: ${parts[1]} ${parts[2]} (${parts[4]})\nArea: ${parts[0]}\nPO: ${parts[7]}\n\nAnda scan ${butuh} dus, tapi saldo sisa ${saldoAktif} dus.\nSilakan minta CS Mutasi PO terlebih dahulu!`;
-            break;
-        } else {
-            updatePayload.push({ id_sku: sku, qty: saldoAktif - butuh });
-        }
+    // 2. Format tagihan menjadi array untuk database
+    let deductionsArray = [];
+    for(let sku in requiredMap) {
+        deductionsArray.push({ sku: sku, qty: requiredMap[sku] });
     }
 
-    if (errorLacking) {
-        alert(errorLacking);
+    // 3. Bungkus paket data Payload
+    const payloadData = {
+        qrs: qrList,
+        deductions: deductionsArray,
+        po: poTarget,
+        ket: keterangan,
+        pic: user.username
+    };
+
+    // 4. TEMBAK KE FUNGSI RPC SUPABASE!
+    const { data, error } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
+
+    if (error) {
+        // Jika database menggagalkan transaksi (misal karena saldo kurang atau jaringan putus)
+        alert(error.message || "Gagal memproses pengeluaran. Transaksi dibatalkan secara otomatis oleh sistem.");
         btnEks.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> KELUARKAN BARANG'; btnEks.disabled = false;
         return;
     }
 
-    // 4. JIKA SALDO CUKUP: Eksekusi Penghapusan dan Pengurangan
-    // A. Hapus Fisik dari Gudang
-    await db.from('stok_qr').delete().in('qrcode', qrToDelete);
-
-    // B. Update/Kurangi Saldo Virtual
-    for (let u of updatePayload) {
-        await db.from('stok_global').update({ qty: u.qty }).eq('id_sku', u.id_sku);
-    }
-
-    // C. Catat di Log Sejarah
-    await db.from('log_mutasi').insert([{
-        aktifitas: 'KIRIM OUT',
-        detail: `Kirim ${qrToDelete.length} Dus untuk PO: ${poTarget}. Ket: ${keterangan || '-'}`,
-        pic: user.username
-    }]);
-
-    alert("PENGELUARAN BARANG BERHASIL!\nBarang fisik telah terhapus dan saldo Kartu Stok terpotong.");
+    alert("PENGELUARAN BARANG BERHASIL!\nBarang fisik terhapus & Saldo Kartu Stok terpotong dengan aman.");
     
     document.getElementById('modal-keluar').classList.add('hidden');
-    document.getElementById('tbody-keluar').innerHTML = ''; // Bersihkan layar
+    document.getElementById('tbody-keluar').innerHTML = ''; 
     btnEks.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> KELUARKAN BARANG'; btnEks.disabled = false;
 }
