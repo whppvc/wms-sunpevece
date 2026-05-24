@@ -25,11 +25,13 @@
                         <tr>
                             <th class="hdr-std w-10"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></th>
                             <th class="hdr-std w-12">No</th>
-                            <th class="hdr-std">QRCode Scanned</th>
+                            <th class="hdr-std">QRCode</th>
+                            <th class="hdr-std">Jenis</th>
+                            <th class="hdr-std">Nama Item</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-stbj" class="text-center text-slate-700">
-                        <tr><td colspan="3" class="p-6 text-slate-400 font-bold">Silakan scan QR Code...</td></tr>
+                        <tr><td colspan="5" class="p-6 text-slate-400 font-bold">Silakan scan QR Code...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -43,53 +45,67 @@
     <script src="global.js"></script>
     <script>
         let scannedQRs = [];
+        let kamusData = []; // Data referensi untuk translate
 
-        document.addEventListener('DOMContentLoaded', () => { 
+        document.addEventListener('DOMContentLoaded', async () => { 
             initModernLayout({ id: 'stbj', title: 'SCAN STBJ', url: 'stbj.html' }); 
             
-            // Jeda sejenak untuk memastikan form sudah dirender oleh global.js
+            // Tarik kamus dari master_2 agar terjemahan berfungsi
+            const { data } = await db.from('master_2').select('*');
+            if(data) kamusData = data;
+
             setTimeout(() => {
                 const formScan = document.getElementById('form-scan');
-                if(formScan) {
-                    formScan.addEventListener('submit', (e) => {
-                        e.preventDefault(); // <-- INI YANG MENCEGAH HALAMAN REFRESH SAAT ENTER
-                        const inputEl = document.getElementById('input-qrcode');
-                        const rawInput = inputEl.value.trim();
-                        if(!rawInput) return;
-                        
-                        // Pecah jika scanner menembak banyak baris sekaligus
-                        const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
-                        codes.forEach(code => {
-                            if(!scannedQRs.includes(code)) {
-                                scannedQRs.push(code);
-                            }
-                        });
-                        
-                        renderSTBJTable();
-                        inputEl.value = '';
-                        inputEl.focus();
+                formScan.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const inputEl = document.getElementById('input-qrcode');
+                    const rawInput = inputEl.value.trim();
+                    if(!rawInput) return;
+                    
+                    const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
+                    codes.forEach(code => {
+                        if(!scannedQRs.includes(code)) scannedQRs.push(code);
                     });
-                }
+                    
+                    renderSTBJTable();
+                    inputEl.value = '';
+                    inputEl.focus();
+                });
             }, 300);
         });
 
+        // FUNGSI TERJEMAHAN (Diambil dari logika langsir)
+        function translateBarcode(barcode) {
+            let data = { jenisItem: '-', namaItem: '-' };
+            const parts = barcode.split('/');
+            if (parts.length < 1) return data;
+            
+            const hurufDepan = barcode.charAt(0).toUpperCase();
+            if (hurufDepan === 'P') data.jenisItem = 'Plafon'; 
+            else if (hurufDepan === 'L') data.jenisItem = 'List'; 
+            else if (hurufDepan === 'W') data.jenisItem = 'WPC';
+            
+            const rawItem = parts[0];
+            const cariItem = kamusData.find(m => m.kode_nama_item === rawItem);
+            data.namaItem = cariItem ? cariItem.nama_item : rawItem;
+            
+            return data;
+        }
+
         function renderSTBJTable() {
             const tbody = document.getElementById('tbody-stbj');
-            if(scannedQRs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="p-6 text-slate-400 font-bold">Silakan scan QR Code...</td></tr>';
-                lucide.createIcons();
-                return;
-            }
+            if(scannedQRs.length === 0) return tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-slate-400 font-bold">Silakan scan QR Code...</td></tr>';
             
             let html = '';
-            // Render dari bawah ke atas agar scan terbaru muncul di atas
             scannedQRs.slice().reverse().forEach((qr, index) => {
-                const actualIndex = scannedQRs.length - index;
+                const td = translateBarcode(qr);
                 html += `
-                    <tr class="border-b border-slate-200 hover:bg-slate-50 transition">
-                        <td class="p-3 text-center border-r border-slate-200"><button onclick="deleteSTBJ('${qr}')" class="text-red-500 hover:text-red-700 cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></button></td>
-                        <td class="p-3 font-bold text-center border-r border-slate-200">${actualIndex}</td>
-                        <td class="p-3 font-mono font-bold text-slate-900 bg-slate-50 tracking-wider">${qr}</td>
+                    <tr class="border-b border-slate-200">
+                        <td class="p-3 text-center"><button onclick="deleteSTBJ('${qr}')" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></button></td>
+                        <td class="p-3 font-bold">${scannedQRs.length - index}</td>
+                        <td class="p-3 font-mono font-bold">${qr}</td>
+                        <td class="p-3 font-bold text-blue-700">${td.jenisItem}</td>
+                        <td class="p-3 font-bold">${td.namaItem}</td>
                     </tr>
                 `;
             });
@@ -97,40 +113,14 @@
             lucide.createIcons();
         }
 
-        function deleteSTBJ(qrCode) {
-            scannedQRs = scannedQRs.filter(q => q !== qrCode);
-            renderSTBJTable();
-        }
+        function deleteSTBJ(qrCode) { scannedQRs = scannedQRs.filter(q => q !== qrCode); renderSTBJTable(); }
 
         async function saveSTBJ() {
-            if(scannedQRs.length === 0) return alert('Belum ada QR Code yang di-scan!');
-            
-            const btn = document.getElementById('btn-save');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MENYIMPAN KE DATABASE...';
-            btn.disabled = true;
-
+            if(scannedQRs.length === 0) return alert('Data kosong!');
             const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
-            const payload = scannedQRs.map(qr => ({
-                qrcode: qr,
-                pic_input: user.username
-            }));
-
-            try {
-                // Upsert data ke tabel hasil_stbj
-                const { error } = await db.from('hasil_stbj').upsert(payload, { onConflict: 'qrcode' });
-                if(error) throw error;
-                
-                alert(`BERHASIL!\n${scannedQRs.length} data QR Code STBJ telah tersimpan ke sistem.`);
-                scannedQRs = []; // Kosongkan array setelah sukses
-                renderSTBJTable();
-            } catch (err) {
-                alert('GAGAL MENYIMPAN: ' + err.message);
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                lucide.createIcons();
-            }
+            const payload = scannedQRs.map(qr => ({ qrcode: qr, pic_input: user.username }));
+            const { error } = await db.from('hasil_stbj').upsert(payload, { onConflict: 'qrcode' });
+            if(error) alert('Error: ' + error.message); else { alert('Tersimpan!'); scannedQRs = []; renderSTBJTable(); }
         }
     </script>
 </body>
