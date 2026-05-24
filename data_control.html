@@ -42,7 +42,9 @@
         </div>
         <div class="flex items-center gap-4">
             <div class="relative">
-                <button id="btn-profile" class="w-10 h-10 bg-blue-600 font-bold rounded-full flex items-center justify-center text-white shadow-md border-2 border-blue-200 cursor-pointer" id="profile-initial">U</button>
+                <button id="btn-profile" class="w-10 h-10 bg-blue-600 font-bold rounded-full flex items-center justify-center text-white shadow-md border-2 border-blue-200 cursor-pointer">
+                    <span id="profile-initial">U</span>
+                </button>
                 <div id="profile-menu" class="hidden absolute right-0 mt-2 w-48 card-dynamic rounded-xl shadow-xl py-2 z-50 border">
                     <div class="px-4 py-2 border-b border-gray-200/20 text-xs font-bold mb-1 opacity-70" id="user-role-display">Role: User</div>
                     <button onclick="localStorage.clear(); window.location.href='index.html'" class="w-full text-left px-4 py-2 hover:bg-red-500/10 text-red-600 font-bold text-sm flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> Logout</button>
@@ -53,6 +55,10 @@
 
     <main class="p-4 md:p-8 max-w-5xl mx-auto flex flex-col gap-6 w-full pt-6">
         
+        <header class="flex flex-col md:flex-row md:justify-between md:items-end gap-4 border-b border-gray-200/50 pb-4">
+            <h2 class="text-2xl font-black flex items-center gap-2"><i data-lucide="settings-2" class="w-7 h-7 text-blue-600"></i> Data Control (Master)</h2>
+        </header>
+
         <div class="card-dynamic p-6 rounded-2xl shadow-sm border flex flex-col md:flex-row gap-4 items-center justify-between">
             <div class="w-full md:w-1/2">
                 <label class="block text-xs font-bold uppercase mb-2 opacity-70">Pilih Kategori Tabel Master</label>
@@ -102,8 +108,8 @@
     <script>
         const sessionData = JSON.parse(localStorage.getItem('user_session'));
         if(sessionData) {
-            document.getElementById('user-role-display').innerText = "Role: " + sessionData.role;
             document.getElementById('profile-initial').innerText = sessionData.username.charAt(0).toUpperCase();
+            document.getElementById('user-role-display').innerText = "Role: " + sessionData.role;
         }
         function toggleSidebar() {
             document.getElementById('sidebar-menu').classList.toggle('-translate-x-full');
