@@ -7,29 +7,43 @@ window.onload = async () => {
     await loadInitialData();
 };
 
+// ==========================================
+// INISIALISASI DATA AWAL (TROLI, AREA, KAMUS)
+// ==========================================
 async function loadInitialData() {
-    const { data: mData1 } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
-    if(mData1) {
-        masterData.troli = [...new Set(mData1.map(r => r.nama_troli).filter(x => x && x.trim() !== ''))]; 
-        const selTroli = document.getElementById('select-troli');
-        if(selTroli) {
-            selTroli.innerHTML = '<option value="">-- Pilih Troli --</option>';
-            masterData.troli.forEach(t => selTroli.innerHTML += `<option value="${t}">${t}</option>`);
+    try {
+        console.log("Menarik data Troli dan Area...");
+        
+        const { data: mData1 } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
+        if(mData1) {
+            masterData.troli = [...new Set(mData1.map(r => r.nama_troli).filter(x => x && x.trim() !== ''))]; 
+            const selTroli = document.getElementById('select-troli');
+            if(selTroli) {
+                selTroli.innerHTML = '<option value="">-- Pilih Troli --</option>';
+                masterData.troli.forEach(t => selTroli.innerHTML += `<option value="${t}">${t}</option>`);
+            }
         }
-    }
-    
-    const { data: mDataArea } = await db.from('master_area').select('nama_area').order('id', { ascending: true });
-    if(mDataArea) {
-        masterData.area = [...new Set(mDataArea.map(r => r.nama_area).filter(x => x && x.trim() !== ''))]; 
-        const selArea = document.getElementById('select-area');
-        if(selArea) {
-            masterData.area.forEach(a => selArea.innerHTML += `<option value="${a}">${a}</option>`);
+        
+        const { data: mDataArea } = await db.from('master_area').select('nama_area').order('id', { ascending: true });
+        if(mDataArea) {
+            masterData.area = [...new Set(mDataArea.map(r => r.nama_area).filter(x => x && x.trim() !== ''))]; 
+            const selArea = document.getElementById('select-area');
+            if(selArea) {
+                selArea.innerHTML = '<option value="">-- Pilih Area --</option>';
+                masterData.area.forEach(a => selArea.innerHTML += `<option value="${a}">${a}</option>`);
+            }
         }
-    }
 
-    const { data: mData2 } = await db.from('master_2').select('*');
-    if(mData2) masterData.kamus = mData2; 
+        const { data: mData2 } = await db.from('master_2').select('*');
+        if(mData2) masterData.kamus = mData2; 
+        
+    } catch (e) {
+        console.error("Gagal memuat data master:", e);
+    }
 }
+
+// Jadikan fungsi global agar bisa dipanggil dari HTML
+window.loadInitialData = loadInitialData;
 
 function translateBarcode(barcode) {
     const parts = barcode.split('/');
