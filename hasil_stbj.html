@@ -51,7 +51,9 @@
         </div>
         <div class="flex items-center gap-4">
             <div class="relative">
-                <button id="btn-profile" class="w-10 h-10 bg-blue-600 font-bold rounded-full flex items-center justify-center text-white shadow-md border-2 border-blue-200 cursor-pointer" id="profile-initial">U</button>
+                <button id="btn-profile" class="w-10 h-10 bg-blue-600 font-bold rounded-full flex items-center justify-center text-white shadow-md border-2 border-blue-200 cursor-pointer">
+                    <span id="profile-initial">U</span>
+                </button>
                 <div id="profile-menu" class="hidden absolute right-0 mt-2 w-48 card-dynamic rounded-xl shadow-xl py-2 z-50 border">
                     <div class="px-4 py-2 border-b border-gray-200/20 text-xs font-bold mb-1 opacity-70" id="user-role-display">Role: User</div>
                     <button onclick="localStorage.clear(); window.location.href='index.html'" class="w-full text-left px-4 py-2 hover:bg-red-500/10 text-red-600 font-bold text-sm flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> Logout</button>
@@ -62,19 +64,22 @@
 
     <main class="p-4 md:p-6 w-full max-w-[98%] mx-auto flex-grow pt-6">
         
-        <div class="mb-4 flex flex-col lg:flex-row lg:justify-between lg:items-end gap-4 border-b border-gray-200/50 pb-4">
-            <div class="flex bg-gray-200/50 p-1.5 rounded-xl border border-gray-200 shadow-inner">
-                <button id="btn-mode-1" onclick="switchMode(1)" class="mode-btn active">Mode 1: Riwayat</button>
-                <button id="btn-mode-2" onclick="switchMode(2)" class="mode-btn">Mode 2: Stok / Qty</button>
-                <button id="btn-mode-3" onclick="switchMode(3)" class="mode-btn">Mode 3 (Tes)</button>
+        <header class="mb-4 flex flex-col lg:flex-row lg:justify-between lg:items-end gap-4 border-b border-gray-200/50 pb-4">
+            <h2 class="text-2xl font-black flex items-center gap-2"><i data-lucide="database" class="w-7 h-7 text-blue-600"></i> Laporan STBJ</h2>
+            <div class="flex flex-col md:flex-row gap-4 items-center">
+                <div class="flex bg-gray-200/50 p-1.5 rounded-xl border border-gray-200 shadow-inner">
+                    <button id="btn-mode-1" onclick="switchMode(1)" class="mode-btn active">Mode 1: Riwayat</button>
+                    <button id="btn-mode-2" onclick="switchMode(2)" class="mode-btn">Mode 2: Stok / Qty</button>
+                    <button id="btn-mode-3" onclick="switchMode(3)" class="mode-btn">Mode 3 (Tes)</button>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="downloadCSV()" class="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg border font-bold transition active:scale-95 flex items-center gap-2 text-sm shadow-sm"><i data-lucide="download" class="w-4 h-4"></i> CSV</button>
+                    <button onclick="salinData()" class="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg border font-bold transition active:scale-95 flex items-center gap-2 text-sm shadow-sm"><i data-lucide="copy" class="w-4 h-4"></i> Copy</button>
+                    <button onclick="holdData()" class="px-4 py-2 bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-lg border font-bold transition active:scale-95 flex items-center gap-2 text-sm shadow-sm"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold</button>
+                    <button onclick="hapusData()" class="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg border font-bold transition active:scale-95 flex items-center gap-2 text-sm shadow-sm"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus</button>
+                </div>
             </div>
-            <div class="flex gap-2">
-                <button onclick="downloadCSV()" class="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg border font-bold transition active:scale-95 flex items-center gap-2 text-sm shadow-sm"><i data-lucide="download" class="w-4 h-4"></i> CSV</button>
-                <button onclick="salinData()" class="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg border font-bold transition active:scale-95 flex items-center gap-2 text-sm shadow-sm"><i data-lucide="copy" class="w-4 h-4"></i> Copy</button>
-                <button onclick="holdData()" class="px-4 py-2 bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-lg border font-bold transition active:scale-95 flex items-center gap-2 text-sm shadow-sm"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold</button>
-                <button onclick="hapusData()" class="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg border font-bold transition active:scale-95 flex items-center gap-2 text-sm shadow-sm"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus</button>
-            </div>
-        </div>
+        </header>
 
         <div class="card-dynamic p-4 rounded-xl shadow-sm mb-4 border">
             <h3 class="text-xs font-bold opacity-60 uppercase mb-3 flex items-center gap-2"><i data-lucide="filter" class="w-4 h-4"></i> Filter Tabel</h3>
@@ -112,15 +117,15 @@
         document.body.setAttribute('data-bg', localStorage.getItem('app_bg') || 'light');
         const userSession = JSON.parse(localStorage.getItem('user_session'));
         if(userSession) {
-            document.getElementById('user-role-display').innerText = "Role: " + userSession.role;
             document.getElementById('profile-initial').innerText = userSession.username.charAt(0).toUpperCase();
+            document.getElementById('user-role-display').innerText = "Role: " + userSession.role;
         }
 
-        // FUNGSI PROFIL & SIDEBAR
         function toggleSidebar() {
             document.getElementById('sidebar-menu').classList.toggle('-translate-x-full');
             document.getElementById('sidebar-overlay').classList.toggle('hidden');
         }
+        
         const btnProfile = document.getElementById('btn-profile');
         const profileMenu = document.getElementById('profile-menu');
         btnProfile.addEventListener('click', (e) => { e.stopPropagation(); profileMenu.classList.toggle('hidden'); });
@@ -162,18 +167,18 @@
                     <tr>
                         <th class="p-3 hdr-black text-center"><input type="checkbox" onclick="toggleAll(this)" class="w-4 h-4 mt-1 cursor-pointer"></th>
                         <th class="p-3 hdr-black text-center">No</th>
-                        <th class="p-3 hdr-black">Text QR Code</th>
+                        <th class="p-3 hdr-black border-r border-gray-600">Text QR Code</th>
                         <th class="p-3 hdr-green">Tgl Produksi</th>
                         <th class="p-3 hdr-green">Mesin</th>
                         <th class="p-3 hdr-green">Shift</th>
-                        <th class="p-3 hdr-blue">Jenis Item</th>
+                        <th class="p-3 hdr-blue border-l border-r border-blue-400">Jenis Item</th>
                         <th class="p-3 hdr-green">Nama Item</th>
                         <th class="p-3 hdr-green">Pjg</th>
                         <th class="p-3 hdr-green">Grade</th>
                         <th class="p-3 hdr-green">Dus</th>
                         <th class="p-3 hdr-green">Shading</th>
-                        <th class="p-3 hdr-green">PO</th>
-                        <th class="p-3 hdr-orange">Keterangan</th>
+                        <th class="p-3 hdr-green border-r border-green-600">PO</th>
+                        <th class="p-3 hdr-orange border-r border-orange-400">Keterangan</th>
                         <th class="p-3 hdr-black text-center">Status</th>
                     </tr>
                 `;
@@ -206,18 +211,18 @@
                     <tr>
                         <th class="p-3 hdr-black text-center"><input type="checkbox" onclick="toggleAll(this)" class="w-4 h-4 mt-1 cursor-pointer"></th>
                         <th class="p-3 hdr-black text-center">No</th>
-                        <th class="p-3 hdr-black text-center">QTY</th>
+                        <th class="p-3 hdr-black text-center border-r border-gray-600">QTY</th>
                         <th class="p-3 hdr-green">Tgl Produksi</th>
                         <th class="p-3 hdr-green">Mesin</th>
                         <th class="p-3 hdr-green">Shift</th>
-                        <th class="p-3 hdr-blue">Jenis Item</th>
+                        <th class="p-3 hdr-blue border-l border-r border-blue-400">Jenis Item</th>
                         <th class="p-3 hdr-green">Nama Item</th>
                         <th class="p-3 hdr-green">Pjg</th>
                         <th class="p-3 hdr-green">Grade</th>
                         <th class="p-3 hdr-green">Dus</th>
                         <th class="p-3 hdr-green">Shading</th>
-                        <th class="p-3 hdr-green">PO</th>
-                        <th class="p-3 hdr-orange">Keterangan</th>
+                        <th class="p-3 hdr-green border-r border-green-600">PO</th>
+                        <th class="p-3 hdr-orange border-r border-orange-400">Keterangan</th>
                         <th class="p-3 hdr-black text-center">Status</th>
                     </tr>
                 `;
@@ -259,10 +264,9 @@
                 tbody.innerHTML = '<tr><td class="p-10 text-center opacity-50 font-bold">Menu sedang dikembangkan...</td></tr>';
             }
             lucide.createIcons();
-            saringTabel(); // Terapkan ulang filter jika ada yang masih terketik
+            saringTabel();
         }
 
-        // LOGIKA FILTER MENGGUNAKAN CLASS
         function saringTabel() {
             const filters = {
                 qr: document.getElementById('flt-qr').value.toLowerCase(),
@@ -295,12 +299,9 @@
             });
         }
 
-        // --- FUNGSI AKSI MASSAL TOOLBAR --- //
         function getSelectedIds() {
             let ids = [];
-            document.querySelectorAll('.row-check:checked').forEach(cb => {
-                ids = ids.concat(cb.getAttribute('data-ids').split(','));
-            });
+            document.querySelectorAll('.row-check:checked').forEach(cb => { ids = ids.concat(cb.getAttribute('data-ids').split(',')); });
             return ids;
         }
         async function hapusData() {
