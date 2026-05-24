@@ -7,150 +7,121 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        .table-container { scrollbar-width: thin; }
-        .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .hdr-black { background-color: #1e293b !important; color: white !important; }
-        .hdr-purple { background-color: #6b21a8 !important; color: white !important; }
-    </style>
 </head>
-<body class="font-sans antialiased text-slate-800 bg-slate-50 flex flex-col min-h-screen">
-
-    <main class="p-4 md:p-6 w-full max-w-[98%] mx-auto flex-grow pt-6">
-        <header class="mb-4 flex flex-col md:flex-row md:justify-between md:items-end gap-4 border-b border-slate-200 pb-4">
-            <h2 class="text-2xl font-black flex items-center gap-2 text-slate-800"><i data-lucide="clipboard-check" class="w-7 h-7 text-purple-600"></i> Stock Opname (Audit)</h2>
-            <button onclick="loadData()" class="px-5 py-2.5 bg-white text-purple-700 font-black rounded-xl border border-slate-200 hover:border-purple-300 hover:bg-purple-50 transition cursor-pointer text-sm flex items-center gap-2 shadow-sm active:scale-95"><i data-lucide="refresh-cw" class="w-5 h-5"></i> REFRESH DATA STOK</button>
-        </header>
-
-        <div class="bg-white p-5 rounded-2xl shadow-sm mb-4 border border-slate-200">
-            <h3 class="text-xs font-black opacity-60 uppercase mb-3 flex items-center gap-2 text-slate-600"><i data-lucide="filter" class="w-4 h-4"></i> Filter Area & Item</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                <input type="text" id="flt-area" oninput="saringTabel()" class="p-3 text-xs border border-slate-300 font-bold rounded-xl outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-200 text-purple-900" placeholder="Ketik Area (Cth: D1)...">
-                <input type="text" id="flt-jenis" oninput="saringTabel()" class="p-3 text-xs border border-slate-300 font-bold rounded-xl outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-200" placeholder="Jenis Item...">
-                <input type="text" id="flt-nama" oninput="saringTabel()" class="p-3 text-xs border border-slate-300 font-bold rounded-xl outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-200" placeholder="Nama Item...">
-                <input type="text" id="flt-pjg" oninput="saringTabel()" class="p-3 text-xs border border-slate-300 font-bold rounded-xl outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-200" placeholder="Panjang...">
-                <input type="text" id="flt-grade" oninput="saringTabel()" class="p-3 text-xs border border-slate-300 font-bold rounded-xl outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-200" placeholder="Grade...">
-                <input type="text" id="flt-po" oninput="saringTabel()" class="p-3 text-xs border border-slate-300 font-bold rounded-xl outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-200" placeholder="PO Aktual...">
+<body class="font-sans">
+    <div class="w-full">
+        
+        <div class="bg-white p-5 rounded-xl shadow-sm mb-4 border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div class="flex-1 w-full">
+                <h3 class="text-xs font-black opacity-60 uppercase mb-3 flex items-center gap-2 text-slate-600"><i data-lucide="filter" class="w-4 h-4"></i> Filter Area & Item</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    <input type="text" id="flt-area" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Cari Area...">
+                    <input type="text" id="flt-jenis" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Jenis Item...">
+                    <input type="text" id="flt-nama" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Nama Item...">
+                    <input type="text" id="flt-pjg" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Panjang...">
+                    <input type="text" id="flt-grade" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Grade...">
+                    <input type="text" id="flt-po" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="PO Aktual...">
+                </div>
             </div>
+            <button onclick="loadData()" class="px-5 py-3 bg-slate-800 text-white font-black rounded-lg hover:bg-slate-900 transition shadow-sm text-xs flex items-center gap-2 whitespace-nowrap uppercase tracking-wider w-full md:w-auto justify-center active:scale-95"><i data-lucide="refresh-cw" class="w-4 h-4"></i> REFRESH DATA</button>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
-            <div class="table-container overflow-x-auto w-full max-h-[60vh]">
-                <table class="w-full text-left text-sm whitespace-nowrap" id="main-table">
-                    <thead class="uppercase text-[11px] font-black sticky top-0 z-10 shadow-sm tracking-wider">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
+            <div class="overflow-x-auto w-full max-h-[60vh] hide-scrollbar">
+                <table class="w-full border-collapse text-sm whitespace-nowrap" id="main-table">
+                    <thead class="sticky top-0 z-10 shadow-sm">
                         <tr>
-                            <th class="p-3 hdr-black text-center w-12">No</th>
-                            <th class="p-3 hdr-purple border-r border-purple-800">Area</th>
-                            <th class="p-3 bg-slate-50 text-slate-700">Jenis Item</th>
-                            <th class="p-3 bg-slate-50 text-slate-700">Nama Item</th>
-                            <th class="p-3 bg-slate-50 text-slate-700">Pjg</th>
-                            <th class="p-3 bg-slate-50 text-slate-700">Grade</th>
-                            <th class="p-3 bg-slate-50 text-slate-700">Dus</th>
-                            <th class="p-3 bg-slate-50 text-slate-700 border-r border-slate-300">Shading</th>
-                            <th class="p-3 bg-slate-100 text-slate-800 text-center border-r border-slate-300">PO Aktual</th>
-                            <th class="p-3 bg-blue-100 text-blue-900 text-center text-sm border-r border-blue-200">QTY SISTEM</th>
-                            <th class="p-3 hdr-purple text-center">QTY FISIK</th>
-                            <th class="p-3 hdr-purple text-center">KETERANGAN OPNAME</th>
-                            <th class="p-3 hdr-black text-center"><i data-lucide="settings" class="w-4 h-4 mx-auto"></i></th>
+                            <th class="hdr-std w-12">No</th>
+                            <th class="hdr-std border-r border-slate-500">Area</th>
+                            <th class="hdr-std">Jenis Item</th>
+                            <th class="hdr-std">Nama Item</th>
+                            <th class="hdr-std">Pjg</th>
+                            <th class="hdr-std">Grade</th>
+                            <th class="hdr-std">Dus</th>
+                            <th class="hdr-std border-r border-slate-500">Shading</th>
+                            <th class="hdr-std border-r border-slate-500">PO Aktual</th>
+                            <th class="hdr-std text-blue-300 border-r border-slate-500 bg-slate-900">QTY SISTEM</th>
+                            <th class="hdr-std">QTY FISIK</th>
+                            <th class="hdr-std">KET. SELISIH</th>
+                            <th class="hdr-std"><i data-lucide="settings" class="w-4 h-4 mx-auto"></i></th>
                         </tr>
                     </thead>
-                    <tbody id="data-body"><tr><td colspan="13" class="text-center p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-purple-500"></i><p class="font-bold text-slate-500">Memuat Stok...</p></td></tr></tbody>
+                    <tbody id="data-body" class="text-center text-slate-700"><tr><td colspan="13" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-slate-500"></i><p class="font-bold text-slate-500">Memuat Stok...</p></td></tr></tbody>
                 </table>
             </div>
         </div>
-    </main>
+    </div>
 
     <script src="global.js"></script>
     <script>
-        const PAGE_META = { id: 'opname', title: 'STOCK OPNAME', url: 'opname.html' };
         let globalData = [];
         const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
-        window.addEventListener('DOMContentLoaded', async () => {
-            initModernTopBar(PAGE_META);
-            await loadData();
+        document.addEventListener('DOMContentLoaded', () => {
+            initModernLayout({ id: 'opname', title: 'STOCK OPNAME', url: 'opname.html' });
+            setTimeout(() => { loadData(); }, 200);
         });
 
         async function loadData() {
             try {
                 const { data, error } = await db.from('stok_global').select('*').order('area', {ascending: true});
-                if(error) throw error;
-                globalData = data || []; renderTable();
-            } catch (err) {
-                document.getElementById('data-body').innerHTML = `<tr><td colspan="13" class="p-10 text-center text-red-500 font-bold">Error: ${err.message}</td></tr>`;
-            }
+                if(error) throw error; globalData = data || []; renderTable();
+            } catch (err) { document.getElementById('data-body').innerHTML = `<tr><td colspan="13" class="p-10 text-center text-red-500 font-bold">Error: ${err.message}</td></tr>`; }
         }
 
         function renderTable() {
             const tbody = document.getElementById('data-body');
-            if(globalData.length === 0) { 
-                tbody.innerHTML = `<tr><td colspan="13" class="text-center p-10 opacity-50"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2"></i> Gudang Kosong.</td></tr>`; 
-                lucide.createIcons(); return; 
-            }
+            if(globalData.length === 0) { tbody.innerHTML = `<tr><td colspan="13" class="text-center p-10 text-slate-500 font-bold">Gudang Kosong.</td></tr>`; lucide.createIcons(); return; }
             let htmlContent = ''; 
             globalData.forEach((r, i) => {
                 htmlContent += `
                     <tr class="border-b border-slate-200 hover:bg-slate-50 transition data-row" id="row-${i}">
-                        <td class="p-3 text-center font-bold text-slate-400">${i+1}</td>
-                        <td class="p-3 font-black text-purple-700 bg-purple-50/50 col-area border-r border-slate-200">${r.area}</td>
-                        <td class="p-3 font-bold text-slate-600 col-jenis">${r.jenis_item}</td>
-                        <td class="p-3 font-bold text-slate-800 col-nama">${r.nama_item}</td>
+                        <td class="p-3 font-bold text-slate-400">${i+1}</td>
+                        <td class="p-3 font-black text-emerald-700 bg-emerald-50/30 col-area border-r border-slate-200">${r.area}</td>
+                        <td class="p-3 font-bold text-blue-700 col-jenis">${r.jenis_item}</td>
+                        <td class="p-3 font-bold text-slate-800 col-nama text-left">${r.nama_item}</td>
                         <td class="p-3 font-bold text-slate-500 col-pjg">${r.panjang}</td>
-                        <td class="p-3 font-semibold text-slate-700 col-grade">${r.grade}</td>
-                        <td class="p-3 text-slate-700 col-dus">${r.dus}</td>
+                        <td class="p-3 font-semibold text-slate-800 col-grade">${r.grade}</td>
+                        <td class="p-3 text-slate-800 col-dus">${r.dus}</td>
                         <td class="p-3 font-medium text-slate-600 col-shading border-r border-slate-200">${r.shading}</td>
-                        <td class="p-3 font-black text-center text-slate-700 bg-slate-50 col-po border-r border-slate-200">${r.po_aktual}</td>
-                        <td class="p-3 text-center font-black text-lg bg-blue-50 text-blue-800 border-r border-slate-200" id="sys-${i}">${r.qty}</td>
-                        <td class="p-2 text-center bg-purple-50/30">
-                            <input type="number" id="fisik-${i}" value="${r.qty}" min="0" class="w-20 p-2 border border-slate-300 rounded-lg text-center font-black text-purple-700 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-200 bg-white">
+                        <td class="p-3 font-black text-orange-600 bg-orange-50/30 col-po border-r border-slate-200">${r.po_aktual}</td>
+                        <td class="p-3 font-black text-lg bg-slate-100 text-slate-800 border-r border-slate-200" id="sys-${i}">${r.qty}</td>
+                        <td class="p-2 bg-slate-50">
+                            <input type="number" id="fisik-${i}" value="${r.qty}" min="0" class="w-20 p-2 border border-slate-300 rounded font-black text-slate-900 outline-none focus:border-slate-800 text-center bg-white mx-auto">
                         </td>
-                        <td class="p-2 bg-purple-50/30">
-                            <input type="text" id="ket-${i}" placeholder="Alasan selisih..." class="w-full p-2 border border-slate-300 rounded-lg text-xs outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-200 bg-white">
+                        <td class="p-2 bg-slate-50">
+                            <input type="text" id="ket-${i}" placeholder="Alasan selisih..." class="w-full min-w-[150px] p-2 border border-slate-300 rounded text-xs outline-none focus:border-slate-800 bg-white">
                         </td>
-                        <td class="p-2 text-center bg-purple-50/30">
-                            <button onclick="eksekusiOpname(${i}, '${r.id_sku}')" id="btn-${i}" class="px-4 py-2 bg-purple-600 text-white font-bold rounded-lg shadow-sm hover:bg-purple-700 transition active:scale-95 text-xs flex items-center justify-center gap-1 mx-auto cursor-pointer">
-                                <i data-lucide="save" class="w-3 h-3"></i> SIMPAN
-                            </button>
+                        <td class="p-2 bg-slate-50">
+                            <button onclick="eksekusiOpname(${i}, '${r.id_sku}')" id="btn-${i}" class="px-4 py-2 bg-slate-800 text-white font-bold rounded shadow-sm hover:bg-slate-900 transition active:scale-95 text-[10px] uppercase flex items-center justify-center gap-1 mx-auto cursor-pointer"><i data-lucide="save" class="w-3 h-3"></i> SIMPAN</button>
                         </td>
-                    </tr>
-                `;
+                    </tr>`;
             });
-            tbody.innerHTML = htmlContent;
-            lucide.createIcons(); saringTabel();
+            tbody.innerHTML = htmlContent; lucide.createIcons(); saringTabel();
         }
 
         function saringTabel() {
             const filters = { area: document.getElementById('flt-area').value.toLowerCase(), jenis: document.getElementById('flt-jenis').value.toLowerCase(), nama: document.getElementById('flt-nama').value.toLowerCase(), pjg: document.getElementById('flt-pjg').value.toLowerCase(), grade: document.getElementById('flt-grade').value.toLowerCase(), po: document.getElementById('flt-po').value.toLowerCase() };
             document.querySelectorAll('.data-row').forEach(row => {
-                let show = true;
-                for(let key in filters) {
-                    if(filters[key] !== '') {
-                        const cell = row.querySelector('.col-' + key);
-                        if(cell && !cell.innerText.toLowerCase().includes(filters[key])) { show = false; break; }
-                    }
-                }
+                let show = true; for(let key in filters) { if(filters[key] !== '') { const cell = row.querySelector('.col-' + key); if(cell && !cell.innerText.toLowerCase().includes(filters[key])) { show = false; break; } } }
                 row.style.display = show ? '' : 'none';
             });
         }
 
         async function eksekusiOpname(index, sku) {
             const qtyFisik = parseInt(document.getElementById(`fisik-${index}`).value); const ket = document.getElementById(`ket-${index}`).value.trim(); const btn = document.getElementById(`btn-${index}`); const sysQty = parseInt(document.getElementById(`sys-${index}`).innerText);
-            if (isNaN(qtyFisik) || qtyFisik < 0) return alert("Kuantiti fisik tidak valid!"); if (qtyFisik === sysQty) return alert("Tidak ada selisih. Angka fisik sama dengan sistem."); if (qtyFisik !== sysQty && !ket) return alert("Wajib mengisi Keterangan Opname jika terdapat selisih saldo!");
+            if (isNaN(qtyFisik) || qtyFisik < 0) return alert("Kuantiti fisik tidak valid!"); if (qtyFisik === sysQty) return alert("Tidak ada selisih."); if (qtyFisik !== sysQty && !ket) return alert("Wajib isi Keterangan jika selisih!");
+            if(!confirm(`Yakin merubah saldo?\nSistem: ${sysQty} -> Fisik: ${qtyFisik}`)) return;
 
-            if(!confirm(`PERINGATAN!\nMerubah saldo sistem secara permanen.\nSistem: ${sysQty} -> Fisik: ${qtyFisik}\nLanjutkan?`)) return;
-
-            const originalHTML = btn.innerHTML; btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>'; btn.disabled = true;
-
+            const originalHTML = btn.innerHTML; btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-3 h-3"></i>'; btn.disabled = true;
             const payload = { sku: sku, qty_fisik: qtyFisik, ket: ket, pic: currentUser.username };
             const { data, error } = await db.rpc('eksekusi_opname_aman', { payload: payload });
 
-            if(error) { alert("Gagal memproses Opname: " + error.message); btn.innerHTML = originalHTML; btn.disabled = false; } 
-            else if (data === 'SUKSES_TANPA_UBAH') { alert("Angka sama, tidak ada perubahan."); btn.innerHTML = originalHTML; btn.disabled = false; } 
+            if(error) { alert("Gagal: " + error.message); btn.innerHTML = originalHTML; btn.disabled = false; } 
+            else if (data === 'SUKSES_TANPA_UBAH') { alert("Angka sama."); btn.innerHTML = originalHTML; btn.disabled = false; } 
             else if (data === 'SUKSES') {
-                document.getElementById(`sys-${index}`).innerText = qtyFisik;
-                document.getElementById(`row-${index}`).classList.add('bg-green-50');
-                btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i> DONE';
-                btn.classList.replace('bg-purple-600', 'bg-emerald-600'); btn.classList.replace('hover:bg-purple-700', 'hover:bg-emerald-700');
+                document.getElementById(`sys-${index}`).innerText = qtyFisik; document.getElementById(`row-${index}`).classList.add('bg-green-100');
+                btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i> DONE'; btn.classList.replace('bg-slate-800', 'bg-emerald-600'); btn.classList.replace('hover:bg-slate-900', 'hover:bg-emerald-700');
             } else { alert(data); btn.innerHTML = originalHTML; btn.disabled = false; }
             lucide.createIcons();
         }
