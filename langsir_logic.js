@@ -216,70 +216,62 @@ async function validasiSTBJ() {
 // ==========================================
 // 3. LOGIKA SAVE (MENYIMPAN KE GUDANG)
 // ==========================================
+async function // ==========================================
+// LOGIKA SAVE (VIA RPC DATABASE)
+// ==========================================
 async function saveToSupabase() {
     const btnSave = document.getElementById('btn-save'); 
     const originalText = btnSave.innerHTML;
     
-    // KEAMANAN 1: Cegah Simpan Jika Ada Duplikat Gudang
-    const duplicateRows = document.querySelectorAll('span[data-status="invalid"]');
-    if(duplicateRows.length > 0) {
-        alert("TIDAK BISA DISIMPAN!\nMasih ada QR Code Duplikat di layar. Hapus baris yang berwarna MERAH terlebih dahulu.");
-        return; 
+    // Keamanan Frontend
+    if(document.querySelectorAll('span[data-status="invalid"]').length > 0) return alert("Hapus baris QR Duplikat (MERAH) terlebih dahulu!");
+    if(document.querySelectorAll('span[data-status="unverified"]').length > 0) return alert("Harap tekan tombol CEK GUDANG terlebih dahulu!");
+    if(document.querySelectorAll('span[data-status="invalid-stbj"]').length > 0) {
+        if(!confirm("Ada baris BELUM STBJ. Tetap lanjutkan?")) return;
     }
-
-    // KEAMANAN 2: Beri Peringatan Jika Ada Belum STBJ
-    const belumSTBJRows = document.querySelectorAll('span[data-status="invalid-stbj"]');
-    if(belumSTBJRows.length > 0) {
-        const lanjut = confirm("Ada baris yang BELUM STBJ (Warna Oren). Tetap ingin melanjutkan masuk gudang?");
-        if(!lanjut) return;
-    }
-
-    // KEAMANAN 3: Cegah Simpan jika belum diverifikasi sama sekali
-    const unverified = document.querySelectorAll('span[data-status="unverified"]');
-    if(unverified.length > 0) {
-        alert("Harap tekan tombol CEK GUDANG terlebih dahulu sebelum menyimpan data.");
-        return;
-    }
-
-    btnSave.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-6 h-6"></i> MEMPROSES DATA...'; btnSave.disabled = true;
 
     const rows = document.querySelectorAll('.row-item');
-    if(rows.length === 0) { alert("Tidak ada data."); btnSave.innerHTML = originalText; btnSave.disabled = false; return; }
+    if(rows.length === 0) return alert("Tidak ada data.");
+
+    btnSave.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-6 h-6"></i> MENYIMPAN TRANSAKSI...'; 
+    btnSave.disabled = true;
 
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
     let arrFisikQR = []; let mapVirtual = {}; 
 
+    // Kumpulkan Data
     rows.forEach(row => {
-        let area = row.querySelector('.area-cell').innerText; let qr = row.querySelector('.qr-val').innerText; let jenis = row.querySelector('.col-jenis').innerText;
-        let nama = row.querySelector('.col-nama').innerText; let pjg = row.querySelector('.col-pjg').innerText; let grade = row.querySelector('.col-grade').innerText;
+        let area = row.querySelector('.area-cell').innerText; let qr = row.querySelector('.qr-val').innerText;
+        let jenis = row.querySelector('.col-jenis').innerText; let nama = row.querySelector('.col-nama').innerText;
+        let pjg = row.querySelector('.col-pjg').innerText; let grade = row.querySelector('.col-grade').innerText;
         let dus = row.querySelector('.col-dus').innerText; let shading = row.querySelector('.col-shading').innerText; let po = row.querySelector('.col-po').innerText;
         
         let id_sku = `${area}_${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}_${po}`;
+        
         arrFisikQR.push({ qrcode: qr, area: area, id_sku: id_sku, pic_input: user.username });
-
         if(!mapVirtual[id_sku]) { mapVirtual[id_sku] = { id_sku: id_sku, area: area, jenis_item: jenis, nama_item: nama, panjang: pjg, grade: grade, dus: dus, shading: shading, po_aktual: po, qty: 0 }; }
         mapVirtual[id_sku].qty += 1;
     });
 
-    const { error: errQR } = await db.from('stok_qr').insert(arrFisikQR);
-    if (errQR) { alert("SISTEM MENOLAK: Terdeteksi QR ganda di Database.\n" + errQR.message); btnSave.innerHTML = originalText; btnSave.disabled = false; return; }
+    let arrVirtualUpdate = Object.values(mapVirtual);
 
-    let skuKeys = Object.keys(mapVirtual);
-    const { data: oldData } = await db.from('stok_global').select('id_sku, qty').in('id_sku', skuKeys);
-    
-    let arrVirtualUpdate = [];
-    skuKeys.forEach(key => {
-        let existing = oldData ? oldData.find(d => d.id_sku === key) : null;
-        let qtySekarang = existing ? existing.qty : 0;
-        let dataBaru = { ...mapVirtual[key], qty: qtySekarang + mapVirtual[key].qty }; 
-        arrVirtualUpdate.push(dataBaru);
-    });
+    // BUNGKUS PAYLOAD
+    const payloadData = {
+        qrs: arrFisikQR,
+        virtuals: arrVirtualUpdate,
+        detail_log: `Masuk ${arrFisikQR.length} Dus via Langsir.`,
+        pic: user.username
+    };
 
-    await db.from('stok_global').upsert(arrVirtualUpdate);
-    await db.from('log_mutasi').insert([{ aktifitas: 'LANGSIR IN', detail: `Masuk ${arrFisikQR.length} Dus via Langsir.`, pic: user.username }]);
+    // TEMBAK RPC SUPABASE
+    const { data, error } = await db.rpc('eksekusi_langsir_aman', { payload: payloadData });
 
-    alert(`BERHASIL!\n${arrFisikQR.length} kardus berhasil didaftarkan ke Gudang.`);
+    if (error || (data && data.startsWith('ERROR'))) { 
+        alert("SISTEM MENOLAK: " + (error ? error.message : data)); 
+        btnSave.innerHTML = originalText; btnSave.disabled = false; return; 
+    }
+
+    alert(`BERHASIL!\n${arrFisikQR.length} kardus berhasil disimpan ke Database secara permanen.`);
     document.getElementById('tbody-langsir').innerHTML = ''; 
     btnSave.innerHTML = originalText; btnSave.disabled = false;
-    lucide.createIcons();
 }
