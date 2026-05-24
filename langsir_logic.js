@@ -216,7 +216,7 @@ async function crossCekSTBJ() {
     });
 
     if(hasDuplicate) {
-        alert("PERINGATAN!\nDitemukan QR Code yang sudah ada di dalam gudang (Duplikat/Sabotase).\nSistem MENGUNCI penyimpanan. Silakan klik ikon 'Tong Sampah' pada baris berwarna merah jambu untuk menghapusnya.");
+        alert("PERINGATAN!\nDitemukan QR Code yang sudah ada di dalam gudang (Duplikat).\nSistem MENGUNCI penyimpanan. Silakan klik ikon 'Tong Sampah' pada baris berwarna merah jambu untuk menghapusnya.");
     } else {
         alert("Pengecekan Selesai.\nSemua QR Code AMAN dan siap dimasukkan ke gudang.");
     }
