@@ -6,124 +6,95 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==========================================
-// DAFTAR MENU APLIKASI WMS
+// MESIN PEMBANGUN TOP BAR & TAB MENU
 // ==========================================
-const APP_MENUS = [
-    { id: 'dashboard', title: 'Dashboard Utama', icon: 'layout-dashboard', url: 'menu.html' },
-    { isDivider: true, title: 'INBOUND (MASUK)' },
-    { id: 'langsir', title: 'Langsir Gudang', icon: 'log-in', url: 'langsir.html', color: 'text-emerald-600' },
-    { id: 'riwayat_langsir', title: 'Riwayat Langsir', icon: 'history', url: 'riwayat_langsir.html' },
-    { isDivider: true, title: 'INVENTORY & AUDIT' },
-    { id: 'kartu_stok', title: 'Kartu Stok & Mutasi', icon: 'layers', url: 'kartu_stok.html', color: 'text-blue-600' },
-    { id: 'riwayat_mutasi', title: 'Riwayat Mutasi PO', icon: 'arrow-right-left', url: 'riwayat_mutasi.html' },
-    { id: 'opname', title: 'Stock Opname', icon: 'clipboard-check', url: 'opname.html', color: 'text-purple-600' },
-    { isDivider: true, title: 'OUTBOUND (KELUAR)' },
-    { id: 'keluar', title: 'Kirim / Keluar', icon: 'truck', url: 'keluar.html', color: 'text-rose-600' },
-    { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' }
-];
-
-// ==========================================
-// MESIN PEMBANGUN LAYOUT MODERN
-// ==========================================
-function initModernLayout(pageId, pageTitle) {
+function initModernTopBar(pageMeta) {
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'Staff'};
     
-    // 1. Buat Container Utama Pembungkus Sidebar & Konten
-    const layoutWrapper = document.createElement('div');
-    layoutWrapper.className = 'flex h-screen bg-slate-50 overflow-hidden text-slate-800 font-sans';
-    
-    // 2. Buat Tampilan Sidebar
-    let sidebarHTML = `
-        <aside id="app-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-[#0f172a] text-slate-300 transform -translate-x-full lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col shadow-xl">
-            <div class="flex items-center justify-center h-16 bg-[#1e293b] border-b border-slate-700/50 shadow-md">
-                <span class="text-white font-black text-xl tracking-wider flex items-center gap-2">
-                    <i data-lucide="box" class="text-blue-500"></i> SUNPEVECE
-                </span>
-            </div>
-            
-            <div class="overflow-y-auto overflow-x-hidden flex-grow scrollbar-hide py-4 px-3 space-y-1">
-    `;
+    // 1. Inisialisasi Data Tab
+    let tabs = JSON.parse(localStorage.getItem('wms_tabs')) || [];
+    if(!tabs.find(t => t.id === 'dashboard')) tabs.unshift({id: 'dashboard', title: 'DASHBOARD', url: 'menu.html'});
+    if(pageMeta && !tabs.find(t => t.id === pageMeta.id)) { 
+        tabs.push(pageMeta); localStorage.setItem('wms_tabs', JSON.stringify(tabs)); 
+    }
 
-    APP_MENUS.forEach(menu => {
-        if (menu.isDivider) {
-            sidebarHTML += `<div class="mt-6 mb-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">${menu.title}</div>`;
-        } else {
-            const isActive = menu.id === pageId;
-            const bgClass = isActive ? 'bg-blue-600/10 text-blue-400' : 'hover:bg-slate-800 hover:text-white';
-            const iconColor = isActive ? 'text-blue-500' : (menu.color || 'text-slate-400');
-            const borderClass = isActive ? 'border-r-4 border-blue-500' : 'border-r-4 border-transparent';
-            
-            sidebarHTML += `
-                <a href="${menu.url}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 cursor-pointer ${bgClass} ${borderClass}">
-                    <i data-lucide="${menu.icon}" class="w-5 h-5 ${iconColor}"></i>
-                    <span class="font-semibold text-sm">${menu.title}</span>
-                </a>
-            `;
-        }
-    });
-
-    sidebarHTML += `
-            </div>
-            <div class="p-4 bg-[#0b1120] border-t border-slate-800">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">${user.username.charAt(0).toUpperCase()}</div>
-                    <div class="flex flex-col">
-                        <span class="text-sm font-bold text-white uppercase">${user.username}</span>
-                        <span class="text-[10px] text-slate-500 font-medium">${user.role}</span>
+    // 2. Bangun HTML Top Bar (Logo, Judul, Profil Dropdown)
+    const headerHTML = `
+        <div class="sticky top-0 z-50 w-full flex flex-col shadow-md font-sans">
+            <nav class="bg-white px-4 py-3 flex items-center justify-between border-b border-slate-200">
+                <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.href='menu.html'">
+                    <img src="sunpevece.png" alt="Logo" class="h-8 object-contain" onerror="this.src='https://via.placeholder.com/150x50?text=SUNPEVECE'">
+                    <div class="flex flex-col ml-1 hidden sm:flex">
+                        <span class="font-black text-lg tracking-wide leading-tight text-slate-800">PORTAL WMS</span>
                     </div>
                 </div>
-                <button onclick="logout()" class="mt-3 w-full py-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded text-xs font-bold transition flex items-center justify-center gap-2">
-                    <i data-lucide="log-out" class="w-4 h-4"></i> LOGOUT
-                </button>
-            </div>
-        </aside>
-        <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 z-40 hidden lg:hidden backdrop-blur-sm transition-opacity"></div>
-    `;
 
-    // 3. Buat Konten Area & Top Header
-    let contentHTML = `
-        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-6 shadow-sm z-30 flex-shrink-0">
-                <div class="flex items-center gap-4">
-                    <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg text-slate-500 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <i data-lucide="menu" class="w-6 h-6"></i>
+                <div class="relative">
+                    <button onclick="toggleProfileMenu()" class="flex items-center gap-2 p-1 focus:outline-none hover:bg-slate-100 rounded-full transition pr-3">
+                        <div class="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-black shadow-inner">
+                            ${user.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="flex-col text-left hidden md:flex">
+                            <span class="text-xs font-black text-slate-800 uppercase leading-none">${user.username}</span>
+                            <span class="text-[10px] font-bold text-slate-500">${user.role || 'PPC / Admin'}</span>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-500"></i>
                     </button>
-                    <h1 class="text-lg lg:text-xl font-black text-slate-800 tracking-tight">${pageTitle}</h1>
+
+                    <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-50 transform origin-top-right transition-all">
+                        <div class="px-4 py-2 border-b border-slate-100 mb-1">
+                            <p class="text-xs font-bold text-slate-400 uppercase">Pengaturan Akun</p>
+                        </div>
+                        <a href="#" onclick="menuProfil('password')" class="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition"><i data-lucide="key-round" class="w-4 h-4"></i> Ubah Password</a>
+                        <a href="#" onclick="menuProfil('tema')" class="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition"><i data-lucide="palette" class="w-4 h-4"></i> Pengaturan Tema</a>
+                        <hr class="my-1 border-slate-100">
+                        <a href="#" onclick="logout()" class="flex items-center gap-3 px-4 py-2.5 text-sm font-black text-red-600 hover:bg-red-50 transition"><i data-lucide="log-out" class="w-4 h-4"></i> Logout</a>
+                    </div>
                 </div>
-            </header>
-            
-            <main id="main-content-area" class="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 lg:p-6 pb-20">
-                </main>
+            </nav>
+
+            <div id="tab-bar-container" class="w-full bg-[#0f172a] text-slate-400 flex overflow-x-auto text-[11px] font-black hide-scrollbar tracking-wider">
+                </div>
         </div>
     `;
 
-    layoutWrapper.innerHTML = sidebarHTML + contentHTML;
-    
-    // 4. Pindahkan Konten Halaman Asli ke Dalam Layout Baru
-    const bodyContent = document.body.innerHTML;
-    document.body.innerHTML = ''; // Bersihkan body
-    document.body.appendChild(layoutWrapper);
-    document.getElementById('main-content-area').innerHTML = bodyContent;
+    // 3. Suntikkan Header ke Halaman (Paling Atas)
+    document.body.insertAdjacentHTML('afterbegin', headerHTML);
 
-    // Aktifkan Icon
+    // 4. Generate Isi Tab
+    const tabBar = document.getElementById('tab-bar-container');
+    tabs.forEach(tab => {
+        const isActive = pageMeta && tab.id === pageMeta.id;
+        const bg = isActive ? 'bg-blue-600 text-white shadow-inner' : 'hover:bg-slate-800 border-r border-slate-700';
+        const closeBtn = tab.id === 'dashboard' ? '' : `<button onclick="closeGlobalTab(event, '${tab.id}', '${pageMeta ? pageMeta.id : ''}')" class="ml-2 hover:text-red-400 transition"><i data-lucide="x" class="w-3 h-3"></i></button>`;
+        tabBar.innerHTML += `<div onclick="window.location.href='${tab.url}'" class="flex items-center px-5 py-3 cursor-pointer transition whitespace-nowrap border-b-2 ${isActive ? 'border-white' : 'border-transparent hover:border-slate-500'} ${bg}"><span>${tab.title}</span>${closeBtn}</div>`;
+    });
+
+    // 5. Tutup dropdown jika klik di luar area
+    document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('profile-dropdown');
+        if (dropdown && !e.target.closest('.relative')) dropdown.classList.add('hidden');
+    });
+
     lucide.createIcons();
 }
 
-// Fungsi Buka/Tutup Sidebar (Untuk HP)
-window.toggleSidebar = function() {
-    const sidebar = document.getElementById('app-sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
+// Fungsi Interaksi UI
+function toggleProfileMenu() { document.getElementById('profile-dropdown').classList.toggle('hidden'); }
+function menuProfil(jenis) { alert(`Fungsi Setting ${jenis} sedang dalam tahap pengembangan (Coming Soon)!`); toggleProfileMenu(); }
+function logout() { if(confirm('Yakin ingin keluar?')) { localStorage.removeItem('user_session'); window.location.href = 'index.html'; } }
+
+function closeGlobalTab(e, idToRemove, currentId) {
+    e.stopPropagation(); 
+    let tabs = JSON.parse(localStorage.getItem('wms_tabs')) || [];
+    tabs = tabs.filter(t => t.id !== idToRemove); 
+    localStorage.setItem('wms_tabs', JSON.stringify(tabs));
     
-    if (sidebar.classList.contains('-translate-x-full')) {
-        sidebar.classList.remove('-translate-x-full');
-        overlay.classList.remove('hidden');
-    } else {
-        sidebar.classList.add('-translate-x-full');
-        overlay.classList.add('hidden');
-    }
+    if(currentId === idToRemove) window.location.href = tabs[tabs.length-1].url; 
+    else window.location.reload(); 
 }
 
-function logout() {
-    localStorage.removeItem('user_session');
-    window.location.href = 'index.html'; // Ganti dengan halaman login Anda
-}
+// Global UI Setup
+document.addEventListener('DOMContentLoaded', () => {
+    document.body.setAttribute('data-bg', localStorage.getItem('app_bg') || 'light');
+});
