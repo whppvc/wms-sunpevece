@@ -110,23 +110,18 @@
         </div>
     </div>
 
+    <script src="global.js"></script>
+
     <script>
         const PAGE_META = { id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' };
-        lucide.createIcons(); document.body.setAttribute('data-bg', localStorage.getItem('app_bg') || 'light');
-
-        const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
-        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
         let globalData = [];
 
         window.onload = async () => {
-            initTabs();
-            await loadPOOptions(); // Panggil fungsi muat dropdown PO
+            initGlobalTabs(PAGE_META);
+            await loadPOOptions(); 
             await loadData();
         };
 
-        // FUNGSI BARU: Muat Daftar PO dari tabel master_2
         async function loadPOOptions() {
             const { data } = await db.from('master_2').select('po');
             if (data) {
@@ -135,25 +130,6 @@
                 sel.innerHTML = '<option value="">-- PILIH PO TUJUAN --</option>';
                 listPO.forEach(p => { sel.innerHTML += `<option value="${p}">${p}</option>` });
             }
-        }
-
-        function initTabs() {
-            let tabs = JSON.parse(localStorage.getItem('wms_tabs')) || [];
-            if(!tabs.find(t => t.id === 'dashboard')) tabs.unshift({id: 'dashboard', title: 'DASHBOARD', url: 'menu.html'});
-            if(!tabs.find(t => t.id === PAGE_META.id)) { tabs.push(PAGE_META); localStorage.setItem('wms_tabs', JSON.stringify(tabs)); }
-            const tabBar = document.getElementById('tab-bar'); tabBar.innerHTML = '';
-            tabs.forEach(tab => {
-                const isActive = tab.id === PAGE_META.id;
-                const bg = isActive ? 'bg-blue-600 text-white shadow-inner' : 'hover:bg-slate-800 border-r border-slate-700';
-                const closeBtn = tab.id === 'dashboard' ? '' : `<button onclick="closeTab(event, '${tab.id}')" class="ml-2 hover:text-red-400 transition"><i data-lucide="x" class="w-3 h-3"></i></button>`;
-                tabBar.innerHTML += `<div onclick="window.location.href='${tab.url}'" class="flex items-center px-5 py-2.5 cursor-pointer transition whitespace-nowrap border-b-2 ${isActive ? 'border-white' : 'border-transparent hover:border-slate-500'} ${bg}"><span>${tab.title}</span>${closeBtn}</div>`;
-            });
-            lucide.createIcons();
-        }
-        function closeTab(e, id) {
-            e.stopPropagation(); let tabs = JSON.parse(localStorage.getItem('wms_tabs')) || [];
-            tabs = tabs.filter(t => t.id !== id); localStorage.setItem('wms_tabs', JSON.stringify(tabs));
-            if(PAGE_META.id === id) { window.location.href = tabs[tabs.length-1].url; } else { initTabs(); }
         }
 
         async function loadData() {
@@ -172,7 +148,6 @@
                 tbody.innerHTML = `<tr><td colspan="11" class="text-center p-10 opacity-50"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2"></i> Gudang Kosong.</td></tr>`; 
                 lucide.createIcons(); return; 
             }
-
             let htmlContent = ''; 
             globalData.forEach((r, i) => {
                 const amanData = JSON.stringify(r).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
@@ -207,8 +182,7 @@
                 grade: document.getElementById('flt-grade').value.toLowerCase(), shading: document.getElementById('flt-shading').value.toLowerCase(),
                 po: document.getElementById('flt-po').value.toLowerCase()
             };
-            const rows = document.querySelectorAll('.data-row');
-            rows.forEach(row => {
+            document.querySelectorAll('.data-row').forEach(row => {
                 let show = true;
                 for(let key in filters) {
                     if(filters[key] !== '') {
@@ -255,17 +229,13 @@
 
             const skuBaru = `${area}_${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}_${poBaru}`;
 
-            // Kurangi Saldo Lama
             const { data: dbLama } = await db.from('stok_global').select('qty').eq('id_sku', skuLama).single();
             await db.from('stok_global').update({ qty: dbLama.qty - qtyPindah }).eq('id_sku', skuLama);
 
-            // Tambah Saldo Baru
             const { data: dbBaru } = await db.from('stok_global').select('qty').eq('id_sku', skuBaru).single();
             let qtyTarget = dbBaru ? dbBaru.qty + qtyPindah : qtyPindah;
 
             await db.from('stok_global').upsert({ id_sku: skuBaru, area: area, jenis_item: jenis, nama_item: nama, panjang: pjg, grade: grade, dus: dus, shading: shading, po_aktual: poBaru, qty: qtyTarget });
-
-            // Log Mutasi
             await db.from('log_mutasi').insert([{ aktifitas: 'GANTI PO (CS)', detail: `Mutasi ${qtyPindah} Dus [${nama}]. Dari PO: ${poLama} -> PO: ${poBaru}. Lokasi: ${area}.`, pic: user.username }]);
 
             alert("Mutasi PO Berhasil!"); tutupModal(); await loadData(); 
