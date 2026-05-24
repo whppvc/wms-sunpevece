@@ -23,6 +23,7 @@
         .hdr-blue { background-color: #2563eb !important; color: white !important; }
         .hdr-orange { background-color: #f97316 !important; color: white !important; }
     </style>
+    <style id="dynamic-col-styles"></style>
 </head>
 <body id="app-body" class="font-sans">
 
@@ -80,8 +81,11 @@
         </header>
 
         <div class="card-dynamic p-4 rounded-xl shadow-sm mb-4 border">
-            <h3 class="text-xs font-bold opacity-60 uppercase mb-3 flex items-center gap-2"><i data-lucide="filter" class="w-4 h-4"></i> Filter Tabel</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleSection('filter-content', 'icon-filter')">
+                <h3 class="text-xs font-bold opacity-60 uppercase flex items-center gap-2 text-blue-600"><i data-lucide="filter" class="w-4 h-4"></i> Filter Tabel</h3>
+                <i data-lucide="chevron-up" id="icon-filter" class="w-5 h-5 text-gray-400 transition-transform"></i>
+            </div>
+            <div id="filter-content" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mt-4 transition-all duration-300 origin-top">
                 <input type="text" id="flt-qr" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="QR Code...">
                 <input type="text" id="flt-tgl" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="Tanggal...">
                 <input type="text" id="flt-mesin" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="Mesin...">
@@ -95,6 +99,21 @@
                 <input type="text" id="flt-po" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="PO...">
                 <input type="text" id="flt-ket" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="Keterangan...">
                 <input type="text" id="flt-status" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="Status...">
+                <input type="text" id="flt-pic" oninput="saringTabel()" class="input-dynamic p-2 text-xs border rounded outline-none focus:border-blue-500 font-medium" placeholder="PIC Input...">
+            </div>
+        </div>
+
+        <div class="card-dynamic p-4 rounded-xl shadow-sm mb-4 border">
+            <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleSection('col-content', 'icon-col')">
+                <h3 class="text-xs font-bold opacity-60 uppercase flex items-center gap-2 text-indigo-600"><i data-lucide="layout-grid" class="w-4 h-4"></i> Hide/Unhide Header Tabel</h3>
+                <i data-lucide="chevron-down" id="icon-col" class="w-5 h-5 text-gray-400 transition-transform rotate-180"></i>
+            </div>
+            <div id="col-content" class="hidden mt-4 transition-all duration-300 origin-top">
+                <div class="flex flex-wrap gap-x-6 gap-y-3 text-xs" id="col-checkboxes">
+                    </div>
+                <div class="mt-4 pt-3 border-t border-gray-200/50 flex justify-end">
+                    <button onclick="saveColDefault()" class="px-4 py-2 bg-slate-800 text-white hover:bg-slate-700 rounded-lg shadow font-bold text-xs flex items-center gap-2 active:scale-95 transition"><i data-lucide="save" class="w-4 h-4"></i> SET AS DEFAULT</button>
+                </div>
             </div>
         </div>
 
@@ -141,6 +160,72 @@
         btnProfile.addEventListener('click', (e) => { e.stopPropagation(); profileMenu.classList.toggle('hidden'); });
         window.addEventListener('click', (e) => { if (!btnProfile.contains(e.target) && !profileMenu.contains(e.target)) profileMenu.classList.add('hidden'); });
 
+        // LOGIKA BUKA/TUTUP KOTAK FILTER & KOLOM
+        function toggleSection(contentId, iconId) {
+            const content = document.getElementById(contentId);
+            const icon = document.getElementById(iconId);
+            content.classList.toggle('hidden');
+            icon.classList.toggle('rotate-180');
+        }
+
+        // LOGIKA DINAMIS HIDE/UNHIDE KOLOM
+        const colDefinitions = [
+            { id: 'col-qr', label: 'QR Code' },
+            { id: 'col-tgl', label: 'Tgl Produksi' },
+            { id: 'col-mesin', label: 'Mesin' },
+            { id: 'col-shift', label: 'Shift' },
+            { id: 'col-jenis', label: 'Jenis Item' },
+            { id: 'col-nama', label: 'Nama Item' },
+            { id: 'col-pjg', label: 'Panjang' },
+            { id: 'col-grade', label: 'Grade' },
+            { id: 'col-dus', label: 'Dus' },
+            { id: 'col-shading', label: 'Shading' },
+            { id: 'col-qty', label: 'QTY (Stok)' },
+            { id: 'col-po', label: 'PO' },
+            { id: 'col-ket', label: 'Keterangan' },
+            { id: 'col-status', label: 'Status' },
+            { id: 'col-pic', label: 'PIC' }
+        ];
+
+        let colPrefs = JSON.parse(localStorage.getItem('stbj_col_prefs')) || colDefinitions.map(c => c.id);
+
+        function initColSettings() {
+            const container = document.getElementById('col-checkboxes');
+            container.innerHTML = '';
+            colDefinitions.forEach(col => {
+                const isChecked = colPrefs.includes(col.id) ? 'checked' : '';
+                container.innerHTML += `
+                    <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-700 hover:text-blue-600 transition">
+                        <input type="checkbox" class="col-toggle-cb w-4 h-4 cursor-pointer accent-blue-600" value="${col.id}" ${isChecked} onchange="applyColStyles()">
+                        ${col.label}
+                    </label>
+                `;
+            });
+            applyColStyles();
+        }
+
+        function applyColStyles() {
+            const checkboxes = document.querySelectorAll('.col-toggle-cb');
+            let css = '';
+            checkboxes.forEach(cb => {
+                if (!cb.checked) {
+                    // Menyuntikkan CSS untuk menghapus kolom secara instan
+                    css += `.${cb.value} { display: none !important; }\n`;
+                }
+            });
+            document.getElementById('dynamic-col-styles').innerHTML = css;
+        }
+
+        function saveColDefault() {
+            const checkboxes = document.querySelectorAll('.col-toggle-cb:checked');
+            const checkedIds = Array.from(checkboxes).map(cb => cb.value);
+            localStorage.setItem('stbj_col_prefs', JSON.stringify(checkedIds));
+            alert("Pengaturan kolom berhasil disimpan sebagai default!");
+            toggleSection('col-content', 'icon-col'); // Tutup layar setelah save
+        }
+
+
+        // KONEKSI DATABASE
         const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -149,6 +234,7 @@
 
         window.onload = async () => {
             initTabs();
+            initColSettings(); // Panggil pengaturan kolom
             try {
                 const { data, error } = await db.from('hasil_stbj').select('*').order('created_at', {ascending: false});
                 if(error) throw error;
@@ -175,26 +261,28 @@
                 lucide.createIcons(); return; 
             }
 
-            let htmlContent = ''; // Ini yang membuat loading 100x lebih cepat (Batch Rendering)
+            let htmlContent = ''; 
 
             if (mode === 1) {
+                // TAMBAHKAN CLASS col-qr, col-tgl, dll PADA TAG <th>
                 thead.innerHTML = `
                     <tr>
                         <th class="p-3 hdr-black text-center"><input type="checkbox" onclick="toggleAll(this)" class="w-4 h-4 mt-1 cursor-pointer"></th>
                         <th class="p-3 hdr-black text-center">No</th>
-                        <th class="p-3 hdr-black border-r border-gray-600">Text QR Code</th>
-                        <th class="p-3 hdr-green">Tgl Produksi</th>
-                        <th class="p-3 hdr-green">Mesin</th>
-                        <th class="p-3 hdr-green">Shift</th>
-                        <th class="p-3 hdr-blue border-l border-r border-blue-400">Jenis Item</th>
-                        <th class="p-3 hdr-green">Nama Item</th>
-                        <th class="p-3 hdr-green">Pjg</th>
-                        <th class="p-3 hdr-green">Grade</th>
-                        <th class="p-3 hdr-green">Dus</th>
-                        <th class="p-3 hdr-green">Shading</th>
-                        <th class="p-3 hdr-green border-r border-green-600">PO</th>
-                        <th class="p-3 hdr-orange border-r border-orange-400">Keterangan</th>
-                        <th class="p-3 hdr-black text-center">Status</th>
+                        <th class="p-3 hdr-black border-r border-gray-600 col-qr">Text QR Code</th>
+                        <th class="p-3 hdr-green col-tgl">Tgl Produksi</th>
+                        <th class="p-3 hdr-green col-mesin">Mesin</th>
+                        <th class="p-3 hdr-green col-shift">Shift</th>
+                        <th class="p-3 hdr-blue border-l border-r border-blue-400 col-jenis">Jenis Item</th>
+                        <th class="p-3 hdr-green col-nama">Nama Item</th>
+                        <th class="p-3 hdr-green col-pjg">Pjg</th>
+                        <th class="p-3 hdr-green col-grade">Grade</th>
+                        <th class="p-3 hdr-green col-dus">Dus</th>
+                        <th class="p-3 hdr-green col-shading">Shading</th>
+                        <th class="p-3 hdr-green border-r border-green-600 col-po">PO</th>
+                        <th class="p-3 hdr-orange border-r border-orange-400 col-ket">Keterangan</th>
+                        <th class="p-3 hdr-black text-center col-status">Status</th>
+                        <th class="p-3 hdr-black text-center col-pic">PIC</th>
                     </tr>
                 `;
                 
@@ -217,6 +305,7 @@
                             <td class="p-3 font-bold text-amber-700 col-po">${r.po || '-'}</td>
                             <td class="p-3 text-orange-500 font-medium col-ket">${r.keterangan || '-'}</td>
                             <td class="p-3 text-center col-status"><span class="${stColor} px-3 py-1 rounded-full font-bold text-[10px] uppercase border shadow-sm">${r.status || 'STBJ'}</span></td>
+                            <td class="p-3 text-center font-bold text-xs text-gray-500 col-pic">${r.pic_input || '-'}</td>
                         </tr>
                     `;
                 });
@@ -226,25 +315,26 @@
                     <tr>
                         <th class="p-3 hdr-black text-center"><input type="checkbox" onclick="toggleAll(this)" class="w-4 h-4 mt-1 cursor-pointer"></th>
                         <th class="p-3 hdr-black text-center">No</th>
-                        <th class="p-3 hdr-green">Tgl Produksi</th>
-                        <th class="p-3 hdr-green">Mesin</th>
-                        <th class="p-3 hdr-green">Shift</th>
-                        <th class="p-3 hdr-blue border-l border-r border-blue-400">Jenis Item</th>
-                        <th class="p-3 hdr-green">Nama Item</th>
-                        <th class="p-3 hdr-green">Pjg</th>
-                        <th class="p-3 hdr-green">Grade</th>
-                        <th class="p-3 hdr-green">Dus</th>
-                        <th class="p-3 hdr-green">Shading</th>
-                        <th class="p-3 hdr-black text-center border-l border-r border-gray-600">QTY</th>
-                        <th class="p-3 hdr-green border-r border-green-600">PO</th>
-                        <th class="p-3 hdr-orange border-r border-orange-400">Keterangan</th>
-                        <th class="p-3 hdr-black text-center">Status</th>
+                        <th class="p-3 hdr-green col-tgl">Tgl Produksi</th>
+                        <th class="p-3 hdr-green col-mesin">Mesin</th>
+                        <th class="p-3 hdr-green col-shift">Shift</th>
+                        <th class="p-3 hdr-blue border-l border-r border-blue-400 col-jenis">Jenis Item</th>
+                        <th class="p-3 hdr-green col-nama">Nama Item</th>
+                        <th class="p-3 hdr-green col-pjg">Pjg</th>
+                        <th class="p-3 hdr-green col-grade">Grade</th>
+                        <th class="p-3 hdr-green col-dus">Dus</th>
+                        <th class="p-3 hdr-green col-shading">Shading</th>
+                        <th class="p-3 hdr-black text-center border-l border-r border-gray-600 col-qty">QTY</th>
+                        <th class="p-3 hdr-green border-r border-green-600 col-po">PO</th>
+                        <th class="p-3 hdr-orange border-r border-orange-400 col-ket">Keterangan</th>
+                        <th class="p-3 hdr-black text-center col-status">Status</th>
+                        <th class="p-3 hdr-black text-center col-pic">PIC</th>
                     </tr>
                 `;
                 
                 let grouped = {};
                 globalData.forEach(r => {
-                    let key = `${r.tgl_produksi}|${r.mesin}|${r.shift}|${r.jenis_item}|${r.nama_item}|${r.panjang}|${r.grade}|${r.dus}|${r.shading}|${r.po}|${r.keterangan}|${r.status}`;
+                    let key = `${r.tgl_produksi}|${r.mesin}|${r.shift}|${r.jenis_item}|${r.nama_item}|${r.panjang}|${r.grade}|${r.dus}|${r.shading}|${r.po}|${r.keterangan}|${r.status}|${r.pic_input}`;
                     if(!grouped[key]) grouped[key] = { ...r, qty: 0, ids: [] };
                     grouped[key].qty += 1;
                     grouped[key].ids.push(r.id); 
@@ -266,10 +356,11 @@
                             <td class="p-3 font-semibold col-grade">${r.grade || '-'}</td>
                             <td class="p-3 col-dus">${r.dus || '-'}</td>
                             <td class="p-3 col-shading">${r.shading || '-'}</td>
-                            <td class="p-3 text-center font-bold text-base text-black bg-gray-100/50">${r.qty}</td>
+                            <td class="p-3 text-center font-bold text-base text-black bg-gray-100/50 col-qty">${r.qty}</td>
                             <td class="p-3 font-bold text-amber-700 col-po">${r.po || '-'}</td>
                             <td class="p-3 text-orange-500 font-medium col-ket">${r.keterangan || '-'}</td>
                             <td class="p-3 text-center col-status"><span class="${stColor} px-3 py-1 rounded-full font-bold text-[10px] uppercase border shadow-sm">${r.status || 'STBJ'}</span></td>
+                            <td class="p-3 text-center font-bold text-xs text-gray-500 col-pic">${r.pic_input || '-'}</td>
                         </tr>
                     `;
                 });
@@ -279,7 +370,9 @@
             }
             
             tbody.innerHTML = htmlContent;
-            lucide.createIcons(); saringTabel();
+            lucide.createIcons(); 
+            applyColStyles(); // Terapkan css saat tabel dirender ulang
+            saringTabel();
         }
 
         function saringTabel() {
@@ -288,7 +381,7 @@
                 shift: document.getElementById('flt-shift').value.toLowerCase(), jenis: document.getElementById('flt-jenis').value.toLowerCase(), nama: document.getElementById('flt-nama').value.toLowerCase(),
                 pjg: document.getElementById('flt-pjg').value.toLowerCase(), grade: document.getElementById('flt-grade').value.toLowerCase(), dus: document.getElementById('flt-dus').value.toLowerCase(),
                 shading: document.getElementById('flt-shading').value.toLowerCase(), po: document.getElementById('flt-po').value.toLowerCase(), ket: document.getElementById('flt-ket').value.toLowerCase(),
-                status: document.getElementById('flt-status').value.toLowerCase()
+                status: document.getElementById('flt-status').value.toLowerCase(), pic: document.getElementById('flt-pic').value.toLowerCase()
             };
             const rows = document.querySelectorAll('.data-row');
             rows.forEach(row => {
@@ -312,7 +405,12 @@
             for (let i = 0; i < rows.length; i++) {
                 if(rows[i].style.display === 'none') continue;
                 let row = [], cols = rows[i].querySelectorAll("td, th");
-                for (let j = 1; j < cols.length; j++) row.push('"' + cols[j].innerText.replace(/"/g, '""') + '"');
+                // Skip kolom checkbox, aksi, dll jika diperlukan. Untuk kesederhanaan, eksport semua yg terlihat.
+                for (let j = 1; j < cols.length; j++) {
+                    if (window.getComputedStyle(cols[j]).display !== 'none') {
+                        row.push('"' + cols[j].innerText.replace(/"/g, '""') + '"');
+                    }
+                }
                 csv.push(row.join(","));
             }
             let csvFile = new Blob([csv.join("\n")], {type: "text/csv"}); let link = document.createElement("a"); link.href = window.URL.createObjectURL(csvFile); link.download = `Laporan_STBJ_Mode${currentMode}.csv`; link.click();
