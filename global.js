@@ -11,14 +11,10 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 function initModernTopBar(pageMeta) {
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'Staff'};
     
-    // 1. Inisialisasi Data Tab
     let tabs = JSON.parse(localStorage.getItem('wms_tabs')) || [];
     if(!tabs.find(t => t.id === 'dashboard')) tabs.unshift({id: 'dashboard', title: 'DASHBOARD', url: 'menu.html'});
-    if(pageMeta && !tabs.find(t => t.id === pageMeta.id)) { 
-        tabs.push(pageMeta); localStorage.setItem('wms_tabs', JSON.stringify(tabs)); 
-    }
+    if(pageMeta && !tabs.find(t => t.id === pageMeta.id)) { tabs.push(pageMeta); localStorage.setItem('wms_tabs', JSON.stringify(tabs)); }
 
-    // 2. Bangun HTML Top Bar (Logo, Judul, Profil Dropdown)
     const headerHTML = `
         <div class="sticky top-0 z-50 w-full flex flex-col shadow-md font-sans">
             <nav class="bg-white px-4 py-3 flex items-center justify-between border-b border-slate-200">
@@ -29,53 +25,48 @@ function initModernTopBar(pageMeta) {
                     </div>
                 </div>
 
-                <div class="relative">
-                    <button onclick="toggleProfileMenu()" class="flex items-center gap-2 p-1 focus:outline-none hover:bg-slate-100 rounded-full transition pr-3">
-                        <div class="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-black shadow-inner">
-                            ${user.username.charAt(0).toUpperCase()}
-                        </div>
-                        <div class="flex-col text-left hidden md:flex">
-                            <span class="text-xs font-black text-slate-800 uppercase leading-none">${user.username}</span>
-                            <span class="text-[10px] font-bold text-slate-500">${user.role || 'PPC / Admin'}</span>
-                        </div>
-                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-500"></i>
-                    </button>
+                <div class="flex items-center gap-2">
+                    
+                    <div class="hidden md:flex items-center bg-slate-100 rounded-full px-3 py-2 border border-slate-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all mr-2">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+                        <input type="text" placeholder="Cari menu / QR..." class="bg-transparent border-none outline-none text-xs ml-2 w-40 lg:w-56 text-slate-700 font-bold placeholder-slate-400" onkeypress="if(event.key==='Enter') alert('Pencarian: ' + this.value + ' (Fitur global sedang dihubungkan)')">
+                    </div>
 
-                    <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-50 transform origin-top-right transition-all">
-                        <div class="px-4 py-2 border-b border-slate-100 mb-1">
-                            <p class="text-xs font-bold text-slate-400 uppercase">Pengaturan Akun</p>
+                    <div class="relative">
+                        <button onclick="toggleProfileMenu()" class="flex items-center gap-2 p-1 focus:outline-none hover:bg-slate-100 rounded-full transition pr-3">
+                            <div class="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-black shadow-inner">${user.username.charAt(0).toUpperCase()}</div>
+                            <div class="flex-col text-left hidden md:flex">
+                                <span class="text-xs font-black text-slate-800 uppercase leading-none">${user.username}</span>
+                                <span class="text-[10px] font-bold text-slate-500">${user.role || 'PPC / Admin'}</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-500"></i>
+                        </button>
+                        <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-50 transform origin-top-right transition-all">
+                            <div class="px-4 py-2 border-b border-slate-100 mb-1"><p class="text-xs font-bold text-slate-400 uppercase">Pengaturan Akun</p></div>
+                            <a href="#" onclick="menuProfil('password')" class="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition"><i data-lucide="key-round" class="w-4 h-4"></i> Ubah Password</a>
+                            <a href="#" onclick="menuProfil('tema')" class="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition"><i data-lucide="palette" class="w-4 h-4"></i> Pengaturan Tema</a>
+                            <hr class="my-1 border-slate-100">
+                            <a href="#" onclick="logout()" class="flex items-center gap-3 px-4 py-2.5 text-sm font-black text-red-600 hover:bg-red-50 transition"><i data-lucide="log-out" class="w-4 h-4"></i> Logout</a>
                         </div>
-                        <a href="#" onclick="menuProfil('password')" class="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition"><i data-lucide="key-round" class="w-4 h-4"></i> Ubah Password</a>
-                        <a href="#" onclick="menuProfil('tema')" class="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition"><i data-lucide="palette" class="w-4 h-4"></i> Pengaturan Tema</a>
-                        <hr class="my-1 border-slate-100">
-                        <a href="#" onclick="logout()" class="flex items-center gap-3 px-4 py-2.5 text-sm font-black text-red-600 hover:bg-red-50 transition"><i data-lucide="log-out" class="w-4 h-4"></i> Logout</a>
                     </div>
                 </div>
             </nav>
 
-            <div id="tab-bar-container" class="w-full bg-[#0f172a] text-slate-400 flex overflow-x-auto text-[11px] font-black hide-scrollbar tracking-wider">
-                </div>
+            <div id="tab-bar-container" class="w-full bg-[#0f172a] text-slate-400 flex overflow-x-auto text-[11px] font-black hide-scrollbar tracking-wider"></div>
         </div>
     `;
 
-    // 3. Suntikkan Header ke Halaman (Paling Atas)
     document.body.insertAdjacentHTML('afterbegin', headerHTML);
 
-    // 4. Generate Isi Tab
     const tabBar = document.getElementById('tab-bar-container');
     tabs.forEach(tab => {
         const isActive = pageMeta && tab.id === pageMeta.id;
         const bg = isActive ? 'bg-blue-600 text-white shadow-inner' : 'hover:bg-slate-800 border-r border-slate-700';
-        const closeBtn = tab.id === 'dashboard' ? '' : `<button onclick="closeGlobalTab(event, '${tab.id}', '${pageMeta ? pageMeta.id : ''}')" class="ml-2 hover:text-red-400 transition"><i data-lucide="x" class="w-3 h-3"></i></button>`;
+        const closeBtn = tab.id === 'dashboard' ? '' : `<button onclick="closeGlobalTab(event, '${tab.id}', '${pageMeta ? pageMeta.id : ''}')" class="ml-2 hover:text-red-400 transition cursor-pointer"><i data-lucide="x" class="w-3 h-3"></i></button>`;
         tabBar.innerHTML += `<div onclick="window.location.href='${tab.url}'" class="flex items-center px-5 py-3 cursor-pointer transition whitespace-nowrap border-b-2 ${isActive ? 'border-white' : 'border-transparent hover:border-slate-500'} ${bg}"><span>${tab.title}</span>${closeBtn}</div>`;
     });
 
-    // 5. Tutup dropdown jika klik di luar area
-    document.addEventListener('click', (e) => {
-        const dropdown = document.getElementById('profile-dropdown');
-        if (dropdown && !e.target.closest('.relative')) dropdown.classList.add('hidden');
-    });
-
+    document.addEventListener('click', (e) => { const dropdown = document.getElementById('profile-dropdown'); if (dropdown && !e.target.closest('.relative')) dropdown.classList.add('hidden'); });
     lucide.createIcons();
 }
 
