@@ -172,34 +172,73 @@ function updateRowNumbers() {
     const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; });
 }
 
+// ==========================================
+// 1. FUNGSI CROSSCEK KEAMANAN GUDANG
+// ==========================================
 async function crossCekSTBJ() {
     const rows = document.querySelectorAll('.row-item');
     if(rows.length === 0) return alert("Belum ada data untuk di cek.");
 
-    const allQRCodes = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
-    const { data: stbjData, error } = await db.from('hasil_stbj').select('qrcode').in('qrcode', allQRCodes);
-    if(error) return alert("Gagal koneksi ke server: " + error.message);
+    const btnSave = document.getElementById('btn-save');
+    const btnCross = document.querySelector('button[onclick="crossCekSTBJ()"]');
+    const originalCrossText = btnCross.innerHTML;
+    
+    btnCross.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MENGECEK...';
+    btnCross.disabled = true;
 
-    const validQRs = stbjData.map(d => d.qrcode);
+    const allQRCodes = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
+    
+    // Cek ke tabel fisik gudang (stok_qr)
+    const { data: existingData, error } = await db.from('stok_qr').select('qrcode').in('qrcode', allQRCodes);
+    
+    if(error) {
+        alert("Gagal koneksi ke server: " + error.message);
+        btnCross.innerHTML = originalCrossText; btnCross.disabled = false; return;
+    }
+
+    const duplicateQRs = existingData.map(d => d.qrcode);
+    let hasDuplicate = false;
 
     rows.forEach(row => {
         const qr = row.querySelector('.qr-val').innerText;
         const valCell = row.querySelector('.col-val');
-        if(validQRs.includes(qr)) {
-            valCell.innerHTML = '<span class="text-green-600 font-black bg-green-100 px-3 py-1 rounded-full border border-green-300 shadow-sm text-xs">VALID</span>';
+        
+        if(duplicateQRs.includes(qr)) {
+            // JIKA SUDAH ADA DI GUDANG -> TOLAK
+            valCell.innerHTML = '<span class="text-red-600 font-black bg-red-100 px-3 py-1 rounded-full border border-red-300 shadow-sm text-xs" data-status="invalid">DUPLIKAT</span>';
+            row.classList.add('bg-red-50'); 
+            hasDuplicate = true;
         } else {
-            valCell.innerHTML = '<span class="text-red-600 font-black bg-red-100 px-3 py-1 rounded-full border border-red-300 shadow-sm text-xs">INVALID</span>';
+            // JIKA BELUM ADA -> AMAN MASUK
+            valCell.innerHTML = '<span class="text-emerald-600 font-black bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300 shadow-sm text-xs" data-status="valid">AMAN</span>';
+            row.classList.remove('bg-red-50');
         }
     });
+
+    if(hasDuplicate) {
+        alert("PERINGATAN!\nDitemukan QR Code yang sudah ada di dalam gudang (Duplikat/Sabotase).\nSistem MENGUNCI penyimpanan. Silakan klik ikon 'Tong Sampah' pada baris berwarna merah jambu untuk menghapusnya.");
+    } else {
+        alert("Pengecekan Selesai.\nSemua QR Code AMAN dan siap dimasukkan ke gudang.");
+    }
+
+    btnCross.innerHTML = originalCrossText; 
+    btnCross.disabled = false;
 }
 
 // ==========================================
-// LOGIKA SAVE SISTEM DECOUPLED INVENTORY
+// 2. LOGIKA SAVE SISTEM DECOUPLED INVENTORY
 // ==========================================
 async function saveToSupabase() {
     const btnSave = document.getElementById('btn-save'); 
     const originalText = btnSave.innerHTML;
     
+    // KEAMANAN: Cek apakah ada status INVALID di layar
+    const invalidRows = document.querySelectorAll('span[data-status="invalid"]');
+    if(invalidRows.length > 0) {
+        alert("TIDAK BISA DISIMPAN!\nMasih ada QR Code Duplikat di layar. Hapus baris yang berwarna MERAH terlebih dahulu.");
+        return; 
+    }
+
     btnSave.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-6 h-6"></i> MEMPROSES DATA...'; 
     btnSave.disabled = true;
 
@@ -208,10 +247,9 @@ async function saveToSupabase() {
 
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
     
-    let arrFisikQR = []; // Untuk tabel stok_qr
-    let mapVirtual = {}; // Untuk tabel stok_global
+    let arrFisikQR = []; 
+    let mapVirtual = {}; 
 
-    // 1. Kumpulkan Data
     rows.forEach(row => {
         let area = row.querySelector('.area-cell').innerText;
         let qr = row.querySelector('.qr-val').innerText;
@@ -223,13 +261,10 @@ async function saveToSupabase() {
         let shading = row.querySelector('.col-shading').innerText;
         let po = row.querySelector('.col-po').innerText;
         
-        // Buat ID Unik (SKU_KEY) agar bisa di-Upsert otomatis oleh database
         let id_sku = `${area}_${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}_${po}`;
 
-        // Data Fisik QR
         arrFisikQR.push({ qrcode: qr, area: area, id_sku: id_sku, pic_input: user.username });
 
-        // Kalkulasi Agregasi Virtual
         if(!mapVirtual[id_sku]) {
             mapVirtual[id_sku] = { 
                 id_sku: id_sku, area: area, jenis_item: jenis, nama_item: nama, 
@@ -239,15 +274,14 @@ async function saveToSupabase() {
         mapVirtual[id_sku].qty += 1;
     });
 
-    // 2. SIMPAN KE TABEL FISIK (stok_qr)
+    // SIMPAN KE TABEL FISIK (stok_qr)
     const { error: errQR } = await db.from('stok_qr').insert(arrFisikQR);
     if (errQR) {
-        alert("Gagal menyimpan fisik QR (Mungkin ada QR ganda/sudah discan sebelumnya).\nDetail: " + errQR.message);
+        alert("SISTEM MENOLAK: Terdeteksi QR ganda di Database. Klik Crosscek Data untuk menemukan baris yang bermasalah.\n" + errQR.message);
         btnSave.innerHTML = originalText; btnSave.disabled = false; return;
     }
 
-    // 3. UPDATE TABEL VIRTUAL (stok_global)
-    // Ambil data lama dulu untuk ditambahkan
+    // UPDATE TABEL VIRTUAL (stok_global)
     let skuKeys = Object.keys(mapVirtual);
     const { data: oldData } = await db.from('stok_global').select('id_sku, qty').in('id_sku', skuKeys);
     
@@ -255,24 +289,21 @@ async function saveToSupabase() {
     skuKeys.forEach(key => {
         let existing = oldData ? oldData.find(d => d.id_sku === key) : null;
         let qtySekarang = existing ? existing.qty : 0;
-        let dataBaru = { ...mapVirtual[key], qty: qtySekarang + mapVirtual[key].qty }; // Tambahkan saldo lama + saldo baru
+        let dataBaru = { ...mapVirtual[key], qty: qtySekarang + mapVirtual[key].qty }; 
         arrVirtualUpdate.push(dataBaru);
     });
 
-    const { error: errGlobal } = await db.from('stok_global').upsert(arrVirtualUpdate);
-    if(errGlobal) { alert("Peringatan: Gagal update Kartu Stok Virtual: " + errGlobal.message); }
+    await db.from('stok_global').upsert(arrVirtualUpdate);
 
-    // 4. CATAT LOG MUTASI
-    const { error: errLog } = await db.from('log_mutasi').insert([{
+    // CATAT LOG MUTASI
+    await db.from('log_mutasi').insert([{
         aktifitas: 'LANGSIR IN',
-        detail: `Masuk ${arrFisikQR.length} Dus via Langsir Scan per Dus.`,
+        detail: `Masuk ${arrFisikQR.length} Dus via Langsir.`,
         pic: user.username
     }]);
 
     alert(`BERHASIL!\n${arrFisikQR.length} kardus berhasil didaftarkan ke Gudang.`);
-    document.getElementById('tbody-langsir').innerHTML = ''; // Bersihkan layar
-    
-    btnSave.innerHTML = originalText; 
-    btnSave.disabled = false;
+    document.getElementById('tbody-langsir').innerHTML = ''; 
+    btnSave.innerHTML = originalText; btnSave.disabled = false;
     lucide.createIcons();
 }
