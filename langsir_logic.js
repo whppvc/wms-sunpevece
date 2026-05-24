@@ -12,10 +12,13 @@ window.onload = async () => {
     await loadInitialData();
 };
 
+// PERBAIKAN FATAL: Penggunaan kelas hidden
 function switchView(view) {
     document.getElementById('view-menu').classList.add('hidden');
-    document.getElementById('view-scan').classList.toggle('hidden', view === 'scan');
-    document.getElementById('view-ambil').classList.toggle('hidden', view === 'ambil');
+    // Jika view yang dipilih adalah 'scan', maka hidden = false (tampilkan view-scan)
+    document.getElementById('view-scan').classList.toggle('hidden', view !== 'scan');
+    // Jika view yang dipilih adalah 'ambil', maka hidden = false (tampilkan view-ambil)
+    document.getElementById('view-ambil').classList.toggle('hidden', view !== 'ambil');
 }
 
 async function loadInitialData() {
@@ -183,7 +186,6 @@ async function crossCekSTBJ() {
 
     const allQRCodes = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     
-    // Cari QR di hasil_stbj
     const { data: stbjData, error } = await db.from('hasil_stbj').select('qrcode').in('qrcode', allQRCodes);
     if(error) return alert("Gagal koneksi ke server: " + error.message);
 
@@ -244,7 +246,7 @@ async function saveToSupabase() {
         alert("Gagal Simpan ke Supabase: " + insertError.message);
     } else {
         alert(`BERHASIL!\n${dataToSave.length} data Langsir telah disimpan.`);
-        document.getElementById('tbody-langsir').innerHTML = ''; // Bersihkan layar
+        document.getElementById('tbody-langsir').innerHTML = '';
     }
 
     btnSave.innerHTML = originalText; 
