@@ -78,50 +78,23 @@
         </div>
     </main>
 
+   <script src="global.js"></script>
+
     <script>
         const PAGE_META = { id: 'riwayat_langsir', title: 'RIWAYAT LANGSIR', url: 'riwayat_langsir.html' };
-        lucide.createIcons(); document.body.setAttribute('data-bg', localStorage.getItem('app_bg') || 'light');
-
-        const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
-        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
         let globalData = [];
         let currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: ''};
 
         window.onload = async () => {
-            initTabs();
-            // Otomatis filter berdasarkan nama user yang sedang login
+            initGlobalTabs(PAGE_META);
             document.getElementById('flt-pic').value = currentUser.username; 
             await loadData();
         };
 
-        function initTabs() {
-            let tabs = JSON.parse(localStorage.getItem('wms_tabs')) || [];
-            if(!tabs.find(t => t.id === 'dashboard')) tabs.unshift({id: 'dashboard', title: 'DASHBOARD', url: 'menu.html'});
-            if(!tabs.find(t => t.id === PAGE_META.id)) { tabs.push(PAGE_META); localStorage.setItem('wms_tabs', JSON.stringify(tabs)); }
-            const tabBar = document.getElementById('tab-bar'); tabBar.innerHTML = '';
-            tabs.forEach(tab => {
-                const isActive = tab.id === PAGE_META.id;
-                const bg = isActive ? 'bg-indigo-600 text-white shadow-inner' : 'hover:bg-slate-800 border-r border-slate-700';
-                const closeBtn = tab.id === 'dashboard' ? '' : `<button onclick="closeTab(event, '${tab.id}')" class="ml-2 hover:text-red-400 transition"><i data-lucide="x" class="w-3 h-3"></i></button>`;
-                tabBar.innerHTML += `<div onclick="window.location.href='${tab.url}'" class="flex items-center px-5 py-2.5 cursor-pointer transition whitespace-nowrap border-b-2 ${isActive ? 'border-white' : 'border-transparent hover:border-slate-500'} ${bg}"><span>${tab.title}</span>${closeBtn}</div>`;
-            });
-            lucide.createIcons();
-        }
-        
-        function closeTab(e, id) {
-            e.stopPropagation(); let tabs = JSON.parse(localStorage.getItem('wms_tabs')) || [];
-            tabs = tabs.filter(t => t.id !== id); localStorage.setItem('wms_tabs', JSON.stringify(tabs));
-            if(PAGE_META.id === id) { window.location.href = tabs[tabs.length-1].url; } else { initTabs(); }
-        }
-
         async function loadData() {
             document.getElementById('data-body').innerHTML = `<tr><td colspan="12" class="text-center p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-indigo-500"></i><p class="font-bold text-gray-500">Membaca Database Gudang...</p></td></tr>`;
             lucide.createIcons();
-            
             try {
-                // Perbaikan kolom tgl_masuk menjadi created_at
                 const { data, error } = await db.from('stok_qr').select('*').order('created_at', {ascending: false}).limit(500);
                 if(error) throw error;
                 globalData = data || []; renderTable();
@@ -132,8 +105,7 @@
 
         function formatTanggal(isoString) {
             if(!isoString) return '-';
-            const date = new Date(isoString);
-            return date.toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            return new Date(isoString).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
 
         function renderTable() {
@@ -142,7 +114,6 @@
                 tbody.innerHTML = `<tr><td colspan="12" class="text-center p-10 opacity-50"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2"></i> Belum ada data masuk.</td></tr>`; 
                 lucide.createIcons(); return; 
             }
-
             let htmlContent = ''; 
             globalData.forEach((r, i) => {
                 const parts = r.id_sku.split('_');
@@ -156,7 +127,6 @@
                         <td class="p-3 font-bold text-indigo-700 bg-indigo-50/50">${formatTanggal(r.created_at)}</td>
                         <td class="p-3 font-bold text-emerald-700 col-area">${r.area}</td>
                         <td class="p-3 font-mono font-bold text-black border-r border-gray-200 col-qr">${r.qrcode}</td>
-                        
                         <td class="p-3 font-bold text-blue-600 col-jenis">${jenis}</td>
                         <td class="p-3 font-bold col-nama">${nama}</td>
                         <td class="p-3 font-bold opacity-70">${pjg}</td>
@@ -178,8 +148,7 @@
                 jenis: document.getElementById('flt-jenis').value.toLowerCase(), nama: document.getElementById('flt-nama').value.toLowerCase(),
                 po: document.getElementById('flt-po').value.toLowerCase(), pic: document.getElementById('flt-pic').value.toLowerCase()
             };
-            const rows = document.querySelectorAll('.data-row');
-            rows.forEach(row => {
+            document.querySelectorAll('.data-row').forEach(row => {
                 let show = true;
                 for(let key in filters) {
                     if(filters[key] !== '') {
