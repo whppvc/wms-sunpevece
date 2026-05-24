@@ -42,10 +42,96 @@
 
     <script src="global.js"></script>
     <script>
+        let scannedQRs = [];
+
         document.addEventListener('DOMContentLoaded', () => { 
             initModernLayout({ id: 'stbj', title: 'SCAN STBJ', url: 'stbj.html' }); 
+            
+            // Jeda sejenak untuk memastikan form sudah dirender oleh global.js
+            setTimeout(() => {
+                const formScan = document.getElementById('form-scan');
+                if(formScan) {
+                    formScan.addEventListener('submit', (e) => {
+                        e.preventDefault(); // <-- INI YANG MENCEGAH HALAMAN REFRESH SAAT ENTER
+                        const inputEl = document.getElementById('input-qrcode');
+                        const rawInput = inputEl.value.trim();
+                        if(!rawInput) return;
+                        
+                        // Pecah jika scanner menembak banyak baris sekaligus
+                        const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
+                        codes.forEach(code => {
+                            if(!scannedQRs.includes(code)) {
+                                scannedQRs.push(code);
+                            }
+                        });
+                        
+                        renderSTBJTable();
+                        inputEl.value = '';
+                        inputEl.focus();
+                    });
+                }
+            }, 300);
         });
-        // Logika saveSTBJ Anda letakkan di sini atau panggil file logic terpisah.
+
+        function renderSTBJTable() {
+            const tbody = document.getElementById('tbody-stbj');
+            if(scannedQRs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="p-6 text-slate-400 font-bold">Silakan scan QR Code...</td></tr>';
+                lucide.createIcons();
+                return;
+            }
+            
+            let html = '';
+            // Render dari bawah ke atas agar scan terbaru muncul di atas
+            scannedQRs.slice().reverse().forEach((qr, index) => {
+                const actualIndex = scannedQRs.length - index;
+                html += `
+                    <tr class="border-b border-slate-200 hover:bg-slate-50 transition">
+                        <td class="p-3 text-center border-r border-slate-200"><button onclick="deleteSTBJ('${qr}')" class="text-red-500 hover:text-red-700 cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></button></td>
+                        <td class="p-3 font-bold text-center border-r border-slate-200">${actualIndex}</td>
+                        <td class="p-3 font-mono font-bold text-slate-900 bg-slate-50 tracking-wider">${qr}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function deleteSTBJ(qrCode) {
+            scannedQRs = scannedQRs.filter(q => q !== qrCode);
+            renderSTBJTable();
+        }
+
+        async function saveSTBJ() {
+            if(scannedQRs.length === 0) return alert('Belum ada QR Code yang di-scan!');
+            
+            const btn = document.getElementById('btn-save');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MENYIMPAN KE DATABASE...';
+            btn.disabled = true;
+
+            const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
+            const payload = scannedQRs.map(qr => ({
+                qrcode: qr,
+                pic_input: user.username
+            }));
+
+            try {
+                // Upsert data ke tabel hasil_stbj
+                const { error } = await db.from('hasil_stbj').upsert(payload, { onConflict: 'qrcode' });
+                if(error) throw error;
+                
+                alert(`BERHASIL!\n${scannedQRs.length} data QR Code STBJ telah tersimpan ke sistem.`);
+                scannedQRs = []; // Kosongkan array setelah sukses
+                renderSTBJTable();
+            } catch (err) {
+                alert('GAGAL MENYIMPAN: ' + err.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        }
     </script>
 </body>
 </html>
