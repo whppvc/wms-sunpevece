@@ -24,7 +24,7 @@ const APP_MENUS = [
     { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' }
 ];
 
-// INJEKSI CSS STANDAR & SISTEM 3 TEMA MODULAR
+// INJEKSI CSS STANDAR & SISTEM TEMA MODULAR
 const style = document.createElement('style');
 style.innerHTML = `
     .hide-scrollbar::-webkit-scrollbar { display: none; } 
@@ -35,27 +35,34 @@ style.innerHTML = `
     body.shape-sharp * { border-radius: 0px !important; }
     
     /* ====================================================
-       2. TRUE DARK MODE (Memaksa Kartu, Teks, & Input Jadi Gelap)
+       2. TRUE DARK MODE (Perbaikan Kontras Teks & Background)
        ==================================================== */
     body.base-dark { background-color: #0f172a !important; color: #f8fafc !important; }
     
-    /* Ubah Kartu Putih dan Sidebar menjadi Gelap */
+    /* Latar Belakang Area Konten */
+    body.base-dark .bg-slate-50, body.base-dark .bg-slate-100, body.base-dark main { background-color: #0f172a !important; }
+    
+    /* Ubah Kartu, Sidebar, dan Modal menjadi Gelap (Dark Slate) */
     body.base-dark .bg-white, body.base-dark aside { background-color: #1e293b !important; border-color: #334155 !important; color: #f8fafc !important; }
     
-    /* Balikkan Warna Teks yang Tadinya Gelap Menjadi Terang */
-    body.base-dark .text-slate-800, body.base-dark .text-slate-700, body.base-dark .text-slate-900 { color: #f8fafc !important; }
-    body.base-dark .text-slate-600, body.base-dark .text-slate-500 { color: #cbd5e1 !important; }
+    /* PERBAIKAN KONTRAS: Balikkan Warna Teks Gelap ke Terang */
+    body.base-dark .text-slate-900, body.base-dark .text-slate-800, body.base-dark .text-slate-700, body.base-dark .text-slate-600 { color: #e2e8f0 !important; }
+    body.base-dark .text-slate-500, body.base-dark .text-slate-400 { color: #94a3b8 !important; }
     
-    /* Penyesuaian Form, Input, dan Tabel di Mode Malam */
-    body.base-dark input, body.base-dark select, body.base-dark table { background-color: #0f172a !important; color: #f8fafc !important; border-color: #334155 !important; }
+    /* Penyesuaian Form, Input, dan Tabel di Mode Malam agar Terbaca */
+    body.base-dark input, body.base-dark select, body.base-dark textarea { background-color: #0f172a !important; color: #f8fafc !important; border-color: #475569 !important; }
+    body.base-dark input::placeholder { color: #64748b !important; }
+    body.base-dark table { background-color: #1e293b !important; color: #f8fafc !important; border-color: #334155 !important; }
     body.base-dark .border-slate-200, body.base-dark .border-slate-300 { border-color: #334155 !important; }
     body.base-dark tr.hover\\:bg-slate-50:hover { background-color: #334155 !important; }
-    body.base-dark thead th.hdr-std { background-color: #0f172a !important; border-color: #334155 !important; }
+    body.base-dark thead th.hdr-std { background-color: #0f172a !important; border-color: #334155 !important; color: #ffffff !important; }
 
     /* ====================================================
        3. ATURAN NUANSA WARNA (Header, Sidebar Atas, Tab) 
        ==================================================== */
     
+    /* Nuansa Gelap (Bawaan) - Tetap Normal */
+
     /* Nuansa Biru */
     body.nuance-biru header.bg-\\[\\#0f172a\\], body.nuance-biru aside .bg-\\[\\#0f172a\\] { background-color: #1e40af !important; border-color: #1e3a8a !important; }
     body.nuance-biru div.bg-\\[\\#1e293b\\] { background-color: #1e3a8a !important; }
@@ -77,21 +84,6 @@ style.innerHTML = `
     body.nuance-color header.bg-\\[\\#0f172a\\], body.nuance-color aside .bg-\\[\\#0f172a\\] { background: linear-gradient(90deg, #6366f1, #a855f7) !important; border: none !important; }
     body.nuance-color div.bg-\\[\\#1e293b\\] { background-color: #4f46e5 !important; border-bottom: none !important; }
     body.nuance-color .bg-slate-800 { background-color: #ec4899 !important; color: #ffffff !important; border: none !important; }
-
-    /* REVISI MANTAP: Nuansa COOL (Flat Vector Art / Seni Gambar Tangan) */
-    /* Warna Solid, Garis Tepi Tebal, Garis Putus-putus, dan Bayangan Kasar (Hard Drop Shadow) */
-    body.nuance-cool header.bg-\\[\\#0f172a\\], body.nuance-cool aside .bg-\\[\\#0f172a\\] { background-color: #f8fafc !important; border-bottom: 2px solid #0f172a !important; }
-    body.nuance-cool header.bg-\\[\\#0f172a\\] * { color: #0f172a !important; }
-    body.nuance-cool div.bg-\\[\\#1e293b\\] { background-color: #f1f5f9 !important; border-bottom: 2px solid #0f172a !important; }
-    body.nuance-cool div.bg-\\[\\#1e293b\\] div { color: #0f172a !important; border-right: 2px dashed #0f172a !important; font-weight: 900 !important; }
-    body.nuance-cool .bg-slate-800 { background-color: #38bdf8 !important; color: #0f172a !important; border: 2px solid #0f172a !important; box-shadow: 3px 3px 0px #0f172a !important; }
-    
-    /* Penyesuaian Nuansa COOL saat Mode Gelap aktif agar kontras tetap bagus */
-    body.base-dark.nuance-cool header.bg-\\[\\#0f172a\\], body.base-dark.nuance-cool aside .bg-\\[\\#0f172a\\] { background-color: #0f172a !important; border-bottom: 2px solid #38bdf8 !important; }
-    body.base-dark.nuance-cool header.bg-\\[\\#0f172a\\] * { color: #38bdf8 !important; }
-    body.base-dark.nuance-cool div.bg-\\[\\#1e293b\\] { background-color: #1e293b !important; border-bottom: 2px solid #38bdf8 !important; }
-    body.base-dark.nuance-cool div.bg-\\[\\#1e293b\\] div { color: #f8fafc !important; border-right: 2px dashed #38bdf8 !important; }
-    body.base-dark.nuance-cool .bg-slate-800 { background-color: #38bdf8 !important; color: #0f172a !important; border: 2px solid #0ea5e9 !important; box-shadow: 3px 3px 0px #0ea5e9 !important; }
 `;
 document.head.appendChild(style);
 
@@ -101,7 +93,7 @@ function initModernLayout(pageMeta) {
     // BACA 3 SETTING TEMA DARI LOCAL STORAGE
     const currentShape = localStorage.getItem('app_shape') || 'rounded'; // rounded, sharp
     const currentBg = localStorage.getItem('app_bg') || 'light';         // light, dark
-    const currentNuance = localStorage.getItem('app_nuance') || 'gelap'; // gelap, biru, abu, light, color, cool
+    const currentNuance = localStorage.getItem('app_nuance') || 'gelap'; // gelap, biru, abu, light, color
 
     let tabs = JSON.parse(localStorage.getItem('wms_tabs')) || [];
     if(!tabs.find(t => t.id === 'dashboard')) tabs.unshift({id: 'dashboard', title: 'DASHBOARD', url: 'menu.html'});
@@ -111,7 +103,7 @@ function initModernLayout(pageMeta) {
     document.body.innerHTML = ''; 
 
     const layoutWrapper = document.createElement('div');
-    // PERBAIKAN DARK MODE: Latar belakang berubah secara fisik dari class Tailwind
+    // Dark Mode mengubah latar belakang pembungkus utama
     layoutWrapper.className = currentBg === 'dark' ? 'flex h-screen bg-slate-900 overflow-hidden font-sans' : 'flex h-screen bg-slate-50 overflow-hidden font-sans';
 
     // SIDEBAR 
@@ -178,7 +170,6 @@ function initModernLayout(pageMeta) {
 
     rightArea.innerHTML = headerHTML;
     let mainContent = document.createElement('main');
-    // PERBAIKAN DARK MODE: Latar belakang berubah secara fisik dari class Tailwind
     mainContent.className = currentBg === 'dark' ? 'flex-1 overflow-x-hidden overflow-y-auto bg-slate-900 p-4 md:p-6 pb-20' : 'flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 md:p-6 pb-20';
     originalNodes.forEach(node => mainContent.appendChild(node));
     rightArea.appendChild(mainContent);
@@ -223,8 +214,7 @@ function initModernLayout(pageMeta) {
                         <button onclick="setTheme('app_nuance', 'biru')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'biru' ? 'bg-blue-700 text-white border-blue-800' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Biru Corporate</button>
                         <button onclick="setTheme('app_nuance', 'abu')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'abu' ? 'bg-gray-500 text-white border-gray-600' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Abu-abu</button>
                         <button onclick="setTheme('app_nuance', 'light')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'light' ? 'bg-white text-slate-800 border-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Putih (Light)</button>
-                        <button onclick="setTheme('app_nuance', 'color')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'color' ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-none' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Color (Gradient)</button>
-                        <button onclick="setTheme('app_nuance', 'cool')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'cool' ? 'bg-sky-400 text-slate-900 border-slate-900 shadow-[2px_2px_0px_#0f172a]' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Cool (Vector Art)</button>
+                        <button onclick="setTheme('app_nuance', 'color')" class="col-span-2 py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'color' ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-none' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Color (Gradient)</button>
                     </div>
                 </div>
                 
@@ -235,7 +225,7 @@ function initModernLayout(pageMeta) {
     layoutWrapper.insertAdjacentHTML('beforeend', modalsHTML);
     document.body.appendChild(layoutWrapper);
     
-    // MENERAPKAN CLASS KE BODY (SANGAT PENTING: REVISI DARK MODE)
+    // MENERAPKAN CLASS KE BODY (SANGAT PENTING)
     if(currentBg === 'dark') document.body.classList.add('base-dark'); 
     if(currentShape === 'sharp') document.body.classList.add('shape-sharp');
     document.body.classList.add(`nuance-${currentNuance}`);
