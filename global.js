@@ -24,183 +24,74 @@ const APP_MENUS = [
     { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' }
 ];
 
-// ==========================================
-// SISTEM CSS TEMA MODULAR (SHARP, DARK, NUANCE)
-// ==========================================
+// INJEKSI CSS STANDAR & SISTEM 3 TEMA MODULAR (REVISI DARK MODE & COOL)
 const style = document.createElement('style');
 style.innerHTML = `
-    /* CSS Standar Utilitas */
     .hide-scrollbar::-webkit-scrollbar { display: none; } 
     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 0.05em; white-space: nowrap; }
     
-    /* ----------------------------------------------------
-       1. ATURAN BENTUK KOMPONEN UI (Shape)
-       ---------------------------------------------------- */
+    /* 1. ATURAN BENTUK KOMPONEN UI */
     body.shape-sharp * { border-radius: 0px !important; }
     
-    /* ----------------------------------------------------
-       2. TRUE DARK MODE OVERRIDES (Mode Malam Gemini)
-       ---------------------------------------------------- */
-    body.base-dark, 
-    body.base-dark div.bg-slate-50, 
-    body.base-dark main { background-color: #0b1120 !important; color: #f1f5f9 !important; } /* Deep Dark Bg */
+    /* ====================================================
+       2. TRUE DARK MODE (Override Semua Background & Text)
+       ==================================================== */
+    body.base-dark { background-color: #0f172a !important; color: #f8fafc !important; }
+    body.base-dark .bg-slate-50, body.base-dark main, body.base-dark .bg-slate-100 { background-color: #0f172a !important; }
+    body.base-dark .bg-white, body.base-dark aside { background-color: #1e293b !important; border-color: #334155 !important; color: #f8fafc !important; }
     
-    body.base-dark .text-slate-800, body.base-dark .text-slate-700 { color: #f1f5f9 !important; } /* Teks Utama Putih */
-    body.base-dark .text-slate-600, body.base-dark .text-slate-500, body.base-dark .text-slate-400 { color: #cbd5e1 !important; } /* Teks Sekunder Abu Terang */
+    /* Paksa teks gelap menjadi terang */
+    body.base-dark .text-slate-800, body.base-dark .text-slate-700, body.base-dark .text-slate-900 { color: #f8fafc !important; }
+    body.base-dark .text-slate-600, body.base-dark .text-slate-500 { color: #cbd5e1 !important; }
     
-    /* Ubah Kartu Putih & Sidebar menjadi Abu Gelap */
-    body.base-dark .bg-white, body.base-dark aside { background-color: #111827 !important; border-color: #1f2937 !important; color: #f1f5f9 !important; }
+    /* Override Border & Elemen Form */
+    body.base-dark .border-slate-200, body.base-dark .border-slate-300 { border-color: #334155 !important; }
+    body.base-dark input, body.base-dark select, body.base-dark table { background-color: #0f172a !important; color: #f8fafc !important; border-color: #334155 !important; }
+    body.base-dark tr.hover\\:bg-slate-50:hover { background-color: #334155 !important; }
+    body.base-dark thead th.hdr-std { background-color: #334155 !important; border-color: #475569 !important; }
+
+    /* ====================================================
+       3. ATURAN NUANSA WARNA (Header, Sidebar Atas, Tab) 
+       ==================================================== */
     
-    /* Input & Select di Mode Gelap */
-    body.base-dark input, body.base-dark select { background-color: #1f2937 !important; border-color: #374151 !important; color: #ffffff !important; }
-    body.base-dark .shadow-sm, body.base-dark .shadow-md, body.base-dark .shadow-xl, body.base-dark .shadow-2xl { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3) !important; }
+    /* Nuansa Biru */
+    body.nuance-biru header.bg-\\[\\#0f172a\\], body.nuance-biru aside .bg-\\[\\#0f172a\\] { background-color: #1e40af !important; border-color: #1e3a8a !important; }
+    body.nuance-biru div.bg-\\[\\#1e293b\\] { background-color: #1e3a8a !important; }
+    body.nuance-biru .bg-slate-800 { background-color: #2563eb !important; border-color: #1d4ed8 !important; }
     
-    /* ----------------------------------------------------
-       3. ATURAN NUANSA WARNA HEADER (Modular)
-       ---------------------------------------------------- */
+    /* Nuansa Abu-Abu */
+    body.nuance-abu header.bg-\\[\\#0f172a\\], body.nuance-abu aside .bg-\\[\\#0f172a\\] { background-color: #4b5563 !important; border-color: #374151 !important; }
+    body.nuance-abu div.bg-\\[\\#1e293b\\] { background-color: #374151 !important; }
+    body.nuance-abu .bg-slate-800 { background-color: #6b7280 !important; border-color: #4b5563 !important; }
     
-    /* --- Nuansa Biru Corporate --- */
-    body.nuance-biru header.bg-\\[\\#0f172a\\], body.nuance-biru aside div.bg-\\[\\#0f172a\\] { background-color: #1e40af !important; border-color: #1e3a8a !important; }
-    body.nuance-biru div.bg-\\[\\#1e293b\\] { background-color: #1e3a8a !important; border-bottom-color: #1e3a8a !important; }
-    body.nuance-biru .bg-slate-800 { background-color: #2563eb !important; border-color: #1d4ed8 !important; text-white !important; }
-    
-    /* --- REVISI: Nuansa COOL (Watercolor Artistic Gradient) --- */
-    /* Gradient Complex Cair: Teal -> Indigo -> Pink Magenta (Sense Buatan Tangan) */
-    body.nuance-cool header.bg-\\[\\#0f172a\\], body.nuance-cool aside div.bg-\\[\\#0f172a\\] { background: linear-gradient(135deg, #14b8a6 0%, #4f46e5 50%, #ec4899 100%) !important; border: none !important; }
-    body.nuance-cool div.bg-\\[\\#1e293b\\] { background-color: #4338ca !important; border-bottom: none !important; } /* Tab Bar Indigo Pekat */
-    body.nuance-cool .bg-slate-800 { background-color: #d946ef !important; border-color: #c026d3 !important; text-white !important; } /* Menu Aktif Pink Terang */
-    
-    /* --- Nuansa Light (Putih Bersih) --- */
-    body.nuance-light header.bg-\\[\\#0f172a\\], body.nuance-light aside div.bg-\\[\\#0f172a\\] { background-color: #ffffff !important; border-color: #e2e8f0 !important; }
-    body.nuance-light header.bg-\\[\\#0f172a\\] * { color: #0f172a !important; } /* Teks Header jadi gelap */
+    /* Nuansa Light (Putih Bersih) */
+    body.nuance-light header.bg-\\[\\#0f172a\\], body.nuance-light aside .bg-\\[\\#0f172a\\] { background-color: #ffffff !important; border-color: #e2e8f0 !important; }
+    body.nuance-light header.bg-\\[\\#0f172a\\] * { color: #0f172a !important; }
     body.nuance-light div.bg-\\[\\#1e293b\\] { background-color: #f1f5f9 !important; border-bottom: 1px solid #cbd5e1 !important; }
     body.nuance-light div.bg-\\[\\#1e293b\\] div { color: #475569 !important; border-right: 1px solid #cbd5e1 !important; }
     body.nuance-light div.bg-\\[\\#1e293b\\] div.bg-slate-600 { background-color: #e2e8f0 !important; color: #0f172a !important; border-bottom: 2px solid #3b82f6 !important; }
-    body.nuance-light .bg-slate-800 { background-color: #e2e8f0 !important; color: #0f172a !important; border-color: #cbd5e1 !important; }
+    body.nuance-light .bg-slate-800 { background-color: #e2e8f0 !important; color: #0f172a !important; }
     
-    /* --- Nuansa Color (Gradient Energik Modern) ---Siaap, saya mengerti sepenuhnya kekecewaan Anda! Permintaan Anda sangat logis.
-
-1.  **Dark Mode Masalah:** Kode sebelumnya hanya mengubah warna dasar *body*, tapi tidak menyentuh warna teks aplikasi dan *background* kartu-kartu konten, sehingga hasilnya berantakan (teks hitam di atas *background* gelap).
-2.  **Mode "Cool" (Watercolor Artistic):** Anda ingin nuansa *gradient* yang artistik, cair, kaya warna, namun tetap elegan dan profesional, memberikan kesan artistik seperti lukisan cat air digital.
-
-Saya telah merombak total sistem CSS TemaModular Anda untuk menangani hal ini. Saya menggunakan teknik *strong CSS Override* berbasis selektor kelas Tailwind (misalnya, `.bg-slate-50`, `.bg-white`, `.text-slate-800`) untuk memastikan pengaturan tema di `global.js` memaksa perubahan gaya tanpa merusak kerangka HTML Anda.
-
-1.  **TRUE DARK MODE (Night):** Saya membuatkan sistem *CSS Override* yang kuat (`body.base-dark`). Jika Mode Gelap aktif, sistem akan memaksa seluruh *background* konten aplikasi menjadi Gelap Pekat (ala Gemini/Slack Dark), mengubah kartu putih menjadi abu gelap, dan membalik warna teks menjadi putih pekat/abu terang agar **mudah dibaca**.
-2.  **NUANSA "COOL" (Watercolor Artistic Gradient):** Saya meracik *Complex Gradient* (perpaduan Teal, Indigo, dan Pink Magenta) yang terasa artistik, cair, dan kaya warna, diaplikasikan pada *header* dan bagian atas *sidebar*.
-
-Silakan **Timpa Total (Replace All)** isi file `global.js` Anda dengan kode mutakhir di bawah ini. Kode ini tetap menjaga keamanan *Supabase credentials* Anda dan struktur menu yang sudah Anda buat.
-
-```javascript
-// ==========================================
-// KREDENSIAL SUPABASE (JANGAN UBAH INI)
-// ==========================================
-const SUPABASE_URL = '[https://mjpqzftwbyrbvbvmarol.supabase.co](https://mjpqzftwbyrbvbvmarol.supabase.co)';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// ==========================================
-// 10 MENU LENGKAP WMS
-// ==========================================
-const APP_MENUS = [
-    { id: 'dashboard', title: 'Dashboard Utama', icon: 'layout-dashboard', url: 'menu.html' },
-    { isDivider: true, title: 'INBOUND (MASUK)' },
-    { id: 'langsir', title: 'Langsir Gudang', icon: 'log-in', url: 'langsir.html' },
-    { id: 'riwayat_langsir', title: 'Riwayat Langsir', icon: 'history', url: 'riwayat_langsir.html' },
-    { id: 'stbj', title: 'Scan STBJ', icon: 'shield-check', url: 'stbj.html' },
-    { id: 'hasil_stbj', title: 'Hasil STBJ', icon: 'clipboard-list', url: 'hasil_stbj.html' },
-    { isDivider: true, title: 'INVENTORY & AUDIT' },
-    { id: 'kartu_stok', title: 'Kartu Stok & Mutasi', icon: 'layers', url: 'kartu_stok.html' },
-    { id: 'riwayat_mutasi', title: 'Riwayat Mutasi', icon: 'arrow-right-left', url: 'riwayat_mutasi.html' },
-    { id: 'opname', title: 'Stock Opname', icon: 'clipboard-check', url: 'opname.html' },
-    { isDivider: true, title: 'OUTBOUND (KELUAR)' },
-    { id: 'keluar', title: 'Kirim / Keluar', icon: 'truck', url: 'keluar.html' },
-    { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' }
-];
-
-// ==========================================
-// SISTEM CSS TEMA MODULAR (SHARP, DARK, NUANCE)
-// ==========================================
-const style = document.createElement('style');
-style.innerHTML = `
-    /* CSS Standar Utilitas */
-    .hide-scrollbar::-webkit-scrollbar { display: none; } 
-    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 0.05em; white-space: nowrap; }
-    
-    /* ----------------------------------------------------
-       1. ATURAN BENTUK KOMPONEN UI (Shape)
-       ---------------------------------------------------- */
-    body.shape-sharp * { border-radius: 0px !important; }
-    
-    /* ----------------------------------------------------
-       2. TRUE DARK MODE OVERRIDES (Mode Malam Gemini)
-       ---------------------------------------------------- */
-    /* Memaksa Background Body Utama & Container Slate-50 menjadi Gelap Pekat */
-    body.base-dark, 
-    body.base-dark div.bg-slate-50, 
-    body.base-dark main[class*="bg-slate-50"] { background-color: #0b1120 !important; color: #f1f5f9 !important; }
-    
-    /* Membalikkan Warna Teks Slate Pekat menjadi Putih/Abu Terang */
-    body.base-dark .text-slate-800, body.base-dark .text-slate-700 { color: #f1f5f9 !important; }
-    body.base-dark .text-slate-600, body.base-dark .text-slate-400 { color: #cbd5e1 !important; }
-    
-    /* Ubah Kartu Putih (bg-white) menjadi Abu Gelap pekat agar konten menonjol */
-    body.base-dark .bg-white, body.base-dark aside { background-color: #111827 !important; border-color: #1f2937 !important; color: #f1f5f9 !important; }
-    
-    /* Sidebar Overrides */
-    body.base-dark aside { border-right-color: #1f2937 !important; }
-    
-    /* Shadow yang lebih gelap agar elegan di mode night */
-    body.base-dark .shadow-sm, body.base-dark .shadow-md, body.base-dark .shadow-xl, body.base-dark .shadow-2xl { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3) !important; }
-    
-    /* Menjaga Nuansa Warna Header tetap aktif di Mode Gelap (Kecuali Light) */
-    body.base-dark:not(.nuance-light) header { border-bottom-color: #1f293b !important; }
-    
-    /* Special Handling: Jika Mode Night + Nuansa Light aktif, Header harus tetap Gelap agar teks terbaca */
-    body.base-dark.nuance-light header.bg-\\[\\#0f172a\\] { background-color: #1f2937 !important; border-bottom-color: #374151 !important; }
-    body.base-dark.nuance-light header * { color: #f1f5f9 !important; }
-    body.base-dark.nuance-light div.bg-\\[\\#1e293b\\] { background-color: #111827 !important; border-bottom-color: #374151 !important; }
-    body.base-dark.nuance-light div.bg-\\[\\#1e293b\\] div { color: #f1f5f9 !important; border-right-color: #374151 !important; }
-    body.base-dark.nuance-light div.bg-\\[\\#1e293b\\] div.bg-slate-600 { background-color: #1f2937 !important; }
-
-    /* ----------------------------------------------------
-       3. ATURAN NUANSA WARNA HEADER (Modular)
-       ---------------------------------------------------- */
-    
-    /* --- Nuansa Biru Corporate (Tetap) --- */
-    body.nuance-biru header.bg-\\[\\#0f172a\\], body.nuance-biru aside div.bg-\\[\\#0f172a\\] { background-color: #1e40af !important; border-color: #1e3a8a !important; }
-    body.nuance-biru div.bg-\\[\\#1e293b\\] { background-color: #1e3a8a !important; border-bottom: none !important; }
-    body.nuance-biru .bg-slate-800 { background-color: #2563eb !important; border-color: #1d4ed8 !important; color: #ffffff !important; }
-    
-    /* --- REVISI BARU: Nuansa COOL (Watercolor Artistic Gradient) --- */
-    /* Gradient Complex Cair: Teal -> Indigo -> Pink Magenta (Sense Buatan Tangan/Hand-painted) */
-    body.nuance-cool header.bg-\\[\\#0f172a\\], body.nuance-cool aside div.bg-\\[\\#0f172a\\] { background: linear-gradient(135deg, #14b8a6 0%, #4f46e5 50%, #ec4899 100%) !important; border: none !important; }
-    body.nuance-cool div.bg-\\[\\#1e293b\\] { background-color: #4338ca !important; border-bottom: none !important; } /* Tab Bar Indigo Pekat */
-    body.nuance-cool .bg-slate-800 { background-color: #d946ef !important; border-color: #c026d3 !important; color: #ffffff !important; } /* Menu Aktif Pink Terang */
-    
-    /* --- Nuansa Light (Putih Bersih) --- */
-    body.nuance-light header.bg-\\[\\#0f172a\\], body.nuance-light aside div.bg-\\[\\#0f172a\\] { background-color: #ffffff !important; border-color: #e2e8f0 !important; }
-    body.nuance-light header.bg-\\[\\#0f172a\\] * { color: #0f172a !important; } /* Teks logo/ikon jadi gelap */
-    body.nuance-light div.bg-\\[\\#1e293b\\] { background-color: #f1f5f9 !important; border-bottom: 1px solid #cbd5e1 !important; }
-    body.nuance-light div.bg-\\[\\#1e293b\\] div { color: #475569 !important; border-right: 1px solid #cbd5e1 !important; }
-    body.nuance-light div.bg-\\[\\#1e293b\\] div.bg-slate-600 { background-color: #e2e8f0 !important; color: #0f172a !important; border-bottom: 2px solid #3b82f6 !important; }
-    body.nuance-light .bg-slate-800 { background-color: #e2e8f0 !important; color: #0f172a !important; border-color: #cbd5e1 !important; }
-    
-    /* --- Nuansa Color (Gradient Energik Modern) --- */
-    body.nuance-color header.bg-\\[\\#0f172a\\], body.nuance-color aside div.bg-\\[\\#0f172a\\] { background: linear-gradient(90deg, #6366f1, #a855f7) !important; border: none !important; }
+    /* Nuansa Color (Gradient Energik) */
+    body.nuance-color header.bg-\\[\\#0f172a\\], body.nuance-color aside .bg-\\[\\#0f172a\\] { background: linear-gradient(90deg, #6366f1, #a855f7) !important; border: none !important; }
     body.nuance-color div.bg-\\[\\#1e293b\\] { background-color: #4f46e5 !important; border-bottom: none !important; }
-    body.nuance-color .bg-slate-800 { background-color: #ec4899 !important; color: #ffffff !important; border-color: #db2777 !important; }
+    body.nuance-color .bg-slate-800 { background-color: #ec4899 !important; color: #ffffff !important; border: none !important; }
+
+    /* REVISI: Nuansa COOL (Watercolor / Lukisan Artistik) */
+    body.nuance-cool header.bg-\\[\\#0f172a\\], body.nuance-cool aside .bg-\\[\\#0f172a\\] { background: linear-gradient(135deg, #0ea5e9, #3b82f6, #8b5cf6, #d946ef) !important; background-size: 200% 200%; border: none !important; }
+    body.nuance-cool div.bg-\\[\\#1e293b\\] { background: rgba(59, 130, 246, 0.9) !important; border-bottom: none !important; backdrop-filter: blur(4px); }
+    body.nuance-cool .bg-slate-800 { background: linear-gradient(to right, #ec4899, #f43f5e) !important; color: #ffffff !important; border: none !important; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4) !important;}
 `;
 document.head.appendChild(style);
 
 function initModernLayout(pageMeta) {
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'Staff'};
     
-    // BACA Preferensi 3 Komponen Tema dari Local Storage
+    // BACA 3 SETTING TEMA DARI LOCAL STORAGE
     const currentShape = localStorage.getItem('app_shape') || 'rounded'; // rounded, sharp
     const currentBg = localStorage.getItem('app_bg') || 'light';         // light, dark
-    const currentNuance = localStorage.getItem('app_nuance') || 'gelap'; // gelap, biru, cool, light, color
+    const currentNuance = localStorage.getItem('app_nuance') || 'gelap'; // gelap, biru, abu, light, color, cool
 
     let tabs = JSON.parse(localStorage.getItem('wms_tabs')) || [];
     if(!tabs.find(t => t.id === 'dashboard')) tabs.unshift({id: 'dashboard', title: 'DASHBOARD', url: 'menu.html'});
@@ -210,7 +101,6 @@ function initModernLayout(pageMeta) {
     document.body.innerHTML = ''; 
 
     const layoutWrapper = document.createElement('div');
-    // Default Base (Nanti akan di-override jika Mode Night aktif)
     layoutWrapper.className = 'flex h-screen bg-slate-50 overflow-hidden font-sans';
 
     // SIDEBAR 
@@ -235,7 +125,7 @@ function initModernLayout(pageMeta) {
     });
     sidebarHTML += `</div></aside><div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 z-40 hidden backdrop-blur-sm transition-opacity"></div>`;
 
-    // AREA KANAN (Top Bar + Konten)
+    // AREA KANAN 
     let rightArea = document.createElement('div');
     rightArea.className = 'flex-1 flex flex-col min-w-0 overflow-hidden';
     
@@ -277,7 +167,6 @@ function initModernLayout(pageMeta) {
 
     rightArea.innerHTML = headerHTML;
     let mainContent = document.createElement('main');
-    // Default Base Class
     mainContent.className = 'flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 md:p-6 pb-20';
     originalNodes.forEach(node => mainContent.appendChild(node));
     rightArea.appendChild(mainContent);
@@ -299,74 +188,55 @@ function initModernLayout(pageMeta) {
         
         <div id="modal-tema" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[90] px-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm border border-slate-200 text-slate-800">
-                <h3 class="text-xl font-black mb-4 flex items-center gap-2 border-b border-slate-200 pb-2"><i data-lucide="palette" class="text-blue-600"></i> Kustomisasi Tema WMS</h3>
+                <h3 class="text-xl font-black mb-4 flex items-center gap-2 border-b border-slate-200 pb-2"><i data-lucide="palette" class="text-blue-600"></i> Tema Tampilan</h3>
                 
-                <div class="mb-4">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">1. Bentuk Shape UI</p>
+                <div class="mb-5 space-y-2">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">1. Bentuk Komponen UI</p>
+                    <button onclick="setTheme('app_shape', 'rounded')" class="w-full py-3 font-bold rounded border ${currentShape === 'rounded' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-100 border-slate-300 text-slate-700'} flex justify-between px-4 items-center transition hover:bg-slate-200">Modern (Melengkung) <i data-lucide="circle" class="w-4 h-4"></i></button>
+                    <button onclick="setTheme('app_shape', 'sharp')" class="w-full py-3 font-bold rounded border ${currentShape === 'sharp' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-100 border-slate-300 text-slate-700'} flex justify-between px-4 items-center transition hover:bg-slate-200">Sharp (Kotak Tajam) <i data-lucide="square" class="w-4 h-4"></i></button>
+                </div>
+
+                <div class="mb-5 space-y-2">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">2. Mode Dasar</p>
                     <div class="flex gap-2">
-                        <button onclick="setThemeProperty('app_shape', 'rounded')" class="flex-1 py-2 text-xs font-bold rounded-lg border-2 ${currentShape === 'rounded' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Melengkung</button>
-                        <button onclick="setThemeProperty('app_shape', 'sharp')" class="flex-1 py-2 text-xs font-bold rounded-lg border-2 ${currentShape === 'sharp' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Sharp (Kotak)</button>
+                        <button onclick="setTheme('app_bg', 'light')" class="w-1/2 py-2.5 bg-slate-100 font-bold rounded border ${currentBg === 'light' ? 'border-blue-600 text-blue-700 bg-blue-50' : 'border-slate-300'} hover:bg-slate-200 transition">Terang</button>
+                        <button onclick="setTheme('app_bg', 'dark')" class="w-1/2 py-2.5 bg-slate-800 text-white font-bold rounded border ${currentBg === 'dark' ? 'border-blue-500 bg-slate-900' : 'border-slate-900'} hover:bg-slate-900 transition">Gelap (Night)</button>
                     </div>
                 </div>
 
-                <div class="mb-4">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">2. Mode Dasar (Background)</p>
-                    <div class="flex gap-2">
-                        <button onclick="setThemeProperty('app_bg', 'light')" class="flex-1 py-2 text-xs font-bold rounded-lg border-2 ${currentBg === 'light' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Terang</button>
-                        <button onclick="setThemeProperty('app_bg', 'dark')" class="flex-1 py-2 text-xs font-bold rounded-lg border-2 ${currentBg === 'dark' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Gelap (Night)</button>
-                    </div>
-                </div>
-
-                <div class="mb-6">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">3. Nuansa Warna Header</p>
+                <div class="mb-6 space-y-2">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">3. Nuansa Warna Bar</p>
                     <div class="grid grid-cols-2 gap-2">
-                        <button onclick="setThemeProperty('app_nuance', 'gelap')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'gelap' ? 'bg-slate-800 text-white border-slate-900' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Gelap (Slate)</button>
-                        <button onclick="setThemeProperty('app_nuance', 'biru')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'biru' ? 'bg-blue-700 text-white border-blue-800' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Biru Corp</button>
-                        <button onclick="setThemeProperty('app_nuance', 'cool')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'cool' ? 'bg-gradient-to-r from-teal-400 via-indigo-500 to-pink-500 text-white border-none' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">COOL (Watercolor)</button>
-                        <button onclick="setThemeProperty('app_nuance', 'light')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'light' ? 'bg-white text-slate-800 border-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Putih (Light)</button>
-                        <button onclick="setThemeProperty('app_nuance', 'color')" class="col-span-2 py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'color' ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-none' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Color (Energik)</button>
+                        <button onclick="setTheme('app_nuance', 'gelap')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'gelap' ? 'bg-slate-800 text-white border-slate-900' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Gelap (Slate)</button>
+                        <button onclick="setTheme('app_nuance', 'biru')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'biru' ? 'bg-blue-700 text-white border-blue-800' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Biru Corporate</button>
+                        <button onclick="setTheme('app_nuance', 'abu')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'abu' ? 'bg-gray-500 text-white border-gray-600' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Abu-abu</button>
+                        <button onclick="setTheme('app_nuance', 'light')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'light' ? 'bg-white text-slate-800 border-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Putih (Light)</button>
+                        <button onclick="setTheme('app_nuance', 'color')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'color' ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-none' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Color (Gradient)</button>
+                        <button onclick="setTheme('app_nuance', 'cool')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'cool' ? 'bg-gradient-to-r from-cyan-500 via-indigo-500 to-pink-500 text-white border-none shadow-md' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Cool (Artistic)</button>
                     </div>
                 </div>
                 
-                <button onclick="tutupModal('modal-tema')" class="w-full py-3 bg-slate-200 text-slate-700 font-black rounded-lg hover:bg-slate-300 transition">TUTUP PENGATURAN</button>
+                <button onclick="tutupModal('modal-tema')" class="w-full py-2.5 bg-slate-200 text-slate-700 font-bold rounded hover:bg-slate-300 transition">Tutup Pengaturan</button>
             </div>
         </div>
     `;
     layoutWrapper.insertAdjacentHTML('beforeend', modalsHTML);
     document.body.appendChild(layoutWrapper);
     
-    // MENERAPKAN CLASS TEMA KE BODY SESUAI PILIHAN (INI KUNCI PERBAIKAN)
-    
-    // 1. Terapkan Mode Dasar (Terang/Gelap total)
-    if(currentBg === 'dark') {
-        document.body.classList.add('base-dark');
-        // Override langsung warna text dan background default Tailwind agar tidak perlu reload
-        layoutWrapper.className = 'flex h-screen bg-slate-950 overflow-hidden font-sans';
-        mainContent.className = 'flex-1 overflow-x-hidden overflow-y-auto bg-slate-950 p-4 md:p-6 pb-20';
-    } else {
-        document.body.classList.remove('base-dark');
-    }
-    
-    // 2. Terapkan Bentuk (Shape)
+    // MENERAPKAN CLASS KE BODY (SANGAT PENTING: REVISI DARK MODE)
+    if(currentBg === 'dark') document.body.classList.add('base-dark'); // Gunakan base-dark, bukan bg-slate-900
     if(currentShape === 'sharp') document.body.classList.add('shape-sharp');
-    else document.body.classList.remove('shape-sharp');
-    
-    // 3. Terapkan Nuansa Warna (Satu Nuansa saja yang aktif)
-    // Hapus dulu nuance class yang mungkin menempel
-    document.body.classList.forEach(className => { if(className.startsWith('nuance-')) document.body.classList.remove(className); });
     document.body.classList.add(`nuance-${currentNuance}`);
     
     lucide.createIcons();
 }
 
-// FUNGSI MODULAR UNTUK MENYIMPAN PREFERENSI TEMA
-function setThemeProperty(key, value) {
+// FUNGSI UNTUK MENYIMPAN KOMPONEN TEMA
+function setTheme(key, value) {
     localStorage.setItem(key, value);
-    // Reload halaman diperlukan karena Tailwind Utility Classes menempel keras di HTML String
     window.location.reload();
 }
 
-// Fungsi Standar Layout Toggles (Tetap)
 function toggleSidebar() { document.getElementById('app-sidebar').classList.toggle('-translate-x-full'); document.getElementById('sidebar-overlay').classList.toggle('hidden'); }
 function toggleProfileMenu() { document.getElementById('profile-dropdown').classList.toggle('hidden'); }
 function bukaModal(id) { document.getElementById(id).classList.remove('hidden'); toggleProfileMenu(); }
@@ -377,5 +247,4 @@ function closeGlobalTab(e, idToRemove, currentId) {
     tabs = tabs.filter(t => t.id !== idToRemove); localStorage.setItem('wms_tabs', JSON.stringify(tabs));
     if(currentId === idToRemove) window.location.href = tabs[tabs.length-1].url; else window.location.reload(); 
 }
-// Tutup dropdown jika klik di luar
 document.addEventListener('click', (e) => { const dropdown = document.getElementById('profile-dropdown'); if (dropdown && !e.target.closest('.relative')) dropdown.classList.add('hidden'); });
