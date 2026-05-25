@@ -24,17 +24,38 @@ const APP_MENUS = [
     { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' }
 ];
 
-// INJEKSI CSS STANDAR TABEL GELAP (Agar semua halaman otomatis rapi)
+// INJEKSI CSS STANDAR TABEL GELAP & TEMA MASERP
 const style = document.createElement('style');
 style.innerHTML = `
     .hide-scrollbar::-webkit-scrollbar { display: none; } 
     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 0.05em; white-space: nowrap; }
+    
+    /* ----------------------------------------------------
+       ATURAN OVERRIDE TEMA MASERP (SHARP & BIRU ELEGAN) 
+       ---------------------------------------------------- */
+    body.theme-maserp * { border-radius: 0px !important; }
+    
+    /* Ubah Header dari Gelap ke Biru Elegan */
+    body.theme-maserp header.bg-\\[\\#0f172a\\] { background-color: #1e40af !important; border-bottom: 1px solid #1e3a8a !important; }
+    body.theme-maserp div.bg-\\[\\#1e293b\\] { background-color: #1e3a8a !important; border-bottom: 1px solid #1e3a8a !important; } /* Barisan Tab */
+    
+    /* Ubah Atas Sidebar dari Gelap ke Putih Bersih */
+    body.theme-maserp aside div.bg-\\[\\#0f172a\\] { background-color: #ffffff !important; border-bottom: 2px solid #e2e8f0 !important; }
+    body.theme-maserp aside div.bg-\\[\\#0f172a\\] .text-white { color: #0f172a !important; } /* Teks logo jadi gelap */
+    
+    /* Highlight tombol dan menu aktif jadi Biru Terang (Bukan slate/abu gelap lagi) */
+    body.theme-maserp .bg-slate-800 { background-color: #2563eb !important; border-color: #1d4ed8 !important; }
+    body.theme-maserp .hover\\:bg-slate-800:hover { background-color: #1d4ed8 !important; }
 `;
 document.head.appendChild(style);
 
 function initModernLayout(pageMeta) {
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'Staff'};
+    
+    // BACA PENGATURAN TEMA DARI LOCAL STORAGE
+    const currentStyle = localStorage.getItem('app_theme_style') || 'rounded';
+
     let tabs = JSON.parse(localStorage.getItem('wms_tabs')) || [];
     if(!tabs.find(t => t.id === 'dashboard')) tabs.unshift({id: 'dashboard', title: 'DASHBOARD', url: 'menu.html'});
     if(pageMeta && !tabs.find(t => t.id === pageMeta.id)) { tabs.push(pageMeta); localStorage.setItem('wms_tabs', JSON.stringify(tabs)); }
@@ -88,11 +109,6 @@ function initModernLayout(pageMeta) {
                 </div>
                 
                 <div class="flex items-center gap-3">
-                    <div class="hidden md:flex items-center bg-slate-800 rounded-full px-3 py-1.5 border border-slate-700">
-                        <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
-                        <input type="text" placeholder="Pencarian Global..." class="bg-transparent border-none outline-none text-xs ml-2 w-40 text-white font-bold placeholder-slate-400">
-                    </div>
-                    
                     <div class="relative">
                         <button onclick="toggleProfileMenu()" class="flex items-center gap-2 p-1 hover:bg-slate-800 rounded-full transition pr-3 cursor-pointer">
                             <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black shadow-inner border border-blue-500">${user.username.charAt(0).toUpperCase()}</div>
@@ -132,20 +148,41 @@ function initModernLayout(pageMeta) {
                 </div>
             </div>
         </div>
+        
         <div id="modal-tema" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[90] px-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm border border-slate-200 text-slate-800">
                 <h3 class="text-xl font-black mb-4 flex items-center gap-2"><i data-lucide="palette" class="text-slate-600"></i> Tema Tampilan</h3>
-                <button onclick="localStorage.setItem('app_bg', 'light'); window.location.reload();" class="w-full py-3 bg-slate-100 font-bold rounded border border-slate-300 mb-2">Tema Terang (Standar)</button>
-                <button onclick="localStorage.setItem('app_bg', 'dark'); window.location.reload();" class="w-full py-3 bg-slate-800 text-white font-bold rounded border border-slate-900 mb-4">Tema Gelap (Malam)</button>
-                <button onclick="tutupModal('modal-tema')" class="w-full py-2.5 bg-slate-200 text-slate-700 font-bold rounded hover:bg-slate-300">Tutup</button>
+                
+                <div class="mb-5 space-y-2">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pilih Bentuk Komponen UI</p>
+                    <button onclick="setStyle('rounded')" class="w-full py-3 font-bold rounded border ${currentStyle === 'rounded' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-100 border-slate-300 text-slate-700'} flex justify-between px-4 items-center transition hover:bg-slate-200">Modern (Melengkung) <i data-lucide="circle" class="w-4 h-4"></i></button>
+                    <button onclick="setStyle('maserp')" class="w-full py-3 font-bold rounded border ${currentStyle === 'maserp' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-100 border-slate-300 text-slate-700'} flex justify-between px-4 items-center transition hover:bg-slate-200">MASERP (Kotak Tajam) <i data-lucide="square" class="w-4 h-4"></i></button>
+                </div>
+
+                <div class="mb-6 space-y-2">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pilih Mode Dasar</p>
+                    <button onclick="localStorage.setItem('app_bg', 'light'); window.location.reload();" class="w-full py-3 bg-slate-100 font-bold rounded border border-slate-300 mb-2 hover:bg-slate-200 transition">Tema Terang (Standar)</button>
+                    <button onclick="localStorage.setItem('app_bg', 'dark'); window.location.reload();" class="w-full py-3 bg-slate-800 text-white font-bold rounded border border-slate-900 mb-4 hover:bg-slate-900 transition">Tema Gelap (Malam)</button>
+                </div>
+                
+                <button onclick="tutupModal('modal-tema')" class="w-full py-2.5 bg-slate-200 text-slate-700 font-bold rounded hover:bg-slate-300 transition">Tutup</button>
             </div>
         </div>
     `;
     layoutWrapper.insertAdjacentHTML('beforeend', modalsHTML);
     document.body.appendChild(layoutWrapper);
     
+    // MENERAPKAN CLASS KE BODY (SANGAT PENTING)
     if(localStorage.getItem('app_bg') === 'dark') document.body.classList.add('bg-slate-900', 'text-white');
+    if(currentStyle === 'maserp') document.body.classList.add('theme-maserp');
+    
     lucide.createIcons();
+}
+
+// FUNGSI UNTUK MENYIMPAN TEMA YANG DIPILIH
+function setStyle(style) {
+    localStorage.setItem('app_theme_style', style);
+    window.location.reload();
 }
 
 function toggleSidebar() { document.getElementById('app-sidebar').classList.toggle('-translate-x-full'); document.getElementById('sidebar-overlay').classList.toggle('hidden'); }
