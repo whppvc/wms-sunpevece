@@ -7,18 +7,24 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .table-container { scrollbar-width: thin; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; white-space: nowrap; }
+    </style>
 </head>
 <body class="font-sans">
     <div class="w-full">
         
         <div class="flex border-b border-slate-200 mb-4 bg-white px-2 rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
-            <button onclick="setMode('qrcode')" id="tab-mode-qr" class="px-5 py-3.5 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2"><i data-lucide="qr-code"></i> MODE QRCODE</button>
-            <button onclick="setMode('item')" id="tab-mode-item" class="px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800"><i data-lucide="boxes"></i> MODE NAMA ITEM & QTY</button>
-            <button onclick="setMode('jasper')" id="tab-mode-jasper" class="px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800"><i data-lucide="file-text"></i> MODE NAMA JASPER & QTY</button>
+            <button onclick="setMode('qrcode')" id="tab-mode-qrcode" class="px-5 py-3.5 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition"><i data-lucide="qr-code"></i> MODE QRCODE</button>
+            <button onclick="setMode('item')" id="tab-mode-item" class="px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="boxes"></i> MODE NAMA ITEM & QTY</button>
+            <button onclick="setMode('jasper')" id="tab-mode-jasper" class="px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="file-text"></i> MODE NAMA JASPER & QTY</button>
+            <button onclick="setMode('katalog')" id="tab-mode-katalog" class="px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition ml-auto border-l border-slate-200"><i data-lucide="database"></i> KATALOG ITEM</button>
         </div>
 
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4 space-y-3">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3" id="panel-atas">
                 <div class="flex items-center gap-3 w-full sm:w-auto">
                     <label id="lbl-pilih-tabel" class="text-xs font-black text-slate-600 uppercase">Tampilkan Data:</label>
                     <select id="select-tabel" onchange="switchTable(this.value)" class="p-2 border-2 border-slate-200 rounded-lg font-bold text-xs text-slate-800 outline-none focus:border-slate-800 bg-slate-50 cursor-pointer">
@@ -27,7 +33,7 @@
                     </select>
                 </div>
                 <div class="flex gap-2 w-full sm:w-auto justify-end">
-                    <button onclick="togglePanel('panel-filter')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded flex items-center gap-1 transition"><i data-lucide="filter" class="w-3.5 h-3.5"></i> FILTER</button>
+                    <button onclick="togglePanel('panel-filter')" id="btn-toggle-filter" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded flex items-center gap-1 transition"><i data-lucide="filter" class="w-3.5 h-3.5"></i> FILTER</button>
                     <button onclick="togglePanel('panel-kolom')" id="btn-toggle-kolom" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded flex items-center gap-1 transition"><i data-lucide="eye" class="w-3.5 h-3.5"></i> KOLOM</button>
                 </div>
             </div>
@@ -48,10 +54,12 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2 pt-2">
-                <button onclick="aksiMassal('salin')" class="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="copy" class="w-4 h-4"></i> SALIN CEL</button>
-                <button onclick="aksiMassal('hapus')" class="flex-1 sm:flex-none px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="trash-2" class="w-4 h-4"></i> HAPUS</button>
+                <button onclick="aksiMassal('salin')" id="btn-massal-salin" class="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="copy" class="w-4 h-4"></i> SALIN CEL</button>
+                <button onclick="aksiMassal('hapus')" id="btn-massal-hapus" class="flex-1 sm:flex-none px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="trash-2" class="w-4 h-4"></i> HAPUS</button>
                 <button onclick="aksiMassal('hold')" id="btn-massal-hold" class="flex-1 sm:flex-none px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="pause-circle" class="w-4 h-4"></i> PINDAHKAN (HOLD/UNHOLD)</button>
-                <button onclick="aksiMassal('xlsx')" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="download" class="w-4 h-4"></i> DOWNLOAD XLS</button>
+                <button onclick="aksiMassal('xlsx')" id="btn-massal-xls" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="download" class="w-4 h-4"></i> DOWNLOAD XLS</button>
+                
+                <button onclick="bukaModalKatalog()" id="btn-tambah-katalog" class="hidden flex-1 sm:flex-none px-5 py-2 bg-blue-700 hover:bg-blue-800 text-white font-black text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-md border-b-4 border-blue-900 ml-auto"><i data-lucide="plus-circle" class="w-4 h-4"></i> TAMBAH KATALOG</button>
             </div>
         </div>
 
@@ -65,13 +73,47 @@
         </div>
     </div>
 
+    <div id="modal-katalog" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[90] px-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
+            <h3 class="text-xl font-black mb-6 flex items-center gap-2 text-slate-800"><i data-lucide="database" class="text-blue-600"></i> Form Katalog Jasper</h3>
+            <input type="hidden" id="kat-id">
+            
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-[11px] font-black uppercase tracking-wide mb-1 text-slate-500">Nama Item Master (Acuan Barcode)</label>
+                    <input type="text" id="kat-nama" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-bold uppercase text-slate-800" placeholder="Cth: BATA RINGAN">
+                </div>
+                <div class="flex gap-3">
+                    <div class="w-1/2">
+                        <label class="block text-[11px] font-black uppercase tracking-wide mb-1 text-slate-500">Panjang</label>
+                        <input type="text" id="kat-pjg" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-bold uppercase text-slate-800 text-center" placeholder="Cth: 4M">
+                    </div>
+                    <div class="w-1/2">
+                        <label class="block text-[11px] font-black uppercase tracking-wide mb-1 text-slate-500">Grade</label>
+                        <input type="text" id="kat-grade" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-bold uppercase text-slate-800 text-center" placeholder="Cth: BAGUS">
+                    </div>
+                </div>
+                <div class="pt-3 border-t border-slate-100">
+                    <label class="block text-xs font-black uppercase tracking-wide mb-1 text-blue-700">Hasil / Nama Output Jasper</label>
+                    <input type="text" id="kat-jasper" class="w-full p-3 border-2 border-blue-200 bg-blue-50 rounded-lg outline-none focus:border-blue-700 font-black uppercase text-blue-900" placeholder="Ketik nama output Jasper di sini...">
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('modal-katalog').classList.add('hidden')" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition cursor-pointer">Batal</button>
+                <button type="button" onclick="simpanKatalog()" id="btn-simpan-kat" class="w-2/3 py-3 bg-blue-700 text-white font-black rounded-xl hover:bg-blue-800 shadow-md flex justify-center items-center gap-2 transition active:scale-95 border-b-4 border-blue-900 cursor-pointer"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
+            </div>
+        </div>
+    </div>
+
     <script src="global.js"></script>
     <script>
-        let modeSekarang = 'qrcode'; 
+        let modeSekarang = 'qrcode'; // qrcode, item, jasper, katalog
         let tabelSekarang = 'hasil_stbj'; 
         let rawDataRaw = [];
         let kamusData = [];
         let jasperData = [];
+        const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
         document.addEventListener('DOMContentLoaded', () => {
             initModernLayout({ id: 'hasil_stbj', title: 'HASIL STBJ', url: 'hasil_stbj.html' });
@@ -84,19 +126,18 @@
         function togglePanel(id) { document.getElementById(id).classList.toggle('hidden'); }
 
         async function loadKamusDanJasper() {
-            const { data: d2 } = await db.from('master_2').select('*');
-            if(d2) kamusData = d2;
+            const { data: d2 } = await db.from('master_2').select('*'); if(d2) kamusData = d2;
             try {
-                const { data: dj } = await db.from('nama_jasper').select('*');
+                const { data: dj } = await db.from('nama_jasper').select('*').order('created_at', {ascending: false});
                 if(dj) jasperData = dj;
             } catch(e) { console.log("Tabel nama_jasper belum siap."); }
         }
 
         async function muatDataDariSupabase() {
+            if(modeSekarang === 'katalog') { renderHeaderDanTabel(); return; } // Skip load table STBJ jika mode katalog
             const tbody = document.getElementById('tbody-stbj');
             tbody.innerHTML = `<tr><td colspan="20" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menarik Data ${tabelSekarang}...</p></td></tr>`;
             lucide.createIcons();
-
             try {
                 const { data, error } = await db.from(tabelSekarang).select('*').order('created_at', {ascending: false});
                 if(error) throw error;
@@ -105,7 +146,6 @@
             } catch(err) { tbody.innerHTML = `<tr><td colspan="20" class="p-10 text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; }
         }
 
-        // FUNGSI TRANSLATE LENGKAP + JASPER
         function translateBarcode(barcode) {
             let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-', jasper: '-' };
             const parts = barcode.split('/'); if (parts.length < 1) return td;
@@ -118,61 +158,148 @@
             
             const p2 = parts[2];
             if (p2 && p2.length >= 4) {
-                let digitPjg = (p2.length === 5) ? 2 : 1; let rawPjg = p2.substring(0, digitPjg);
-                td.panjang = (digitPjg === 1) ? rawPjg + "M" : rawPjg[0] + "." + rawPjg[1] + "M"; 
-                let rawGrade = p2.substring(digitPjg, digitPjg + 1); td.grade = rawGrade === '1' ? 'BAGUS' : (rawGrade === '2' ? 'A' : rawGrade);
-                let rawDus = p2.substring(p2.length - 2); let cariDus = kamusData.find(m => m.kode_dus === rawDus); td.dus = cariDus && cariDus.dus ? cariDus.dus : rawDus;
+                let dP = (p2.length === 5) ? 2 : 1; let rP = p2.substring(0, dP); td.panjang = (dP === 1) ? rP + "M" : rP[0] + "." + rP[1] + "M"; 
+                let rG = p2.substring(dP, dP + 1); td.grade = rG === '1' ? 'BAGUS' : (rG === '2' ? 'A' : rG);
+                let rD = p2.substring(p2.length - 2); let cD = kamusData.find(m => m.kode_dus === rD); td.dus = cD && cD.dus ? cD.dus : rD;
             }
-            const p3 = parts[3];
-            if (p3 && p3.length >= 5) {
-                const dayOfYear = parseInt(p3.substring(0, 3)); const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
-                const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
-                td.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
-                let sisaString = p3.substring(5); let match = sisaString.match(/(C.*?)(S.*?)(P.*)/);
-                if (match) {
-                    let cariMesin = kamusData.find(m => m.kode_mesin === match[1]); td.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : match[1];
-                    let cariShift = kamusData.find(m => m.kode_shift === match[2]); td.shift = cariShift && cariShift.shift ? cariShift.shift : match[2];
-                    let cariPO = kamusData.find(m => m.kode_po === match[3]); td.po = cariPO && cariPO.po ? cariPO.po : match[3];
+            if (parts[3] && parts[3].length >= 5) {
+                let s = parts[3].substring(5); let m = s.match(/(C.*?)(S.*?)(P.*)/);
+                if (m) {
+                    let cPO = kamusData.find(x => x.kode_po === m[3]); td.po = cPO && cPO.po ? cPO.po : m[3];
                 }
             }
 
-            // LOGIKA JASPER MENGGUNAKAN NAMA ITEM, PANJANG, & GRADE
             if(jasperData.length > 0) {
                 const cJasper = jasperData.find(j => 
-                    (j.nama_item === td.namaItem || j.nama === td.namaItem) && 
-                    (j.panjang === td.panjang || j.pjg === td.panjang) && 
-                    j.grade === td.grade
+                    j.nama_item === td.namaItem && j.panjang === td.panjang && j.grade === td.grade
                 );
-                td.jasper = cJasper ? (cJasper.nama_jasper || cJasper.jasper) : `JAS-${td.namaItem}`;
-            } else {
-                td.jasper = `JAS-${td.namaItem}`;
-            }
+                td.jasper = cJasper ? cJasper.nama_jasper : `JAS-${td.namaItem}`;
+            } else { td.jasper = `JAS-${td.namaItem}`; }
 
             return td;
         }
 
+        // FUNGSI GANTI TABS (TERMASUK KATALOG)
         function setMode(m) {
             modeSekarang = m;
-            document.getElementById('tab-mode-qr').className = m === 'qrcode' ? 'px-5 py-3.5 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2' : 'px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800';
-            document.getElementById('tab-mode-item').className = m === 'item' ? 'px-5 py-3.5 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2' : 'px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800';
-            document.getElementById('tab-mode-jasper').className = m === 'jasper' ? 'px-5 py-3.5 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2' : 'px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800';
+            ['qrcode', 'item', 'jasper', 'katalog'].forEach(tab => {
+                const el = document.getElementById('tab-mode-' + tab);
+                if(m === tab) el.className = 'px-5 py-3.5 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition';
+                else el.className = 'px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
+            });
             
-            document.getElementById('lbl-pilih-tabel').style.display = m === 'qrcode' ? '' : 'none';
-            document.getElementById('select-tabel').style.display = m === 'qrcode' ? '' : 'none';
-            document.getElementById('btn-toggle-kolom').style.display = m === 'qrcode' ? '' : 'none';
-            document.getElementById('panel-kolom').classList.add('hidden');
-            document.getElementById('btn-massal-hold').style.display = m === 'qrcode' ? '' : 'none';
+            const isKatalog = m === 'katalog';
+            const isQr = m === 'qrcode';
 
-            document.querySelectorAll('.dynamic-filter').forEach(el => el.style.display = m === 'qrcode' ? 'none' : '');
-            renderHeaderDanTabel();
+            // Sembunyikan elemen jika katalog
+            document.getElementById('lbl-pilih-tabel').style.display = isQr ? '' : 'none';
+            document.getElementById('select-tabel').style.display = isQr ? '' : 'none';
+            document.getElementById('btn-toggle-kolom').style.display = isQr ? '' : 'none';
+            document.getElementById('panel-kolom').classList.add('hidden');
+            
+            // Mass actions
+            document.getElementById('btn-massal-salin').style.display = isKatalog ? 'none' : '';
+            document.getElementById('btn-massal-hapus').style.display = isKatalog ? 'none' : '';
+            document.getElementById('btn-massal-xls').style.display = isKatalog ? 'none' : '';
+            document.getElementById('btn-massal-hold').style.display = isQr ? '' : 'none';
+
+            // Tombol Khusus Katalog
+            document.getElementById('btn-tambah-katalog').style.display = isKatalog ? '' : 'none';
+            document.querySelectorAll('.dynamic-filter').forEach(el => el.style.display = (isQr || isKatalog) ? 'none' : '');
+            
+            if(isKatalog) renderHeaderDanTabel(); else muatDataDariSupabase();
         }
 
         function switchTable(val) { tabelSekarang = val; muatDataDariSupabase(); }
+
+        // FUNGSI CRUD KATALOG JASPER
+        function bukaModalKatalog(jsonStr) {
+            if(jsonStr) {
+                const d = JSON.parse(jsonStr);
+                document.getElementById('kat-id').value = d.id;
+                document.getElementById('kat-nama').value = d.nama_item || '';
+                document.getElementById('kat-pjg').value = d.panjang || '';
+                document.getElementById('kat-grade').value = d.grade || '';
+                document.getElementById('kat-jasper').value = d.nama_jasper || '';
+            } else {
+                document.getElementById('kat-id').value = ''; document.getElementById('kat-nama').value = '';
+                document.getElementById('kat-pjg').value = ''; document.getElementById('kat-grade').value = '';
+                document.getElementById('kat-jasper').value = '';
+            }
+            document.getElementById('modal-katalog').classList.remove('hidden');
+        }
+
+        async function simpanKatalog() {
+            const id = document.getElementById('kat-id').value;
+            const nama = document.getElementById('kat-nama').value.trim().toUpperCase();
+            const pjg = document.getElementById('kat-pjg').value.trim().toUpperCase();
+            const grade = document.getElementById('kat-grade').value.trim().toUpperCase();
+            const jasper = document.getElementById('kat-jasper').value.trim().toUpperCase();
+            
+            if(!nama || !pjg || !grade || !jasper) return alert("Pastikan semua kolom diisi!");
+            
+            const btn = document.getElementById('btn-simpan-kat'); btn.disabled=true; btn.innerHTML='<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...';
+            const payload = { nama_item: nama, panjang: pjg, grade: grade, nama_jasper: jasper, pic: currentUser.username };
+            
+            let res;
+            if(id) res = await db.from('nama_jasper').update(payload).eq('id', id);
+            else res = await db.from('nama_jasper').insert(payload);
+            
+            if(res.error) alert("Gagal: " + res.error.message);
+            else { alert("Katalog berhasil disimpan!"); document.getElementById('modal-katalog').classList.add('hidden'); await loadKamusDanJasper(); renderHeaderDanTabel(); }
+            
+            btn.disabled=false; btn.innerHTML='<i data-lucide="save" class="w-4 h-4"></i> SIMPAN'; lucide.createIcons();
+        }
+
+        async function hapusKatalog(id) {
+            if(!confirm("Yakin ingin menghapus item katalog ini?")) return;
+            const {error} = await db.from('nama_jasper').delete().eq('id', id);
+            if(error) alert("Gagal Hapus: " + error.message); else { await loadKamusDanJasper(); renderHeaderDanTabel(); }
+        }
 
         function renderHeaderDanTabel() {
             const thead = document.getElementById('thead-stbj');
             const tbody = document.getElementById('tbody-stbj');
 
+            // MODE KATALOG JASPER
+            if(modeSekarang === 'katalog') {
+                thead.innerHTML = `
+                    <tr>
+                        <th class="hdr-std w-12">No</th>
+                        <th class="hdr-std">Nama Item Master</th>
+                        <th class="hdr-std">Panjang</th>
+                        <th class="hdr-std border-r border-slate-500">Grade</th>
+                        <th class="hdr-std bg-slate-900 text-blue-300">NAMA OUTPUT JASPER</th>
+                        <th class="hdr-std border-l border-slate-500">PIC & Waktu Update</th>
+                        <th class="hdr-std w-20">Aksi</th>
+                    </tr>`;
+                
+                if(jasperData.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="p-6 font-bold text-slate-400">Katalog Jasper belum ada / Kosong.</td></tr>'; return; }
+                
+                let h = '';
+                jasperData.forEach((r, i) => {
+                    const tgl = r.created_at ? new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '-';
+                    const safeR = JSON.stringify(r).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+                    h += `
+                        <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-row text-center">
+                            <td class="p-3 font-bold text-slate-400">${i+1}</td>
+                            <td class="p-3 font-bold text-slate-800 text-left">${r.nama_item || '-'}</td>
+                            <td class="p-3 font-bold text-slate-600">${r.panjang || '-'}</td>
+                            <td class="p-3 font-bold text-slate-800 border-r border-slate-200">${r.grade || '-'}</td>
+                            <td class="p-3 font-black text-blue-700 bg-blue-50/50 text-left">${r.nama_jasper || '-'}</td>
+                            <td class="p-2 text-[10px] text-slate-500 border-l border-slate-200"><span class="font-black text-slate-700 uppercase">${r.pic || '-'}</span><br>${tgl}</td>
+                            <td class="p-2">
+                                <div class="flex gap-1 justify-center">
+                                    <button onclick="bukaModalKatalog('${safeR}')" class="p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded cursor-pointer transition"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                                    <button onclick="hapusKatalog('${r.id}')" class="p-2 bg-red-100 text-red-700 hover:bg-red-200 rounded cursor-pointer transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                </div>
+                            </td>
+                        </tr>`;
+                });
+                tbody.innerHTML = h; lucide.createIcons(); jalankanSaring(); return;
+            }
+
+            // MODE QRCODE
             if(modeSekarang === 'qrcode') {
                 thead.innerHTML = `
                     <tr>
@@ -204,26 +331,27 @@
                     h += `
                         <tr class="border-b border-slate-200 hover:bg-slate-50 text-row">
                             <td class="p-3 text-center"><input type="checkbox" value="${r.qrcode}" class="row-cb cursor-pointer"></td>
-                            <td class="p-3 font-bold text-slate-400">${i+1}</td>
-                            <td class="p-3 text-slate-600 c-waktu">${tgl}</td>
+                            <td class="p-3 font-bold text-slate-400 text-center">${i+1}</td>
+                            <td class="p-3 text-slate-600 c-waktu text-center">${tgl}</td>
                             <td class="p-3 font-mono font-bold text-slate-900 text-left s-qr bg-slate-50 tracking-wider border-r border-slate-200">${r.qrcode}</td>
-                            <td class="p-3 font-bold text-slate-600 c-prod">${td.tglProduksi}</td>
-                            <td class="p-3 font-bold text-slate-600 c-prod">${td.mesin}</td>
-                            <td class="p-3 font-bold text-slate-600 c-prod border-r border-slate-200">${td.shift}</td>
-                            <td class="p-3 font-black text-blue-700 s-jenis">${td.jenisItem}</td>
+                            <td class="p-3 font-bold text-slate-600 c-prod text-center">${td.tglProduksi}</td>
+                            <td class="p-3 font-bold text-slate-600 c-prod text-center">${td.mesin}</td>
+                            <td class="p-3 font-bold text-slate-600 c-prod text-center border-r border-slate-200">${td.shift}</td>
+                            <td class="p-3 font-black text-blue-700 s-jenis text-center">${td.jenisItem}</td>
                             <td class="p-3 font-bold text-slate-800 text-left s-nama">${td.namaItem}</td>
-                            <td class="p-3 font-bold text-slate-600">${td.panjang}</td>
-                            <td class="p-3 font-bold text-slate-800">${td.grade}</td>
-                            <td class="p-3 font-bold text-slate-800">${td.dus}</td>
-                            <td class="p-3 font-bold text-slate-600 border-r border-slate-200">${td.shading}</td>
-                            <td class="p-3 font-black text-orange-600 bg-orange-50/50 s-po">${td.po}</td>
-                            <td class="p-3 font-bold uppercase text-[11px] text-slate-500 c-pic border-l border-slate-200">${r.pic_input || '-'}</td>
+                            <td class="p-3 font-bold text-slate-600 text-center">${td.panjang}</td>
+                            <td class="p-3 font-bold text-slate-800 text-center">${td.grade}</td>
+                            <td class="p-3 font-bold text-slate-800 text-center">${td.dus}</td>
+                            <td class="p-3 font-bold text-slate-600 text-center border-r border-slate-200">${td.shading}</td>
+                            <td class="p-3 font-black text-orange-600 bg-orange-50/50 s-po text-center">${td.po}</td>
+                            <td class="p-3 font-bold uppercase text-[10px] text-slate-500 c-pic text-center border-l border-slate-200">${r.pic_input || '-'}</td>
                             <td class="p-3 text-slate-600 text-left c-ket">${r.keterangan || '-'}</td>
-                            ${tabelSekarang === 'hold_stbj' ? `<td class="p-3 font-black text-[10px] text-amber-600 bg-amber-50">${r.status || 'HOLD'}</td>` : ''}
+                            ${tabelSekarang === 'hold_stbj' ? `<td class="p-3 font-black text-[10px] text-amber-600 bg-amber-50 text-center">${r.status || 'HOLD'}</td>` : ''}
                         </tr>`;
                 });
                 tbody.innerHTML = h;
             } 
+            // MODE ITEM
             else if(modeSekarang === 'item') {
                 thead.innerHTML = `
                     <tr>
@@ -236,24 +364,19 @@
                         <th class="hdr-std">PO Aktual</th>
                         <th class="hdr-std bg-slate-900 text-blue-300">QTY (DUS)</th>
                     </tr>`;
-                
                 let groups = {};
                 rawDataRaw.forEach(r => {
-                    let t = translateBarcode(r.qrcode);
-                    let key = `${t.jenisItem}_${t.namaItem}_${t.panjang}_${t.grade}_${t.po}`;
+                    let t = translateBarcode(r.qrcode); let key = `${t.jenisItem}_${t.namaItem}_${t.panjang}_${t.grade}_${t.po}`;
                     if(!groups[key]) groups[key] = { ...t, qty: 0, qrcodes: [] };
-                    groups[key].qty++;
-                    groups[key].qrcodes.push(r.qrcode);
+                    groups[key].qty++; groups[key].qrcodes.push(r.qrcode);
                 });
-
                 let arr = Object.values(groups);
                 if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="p-6 font-bold text-slate-400">Kosong.</td></tr>'; return; }
-
                 let h = '';
                 arr.forEach((r, i) => {
                     h += `
-                        <tr class="border-b border-slate-200 hover:bg-slate-50 text-row">
-                            <td class="p-3 text-center"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer"></td>
+                        <tr class="border-b border-slate-200 hover:bg-slate-50 text-row text-center">
+                            <td class="p-3"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer"></td>
                             <td class="p-3 font-bold text-slate-400">${i+1}</td>
                             <td class="p-3 font-black text-blue-700 s-jenis">${r.jenisItem}</td>
                             <td class="p-3 font-bold text-slate-800 text-left s-nama">${r.namaItem}</td>
@@ -265,6 +388,7 @@
                 });
                 tbody.innerHTML = h;
             } 
+            // MODE JASPER
             else if(modeSekarang === 'jasper') {
                 thead.innerHTML = `
                     <tr>
@@ -275,24 +399,19 @@
                         <th class="hdr-std">PO Aktual</th>
                         <th class="hdr-std bg-slate-900 text-blue-300">QTY (DUS)</th>
                     </tr>`;
-
                 let groups = {};
                 rawDataRaw.forEach(r => {
-                    let t = translateBarcode(r.qrcode);
-                    let key = `${t.jenisItem}_${t.jasper}_${t.po}`;
+                    let t = translateBarcode(r.qrcode); let key = `${t.jenisItem}_${t.jasper}_${t.po}`;
                     if(!groups[key]) groups[key] = { jenisItem: t.jenisItem, jasper: t.jasper, po: t.po, qty: 0, qrcodes: [] };
-                    groups[key].qty++;
-                    groups[key].qrcodes.push(r.qrcode);
+                    groups[key].qty++; groups[key].qrcodes.push(r.qrcode);
                 });
-
                 let arr = Object.values(groups);
                 if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="p-6 font-bold text-slate-400">Kosong.</td></tr>'; return; }
-
                 let h = '';
                 arr.forEach((r, i) => {
                     h += `
-                        <tr class="border-b border-slate-200 hover:bg-slate-50 text-row">
-                            <td class="p-3 text-center"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer"></td>
+                        <tr class="border-b border-slate-200 hover:bg-slate-50 text-row text-center">
+                            <td class="p-3"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer"></td>
                             <td class="p-3 font-bold text-slate-400">${i+1}</td>
                             <td class="p-3 font-black text-blue-700 s-jenis">${r.jenisItem}</td>
                             <td class="p-3 font-bold text-slate-800 text-left s-nama">${r.jasper}</td>
@@ -302,18 +421,12 @@
                 });
                 tbody.innerHTML = h;
             }
-            lucide.createIcons();
-            jalankanSaring();
+            lucide.createIcons(); jalankanSaring();
         }
 
         function toggleSemuaCentang(checked) { document.querySelectorAll('.row-cb').forEach(cb => cb.checked = checked); }
         function toggleKolomRaw(cls, show) { document.querySelectorAll('.' + cls).forEach(el => el.style.display = show ? '' : 'none'); }
-
-        function bersihkanFilter() {
-            document.getElementById('flt-qr').value = '';
-            document.querySelectorAll('.dynamic-filter').forEach(el => el.value = '');
-            jalankanSaring();
-        }
+        function bersihkanFilter() { document.getElementById('flt-qr').value = ''; document.querySelectorAll('.dynamic-filter').forEach(el => el.value = ''); jalankanSaring(); }
 
         function jalankanSaring() {
             const fQr = document.getElementById('flt-qr').value.toLowerCase();
@@ -323,26 +436,22 @@
 
             document.querySelectorAll('.text-row').forEach(row => {
                 let show = true;
-                const cQr = row.querySelector('.s-qr');
-                const cJenis = row.querySelector('.s-jenis');
-                const cNama = row.querySelector('.s-nama');
-                const cPo = row.querySelector('.s-po');
+                const cQr = row.querySelector('.s-qr'); const cJenis = row.querySelector('.s-jenis');
+                const cNama = row.querySelector('.s-nama'); const cPo = row.querySelector('.s-po');
 
                 if(fQr && cQr && !cQr.innerText.toLowerCase().includes(fQr)) show = false;
                 if(fJenis && cJenis && !cJenis.innerText.toLowerCase().includes(fJenis)) show = false;
                 if(fNama && cNama && !cNama.innerText.toLowerCase().includes(fNama)) show = false;
                 if(fPo && cPo && !cPo.innerText.toLowerCase().includes(fPo)) show = false;
 
-                row.style.display = show ? '' : 'none';
+                // Jangan hide jika di mode katalog (filter mati)
+                if(modeSekarang !== 'katalog') row.style.display = show ? '' : 'none';
             });
         }
 
         async function aksiMassal(tipe) {
             let checkedValues = [];
-            document.querySelectorAll('.row-cb:checked').forEach(cb => {
-                cb.value.split(',').forEach(v => { if(v) checkedValues.push(v); });
-            });
-
+            document.querySelectorAll('.row-cb:checked').forEach(cb => { cb.value.split(',').forEach(v => { if(v) checkedValues.push(v); }); });
             if(checkedValues.length === 0) return alert("Centang baris tabel terlebih dahulu!");
 
             if(tipe === 'salin') {
