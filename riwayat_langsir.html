@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>WMS - Riwayat Langsir</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -10,38 +10,30 @@
 </head>
 <body class="font-sans">
     <div class="w-full">
+        
+        <div class="flex border-b border-slate-200 mb-4 bg-white px-2 rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
+            <button onclick="gantiModeRiwayat('qrcode')" id="tab-r-qr" class="px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2"><i data-lucide="list"></i> DETAIL QRCODE ECERAN</button>
+            <button onclick="gantiModeRiwayat('agregasi')" id="tab-r-agregasi" class="px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800"><i data-lucide="bar-chart-3"></i> RANGKUMAN NAMA ITEM & QTY</button>
+        </div>
+
         <div class="bg-white p-5 rounded-xl shadow-sm mb-4 border border-slate-200">
-            <h3 class="text-xs font-black opacity-60 uppercase mb-3 flex items-center gap-2 text-slate-600"><i data-lucide="filter" class="w-4 h-4"></i> Filter Riwayat Fisik Masuk</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                <input type="text" id="flt-qr" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-400" placeholder="QR Code...">
-                <input type="text" id="flt-area" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Area...">
-                <input type="text" id="flt-jenis" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Jenis Item...">
-                <input type="text" id="flt-nama" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Nama Item...">
-                <input type="text" id="flt-po" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="PO Awal...">
-                <input type="text" id="flt-pic" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="User / PIC...">
+            <h3 class="text-xs font-black opacity-60 uppercase mb-3 flex items-center gap-2 text-slate-600"><i data-lucide="filter" class="w-4 h-4"></i> Filter Penelusuran Riwayat</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                <input type="text" id="flt-qr" oninput="saringTabelRiwayat()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none" placeholder="QRCode...">
+                <input type="text" id="flt-area" oninput="saringTabelRiwayat()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none" placeholder="Area...">
+                <input type="text" id="flt-jenis" oninput="saringTabelRiwayat()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none" placeholder="Jenis Item...">
+                <input type="text" id="flt-nama" oninput="saringTabelRiwayat()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none" placeholder="Nama Item...">
+                <input type="text" id="flt-po" oninput="saringTabelRiwayat()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none" placeholder="PO Awal...">
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative mb-10">
             <div class="overflow-x-auto w-full max-h-[60vh] hide-scrollbar">
                 <table class="w-full border-collapse text-sm whitespace-nowrap">
-                    <thead class="sticky top-0 z-10 shadow-sm">
-                        <tr>
-                            <th class="hdr-std w-12">No</th>
-                            <th class="hdr-std border-r border-slate-500">Tgl Masuk</th>
-                            <th class="hdr-std">Area</th>
-                            <th class="hdr-std border-r border-slate-500">QRCode</th>
-                            <th class="hdr-std">Jenis</th>
-                            <th class="hdr-std">Nama Item</th>
-                            <th class="hdr-std">Pjg</th>
-                            <th class="hdr-std">Grade</th>
-                            <th class="hdr-std">Dus</th>
-                            <th class="hdr-std border-r border-slate-500">Shading</th>
-                            <th class="hdr-std bg-slate-900 border-r border-slate-500 text-orange-400">PO Awal</th>
-                            <th class="hdr-std">User / PIC</th>
-                        </tr>
-                    </thead>
-                    <tbody id="data-body" class="text-center text-slate-700"><tr><td colspan="12" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-slate-500"></i><p class="font-bold text-slate-500">Memuat Data...</p></td></tr></tbody>
+                    <thead class="sticky top-0 z-10 shadow-sm" id="thead-riwayat">
+                        </thead>
+                    <tbody id="tbody-riwayat" class="text-center text-slate-700">
+                        </tbody>
                 </table>
             </div>
         </div>
@@ -49,55 +41,174 @@
 
     <script src="global.js"></script>
     <script>
-        let globalData = [];
-        let currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: ''};
+        let modeRiwayat = 'qrcode'; // qrcode, agregasi
+        let logLangsirRaw = [];
+        let kamusData = [];
 
         document.addEventListener('DOMContentLoaded', () => {
-            initModernLayout({ id: 'riwayat_langsir', title: 'RIWAYAT LANGSIR', url: 'riwayat_langsir.html' });
+            initModernLayout({ id: 'riwayat_langsir', title: 'RIWAYAT LANGSIR GUDANG', url: 'riwayat_langsir.html' });
             setTimeout(async () => {
-                document.getElementById('flt-pic').value = currentUser.username;
-                await loadData();
+                const { data } = await db.from('master_2').select('*'); if(data) kamusData = data;
+                await ambilRiwayatSupabase();
             }, 200);
         });
 
-        async function loadData() {
+        async function ambilRiwayatSupabase() {
+            document.getElementById('tbody-riwayat').innerHTML = `<tr><td colspan="15" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menarik Data Riwayat...</p></td></tr>`;
+            lucide.createIcons();
+
             try {
-                const { data, error } = await db.from('stok_qr').select('*').order('created_at', {ascending: false}).limit(500);
-                if(error) throw error; globalData = data || []; renderTable();
-            } catch (err) { document.getElementById('data-body').innerHTML = `<tr><td colspan="12" class="p-10 text-center text-red-500 font-bold">Error: ${err.message}</td></tr>`; }
+                const { data, error } = await db.from('stok_qr').select('*').order('created_at', {ascending: false}).limit(1000);
+                if(error) throw error;
+                logLangsirRaw = data || [];
+                renderTabelRiwayat();
+            } catch(e) {
+                document.getElementById('tbody-riwayat').innerHTML = `<tr><td colspan="15" class="p-10 text-red-500 font-bold">Error: ${e.message}</td></tr>`;
+            }
         }
 
-        function formatTanggal(isoString) { if(!isoString) return '-'; return new Date(isoString).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+        function translateBarcode(barcode) {
+            let td = { jenis: '-', nama: '-', pjg: '-', grade: '-', dus: '-', shading: '-', po: '-' };
+            const parts = barcode.split('/'); if (parts.length < 1) return td;
+            const h = barcode.charAt(0).toUpperCase();
+            if (h === 'P') td.jenis = 'Plafon'; else if (h === 'L') td.jenis = 'List'; else if (h === 'W') td.jenis = 'WPC';
+            let ri = parts[0]; let ci = kamusData.find(m => m.kode_nama_item === ri);
+            td.nama = ci ? ci.nama_item : ri; td.shading = parts[1] || '-';
+            if(parts[2]) {
+                let d = (parts[2].length === 5) ? 2 : 1; let rp = parts[2].substring(0, d);
+                td.pjg = (d === 1) ? rp + "M" : rp[0] + "." + rp[1] + "M";
+                let rg = parts[2].substring(d, d + 1); td.grade = rg === '1' ? 'BAGUS' : (rg === '2' ? 'A' : rg);
+                let rd = parts[2].substring(parts[2].length - 2); let cd = kamusData.find(m => m.kode_dus === rd); td.dus = cd ? cd.dus : rd;
+            }
+            if(parts[3] && parts[3].length >= 5) {
+                let s = parts[3].substring(5); let m = s.match(/(C.*?)(S.*?)(P.*)/);
+                if(m) { let cp = kamusData.find(m => m.kode_po === m[3]); td.po = cp ? cp.po : m[3]; }
+            }
+            return td;
+        }
 
-        function renderTable() {
-            const tbody = document.getElementById('data-body');
-            if(globalData.length === 0) { tbody.innerHTML = `<tr><td colspan="12" class="text-center p-10 text-slate-500 font-bold">Belum ada data.</td></tr>`; lucide.createIcons(); return; }
-            let html = ''; 
-            globalData.forEach((r, i) => {
-                const parts = r.id_sku.split('_'); const jenis = parts[1] || '-'; const nama = parts[2] || '-'; const pjg = parts[3] || '-'; const grade = parts[4] || '-'; const dus = parts[5] || '-'; const shading = parts[6] || '-'; const po = parts[7] || '-';
-                html += `
-                    <tr class="border-b border-slate-200 hover:bg-slate-100 transition data-row">
-                        <td class="p-3 font-bold text-slate-400">${i+1}</td>
-                        <td class="p-3 font-black text-slate-800 border-r border-slate-200">${formatTanggal(r.created_at)}</td>
-                        <td class="p-3 font-black text-emerald-600 col-area">${r.area}</td>
-                        <td class="p-3 font-mono font-bold text-slate-900 border-r border-slate-200 col-qr bg-slate-50">${r.qrcode}</td>
-                        <td class="p-3 font-bold text-blue-700 col-jenis">${jenis}</td>
-                        <td class="p-3 font-bold text-slate-800 text-left col-nama">${nama}</td>
-                        <td class="p-3 font-bold text-slate-500 col-pjg">${pjg}</td>
-                        <td class="p-3 font-semibold text-slate-800 col-grade">${grade}</td>
-                        <td class="p-3 text-slate-800 col-dus">${dus}</td>
-                        <td class="p-3 font-medium text-slate-600 col-shading border-r border-slate-200">${shading}</td>
-                        <td class="p-3 font-black text-orange-600 bg-orange-50/50 col-po border-r border-slate-200">${po}</td>
-                        <td class="p-3 font-bold text-[10px] uppercase col-pic">${r.pic_input}</td>
+        function gantiModeRiwayat(m) {
+            modeRiwayat = m;
+            document.getElementById('tab-r-qr').className = m === 'qrcode' ? 'px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2' : 'px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800';
+            document.getElementById('tab-r-agregasi').className = m === 'agregasi' ? 'px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2' : 'px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800';
+            
+            document.getElementById('flt-qr').style.display = m === 'qrcode' ? '' : 'none';
+            renderTabelRiwayat();
+        }
+
+        function renderTabelRiwayat() {
+            const thead = document.getElementById('thead-riwayat');
+            const tbody = document.getElementById('tbody-riwayat');
+
+            if(modeRiwayat === 'qrcode') {
+                thead.innerHTML = `
+                    <tr>
+                        <th class="hdr-std w-12">No</th>
+                        <th class="hdr-std">Waktu Masuk</th>
+                        <th class="hdr-std">Area</th>
+                        <th class="hdr-std">QRCode</th>
+                        <th class="hdr-std">Jenis</th>
+                        <th class="hdr-std text-left pl-4">Nama Item</th>
+                        <th class="hdr-std">Pjg</th>
+                        <th class="hdr-std">Grade</th>
+                        <th class="hdr-std">Dus</th>
+                        <th class="hdr-std">Shading</th>
+                        <th class="hdr-std bg-slate-900 text-orange-400">PO Awal</th>
+                        <th class="hdr-std">User / PIC</th>
                     </tr>`;
-            });
-            tbody.innerHTML = html; lucide.createIcons(); saringTabel();
+                
+                if(logLangsirRaw.length === 0) { tbody.innerHTML = '<tr><td colspan="12" class="p-6 text-slate-400 font-bold">Belum ada riwayat.</td></tr>'; return; }
+                
+                let h = '';
+                logLangsirRaw.forEach((r, i) => {
+                    const parts = r.id_sku.split('_');
+                    const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+                    h += `
+                        <tr class="border-b border-slate-200 hover:bg-slate-100 transition r-row">
+                            <td class="p-3 font-bold text-slate-400">${i+1}</td>
+                            <td class="p-3 text-slate-600 font-semibold">${tgl}</td>
+                            <td class="p-3 font-black text-emerald-600 r-area">${r.area}</td>
+                            <td class="p-3 font-mono font-bold text-slate-900 text-left r-qr bg-slate-50 tracking-wider">${r.qrcode}</td>
+                            <td class="p-3 font-bold text-blue-700 r-jenis">${parts[1]||'-'}</td>
+                            <td class="p-3 font-bold text-slate-800 text-left r-nama">${parts[2]||'-'}</td>
+                            <td class="p-3 font-bold text-slate-500">${parts[3]||'-'}</td>
+                            <td class="p-3 font-semibold text-slate-800">${parts[4]||'-'}</td>
+                            <td class="p-3 text-slate-700">${parts[5]||'-'}</td>
+                            <td class="p-3 font-medium text-slate-600">${parts[6]||'-'}</td>
+                            <td class="p-3 font-black text-orange-600 bg-orange-50/50 r-po">${parts[7]||'-'}</td>
+                            <td class="p-3 font-bold text-[10px] uppercase text-slate-500">${r.pic_input || '-'}</td>
+                        </tr>`;
+                });
+                tbody.innerHTML = h;
+            } 
+            else {
+                thead.innerHTML = `
+                    <tr>
+                        <th class="hdr-std w-12">No</th>
+                        <th class="hdr-std">Area</th>
+                        <th class="hdr-std">Jenis Item</th>
+                        <th class="hdr-std text-left pl-4">Nama Item</th>
+                        <th class="hdr-std">Panjang</th>
+                        <th class="hdr-std">Grade</th>
+                        <th class="hdr-std">PO Bawaan</th>
+                        <th class="hdr-std bg-slate-900 text-blue-300">QTY TOTAL (DUS)</th>
+                    </tr>`;
+
+                let groups = {};
+                logLangsirRaw.forEach(r => {
+                    const parts = r.id_sku.split('_');
+                    let area = r.area; let jenis = parts[1] || '-'; let nama = parts[2] || '-';
+                    let pjg = parts[3] || '-'; let grade = parts[4] || '-'; let po = parts[7] || '-';
+                    let key = `${area}_${jenis}_${nama}_${pjg}_${grade}_${po}`;
+                    
+                    if(!groups[key]) groups[key] = { area, jenis, nama, pjg, grade, po, qty: 0 };
+                    groups[key].qty++;
+                });
+
+                let arr = Object.values(groups);
+                if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-slate-400 font-bold">Kosong.</td></tr>'; return; }
+
+                let h = '';
+                arr.forEach((r, i) => {
+                    h += `
+                        <tr class="border-b border-slate-200 hover:bg-slate-50 transition r-row">
+                            <td class="p-3 font-bold text-slate-400">${i+1}</td>
+                            <td class="p-3 font-black text-emerald-600 r-area">${r.area}</td>
+                            <td class="p-3 font-bold text-blue-700 r-jenis">${r.jenis}</td>
+                            <td class="p-3 font-bold text-slate-800 text-left r-nama">${r.nama}</td>
+                            <td class="p-3 font-bold text-slate-500">${r.pjg}</td>
+                            <td class="p-3 font-semibold text-slate-800">${r.grade}</td>
+                            <td class="p-3 font-black text-orange-600 bg-orange-50/40 r-po">${r.po}</td>
+                            <td class="p-3 font-black text-base text-slate-900 bg-slate-100">${r.qty}</td>
+                        </tr>`;
+                });
+                tbody.innerHTML = h;
+            }
+            lucide.createIcons();
+            saringTabelRiwayat();
         }
 
-        function saringTabel() {
-            const filters = { qr: document.getElementById('flt-qr').value.toLowerCase(), area: document.getElementById('flt-area').value.toLowerCase(), jenis: document.getElementById('flt-jenis').value.toLowerCase(), nama: document.getElementById('flt-nama').value.toLowerCase(), po: document.getElementById('flt-po').value.toLowerCase(), pic: document.getElementById('flt-pic').value.toLowerCase() };
-            document.querySelectorAll('.data-row').forEach(row => {
-                let show = true; for(let key in filters) { if(filters[key] !== '') { const cell = row.querySelector('.col-' + key); if(cell && !cell.innerText.toLowerCase().includes(filters[key])) { show = false; break; } } }
+        function saringTabelRiwayat() {
+            const fQr = document.getElementById('flt-qr').value.toLowerCase();
+            const fArea = document.getElementById('flt-area').value.toLowerCase();
+            const fJenis = document.getElementById('flt-jenis').value.toLowerCase();
+            const fNama = document.getElementById('flt-nama').value.toLowerCase();
+            const fPo = document.getElementById('flt-po').value.toLowerCase();
+
+            document.querySelectorAll('.r-row').forEach(row => {
+                let show = true;
+                const cQr = row.querySelector('.r-qr');
+                const cArea = row.querySelector('.r-area');
+                const cJenis = row.querySelector('.r-jenis');
+                const cNama = row.querySelector('.r-nama');
+                const cPo = row.querySelector('.r-po');
+
+                if(fQr && cQr && !cQr.innerText.toLowerCase().includes(fQr)) show = false;
+                if(fArea && cArea && !cArea.innerText.toLowerCase().includes(fArea)) show = false;
+                if(fJenis && cJenis && !cJenis.innerText.toLowerCase().includes(fJenis)) show = false;
+                if(fNama && cNama && !cNama.innerText.toLowerCase().includes(fNama)) show = false;
+                if(fPo && cPo && !cPo.innerText.toLowerCase().includes(fPo)) show = false;
+
                 row.style.display = show ? '' : 'none';
             });
         }
