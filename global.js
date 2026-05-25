@@ -24,37 +24,50 @@ const APP_MENUS = [
     { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' }
 ];
 
-// INJEKSI CSS STANDAR TABEL GELAP & TEMA Sharp
+// INJEKSI CSS STANDAR & SISTEM 3 TEMA MODULAR
 const style = document.createElement('style');
 style.innerHTML = `
     .hide-scrollbar::-webkit-scrollbar { display: none; } 
     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 0.05em; white-space: nowrap; }
     
-    /* ----------------------------------------------------
-       ATURAN OVERRIDE TEMA Sharp (SHARP & BIRU ELEGAN) 
-       ---------------------------------------------------- */
-    body.theme-Sharp * { border-radius: 0px !important; }
+    /* 1. ATURAN BENTUK KOMPONEN UI */
+    body.shape-sharp * { border-radius: 0px !important; }
     
-    /* Ubah Header dari Gelap ke Biru Elegan */
-    body.theme-Sharp header.bg-\\[\\#0f172a\\] { background-color: #1e40af !important; border-bottom: 1px solid #1e3a8a !important; }
-    body.theme-Sharp div.bg-\\[\\#1e293b\\] { background-color: #1e3a8a !important; border-bottom: 1px solid #1e3a8a !important; } /* Barisan Tab */
+    /* 2. ATURAN NUANSA WARNA (Header, Sidebar Atas, Tab Bar, Menu Aktif) */
     
-    /* Ubah Atas Sidebar dari Gelap ke Putih Bersih */
-    body.theme-Sharp aside div.bg-\\[\\#0f172a\\] { background-color: #ffffff !important; border-bottom: 2px solid #e2e8f0 !important; }
-    body.theme-Sharp aside div.bg-\\[\\#0f172a\\] .text-white { color: #0f172a !important; } /* Teks logo jadi gelap */
+    /* Nuansa Biru */
+    body.nuance-biru header.bg-\\[\\#0f172a\\], body.nuance-biru aside .bg-\\[\\#0f172a\\] { background-color: #1e40af !important; border-color: #1e3a8a !important; }
+    body.nuance-biru div.bg-\\[\\#1e293b\\] { background-color: #1e3a8a !important; }
+    body.nuance-biru .bg-slate-800 { background-color: #2563eb !important; border-color: #1d4ed8 !important; }
     
-    /* Highlight tombol dan menu aktif jadi Biru Terang (Bukan slate/abu gelap lagi) */
-    body.theme-Sharp .bg-slate-800 { background-color: #2563eb !important; border-color: #1d4ed8 !important; }
-    body.theme-Sharp .hover\\:bg-slate-800:hover { background-color: #1d4ed8 !important; }
+    /* Nuansa Abu-Abu */
+    body.nuance-abu header.bg-\\[\\#0f172a\\], body.nuance-abu aside .bg-\\[\\#0f172a\\] { background-color: #4b5563 !important; border-color: #374151 !important; }
+    body.nuance-abu div.bg-\\[\\#1e293b\\] { background-color: #374151 !important; }
+    body.nuance-abu .bg-slate-800 { background-color: #6b7280 !important; border-color: #4b5563 !important; }
+    
+    /* Nuansa Light (Putih Bersih) */
+    body.nuance-light header.bg-\\[\\#0f172a\\], body.nuance-light aside .bg-\\[\\#0f172a\\] { background-color: #ffffff !important; border-color: #e2e8f0 !important; }
+    body.nuance-light header.bg-\\[\\#0f172a\\] * { color: #0f172a !important; }
+    body.nuance-light div.bg-\\[\\#1e293b\\] { background-color: #f1f5f9 !important; border-bottom: 1px solid #cbd5e1 !important; }
+    body.nuance-light div.bg-\\[\\#1e293b\\] div { color: #475569 !important; border-right: 1px solid #cbd5e1 !important; }
+    body.nuance-light div.bg-\\[\\#1e293b\\] div.bg-slate-600 { background-color: #e2e8f0 !important; color: #0f172a !important; border-bottom: 2px solid #3b82f6 !important; }
+    body.nuance-light .bg-slate-800 { background-color: #e2e8f0 !important; color: #0f172a !important; }
+    
+    /* Nuansa Color (Gradient Energik) */
+    body.nuance-color header.bg-\\[\\#0f172a\\], body.nuance-color aside .bg-\\[\\#0f172a\\] { background: linear-gradient(90deg, #6366f1, #a855f7) !important; border: none !important; }
+    body.nuance-color div.bg-\\[\\#1e293b\\] { background-color: #4f46e5 !important; border-bottom: none !important; }
+    body.nuance-color .bg-slate-800 { background-color: #ec4899 !important; color: #ffffff !important; }
 `;
 document.head.appendChild(style);
 
 function initModernLayout(pageMeta) {
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'Staff'};
     
-    // BACA PENGATURAN TEMA DARI LOCAL STORAGE
-    const currentStyle = localStorage.getItem('app_theme_style') || 'rounded';
+    // BACA 3 SETTING TEMA DARI LOCAL STORAGE
+    const currentShape = localStorage.getItem('app_shape') || 'rounded'; // rounded, sharp
+    const currentBg = localStorage.getItem('app_bg') || 'light';         // light, dark
+    const currentNuance = localStorage.getItem('app_nuance') || 'gelap'; // gelap, biru, abu, light, color
 
     let tabs = JSON.parse(localStorage.getItem('wms_tabs')) || [];
     if(!tabs.find(t => t.id === 'dashboard')) tabs.unshift({id: 'dashboard', title: 'DASHBOARD', url: 'menu.html'});
@@ -66,7 +79,7 @@ function initModernLayout(pageMeta) {
     const layoutWrapper = document.createElement('div');
     layoutWrapper.className = 'flex h-screen bg-slate-50 overflow-hidden font-sans';
 
-    // SIDEBAR (Bisa dilipat di PC & HP)
+    // SIDEBAR 
     let sidebarHTML = `
         <aside id="app-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform -translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
             <div class="flex items-center justify-between h-16 bg-[#0f172a] border-b border-slate-800 shadow-md px-4">
@@ -88,7 +101,7 @@ function initModernLayout(pageMeta) {
     });
     sidebarHTML += `</div></aside><div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 z-40 hidden backdrop-blur-sm transition-opacity"></div>`;
 
-    // AREA KANAN (Top Bar + Konten)
+    // AREA KANAN 
     let rightArea = document.createElement('div');
     rightArea.className = 'flex-1 flex flex-col min-w-0 overflow-hidden';
     
@@ -100,6 +113,7 @@ function initModernLayout(pageMeta) {
         tabsHTML += `<div onclick="window.location.href='${tab.url}'" class="flex items-center px-4 py-2.5 cursor-pointer transition whitespace-nowrap border-b-2 ${isActive ? 'border-white' : 'border-transparent'} ${bg} text-[11px] font-black tracking-wider uppercase"><span>${tab.title}</span>${closeBtn}</div>`;
     });
 
+    // HEADER - KOTAK PENCARIAN BIRU TELAH DIHAPUS DARI SINI
     let headerHTML = `
         <header class="bg-[#0f172a] text-white flex flex-col z-30 shadow-md">
             <div class="h-16 px-4 flex items-center justify-between border-b border-slate-800">
@@ -150,38 +164,54 @@ function initModernLayout(pageMeta) {
         </div>
         
         <div id="modal-tema" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[90] px-4 backdrop-blur-sm">
-            <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm border border-slate-200 text-slate-800">
-                <h3 class="text-xl font-black mb-4 flex items-center gap-2"><i data-lucide="palette" class="text-slate-600"></i> Tema Tampilan</h3>
+            <div class="bg-white p-5 rounded-xl shadow-2xl w-full max-w-sm border border-slate-200 text-slate-800">
+                <h3 class="text-lg font-black mb-4 flex items-center gap-2 border-b border-slate-200 pb-2"><i data-lucide="palette" class="text-blue-600"></i> Personalisasi Tema</h3>
                 
-                <div class="mb-5 space-y-2">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pilih Bentuk Komponen UI</p>
-                    <button onclick="setStyle('rounded')" class="w-full py-3 font-bold rounded border ${currentStyle === 'rounded' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-100 border-slate-300 text-slate-700'} flex justify-between px-4 items-center transition hover:bg-slate-200">Modern (Melengkung) <i data-lucide="circle" class="w-4 h-4"></i></button>
-                    <button onclick="setStyle('Sharp')" class="w-full py-3 font-bold rounded border ${currentStyle === 'Sharp' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-100 border-slate-300 text-slate-700'} flex justify-between px-4 items-center transition hover:bg-slate-200">Sharp (Kotak Tajam) <i data-lucide="square" class="w-4 h-4"></i></button>
+                <div class="mb-4">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">1. Bentuk Komponen UI</p>
+                    <div class="flex gap-2">
+                        <button onclick="setTheme('app_shape', 'rounded')" class="flex-1 py-2 text-xs font-bold rounded-lg border-2 ${currentShape === 'rounded' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Melengkung</button>
+                        <button onclick="setTheme('app_shape', 'sharp')" class="flex-1 py-2 text-xs font-bold rounded-lg border-2 ${currentShape === 'sharp' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Sharp (Tajam)</button>
+                    </div>
                 </div>
 
-                <div class="mb-6 space-y-2">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pilih Mode Dasar</p>
-                    <button onclick="localStorage.setItem('app_bg', 'light'); window.location.reload();" class="w-full py-3 bg-slate-100 font-bold rounded border border-slate-300 mb-2 hover:bg-slate-200 transition">Tema Terang (Standar)</button>
-                    <button onclick="localStorage.setItem('app_bg', 'dark'); window.location.reload();" class="w-full py-3 bg-slate-800 text-white font-bold rounded border border-slate-900 mb-4 hover:bg-slate-900 transition">Tema Gelap (Malam)</button>
+                <div class="mb-4">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">2. Mode Dasar (Background)</p>
+                    <div class="flex gap-2">
+                        <button onclick="setTheme('app_bg', 'light')" class="flex-1 py-2 text-xs font-bold rounded-lg border-2 ${currentBg === 'light' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Terang</button>
+                        <button onclick="setTheme('app_bg', 'dark')" class="flex-1 py-2 text-xs font-bold rounded-lg border-2 ${currentBg === 'dark' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Gelap (Night)</button>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">3. Nuansa Warna Bar</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="setTheme('app_nuance', 'gelap')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'gelap' ? 'bg-slate-800 text-white border-slate-900' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Gelap (Slate)</button>
+                        <button onclick="setTheme('app_nuance', 'biru')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'biru' ? 'bg-blue-700 text-white border-blue-800' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Biru Corporate</button>
+                        <button onclick="setTheme('app_nuance', 'abu')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'abu' ? 'bg-gray-500 text-white border-gray-600' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Abu-abu</button>
+                        <button onclick="setTheme('app_nuance', 'light')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'light' ? 'bg-white text-slate-800 border-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Putih (Light)</button>
+                        <button onclick="setTheme('app_nuance', 'color')" class="col-span-2 py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'color' ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-indigo-600' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Color (Gradient)</button>
+                    </div>
                 </div>
                 
-                <button onclick="tutupModal('modal-tema')" class="w-full py-2.5 bg-slate-200 text-slate-700 font-bold rounded hover:bg-slate-300 transition">Tutup</button>
+                <button onclick="tutupModal('modal-tema')" class="w-full py-3 bg-slate-200 text-slate-700 font-black rounded-lg hover:bg-slate-300 transition">TUTUP PENGATURAN</button>
             </div>
         </div>
     `;
     layoutWrapper.insertAdjacentHTML('beforeend', modalsHTML);
     document.body.appendChild(layoutWrapper);
     
-    // MENERAPKAN CLASS KE BODY (SANGAT PENTING)
-    if(localStorage.getItem('app_bg') === 'dark') document.body.classList.add('bg-slate-900', 'text-white');
-    if(currentStyle === 'Sharp') document.body.classList.add('theme-Sharp');
+    // MENERAPKAN CLASS KE BODY SESUAI PILIHAN TEMA (SANGAT PENTING)
+    if(currentBg === 'dark') document.body.classList.add('bg-slate-900', 'text-white');
+    if(currentShape === 'sharp') document.body.classList.add('shape-sharp');
+    document.body.classList.add(`nuance-${currentNuance}`);
     
     lucide.createIcons();
 }
 
-// FUNGSI UNTUK MENYIMPAN TEMA YANG DIPILIH
-function setStyle(style) {
-    localStorage.setItem('app_theme_style', style);
+// FUNGSI UNTUK MENYIMPAN KOMPONEN TEMA
+function setTheme(key, value) {
+    localStorage.setItem(key, value);
     window.location.reload();
 }
 
