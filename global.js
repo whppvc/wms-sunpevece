@@ -153,7 +153,7 @@ function initModernLayout(pageMeta) {
                 <div class="mb-5 space-y-2">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pilih Bentuk Komponen UI</p>
                     <button onclick="setStyle('rounded')" class="w-full py-3 font-bold rounded border ${currentStyle === 'rounded' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-100 border-slate-300 text-slate-700'} flex justify-between px-4 items-center transition">Modern (Melengkung) <i data-lucide="circle" class="w-4 h-4"></i></button>
-                    <button onclick="setStyle('maserp')" class="w-full py-3 font-bold rounded border ${currentStyle === 'maserp' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-100 border-slate-300 text-slate-700'} flex justify-between px-4 items-center transition">MASERP (Kotak Tajam) <i data-lucide="square" class="w-4 h-4"></i></button>
+                    <button onclick="setStyle('maserp')" class="w-full py-3 font-bold rounded border ${currentStyle === 'maserp' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-100 border-slate-300 text-slate-700'} flex justify-between px-4 items-center transition">Sharp <i data-lucide="square" class="w-4 h-4"></i></button>
                 </div>
 
                 <div class="mb-6 space-y-2">
