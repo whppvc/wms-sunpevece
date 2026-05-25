@@ -25,7 +25,6 @@
         </div>
 
         <div class="bg-white p-5 md:p-6 rounded-b-xl rounded-tr-xl shadow-sm border border-slate-200 relative mb-4">
-            
             <div class="flex flex-col md:flex-row gap-4 mb-4">
                 <div class="w-full md:w-1/3">
                     <label class="block text-[11px] font-black uppercase tracking-wide mb-2 text-slate-600">Pilih Troli</label>
@@ -51,8 +50,14 @@
                 </div>
             </div>
 
-            <div class="flex justify-end gap-2 mt-4 pt-4 border-t border-slate-100">
-                <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="px-5 py-3 bg-white text-slate-800 font-black rounded-xl border-2 border-slate-800 hover:bg-slate-100 transition cursor-pointer text-xs flex items-center justify-center gap-2 active:scale-95 uppercase tracking-wide w-full sm:w-auto"><i data-lucide="search-check" class="w-4 h-4"></i> CEK STATUS DUPLIKAT DB</button>
+            <div class="flex flex-col sm:flex-row justify-between gap-3 mt-4 pt-4 border-t border-slate-100">
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button onclick="hapusBarisTerpilih()" class="flex-1 sm:flex-none px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center justify-center gap-2 active:scale-95 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> HAPUS BARIS</button>
+                </div>
+                <div class="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+                    <button onclick="holdManual()" class="flex-1 sm:flex-none px-4 py-3 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center justify-center gap-2 active:scale-95 transition"><i data-lucide="pause-circle" class="w-4 h-4"></i> HOLD MANUAL</button>
+                    <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="flex-1 sm:flex-none px-5 py-3 bg-slate-800 text-white font-black rounded-lg shadow-sm hover:bg-slate-900 border-b-4 border-slate-900 transition text-xs flex items-center justify-center gap-2 active:scale-95 uppercase"><i data-lucide="search-check" class="w-4 h-4"></i> CEK STATUS DUPLIKAT</button>
+                </div>
             </div>
         </div>
 
@@ -61,9 +66,9 @@
                 <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-stbj">
                     <thead class="sticky top-0 z-10 shadow-sm">
                         <tr>
-                            <th class="hdr-std w-10"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></th>
+                            <th class="hdr-std w-10"><input type="checkbox" onchange="toggleAll(this.checked)" class="cursor-pointer"></th>
                             <th class="hdr-std w-12">No</th>
-                            <th class="hdr-std border-r border-slate-500">Hasil Cek</th>
+                            <th class="hdr-std border-r border-slate-500">Status</th>
                             <th class="hdr-std">Troli</th>
                             <th class="hdr-std border-r border-slate-500">Text QRCode</th>
                             <th class="hdr-std">Tgl Produksi</th>
@@ -88,14 +93,14 @@
         </div>
         
         <div class="pt-2 pb-10">
-            <button id="btn-save" onclick="saveToDatabaseSTBJ()" class="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-lg flex items-center justify-center gap-2 text-base tracking-widest cursor-pointer transition active:scale-95 uppercase border-b-4 border-black"><i data-lucide="save" class="w-5 h-5"></i> SIMPAN DATA (UNIQUE -> HASIL, DUPLIKAT -> HOLD)</button>
+            <button id="btn-save" onclick="saveToDatabaseSTBJ()" class="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-lg flex items-center justify-center gap-2 text-base tracking-widest cursor-pointer transition active:scale-95 uppercase border-b-4 border-black"><i data-lucide="save" class="w-5 h-5"></i> SIMPAN DATA (UNIQUE -> HASIL, DUPLIKAT/HOLD -> HOLD)</button>
         </div>
     </div>
 
     <script src="global.js"></script>
     <script>
         let currentTab = 'scan';
-        let dataStbj = []; // Array of objects
+        let dataStbj = []; 
         let masterKamus = [];
         let globalRowId = 0;
         const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
@@ -105,20 +110,16 @@
             await loadInitialSTBJData();
         });
 
-        // 1. TAMPILAN TABS
         function switchTab(tab) {
             currentTab = tab;
             document.getElementById('view-scan').classList.toggle('hidden', tab !== 'scan');
             document.getElementById('view-csv').classList.toggle('hidden', tab !== 'csv');
-            
             document.getElementById('btn-tab-scan').className = tab === 'scan' ? 'px-6 py-4 tab-active transition whitespace-nowrap flex items-center gap-2' : 'px-6 py-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2';
             document.getElementById('btn-tab-csv').className = tab === 'csv' ? 'px-6 py-4 tab-active transition whitespace-nowrap flex items-center gap-2' : 'px-6 py-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2';
         }
 
-        // 2. TARIK DATA AWAL (Troli & Kamus)
         async function loadInitialSTBJData() {
             try {
-                // Tarik Troli
                 const { data: mData1 } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
                 if(mData1) {
                     const trolis = [...new Set(mData1.map(r => r.nama_troli).filter(x => x))];
@@ -126,25 +127,20 @@
                     sel.innerHTML = '<option value="">-- Pilih Troli --</option>';
                     trolis.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
                 }
-                // Tarik Kamus
                 const { data: mData2 } = await db.from('master_2').select('*');
                 if(mData2) masterKamus = mData2;
-                
-            } catch (err) { console.error("Gagal muat referensi STBJ:", err); }
+            } catch (err) { console.error("Gagal muat referensi:", err); }
         }
 
-        // 3. FUNGSI TRANSLATE BARCODE
         function translateBarcode(barcode) {
             let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-' };
-            const parts = barcode.split('/');
-            if (parts.length < 4) return td;
+            const parts = barcode.split('/'); if (parts.length < 4) return td;
             
             const hurufDepan = barcode.charAt(0).toUpperCase();
             if (hurufDepan === 'P') td.jenisItem = 'Plafon'; else if (hurufDepan === 'L') td.jenisItem = 'List'; else if (hurufDepan === 'W') td.jenisItem = 'WPC'; else td.jenisItem = hurufDepan;
 
             let rawItem = parts[0]; let cariItem = masterKamus.find(m => m.kode_nama_item === rawItem); 
-            td.namaItem = cariItem && cariItem.nama_item ? cariItem.nama_item : rawItem; 
-            td.shading = parts[1];
+            td.namaItem = cariItem && cariItem.nama_item ? cariItem.nama_item : rawItem; td.shading = parts[1];
             
             const p2 = parts[2];
             if (p2 && p2.length >= 4) {
@@ -168,7 +164,6 @@
             return td;
         }
 
-        // 4. SCAN MANUAL SUBMIT
         document.getElementById('form-scan').addEventListener('submit', (e) => {
             e.preventDefault();
             const troli = document.getElementById('select-troli').value;
@@ -181,16 +176,13 @@
             codes.forEach(code => {
                 if(!dataStbj.find(d => d.qrcode === code)) {
                     const trans = translateBarcode(code);
-                    dataStbj.unshift({
-                        id: ++globalRowId, qrcode: code, troli: troli, status: 'BELUM CEK', keterangan: '', pic: currentUser.username, ...trans
-                    });
+                    dataStbj.unshift({ id: ++globalRowId, qrcode: code, troli: troli, status: 'BELUM CEK', keterangan: '', pic: currentUser.username, ...trans });
                 }
             });
             renderTable();
             inputEl.value = ''; inputEl.focus();
         });
 
-        // 5. IMPORT CSV
         function prosesCSV() {
             const troli = document.getElementById('select-troli').value;
             const fileInput = document.getElementById('input-csv');
@@ -198,28 +190,38 @@
             if(!fileInput.files.length) return alert("Pilih file CSV!");
 
             Papa.parse(fileInput.files[0], {
-                header: false,
-                skipEmptyLines: true,
+                header: false, skipEmptyLines: true,
                 complete: function(results) {
                     let added = 0;
                     results.data.forEach(row => {
                         const code = row[0] ? row[0].trim() : '';
                         if(code && !dataStbj.find(d => d.qrcode === code)) {
                             const trans = translateBarcode(code);
-                            dataStbj.push({
-                                id: ++globalRowId, qrcode: code, troli: troli, status: 'BELUM CEK', keterangan: 'Dari CSV', pic: currentUser.username, ...trans
-                            });
+                            dataStbj.push({ id: ++globalRowId, qrcode: code, troli: troli, status: 'BELUM CEK', keterangan: 'Dari CSV', pic: currentUser.username, ...trans });
                             added++;
                         }
                     });
-                    alert(`${added} QR Code dari CSV berhasil dimuat ke tabel.`);
-                    renderTable();
-                    fileInput.value = '';
+                    alert(`${added} QR Code dari CSV berhasil dimuat ke tabel.`); renderTable(); fileInput.value = '';
                 }
             });
         }
 
-        // 6. RENDER TABEL
+        function toggleAll(checked) { document.querySelectorAll('.row-cb').forEach(cb => cb.checked = checked); }
+        function getCheckedIds() {
+            const ids = []; document.querySelectorAll('.row-cb:checked').forEach(cb => ids.push(parseInt(cb.value))); return ids;
+        }
+
+        function hapusBarisTerpilih() {
+            const ids = getCheckedIds(); if(ids.length === 0) return alert("Centang baris yang ingin dihapus!");
+            dataStbj = dataStbj.filter(d => !ids.includes(d.id)); renderTable();
+        }
+
+        function holdManual() {
+            const ids = getCheckedIds(); if(ids.length === 0) return alert("Centang baris yang ingin di-HOLD manual!");
+            dataStbj.forEach(d => { if(ids.includes(d.id)) d.status = 'HOLD'; });
+            renderTable(); document.querySelector('input[onchange="toggleAll(this.checked)"]').checked = false;
+        }
+
         function renderTable() {
             const tbody = document.getElementById('tbody-stbj');
             if(dataStbj.length === 0) return tbody.innerHTML = '<tr><td colspan="17" class="p-10 text-slate-400 font-bold"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan / di-import.</td></tr>';
@@ -229,10 +231,11 @@
                 let badgeClass = "bg-slate-200 text-slate-700";
                 if(d.status === 'UNIQUE') badgeClass = "bg-emerald-500 text-white";
                 if(d.status === 'DUPLIKAT') badgeClass = "bg-red-600 text-white";
+                if(d.status === 'HOLD') badgeClass = "bg-amber-500 text-white";
 
                 html += `
-                    <tr class="border-b border-slate-200 hover:bg-slate-50 transition ${d.status==='DUPLIKAT'?'bg-red-50':''}">
-                        <td class="p-3 text-center"><button onclick="deleteRow(${d.id})" class="text-red-500 hover:text-red-700 cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></button></td>
+                    <tr class="border-b border-slate-200 hover:bg-slate-50 transition ${d.status==='DUPLIKAT'?'bg-red-50':(d.status==='HOLD'?'bg-amber-50':'')}">
+                        <td class="p-3 text-center"><input type="checkbox" value="${d.id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600"></td>
                         <td class="p-3 font-bold">${index + 1}</td>
                         <td class="p-3 font-black text-[10px] border-r border-slate-200"><span class="px-3 py-1 rounded ${badgeClass}">${d.status}</span></td>
                         <td class="p-3 font-bold text-slate-700">${d.troli}</td>
@@ -255,66 +258,62 @@
             tbody.innerHTML = html; lucide.createIcons();
         }
 
-        function deleteRow(id) { dataStbj = dataStbj.filter(d => d.id !== id); renderTable(); }
         function updateKet(id, val) { const item = dataStbj.find(d => d.id === id); if(item) item.keterangan = val; }
 
-        // 7. CEK GUDANG (CEK DUPLIKAT KARTU STOK)
+        // MENCEK HASIL_STBJ (BUKAN STOK_QR)
         async function cekGudangSTBJ() {
             if(dataStbj.length === 0) return alert("Belum ada data.");
             const btn = document.getElementById('btn-cek-gudang'); const ori = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENCEK DATABASE...'; btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENCEK DB...'; btn.disabled = true;
 
             const allQRs = dataStbj.map(d => d.qrcode);
             try {
-                // Asumsi tabel 'stok_qr' mencatat semua QR yang ada di kartu stok/gudang
-                const { data, error } = await db.from('stok_qr').select('qrcode').in('qrcode', allQRs);
+                // REVISI: Cek ke hasil_stbj
+                const { data, error } = await db.from('hasil_stbj').select('qrcode').in('qrcode', allQRs);
                 if(error) throw error;
                 
                 const existingQRs = data.map(d => d.qrcode);
                 dataStbj.forEach(d => {
+                    if(d.status === 'HOLD') return; // Lewati yang sudah dihold manual
                     if(existingQRs.includes(d.qrcode)) d.status = 'DUPLIKAT';
                     else d.status = 'UNIQUE';
                 });
                 renderTable();
-                alert("Cek Selesai! Perhatikan status warna pada tabel.");
+                alert("Cek Selesai! Data yang sudah ada di hasil_stbj ditandai DUPLIKAT.");
             } catch (err) { alert("Gagal cek database: " + err.message); }
             finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
         }
 
-        // 8. SIMPAN KE DATABASE (UNIQUE -> hasil_stbj | DUPLIKAT -> hold_stbj)
         async function saveToDatabaseSTBJ() {
             if(dataStbj.length === 0) return alert('Data kosong!');
             const blmCek = dataStbj.filter(d => d.status === 'BELUM CEK');
             if(blmCek.length > 0) return alert('Tekan tombol CEK STATUS DUPLIKAT terlebih dahulu sebelum menyimpan!');
 
             const btn = document.getElementById('btn-save'); const ori = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES PENYIMPANAN...'; btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btn.disabled = true;
 
             const uniques = dataStbj.filter(d => d.status === 'UNIQUE');
-            const dupes = dataStbj.filter(d => d.status === 'DUPLIKAT');
+            const dupes = dataStbj.filter(d => d.status === 'DUPLIKAT' || d.status === 'HOLD');
 
             try {
-                // 1. Simpan yang UNIQUE ke hasil_stbj (MENGGUNAKAN INSERT BIASA)
                 if(uniques.length > 0) {
                     const payloadHasil = uniques.map(d => ({ qrcode: d.qrcode, pic_input: d.pic, keterangan: d.keterangan }));
                     const { error: err1 } = await db.from('hasil_stbj').insert(payloadHasil);
                     if(err1) throw err1;
                 }
                 
-                // 2. Simpan yang DUPLIKAT ke hold_stbj (MENGGUNAKAN INSERT BIASA)
                 if(dupes.length > 0) {
-                    const payloadHold = dupes.map(d => ({ qrcode: d.qrcode, pic_input: d.pic, keterangan: d.keterangan, status_hold: 'HOLD' }));
+                    // REVISI: Mengirimkan status ke tabel hold_stbj
+                    const payloadHold = dupes.map(d => ({ qrcode: d.qrcode, pic_input: d.pic, keterangan: d.keterangan, status: d.status }));
                     const { error: err2 } = await db.from('hold_stbj').insert(payloadHold);
                     if(err2) throw err2;
                 }
 
-                alert(`BERHASIL DISIMPAN!\n- ${uniques.length} Barang Unique masuk ke Hasil STBJ\n- ${dupes.length} Barang Duplikat masuk ke Hold STBJ`);
-                dataStbj = []; renderTable(); // Kosongkan setelah sukses
-            } catch (err) {
-                alert('GAGAL MENYIMPAN: ' + err.message);
-            } finally {
-                btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
-            }
+                alert(`BERHASIL DISIMPAN!\n- ${uniques.length} Barang Unique masuk ke Hasil STBJ\n- ${dupes.length} Barang Hold/Duplikat masuk ke Hold STBJ`);
+                dataStbj = []; renderTable();
+                document.querySelector('input[onchange="toggleAll(this.checked)"]').checked = false;
+            } catch (err) { alert('GAGAL MENYIMPAN: ' + err.message); } 
+            finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
         }
     </script>
 </body>
