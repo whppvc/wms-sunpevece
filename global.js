@@ -24,7 +24,7 @@ const APP_MENUS = [
     { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' }
 ];
 
-// INJEKSI CSS STANDAR TABEL GELAP & TEMA MASERP
+// INJEKSI CSS STANDAR TABEL GELAP & TEMA Sharp
 const style = document.createElement('style');
 style.innerHTML = `
     .hide-scrollbar::-webkit-scrollbar { display: none; } 
@@ -32,21 +32,21 @@ style.innerHTML = `
     .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 0.05em; white-space: nowrap; }
     
     /* ----------------------------------------------------
-       ATURAN OVERRIDE TEMA MASERP (SHARP & BIRU ELEGAN) 
+       ATURAN OVERRIDE TEMA Sharp (SHARP & BIRU ELEGAN) 
        ---------------------------------------------------- */
-    body.theme-maserp * { border-radius: 0px !important; }
+    body.theme-Sharp * { border-radius: 0px !important; }
     
     /* Ubah Header dari Gelap ke Biru Elegan */
-    body.theme-maserp header.bg-\\[\\#0f172a\\] { background-color: #1e40af !important; border-bottom: 1px solid #1e3a8a !important; }
-    body.theme-maserp div.bg-\\[\\#1e293b\\] { background-color: #1e3a8a !important; border-bottom: 1px solid #1e3a8a !important; } /* Barisan Tab */
+    body.theme-Sharp header.bg-\\[\\#0f172a\\] { background-color: #1e40af !important; border-bottom: 1px solid #1e3a8a !important; }
+    body.theme-Sharp div.bg-\\[\\#1e293b\\] { background-color: #1e3a8a !important; border-bottom: 1px solid #1e3a8a !important; } /* Barisan Tab */
     
     /* Ubah Atas Sidebar dari Gelap ke Putih Bersih */
-    body.theme-maserp aside div.bg-\\[\\#0f172a\\] { background-color: #ffffff !important; border-bottom: 2px solid #e2e8f0 !important; }
-    body.theme-maserp aside div.bg-\\[\\#0f172a\\] .text-white { color: #0f172a !important; } /* Teks logo jadi gelap */
+    body.theme-Sharp aside div.bg-\\[\\#0f172a\\] { background-color: #ffffff !important; border-bottom: 2px solid #e2e8f0 !important; }
+    body.theme-Sharp aside div.bg-\\[\\#0f172a\\] .text-white { color: #0f172a !important; } /* Teks logo jadi gelap */
     
     /* Highlight tombol dan menu aktif jadi Biru Terang (Bukan slate/abu gelap lagi) */
-    body.theme-maserp .bg-slate-800 { background-color: #2563eb !important; border-color: #1d4ed8 !important; }
-    body.theme-maserp .hover\\:bg-slate-800:hover { background-color: #1d4ed8 !important; }
+    body.theme-Sharp .bg-slate-800 { background-color: #2563eb !important; border-color: #1d4ed8 !important; }
+    body.theme-Sharp .hover\\:bg-slate-800:hover { background-color: #1d4ed8 !important; }
 `;
 document.head.appendChild(style);
 
@@ -156,7 +156,7 @@ function initModernLayout(pageMeta) {
                 <div class="mb-5 space-y-2">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pilih Bentuk Komponen UI</p>
                     <button onclick="setStyle('rounded')" class="w-full py-3 font-bold rounded border ${currentStyle === 'rounded' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-100 border-slate-300 text-slate-700'} flex justify-between px-4 items-center transition hover:bg-slate-200">Modern (Melengkung) <i data-lucide="circle" class="w-4 h-4"></i></button>
-                    <button onclick="setStyle('maserp')" class="w-full py-3 font-bold rounded border ${currentStyle === 'maserp' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-100 border-slate-300 text-slate-700'} flex justify-between px-4 items-center transition hover:bg-slate-200">MASERP (Kotak Tajam) <i data-lucide="square" class="w-4 h-4"></i></button>
+                    <button onclick="setStyle('Sharp')" class="w-full py-3 font-bold rounded border ${currentStyle === 'Sharp' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-100 border-slate-300 text-slate-700'} flex justify-between px-4 items-center transition hover:bg-slate-200">Sharp (Kotak Tajam) <i data-lucide="square" class="w-4 h-4"></i></button>
                 </div>
 
                 <div class="mb-6 space-y-2">
@@ -174,7 +174,7 @@ function initModernLayout(pageMeta) {
     
     // MENERAPKAN CLASS KE BODY (SANGAT PENTING)
     if(localStorage.getItem('app_bg') === 'dark') document.body.classList.add('bg-slate-900', 'text-white');
-    if(currentStyle === 'maserp') document.body.classList.add('theme-maserp');
+    if(currentStyle === 'Sharp') document.body.classList.add('theme-Sharp');
     
     lucide.createIcons();
 }
