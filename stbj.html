@@ -2,125 +2,319 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>WMS - Scan STBJ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        .table-container { scrollbar-width: thin; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; white-space: nowrap; }
+        .tab-active { border-bottom: 4px solid #1e40af; color: #1e40af; font-weight: 900; }
+        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 4px solid transparent; }
+    </style>
 </head>
 <body class="font-sans">
     <div class="w-full">
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 relative mb-4">
-            <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Scan Fisik Kardus (STBJ)</label>
-            <form id="form-scan" class="flex gap-3">
-                <input type="text" id="input-qrcode" class="flex-1 p-3 border border-slate-300 rounded outline-none focus:border-slate-800 font-bold text-slate-800 text-lg bg-slate-50" placeholder="Arahkan scanner ke kardus..." autocomplete="off">
-                <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-8 rounded font-bold shadow-sm cursor-pointer transition active:scale-95 flex items-center gap-2"><i data-lucide="corner-down-left"></i> ENTER</button>
-            </form>
+        
+        <div class="flex border-b border-slate-200 mb-4 bg-white px-2 rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
+            <button onclick="switchTab('scan')" id="btn-tab-scan" class="px-6 py-4 tab-active transition whitespace-nowrap flex items-center gap-2"><i data-lucide="barcode" class="w-4 h-4"></i> SCAN ITEM PER DUS</button>
+            <button onclick="switchTab('csv')" id="btn-tab-csv" class="px-6 py-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> IMPORT CSV</button>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
-            <div class="overflow-x-auto w-full max-h-[50vh] hide-scrollbar">
+        <div class="bg-white p-5 md:p-6 rounded-b-xl rounded-tr-xl shadow-sm border border-slate-200 relative mb-4">
+            
+            <div class="flex flex-col md:flex-row gap-4 mb-4">
+                <div class="w-full md:w-1/3">
+                    <label class="block text-[11px] font-black uppercase tracking-wide mb-2 text-slate-600">Pilih Troli</label>
+                    <select id="select-troli" class="w-full p-3.5 border-2 border-slate-200 rounded-xl font-bold outline-none focus:border-blue-700 text-slate-800 cursor-pointer bg-slate-50 transition">
+                        <option value="">-- Memuat Troli... --</option>
+                    </select>
+                </div>
+
+                <div id="view-scan" class="w-full md:w-2/3">
+                    <label class="block text-[11px] font-black uppercase tracking-wide mb-2 text-slate-600">Scan Fisik Kardus</label>
+                    <form id="form-scan" class="flex flex-col sm:flex-row gap-2">
+                        <input type="text" id="input-qrcode" class="flex-1 p-3.5 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-700 font-black text-slate-800 text-lg transition" placeholder="Arahkan scanner ke kardus..." autocomplete="off">
+                        <button type="submit" class="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white px-8 py-3.5 rounded-xl font-black shadow-md cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-4 border-blue-900"><i data-lucide="plus-square" class="w-5 h-5"></i> ADD</button>
+                    </form>
+                </div>
+
+                <div id="view-csv" class="w-full md:w-2/3 hidden">
+                    <label class="block text-[11px] font-black uppercase tracking-wide mb-2 text-slate-600">Upload File CSV</label>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="file" id="input-csv" accept=".csv" class="flex-1 p-2.5 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-700 font-bold text-slate-700 bg-slate-50 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition">
+                        <button onclick="prosesCSV()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-xl font-black shadow-md cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-4 border-emerald-800"><i data-lucide="upload-cloud" class="w-5 h-5"></i> PROSES CSV</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-4 pt-4 border-t border-slate-100">
+                <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="px-5 py-3 bg-white text-slate-800 font-black rounded-xl border-2 border-slate-800 hover:bg-slate-100 transition cursor-pointer text-xs flex items-center justify-center gap-2 active:scale-95 uppercase tracking-wide w-full sm:w-auto"><i data-lucide="search-check" class="w-4 h-4"></i> CEK STATUS DUPLIKAT DB</button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative mb-4">
+            <div class="table-container overflow-x-auto w-full max-h-[50vh]">
                 <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-stbj">
                     <thead class="sticky top-0 z-10 shadow-sm">
                         <tr>
                             <th class="hdr-std w-10"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></th>
                             <th class="hdr-std w-12">No</th>
-                            <th class="hdr-std">QRCode</th>
-                            <th class="hdr-std">Jenis</th>
+                            <th class="hdr-std border-r border-slate-500">Hasil Cek</th>
+                            <th class="hdr-std">Troli</th>
+                            <th class="hdr-std border-r border-slate-500">Text QRCode</th>
+                            <th class="hdr-std">Tgl Produksi</th>
+                            <th class="hdr-std">Mesin</th>
+                            <th class="hdr-std border-r border-slate-500">Shift</th>
+                            <th class="hdr-std text-blue-300">Jenis Item</th>
                             <th class="hdr-std">Nama Item</th>
+                            <th class="hdr-std">Pjg</th>
+                            <th class="hdr-std">Grade</th>
+                            <th class="hdr-std">Dus</th>
+                            <th class="hdr-std border-r border-slate-500">Shading</th>
+                            <th class="hdr-std">PO Awal</th>
+                            <th class="hdr-std">Keterangan</th>
+                            <th class="hdr-std">PIC Input</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-stbj" class="text-center text-slate-700">
-                        <tr><td colspan="5" class="p-6 text-slate-400 font-bold">Silakan scan QR Code...</td></tr>
+                        <tr><td colspan="17" class="p-10 text-slate-400 font-bold"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan / di-import.</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
         
-        <div class="pt-4">
-            <button id="btn-save" onclick="saveSTBJ()" class="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-base tracking-widest cursor-pointer transition active:scale-95 uppercase"><i data-lucide="save" class="w-5 h-5"></i> SIMPAN STBJ</button>
+        <div class="pt-2 pb-10">
+            <button id="btn-save" onclick="saveToDatabaseSTBJ()" class="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-lg flex items-center justify-center gap-2 text-base tracking-widest cursor-pointer transition active:scale-95 uppercase border-b-4 border-black"><i data-lucide="save" class="w-5 h-5"></i> SIMPAN DATA (UNIQUE -> HASIL, DUPLIKAT -> HOLD)</button>
         </div>
     </div>
 
     <script src="global.js"></script>
     <script>
-        let scannedQRs = [];
-        let kamusData = []; // Data referensi untuk translate
+        let currentTab = 'scan';
+        let dataStbj = []; // Array of objects
+        let masterKamus = [];
+        let globalRowId = 0;
+        const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
         document.addEventListener('DOMContentLoaded', async () => { 
             initModernLayout({ id: 'stbj', title: 'SCAN STBJ', url: 'stbj.html' }); 
-            
-            // Tarik kamus dari master_2 agar terjemahan berfungsi
-            const { data } = await db.from('master_2').select('*');
-            if(data) kamusData = data;
-
-            setTimeout(() => {
-                const formScan = document.getElementById('form-scan');
-                formScan.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    const inputEl = document.getElementById('input-qrcode');
-                    const rawInput = inputEl.value.trim();
-                    if(!rawInput) return;
-                    
-                    const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
-                    codes.forEach(code => {
-                        if(!scannedQRs.includes(code)) scannedQRs.push(code);
-                    });
-                    
-                    renderSTBJTable();
-                    inputEl.value = '';
-                    inputEl.focus();
-                });
-            }, 300);
+            await loadInitialSTBJData();
         });
 
-        // FUNGSI TERJEMAHAN (Diambil dari logika langsir)
-        function translateBarcode(barcode) {
-            let data = { jenisItem: '-', namaItem: '-' };
-            const parts = barcode.split('/');
-            if (parts.length < 1) return data;
+        // 1. TAMPILAN TABS
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('view-scan').classList.toggle('hidden', tab !== 'scan');
+            document.getElementById('view-csv').classList.toggle('hidden', tab !== 'csv');
             
-            const hurufDepan = barcode.charAt(0).toUpperCase();
-            if (hurufDepan === 'P') data.jenisItem = 'Plafon'; 
-            else if (hurufDepan === 'L') data.jenisItem = 'List'; 
-            else if (hurufDepan === 'W') data.jenisItem = 'WPC';
-            
-            const rawItem = parts[0];
-            const cariItem = kamusData.find(m => m.kode_nama_item === rawItem);
-            data.namaItem = cariItem ? cariItem.nama_item : rawItem;
-            
-            return data;
+            document.getElementById('btn-tab-scan').className = tab === 'scan' ? 'px-6 py-4 tab-active transition whitespace-nowrap flex items-center gap-2' : 'px-6 py-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2';
+            document.getElementById('btn-tab-csv').className = tab === 'csv' ? 'px-6 py-4 tab-active transition whitespace-nowrap flex items-center gap-2' : 'px-6 py-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2';
         }
 
-        function renderSTBJTable() {
+        // 2. TARIK DATA AWAL (Troli & Kamus)
+        async function loadInitialSTBJData() {
+            try {
+                // Tarik Troli
+                const { data: mData1 } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
+                if(mData1) {
+                    const trolis = [...new Set(mData1.map(r => r.nama_troli).filter(x => x))];
+                    const sel = document.getElementById('select-troli');
+                    sel.innerHTML = '<option value="">-- Pilih Troli --</option>';
+                    trolis.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
+                }
+                // Tarik Kamus
+                const { data: mData2 } = await db.from('master_2').select('*');
+                if(mData2) masterKamus = mData2;
+                
+            } catch (err) { console.error("Gagal muat referensi STBJ:", err); }
+        }
+
+        // 3. FUNGSI TRANSLATE BARCODE
+        function translateBarcode(barcode) {
+            let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-' };
+            const parts = barcode.split('/');
+            if (parts.length < 4) return td;
+            
+            const hurufDepan = barcode.charAt(0).toUpperCase();
+            if (hurufDepan === 'P') td.jenisItem = 'Plafon'; else if (hurufDepan === 'L') td.jenisItem = 'List'; else if (hurufDepan === 'W') td.jenisItem = 'WPC'; else td.jenisItem = hurufDepan;
+
+            let rawItem = parts[0]; let cariItem = masterKamus.find(m => m.kode_nama_item === rawItem); 
+            td.namaItem = cariItem && cariItem.nama_item ? cariItem.nama_item : rawItem; 
+            td.shading = parts[1];
+            
+            const p2 = parts[2];
+            if (p2 && p2.length >= 4) {
+                let digitPjg = (p2.length === 5) ? 2 : 1; let rawPjg = p2.substring(0, digitPjg);
+                td.panjang = (digitPjg === 1) ? rawPjg + "M" : rawPjg[0] + "." + rawPjg[1] + "M"; 
+                let rawGrade = p2.substring(digitPjg, digitPjg + 1); td.grade = rawGrade === '1' ? 'BAGUS' : (rawGrade === '2' ? 'A' : rawGrade);
+                let rawDus = p2.substring(p2.length - 2); let cariDus = masterKamus.find(m => m.kode_dus === rawDus); td.dus = cariDus && cariDus.dus ? cariDus.dus : rawDus;
+            }
+            const p3 = parts[3];
+            if (p3.length >= 5) {
+                const dayOfYear = parseInt(p3.substring(0, 3)); const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
+                const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
+                td.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
+                let sisaString = p3.substring(5); let match = sisaString.match(/(C.*?)(S.*?)(P.*)/);
+                if (match) {
+                    let cariMesin = masterKamus.find(m => m.kode_mesin === match[1]); td.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : match[1];
+                    let cariShift = masterKamus.find(m => m.kode_shift === match[2]); td.shift = cariShift && cariShift.shift ? cariShift.shift : match[2];
+                    let cariPO = masterKamus.find(m => m.kode_po === match[3]); td.po = cariPO && cariPO.po ? cariPO.po : match[3];
+                }
+            }
+            return td;
+        }
+
+        // 4. SCAN MANUAL SUBMIT
+        document.getElementById('form-scan').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const troli = document.getElementById('select-troli').value;
+            const inputEl = document.getElementById('input-qrcode');
+            const rawInput = inputEl.value.trim();
+            if(!troli) return alert("Pilih Troli terlebih dahulu!");
+            if(!rawInput) return;
+
+            const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
+            codes.forEach(code => {
+                if(!dataStbj.find(d => d.qrcode === code)) {
+                    const trans = translateBarcode(code);
+                    dataStbj.unshift({
+                        id: ++globalRowId, qrcode: code, troli: troli, status: 'BELUM CEK', keterangan: '', pic: currentUser.username, ...trans
+                    });
+                }
+            });
+            renderTable();
+            inputEl.value = ''; inputEl.focus();
+        });
+
+        // 5. IMPORT CSV
+        function prosesCSV() {
+            const troli = document.getElementById('select-troli').value;
+            const fileInput = document.getElementById('input-csv');
+            if(!troli) return alert("Pilih Troli terlebih dahulu!");
+            if(!fileInput.files.length) return alert("Pilih file CSV!");
+
+            Papa.parse(fileInput.files[0], {
+                header: false,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    let added = 0;
+                    results.data.forEach(row => {
+                        const code = row[0] ? row[0].trim() : '';
+                        if(code && !dataStbj.find(d => d.qrcode === code)) {
+                            const trans = translateBarcode(code);
+                            dataStbj.push({
+                                id: ++globalRowId, qrcode: code, troli: troli, status: 'BELUM CEK', keterangan: 'Dari CSV', pic: currentUser.username, ...trans
+                            });
+                            added++;
+                        }
+                    });
+                    alert(`${added} QR Code dari CSV berhasil dimuat ke tabel.`);
+                    renderTable();
+                    fileInput.value = '';
+                }
+            });
+        }
+
+        // 6. RENDER TABEL
+        function renderTable() {
             const tbody = document.getElementById('tbody-stbj');
-            if(scannedQRs.length === 0) return tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-slate-400 font-bold">Silakan scan QR Code...</td></tr>';
+            if(dataStbj.length === 0) return tbody.innerHTML = '<tr><td colspan="17" class="p-10 text-slate-400 font-bold"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan / di-import.</td></tr>';
             
             let html = '';
-            scannedQRs.slice().reverse().forEach((qr, index) => {
-                const td = translateBarcode(qr);
+            dataStbj.forEach((d, index) => {
+                let badgeClass = "bg-slate-200 text-slate-700";
+                if(d.status === 'UNIQUE') badgeClass = "bg-emerald-500 text-white";
+                if(d.status === 'DUPLIKAT') badgeClass = "bg-red-600 text-white";
+
                 html += `
-                    <tr class="border-b border-slate-200">
-                        <td class="p-3 text-center"><button onclick="deleteSTBJ('${qr}')" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></button></td>
-                        <td class="p-3 font-bold">${scannedQRs.length - index}</td>
-                        <td class="p-3 font-mono font-bold">${qr}</td>
-                        <td class="p-3 font-bold text-blue-700">${td.jenisItem}</td>
-                        <td class="p-3 font-bold">${td.namaItem}</td>
+                    <tr class="border-b border-slate-200 hover:bg-slate-50 transition ${d.status==='DUPLIKAT'?'bg-red-50':''}">
+                        <td class="p-3 text-center"><button onclick="deleteRow(${d.id})" class="text-red-500 hover:text-red-700 cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></button></td>
+                        <td class="p-3 font-bold">${index + 1}</td>
+                        <td class="p-3 font-black text-[10px] border-r border-slate-200"><span class="px-3 py-1 rounded ${badgeClass}">${d.status}</span></td>
+                        <td class="p-3 font-bold text-slate-700">${d.troli}</td>
+                        <td class="p-3 font-mono font-bold text-slate-900 border-r border-slate-200 tracking-wider">${d.qrcode}</td>
+                        <td class="p-3 font-bold text-slate-600">${d.tglProduksi}</td>
+                        <td class="p-3 font-bold text-slate-600">${d.mesin}</td>
+                        <td class="p-3 font-bold text-slate-600 border-r border-slate-200">${d.shift}</td>
+                        <td class="p-3 font-black text-blue-700">${d.jenisItem}</td>
+                        <td class="p-3 font-bold text-slate-800 text-left">${d.namaItem}</td>
+                        <td class="p-3 font-bold text-slate-600">${d.panjang}</td>
+                        <td class="p-3 font-bold text-slate-800">${d.grade}</td>
+                        <td class="p-3 font-bold text-slate-800">${d.dus}</td>
+                        <td class="p-3 font-bold text-slate-600 border-r border-slate-200">${d.shading}</td>
+                        <td class="p-3 font-black text-orange-600 bg-orange-50/50">${d.po}</td>
+                        <td class="p-2"><input type="text" onchange="updateKet(${d.id}, this.value)" value="${d.keterangan}" class="w-full p-2 text-xs border border-slate-300 rounded outline-none focus:border-blue-500" placeholder="Keterangan..."></td>
+                        <td class="p-3 font-bold uppercase text-[10px] text-slate-500">${d.pic}</td>
                     </tr>
                 `;
             });
-            tbody.innerHTML = html;
-            lucide.createIcons();
+            tbody.innerHTML = html; lucide.createIcons();
         }
 
-        function deleteSTBJ(qrCode) { scannedQRs = scannedQRs.filter(q => q !== qrCode); renderSTBJTable(); }
+        function deleteRow(id) { dataStbj = dataStbj.filter(d => d.id !== id); renderTable(); }
+        function updateKet(id, val) { const item = dataStbj.find(d => d.id === id); if(item) item.keterangan = val; }
 
-        async function saveSTBJ() {
-            if(scannedQRs.length === 0) return alert('Data kosong!');
-            const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
-            const payload = scannedQRs.map(qr => ({ qrcode: qr, pic_input: user.username }));
-            const { error } = await db.from('hasil_stbj').upsert(payload, { onConflict: 'qrcode' });
-            if(error) alert('Error: ' + error.message); else { alert('Tersimpan!'); scannedQRs = []; renderSTBJTable(); }
+        // 7. CEK GUDANG (CEK DUPLIKAT KARTU STOK)
+        async function cekGudangSTBJ() {
+            if(dataStbj.length === 0) return alert("Belum ada data.");
+            const btn = document.getElementById('btn-cek-gudang'); const ori = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENCEK DATABASE...'; btn.disabled = true;
+
+            const allQRs = dataStbj.map(d => d.qrcode);
+            try {
+                // Asumsi tabel 'stok_qr' mencatat semua QR yang ada di kartu stok/gudang
+                const { data, error } = await db.from('stok_qr').select('qrcode').in('qrcode', allQRs);
+                if(error) throw error;
+                
+                const existingQRs = data.map(d => d.qrcode);
+                dataStbj.forEach(d => {
+                    if(existingQRs.includes(d.qrcode)) d.status = 'DUPLIKAT';
+                    else d.status = 'UNIQUE';
+                });
+                renderTable();
+                alert("Cek Selesai! Perhatikan status warna pada tabel.");
+            } catch (err) { alert("Gagal cek database: " + err.message); }
+            finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
+        }
+
+        // 8. SIMPAN KE DATABASE (UNIQUE -> hasil_stbj | DUPLIKAT -> hold_stbj)
+        async function saveToDatabaseSTBJ() {
+            if(dataStbj.length === 0) return alert('Data kosong!');
+            const blmCek = dataStbj.filter(d => d.status === 'BELUM CEK');
+            if(blmCek.length > 0) return alert('Tekan tombol CEK STATUS DUPLIKAT terlebih dahulu sebelum menyimpan!');
+
+            const btn = document.getElementById('btn-save'); const ori = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES PENYIMPANAN...'; btn.disabled = true;
+
+            const uniques = dataStbj.filter(d => d.status === 'UNIQUE');
+            const dupes = dataStbj.filter(d => d.status === 'DUPLIKAT');
+
+            try {
+                // 1. Simpan yang UNIQUE ke hasil_stbj
+                if(uniques.length > 0) {
+                    const payloadHasil = uniques.map(d => ({ qrcode: d.qrcode, pic_input: d.pic, keterangan: d.keterangan }));
+                    const { error: err1 } = await db.from('hasil_stbj').upsert(payloadHasil, { onConflict: 'qrcode' });
+                    if(err1) throw err1;
+                }
+                
+                // 2. Simpan yang DUPLIKAT ke hold_stbj (asumsi tabel hold_stbj ada dengan kolom sama)
+                if(dupes.length > 0) {
+                    const payloadHold = dupes.map(d => ({ qrcode: d.qrcode, pic_input: d.pic, keterangan: d.keterangan, status_hold: 'HOLD' }));
+                    const { error: err2 } = await db.from('hold_stbj').upsert(payloadHold, { onConflict: 'qrcode' });
+                    if(err2) throw err2;
+                }
+
+                alert(`BERHASIL DISIMPAN!\n- ${uniques.length} Barang Unique masuk ke Hasil STBJ\n- ${dupes.length} Barang Duplikat masuk ke Hold STBJ`);
+                dataStbj = []; renderTable(); // Kosongkan setelah sukses
+            } catch (err) {
+                alert('GAGAL MENYIMPAN: ' + err.message);
+            } finally {
+                btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
+            }
         }
     </script>
 </body>
