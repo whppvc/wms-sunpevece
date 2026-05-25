@@ -38,10 +38,10 @@
                 </div>
             </div>
 
-            <div id="panel-filter" class="hidden grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                <input type="text" id="flt-qr" oninput="jalankanSaring()" class="p-2 text-xs border border-slate-300 font-bold rounded outline-none" placeholder="Cari QRCode...">
+            <div id="panel-filter" class="hidden grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                <input type="text" id="flt-qr" oninput="jalankanSaring()" class="p-2 text-xs border border-slate-300 font-bold rounded outline-none dynamic-filter" placeholder="Cari QRCode...">
                 <input type="text" id="flt-jenis" oninput="jalankanSaring()" class="p-2 text-xs border border-slate-300 font-bold rounded outline-none dynamic-filter" placeholder="Jenis Item...">
-                <input type="text" id="flt-nama" oninput="jalankanSaring()" class="p-2 text-xs border border-slate-300 font-bold rounded outline-none dynamic-filter" placeholder="Nama Item / Jasper...">
+                <input type="text" id="flt-nama" oninput="jalankanSaring()" class="p-2 text-xs border border-slate-300 font-bold rounded outline-none" placeholder="Nama Item / Jasper...">
                 <input type="text" id="flt-po" oninput="jalankanSaring()" class="p-2 text-xs border border-slate-300 font-bold rounded outline-none dynamic-filter" placeholder="PO...">
                 <button onclick="bersihkanFilter()" class="p-2 bg-slate-200 text-slate-700 font-bold text-xs rounded hover:bg-slate-300 transition">Reset Filter</button>
             </div>
@@ -134,7 +134,7 @@
         }
 
         async function muatDataDariSupabase() {
-            if(modeSekarang === 'katalog') { renderHeaderDanTabel(); return; } // Skip load table STBJ jika mode katalog
+            if(modeSekarang === 'katalog') { renderHeaderDanTabel(); return; } 
             const tbody = document.getElementById('tbody-stbj');
             tbody.innerHTML = `<tr><td colspan="20" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menarik Data ${tabelSekarang}...</p></td></tr>`;
             lucide.createIcons();
@@ -146,6 +146,7 @@
             } catch(err) { tbody.innerHTML = `<tr><td colspan="20" class="p-10 text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; }
         }
 
+        // PERBAIKAN LOGIKA TRANSLATE AGAR TGL/MESIN/SHIFT TERBACA KEMBALI
         function translateBarcode(barcode) {
             let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-', jasper: '-' };
             const parts = barcode.split('/'); if (parts.length < 1) return td;
@@ -162,9 +163,17 @@
                 let rG = p2.substring(dP, dP + 1); td.grade = rG === '1' ? 'BAGUS' : (rG === '2' ? 'A' : rG);
                 let rD = p2.substring(p2.length - 2); let cD = kamusData.find(m => m.kode_dus === rD); td.dus = cD && cD.dus ? cD.dus : rD;
             }
-            if (parts[3] && parts[3].length >= 5) {
-                let s = parts[3].substring(5); let m = s.match(/(C.*?)(S.*?)(P.*)/);
+            const p3 = parts[3];
+            if (p3 && p3.length >= 5) {
+                const dayOfYear = parseInt(p3.substring(0, 3)); const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
+                if (!isNaN(dayOfYear) && !isNaN(realYear)) {
+                    const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
+                    td.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
+                }
+                let s = p3.substring(5); let m = s.match(/(C.*?)(S.*?)(P.*)/);
                 if (m) {
+                    let cM = kamusData.find(x => x.kode_mesin === m[1]); td.mesin = cM && cM.mesin ? cM.mesin : m[1];
+                    let cS = kamusData.find(x => x.kode_shift === m[2]); td.shift = cS && cS.shift ? cS.shift : m[2];
                     let cPO = kamusData.find(x => x.kode_po === m[3]); td.po = cPO && cPO.po ? cPO.po : m[3];
                 }
             }
@@ -179,7 +188,6 @@
             return td;
         }
 
-        // FUNGSI GANTI TABS (TERMASUK KATALOG)
         function setMode(m) {
             modeSekarang = m;
             ['qrcode', 'item', 'jasper', 'katalog'].forEach(tab => {
@@ -191,28 +199,27 @@
             const isKatalog = m === 'katalog';
             const isQr = m === 'qrcode';
 
-            // Sembunyikan elemen jika katalog
             document.getElementById('lbl-pilih-tabel').style.display = isQr ? '' : 'none';
             document.getElementById('select-tabel').style.display = isQr ? '' : 'none';
             document.getElementById('btn-toggle-kolom').style.display = isQr ? '' : 'none';
             document.getElementById('panel-kolom').classList.add('hidden');
             
-            // Mass actions
             document.getElementById('btn-massal-salin').style.display = isKatalog ? 'none' : '';
             document.getElementById('btn-massal-hapus').style.display = isKatalog ? 'none' : '';
             document.getElementById('btn-massal-xls').style.display = isKatalog ? 'none' : '';
             document.getElementById('btn-massal-hold').style.display = isQr ? '' : 'none';
 
-            // Tombol Khusus Katalog
             document.getElementById('btn-tambah-katalog').style.display = isKatalog ? '' : 'none';
-            document.querySelectorAll('.dynamic-filter').forEach(el => el.style.display = (isQr || isKatalog) ? 'none' : '');
+            
+            // PERBAIKAN FILTER UNTUK KATALOG ITEM
+            document.querySelectorAll('.dynamic-filter').forEach(el => el.style.display = isKatalog ? 'none' : '');
+            document.getElementById('flt-nama').placeholder = isKatalog ? "Cari Nama Item / Nama Jasper..." : "Nama Item / Jasper...";
             
             if(isKatalog) renderHeaderDanTabel(); else muatDataDariSupabase();
         }
 
         function switchTable(val) { tabelSekarang = val; muatDataDariSupabase(); }
 
-        // FUNGSI CRUD KATALOG JASPER
         function bukaModalKatalog(jsonStr) {
             if(jsonStr) {
                 const d = JSON.parse(jsonStr);
@@ -229,6 +236,7 @@
             document.getElementById('modal-katalog').classList.remove('hidden');
         }
 
+        // PERBAIKAN SIMPAN KATALOG (HAPUS PAYLOAD PIC AGAR TIDAK ERROR DATABASE)
         async function simpanKatalog() {
             const id = document.getElementById('kat-id').value;
             const nama = document.getElementById('kat-nama').value.trim().toUpperCase();
@@ -239,7 +247,8 @@
             if(!nama || !pjg || !grade || !jasper) return alert("Pastikan semua kolom diisi!");
             
             const btn = document.getElementById('btn-simpan-kat'); btn.disabled=true; btn.innerHTML='<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...';
-            const payload = { nama_item: nama, panjang: pjg, grade: grade, nama_jasper: jasper, pic: currentUser.username };
+            // INFO: Kolom 'pic' sengaja tidak dikirimkan ke Supabase karena belum dibuat di tabel Anda
+            const payload = { nama_item: nama, panjang: pjg, grade: grade, nama_jasper: jasper };
             
             let res;
             if(id) res = await db.from('nama_jasper').update(payload).eq('id', id);
@@ -270,24 +279,21 @@
                         <th class="hdr-std">Panjang</th>
                         <th class="hdr-std border-r border-slate-500">Grade</th>
                         <th class="hdr-std bg-slate-900 text-blue-300">NAMA OUTPUT JASPER</th>
-                        <th class="hdr-std border-l border-slate-500">PIC & Waktu Update</th>
                         <th class="hdr-std w-20">Aksi</th>
                     </tr>`;
                 
-                if(jasperData.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="p-6 font-bold text-slate-400">Katalog Jasper belum ada / Kosong.</td></tr>'; return; }
+                if(jasperData.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="p-6 font-bold text-slate-400">Katalog Jasper belum ada / Kosong.</td></tr>'; return; }
                 
                 let h = '';
                 jasperData.forEach((r, i) => {
-                    const tgl = r.created_at ? new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '-';
                     const safeR = JSON.stringify(r).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
                     h += `
-                        <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-row text-center">
+                        <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-row text-center katalog-row">
                             <td class="p-3 font-bold text-slate-400">${i+1}</td>
-                            <td class="p-3 font-bold text-slate-800 text-left">${r.nama_item || '-'}</td>
+                            <td class="p-3 font-bold text-slate-800 text-left s-nama">${r.nama_item || '-'}</td>
                             <td class="p-3 font-bold text-slate-600">${r.panjang || '-'}</td>
                             <td class="p-3 font-bold text-slate-800 border-r border-slate-200">${r.grade || '-'}</td>
-                            <td class="p-3 font-black text-blue-700 bg-blue-50/50 text-left">${r.nama_jasper || '-'}</td>
-                            <td class="p-2 text-[10px] text-slate-500 border-l border-slate-200"><span class="font-black text-slate-700 uppercase">${r.pic || '-'}</span><br>${tgl}</td>
+                            <td class="p-3 font-black text-blue-700 bg-blue-50/50 text-left s-jasper">${r.nama_jasper || '-'}</td>
                             <td class="p-2">
                                 <div class="flex gap-1 justify-center">
                                     <button onclick="bukaModalKatalog('${safeR}')" class="p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded cursor-pointer transition"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
@@ -344,77 +350,111 @@
                             <td class="p-3 font-bold text-slate-800 text-center">${td.dus}</td>
                             <td class="p-3 font-bold text-slate-600 text-center border-r border-slate-200">${td.shading}</td>
                             <td class="p-3 font-black text-orange-600 bg-orange-50/50 s-po text-center">${td.po}</td>
-                            <td class="p-3 font-bold uppercase text-[10px] text-slate-500 c-pic text-center border-l border-slate-200">${r.pic_input || '-'}</td>
+                            <td class="p-3 font-bold uppercase text-[11px] text-slate-500 c-pic text-center border-l border-slate-200">${r.pic_input || '-'}</td>
                             <td class="p-3 text-slate-600 text-left c-ket">${r.keterangan || '-'}</td>
                             ${tabelSekarang === 'hold_stbj' ? `<td class="p-3 font-black text-[10px] text-amber-600 bg-amber-50 text-center">${r.status || 'HOLD'}</td>` : ''}
                         </tr>`;
                 });
                 tbody.innerHTML = h;
             } 
-            // MODE ITEM
+            // PERBAIKAN: MODE ITEM - MENAMPILKAN SEMUA KOLOM FISIK LENGKAP + QTY
             else if(modeSekarang === 'item') {
                 thead.innerHTML = `
                     <tr>
                         <th class="hdr-std w-10"><input type="checkbox" id="master-cb" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer"></th>
                         <th class="hdr-std w-12">No</th>
+                        <th class="hdr-std">Tgl Produksi</th>
+                        <th class="hdr-std">Mesin</th>
+                        <th class="hdr-std border-r border-slate-500">Shift</th>
                         <th class="hdr-std">Jenis Item</th>
                         <th class="hdr-std text-left pl-4">Nama Item</th>
-                        <th class="hdr-std">Panjang</th>
+                        <th class="hdr-std">Pjg</th>
                         <th class="hdr-std">Grade</th>
+                        <th class="hdr-std">Dus</th>
+                        <th class="hdr-std border-r border-slate-500">Shading</th>
                         <th class="hdr-std">PO Aktual</th>
                         <th class="hdr-std bg-slate-900 text-blue-300">QTY (DUS)</th>
                     </tr>`;
+                
                 let groups = {};
                 rawDataRaw.forEach(r => {
-                    let t = translateBarcode(r.qrcode); let key = `${t.jenisItem}_${t.namaItem}_${t.panjang}_${t.grade}_${t.po}`;
+                    let t = translateBarcode(r.qrcode); 
+                    // Pengelompokan spesifik mencakup semua atribut batch
+                    let key = `${t.jenisItem}_${t.namaItem}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${t.po}_${t.tglProduksi}_${t.mesin}_${t.shift}`;
                     if(!groups[key]) groups[key] = { ...t, qty: 0, qrcodes: [] };
                     groups[key].qty++; groups[key].qrcodes.push(r.qrcode);
                 });
+
                 let arr = Object.values(groups);
-                if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="p-6 font-bold text-slate-400">Kosong.</td></tr>'; return; }
+                if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="13" class="p-6 font-bold text-slate-400">Kosong.</td></tr>'; return; }
+
                 let h = '';
                 arr.forEach((r, i) => {
                     h += `
                         <tr class="border-b border-slate-200 hover:bg-slate-50 text-row text-center">
                             <td class="p-3"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer"></td>
                             <td class="p-3 font-bold text-slate-400">${i+1}</td>
+                            <td class="p-3 font-bold text-slate-600">${r.tglProduksi}</td>
+                            <td class="p-3 font-bold text-slate-600">${r.mesin}</td>
+                            <td class="p-3 font-bold text-slate-600 border-r border-slate-200">${r.shift}</td>
                             <td class="p-3 font-black text-blue-700 s-jenis">${r.jenisItem}</td>
                             <td class="p-3 font-bold text-slate-800 text-left s-nama">${r.namaItem}</td>
                             <td class="p-3 font-bold text-slate-500">${r.panjang}</td>
                             <td class="p-3 font-semibold text-slate-800">${r.grade}</td>
+                            <td class="p-3 font-bold text-slate-800">${r.dus}</td>
+                            <td class="p-3 font-bold text-slate-600 border-r border-slate-200">${r.shading}</td>
                             <td class="p-3 font-black text-orange-600 bg-orange-50/40 s-po">${r.po}</td>
                             <td class="p-3 font-black text-base text-slate-900 bg-slate-100">${r.qty}</td>
                         </tr>`;
                 });
                 tbody.innerHTML = h;
             } 
-            // MODE JASPER
+            // PERBAIKAN: MODE JASPER - MENAMPILKAN SEMUA KOLOM FISIK LENGKAP + QTY
             else if(modeSekarang === 'jasper') {
                 thead.innerHTML = `
                     <tr>
                         <th class="hdr-std w-10"><input type="checkbox" id="master-cb" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer"></th>
                         <th class="hdr-std w-12">No</th>
+                        <th class="hdr-std">Tgl Produksi</th>
+                        <th class="hdr-std">Mesin</th>
+                        <th class="hdr-std border-r border-slate-500">Shift</th>
                         <th class="hdr-std">Jenis Item</th>
                         <th class="hdr-std text-left pl-4">Nama Barang Jasper</th>
+                        <th class="hdr-std">Pjg</th>
+                        <th class="hdr-std">Grade</th>
+                        <th class="hdr-std">Dus</th>
+                        <th class="hdr-std border-r border-slate-500">Shading</th>
                         <th class="hdr-std">PO Aktual</th>
                         <th class="hdr-std bg-slate-900 text-blue-300">QTY (DUS)</th>
                     </tr>`;
+                
                 let groups = {};
                 rawDataRaw.forEach(r => {
-                    let t = translateBarcode(r.qrcode); let key = `${t.jenisItem}_${t.jasper}_${t.po}`;
-                    if(!groups[key]) groups[key] = { jenisItem: t.jenisItem, jasper: t.jasper, po: t.po, qty: 0, qrcodes: [] };
+                    let t = translateBarcode(r.qrcode); 
+                    // Pengelompokan spesifik mencakup jasper name & batch
+                    let key = `${t.jenisItem}_${t.jasper}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${t.po}_${t.tglProduksi}_${t.mesin}_${t.shift}`;
+                    if(!groups[key]) groups[key] = { ...t, qty: 0, qrcodes: [] };
                     groups[key].qty++; groups[key].qrcodes.push(r.qrcode);
                 });
+
                 let arr = Object.values(groups);
-                if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="p-6 font-bold text-slate-400">Kosong.</td></tr>'; return; }
+                if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="13" class="p-6 font-bold text-slate-400">Kosong.</td></tr>'; return; }
+
                 let h = '';
                 arr.forEach((r, i) => {
                     h += `
                         <tr class="border-b border-slate-200 hover:bg-slate-50 text-row text-center">
                             <td class="p-3"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer"></td>
                             <td class="p-3 font-bold text-slate-400">${i+1}</td>
+                            <td class="p-3 font-bold text-slate-600">${r.tglProduksi}</td>
+                            <td class="p-3 font-bold text-slate-600">${r.mesin}</td>
+                            <td class="p-3 font-bold text-slate-600 border-r border-slate-200">${r.shift}</td>
                             <td class="p-3 font-black text-blue-700 s-jenis">${r.jenisItem}</td>
                             <td class="p-3 font-bold text-slate-800 text-left s-nama">${r.jasper}</td>
+                            <td class="p-3 font-bold text-slate-500">${r.panjang}</td>
+                            <td class="p-3 font-semibold text-slate-800">${r.grade}</td>
+                            <td class="p-3 font-bold text-slate-800">${r.dus}</td>
+                            <td class="p-3 font-bold text-slate-600 border-r border-slate-200">${r.shading}</td>
                             <td class="p-3 font-black text-orange-600 bg-orange-50/40 s-po">${r.po}</td>
                             <td class="p-3 font-black text-base text-slate-900 bg-slate-100">${r.qty}</td>
                         </tr>`;
@@ -426,13 +466,22 @@
 
         function toggleSemuaCentang(checked) { document.querySelectorAll('.row-cb').forEach(cb => cb.checked = checked); }
         function toggleKolomRaw(cls, show) { document.querySelectorAll('.' + cls).forEach(el => el.style.display = show ? '' : 'none'); }
-        function bersihkanFilter() { document.getElementById('flt-qr').value = ''; document.querySelectorAll('.dynamic-filter').forEach(el => el.value = ''); jalankanSaring(); }
+        function bersihkanFilter() { document.getElementById('flt-qr').value = ''; document.querySelectorAll('.dynamic-filter').forEach(el => el.value = ''); document.getElementById('flt-nama').value = ''; jalankanSaring(); }
 
+        // PERBAIKAN LOGIKA FILTER (MEMISAHKAN PERILAKU UNTUK KATALOG VS QR)
         function jalankanSaring() {
             const fQr = document.getElementById('flt-qr').value.toLowerCase();
             const fJenis = document.getElementById('flt-jenis').value.toLowerCase();
             const fNama = document.getElementById('flt-nama').value.toLowerCase();
             const fPo = document.getElementById('flt-po').value.toLowerCase();
+
+            if (modeSekarang === 'katalog') {
+                document.querySelectorAll('.katalog-row').forEach(row => {
+                    const txt = row.innerText.toLowerCase();
+                    row.style.display = txt.includes(fNama) ? '' : 'none';
+                });
+                return;
+            }
 
             document.querySelectorAll('.text-row').forEach(row => {
                 let show = true;
@@ -444,8 +493,7 @@
                 if(fNama && cNama && !cNama.innerText.toLowerCase().includes(fNama)) show = false;
                 if(fPo && cPo && !cPo.innerText.toLowerCase().includes(fPo)) show = false;
 
-                // Jangan hide jika di mode katalog (filter mati)
-                if(modeSekarang !== 'katalog') row.style.display = show ? '' : 'none';
+                row.style.display = show ? '' : 'none';
             });
         }
 
@@ -455,13 +503,12 @@
             if(checkedValues.length === 0) return alert("Centang baris tabel terlebih dahulu!");
 
             if(tipe === 'salin') {
-                let textSalin = "NO\tQRCODE\tJENIS\tNAMA ITEM\tPANJANG\tGRADE\tPO\n";
-                if (modeSekarang === 'jasper') textSalin = "NO\tQRCODE\tJENIS\tNAMA JASPER\tPO\n";
-
+                // EXCEL EXPORT LENGKAP SEMUA KOLOM
+                let textSalin = "NO\tQRCODE\tTGL PRODUKSI\tMESIN\tSHIFT\tJENIS\tNAMA ITEM/JASPER\tPANJANG\tGRADE\tDUS\tSHADING\tPO\n";
                 checkedValues.forEach((qr, idx) => {
                     let t = translateBarcode(qr);
-                    if (modeSekarang === 'jasper') textSalin += `${idx+1}\t${qr}\t${t.jenisItem}\t${t.jasper}\t${t.po}\n`;
-                    else textSalin += `${idx+1}\t${qr}\t${t.jenisItem}\t${t.namaItem}\t${t.panjang}\t${t.grade}\t${t.po}\n`;
+                    let n = modeSekarang === 'jasper' ? t.jasper : t.namaItem;
+                    textSalin += `${idx+1}\t${qr}\t${t.tglProduksi}\t${t.mesin}\t${t.shift}\t${t.jenisItem}\t${n}\t${t.panjang}\t${t.grade}\t${t.dus}\t${t.shading}\t${t.po}\n`;
                 });
                 navigator.clipboard.writeText(textSalin);
                 alert(`Tersalin ${checkedValues.length} baris. Buka Excel dan Paste (Ctrl+V).`);
@@ -485,13 +532,11 @@
                 }
             } 
             else if(tipe === 'xlsx') {
-                let csvContent = "data:text/csv;charset=utf-8,NO,QRCODE,JENIS,NAMA,PANJANG,GRADE,PO\n";
-                if (modeSekarang === 'jasper') csvContent = "data:text/csv;charset=utf-8,NO,QRCODE,JENIS,NAMA JASPER,PO\n";
-
+                let csvContent = "data:text/csv;charset=utf-8,NO,QRCODE,TGL_PRODUKSI,MESIN,SHIFT,JENIS,NAMA,PANJANG,GRADE,DUS,SHADING,PO\n";
                 checkedValues.forEach((qr, idx) => {
                     let t = translateBarcode(qr);
-                    if (modeSekarang === 'jasper') csvContent += `${idx+1},${qr},${t.jenisItem},${t.jasper},${t.po}\n`;
-                    else csvContent += `${idx+1},${qr},${t.jenisItem},${t.namaItem},${t.panjang},${t.grade},${t.po}\n`;
+                    let n = modeSekarang === 'jasper' ? t.jasper : t.namaItem;
+                    csvContent += `${idx+1},${qr},${t.tglProduksi},${t.mesin},${t.shift},${t.jenisItem},${n},${t.panjang},${t.grade},${t.dus},${t.shading},${t.po}\n`;
                 });
                 const encodedUri = encodeURI(csvContent);
                 const link = document.createElement("a");
