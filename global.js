@@ -35,21 +35,32 @@ style.innerHTML = `
     body.shape-sharp * { border-radius: 0px !important; }
     
     /* ====================================================
-       2. TRUE DARK MODE (Perbaikan Kontras Teks & Background)
+       2. TRUE DARK MODE (Perbaikan Kontras Teks, Tombol & Hover)
        ==================================================== */
     body.base-dark { background-color: #0f172a !important; color: #f8fafc !important; }
     
-    /* Latar Belakang Area Konten */
-    body.base-dark .bg-slate-50, body.base-dark .bg-slate-100, body.base-dark main { background-color: #0f172a !important; }
+    /* Latar Belakang Area Konten Utama */
+    body.base-dark main { background-color: #0f172a !important; }
     
-    /* Ubah Kartu, Sidebar, dan Modal menjadi Gelap (Dark Slate) */
+    /* Ubah Kartu, Sidebar, dan Modal menjadi Gelap Elegan */
     body.base-dark .bg-white, body.base-dark aside { background-color: #1e293b !important; border-color: #334155 !important; color: #f8fafc !important; }
     
-    /* PERBAIKAN KONTRAS: Balikkan Warna Teks Gelap ke Terang */
-    body.base-dark .text-slate-900, body.base-dark .text-slate-800, body.base-dark .text-slate-700, body.base-dark .text-slate-600 { color: #e2e8f0 !important; }
+    /* FIX TOMBOL: Cegah background putih/terang pada tombol sekunder saat mode gelap */
+    body.base-dark .bg-slate-50, body.base-dark .bg-slate-100 { background-color: #0f172a !important; color: #f8fafc !important; border-color: #334155 !important; }
+    body.base-dark .bg-slate-200 { background-color: #334155 !important; color: #f8fafc !important; border-color: #475569 !important; }
+    
+    /* FIX HOVER/HIGHLIGHT: Jangan biarkan highlight menjadi terang/silau */
+    body.base-dark .hover\\:bg-slate-100:hover, 
+    body.base-dark .hover\\:bg-slate-200:hover { background-color: #334155 !important; color: #ffffff !important; }
+    body.base-dark .hover\\:bg-slate-300:hover { background-color: #475569 !important; color: #ffffff !important; }
+    body.base-dark .hover\\:text-slate-900:hover { color: #ffffff !important; }
+    
+    /* FIX TEKS: Balikkan Warna Teks yang awalnya Gelap agar Terang dan Terbaca */
+    body.base-dark .text-slate-900, body.base-dark .text-slate-800, 
+    body.base-dark .text-slate-700, body.base-dark .text-slate-600 { color: #f1f5f9 !important; }
     body.base-dark .text-slate-500, body.base-dark .text-slate-400 { color: #94a3b8 !important; }
     
-    /* Penyesuaian Form, Input, dan Tabel di Mode Malam agar Terbaca */
+    /* Penyesuaian Input Form dan Tabel di Mode Malam */
     body.base-dark input, body.base-dark select, body.base-dark textarea { background-color: #0f172a !important; color: #f8fafc !important; border-color: #475569 !important; }
     body.base-dark input::placeholder { color: #64748b !important; }
     body.base-dark table { background-color: #1e293b !important; color: #f8fafc !important; border-color: #334155 !important; }
@@ -90,7 +101,7 @@ document.head.appendChild(style);
 function initModernLayout(pageMeta) {
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'Staff'};
     
-    // BACA 3 SETTING TEMA DARI LOCAL STORAGE
+    // BACA SETTING TEMA DARI LOCAL STORAGE
     const currentShape = localStorage.getItem('app_shape') || 'rounded'; // rounded, sharp
     const currentBg = localStorage.getItem('app_bg') || 'light';         // light, dark
     const currentNuance = localStorage.getItem('app_nuance') || 'gelap'; // gelap, biru, abu, light, color
@@ -170,6 +181,7 @@ function initModernLayout(pageMeta) {
 
     rightArea.innerHTML = headerHTML;
     let mainContent = document.createElement('main');
+    // PERBAIKAN DARK MODE: Latar belakang main berubah otomatis sesuai mode
     mainContent.className = currentBg === 'dark' ? 'flex-1 overflow-x-hidden overflow-y-auto bg-slate-900 p-4 md:p-6 pb-20' : 'flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 md:p-6 pb-20';
     originalNodes.forEach(node => mainContent.appendChild(node));
     rightArea.appendChild(mainContent);
@@ -183,8 +195,8 @@ function initModernLayout(pageMeta) {
                 <h3 class="text-xl font-black mb-4 flex items-center gap-2"><i data-lucide="key-round" class="text-slate-600"></i> Ganti Password</h3>
                 <input type="password" placeholder="Password Baru" class="w-full p-3 border border-slate-300 rounded mb-4 font-bold outline-none focus:border-slate-800">
                 <div class="flex gap-2">
-                    <button onclick="tutupModal('modal-password')" class="w-1/2 py-2.5 bg-slate-200 text-slate-700 font-bold rounded hover:bg-slate-300">Batal</button>
-                    <button onclick="tutupModal('modal-password'); alert('Fungsi ini akan segera disambungkan ke DB');" class="w-1/2 py-2.5 bg-slate-800 text-white font-bold rounded hover:bg-slate-900">Simpan</button>
+                    <button onclick="tutupModal('modal-password')" class="w-1/2 py-2.5 bg-slate-200 text-slate-700 font-bold rounded hover:bg-slate-300 transition">Batal</button>
+                    <button onclick="tutupModal('modal-password'); alert('Fungsi ini akan segera disambungkan ke DB');" class="w-1/2 py-2.5 bg-slate-800 text-white font-bold rounded hover:bg-slate-900 transition">Simpan</button>
                 </div>
             </div>
         </div>
@@ -210,11 +222,11 @@ function initModernLayout(pageMeta) {
                 <div class="mb-6 space-y-2">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">3. Nuansa Warna Bar</p>
                     <div class="grid grid-cols-2 gap-2">
-                        <button onclick="setTheme('app_nuance', 'gelap')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'gelap' ? 'bg-slate-800 text-white border-slate-900' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Gelap (Slate)</button>
-                        <button onclick="setTheme('app_nuance', 'biru')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'biru' ? 'bg-blue-700 text-white border-blue-800' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Biru Corporate</button>
-                        <button onclick="setTheme('app_nuance', 'abu')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'abu' ? 'bg-gray-500 text-white border-gray-600' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Abu-abu</button>
-                        <button onclick="setTheme('app_nuance', 'light')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'light' ? 'bg-white text-slate-800 border-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Putih (Light)</button>
-                        <button onclick="setTheme('app_nuance', 'color')" class="col-span-2 py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'color' ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-none' : 'bg-slate-50 border-slate-200 text-slate-600'} transition">Color (Gradient)</button>
+                        <button onclick="setTheme('app_nuance', 'gelap')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'gelap' ? 'bg-slate-800 text-white border-slate-900' : 'bg-slate-50 border-slate-200 text-slate-600'} transition hover:bg-slate-200">Gelap (Slate)</button>
+                        <button onclick="setTheme('app_nuance', 'biru')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'biru' ? 'bg-blue-700 text-white border-blue-800' : 'bg-slate-50 border-slate-200 text-slate-600'} transition hover:bg-slate-200">Biru Corporate</button>
+                        <button onclick="setTheme('app_nuance', 'abu')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'abu' ? 'bg-gray-500 text-white border-gray-600' : 'bg-slate-50 border-slate-200 text-slate-600'} transition hover:bg-slate-200">Abu-abu</button>
+                        <button onclick="setTheme('app_nuance', 'light')" class="py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'light' ? 'bg-white text-slate-800 border-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'} transition hover:bg-slate-200">Putih (Light)</button>
+                        <button onclick="setTheme('app_nuance', 'color')" class="col-span-2 py-2 text-xs font-bold rounded-lg border-2 ${currentNuance === 'color' ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-none' : 'bg-slate-50 border-slate-200 text-slate-600'} transition hover:bg-slate-200">Color (Gradient)</button>
                     </div>
                 </div>
                 
@@ -225,7 +237,7 @@ function initModernLayout(pageMeta) {
     layoutWrapper.insertAdjacentHTML('beforeend', modalsHTML);
     document.body.appendChild(layoutWrapper);
     
-    // MENERAPKAN CLASS KE BODY (SANGAT PENTING)
+    // MENERAPKAN CLASS KE BODY
     if(currentBg === 'dark') document.body.classList.add('base-dark'); 
     if(currentShape === 'sharp') document.body.classList.add('shape-sharp');
     document.body.classList.add(`nuance-${currentNuance}`);
