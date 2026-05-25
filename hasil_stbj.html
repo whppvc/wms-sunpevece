@@ -23,7 +23,7 @@
                     <label id="lbl-pilih-tabel" class="text-xs font-black text-slate-600 uppercase">Tampilkan Data:</label>
                     <select id="select-tabel" onchange="switchTable(this.value)" class="p-2 border-2 border-slate-200 rounded-lg font-bold text-xs text-slate-800 outline-none focus:border-slate-800 bg-slate-50 cursor-pointer">
                         <option value="hasil_stbj">TABEL HASIL STBJ (UNIQUE)</option>
-                        <option value="hold_stbj">TABEL HOLD STBJ (DUPLIKAT)</option>
+                        <option value="hold_stbj">TABEL HOLD STBJ (DUPLIKAT/HOLD)</option>
                     </select>
                 </div>
                 <div class="flex gap-2 w-full sm:w-auto justify-end">
@@ -42,6 +42,7 @@
 
             <div id="panel-kolom" class="hidden flex flex-wrap gap-4 bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs font-bold text-slate-600">
                 <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked onchange="toggleKolomRaw('c-waktu', this.checked)"> Waktu</label>
+                <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked onchange="toggleKolomRaw('c-prod', this.checked)"> Produksi (Mesin/Shift/Tgl)</label>
                 <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked onchange="toggleKolomRaw('c-pic', this.checked)"> PIC Input</label>
                 <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked onchange="toggleKolomRaw('c-ket', this.checked)"> Keterangan</label>
             </div>
@@ -49,7 +50,7 @@
             <div class="flex flex-wrap items-center gap-2 pt-2">
                 <button onclick="aksiMassal('salin')" class="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="copy" class="w-4 h-4"></i> SALIN CEL</button>
                 <button onclick="aksiMassal('hapus')" class="flex-1 sm:flex-none px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="trash-2" class="w-4 h-4"></i> HAPUS</button>
-                <button onclick="aksiMassal('hold')" id="btn-massal-hold" class="flex-1 sm:flex-none px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="pause-circle" class="w-4 h-4"></i> HOLD / UNHOLD</button>
+                <button onclick="aksiMassal('hold')" id="btn-massal-hold" class="flex-1 sm:flex-none px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="pause-circle" class="w-4 h-4"></i> PINDAHKAN (HOLD/UNHOLD)</button>
                 <button onclick="aksiMassal('xlsx')" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="download" class="w-4 h-4"></i> DOWNLOAD XLS</button>
             </div>
         </div>
@@ -57,10 +58,8 @@
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative mb-10">
             <div class="overflow-x-auto w-full max-h-[60vh] hide-scrollbar">
                 <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-stbj-main">
-                    <thead class="sticky top-0 z-10 shadow-sm" id="thead-stbj">
-                        </thead>
-                    <tbody id="tbody-stbj" class="text-center text-slate-700">
-                        </tbody>
+                    <thead class="sticky top-0 z-10 shadow-sm" id="thead-stbj"></thead>
+                    <tbody id="tbody-stbj" class="text-center text-slate-700"></tbody>
                 </table>
             </div>
         </div>
@@ -68,14 +67,14 @@
 
     <script src="global.js"></script>
     <script>
-        let modeSekarang = 'qrcode'; // qrcode, item, jasper
-        let tabelSekarang = 'hasil_stbj'; // hasil_stbj, hold_stbj
+        let modeSekarang = 'qrcode'; 
+        let tabelSekarang = 'hasil_stbj'; 
         let rawDataRaw = [];
         let kamusData = [];
         let jasperData = [];
 
         document.addEventListener('DOMContentLoaded', () => {
-            initModernLayout({ id: 'hasil_stbj', title: 'HASIL AUDIT STBJ', url: 'hasil_stbj.html' });
+            initModernLayout({ id: 'hasil_stbj', title: 'HASIL STBJ', url: 'hasil_stbj.html' });
             setTimeout(async () => {
                 await loadKamusDanJasper();
                 await muatDataDariSupabase();
@@ -90,12 +89,12 @@
             try {
                 const { data: dj } = await db.from('nama_jasper').select('*');
                 if(dj) jasperData = dj;
-            } catch(e) { console.log("Tabel nama_jasper belum siap, menggunakan fallback otomatis."); }
+            } catch(e) { console.log("Tabel nama_jasper belum siap."); }
         }
 
         async function muatDataDariSupabase() {
-            const tbody = document.getElementById('data-body');
-            document.getElementById('tbody-stbj').innerHTML = `<tr><td colspan="20" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menarik Data ${tabelSekarang}...</p></td></tr>`;
+            const tbody = document.getElementById('tbody-stbj');
+            tbody.innerHTML = `<tr><td colspan="20" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menarik Data ${tabelSekarang}...</p></td></tr>`;
             lucide.createIcons();
 
             try {
@@ -103,40 +102,51 @@
                 if(error) throw error;
                 rawDataRaw = data || [];
                 renderHeaderDanTabel();
-            } catch(err) {
-                document.getElementById('tbody-stbj').innerHTML = `<tr><td colspan="20" class="p-10 text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`;
-            }
+            } catch(err) { tbody.innerHTML = `<tr><td colspan="20" class="p-10 text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; }
         }
 
+        // FUNGSI TRANSLATE LENGKAP + JASPER
         function translateBarcode(barcode) {
-            let td = { jenis: '-', nama: '-', pjg: '-', grade: '-', dus: '-', shading: '-', po: '-', jasper: '-' };
-            const parts = barcode.split('/');
-            if (parts.length < 1) return td;
+            let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-', jasper: '-' };
+            const parts = barcode.split('/'); if (parts.length < 1) return td;
             
             const hurufDepan = barcode.charAt(0).toUpperCase();
-            if (hurufDepan === 'P') td.jenis = 'Plafon'; else if (hurufDepan === 'L') td.jenis = 'List'; else if (hurufDepan === 'W') td.jenis = 'WPC';
+            if (hurufDepan === 'P') td.jenisItem = 'Plafon'; else if (hurufDepan === 'L') td.jenisItem = 'List'; else if (hurufDepan === 'W') td.jenisItem = 'WPC'; else td.jenisItem = hurufDepan;
+
+            let rawItem = parts[0]; let cariItem = kamusData.find(m => m.kode_nama_item === rawItem); 
+            td.namaItem = cariItem && cariItem.nama_item ? cariItem.nama_item : rawItem; td.shading = parts[1] || '-';
             
-            const rawItem = parts[0];
-            const cariItem = kamusData.find(m => m.kode_nama_item === rawItem);
-            td.nama = cariItem ? cariItem.nama_item : rawItem;
-            td.shading = parts[1] || '-';
-
-            if(parts[2]) {
-                const p2 = parts[2];
+            const p2 = parts[2];
+            if (p2 && p2.length >= 4) {
                 let digitPjg = (p2.length === 5) ? 2 : 1; let rawPjg = p2.substring(0, digitPjg);
-                td.pjg = (digitPjg === 1) ? rawPjg + "M" : rawPjg[0] + "." + rawPjg[1] + "M";
+                td.panjang = (digitPjg === 1) ? rawPjg + "M" : rawPjg[0] + "." + rawPjg[1] + "M"; 
                 let rawGrade = p2.substring(digitPjg, digitPjg + 1); td.grade = rawGrade === '1' ? 'BAGUS' : (rawGrade === '2' ? 'A' : rawGrade);
-                let rawDus = p2.substring(p2.length - 2); let cariDus = kamusData.find(m => m.kode_dus === rawDus); td.dus = cariDus ? cariDus.dus : rawDus;
+                let rawDus = p2.substring(p2.length - 2); let cariDus = kamusData.find(m => m.kode_dus === rawDus); td.dus = cariDus && cariDus.dus ? cariDus.dus : rawDus;
             }
-            if(parts[3] && parts[3].length >= 5) {
-                let sisa = parts[3].substring(5); let match = sisa.match(/(C.*?)(S.*?)(P.*)/);
-                if(match) { let cp = kamusData.find(m => m.kode_po === match[3]); td.po = cp ? cp.po : match[3]; }
+            const p3 = parts[3];
+            if (p3 && p3.length >= 5) {
+                const dayOfYear = parseInt(p3.substring(0, 3)); const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
+                const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
+                td.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
+                let sisaString = p3.substring(5); let match = sisaString.match(/(C.*?)(S.*?)(P.*)/);
+                if (match) {
+                    let cariMesin = kamusData.find(m => m.kode_mesin === match[1]); td.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : match[1];
+                    let cariShift = kamusData.find(m => m.kode_shift === match[2]); td.shift = cariShift && cariShift.shift ? cariShift.shift : match[2];
+                    let cariPO = kamusData.find(m => m.kode_po === match[3]); td.po = cariPO && cariPO.po ? cariPO.po : match[3];
+                }
             }
 
-            // Cari Nama Jasper
-            const skuString = `${td.jenis}_${td.nama}_${td.pjg}_${td.grade}`;
-            const cJasper = jasperData.find(j => j.sku_asal === skuString || j.kode_item === rawItem);
-            td.jasper = cJasper ? cJasper.nama_jasper : `JASPER-${td.nama}`;
+            // LOGIKA JASPER MENGGUNAKAN NAMA ITEM, PANJANG, & GRADE
+            if(jasperData.length > 0) {
+                const cJasper = jasperData.find(j => 
+                    (j.nama_item === td.namaItem || j.nama === td.namaItem) && 
+                    (j.panjang === td.panjang || j.pjg === td.panjang) && 
+                    j.grade === td.grade
+                );
+                td.jasper = cJasper ? (cJasper.nama_jasper || cJasper.jasper) : `JAS-${td.namaItem}`;
+            } else {
+                td.jasper = `JAS-${td.namaItem}`;
+            }
 
             return td;
         }
@@ -147,16 +157,13 @@
             document.getElementById('tab-mode-item').className = m === 'item' ? 'px-5 py-3.5 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2' : 'px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800';
             document.getElementById('tab-mode-jasper').className = m === 'jasper' ? 'px-5 py-3.5 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2' : 'px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800';
             
-            // Sembunyikan pilihan tabel & kolom jika masuk mode agregasi/qty
             document.getElementById('lbl-pilih-tabel').style.display = m === 'qrcode' ? '' : 'none';
             document.getElementById('select-tabel').style.display = m === 'qrcode' ? '' : 'none';
             document.getElementById('btn-toggle-kolom').style.display = m === 'qrcode' ? '' : 'none';
             document.getElementById('panel-kolom').classList.add('hidden');
             document.getElementById('btn-massal-hold').style.display = m === 'qrcode' ? '' : 'none';
 
-            // Sembunyikan atau sesuaikan filter box
             document.querySelectorAll('.dynamic-filter').forEach(el => el.style.display = m === 'qrcode' ? 'none' : '');
-
             renderHeaderDanTabel();
         }
 
@@ -172,24 +179,47 @@
                         <th class="hdr-std w-10"><input type="checkbox" id="master-cb" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer"></th>
                         <th class="hdr-std w-12">No</th>
                         <th class="hdr-std c-waktu">Waktu Scan</th>
-                        <th class="hdr-std">QRCode</th>
-                        <th class="hdr-std c-pic">PIC Input</th>
+                        <th class="hdr-std border-r border-slate-500">QRCode</th>
+                        <th class="hdr-std c-prod">Tgl Produksi</th>
+                        <th class="hdr-std c-prod">Mesin</th>
+                        <th class="hdr-std c-prod border-r border-slate-500">Shift</th>
+                        <th class="hdr-std text-blue-300">Jenis Item</th>
+                        <th class="hdr-std">Nama Item</th>
+                        <th class="hdr-std">Pjg</th>
+                        <th class="hdr-std">Grade</th>
+                        <th class="hdr-std">Dus</th>
+                        <th class="hdr-std border-r border-slate-500">Shading</th>
+                        <th class="hdr-std">PO Awal</th>
+                        <th class="hdr-std c-pic border-l border-slate-500">PIC Input</th>
                         <th class="hdr-std c-ket">Keterangan</th>
+                        ${tabelSekarang === 'hold_stbj' ? '<th class="hdr-std text-amber-400">Status Hold</th>' : ''}
                     </tr>`;
                 
-                if(rawDataRaw.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="p-6 font-bold text-slate-400">Tabel Kosong.</td></tr>'; return; }
+                if(rawDataRaw.length === 0) { tbody.innerHTML = '<tr><td colspan="17" class="p-6 font-bold text-slate-400">Tabel Kosong.</td></tr>'; return; }
                 
                 let h = '';
                 rawDataRaw.forEach((r, i) => {
                     const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+                    const td = translateBarcode(r.qrcode);
                     h += `
                         <tr class="border-b border-slate-200 hover:bg-slate-50 text-row">
                             <td class="p-3 text-center"><input type="checkbox" value="${r.qrcode}" class="row-cb cursor-pointer"></td>
                             <td class="p-3 font-bold text-slate-400">${i+1}</td>
                             <td class="p-3 text-slate-600 c-waktu">${tgl}</td>
-                            <td class="p-3 font-mono font-bold text-slate-900 text-left s-qr bg-slate-50 tracking-wider">${r.qrcode}</td>
-                            <td class="p-3 font-bold uppercase text-[11px] text-slate-500 c-pic">${r.pic_input || '-'}</td>
+                            <td class="p-3 font-mono font-bold text-slate-900 text-left s-qr bg-slate-50 tracking-wider border-r border-slate-200">${r.qrcode}</td>
+                            <td class="p-3 font-bold text-slate-600 c-prod">${td.tglProduksi}</td>
+                            <td class="p-3 font-bold text-slate-600 c-prod">${td.mesin}</td>
+                            <td class="p-3 font-bold text-slate-600 c-prod border-r border-slate-200">${td.shift}</td>
+                            <td class="p-3 font-black text-blue-700 s-jenis">${td.jenisItem}</td>
+                            <td class="p-3 font-bold text-slate-800 text-left s-nama">${td.namaItem}</td>
+                            <td class="p-3 font-bold text-slate-600">${td.panjang}</td>
+                            <td class="p-3 font-bold text-slate-800">${td.grade}</td>
+                            <td class="p-3 font-bold text-slate-800">${td.dus}</td>
+                            <td class="p-3 font-bold text-slate-600 border-r border-slate-200">${td.shading}</td>
+                            <td class="p-3 font-black text-orange-600 bg-orange-50/50 s-po">${td.po}</td>
+                            <td class="p-3 font-bold uppercase text-[11px] text-slate-500 c-pic border-l border-slate-200">${r.pic_input || '-'}</td>
                             <td class="p-3 text-slate-600 text-left c-ket">${r.keterangan || '-'}</td>
+                            ${tabelSekarang === 'hold_stbj' ? `<td class="p-3 font-black text-[10px] text-amber-600 bg-amber-50">${r.status || 'HOLD'}</td>` : ''}
                         </tr>`;
                 });
                 tbody.innerHTML = h;
@@ -207,11 +237,10 @@
                         <th class="hdr-std bg-slate-900 text-blue-300">QTY (DUS)</th>
                     </tr>`;
                 
-                // Grouping logika
                 let groups = {};
                 rawDataRaw.forEach(r => {
                     let t = translateBarcode(r.qrcode);
-                    let key = `${t.jenis}_${t.nama}_${t.pjg}_${t.grade}_${t.po}`;
+                    let key = `${t.jenisItem}_${t.namaItem}_${t.panjang}_${t.grade}_${t.po}`;
                     if(!groups[key]) groups[key] = { ...t, qty: 0, qrcodes: [] };
                     groups[key].qty++;
                     groups[key].qrcodes.push(r.qrcode);
@@ -226,9 +255,9 @@
                         <tr class="border-b border-slate-200 hover:bg-slate-50 text-row">
                             <td class="p-3 text-center"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer"></td>
                             <td class="p-3 font-bold text-slate-400">${i+1}</td>
-                            <td class="p-3 font-black text-blue-700 s-jenis">${r.jenis}</td>
-                            <td class="p-3 font-bold text-slate-800 text-left s-nama">${r.nama}</td>
-                            <td class="p-3 font-bold text-slate-500">${r.pjg}</td>
+                            <td class="p-3 font-black text-blue-700 s-jenis">${r.jenisItem}</td>
+                            <td class="p-3 font-bold text-slate-800 text-left s-nama">${r.namaItem}</td>
+                            <td class="p-3 font-bold text-slate-500">${r.panjang}</td>
                             <td class="p-3 font-semibold text-slate-800">${r.grade}</td>
                             <td class="p-3 font-black text-orange-600 bg-orange-50/40 s-po">${r.po}</td>
                             <td class="p-3 font-black text-base text-slate-900 bg-slate-100">${r.qty}</td>
@@ -250,8 +279,8 @@
                 let groups = {};
                 rawDataRaw.forEach(r => {
                     let t = translateBarcode(r.qrcode);
-                    let key = `${t.jenis}_${t.jasper}_${t.po}`;
-                    if(!groups[key]) groups[key] = { jenis: t.jenis, jasper: t.jasper, po: t.po, qty: 0, qrcodes: [] };
+                    let key = `${t.jenisItem}_${t.jasper}_${t.po}`;
+                    if(!groups[key]) groups[key] = { jenisItem: t.jenisItem, jasper: t.jasper, po: t.po, qty: 0, qrcodes: [] };
                     groups[key].qty++;
                     groups[key].qrcodes.push(r.qrcode);
                 });
@@ -265,7 +294,7 @@
                         <tr class="border-b border-slate-200 hover:bg-slate-50 text-row">
                             <td class="p-3 text-center"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer"></td>
                             <td class="p-3 font-bold text-slate-400">${i+1}</td>
-                            <td class="p-3 font-black text-blue-700 s-jenis">${r.jenis}</td>
+                            <td class="p-3 font-black text-blue-700 s-jenis">${r.jenisItem}</td>
                             <td class="p-3 font-bold text-slate-800 text-left s-nama">${r.jasper}</td>
                             <td class="p-3 font-black text-orange-600 bg-orange-50/40 s-po">${r.po}</td>
                             <td class="p-3 font-black text-base text-slate-900 bg-slate-100">${r.qty}</td>
@@ -308,59 +337,57 @@
             });
         }
 
-        // 9. CORE ACTION BUTTONS MASSAL LOGIC
         async function aksiMassal(tipe) {
             let checkedValues = [];
             document.querySelectorAll('.row-cb:checked').forEach(cb => {
                 cb.value.split(',').forEach(v => { if(v) checkedValues.push(v); });
             });
 
-            if(checkedValues.length === 0) return alert("Pilih / Centang baris tabel terlebih dahulu!");
+            if(checkedValues.length === 0) return alert("Centang baris tabel terlebih dahulu!");
 
             if(tipe === 'salin') {
-                // SALIN SEL FORMAT EXCEL (MENGGUNAKAN TAB SEPARATOR)
                 let textSalin = "NO\tQRCODE\tJENIS\tNAMA ITEM\tPANJANG\tGRADE\tPO\n";
+                if (modeSekarang === 'jasper') textSalin = "NO\tQRCODE\tJENIS\tNAMA JASPER\tPO\n";
+
                 checkedValues.forEach((qr, idx) => {
                     let t = translateBarcode(qr);
-                    textSalin += `${idx+1}\t${qr}\t${t.jenis}\t${t.nama}\t${t.pjg}\t${t.grade}\t${t.po}\n`;
+                    if (modeSekarang === 'jasper') textSalin += `${idx+1}\t${qr}\t${t.jenisItem}\t${t.jasper}\t${t.po}\n`;
+                    else textSalin += `${idx+1}\t${qr}\t${t.jenisItem}\t${t.namaItem}\t${t.panjang}\t${t.grade}\t${t.po}\n`;
                 });
                 navigator.clipboard.writeText(textSalin);
-                alert(`Berhasil menyalin ${checkedValues.length} baris sel. Silakan langsung paste (Ctrl+V) ke Microsoft Excel.`);
+                alert(`Tersalin ${checkedValues.length} baris. Buka Excel dan Paste (Ctrl+V).`);
             } 
             else if(tipe === 'hapus') {
-                if(!confirm(`Yakin ingin menghapus massal ${checkedValues.length} data QRCode ini secara permanen dari database?`)) return;
+                if(!confirm(`Hapus permanen ${checkedValues.length} QRCode dari database?`)) return;
                 const { error } = await db.from(tabelSekarang).delete().in('qrcode', checkedValues);
-                if(error) alert("Gagal hapus: " + error.message); else { alert("Data berhasil dihapus!"); muatDataDariSupabase(); }
+                if(error) alert("Gagal hapus: " + error.message); else { alert("Dihapus!"); muatDataDariSupabase(); }
             } 
             else if(tipe === 'hold') {
                 if(tabelSekarang === 'hasil_stbj') {
-                    if(!confirm(`Pindahkan ${checkedValues.length} data ini dari HASIL ke tabel HOLD (Duplikat)?`)) return;
-                    const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ qrcode: r.qrcode, pic_input: r.pic_input, keterangan: r.keterangan }));
-                    
+                    if(!confirm(`Pindahkan ${checkedValues.length} data HASIL -> tabel HOLD (Duplikat)?`)) return;
+                    const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ qrcode: r.qrcode, pic_input: r.pic_input, keterangan: r.keterangan, status: 'HOLD' }));
                     const { error: errAdd } = await db.from('hold_stbj').upsert(dataPindah);
-                    if(!errAdd) { await db.from('hasil_stbj').delete().in('qrcode', checkedValues); alert("Berhasil dipindahkan ke HOLD!"); muatDataDariSupabase(); }
+                    if(!errAdd) { await db.from('hasil_stbj').delete().in('qrcode', checkedValues); alert("Dipindahkan ke HOLD!"); muatDataDariSupabase(); }
                 } else {
-                    if(!confirm(`Kembalikan / Unhold ${checkedValues.length} data ini ke tabel HASIL (Unique)?`)) return;
+                    if(!confirm(`Unhold ${checkedValues.length} data HOLD -> tabel HASIL (Unique)?`)) return;
                     const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ qrcode: r.qrcode, pic_input: r.pic_input, keterangan: r.keterangan }));
-                    
                     const { error: errAdd } = await db.from('hasil_stbj').upsert(dataPindah);
-                    if(!errAdd) { await db.from('hold_stbj').delete().in('qrcode', checkedValues); alert("Berhasil di-unhold ke HASIL!"); muatDataDariSupabase(); }
+                    if(!errAdd) { await db.from('hold_stbj').delete().in('qrcode', checkedValues); alert("Di-unhold ke HASIL!"); muatDataDariSupabase(); }
                 }
             } 
             else if(tipe === 'xlsx') {
-                // GENERATE CSV / DOWNLOAD XLS LAYOUT
-                let csvContent = "data:text/csv;charset=utf-8,NO,QRCODE,JENIS,NAMA_ITEM,PANJANG,GRADE,PO\n";
+                let csvContent = "data:text/csv;charset=utf-8,NO,QRCODE,JENIS,NAMA,PANJANG,GRADE,PO\n";
+                if (modeSekarang === 'jasper') csvContent = "data:text/csv;charset=utf-8,NO,QRCODE,JENIS,NAMA JASPER,PO\n";
+
                 checkedValues.forEach((qr, idx) => {
                     let t = translateBarcode(qr);
-                    csvContent += `${idx+1},${qr},${t.jenis},${t.nama},${t.pjg},${t.grade},${t.po}\n`;
+                    if (modeSekarang === 'jasper') csvContent += `${idx+1},${qr},${t.jenisItem},${t.jasper},${t.po}\n`;
+                    else csvContent += `${idx+1},${qr},${t.jenisItem},${t.namaItem},${t.panjang},${t.grade},${t.po}\n`;
                 });
                 const encodedUri = encodeURI(csvContent);
                 const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", `EXPORT_STBJ_${tabelSekarang}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                link.setAttribute("href", encodedUri); link.setAttribute("download", `STBJ_${tabelSekarang}.csv`);
+                document.body.appendChild(link); link.click(); document.body.removeChild(link);
             }
         }
     </script>
