@@ -23,15 +23,9 @@ const APP_MENUS = [
     { id: 'keluar', title: 'Kirim / Keluar', icon: 'truck', url: 'keluar.html' },
     { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' }
 ];
-
-// INJEKSI CSS STANDAR TABEL GELAP & TEMA MASERP
+// INJEKSI CSS TEMA MASERP (SUDUT TAJAM)
 const style = document.createElement('style');
 style.innerHTML = `
-    .hide-scrollbar::-webkit-scrollbar { display: none; } 
-    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 0.05em; white-space: nowrap; }
-    
-    /* OVERRIDE TEMA MASERP (SHARP & COOL) */
     body.theme-maserp * { border-radius: 0px !important; }
     body.theme-maserp .bg-white, body.theme-maserp .bg-slate-50 { border: 1px solid #cbd5e1; box-shadow: none !important; }
     body.theme-maserp aside { background-color: #f8fafc !important; border-right: 2px solid #cbd5e1 !important; }
@@ -41,12 +35,17 @@ style.innerHTML = `
 `;
 document.head.appendChild(style);
 
+// INJEKSI CSS STANDAR TABEL GELAP (Agar semua halaman otomatis rapi)
+const style = document.createElement('style');
+style.innerHTML = `
+    .hide-scrollbar::-webkit-scrollbar { display: none; } 
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 0.05em; white-space: nowrap; }
+`;
+document.head.appendChild(style);
+
 function initModernLayout(pageMeta) {
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'Staff'};
-    
-    // Tarik preferensi style dari localStorage
-    const currentStyle = localStorage.getItem('app_theme_style') || 'rounded';
-
     let tabs = JSON.parse(localStorage.getItem('wms_tabs')) || [];
     if(!tabs.find(t => t.id === 'dashboard')) tabs.unshift({id: 'dashboard', title: 'DASHBOARD', url: 'menu.html'});
     if(pageMeta && !tabs.find(t => t.id === pageMeta.id)) { tabs.push(pageMeta); localStorage.setItem('wms_tabs', JSON.stringify(tabs)); }
@@ -133,7 +132,6 @@ function initModernLayout(pageMeta) {
     layoutWrapper.innerHTML = sidebarHTML;
     layoutWrapper.appendChild(rightArea);
 
-    // MODAL PENGATURAN (TEMA & BENTUK UI)
     const modalsHTML = `
         <div id="modal-password" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[90] px-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm border border-slate-200 text-slate-800">
@@ -145,15 +143,14 @@ function initModernLayout(pageMeta) {
                 </div>
             </div>
         </div>
-        
         <div id="modal-tema" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[90] px-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm border border-slate-200 text-slate-800">
                 <h3 class="text-xl font-black mb-4 flex items-center gap-2"><i data-lucide="palette" class="text-slate-600"></i> Pengaturan Tampilan</h3>
                 
                 <div class="mb-5 space-y-2">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pilih Bentuk Komponen UI</p>
-                    <button onclick="setStyle('rounded')" class="w-full py-3 font-bold rounded border ${currentStyle === 'rounded' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-100 border-slate-300 text-slate-700'} flex justify-between px-4 items-center transition">Modern (Melengkung) <i data-lucide="circle" class="w-4 h-4"></i></button>
-                    <button onclick="setStyle('maserp')" class="w-full py-3 font-bold rounded border ${currentStyle === 'maserp' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-100 border-slate-300 text-slate-700'} flex justify-between px-4 items-center transition">Sharp <i data-lucide="square" class="w-4 h-4"></i></button>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pilih Bentuk UI</p>
+                    <button onclick="setStyle('rounded')" class="w-full py-3 font-bold rounded border bg-slate-100 border-slate-300 text-slate-700 flex justify-between px-4 items-center transition hover:bg-slate-200">Modern (Melengkung) <i data-lucide="circle" class="w-4 h-4"></i></button>
+                    <button onclick="setStyle('maserp')" class="w-full py-3 font-bold rounded border bg-slate-100 border-slate-300 text-slate-700 flex justify-between px-4 items-center transition hover:bg-slate-200">MASERP (Kotak Tajam) <i data-lucide="square" class="w-4 h-4"></i></button>
                 </div>
 
                 <div class="mb-6 space-y-2">
@@ -169,16 +166,10 @@ function initModernLayout(pageMeta) {
     layoutWrapper.insertAdjacentHTML('beforeend', modalsHTML);
     document.body.appendChild(layoutWrapper);
     
-    // Terapkan Class Tema Tambahan
     if(localStorage.getItem('app_bg') === 'dark') document.body.classList.add('bg-slate-900', 'text-white');
+    const currentStyle = localStorage.getItem('app_theme_style') || 'rounded';
     if(currentStyle === 'maserp') document.body.classList.add('theme-maserp');
-    
     lucide.createIcons();
-}
-
-function setStyle(style) {
-    localStorage.setItem('app_theme_style', style);
-    window.location.reload();
 }
 
 function toggleSidebar() { document.getElementById('app-sidebar').classList.toggle('-translate-x-full'); document.getElementById('sidebar-overlay').classList.toggle('hidden'); }
@@ -191,4 +182,9 @@ function closeGlobalTab(e, idToRemove, currentId) {
     tabs = tabs.filter(t => t.id !== idToRemove); localStorage.setItem('wms_tabs', JSON.stringify(tabs));
     if(currentId === idToRemove) window.location.href = tabs[tabs.length-1].url; else window.location.reload(); 
 }
+function setStyle(style) {
+    localStorage.setItem('app_theme_style', style);
+    window.location.reload();
+}
 document.addEventListener('click', (e) => { const dropdown = document.getElementById('profile-dropdown'); if (dropdown && !e.target.closest('.relative')) dropdown.classList.add('hidden'); });
+
