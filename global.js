@@ -23,17 +23,6 @@ const APP_MENUS = [
     { id: 'keluar', title: 'Kirim / Keluar', icon: 'truck', url: 'keluar.html' },
     { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' }
 ];
-// INJEKSI CSS TEMA MASERP (SUDUT TAJAM)
-const style = document.createElement('style');
-style.innerHTML = `
-    body.theme-maserp * { border-radius: 0px !important; }
-    body.theme-maserp .bg-white, body.theme-maserp .bg-slate-50 { border: 1px solid #cbd5e1; box-shadow: none !important; }
-    body.theme-maserp aside { background-color: #f8fafc !important; border-right: 2px solid #cbd5e1 !important; }
-    body.theme-maserp aside .bg-[#0f172a] { background-color: #ffffff !important; border-bottom: 2px solid #cbd5e1 !important; }
-    body.theme-maserp aside .text-white { color: #1e293b !important; }
-    body.theme-maserp header { background-color: #1e293b !important; }
-`;
-document.head.appendChild(style);
 
 // INJEKSI CSS STANDAR TABEL GELAP (Agar semua halaman otomatis rapi)
 const style = document.createElement('style');
@@ -145,21 +134,10 @@ function initModernLayout(pageMeta) {
         </div>
         <div id="modal-tema" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[90] px-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm border border-slate-200 text-slate-800">
-                <h3 class="text-xl font-black mb-4 flex items-center gap-2"><i data-lucide="palette" class="text-slate-600"></i> Pengaturan Tampilan</h3>
-                
-                <div class="mb-5 space-y-2">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pilih Bentuk UI</p>
-                    <button onclick="setStyle('rounded')" class="w-full py-3 font-bold rounded border bg-slate-100 border-slate-300 text-slate-700 flex justify-between px-4 items-center transition hover:bg-slate-200">Modern (Melengkung) <i data-lucide="circle" class="w-4 h-4"></i></button>
-                    <button onclick="setStyle('maserp')" class="w-full py-3 font-bold rounded border bg-slate-100 border-slate-300 text-slate-700 flex justify-between px-4 items-center transition hover:bg-slate-200">MASERP (Kotak Tajam) <i data-lucide="square" class="w-4 h-4"></i></button>
-                </div>
-
-                <div class="mb-6 space-y-2">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pilih Mode Warna</p>
-                    <button onclick="localStorage.setItem('app_bg', 'light'); window.location.reload();" class="w-full py-3 bg-slate-100 font-bold rounded border border-slate-300 transition hover:bg-slate-200">Mode Terang</button>
-                    <button onclick="localStorage.setItem('app_bg', 'dark'); window.location.reload();" class="w-full py-3 bg-slate-800 text-white font-bold rounded border border-slate-900 transition hover:bg-slate-900">Mode Gelap</button>
-                </div>
-
-                <button onclick="tutupModal('modal-tema')" class="w-full py-2.5 bg-slate-200 text-slate-700 font-bold rounded hover:bg-slate-300 transition">Tutup</button>
+                <h3 class="text-xl font-black mb-4 flex items-center gap-2"><i data-lucide="palette" class="text-slate-600"></i> Tema Tampilan</h3>
+                <button onclick="localStorage.setItem('app_bg', 'light'); window.location.reload();" class="w-full py-3 bg-slate-100 font-bold rounded border border-slate-300 mb-2">Tema Terang (Standar)</button>
+                <button onclick="localStorage.setItem('app_bg', 'dark'); window.location.reload();" class="w-full py-3 bg-slate-800 text-white font-bold rounded border border-slate-900 mb-4">Tema Gelap (Malam)</button>
+                <button onclick="tutupModal('modal-tema')" class="w-full py-2.5 bg-slate-200 text-slate-700 font-bold rounded hover:bg-slate-300">Tutup</button>
             </div>
         </div>
     `;
@@ -167,8 +145,6 @@ function initModernLayout(pageMeta) {
     document.body.appendChild(layoutWrapper);
     
     if(localStorage.getItem('app_bg') === 'dark') document.body.classList.add('bg-slate-900', 'text-white');
-    const currentStyle = localStorage.getItem('app_theme_style') || 'rounded';
-    if(currentStyle === 'maserp') document.body.classList.add('theme-maserp');
     lucide.createIcons();
 }
 
@@ -182,9 +158,4 @@ function closeGlobalTab(e, idToRemove, currentId) {
     tabs = tabs.filter(t => t.id !== idToRemove); localStorage.setItem('wms_tabs', JSON.stringify(tabs));
     if(currentId === idToRemove) window.location.href = tabs[tabs.length-1].url; else window.location.reload(); 
 }
-function setStyle(style) {
-    localStorage.setItem('app_theme_style', style);
-    window.location.reload();
-}
 document.addEventListener('click', (e) => { const dropdown = document.getElementById('profile-dropdown'); if (dropdown && !e.target.closest('.relative')) dropdown.classList.add('hidden'); });
-
