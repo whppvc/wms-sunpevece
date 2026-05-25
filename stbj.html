@@ -294,17 +294,17 @@
             const dupes = dataStbj.filter(d => d.status === 'DUPLIKAT');
 
             try {
-                // 1. Simpan yang UNIQUE ke hasil_stbj
+                // 1. Simpan yang UNIQUE ke hasil_stbj (MENGGUNAKAN INSERT BIASA)
                 if(uniques.length > 0) {
                     const payloadHasil = uniques.map(d => ({ qrcode: d.qrcode, pic_input: d.pic, keterangan: d.keterangan }));
-                    const { error: err1 } = await db.from('hasil_stbj').upsert(payloadHasil, { onConflict: 'qrcode' });
+                    const { error: err1 } = await db.from('hasil_stbj').insert(payloadHasil);
                     if(err1) throw err1;
                 }
                 
-                // 2. Simpan yang DUPLIKAT ke hold_stbj (asumsi tabel hold_stbj ada dengan kolom sama)
+                // 2. Simpan yang DUPLIKAT ke hold_stbj (MENGGUNAKAN INSERT BIASA)
                 if(dupes.length > 0) {
                     const payloadHold = dupes.map(d => ({ qrcode: d.qrcode, pic_input: d.pic, keterangan: d.keterangan, status_hold: 'HOLD' }));
-                    const { error: err2 } = await db.from('hold_stbj').upsert(payloadHold, { onConflict: 'qrcode' });
+                    const { error: err2 } = await db.from('hold_stbj').insert(payloadHold);
                     if(err2) throw err2;
                 }
 
