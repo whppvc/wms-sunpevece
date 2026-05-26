@@ -1,7 +1,6 @@
 let masterData = { kamus: [], troli: [], area: [] };
 let deleteStack = [], globalRowId = 0;
 
-// Otomatis jalan setelah layout dirender
 document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(async () => {
         try {
@@ -22,7 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const { data: mData2 } = await db.from('master_2').select('*');
             if(mData2) masterData.kamus = mData2; 
         } catch (e) { console.error("Gagal muat dropdown:", e); }
-    }, 200); // Jeda aman
+    }, 200); 
 });
 
 function translateBarcode(barcode) {
@@ -69,10 +68,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
                 
                 codes.forEach(code => { 
-                    // REVISI: Cek apakah duplikat, tapi tetap jalankan addRow
+                    // Trik: Cek apakah kodenya sudah di tabel
                     const isLocalDuplicate = existingQRs.includes(code);
+                    // Tetap panggil addRow, tapi kirim status duplikatnya
                     addRow(troli, area, code, isLocalDuplicate); 
-                    existingQRs.push(code); // Tambahkan agar scan ganda beruntun juga kena merah
+                    // Tambahkan ke array agar scan ganda berikutnya juga terdeteksi
+                    existingQRs.push(code); 
                 });
                 
                 document.getElementById('input-qrcode').value = '';
@@ -81,25 +82,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 500);
 });
 
-// REVISI: Terima parameter isDuplicate
+// Terima parameter isDuplicate
 function addRow(troli, area, code, isDuplicate = false) {
-    globalRowId++; 
-    const tr = document.createElement('tr'); 
+    globalRowId++; const tr = document.createElement('tr'); 
     
-    // REVISI: Warnai merah jika duplikat
-    let rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'hover:bg-slate-100';
+    // Jika duplikat lokal, langsung merah
+    const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'hover:bg-slate-100';
     tr.className = `border-b border-slate-200 transition row-item ${rowClass}`; 
     
     const td = translateBarcode(code); 
     
-    let statusBadge = isDuplicate 
-        ? '<span class="text-white font-bold bg-red-600 px-3 py-1 rounded" data-status="invalid">DUPLIKAT LOKAL</span>'
+    const badgeHtml = isDuplicate 
+        ? '<span class="text-white font-bold bg-red-600 px-2 py-1 text-[10px] rounded" data-status="invalid">DUPLIKAT LOKAL</span>'
         : '<span class="text-slate-500 font-bold" data-status="unverified">-</span>';
 
     tr.innerHTML = `
         <td class="p-3 text-center border-r border-slate-200"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 cursor-pointer"><i data-lucide="trash-2"></i></button></td>
         <td class="p-3 font-bold no-cell text-center border-r border-slate-200"></td>
-        <td class="p-3 font-bold text-center col-val border-r border-slate-200">${statusBadge}</td>
+        <td class="p-3 font-bold text-center col-val border-r border-slate-200">${badgeHtml}</td>
         <td class="p-3 troli-cell font-bold text-slate-700">${troli}</td>
         <td class="p-3 area-cell font-bold text-slate-700 border-r border-slate-200">${area}</td>
         <td class="p-3 font-mono font-bold text-slate-900 qr-val border-r border-slate-200 bg-slate-50">${code}</td>
@@ -119,47 +119,41 @@ function deleteRow(btn) { const tr = btn.closest('tr'); deleteStack.push({ paren
 function undoDelete() { if(deleteStack.length === 0) return; const last = deleteStack.pop(); const temp = document.createElement('tbody'); temp.innerHTML = last.html; if (last.nextSibling) last.parent.insertBefore(temp.firstChild, last.nextSibling); else last.parent.appendChild(temp.firstChild); lucide.createIcons(); updateRowNumbers(); }
 function updateRowNumbers() { const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; }); }
 
+// FUNGSI CEK GUDANG KEMBALI SEPERTI ASLI (Murni cek DB stok_qr)
 async function cekGudang() {
     const rows = document.querySelectorAll('.row-item'); if(rows.length === 0) return alert("Belum ada data.");
     const btnCross = document.querySelector('button[onclick="cekGudang()"]'); const original = btnCross.innerHTML; btnCross.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i>'; btnCross.disabled = true;
-    
     const allQRCodes = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     const { data: exData, error } = await db.from('stok_qr').select('qrcode').in('qrcode', allQRCodes);
     if(error) { alert("Error: " + error.message); btnCross.innerHTML = original; btnCross.disabled = false; return; }
     
-    const dupes = exData.map(d => d.qrcode); 
-    let hasDupe = false;
-    let processedQRs = []; // Track duplikat layar
-
+    const dupes = exData.map(d => d.qrcode); let hasDupe = false;
     rows.forEach(r => {
         const qr = r.querySelector('.qr-val').innerText; const valCell = r.querySelector('.col-val');
         
-        // REVISI: Cek apakah duplikat di DB ATAU duplikat di layar
-        if(dupes.includes(qr) || processedQRs.includes(qr)) { 
-            valCell.innerHTML = '<span class="text-white font-bold bg-red-600 px-3 py-1 rounded" data-status="invalid">DUPLIKAT</span>'; 
-            r.classList.add('bg-red-100'); 
-            hasDupe = true; 
-        } 
-        else { 
-            processedQRs.push(qr);
-            valCell.innerHTML = '<span class="text-white font-bold bg-emerald-500 px-3 py-1 rounded" data-status="valid">AMAN</span>'; 
-            r.classList.remove('bg-red-100', 'bg-red-50', 'bg-orange-50'); 
-        }
+        // PENGAMAN: Jika baris sudah merah karena Duplikat Lokal (di layar), biarkan saja tetap merah
+        if(valCell.innerText.includes('LOKAL')) { hasDupe = true; return; }
+
+        if(dupes.includes(qr)) { valCell.innerHTML = '<span class="text-white font-bold bg-red-600 px-3 py-1 rounded" data-status="invalid">DUPLIKAT DB</span>'; r.classList.add('bg-red-50'); hasDupe = true; } 
+        else { valCell.innerHTML = '<span class="text-white font-bold bg-emerald-500 px-3 py-1 rounded" data-status="valid">AMAN</span>'; r.classList.remove('bg-red-50'); r.classList.remove('bg-orange-50'); }
     });
-    if(hasDupe) alert("Ada Duplikat! Harap hapus baris yang merah muda."); else alert("Aman!");
+    if(hasDupe) alert("Ada Duplikat!"); else alert("Aman!");
     btnCross.innerHTML = original; btnCross.disabled = false; lucide.createIcons();
 }
 
+// FUNGSI VALIDASI STBJ KEMBALI SEPERTI ASLI
 async function validasiSTBJ() {
     const rows = document.querySelectorAll('.row-item'); if(rows.length === 0) return;
     const btn = document.querySelector('button[onclick="validasiSTBJ()"]'); const original = btn.innerHTML; btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i>'; btn.disabled = true;
     const allQRCodes = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     const { data: stbjData, error } = await db.from('hasil_stbj').select('qrcode').in('qrcode', allQRCodes);
     if(error) { alert("Error: " + error.message); btn.innerHTML = original; btn.disabled = false; return; }
+    
     const valid = stbjData.map(d => d.qrcode); let adaInv = false;
     rows.forEach(r => {
         const qr = r.querySelector('.qr-val').innerText; const valCell = r.querySelector('.col-val');
-        if(valCell.innerHTML.includes("DUPLIKAT")) return; // Lewati yang sudah pasti error
+        if(valCell.innerHTML.includes("DUPLIKAT")) return; // Abaikan yang sudah error
+        
         if(valid.includes(qr)) { valCell.innerHTML = '<span class="text-white font-bold bg-blue-600 px-3 py-1 rounded">VALID STBJ</span>'; r.classList.remove('bg-orange-50'); } 
         else { valCell.innerHTML = '<span class="text-white font-bold bg-orange-500 px-3 py-1 rounded" data-status="invalid-stbj">BLM STBJ</span>'; r.classList.add('bg-orange-50'); adaInv = true; }
     });
@@ -169,7 +163,7 @@ async function validasiSTBJ() {
 
 async function saveToSupabase() {
     const btn = document.getElementById('btn-save'); const original = btn.innerHTML;
-    if(document.querySelectorAll('span[data-status="invalid"]').length > 0) return alert("Hapus baris MERAH (Duplikat) dulu!");
+    if(document.querySelectorAll('span[data-status="invalid"]').length > 0) return alert("Hapus baris MERAH (Duplikat DB/Lokal) dulu!");
     if(document.querySelectorAll('span[data-status="unverified"]').length > 0) return alert("Tekan CEK GUDANG dulu!");
     if(document.querySelectorAll('span[data-status="invalid-stbj"]').length > 0) { if(!confirm("Ada yang belum STBJ. Lanjutkan?")) return; }
     const rows = document.querySelectorAll('.row-item'); if(rows.length === 0) return;
