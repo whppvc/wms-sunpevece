@@ -1,4 +1,3 @@
-// KONEKSI SUPABASE
 const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -39,7 +38,10 @@ function translateBarcode(barcode) {
     if (parts.length < 4) return data;
 
     const hurufDepan = barcode.charAt(0).toUpperCase();
-    if (hurufDepan === 'P') data.jenisItem = 'Plafon'; else if (hurufDepan === 'L') data.jenisItem = 'List'; else if (hurufDepan === 'W') data.jenisItem = 'WPC'; else data.jenisItem = hurufDepan;
+    if (hurufDepan === 'P') data.jenisItem = 'Plafon';
+    else if (hurufDepan === 'L') data.jenisItem = 'List';
+    else if (hurufDepan === 'W') data.jenisItem = 'WPC';
+    else data.jenisItem = hurufDepan;
 
     let rawItem = parts[0];
     let cariItem = masterData.kamus.find(m => m.kode_nama_item === rawItem);
@@ -49,11 +51,15 @@ function translateBarcode(barcode) {
 
     const p2 = parts[2];
     if (p2 && p2.length >= 4) {
-        let digitPjg = (p2.length === 5) ? 2 : 1; let rawPjg = p2.substring(0, digitPjg);
-        if (digitPjg === 1) data.panjang = rawPjg + "M"; else data.panjang = rawPjg[0] + "." + rawPjg[1] + "M"; 
+        let digitPjg = (p2.length === 5) ? 2 : 1;
+        let rawPjg = p2.substring(0, digitPjg);
+        if (digitPjg === 1) data.panjang = rawPjg + "M"; 
+        else data.panjang = rawPjg[0] + "." + rawPjg[1] + "M"; 
 
         let rawGrade = p2.substring(digitPjg, digitPjg + 1);
-        if (rawGrade === '1') data.grade = 'BAGUS'; else if (rawGrade === '2') data.grade = 'A'; else data.grade = rawGrade;
+        if (rawGrade === '1') data.grade = 'BAGUS';
+        else if (rawGrade === '2') data.grade = 'A';
+        else data.grade = rawGrade;
 
         let rawDus = p2.substring(p2.length - 2); 
         let cariDus = masterData.kamus.find(m => m.kode_dus === rawDus);
@@ -71,7 +77,7 @@ function translateBarcode(barcode) {
         let match = sisaString.match(/(C.*?)(S.*?)(P.*)/);
         
         if (match) {
-            let rawMesin = match[1]; let rawShift = match[2]; let rawPO = match[3];  
+            let rawMesin = match[1]; let rawShift = match[2]; let rawPO = match[3];    
             let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin); data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
             let cariShift = masterData.kamus.find(m => m.kode_shift === rawShift); data.shift = cariShift && cariShift.shift ? cariShift.shift : rawShift;
             let cariPO = masterData.kamus.find(m => m.kode_po === rawPO); data.po = cariPO && cariPO.po ? cariPO.po : rawPO;
@@ -82,7 +88,6 @@ function translateBarcode(barcode) {
     return data;
 }
 
-// PEMISAH SPASI DAN TITIK KOMA
 document.addEventListener('DOMContentLoaded', () => {
     const formScan = document.getElementById('form-scan');
     if(formScan) {
@@ -96,7 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
             
             codes.forEach(code => {
-                // REVISI: Tetap masukkan, tapi tandai sebagai duplikat lokal
                 const isLocalDuplicate = existingQRs.includes(code);
                 addRow(troli, code, isLocalDuplicate); 
                 existingQRs.push(code); 
@@ -107,15 +111,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// OTOMATIS TERJEMAH SAAT BARIS DITAMBAHKAN
 function addRow(troli, code, isDuplicate = false) {
     globalRowId++;
     const tr = document.createElement('tr'); 
     
-    // REVISI: Warnai baris merah
-    let rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200 text-red-900' : 'hover:bg-black/5';
+    const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200 text-red-900' : 'hover:bg-black/5';
     tr.className = `border-b border-inherit transition row-item ${rowClass}`; 
     tr.id = `row-${globalRowId}`;
+    
+    // Tambahkan bendera atribut agar Supabase tau ini invalid
+    if(isDuplicate) tr.setAttribute('data-local-dup', 'true');
     
     const td = translateBarcode(code); 
     
@@ -133,7 +138,7 @@ function addRow(troli, code, isDuplicate = false) {
         <td class="p-3 col-dus">${td.dus}</td>
         <td class="p-3 col-shading">${td.shading}</td>
         <td class="p-3 font-bold col-po">${td.po}</td>
-        <td class="p-2"><input type="text" value="${isDuplicate ? 'DUPLIKAT SCAN' : ''}" class="input-dynamic w-full p-2 border rounded outline-none uppercase text-xs font-bold ket-input ${isDuplicate ? 'border-red-400 text-red-700' : ''}"></td>`;
+        <td class="p-2"><input type="text" class="input-dynamic w-full p-2 border rounded outline-none uppercase text-xs font-bold ket-input ${isDuplicate ? 'border-red-400 text-red-700' : ''}" value="${isDuplicate ? 'DUPLIKAT LOKAL' : ''}"></td>`;
     
     tr.innerHTML = html; document.getElementById('tbody-stbj').prepend(tr);
     lucide.createIcons(); updateRowNumbers();
@@ -143,7 +148,7 @@ function deleteRow(btn) { const tr = btn.closest('tr'); deleteStack.push({ paren
 function undoDelete() { if(deleteStack.length === 0) return; const lastData = deleteStack.pop(); const tempDiv = document.createElement('tbody'); tempDiv.innerHTML = lastData.html; if (lastData.nextSibling) lastData.parent.insertBefore(tempDiv.firstChild, lastData.nextSibling); else lastData.parent.appendChild(tempDiv.firstChild); lucide.createIcons(); updateRowNumbers(); }
 function updateRowNumbers() { const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; }); }
 
-// LOGIKA SAVE CANGGIH & ANTI DUPLIKAT SUPABASE
+// KEMBALI KE ASLI: Murni validasi saat menekan Simpan
 async function saveToSupabase() {
     const btnSave = document.getElementById('btn-save'); 
     const originalText = btnSave.innerHTML;
@@ -165,11 +170,9 @@ async function saveToSupabase() {
         const qr = row.querySelector('.qr-val').innerText;
         allQRCodes.push(qr);
         rowMap[qr] = row;
-        // Bersihkan warna merah untuk di-recheck
-        row.classList.remove('bg-red-100', 'hover:bg-red-200', 'text-red-900');
+        row.classList.remove('bg-red-200', 'hover:bg-red-300', 'text-red-900'); // Reset warna
     });
 
-    // Cek Duplikat ke DB
     const { data: existingData, error: checkError } = await db.from('hasil_stbj').select('qrcode').in('qrcode', allQRCodes);
 
     if (checkError) {
@@ -181,18 +184,17 @@ async function saveToSupabase() {
     const dataToSave = [];
     let duplikatCount = 0;
     let masukCount = 0;
-    let processedQRs = []; // REVISI: Cegah upload barcode kembar dalam satu sesi
 
     rows.forEach(row => {
         const qr = row.querySelector('.qr-val').innerText;
-        
-        // Cek jika QR ini sudah ada di DB atau sebelumnya sudah dibaca (scan ganda layar)
-        if (existingQRs.includes(qr) || processedQRs.includes(qr)) {
-            row.classList.add('bg-red-100', 'hover:bg-red-200', 'text-red-900');
-            row.querySelector('.ket-input').value = 'DUPLIKAT';
+        const isLocalDup = row.getAttribute('data-local-dup') === 'true';
+
+        // PENGAMAN: Jika ada di DB ATAU duplikat scan lokal
+        if (existingQRs.includes(qr) || isLocalDup) {
+            row.classList.add('bg-red-200', 'hover:bg-red-300', 'text-red-900');
+            if(!isLocalDup) row.querySelector('.ket-input').value = 'DUPLIKAT DI DB';
             duplikatCount++;
         } else {
-            processedQRs.push(qr); // Tandai QR ini sudah "diantrikan" untuk di-save
             dataToSave.push({
                 troli: row.querySelector('.troli-cell').innerText,
                 qrcode: qr,
@@ -219,26 +221,15 @@ async function saveToSupabase() {
         if (insertError) {
             alert("Gagal Simpan ke Supabase: " + insertError.message);
         } else {
-            // BERSIHKAN DATA YANG SUKSES DARI LAYAR
-            dataToSave.forEach(d => {
-                if(rowMap[d.qrcode]) rowMap[d.qrcode].remove();
-            });
+            dataToSave.forEach(d => { if(rowMap[d.qrcode]) rowMap[d.qrcode].remove(); });
             updateRowNumbers();
         }
     }
 
-    btnSave.innerHTML = originalText; 
-    btnSave.disabled = false;
-    lucide.createIcons();
-
-    if(duplikatCount > 0) {
-        alert(`SEBAGIAN DISIMPAN!\n✅ Berhasil disimpan: ${masukCount} data\n❌ Ditolak (Sudah ada di database/Duplikat Scan): ${duplikatCount} data\n\nBaris merah muda belum terhapus untuk Anda review.`);
-    } else {
-        alert(`PROSES SELESAI!\n✅ Berhasil disimpan: ${masukCount} data.`);
-    }
+    btnSave.innerHTML = originalText; btnSave.disabled = false; lucide.createIcons();
+    alert(`PROSES SELESAI!\n✅ Berhasil disimpan: ${masukCount} data\n❌ Ditolak (Duplikat LOKAL/DB): ${duplikatCount} data`);
 }
 
-// LOGIKA IMPORT CSV
 function generateImportRows() {
     const container = document.getElementById('import-rows');
     if(!container) return;
@@ -279,17 +270,14 @@ function handleFileSelect(input, idx) {
 
 function processImportToTable() {
     if(!importConfigs.some(c => c && c.troli && c.codes && c.codes.length > 0)) return alert("Isi Troli & File dengan benar.");
-    switchView('scan'); 
-    const existingQRs = Array.from(document.querySelectorAll('.qr-val')).map(td => td.innerText);
-    
+    switchView('scan'); const existingQRs = Array.from(document.querySelectorAll('.qr-val')).map(td => td.innerText);
     importConfigs.forEach(conf => { 
         if (conf && conf.troli && conf.codes) { 
             conf.codes.forEach(c => { 
                 let code = String(c).trim(); 
-                // REVISI: Tetap masukkan meski duplikat, dan warnai merah
                 const isLocalDuplicate = existingQRs.includes(code);
                 addRow(conf.troli, code, isLocalDuplicate); 
-                existingQRs.push(code); // Tambah agar duplikat berturut-turut terdeteksi
+                existingQRs.push(code); 
             }); 
         } 
     });
