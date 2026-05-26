@@ -64,21 +64,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 const troli = document.getElementById('select-troli').value;
                 const area = document.getElementById('select-area').value;
                 if(!troli || !area || !rawInput) return alert("Pilih Troli, Area, dan isi QR Code!");
+                
                 const existingQRs = Array.from(document.querySelectorAll('.qr-val')).map(td => td.innerText);
                 const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
-                codes.forEach(code => { if(!existingQRs.includes(code)) addRow(troli, area, code); });
+                
+                codes.forEach(code => { 
+                    // REVISI: Cek apakah duplikat, tapi tetap jalankan addRow
+                    const isLocalDuplicate = existingQRs.includes(code);
+                    addRow(troli, area, code, isLocalDuplicate); 
+                    existingQRs.push(code); // Tambahkan agar scan ganda beruntun juga kena merah
+                });
+                
                 document.getElementById('input-qrcode').value = '';
             });
         }
     }, 500);
 });
 
-function addRow(troli, area, code) {
-    globalRowId++; const tr = document.createElement('tr'); tr.className = "border-b border-slate-200 hover:bg-slate-100 transition row-item"; const td = translateBarcode(code); 
+// REVISI: Terima parameter isDuplicate
+function addRow(troli, area, code, isDuplicate = false) {
+    globalRowId++; 
+    const tr = document.createElement('tr'); 
+    
+    // REVISI: Warnai merah jika duplikat
+    let rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'hover:bg-slate-100';
+    tr.className = `border-b border-slate-200 transition row-item ${rowClass}`; 
+    
+    const td = translateBarcode(code); 
+    
+    let statusBadge = isDuplicate 
+        ? '<span class="text-white font-bold bg-red-600 px-3 py-1 rounded" data-status="invalid">DUPLIKAT LOKAL</span>'
+        : '<span class="text-slate-500 font-bold" data-status="unverified">-</span>';
+
     tr.innerHTML = `
         <td class="p-3 text-center border-r border-slate-200"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 cursor-pointer"><i data-lucide="trash-2"></i></button></td>
         <td class="p-3 font-bold no-cell text-center border-r border-slate-200"></td>
-        <td class="p-3 font-bold text-center col-val border-r border-slate-200"><span class="text-slate-500 font-bold" data-status="unverified">-</span></td>
+        <td class="p-3 font-bold text-center col-val border-r border-slate-200">${statusBadge}</td>
         <td class="p-3 troli-cell font-bold text-slate-700">${troli}</td>
         <td class="p-3 area-cell font-bold text-slate-700 border-r border-slate-200">${area}</td>
         <td class="p-3 font-mono font-bold text-slate-900 qr-val border-r border-slate-200 bg-slate-50">${code}</td>
@@ -101,16 +122,31 @@ function updateRowNumbers() { const rows = document.querySelectorAll('.row-item'
 async function cekGudang() {
     const rows = document.querySelectorAll('.row-item'); if(rows.length === 0) return alert("Belum ada data.");
     const btnCross = document.querySelector('button[onclick="cekGudang()"]'); const original = btnCross.innerHTML; btnCross.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i>'; btnCross.disabled = true;
+    
     const allQRCodes = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     const { data: exData, error } = await db.from('stok_qr').select('qrcode').in('qrcode', allQRCodes);
     if(error) { alert("Error: " + error.message); btnCross.innerHTML = original; btnCross.disabled = false; return; }
-    const dupes = exData.map(d => d.qrcode); let hasDupe = false;
+    
+    const dupes = exData.map(d => d.qrcode); 
+    let hasDupe = false;
+    let processedQRs = []; // Track duplikat layar
+
     rows.forEach(r => {
         const qr = r.querySelector('.qr-val').innerText; const valCell = r.querySelector('.col-val');
-        if(dupes.includes(qr)) { valCell.innerHTML = '<span class="text-white font-bold bg-red-600 px-3 py-1 rounded" data-status="invalid">DUPLIKAT</span>'; r.classList.add('bg-red-50'); hasDupe = true; } 
-        else { valCell.innerHTML = '<span class="text-white font-bold bg-emerald-500 px-3 py-1 rounded" data-status="valid">AMAN</span>'; r.classList.remove('bg-red-50'); r.classList.remove('bg-orange-50'); }
+        
+        // REVISI: Cek apakah duplikat di DB ATAU duplikat di layar
+        if(dupes.includes(qr) || processedQRs.includes(qr)) { 
+            valCell.innerHTML = '<span class="text-white font-bold bg-red-600 px-3 py-1 rounded" data-status="invalid">DUPLIKAT</span>'; 
+            r.classList.add('bg-red-100'); 
+            hasDupe = true; 
+        } 
+        else { 
+            processedQRs.push(qr);
+            valCell.innerHTML = '<span class="text-white font-bold bg-emerald-500 px-3 py-1 rounded" data-status="valid">AMAN</span>'; 
+            r.classList.remove('bg-red-100', 'bg-red-50', 'bg-orange-50'); 
+        }
     });
-    if(hasDupe) alert("Ada Duplikat!"); else alert("Aman!");
+    if(hasDupe) alert("Ada Duplikat! Harap hapus baris yang merah muda."); else alert("Aman!");
     btnCross.innerHTML = original; btnCross.disabled = false; lucide.createIcons();
 }
 
@@ -123,7 +159,7 @@ async function validasiSTBJ() {
     const valid = stbjData.map(d => d.qrcode); let adaInv = false;
     rows.forEach(r => {
         const qr = r.querySelector('.qr-val').innerText; const valCell = r.querySelector('.col-val');
-        if(valCell.innerHTML.includes("DUPLIKAT")) return;
+        if(valCell.innerHTML.includes("DUPLIKAT")) return; // Lewati yang sudah pasti error
         if(valid.includes(qr)) { valCell.innerHTML = '<span class="text-white font-bold bg-blue-600 px-3 py-1 rounded">VALID STBJ</span>'; r.classList.remove('bg-orange-50'); } 
         else { valCell.innerHTML = '<span class="text-white font-bold bg-orange-500 px-3 py-1 rounded" data-status="invalid-stbj">BLM STBJ</span>'; r.classList.add('bg-orange-50'); adaInv = true; }
     });
