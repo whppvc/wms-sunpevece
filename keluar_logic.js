@@ -58,9 +58,6 @@ function translateBarcode(barcode) {
     return data;
 }
 
-// =====================================
-// PEMISAH SCAN KELUAR
-// =====================================
 document.addEventListener('DOMContentLoaded', () => {
     const formScan = document.getElementById('form-scan');
     if(formScan) {
@@ -73,34 +70,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
             
             codes.forEach(code => {
-                // REVISI: Cek apakah duplikat, dan panggil fungsi dengan isDuplicate
                 const isLocalDuplicate = existingQRs.includes(code);
                 addRowKeluar(code, isLocalDuplicate); 
-                existingQRs.push(code); // Tambah agar duplikat berturut-turut terdeteksi
+                existingQRs.push(code); 
             });
             document.getElementById('input-qrcode').value = '';
         });
     }
 });
 
-// REVISI: Terima isDuplicate dan aplikasikan kelas warna merah
 function addRowKeluar(code, isDuplicate = false) {
     globalRowId++;
     const tr = document.createElement('tr'); 
     
-    let rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'hover:bg-slate-100';
+    const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'hover:bg-black/5';
     tr.className = `border-b border-inherit transition row-item ${rowClass}`; 
-    
     const td = translateBarcode(code); 
     
-    let statusBadge = isDuplicate 
-        ? '<span class="text-white font-bold bg-red-600 px-3 py-1 rounded-full text-xs shadow-sm" data-status="invalid">DUPLIKAT LOKAL</span>' 
+    const badgeHtml = isDuplicate 
+        ? '<span class="text-white font-bold bg-red-600 px-2 py-1 rounded text-xs" data-status="invalid">DUPLIKAT LOKAL</span>'
         : '<span class="text-gray-400 font-bold" data-status="unverified">-</span>';
         
     let html = `
         <td class="p-3 text-center"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 cursor-pointer"><i data-lucide="trash-2"></i></button></td>
         <td class="p-3 font-bold no-cell text-center"></td>
-        <td class="p-3 font-bold text-center col-val">${statusBadge}</td>
+        <td class="p-3 font-bold text-center col-val">${badgeHtml}</td>
         <td class="p-3 font-black text-emerald-600 area-cell">?</td>
         <td class="p-3 font-mono font-bold text-black qr-val border-r border-inherit">${code}</td>
         <td class="p-3 col-tgl">${td.tglProduksi}</td>
@@ -122,9 +116,7 @@ function deleteRow(btn) { const tr = btn.closest('tr'); deleteStack.push({ paren
 function undoDelete() { if(deleteStack.length === 0) return; const lastData = deleteStack.pop(); const tempDiv = document.createElement('tbody'); tempDiv.innerHTML = lastData.html; if (lastData.nextSibling) lastData.parent.insertBefore(tempDiv.firstChild, lastData.nextSibling); else lastData.parent.appendChild(tempDiv.firstChild); lucide.createIcons(); updateRowNumbers(); }
 function updateRowNumbers() { const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; }); }
 
-// =====================================
-// VALIDASI (TARIK LOKASI FISIK)
-// =====================================
+// KEMBALI KE ASLI: Murni validasi fisik DB
 async function crossCekOutbound() {
     const rows = document.querySelectorAll('.row-item');
     if(rows.length === 0) return alert("Belum ada data untuk dicek.");
@@ -134,48 +126,38 @@ async function crossCekOutbound() {
     btnCross.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMVALIDASI GUDANG...'; btnCross.disabled = true;
 
     const allQRCodes = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
+    
     const { data: dbQRs, error } = await db.from('stok_qr').select('qrcode, area').in('qrcode', allQRCodes);
     if(error) { alert("Koneksi gagal: " + error.message); btnCross.innerHTML = originalText; btnCross.disabled = false; return; }
 
     let missingCount = 0;
-    let processedQRs = []; // REVISI: Track duplikat layar
 
     rows.forEach(row => {
         const qr = row.querySelector('.qr-val').innerText;
         const valCell = row.querySelector('.col-val');
         const areaCell = row.querySelector('.area-cell');
         
+        // PENGAMAN: Jaga agar peringatan "Duplikat Lokal" di layar tidak hilang
+        if(valCell.innerText.includes('LOKAL')) { missingCount++; return; }
+
         let foundDb = dbQRs.find(d => d.qrcode === qr);
 
         if(foundDb) {
-            // REVISI: Jika barang ada di DB, pastikan ia belum dicentang di baris sebelumnya
-            if (processedQRs.includes(qr)) {
-                valCell.innerHTML = '<span class="text-white font-black bg-red-600 px-3 py-1 rounded-full shadow-sm text-xs" data-status="invalid">DUPLIKAT SCAN</span>';
-                areaCell.innerText = "DUPLIKAT";
-                row.classList.add('bg-red-100'); 
-                missingCount++;
-            } else {
-                processedQRs.push(qr);
-                valCell.innerHTML = '<span class="text-emerald-600 font-black bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300 shadow-sm text-xs" data-status="valid">VALID FISIK</span>';
-                areaCell.innerText = foundDb.area; 
-                row.classList.remove('bg-red-50', 'bg-red-100', 'hover:bg-red-200');
-            }
+            valCell.innerHTML = '<span class="text-emerald-600 font-black bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300 shadow-sm text-xs" data-status="valid">VALID FISIK</span>';
+            areaCell.innerText = foundDb.area; 
+            row.classList.remove('bg-red-50');
         } else {
-            valCell.innerHTML = '<span class="text-white font-black bg-red-600 px-3 py-1 rounded-full shadow-sm text-xs" data-status="invalid">TDK ADA DI DB</span>';
+            valCell.innerHTML = '<span class="text-red-600 font-black bg-red-100 px-3 py-1 rounded-full border border-red-300 shadow-sm text-xs" data-status="invalid">TDK ADA DI GUDANG</span>';
             areaCell.innerText = "KOSONG";
-            row.classList.add('bg-red-100'); 
+            row.classList.add('bg-red-50'); 
             missingCount++;
         }
     });
 
-    if(missingCount > 0) alert(`Ditemukan masalah (Warna Merah Muda).\nBisa jadi Barang TDK ADA, atau Anda scan BARANG YANG SAMA dua kali.\nHapus baris merah muda sebelum lanjut.`);
-    
+    if(missingCount > 0) alert(`Ditemukan masalah.\nHapus baris merah (KOSONG / DUPLIKAT LOKAL) sebelum lanjut.`);
     btnCross.innerHTML = originalText; btnCross.disabled = false;
 }
 
-// =====================================
-// BUKA MODAL POTONG PO (KARTU STOK)
-// =====================================
 function bukaModalKeluar() {
     const rows = document.querySelectorAll('.row-item');
     if(rows.length === 0) return alert("Belum ada data.");
@@ -225,12 +207,19 @@ async function eksekusiKeluar() {
         deductionsArray.push({ sku: sku, qty: requiredMap[sku] });
     }
 
-    const payloadData = { qrs: qrList, deductions: deductionsArray, po: poTarget, ket: keterangan, pic: user.username };
+    const payloadData = {
+        qrs: qrList,
+        deductions: deductionsArray,
+        po: poTarget,
+        ket: keterangan,
+        pic: user.username
+    };
+
     const { data, error } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
 
     if (error) {
-        alert(error.message || "Gagal memproses pengeluaran. Transaksi dibatalkan secara otomatis oleh sistem.");
-        btnEks.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> KELUARKAN BARANG'; btnEks.disabled = false;
+        alert(error.message || "Gagal memproses pengeluaran.");
+        btnEks.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4"></i> EKSEKUSI'; btnEks.disabled = false;
         return;
     }
 
@@ -238,5 +227,5 @@ async function eksekusiKeluar() {
     
     document.getElementById('modal-keluar').classList.add('hidden');
     document.getElementById('tbody-keluar').innerHTML = ''; 
-    btnEks.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> KELUARKAN BARANG'; btnEks.disabled = false;
+    btnEks.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4"></i> EKSEKUSI'; btnEks.disabled = false;
 }
