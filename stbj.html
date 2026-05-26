@@ -164,6 +164,7 @@
             return td;
         }
 
+        // --- REVISI: FORM SCAN ---
         document.getElementById('form-scan').addEventListener('submit', (e) => {
             e.preventDefault();
             const troli = document.getElementById('select-troli').value;
@@ -174,15 +175,28 @@
 
             const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
             codes.forEach(code => {
-                if(!dataStbj.find(d => d.qrcode === code)) {
-                    const trans = translateBarcode(code);
-                    dataStbj.unshift({ id: ++globalRowId, qrcode: code, troli: troli, status: 'BELUM CEK', keterangan: '', pic: currentUser.username, ...trans });
-                }
+                // PENGAMAN BARU: Cek apakah kode sudah ada di tabel saat ini (Duplikat Lokal)
+                const isLocalDuplicate = dataStbj.some(d => d.qrcode === code);
+                
+                const trans = translateBarcode(code);
+                
+                // Tetap di-push ke tabel walaupun duplikat! Tapi bawa bendera isLocalDuplicate
+                dataStbj.unshift({ 
+                    id: ++globalRowId, 
+                    qrcode: code, 
+                    troli: troli, 
+                    status: 'BELUM CEK', 
+                    keterangan: isLocalDuplicate ? 'DUPLIKAT LOKAL' : '', 
+                    pic: currentUser.username, 
+                    isLocalDuplicate: isLocalDuplicate, // Bendera deteksi merah
+                    ...trans 
+                });
             });
             renderTable();
             inputEl.value = ''; inputEl.focus();
         });
 
+        // --- REVISI: IMPORT CSV ---
         function prosesCSV() {
             const troli = document.getElementById('select-troli').value;
             const fileInput = document.getElementById('input-csv');
@@ -195,9 +209,21 @@
                     let added = 0;
                     results.data.forEach(row => {
                         const code = row[0] ? row[0].trim() : '';
-                        if(code && !dataStbj.find(d => d.qrcode === code)) {
+                        if(code) {
+                            // Sama seperti form scan, cek dan biarkan masuk
+                            const isLocalDuplicate = dataStbj.some(d => d.qrcode === code);
                             const trans = translateBarcode(code);
-                            dataStbj.push({ id: ++globalRowId, qrcode: code, troli: troli, status: 'BELUM CEK', keterangan: 'Dari CSV', pic: currentUser.username, ...trans });
+                            
+                            dataStbj.push({ 
+                                id: ++globalRowId, 
+                                qrcode: code, 
+                                troli: troli, 
+                                status: 'BELUM CEK', 
+                                keterangan: isLocalDuplicate ? 'DUPLIKAT LOKAL (CSV)' : 'Dari CSV', 
+                                pic: currentUser.username, 
+                                isLocalDuplicate: isLocalDuplicate, 
+                                ...trans 
+                            });
                             added++;
                         }
                     });
@@ -222,6 +248,7 @@
             renderTable(); document.querySelector('input[onchange="toggleAll(this.checked)"]').checked = false;
         }
 
+        // --- REVISI: RENDER TABEL (Mewarnai baris duplikat) ---
         function renderTable() {
             const tbody = document.getElementById('tbody-stbj');
             if(dataStbj.length === 0) return tbody.innerHTML = '<tr><td colspan="17" class="p-10 text-slate-400 font-bold"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan / di-import.</td></tr>';
@@ -229,29 +256,42 @@
             let html = '';
             dataStbj.forEach((d, index) => {
                 let badgeClass = "bg-slate-200 text-slate-700";
+                let displayStatus = d.status;
+
+                // Pewarnaan status standar
                 if(d.status === 'UNIQUE') badgeClass = "bg-emerald-500 text-white";
                 if(d.status === 'DUPLIKAT') badgeClass = "bg-red-600 text-white";
                 if(d.status === 'HOLD') badgeClass = "bg-amber-500 text-white";
 
+                // Jika statusnya belum dicek tapi ketahuan kembar oleh layar
+                if(d.status === 'BELUM CEK' && d.isLocalDuplicate) {
+                    badgeClass = "bg-red-600 text-white";
+                    displayStatus = "DUPLIKAT LOKAL";
+                }
+
+                // Warnai background seluruh baris (Merah untuk duplikat layar/database)
+                const isRedHighlight = d.status === 'DUPLIKAT' || d.isLocalDuplicate;
+                const trBaseClass = isRedHighlight ? 'bg-red-100 hover:bg-red-200 text-red-900' : (d.status === 'HOLD' ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-slate-50 text-slate-700');
+
                 html += `
-                    <tr class="border-b border-slate-200 hover:bg-slate-50 transition ${d.status==='DUPLIKAT'?'bg-red-50':(d.status==='HOLD'?'bg-amber-50':'')}">
+                    <tr class="border-b border-slate-200 transition ${trBaseClass}">
                         <td class="p-3 text-center"><input type="checkbox" value="${d.id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600"></td>
                         <td class="p-3 font-bold">${index + 1}</td>
-                        <td class="p-3 font-black text-[10px] border-r border-slate-200"><span class="px-3 py-1 rounded ${badgeClass}">${d.status}</span></td>
-                        <td class="p-3 font-bold text-slate-700">${d.troli}</td>
-                        <td class="p-3 font-mono font-bold text-slate-900 border-r border-slate-200 tracking-wider">${d.qrcode}</td>
-                        <td class="p-3 font-bold text-slate-600">${d.tglProduksi}</td>
-                        <td class="p-3 font-bold text-slate-600">${d.mesin}</td>
-                        <td class="p-3 font-bold text-slate-600 border-r border-slate-200">${d.shift}</td>
-                        <td class="p-3 font-black text-blue-700">${d.jenisItem}</td>
-                        <td class="p-3 font-bold text-slate-800 text-left">${d.namaItem}</td>
-                        <td class="p-3 font-bold text-slate-600">${d.panjang}</td>
-                        <td class="p-3 font-bold text-slate-800">${d.grade}</td>
-                        <td class="p-3 font-bold text-slate-800">${d.dus}</td>
-                        <td class="p-3 font-bold text-slate-600 border-r border-slate-200">${d.shading}</td>
-                        <td class="p-3 font-black text-orange-600 bg-orange-50/50">${d.po}</td>
-                        <td class="p-2"><input type="text" onchange="updateKet(${d.id}, this.value)" value="${d.keterangan}" class="w-full p-2 text-xs border border-slate-300 rounded outline-none focus:border-blue-500" placeholder="Keterangan..."></td>
-                        <td class="p-3 font-bold uppercase text-[10px] text-slate-500">${d.pic}</td>
+                        <td class="p-3 font-black text-[10px] border-r border-slate-200"><span class="px-3 py-1 rounded ${badgeClass}">${displayStatus}</span></td>
+                        <td class="p-3 font-bold ${isRedHighlight ? 'text-red-900' : 'text-slate-700'}">${d.troli}</td>
+                        <td class="p-3 font-mono font-bold border-r border-slate-200 tracking-wider">${d.qrcode}</td>
+                        <td class="p-3 font-bold">${d.tglProduksi}</td>
+                        <td class="p-3 font-bold">${d.mesin}</td>
+                        <td class="p-3 font-bold border-r border-slate-200">${d.shift}</td>
+                        <td class="p-3 font-black ${isRedHighlight ? 'text-red-700' : 'text-blue-700'}">${d.jenisItem}</td>
+                        <td class="p-3 font-bold text-left">${d.namaItem}</td>
+                        <td class="p-3 font-bold">${d.panjang}</td>
+                        <td class="p-3 font-bold">${d.grade}</td>
+                        <td class="p-3 font-bold">${d.dus}</td>
+                        <td class="p-3 font-bold border-r border-slate-200">${d.shading}</td>
+                        <td class="p-3 font-black ${isRedHighlight ? 'text-red-700' : 'text-orange-600'}">${d.po}</td>
+                        <td class="p-2"><input type="text" onchange="updateKet(${d.id}, this.value)" value="${d.keterangan}" class="w-full p-2 text-xs border border-slate-300 rounded outline-none focus:border-blue-500 bg-transparent ${isRedHighlight ? 'placeholder-red-400' : ''}" placeholder="Keterangan..."></td>
+                        <td class="p-3 font-bold uppercase text-[10px] opacity-70">${d.pic}</td>
                     </tr>
                 `;
             });
@@ -260,7 +300,7 @@
 
         function updateKet(id, val) { const item = dataStbj.find(d => d.id === id); if(item) item.keterangan = val; }
 
-        // MENCEK HASIL_STBJ (BUKAN STOK_QR)
+        // --- REVISI: FUNGSI CEK GUDANG (Kembali fokus cek ke Database) ---
         async function cekGudangSTBJ() {
             if(dataStbj.length === 0) return alert("Belum ada data.");
             const btn = document.getElementById('btn-cek-gudang'); const ori = btn.innerHTML;
@@ -268,18 +308,24 @@
 
             const allQRs = dataStbj.map(d => d.qrcode);
             try {
-                // REVISI: Cek ke hasil_stbj
+                // Mengecek ke table hasil_stbj di Supabase
                 const { data, error } = await db.from('hasil_stbj').select('qrcode').in('qrcode', allQRs);
                 if(error) throw error;
                 
                 const existingQRs = data.map(d => d.qrcode);
+                
                 dataStbj.forEach(d => {
                     if(d.status === 'HOLD') return; // Lewati yang sudah dihold manual
-                    if(existingQRs.includes(d.qrcode)) d.status = 'DUPLIKAT';
-                    else d.status = 'UNIQUE';
+                    
+                    // Kalau ketemu di DB ATAU itu duplikat layar, paksa jadi DUPLIKAT
+                    if(existingQRs.includes(d.qrcode) || d.isLocalDuplicate) {
+                        d.status = 'DUPLIKAT';
+                    } else {
+                        d.status = 'UNIQUE';
+                    }
                 });
                 renderTable();
-                alert("Cek Selesai! Data yang sudah ada di hasil_stbj ditandai DUPLIKAT.");
+                alert("Validasi Selesai!\nData telah dicocokkan dengan Database STBJ.");
             } catch (err) { alert("Gagal cek database: " + err.message); }
             finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
         }
@@ -303,7 +349,6 @@
                 }
                 
                 if(dupes.length > 0) {
-                    // REVISI: Mengirimkan status ke tabel hold_stbj
                     const payloadHold = dupes.map(d => ({ qrcode: d.qrcode, pic_input: d.pic, keterangan: d.keterangan, status: d.status }));
                     const { error: err2 } = await db.from('hold_stbj').insert(payloadHold);
                     if(err2) throw err2;
