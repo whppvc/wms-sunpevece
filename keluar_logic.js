@@ -88,7 +88,7 @@ function addRowKeluar(code, isDuplicate = false) {
     const td = translateBarcode(code); 
     
     const badgeHtml = isDuplicate 
-        ? '<span class="text-white font-bold bg-red-600 px-2 py-1 rounded text-xs" data-status="invalid">DUPLIKAT LOKAL</span>'
+        ? '<span class="text-white font-bold bg-red-600 px-2 py-1 rounded text-xs" data-status="invalid">DUPLIKAT SCAN</span>'
         : '<span class="text-gray-400 font-bold" data-status="unverified">-</span>';
         
     let html = `
@@ -154,7 +154,7 @@ async function crossCekOutbound() {
         }
     });
 
-    if(missingCount > 0) alert(`Ditemukan masalah.\nHapus baris merah (KOSONG / DUPLIKAT LOKAL) sebelum lanjut.`);
+    if(missingCount > 0) alert(`Ditemukan masalah.\nHapus baris merah (KOSONG / DUPLIKAT SCAN) sebelum lanjut.`);
     btnCross.innerHTML = originalText; btnCross.disabled = false;
 }
 
