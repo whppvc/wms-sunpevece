@@ -36,14 +36,10 @@ async function loadInitialData() {
 function translateBarcode(barcode) {
     const parts = barcode.split('/');
     let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-' };
-    
     if (parts.length < 4) return data;
 
     const hurufDepan = barcode.charAt(0).toUpperCase();
-    if (hurufDepan === 'P') data.jenisItem = 'Plafon';
-    else if (hurufDepan === 'L') data.jenisItem = 'List';
-    else if (hurufDepan === 'W') data.jenisItem = 'WPC';
-    else data.jenisItem = hurufDepan;
+    if (hurufDepan === 'P') data.jenisItem = 'Plafon'; else if (hurufDepan === 'L') data.jenisItem = 'List'; else if (hurufDepan === 'W') data.jenisItem = 'WPC'; else data.jenisItem = hurufDepan;
 
     let rawItem = parts[0];
     let cariItem = masterData.kamus.find(m => m.kode_nama_item === rawItem);
@@ -53,15 +49,11 @@ function translateBarcode(barcode) {
 
     const p2 = parts[2];
     if (p2 && p2.length >= 4) {
-        let digitPjg = (p2.length === 5) ? 2 : 1;
-        let rawPjg = p2.substring(0, digitPjg);
-        if (digitPjg === 1) data.panjang = rawPjg + "M"; 
-        else data.panjang = rawPjg[0] + "." + rawPjg[1] + "M"; 
+        let digitPjg = (p2.length === 5) ? 2 : 1; let rawPjg = p2.substring(0, digitPjg);
+        if (digitPjg === 1) data.panjang = rawPjg + "M"; else data.panjang = rawPjg[0] + "." + rawPjg[1] + "M"; 
 
         let rawGrade = p2.substring(digitPjg, digitPjg + 1);
-        if (rawGrade === '1') data.grade = 'BAGUS';
-        else if (rawGrade === '2') data.grade = 'A';
-        else data.grade = rawGrade;
+        if (rawGrade === '1') data.grade = 'BAGUS'; else if (rawGrade === '2') data.grade = 'A'; else data.grade = rawGrade;
 
         let rawDus = p2.substring(p2.length - 2); 
         let cariDus = masterData.kamus.find(m => m.kode_dus === rawDus);
@@ -70,37 +62,21 @@ function translateBarcode(barcode) {
 
     const p3 = parts[3];
     if (p3.length >= 5) {
-        // 1. Ekstrak Tanggal (5 digit pertama)
         const dayOfYear = parseInt(p3.substring(0, 3));
         const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
         const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
         data.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
 
-        // 2. Ekstrak Sisa Kode (Mesin, Shift, PO)
-        let sisaString = p3.substring(5); // Ambil sisa teks setelah 5 digit tanggal
-        
-        // 3. Gunakan Regex untuk menangkap teks berdasarkan awalan C, S, dan P
-        // Penjelasan: (C.*?) ambil C beserta apapun setelahnya sampai ketemu S
+        let sisaString = p3.substring(5); 
         let match = sisaString.match(/(C.*?)(S.*?)(P.*)/);
         
         if (match) {
-            let rawMesin = match[1]; // Hasil: C12, C1, dst.
-            let rawShift = match[2]; // Hasil: S1, S2, dst.
-            let rawPO = match[3];    // Hasil: P4, P24, dst.
-
-            let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin);
-            data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
-
-            let cariShift = masterData.kamus.find(m => m.kode_shift === rawShift);
-            data.shift = cariShift && cariShift.shift ? cariShift.shift : rawShift;
-            
-            let cariPO = masterData.kamus.find(m => m.kode_po === rawPO);
-            data.po = cariPO && cariPO.po ? cariPO.po : rawPO;
+            let rawMesin = match[1]; let rawShift = match[2]; let rawPO = match[3];  
+            let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin); data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
+            let cariShift = masterData.kamus.find(m => m.kode_shift === rawShift); data.shift = cariShift && cariShift.shift ? cariShift.shift : rawShift;
+            let cariPO = masterData.kamus.find(m => m.kode_po === rawPO); data.po = cariPO && cariPO.po ? cariPO.po : rawPO;
         } else {
-            // Jika format barcode tidak memiliki unsur C, S, dan P yang berurutan
-            data.mesin = "FORMAT SALAH";
-            data.shift = "FORMAT SALAH";
-            data.po = "FORMAT SALAH";
+            data.mesin = "FORMAT SALAH"; data.shift = "FORMAT SALAH"; data.po = "FORMAT SALAH";
         }
     }
     return data;
@@ -117,32 +93,31 @@ document.addEventListener('DOMContentLoaded', () => {
             if(!troli || !rawInput) return;
             
             const existingQRs = Array.from(document.querySelectorAll('.qr-val')).map(td => td.innerText);
-            // REGEX: Memecah berdasarkan spasi ( ), Enter (\n), atau titik koma (;)
             const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
-            let hasDuplicate = false;
             
             codes.forEach(code => {
-                if(existingQRs.includes(code)) hasDuplicate = true;
-                else { addRow(troli, code); existingQRs.push(code); }
+                // REVISI: Tetap masukkan, tapi tandai sebagai duplikat lokal
+                const isLocalDuplicate = existingQRs.includes(code);
+                addRow(troli, code, isLocalDuplicate); 
+                existingQRs.push(code); 
             });
             
-            if(hasDuplicate) { 
-                document.getElementById('dup-notif').classList.remove('hidden'); 
-                setTimeout(() => document.getElementById('dup-notif').classList.add('hidden'), 2000); 
-            }
             document.getElementById('input-qrcode').value = '';
         });
     }
 });
 
 // OTOMATIS TERJEMAH SAAT BARIS DITAMBAHKAN
-function addRow(troli, code) {
+function addRow(troli, code, isDuplicate = false) {
     globalRowId++;
     const tr = document.createElement('tr'); 
-    tr.className = "border-b border-inherit hover:bg-black/5 transition row-item"; 
+    
+    // REVISI: Warnai baris merah
+    let rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200 text-red-900' : 'hover:bg-black/5';
+    tr.className = `border-b border-inherit transition row-item ${rowClass}`; 
     tr.id = `row-${globalRowId}`;
     
-    const td = translateBarcode(code); // Langsung terjemah
+    const td = translateBarcode(code); 
     
     let html = `<td class="p-3 text-center"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 cursor-pointer"><i data-lucide="trash-2"></i></button></td>
         <td class="p-3 font-bold no-cell text-center"></td>
@@ -158,34 +133,21 @@ function addRow(troli, code) {
         <td class="p-3 col-dus">${td.dus}</td>
         <td class="p-3 col-shading">${td.shading}</td>
         <td class="p-3 font-bold col-po">${td.po}</td>
-        <td class="p-2"><input type="text" class="input-dynamic w-full p-2 border rounded outline-none uppercase text-xs font-bold ket-input"></td>`;
+        <td class="p-2"><input type="text" value="${isDuplicate ? 'DUPLIKAT SCAN' : ''}" class="input-dynamic w-full p-2 border rounded outline-none uppercase text-xs font-bold ket-input ${isDuplicate ? 'border-red-400 text-red-700' : ''}"></td>`;
     
     tr.innerHTML = html; document.getElementById('tbody-stbj').prepend(tr);
     lucide.createIcons(); updateRowNumbers();
 }
 
-function deleteRow(btn) {
-    const tr = btn.closest('tr'); deleteStack.push({ parent: tr.parentNode, html: tr.outerHTML, nextSibling: tr.nextSibling });
-    tr.remove(); updateRowNumbers();
-}
-
-function undoDelete() {
-    if(deleteStack.length === 0) return; const lastData = deleteStack.pop();
-    const tempDiv = document.createElement('tbody'); tempDiv.innerHTML = lastData.html;
-    if (lastData.nextSibling) lastData.parent.insertBefore(tempDiv.firstChild, lastData.nextSibling); else lastData.parent.appendChild(tempDiv.firstChild);
-    lucide.createIcons(); updateRowNumbers();
-}
-
-function updateRowNumbers() {
-    const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; });
-}
+function deleteRow(btn) { const tr = btn.closest('tr'); deleteStack.push({ parent: tr.parentNode, html: tr.outerHTML, nextSibling: tr.nextSibling }); tr.remove(); updateRowNumbers(); }
+function undoDelete() { if(deleteStack.length === 0) return; const lastData = deleteStack.pop(); const tempDiv = document.createElement('tbody'); tempDiv.innerHTML = lastData.html; if (lastData.nextSibling) lastData.parent.insertBefore(tempDiv.firstChild, lastData.nextSibling); else lastData.parent.appendChild(tempDiv.firstChild); lucide.createIcons(); updateRowNumbers(); }
+function updateRowNumbers() { const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; }); }
 
 // LOGIKA SAVE CANGGIH & ANTI DUPLIKAT SUPABASE
 async function saveToSupabase() {
     const btnSave = document.getElementById('btn-save'); 
     const originalText = btnSave.innerHTML;
     
-    // Animasi tanpa men-disable secara permanen
     btnSave.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-6 h-6"></i> MENYIMPAN...'; 
     btnSave.disabled = true;
 
@@ -203,11 +165,11 @@ async function saveToSupabase() {
         const qr = row.querySelector('.qr-val').innerText;
         allQRCodes.push(qr);
         rowMap[qr] = row;
-        // Bersihkan warna merah (jika user nge-save ulang)
-        row.classList.remove('bg-red-200', 'hover:bg-red-300', 'text-red-900');
+        // Bersihkan warna merah untuk di-recheck
+        row.classList.remove('bg-red-100', 'hover:bg-red-200', 'text-red-900');
     });
 
-    // Cek Duplikat ke Supabase secara massal
+    // Cek Duplikat ke DB
     const { data: existingData, error: checkError } = await db.from('hasil_stbj').select('qrcode').in('qrcode', allQRCodes);
 
     if (checkError) {
@@ -219,15 +181,18 @@ async function saveToSupabase() {
     const dataToSave = [];
     let duplikatCount = 0;
     let masukCount = 0;
+    let processedQRs = []; // REVISI: Cegah upload barcode kembar dalam satu sesi
 
     rows.forEach(row => {
         const qr = row.querySelector('.qr-val').innerText;
-        if (existingQRs.includes(qr)) {
-            // MERAHKAN BARIS JIKA DUPLIKAT
-            row.classList.add('bg-red-200', 'hover:bg-red-300', 'text-red-900');
+        
+        // Cek jika QR ini sudah ada di DB atau sebelumnya sudah dibaca (scan ganda layar)
+        if (existingQRs.includes(qr) || processedQRs.includes(qr)) {
+            row.classList.add('bg-red-100', 'hover:bg-red-200', 'text-red-900');
+            row.querySelector('.ket-input').value = 'DUPLIKAT';
             duplikatCount++;
         } else {
-            // JIKA BELUM ADA, SIAPKAN UNTUK DISIMPAN
+            processedQRs.push(qr); // Tandai QR ini sudah "diantrikan" untuk di-save
             dataToSave.push({
                 troli: row.querySelector('.troli-cell').innerText,
                 qrcode: qr,
@@ -266,8 +231,11 @@ async function saveToSupabase() {
     btnSave.disabled = false;
     lucide.createIcons();
 
-    // MUNCULKAN POP-UP HASIL
-    alert(`PROSES SELESAI!\n✅ Berhasil disimpan: ${masukCount} data\n❌ Ditolak (Sudah ada di database): ${duplikatCount} data`);
+    if(duplikatCount > 0) {
+        alert(`SEBAGIAN DISIMPAN!\n✅ Berhasil disimpan: ${masukCount} data\n❌ Ditolak (Sudah ada di database/Duplikat Scan): ${duplikatCount} data\n\nBaris merah muda belum terhapus untuk Anda review.`);
+    } else {
+        alert(`PROSES SELESAI!\n✅ Berhasil disimpan: ${masukCount} data.`);
+    }
 }
 
 // LOGIKA IMPORT CSV
@@ -311,7 +279,19 @@ function handleFileSelect(input, idx) {
 
 function processImportToTable() {
     if(!importConfigs.some(c => c && c.troli && c.codes && c.codes.length > 0)) return alert("Isi Troli & File dengan benar.");
-    switchView('scan'); const existingQRs = Array.from(document.querySelectorAll('.qr-val')).map(td => td.innerText);
-    importConfigs.forEach(conf => { if (conf && conf.troli && conf.codes) { conf.codes.forEach(c => { let code = String(c).trim(); if(!existingQRs.includes(code)) { addRow(conf.troli, code); existingQRs.push(code); } }); } });
+    switchView('scan'); 
+    const existingQRs = Array.from(document.querySelectorAll('.qr-val')).map(td => td.innerText);
+    
+    importConfigs.forEach(conf => { 
+        if (conf && conf.troli && conf.codes) { 
+            conf.codes.forEach(c => { 
+                let code = String(c).trim(); 
+                // REVISI: Tetap masukkan meski duplikat, dan warnai merah
+                const isLocalDuplicate = existingQRs.includes(code);
+                addRow(conf.troli, code, isLocalDuplicate); 
+                existingQRs.push(code); // Tambah agar duplikat berturut-turut terdeteksi
+            }); 
+        } 
+    });
     importConfigs = [];
 }
