@@ -93,7 +93,7 @@ function addRow(troli, area, code, isDuplicate = false) {
     const td = translateBarcode(code); 
     
     const badgeHtml = isDuplicate 
-        ? '<span class="text-white font-bold bg-red-600 px-2 py-1 text-[10px] rounded" data-status="invalid">DUPLIKAT LOKAL</span>'
+        ? '<span class="text-white font-bold bg-red-600 px-2 py-1 text-[10px] rounded" data-status="invalid">DUPLIKAT SCAN</span>'
         : '<span class="text-slate-500 font-bold" data-status="unverified">-</span>';
 
     tr.innerHTML = `
