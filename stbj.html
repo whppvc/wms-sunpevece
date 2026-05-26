@@ -186,7 +186,7 @@
                     qrcode: code, 
                     troli: troli, 
                     status: 'BELUM CEK', 
-                    keterangan: isLocalDuplicate ? 'DUPLIKAT LOKAL' : '', 
+                    keterangan: isLocalDuplicate ? 'DUPLIKAT SCAN' : '', 
                     pic: currentUser.username, 
                     isLocalDuplicate: isLocalDuplicate, // Bendera deteksi merah
                     ...trans 
@@ -219,7 +219,7 @@
                                 qrcode: code, 
                                 troli: troli, 
                                 status: 'BELUM CEK', 
-                                keterangan: isLocalDuplicate ? 'DUPLIKAT LOKAL (CSV)' : 'Dari CSV', 
+                                keterangan: isLocalDuplicate ? 'DUPLIKAT SCAN (CSV)' : 'Dari CSV', 
                                 pic: currentUser.username, 
                                 isLocalDuplicate: isLocalDuplicate, 
                                 ...trans 
@@ -266,7 +266,7 @@
                 // Jika statusnya belum dicek tapi ketahuan kembar oleh layar
                 if(d.status === 'BELUM CEK' && d.isLocalDuplicate) {
                     badgeClass = "bg-red-600 text-white";
-                    displayStatus = "DUPLIKAT LOKAL";
+                    displayStatus = "DUPLIKAT SCAN";
                 }
 
                 // Warnai background seluruh baris (Merah untuk duplikat layar/database)
