@@ -2,11 +2,9 @@ let masterData = { kamus: [] };
 let deleteStack = [], globalRowId = 0;
 
 async function loadInitialOutboundData() {
-    // Load Kamus (untuk translate barcode display saja)
     const { data: mData2 } = await db.from('master_2').select('*');
     if(mData2) masterData.kamus = mData2; 
 
-    // Load Dropdown PO untuk Modal Keluar
     const { data: poData } = await db.from('master_2').select('po');
     if (poData) {
         const listPO = [...new Set(poData.map(d => d.po).filter(x => x && x.trim() !== ''))].sort();
@@ -75,23 +73,34 @@ document.addEventListener('DOMContentLoaded', () => {
             const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
             
             codes.forEach(code => {
-                if(!existingQRs.includes(code)) { addRowKeluar(code); existingQRs.push(code); }
+                // REVISI: Cek apakah duplikat, dan panggil fungsi dengan isDuplicate
+                const isLocalDuplicate = existingQRs.includes(code);
+                addRowKeluar(code, isLocalDuplicate); 
+                existingQRs.push(code); // Tambah agar duplikat berturut-turut terdeteksi
             });
             document.getElementById('input-qrcode').value = '';
         });
     }
 });
 
-function addRowKeluar(code) {
+// REVISI: Terima isDuplicate dan aplikasikan kelas warna merah
+function addRowKeluar(code, isDuplicate = false) {
     globalRowId++;
     const tr = document.createElement('tr'); 
-    tr.className = "border-b border-inherit hover:bg-black/5 transition row-item"; 
+    
+    let rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'hover:bg-slate-100';
+    tr.className = `border-b border-inherit transition row-item ${rowClass}`; 
+    
     const td = translateBarcode(code); 
     
+    let statusBadge = isDuplicate 
+        ? '<span class="text-white font-bold bg-red-600 px-3 py-1 rounded-full text-xs shadow-sm" data-status="invalid">DUPLIKAT LOKAL</span>' 
+        : '<span class="text-gray-400 font-bold" data-status="unverified">-</span>';
+        
     let html = `
         <td class="p-3 text-center"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 cursor-pointer"><i data-lucide="trash-2"></i></button></td>
         <td class="p-3 font-bold no-cell text-center"></td>
-        <td class="p-3 font-bold text-center col-val"><span class="text-gray-400 font-bold" data-status="unverified">-</span></td>
+        <td class="p-3 font-bold text-center col-val">${statusBadge}</td>
         <td class="p-3 font-black text-emerald-600 area-cell">?</td>
         <td class="p-3 font-mono font-bold text-black qr-val border-r border-inherit">${code}</td>
         <td class="p-3 col-tgl">${td.tglProduksi}</td>
@@ -125,12 +134,11 @@ async function crossCekOutbound() {
     btnCross.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMVALIDASI GUDANG...'; btnCross.disabled = true;
 
     const allQRCodes = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
-    
-    // Cari fisik QR di Database
     const { data: dbQRs, error } = await db.from('stok_qr').select('qrcode, area').in('qrcode', allQRCodes);
     if(error) { alert("Koneksi gagal: " + error.message); btnCross.innerHTML = originalText; btnCross.disabled = false; return; }
 
     let missingCount = 0;
+    let processedQRs = []; // REVISI: Track duplikat layar
 
     rows.forEach(row => {
         const qr = row.querySelector('.qr-val').innerText;
@@ -140,20 +148,27 @@ async function crossCekOutbound() {
         let foundDb = dbQRs.find(d => d.qrcode === qr);
 
         if(foundDb) {
-            // JIKA ADA FISIKNYA DI DB -> Lolos, Tarik Area-nya.
-            valCell.innerHTML = '<span class="text-emerald-600 font-black bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300 shadow-sm text-xs" data-status="valid">VALID FISIK</span>';
-            areaCell.innerText = foundDb.area; // Mengisi Area Otomatis
-            row.classList.remove('bg-red-50');
+            // REVISI: Jika barang ada di DB, pastikan ia belum dicentang di baris sebelumnya
+            if (processedQRs.includes(qr)) {
+                valCell.innerHTML = '<span class="text-white font-black bg-red-600 px-3 py-1 rounded-full shadow-sm text-xs" data-status="invalid">DUPLIKAT SCAN</span>';
+                areaCell.innerText = "DUPLIKAT";
+                row.classList.add('bg-red-100'); 
+                missingCount++;
+            } else {
+                processedQRs.push(qr);
+                valCell.innerHTML = '<span class="text-emerald-600 font-black bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300 shadow-sm text-xs" data-status="valid">VALID FISIK</span>';
+                areaCell.innerText = foundDb.area; 
+                row.classList.remove('bg-red-50', 'bg-red-100', 'hover:bg-red-200');
+            }
         } else {
-            // JIKA TIDAK ADA FISIKNYA -> Mungkin sudah dikirim atau belum dilangsir.
-            valCell.innerHTML = '<span class="text-red-600 font-black bg-red-100 px-3 py-1 rounded-full border border-red-300 shadow-sm text-xs" data-status="invalid">TDK ADA DI GUDANG</span>';
+            valCell.innerHTML = '<span class="text-white font-black bg-red-600 px-3 py-1 rounded-full shadow-sm text-xs" data-status="invalid">TDK ADA DI DB</span>';
             areaCell.innerText = "KOSONG";
-            row.classList.add('bg-red-50'); 
+            row.classList.add('bg-red-100'); 
             missingCount++;
         }
     });
 
-    if(missingCount > 0) alert(`Ditemukan ${missingCount} QR Code yang secara sistem TIDAK ADA DI GUDANG.\nHapus baris merah sebelum lanjut proses keluar.`);
+    if(missingCount > 0) alert(`Ditemukan masalah (Warna Merah Muda).\nBisa jadi Barang TDK ADA, atau Anda scan BARANG YANG SAMA dua kali.\nHapus baris merah muda sebelum lanjut.`);
     
     btnCross.innerHTML = originalText; btnCross.disabled = false;
 }
@@ -165,7 +180,6 @@ function bukaModalKeluar() {
     const rows = document.querySelectorAll('.row-item');
     if(rows.length === 0) return alert("Belum ada data.");
 
-    // Cek apakah belum divalidasi atau ada yang merah
     let unverified = document.querySelector('span[data-status="unverified"]');
     let invalid = document.querySelector('span[data-status="invalid"]');
     
@@ -173,15 +187,11 @@ function bukaModalKeluar() {
         return alert("STOP!\nAnda belum menekan VALIDASI GUDANG atau masih ada baris error (Merah). Pastikan semua QR Valid Fisik!");
     }
 
-    // Reset isi modal dan buka
     document.getElementById('out-po-target').value = '';
     document.getElementById('out-keterangan').value = '';
     document.getElementById('modal-keluar').classList.remove('hidden');
 }
 
-// =====================================
-// EKSEKUSI PEMOTONGAN VIA RPC (TRANSAKSI AMAN)
-// =====================================
 async function eksekusiKeluar() {
     const poTarget = document.getElementById('out-po-target').value;
     const keterangan = document.getElementById('out-keterangan').value.trim();
@@ -196,7 +206,6 @@ async function eksekusiKeluar() {
     let qrList = [];
     let requiredMap = {};
 
-    // 1. Kumpulkan Tagihan
     rows.forEach(row => {
         let area = row.querySelector('.area-cell').innerText;
         let qr = row.querySelector('.qr-val').innerText;
@@ -211,26 +220,15 @@ async function eksekusiKeluar() {
         requiredMap[virtual_sku] += 1;
     });
 
-    // 2. Format tagihan menjadi array untuk database
     let deductionsArray = [];
     for(let sku in requiredMap) {
         deductionsArray.push({ sku: sku, qty: requiredMap[sku] });
     }
 
-    // 3. Bungkus paket data Payload
-    const payloadData = {
-        qrs: qrList,
-        deductions: deductionsArray,
-        po: poTarget,
-        ket: keterangan,
-        pic: user.username
-    };
-
-    // 4. TEMBAK KE FUNGSI RPC SUPABASE!
+    const payloadData = { qrs: qrList, deductions: deductionsArray, po: poTarget, ket: keterangan, pic: user.username };
     const { data, error } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
 
     if (error) {
-        // Jika database menggagalkan transaksi (misal karena saldo kurang atau jaringan putus)
         alert(error.message || "Gagal memproses pengeluaran. Transaksi dibatalkan secara otomatis oleh sistem.");
         btnEks.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> KELUARKAN BARANG'; btnEks.disabled = false;
         return;
