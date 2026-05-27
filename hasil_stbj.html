@@ -12,6 +12,7 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; white-space: nowrap; }
     </style>
+    <style id="dynamic-col-styles"></style>
 </head>
 <body class="font-sans overflow-x-hidden">
     <div class="w-full relative">
@@ -20,7 +21,6 @@
             <button onclick="setMode('qrcode')" id="tab-mode-qrcode" class="px-5 py-3.5 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition"><i data-lucide="qr-code"></i> MODE QRCODE</button>
             <button onclick="setMode('item')" id="tab-mode-item" class="px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="boxes"></i> MODE NAMA ITEM & QTY</button>
             <button onclick="setMode('jasper')" id="tab-mode-jasper" class="px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="file-text"></i> MODE NAMA JASPER & QTY</button>
-            <button onclick="setMode('katalog')" id="tab-mode-katalog" class="px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition ml-auto border-l border-slate-200"><i data-lucide="database"></i> KATALOG ITEM</button>
         </div>
 
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4 space-y-3">
@@ -33,25 +33,27 @@
                     </select>
                 </div>
                 <div class="flex gap-2 w-full sm:w-auto justify-end">
-                    <button onclick="toggleSidebarFilter()" id="btn-toggle-filter" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded flex items-center gap-1 transition"><i data-lucide="filter" class="w-3.5 h-3.5"></i> FILTER</button>
-                    <button onclick="togglePanel('panel-kolom')" id="btn-toggle-kolom" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded flex items-center gap-1 transition border border-slate-300"><i data-lucide="eye" class="w-3.5 h-3.5"></i> KOLOM</button>
+                    <button onclick="toggleSidebarFilter()" id="btn-toggle-filter" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded flex items-center gap-1 transition uppercase"><i data-lucide="filter" class="w-3.5 h-3.5"></i> FILTER</button>
+                    <div class="relative">
+                        <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="px-3 py-1.5 bg-white text-slate-700 hover:text-slate-900 font-bold rounded shadow-sm border-2 border-slate-200 text-xs flex items-center gap-1 active:scale-95 transition uppercase"><i data-lucide="eye-off" class="w-3.5 h-3.5"></i> KOLOM</button>
+                        <div id="dropdown-kolom" class="hidden absolute top-full right-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
+                                <span class="text-xs font-black text-slate-500 uppercase">Sembunyikan</span>
+                                <button onclick="resetKolom()" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold hover:bg-blue-200">RESET</button>
+                            </div>
+                            <div class="flex flex-col gap-2 max-h-64 overflow-y-auto" id="list-kolom-toggles"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div id="panel-kolom" class="hidden flex flex-wrap gap-4 bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs font-bold text-slate-600">
-                <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked onchange="toggleKolomRaw('c-waktu', this.checked)"> Waktu</label>
-                <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked onchange="toggleKolomRaw('c-prod', this.checked)"> Produksi (Mesin/Shift/Tgl)</label>
-                <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked onchange="toggleKolomRaw('c-pic', this.checked)"> PIC Input</label>
-                <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked onchange="toggleKolomRaw('c-ket', this.checked)"> Keterangan</label>
-            </div>
-
             <div class="flex flex-wrap items-center gap-2 pt-2">
-                <button onclick="aksiMassal('salin')" id="btn-massal-salin" class="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="copy" class="w-4 h-4"></i> SALIN CEL</button>
-                <button onclick="aksiMassal('hapus')" id="btn-massal-hapus" class="flex-1 sm:flex-none px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="trash-2" class="w-4 h-4"></i> HAPUS</button>
-                <button onclick="aksiMassal('hold')" id="btn-massal-hold" class="flex-1 sm:flex-none px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="pause-circle" class="w-4 h-4"></i> PINDAHKAN (HOLD/UNHOLD)</button>
-                <button onclick="aksiMassal('xlsx')" id="btn-massal-xls" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"><i data-lucide="download" class="w-4 h-4"></i> DOWNLOAD XLS</button>
+                <button onclick="aksiMassal('salin')" id="btn-massal-salin" class="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase"><i data-lucide="copy" class="w-4 h-4"></i> SALIN</button>
+                <button onclick="aksiMassal('hapus')" id="btn-massal-hapus" class="flex-1 sm:flex-none px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase"><i data-lucide="trash-2" class="w-4 h-4"></i> HAPUS</button>
+                <button onclick="aksiMassal('hold')" id="btn-massal-hold" class="flex-1 sm:flex-none px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase"><i data-lucide="pause-circle" class="w-4 h-4"></i> HOLD/UNHOLD</button>
+                <button onclick="aksiMassal('xlsx')" id="btn-massal-xls" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase"><i data-lucide="download" class="w-4 h-4"></i> UNDUH EXCEL</button>
                 
-                <button onclick="bukaModalKatalog()" id="btn-tambah-katalog" class="flex-1 sm:flex-none px-5 py-2 bg-blue-700 hover:bg-blue-800 text-white font-black text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-md border-b-4 border-blue-900 ml-auto"><i data-lucide="plus-circle" class="w-4 h-4"></i> TAMBAH KATALOG</button>
+                <button onclick="bukaDaftarKatalog()" id="btn-tambah-katalog" class="flex-1 sm:flex-none px-5 py-2 bg-blue-700 hover:bg-blue-800 text-white font-black text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-md border-b-4 border-blue-900 ml-auto uppercase"><i data-lucide="database" class="w-4 h-4"></i> KATALOG JASPER</button>
             </div>
         </div>
 
@@ -73,6 +75,7 @@
         <div class="p-4 flex flex-col gap-4 overflow-y-auto">
             <div class="grid grid-cols-2 gap-3">
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Waktu</label><input type="text" id="f-waktu" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label><input type="text" id="f-troli" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="f-qr" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="text" id="f-tgl" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label><input type="text" id="f-mesin" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
@@ -91,37 +94,68 @@
         </div>
     </div>
 
+    <div id="modal-list-katalog" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[60] px-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide"><i data-lucide="database" class="w-5 h-5 text-blue-600"></i> DATABASE KATALOG JASPER</h3>
+                <div class="flex gap-2">
+                    <button onclick="bukaModalKatalogForm()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs transition flex items-center gap-1 shadow-sm"><i data-lucide="plus" class="w-4 h-4"></i> TAMBAH DATA</button>
+                    <button onclick="document.getElementById('modal-list-katalog').classList.add('hidden')" class="px-4 py-2 bg-slate-200 hover:bg-red-500 hover:text-white text-slate-600 font-bold rounded-lg text-xs transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+            </div>
+            <div class="p-4 border-b border-slate-100">
+                <input type="text" id="f-kat-search" oninput="saringKatalogList()" class="w-full p-3 text-sm border-2 border-slate-200 rounded-lg outline-none focus:border-blue-500 font-bold" placeholder="Pencarian Cepat Katalog (Nama Item / Hasil Jasper)...">
+            </div>
+            <div class="overflow-y-auto p-4 flex-1 hide-scrollbar">
+                <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+                    <thead class="sticky top-0 z-10 shadow-sm">
+                        <tr>
+                            <th class="hdr-std w-12">No</th>
+                            <th class="hdr-std text-left pl-4">Nama Item Master</th>
+                            <th class="hdr-std">Panjang</th>
+                            <th class="hdr-std border-r border-slate-500">Grade</th>
+                            <th class="hdr-std bg-slate-900 text-blue-300">NAMA OUTPUT JASPER</th>
+                            <th class="hdr-std w-20">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-katalog-list" class="text-center text-slate-700"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-katalog" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[90] px-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
-            <h3 class="text-xl font-black mb-6 flex items-center gap-2 text-slate-800"><i data-lucide="database" class="text-blue-600"></i> Form Katalog Jasper</h3>
+            <h3 class="text-xl font-black mb-6 flex items-center gap-2 text-slate-800"><i data-lucide="edit" class="text-blue-600"></i> Form Katalog Jasper</h3>
             <input type="hidden" id="kat-id">
             <div class="space-y-4 mb-6">
                 <div>
                     <label class="block text-[11px] font-black uppercase tracking-wide mb-1 text-slate-500">Nama Item Master</label>
-                    <input type="text" id="kat-nama" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-bold uppercase text-slate-800">
+                    <input type="text" id="kat-nama" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-bold uppercase text-slate-800" placeholder="Cth: LIS PLINT">
                 </div>
                 <div class="flex gap-3">
                     <div class="w-1/2">
                         <label class="block text-[11px] font-black uppercase tracking-wide mb-1 text-slate-500">Panjang</label>
-                        <input type="text" id="kat-pjg" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-bold uppercase text-slate-800 text-center">
+                        <input type="text" id="kat-pjg" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-bold uppercase text-slate-800 text-center" placeholder="Cth: 4M">
                     </div>
                     <div class="w-1/2">
                         <label class="block text-[11px] font-black uppercase tracking-wide mb-1 text-slate-500">Grade</label>
-                        <input type="text" id="kat-grade" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-bold uppercase text-slate-800 text-center">
+                        <input type="text" id="kat-grade" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-bold uppercase text-slate-800 text-center" placeholder="Cth: BAGUS">
                     </div>
                 </div>
                 <div class="pt-3 border-t border-slate-100">
                     <label class="block text-xs font-black uppercase tracking-wide mb-1 text-blue-700">Hasil / Nama Output Jasper</label>
-                    <input type="text" id="kat-jasper" class="w-full p-3 border-2 border-blue-200 bg-blue-50 rounded-lg outline-none focus:border-blue-700 font-black uppercase text-blue-900">
+                    <input type="text" id="kat-jasper" class="w-full p-3 border-2 border-blue-200 bg-blue-50 rounded-lg outline-none focus:border-blue-700 font-black uppercase text-blue-900" placeholder="Ketik nama output Jasper di sini...">
                 </div>
             </div>
             <div class="flex gap-2">
-                <button type="button" onclick="document.getElementById('modal-katalog').classList.add('hidden')" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition">Batal</button>
-                <button type="button" onclick="simpanKatalog()" id="btn-simpan-kat" class="w-2/3 py-3 bg-blue-700 text-white font-black rounded-xl hover:bg-blue-800 shadow-md flex justify-center items-center gap-2 transition active:scale-95 border-b-4 border-blue-900"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
+                <button type="button" onclick="document.getElementById('modal-katalog').classList.add('hidden')" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition uppercase text-xs">BATAL</button>
+                <button type="button" onclick="simpanKatalog()" id="btn-simpan-kat" class="w-2/3 py-3 bg-blue-700 text-white font-black rounded-xl hover:bg-blue-800 shadow-md flex justify-center items-center gap-2 transition active:scale-95 border-b-4 border-blue-900 uppercase text-xs"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
             </div>
         </div>
     </div>
-    <div id="overlay-klik-luar-k" onclick="toggleSidebarFilter()" class="hidden fixed inset-0 z-30"></div>
+    
+    <div id="overlay-klik-luar-k" onclick="tutupPopups()" class="hidden fixed inset-0 z-30"></div>
 
     <script src="global.js"></script>
     <script>
@@ -130,20 +164,80 @@
         let rawDataRaw = [];
         let kamusData = [];
         let jasperData = [];
+        let hiddenCols = [];
         const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
+
+        const colDefinitions = [
+            { id: 'col-cb', label: 'Checkbox', default: true },
+            { id: 'col-no', label: 'Nomor Urut', default: true },
+            { id: 'col-status', label: 'Status Hold', default: true },
+            { id: 'col-waktu', label: 'Waktu Input', default: true },
+            { id: 'col-troli', label: 'Troli', default: true },
+            { id: 'col-qr', label: 'QRCode', default: true },
+            { id: 'col-tgl', label: 'Tgl Produksi', default: true },
+            { id: 'col-mesin', label: 'Mesin', default: true },
+            { id: 'col-shift', label: 'Shift', default: true },
+            { id: 'col-jenis', label: 'Jenis Item', default: true },
+            { id: 'col-nama', label: 'Nama Item / Jasper', default: true },
+            { id: 'col-pjg', label: 'Pjg', default: true },
+            { id: 'col-grade', label: 'Grade', default: true },
+            { id: 'col-dus', label: 'Dus', default: true },
+            { id: 'col-shading', label: 'Shading', default: true },
+            { id: 'col-po', label: 'PO', default: true },
+            { id: 'col-qty', label: 'QTY Total', default: true },
+            { id: 'col-ket', label: 'Keterangan', default: true },
+            { id: 'col-pic', label: 'PIC Input', default: true }
+        ];
 
         document.addEventListener('DOMContentLoaded', () => {
             initModernLayout({ id: 'hasil_stbj', title: 'HASIL STBJ', url: 'hasil_stbj.html' });
             setTimeout(async () => {
+                buatDropdownKolom();
                 await loadKamusDanJasper();
                 await muatDataDariSupabase();
             }, 200);
         });
 
-        function togglePanel(id) { document.getElementById(id).classList.toggle('hidden'); }
+        function buatDropdownKolom() {
+            const container = document.getElementById('list-kolom-toggles');
+            let html = '';
+            colDefinitions.forEach(col => {
+                html += `
+                    <label class="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-slate-50 rounded">
+                        <input type="checkbox" checked onchange="toggleKolom('${col.id}', this.checked)" class="w-4 h-4 cursor-pointer text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                        <span class="text-xs font-bold text-slate-700">${col.label}</span>
+                    </label>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function toggleKolom(colId, isVisible) {
+            if(isVisible) { hiddenCols = hiddenCols.filter(id => id !== colId); } 
+            else { if(!hiddenCols.includes(colId)) hiddenCols.push(colId); }
+            terapkanStyleKolom();
+        }
+
+        function resetKolom() {
+            hiddenCols = [];
+            document.querySelectorAll('#list-kolom-toggles input[type="checkbox"]').forEach(cb => cb.checked = true);
+            terapkanStyleKolom();
+        }
+
+        function terapkanStyleKolom() {
+            const cssString = hiddenCols.map(id => `.${id} { display: none !important; }`).join('\n');
+            document.getElementById('dynamic-col-styles').innerHTML = cssString;
+        }
+
         function toggleSidebarFilter() {
             document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
             document.getElementById('overlay-klik-luar-k').classList.toggle('hidden');
+        }
+
+        function tutupPopups() {
+            document.getElementById('sidebar-filter').classList.add('translate-x-full');
+            document.getElementById('dropdown-kolom').classList.add('hidden');
+            document.getElementById('overlay-klik-luar-k').classList.add('hidden');
         }
 
         async function loadKamusDanJasper() {
@@ -155,7 +249,6 @@
         }
 
         async function muatDataDariSupabase() {
-            if(modeSekarang === 'katalog') { renderHeaderDanTabel(); return; } 
             const tbody = document.getElementById('tbody-stbj');
             tbody.innerHTML = `<tr><td colspan="20" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menarik Data ${tabelSekarang}...</p></td></tr>`;
             lucide.createIcons();
@@ -169,6 +262,7 @@
 
         function translateBarcode(barcode) {
             let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-', jasper: '-' };
+            if(!barcode) return td;
             const parts = barcode.split('/'); if (parts.length < 1) return td;
             
             const hurufDepan = barcode.charAt(0).toUpperCase();
@@ -206,20 +300,59 @@
             return td;
         }
 
-        // PERUBAHAN: Semua elemen toolbar tetap TAMPIL apa pun modenya!
         function setMode(m) {
             modeSekarang = m;
-            ['qrcode', 'item', 'jasper', 'katalog'].forEach(tab => {
+            ['qrcode', 'item', 'jasper'].forEach(tab => {
                 const el = document.getElementById('tab-mode-' + tab);
-                if(m === tab) el.className = 'px-5 py-3.5 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition';
-                else el.className = 'px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
+                if(el) {
+                    if(m === tab) el.className = 'px-5 py-3.5 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition';
+                    else el.className = 'px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
+                }
             });
-            if(m === 'katalog') renderHeaderDanTabel(); else muatDataDariSupabase();
+            renderHeaderDanTabel();
         }
 
         function switchTable(val) { tabelSekarang = val; muatDataDariSupabase(); }
 
-        function bukaModalKatalog(jsonStr) {
+        function bukaDaftarKatalog() {
+            renderKatalogList();
+            document.getElementById('modal-list-katalog').classList.remove('hidden');
+        }
+
+        function renderKatalogList() {
+            const tbody = document.getElementById('tbody-katalog-list');
+            if(jasperData.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="p-6 font-bold text-slate-400">Katalog Jasper belum ada / Kosong.</td></tr>'; return; }
+            
+            let h = '';
+            jasperData.forEach((r, i) => {
+                const safeR = JSON.stringify(r).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+                h += `
+                    <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-center katalog-row">
+                        <td class="p-3 font-bold text-slate-400">${i+1}</td>
+                        <td class="p-3 font-bold text-slate-800 text-left s-nama">${r.nama_item || '-'}</td>
+                        <td class="p-3 font-bold text-slate-600 s-pjg">${r.panjang || '-'}</td>
+                        <td class="p-3 font-bold text-slate-800 border-r border-slate-200 s-grade">${r.grade || '-'}</td>
+                        <td class="p-3 font-black text-blue-700 bg-blue-50/50 text-left s-jasper">${r.nama_jasper || '-'}</td>
+                        <td class="p-2">
+                            <div class="flex gap-1 justify-center">
+                                <button onclick="bukaModalKatalogForm('${safeR}')" class="p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded cursor-pointer transition"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                                <button onclick="hapusKatalog('${r.id}')" class="p-2 bg-red-100 text-red-700 hover:bg-red-200 rounded cursor-pointer transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            </div>
+                        </td>
+                    </tr>`;
+            });
+            tbody.innerHTML = h; lucide.createIcons();
+        }
+
+        function saringKatalogList() {
+            const q = document.getElementById('f-kat-search').value.toLowerCase();
+            document.querySelectorAll('.katalog-row').forEach(row => {
+                const txt = row.innerText.toLowerCase();
+                row.style.display = txt.includes(q) ? '' : 'none';
+            });
+        }
+
+        function bukaModalKatalogForm(jsonStr) {
             if(jsonStr) {
                 const d = JSON.parse(jsonStr);
                 document.getElementById('kat-id').value = d.id;
@@ -251,79 +384,45 @@
             else res = await db.from('nama_jasper').insert(payload);
             
             if(res.error) alert("Gagal: " + res.error.message);
-            else { alert("Katalog berhasil disimpan!"); document.getElementById('modal-katalog').classList.add('hidden'); await loadKamusDanJasper(); renderHeaderDanTabel(); }
+            else { alert("Katalog berhasil disimpan!"); document.getElementById('modal-katalog').classList.add('hidden'); await loadKamusDanJasper(); renderKatalogList(); }
             btn.disabled=false; btn.innerHTML='<i data-lucide="save" class="w-4 h-4"></i> SIMPAN'; lucide.createIcons();
         }
 
         async function hapusKatalog(id) {
             if(!confirm("Yakin ingin menghapus item katalog ini?")) return;
             const {error} = await db.from('nama_jasper').delete().eq('id', id);
-            if(error) alert("Gagal Hapus: " + error.message); else { await loadKamusDanJasper(); renderHeaderDanTabel(); }
+            if(error) alert("Gagal Hapus: " + error.message); else { await loadKamusDanJasper(); renderKatalogList(); }
         }
 
         function renderHeaderDanTabel() {
             const thead = document.getElementById('thead-stbj');
             const tbody = document.getElementById('tbody-stbj');
 
-            if(modeSekarang === 'katalog') {
-                thead.innerHTML = `
-                    <tr>
-                        <th class="hdr-std w-10"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer"></th>
-                        <th class="hdr-std w-12">No</th>
-                        <th class="hdr-std text-left pl-4">Nama Item Master</th>
-                        <th class="hdr-std">Panjang</th>
-                        <th class="hdr-std border-r border-slate-500">Grade</th>
-                        <th class="hdr-std bg-slate-900 text-blue-300">NAMA OUTPUT JASPER</th>
-                        <th class="hdr-std w-20">Aksi</th>
-                    </tr>`;
-                
-                if(jasperData.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="p-6 font-bold text-slate-400">Katalog Jasper belum ada / Kosong.</td></tr>'; return; }
-                
-                let h = '';
-                jasperData.forEach((r, i) => {
-                    const safeR = JSON.stringify(r).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
-                    h += `
-                        <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-row text-center katalog-row">
-                            <td class="p-3"><input type="checkbox" value="${r.id}" class="row-cb cursor-pointer"></td>
-                            <td class="p-3 font-bold text-slate-400">${i+1}</td>
-                            <td class="p-3 font-bold text-slate-800 text-left s-nama">${r.nama_item || '-'}</td>
-                            <td class="p-3 font-bold text-slate-600 s-pjg">${r.panjang || '-'}</td>
-                            <td class="p-3 font-bold text-slate-800 border-r border-slate-200 s-grade">${r.grade || '-'}</td>
-                            <td class="p-3 font-black text-blue-700 bg-blue-50/50 text-left s-jasper">${r.nama_jasper || '-'}</td>
-                            <td class="p-2">
-                                <div class="flex gap-1 justify-center">
-                                    <button onclick="bukaModalKatalog('${safeR}')" class="p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded cursor-pointer transition"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-                                    <button onclick="hapusKatalog('${r.id}')" class="p-2 bg-red-100 text-red-700 hover:bg-red-200 rounded cursor-pointer transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                                </div>
-                            </td>
-                        </tr>`;
-                });
-                tbody.innerHTML = h; lucide.createIcons(); jalankanSaring(); return;
-            }
-
             if(modeSekarang === 'qrcode') {
                 thead.innerHTML = `
                     <tr>
-                        <th class="hdr-std w-10"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer"></th>
-                        <th class="hdr-std w-12">No</th>
-                        <th class="hdr-std c-waktu">Waktu Scan</th>
-                        <th class="hdr-std border-r border-slate-500">QRCode</th>
-                        <th class="hdr-std c-prod">Tgl Produksi</th>
-                        <th class="hdr-std c-prod">Mesin</th>
-                        <th class="hdr-std c-prod border-r border-slate-500">Shift</th>
-                        <th class="hdr-std text-blue-300">Jenis Item</th>
-                        <th class="hdr-std text-left pl-4">Nama Item</th>
-                        <th class="hdr-std">Pjg</th>
-                        <th class="hdr-std">Grade</th>
-                        <th class="hdr-std">Dus</th>
-                        <th class="hdr-std border-r border-slate-500">Shading</th>
-                        <th class="hdr-std">PO Awal</th>
-                        <th class="hdr-std c-pic border-l border-slate-500">PIC Input</th>
-                        <th class="hdr-std c-ket">Keterangan</th>
-                        ${tabelSekarang === 'hold_stbj' ? '<th class="hdr-std text-amber-400">Status Hold</th>' : ''}
+                        <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer"></th>
+                        <th class="hdr-std w-12 col-no">No</th>
+                        ${tabelSekarang === 'hold_stbj' ? '<th class="hdr-std text-amber-400 col-status">Status Hold</th>' : '<th class="hdr-std hidden col-status">Status Hold</th>'}
+                        <th class="hdr-std col-waktu">Waktu Scan</th>
+                        <th class="hdr-std text-amber-300 col-troli">Troli</th>
+                        <th class="hdr-std border-r border-slate-500 col-qr">QRCode</th>
+                        <th class="hdr-std col-tgl">Tgl Produksi</th>
+                        <th class="hdr-std col-mesin">Mesin</th>
+                        <th class="hdr-std border-r border-slate-500 col-shift">Shift</th>
+                        <th class="hdr-std text-blue-300 col-jenis">Jenis Item</th>
+                        <th class="hdr-std text-left pl-4 col-nama">Nama Item</th>
+                        <th class="hdr-std col-pjg">Pjg</th>
+                        <th class="hdr-std col-grade">Grade</th>
+                        <th class="hdr-std col-dus">Dus</th>
+                        <th class="hdr-std border-r border-slate-500 col-shading">Shading</th>
+                        <th class="hdr-std col-po">PO Awal</th>
+                        <th class="hdr-std hidden col-qty">Qty</th>
+                        <th class="hdr-std col-ket">Keterangan</th>
+                        <th class="hdr-std col-pic border-l border-slate-500">PIC Input</th>
                     </tr>`;
                 
-                if(rawDataRaw.length === 0) { tbody.innerHTML = '<tr><td colspan="17" class="p-6 font-bold text-slate-400">Tabel Kosong.</td></tr>'; return; }
+                if(rawDataRaw.length === 0) { tbody.innerHTML = '<tr><td colspan="19" class="p-6 font-bold text-slate-400">Tabel Kosong.</td></tr>'; return; }
                 
                 let h = '';
                 rawDataRaw.forEach((r, i) => {
@@ -331,13 +430,15 @@
                     const td = translateBarcode(r.qrcode);
                     h += `
                         <tr class="border-b border-slate-200 hover:bg-slate-50 text-row">
-                            <td class="p-3 text-center"><input type="checkbox" value="${r.qrcode}" class="row-cb cursor-pointer"></td>
-                            <td class="p-3 font-bold text-slate-400 text-center">${i+1}</td>
-                            <td class="p-3 text-slate-600 c-waktu text-center col-waktu">${tgl}</td>
+                            <td class="p-3 text-center col-cb"><input type="checkbox" value="${r.qrcode}" class="row-cb cursor-pointer"></td>
+                            <td class="p-3 font-bold text-slate-400 text-center col-no">${i+1}</td>
+                            ${tabelSekarang === 'hold_stbj' ? `<td class="p-3 font-black text-[10px] text-amber-600 bg-amber-50 text-center col-status">${r.status || 'HOLD'}</td>` : '<td class="p-3 hidden col-status">-</td>'}
+                            <td class="p-3 text-slate-600 font-semibold text-center col-waktu">${tgl}</td>
+                            <td class="p-3 font-bold text-slate-700 text-center col-troli">${r.troli || '-'}</td>
                             <td class="p-3 font-mono font-bold text-slate-900 text-left s-qr bg-slate-50 tracking-wider border-r border-slate-200 col-qr">${r.qrcode}</td>
-                            <td class="p-3 font-bold text-slate-600 c-prod text-center col-tgl">${td.tglProduksi}</td>
-                            <td class="p-3 font-bold text-slate-600 c-prod text-center col-mesin">${td.mesin}</td>
-                            <td class="p-3 font-bold text-slate-600 c-prod text-center border-r border-slate-200 col-shift">${td.shift}</td>
+                            <td class="p-3 font-bold text-slate-600 text-center col-tgl">${td.tglProduksi}</td>
+                            <td class="p-3 font-bold text-slate-600 text-center col-mesin">${td.mesin}</td>
+                            <td class="p-3 font-bold text-slate-600 text-center border-r border-slate-200 col-shift">${td.shift}</td>
                             <td class="p-3 font-black text-blue-700 s-jenis text-center col-jenis">${td.jenisItem}</td>
                             <td class="p-3 font-bold text-slate-800 text-left s-nama col-nama">${td.namaItem}</td>
                             <td class="p-3 font-bold text-slate-600 text-center col-pjg">${td.panjang}</td>
@@ -345,9 +446,9 @@
                             <td class="p-3 font-bold text-slate-800 text-center col-dus">${td.dus}</td>
                             <td class="p-3 font-bold text-slate-600 text-center border-r border-slate-200 col-shading">${td.shading}</td>
                             <td class="p-3 font-black text-orange-600 bg-orange-50/50 s-po text-center col-po">${td.po}</td>
-                            <td class="p-3 font-bold uppercase text-[11px] text-slate-500 c-pic text-center border-l border-slate-200 col-pic">${r.pic_input || '-'}</td>
-                            <td class="p-3 text-slate-600 text-left c-ket col-ket">${r.keterangan || '-'}</td>
-                            ${tabelSekarang === 'hold_stbj' ? `<td class="p-3 font-black text-[10px] text-amber-600 bg-amber-50 text-center">${r.status || 'HOLD'}</td>` : ''}
+                            <td class="p-3 hidden col-qty">1</td>
+                            <td class="p-3 text-slate-600 text-left col-ket">${r.keterangan || '-'}</td>
+                            <td class="p-3 font-bold uppercase text-[11px] text-slate-500 text-center border-l border-slate-200 col-pic">${r.pic_input || '-'}</td>
                         </tr>`;
                 });
                 tbody.innerHTML = h;
@@ -356,19 +457,25 @@
                 const isJasper = modeSekarang === 'jasper';
                 thead.innerHTML = `
                     <tr>
-                        <th class="hdr-std w-10"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer"></th>
-                        <th class="hdr-std w-12">No</th>
-                        <th class="hdr-std">Tgl Produksi</th>
-                        <th class="hdr-std">Mesin</th>
-                        <th class="hdr-std border-r border-slate-500">Shift</th>
-                        <th class="hdr-std">Jenis Item</th>
-                        <th class="hdr-std text-left pl-4">${isJasper ? 'Nama Barang Jasper' : 'Nama Item'}</th>
-                        <th class="hdr-std">Pjg</th>
-                        <th class="hdr-std">Grade</th>
-                        <th class="hdr-std">Dus</th>
-                        <th class="hdr-std border-r border-slate-500">Shading</th>
-                        <th class="hdr-std">PO Aktual</th>
-                        <th class="hdr-std bg-slate-900 text-blue-300">QTY (DUS)</th>
+                        <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer"></th>
+                        <th class="hdr-std w-12 col-no">No</th>
+                        <th class="hdr-std hidden col-status">Status Hold</th>
+                        <th class="hdr-std hidden col-waktu">Waktu Scan</th>
+                        <th class="hdr-std text-amber-300 col-troli">Troli Gabungan</th>
+                        <th class="hdr-std hidden col-qr">QRCode</th>
+                        <th class="hdr-std col-tgl">Tgl Produksi</th>
+                        <th class="hdr-std col-mesin">Mesin</th>
+                        <th class="hdr-std border-r border-slate-500 col-shift">Shift</th>
+                        <th class="hdr-std col-jenis">Jenis Item</th>
+                        <th class="hdr-std text-left pl-4 col-nama">${isJasper ? 'Nama Barang Jasper' : 'Nama Item'}</th>
+                        <th class="hdr-std col-pjg">Pjg</th>
+                        <th class="hdr-std col-grade">Grade</th>
+                        <th class="hdr-std col-dus">Dus</th>
+                        <th class="hdr-std border-r border-slate-500 col-shading">Shading</th>
+                        <th class="hdr-std col-po">PO Aktual</th>
+                        <th class="hdr-std bg-slate-900 text-blue-300 col-qty">QTY (DUS)</th>
+                        <th class="hdr-std hidden col-ket">Keterangan</th>
+                        <th class="hdr-std hidden col-pic">PIC Input</th>
                     </tr>`;
                 
                 let groups = {};
@@ -376,19 +483,26 @@
                     let t = translateBarcode(r.qrcode); 
                     let n = isJasper ? t.jasper : t.namaItem;
                     let key = `${t.jenisItem}_${n}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${t.po}_${t.tglProduksi}_${t.mesin}_${t.shift}`;
-                    if(!groups[key]) groups[key] = { ...t, displayNama: n, qty: 0, qrcodes: [] };
-                    groups[key].qty++; groups[key].qrcodes.push(r.qrcode);
+                    if(!groups[key]) groups[key] = { ...t, displayNama: n, qty: 0, qrcodes: [], trolis: new Set() };
+                    groups[key].qty++; 
+                    groups[key].qrcodes.push(r.qrcode);
+                    if(r.troli) groups[key].trolis.add(r.troli);
                 });
 
                 let arr = Object.values(groups);
-                if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="13" class="p-6 font-bold text-slate-400">Kosong.</td></tr>'; return; }
+                if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="19" class="p-6 font-bold text-slate-400">Kosong.</td></tr>'; return; }
 
                 let h = '';
                 arr.forEach((r, i) => {
+                    const gabunganTroli = Array.from(r.trolis).join(', ') || '-';
                     h += `
                         <tr class="border-b border-slate-200 hover:bg-slate-50 text-row text-center">
-                            <td class="p-3"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer"></td>
-                            <td class="p-3 font-bold text-slate-400">${i+1}</td>
+                            <td class="p-3 col-cb"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer"></td>
+                            <td class="p-3 font-bold text-slate-400 col-no">${i+1}</td>
+                            <td class="p-3 hidden col-status">-</td>
+                            <td class="p-3 hidden col-waktu">-</td>
+                            <td class="p-3 font-bold text-slate-700 col-troli">${gabunganTroli}</td>
+                            <td class="p-3 hidden col-qr">-</td>
                             <td class="p-3 font-bold text-slate-600 col-tgl">${r.tglProduksi}</td>
                             <td class="p-3 font-bold text-slate-600 col-mesin">${r.mesin}</td>
                             <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shift">${r.shift}</td>
@@ -399,7 +513,9 @@
                             <td class="p-3 font-bold text-slate-800 col-dus">${r.dus}</td>
                             <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${r.shading}</td>
                             <td class="p-3 font-black text-orange-600 bg-orange-50/40 s-po col-po">${r.po}</td>
-                            <td class="p-3 font-black text-base text-slate-900 bg-slate-100">${r.qty}</td>
+                            <td class="p-3 font-black text-base text-slate-900 bg-slate-100 col-qty">${r.qty}</td>
+                            <td class="p-3 hidden col-ket">-</td>
+                            <td class="p-3 hidden col-pic">-</td>
                         </tr>`;
                 });
                 tbody.innerHTML = h;
@@ -408,9 +524,8 @@
         }
 
         function toggleSemuaCentang(checked) { document.querySelectorAll('.row-cb').forEach(cb => cb.checked = checked); }
-        function toggleKolomRaw(cls, show) { document.querySelectorAll('.' + cls).forEach(el => el.style.display = show ? '' : 'none'); }
         function bersihkanFilter() { 
-            const ids = ['f-waktu','f-qr','f-tgl','f-mesin','f-shift','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket','f-pic'];
+            const ids = ['f-waktu','f-troli','f-qr','f-tgl','f-mesin','f-shift','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket','f-pic'];
             ids.forEach(id => document.getElementById(id).value = ''); 
             jalankanSaring(); toggleSidebarFilter();
         }
@@ -418,6 +533,7 @@
         function jalankanSaring() {
             const f = {
                 waktu: document.getElementById('f-waktu').value.toLowerCase(),
+                troli: document.getElementById('f-troli').value.toLowerCase(),
                 qr: document.getElementById('f-qr').value.toLowerCase(),
                 tgl: document.getElementById('f-tgl').value.toLowerCase(),
                 mesin: document.getElementById('f-mesin').value.toLowerCase(),
@@ -432,17 +548,6 @@
                 ket: document.getElementById('f-ket').value.toLowerCase(),
                 pic: document.getElementById('f-pic').value.toLowerCase()
             };
-
-            if (modeSekarang === 'katalog') {
-                document.querySelectorAll('.katalog-row').forEach(row => {
-                    let show = true;
-                    if(f.nama && !row.querySelector('.s-nama').innerText.toLowerCase().includes(f.nama) && !row.querySelector('.s-jasper').innerText.toLowerCase().includes(f.nama)) show = false;
-                    if(f.pjg && !row.querySelector('.s-pjg').innerText.toLowerCase().includes(f.pjg)) show = false;
-                    if(f.grade && !row.querySelector('.s-grade').innerText.toLowerCase().includes(f.grade)) show = false;
-                    row.style.display = show ? '' : 'none';
-                });
-                return;
-            }
 
             document.querySelectorAll('.text-row').forEach(row => {
                 let show = true;
@@ -463,72 +568,55 @@
 
             if(tipe === 'salin') {
                 let textSalin = "";
-                if(modeSekarang === 'katalog') {
-                    textSalin = "NO\tNAMA ITEM\tPANJANG\tGRADE\tNAMA JASPER\n";
-                    let c = 1;
-                    document.querySelectorAll('.katalog-row').forEach(tr => {
-                        if(tr.querySelector('.row-cb').checked) {
-                            textSalin += `${c++}\t${tr.children[2].innerText}\t${tr.children[3].innerText}\t${tr.children[4].innerText}\t${tr.children[5].innerText}\n`;
+                const headers = Array.from(document.querySelectorAll('#thead-stbj th'))
+                    .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb'))
+                    .map(th => th.innerText.trim().replace(/\n/g, ' '));
+                textSalin += headers.join('\t') + '\n';
+
+                document.querySelectorAll('.row-cb:checked').forEach(cb => {
+                    const tr = cb.closest('tr');
+                    const rowData = [];
+                    Array.from(tr.children).forEach(td => {
+                        if(td.classList.contains('col-cb')) return;
+                        if(window.getComputedStyle(td).display !== 'none') {
+                            rowData.push(td.innerText.trim().replace(/\n/g, ' '));
                         }
                     });
-                } else {
-                    textSalin = "NO\tQRCODE\tTGL PRODUKSI\tMESIN\tSHIFT\tJENIS\tNAMA ITEM/JASPER\tPANJANG\tGRADE\tDUS\tSHADING\tPO\n";
-                    checkedValues.forEach((qr, idx) => {
-                        let t = translateBarcode(qr);
-                        let n = modeSekarang === 'jasper' ? t.jasper : t.namaItem;
-                        textSalin += `${idx+1}\t${qr}\t${t.tglProduksi}\t${t.mesin}\t${t.shift}\t${t.jenisItem}\t${n}\t${t.panjang}\t${t.grade}\t${t.dus}\t${t.shading}\t${t.po}\n`;
-                    });
-                }
+                    textSalin += rowData.join('\t') + '\n';
+                });
                 navigator.clipboard.writeText(textSalin);
-                alert(`Tersalin ${checkedValues.length} baris. Buka Excel dan Paste (Ctrl+V).`);
+                alert(`Tersalin baris! Buka Excel dan Paste (Ctrl+V).`);
             } 
             else if(tipe === 'hapus') {
-                if(modeSekarang === 'katalog') {
-                    if(!confirm(`Hapus permanen ${checkedValues.length} Katalog dari database?`)) return;
-                    const { error } = await db.from('nama_jasper').delete().in('id', checkedValues);
-                    if(error) alert("Gagal hapus: " + error.message); else { alert("Katalog Dihapus!"); loadKamusDanJasper(); renderHeaderDanTabel(); }
-                } else {
-                    if(!confirm(`Hapus permanen ${checkedValues.length} QRCode dari database?`)) return;
-                    const { error } = await db.from(tabelSekarang).delete().in('qrcode', checkedValues);
-                    if(error) alert("Gagal hapus: " + error.message); else { alert("Data Dihapus!"); muatDataDariSupabase(); }
-                }
+                if(!confirm(`Hapus permanen ${checkedValues.length} QRCode dari database?`)) return;
+                const { error } = await db.from(tabelSekarang).delete().in('qrcode', checkedValues);
+                if(error) alert("Gagal hapus: " + error.message); else { alert("Data Dihapus!"); muatDataDariSupabase(); }
             } 
             else if(tipe === 'hold') {
-                if(modeSekarang === 'katalog') return alert("Tindakan ini tidak bisa dilakukan pada Katalog Item.");
                 if(tabelSekarang === 'hasil_stbj') {
                     if(!confirm(`Pindahkan ${checkedValues.length} data HASIL -> tabel HOLD (Duplikat)?`)) return;
-                    const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ qrcode: r.qrcode, pic_input: r.pic_input, keterangan: r.keterangan, status: 'HOLD' }));
+                    const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ qrcode: r.qrcode, troli: r.troli, pic_input: r.pic_input, keterangan: r.keterangan, status: 'HOLD' }));
                     const { error: errAdd } = await db.from('hold_stbj').upsert(dataPindah);
                     if(!errAdd) { await db.from('hasil_stbj').delete().in('qrcode', checkedValues); alert("Dipindahkan ke HOLD!"); muatDataDariSupabase(); }
                 } else {
                     if(!confirm(`Unhold ${checkedValues.length} data HOLD -> tabel HASIL (Unique)?`)) return;
-                    const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ qrcode: r.qrcode, pic_input: r.pic_input, keterangan: r.keterangan }));
+                    const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ qrcode: r.qrcode, troli: r.troli, pic_input: r.pic_input, keterangan: r.keterangan }));
                     const { error: errAdd } = await db.from('hasil_stbj').upsert(dataPindah);
                     if(!errAdd) { await db.from('hold_stbj').delete().in('qrcode', checkedValues); alert("Di-unhold ke HASIL!"); muatDataDariSupabase(); }
                 }
             } 
             else if(tipe === 'xlsx') {
-                let csvContent = "";
-                if(modeSekarang === 'katalog') {
-                    csvContent = "data:text/csv;charset=utf-8,NO,NAMA_ITEM,PANJANG,GRADE,NAMA_JASPER\n";
-                    let c = 1;
-                    document.querySelectorAll('.katalog-row').forEach(tr => {
-                        if(tr.querySelector('.row-cb').checked) {
-                            csvContent += `${c++},${tr.children[2].innerText},${tr.children[3].innerText},${tr.children[4].innerText},${tr.children[5].innerText}\n`;
-                        }
-                    });
-                } else {
-                    csvContent = "data:text/csv;charset=utf-8,NO,QRCODE,TGL_PRODUKSI,MESIN,SHIFT,JENIS,NAMA,PANJANG,GRADE,DUS,SHADING,PO\n";
-                    checkedValues.forEach((qr, idx) => {
-                        let t = translateBarcode(qr);
-                        let n = modeSekarang === 'jasper' ? t.jasper : t.namaItem;
-                        csvContent += `${idx+1},${qr},${t.tglProduksi},${t.mesin},${t.shift},${t.jenisItem},${n},${t.panjang},${t.grade},${t.dus},${t.shading},${t.po}\n`;
-                    });
-                }
+                let csvContent = "data:text/csv;charset=utf-8,NO,TROLI,QRCODE,TGL_PRODUKSI,MESIN,SHIFT,JENIS,NAMA,PANJANG,GRADE,DUS,SHADING,PO\n";
+                checkedValues.forEach((qr, idx) => {
+                    let t = translateBarcode(qr);
+                    let dbRow = rawDataRaw.find(x => x.qrcode === qr);
+                    let n = modeSekarang === 'jasper' ? t.jasper : t.namaItem;
+                    csvContent += `${idx+1},${dbRow?dbRow.troli:''},${qr},${t.tglProduksi},${t.mesin},${t.shift},${t.jenisItem},${n},${t.panjang},${t.grade},${t.dus},${t.shading},${t.po}\n`;
+                });
                 const encodedUri = encodeURI(csvContent);
                 const link = document.createElement("a");
                 link.setAttribute("href", encodedUri); 
-                link.setAttribute("download", modeSekarang === 'katalog' ? 'Katalog_Jasper.csv' : `STBJ_${tabelSekarang}.csv`);
+                link.setAttribute("download", `STBJ_${tabelSekarang}.csv`);
                 document.body.appendChild(link); link.click(); document.body.removeChild(link);
             }
         }
