@@ -213,7 +213,7 @@ async function validasiDanCek() {
     if(rows.length === 0) return alert("Belum ada data untuk divalidasi.");
     
     const btn = document.getElementById('btn-validasi'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMERIKSA DATA...'; btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MEMERIKSA DATA...'; btn.disabled = true;
     
     const qrs = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     
@@ -230,27 +230,36 @@ async function validasiDanCek() {
         const stokList = resStok.data.map(d => d.qrcode);
         let hasError = false;
 
+        // BUG FIX: Modify existing span attributes instead of replacing innerHTML with new spans
         rows.forEach(r => {
             const qr = r.querySelector('.qr-val').innerText;
-            const stbjCell = r.querySelector('.stbj-val');
-            const kodeCell = r.querySelector('.kode-val');
+            const stbjSpan = r.querySelector('.stbj-val');
+            const kodeSpan = r.querySelector('.kode-val');
             
             if(stbjList.includes(qr)) {
-                stbjCell.innerHTML = '<span class="text-white font-bold bg-blue-600 px-3 py-1.5 rounded shadow-sm text-[10px]" data-status="valid">SDH STBJ</span>';
+                stbjSpan.className = 'text-white font-bold bg-blue-600 px-3 py-1.5 rounded shadow-sm text-[10px] stbj-val';
+                stbjSpan.setAttribute('data-status', 'valid');
+                stbjSpan.innerText = 'SDH STBJ';
             } else {
-                stbjCell.innerHTML = '<span class="text-white font-bold bg-orange-500 px-3 py-1.5 rounded shadow-sm text-[10px]" data-status="invalid-stbj">BLM STBJ</span>';
+                stbjSpan.className = 'text-white font-bold bg-orange-500 px-3 py-1.5 rounded shadow-sm text-[10px] stbj-val';
+                stbjSpan.setAttribute('data-status', 'invalid-stbj');
+                stbjSpan.innerText = 'BLM STBJ';
                 hasError = true;
             }
 
-            if(kodeCell.innerText.includes('LOKAL')) {
+            if(kodeSpan.innerText.includes('LOKAL')) {
                 hasError = true;
             } 
             else if(stokList.includes(qr)) {
-                kodeCell.innerHTML = '<span class="text-white font-black bg-red-600 px-3 py-1.5 rounded shadow-sm text-[10px] tracking-wide" data-status="invalid">DUPLIKAT</span>';
+                kodeSpan.className = 'text-white font-black bg-red-600 px-3 py-1.5 rounded shadow-sm text-[10px] tracking-wide kode-val';
+                kodeSpan.setAttribute('data-status', 'invalid');
+                kodeSpan.innerText = 'DUPLIKAT';
                 r.classList.add('bg-red-50');
                 hasError = true;
             } else {
-                kodeCell.innerHTML = '<span class="text-emerald-700 font-black bg-emerald-100 border border-emerald-300 px-3 py-1 rounded shadow-sm text-[10px]" data-status="valid">ACCEPT</span>';
+                kodeSpan.className = 'text-emerald-700 font-black bg-emerald-100 border border-emerald-300 px-3 py-1 rounded shadow-sm text-[10px] kode-val';
+                kodeSpan.setAttribute('data-status', 'valid');
+                kodeSpan.innerText = 'ACCEPT';
                 r.classList.remove('bg-red-50');
             }
         });
@@ -264,6 +273,7 @@ async function validasiDanCek() {
 async function saveToSupabase() {
     const btn = document.getElementById('btn-save'); const original = btn.innerHTML;
     
+    // Karena HTML sekarang tidak di-nesting, pembacaan querySelectorAll menjadi sangat akurat.
     const adaYgBelumDicek = document.querySelectorAll('span[data-status="unverified"]').length > 0;
     const adaDuplikat = document.querySelectorAll('span[data-status="invalid"]').length > 0;
     const adaBelumStbj = document.querySelectorAll('span[data-status="invalid-stbj"]').length > 0;
