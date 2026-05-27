@@ -2,152 +2,538 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>WMS - Kartu Stok</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .table-container { scrollbar-width: thin; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; white-space: nowrap; }
+    </style>
+    <style id="dynamic-col-styles"></style>
 </head>
-<body class="font-sans">
-    <div class="w-full">
-        <div class="bg-white p-5 rounded-xl shadow-sm mb-4 border border-slate-200">
-            <h3 class="text-xs font-black opacity-60 uppercase mb-3 flex items-center gap-2 text-slate-600"><i data-lucide="filter" class="w-4 h-4"></i> Filter Stok</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                <input type="text" id="flt-area" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-400" placeholder="Area...">
-                <input type="text" id="flt-jenis" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Jenis Item...">
-                <input type="text" id="flt-nama" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Nama Item...">
-                <input type="text" id="flt-pjg" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Panjang...">
-                <input type="text" id="flt-grade" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Grade...">
-                <input type="text" id="flt-shading" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="Shading...">
-                <input type="text" id="flt-po" oninput="saringTabel()" class="p-2.5 text-xs border border-slate-300 font-bold rounded outline-none focus:border-slate-800" placeholder="PO Aktual...">
+<body class="font-sans overflow-x-hidden">
+    <div class="w-full relative">
+        
+        <div class="flex border-b border-slate-200 mb-4 bg-white px-2 rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
+            <button onclick="setModeKS('area')" id="tab-area" class="px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition"><i data-lucide="map"></i> KS AREA (LOKASI)</button>
+            <button onclick="setModeKS('global')" id="tab-global" class="px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="globe"></i> KS GLOBAL (KUMULATIF)</button>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mb-4 justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+            <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                <button onclick="toggleSidebarFilter()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg shadow-sm text-xs flex items-center justify-center gap-2 active:scale-95 transition uppercase border-b-2 border-slate-950"><i data-lucide="filter" class="w-4 h-4"></i> FILTER</button>
+                
+                <div class="relative">
+                    <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="px-4 py-2.5 bg-white text-slate-700 hover:bg-slate-50 font-black rounded-lg shadow-sm border-2 border-slate-200 text-xs flex items-center gap-2 active:scale-95 transition uppercase"><i data-lucide="eye-off" class="w-4 h-4"></i> KOLOM</button>
+                    <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
+                        <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
+                            <span class="text-xs font-black text-slate-500 uppercase">Sembunyikan</span>
+                            <button onclick="resetKolom()" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold hover:bg-blue-200">RESET</button>
+                        </div>
+                        <div class="flex flex-col gap-2 max-h-64 overflow-y-auto" id="list-kolom-toggles"></div>
+                    </div>
+                </div>
+
+                <button onclick="salinData()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-blue-800"><i data-lucide="copy" class="w-4 h-4"></i> SALIN</button>
+                <button onclick="downloadXLS()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-emerald-800"><i data-lucide="download" class="w-4 h-4"></i> EXCEL</button>
+                <button onclick="alert('Fitur Konversi akan dibahas dan dikembangkan lebih lanjut.')" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-purple-800"><i data-lucide="refresh-cw" class="w-4 h-4"></i> KONVERSI</button>
+                <button onclick="alert('Fitur Note akan dibahas dan dikembangkan lebih lanjut.')" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-amber-700"><i data-lucide="sticky-note" class="w-4 h-4"></i> NOTE</button>
+            </div>
+            
+            <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0 justify-end">
+                <button id="btn-ganti-po-main" onclick="siapkanGantiPO('main')" class="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-orange-800"><i data-lucide="edit-3" class="w-4 h-4"></i> GANTI PO AKTUAL</button>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
-            <div class="overflow-x-auto w-full max-h-[60vh] hide-scrollbar">
-                <table class="w-full text-left text-sm whitespace-nowrap" id="main-table">
-                    <thead class="sticky top-0 z-10 shadow-sm">
-                        <tr>
-                            <th class="hdr-std w-12">No</th>
-                            <th class="hdr-std border-r border-slate-500">Aksi (CS)</th>
-                            <th class="hdr-std">Area</th>
-                            <th class="hdr-std border-r border-slate-500">Jenis Item</th>
-                            <th class="hdr-std">Nama Item</th>
-                            <th class="hdr-std">Pjg</th>
-                            <th class="hdr-std">Grade</th>
-                            <th class="hdr-std">Dus</th>
-                            <th class="hdr-std border-r border-slate-500">Shading</th>
-                            <th class="hdr-std bg-slate-900 border-x border-slate-500 text-orange-400">PO AKTUAL</th>
-                            <th class="hdr-std">QTY (DUS)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="data-body"><tr><td colspan="11" class="text-center p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-slate-500"></i><p class="font-bold text-slate-500">Memuat Stok...</p></td></tr></tbody>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative mb-10">
+            <div class="overflow-x-auto w-full max-h-[65vh] hide-scrollbar">
+                <table class="w-full border-collapse text-sm whitespace-nowrap" id="main-table">
+                    <thead class="sticky top-0 z-10 shadow-sm" id="thead-ks"></thead>
+                    <tbody id="tbody-ks" class="text-center text-slate-700"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <div id="modal-mutasi" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200">
-            <h3 class="text-xl font-black mb-1 flex items-center gap-2"><i data-lucide="arrow-right-left" class="text-slate-600"></i> Mutasi / Ganti PO</h3>
-            <p class="text-xs font-semibold text-slate-500 mb-6">Pindahkan alokasi kuantiti ke PO lain tanpa mengubah fisik QR Code.</p>
-            <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200 mb-5 text-sm">
-                <input type="hidden" id="mut-sku"><input type="hidden" id="mut-area"><input type="hidden" id="mut-jenis"><input type="hidden" id="mut-nama"><input type="hidden" id="mut-pjg"><input type="hidden" id="mut-grade"><input type="hidden" id="mut-dus"><input type="hidden" id="mut-shading">
-                <div class="flex justify-between border-b border-slate-200 pb-1"><span class="font-bold opacity-60 text-slate-600">Item:</span> <span id="lbl-item" class="font-black text-slate-800 text-right"></span></div>
-                <div class="flex justify-between border-b border-slate-200 pb-1"><span class="font-bold opacity-60 text-slate-600">Lokasi Area:</span> <span id="lbl-area" class="font-black text-right text-emerald-600"></span></div>
-                <div class="flex justify-between border-b border-slate-200 pb-1"><span class="font-bold opacity-60 text-slate-600">PO Saat Ini:</span> <span id="lbl-po" class="font-black text-right text-orange-600"></span></div>
-                <div class="flex justify-between pt-1"><span class="font-bold opacity-60 text-slate-600">Sisa Qty Dipindah:</span> <span id="lbl-qty" class="font-black text-right text-blue-600 text-lg"></span></div>
+    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
+        <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide"><i data-lucide="filter" class="w-5 h-5"></i> Filter Kartu Stok</h3>
+            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-4 flex flex-col gap-4 overflow-y-auto">
+            <div class="grid grid-cols-2 gap-3">
+                <div id="f-area-container"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label><input type="text" id="f-area" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><input type="text" id="f-jenis" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><input type="text" id="f-nama" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><input type="text" id="f-pjg" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><input type="text" id="f-grade" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><input type="text" id="f-dus" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="f-shading" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PO Aktual</label><input type="text" id="f-po" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
             </div>
-            <div class="flex gap-4 mb-6">
-                <div class="w-2/3">
-                    <label class="block text-xs font-black uppercase mb-1 text-slate-600">PO Tujuan</label>
-                    <select id="mut-po-baru" class="w-full p-3 border border-slate-300 rounded outline-none font-bold uppercase text-slate-800 bg-white"><option value="">-- MEMUAT PO... --</option></select>
-                </div>
-                <div class="w-1/3">
-                    <label class="block text-xs font-black uppercase mb-1 text-slate-600">Qty Pindah</label>
-                    <input type="number" id="mut-qty-pindah" min="1" class="w-full p-3 border border-slate-300 rounded outline-none font-black text-center text-lg" placeholder="0">
-                </div>
+            <button onclick="resetFilter()" class="mt-4 py-3 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-xs uppercase transition border border-slate-300">RESET FILTER</button>
+        </div>
+    </div>
+
+    <div id="modal-breakdown" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] px-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl border border-slate-200 flex flex-col max-h-[85vh]">
+            <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                <h3 class="font-black text-slate-800 flex flex-col gap-1 uppercase tracking-wide">
+                    <span class="flex items-center gap-2"><i data-lucide="package-open" class="w-5 h-5 text-blue-600"></i> DETAIL AREA ITEM</span>
+                    <span id="bd-title-item" class="text-xs text-blue-700 font-bold ml-7">NAMA ITEM - 4M - BAGUS</span>
+                </h3>
+                <button onclick="tutupModalBreakdown()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-2 rounded-lg transition"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <div class="flex gap-3">
-                <button type="button" onclick="tutupModal()" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded hover:bg-slate-300">BATAL</button>
-                <button type="button" onclick="eksekusiMutasi()" id="btn-eksekusi" class="w-2/3 py-3 bg-slate-800 font-bold rounded text-white hover:bg-slate-900 flex justify-center items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4"></i> EKSEKUSI</button>
+            
+            <div class="p-3 bg-white border-b border-slate-100 flex gap-2">
+                <button onclick="salinDataBreakdown()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg flex items-center gap-2 shadow-sm transition"><i data-lucide="copy" class="w-4 h-4"></i> SALIN DETAIL</button>
+                <button onclick="siapkanGantiPO('breakdown')" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-lg flex items-center gap-2 shadow-sm transition"><i data-lucide="edit-3" class="w-4 h-4"></i> GANTI PO AKTUAL</button>
+            </div>
+
+            <div class="overflow-y-auto flex-1 hide-scrollbar bg-slate-50 p-4">
+                <table class="w-full border-collapse text-sm whitespace-nowrap bg-white rounded-xl shadow-sm overflow-hidden" id="table-breakdown">
+                    <thead>
+                        <tr>
+                            <th class="hdr-std w-10"><input type="checkbox" onchange="toggleCentangBreakdown(this.checked)" class="cursor-pointer"></th>
+                            <th class="hdr-std">No</th>
+                            <th class="hdr-std">Area Penyimpanan</th>
+                            <th class="hdr-std border-r border-slate-500">PO Aktual (Saat ini)</th>
+                            <th class="hdr-std bg-emerald-700 text-white">Total Dus (QTY)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-breakdown" class="text-center text-slate-700"></tbody>
+                </table>
             </div>
         </div>
     </div>
 
+    <div id="modal-po" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200">
+            <h3 class="text-lg font-black mb-2 flex items-center gap-2 text-slate-800"><i data-lucide="edit-3" class="text-orange-600"></i> Ganti PO Aktual</h3>
+            <p class="text-[11px] font-bold text-slate-500 mb-6" id="info-ganti-po">Mengganti PO untuk X kardus terpilih.</p>
+            
+            <div class="mb-6">
+                <label class="block text-xs font-black uppercase tracking-wide mb-2 text-slate-600">Nomor PO Baru / Aktual</label>
+                <input type="text" id="input-new-po" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-orange-600 font-bold text-slate-800 uppercase bg-slate-50" placeholder="Ketik PO...">
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="tutupModalPO()" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-black rounded-xl hover:bg-slate-300 transition cursor-pointer text-xs uppercase">BATAL</button>
+                <button type="button" onclick="eksekusiGantiPO()" id="btn-simpan-po" class="w-1/2 py-3 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl shadow-md transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase border-b-4 border-orange-800"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="overlay-klik-luar" onclick="tutupSemuaPopups()" class="hidden fixed inset-0 z-30"></div>
+
     <script src="global.js"></script>
     <script>
-        let globalData = [];
-        document.addEventListener('DOMContentLoaded', async () => {
-            initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK & PO', url: 'kartu_stok.html' });
-            setTimeout(async () => { await loadPOOptions(); await loadData(); }, 200);
+        let modeKS = 'area'; 
+        let stokQRRaw = [];
+        let dataKSArea = [];
+        let dataKSGlobal = [];
+        
+        // State for Changing PO
+        let selectedForPO = [];
+        let sourcePOContext = ''; // 'main' or 'breakdown'
+        let currentBreakdownData = [];
+
+        const colDefinitions = [
+            { id: 'col-cb', label: 'Checkbox', default: true },
+            { id: 'col-open', label: 'Tombol Buka (Global)', default: true },
+            { id: 'col-no', label: 'Nomor Urut', default: true },
+            { id: 'col-area', label: 'Area', default: true },
+            { id: 'col-jenis', label: 'Jenis Item', default: true },
+            { id: 'col-nama', label: 'Nama Item', default: true },
+            { id: 'col-pjg', label: 'Panjang', default: true },
+            { id: 'col-grade', label: 'Grade', default: true },
+            { id: 'col-dus', label: 'Dus', default: true },
+            { id: 'col-shading', label: 'Shading', default: true },
+            { id: 'col-po', label: 'PO Aktual', default: true },
+            { id: 'col-qty', label: 'Total QTY (Dus)', default: true }
+        ];
+        let hiddenCols = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
+            buatDropdownKolom();
+            setTimeout(muatDataStok, 200);
         });
 
-        async function loadPOOptions() {
-            const { data } = await db.from('master_2').select('po');
-            if (data) {
-                const listPO = [...new Set(data.map(d => d.po).filter(x => x && x.trim() !== ''))].sort();
-                const sel = document.getElementById('mut-po-baru'); sel.innerHTML = '<option value="">-- PILIH PO TUJUAN --</option>';
-                listPO.forEach(p => { sel.innerHTML += `<option value="${p}">${p}</option>` });
+        // ================= KONTROL KOLOM =================
+        function buatDropdownKolom() {
+            const container = document.getElementById('list-kolom-toggles');
+            let html = '';
+            colDefinitions.forEach(col => {
+                html += `
+                    <label class="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-slate-50 rounded">
+                        <input type="checkbox" checked onchange="toggleKolom('${col.id}', this.checked)" class="w-4 h-4 cursor-pointer text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                        <span class="text-xs font-bold text-slate-700">${col.label}</span>
+                    </label>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function toggleKolom(colId, isVisible) {
+            if(isVisible) { hiddenCols = hiddenCols.filter(id => id !== colId); } 
+            else { if(!hiddenCols.includes(colId)) hiddenCols.push(colId); }
+            terapkanStyleKolom();
+        }
+
+        function resetKolom() {
+            hiddenCols = [];
+            document.querySelectorAll('#list-kolom-toggles input[type="checkbox"]').forEach(cb => cb.checked = true);
+            terapkanStyleKolom();
+        }
+
+        function terapkanStyleKolom() {
+            const cssString = hiddenCols.map(id => `.${id} { display: none !important; }`).join('\n');
+            document.getElementById('dynamic-col-styles').innerHTML = cssString;
+        }
+
+        // ================= PENGAMBILAN DATA (Langsung Kalkulasi dari fisik QR) =================
+        async function muatDataStok() {
+            document.getElementById('tbody-ks').innerHTML = `<tr><td colspan="12" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Mengkalkulasi Kartu Stok dari Barcode Gudang...</p></td></tr>`;
+            lucide.createIcons();
+            try {
+                // Ambil seluruh barcode fisik. Ini dijamin 100% akurat dengan mutasi.
+                const { data, error } = await db.from('stok_qr').select('*');
+                if(error) throw error;
+                stokQRRaw = data || [];
+
+                // 1. Grouping KS AREA
+                let areaMap = {};
+                stokQRRaw.forEach(r => {
+                    if(!r.id_sku) return;
+                    if(!areaMap[r.id_sku]) {
+                        const p = r.id_sku.split('_'); 
+                        areaMap[r.id_sku] = { 
+                            id_sku: r.id_sku, area: p[0], jenis: p[1], nama: p[2], 
+                            pjg: p[3], grade: p[4], dus: p[5], shading: p[6], po: p[7], 
+                            qty: 0, qrcodes: [] 
+                        };
+                    }
+                    areaMap[r.id_sku].qty++;
+                    areaMap[r.id_sku].qrcodes.push(r.qrcode);
+                });
+                dataKSArea = Object.values(areaMap);
+
+                // 2. Grouping KS GLOBAL (Abaikan Area)
+                let globalMap = {};
+                dataKSArea.forEach(a => {
+                    let gKey = `${a.jenis}_${a.nama}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po}`;
+                    if(!globalMap[gKey]) {
+                        globalMap[gKey] = { 
+                            gKey: gKey, jenis: a.jenis, nama: a.nama, pjg: a.pjg, 
+                            grade: a.grade, dus: a.dus, shading: a.shading, po: a.po, 
+                            qty: 0, areas: [] 
+                        };
+                    }
+                    globalMap[gKey].qty += a.qty;
+                    // Simpan rincian area di dalam Global Item
+                    globalMap[gKey].areas.push({
+                        id_sku: a.id_sku, area: a.area, po: a.po, qty: a.qty, qrcodes: a.qrcodes
+                    });
+                });
+                dataKSGlobal = Object.values(globalMap);
+
+                renderTabel();
+            } catch(e) {
+                document.getElementById('tbody-ks').innerHTML = `<tr><td colspan="12" class="p-10 text-red-500 font-bold">Gagal memuat: ${e.message}</td></tr>`;
             }
         }
-        async function loadData() {
-            try {
-                const { data, error } = await db.from('stok_global').select('*').gt('qty', 0).order('area', {ascending: true});
-                if(error) throw error; globalData = data || []; renderTable();
-            } catch (err) { document.getElementById('data-body').innerHTML = `<tr><td colspan="11" class="p-10 text-center text-red-500 font-bold">Error: ${err.message}</td></tr>`; }
+
+        // ================= RENDERING TABEL =================
+        function setModeKS(m) {
+            modeKS = m;
+            document.getElementById('tab-area').className = m === 'area' ? 'px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition' : 'px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
+            document.getElementById('tab-global').className = m === 'global' ? 'px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition' : 'px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
+            
+            // Toggles
+            document.getElementById('btn-ganti-po-main').classList.toggle('hidden', m === 'global');
+            document.getElementById('f-area-container').classList.toggle('hidden', m === 'global');
+            
+            renderTabel();
         }
-        function renderTable() {
-            const tbody = document.getElementById('data-body');
-            if(globalData.length === 0) { tbody.innerHTML = `<tr><td colspan="11" class="text-center p-10 text-slate-500 font-bold">Gudang Kosong.</td></tr>`; lucide.createIcons(); return; }
-            let htmlContent = ''; 
-            globalData.forEach((r, i) => {
-                const amanData = JSON.stringify(r).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
-                htmlContent += `
-                    <tr class="border-b border-slate-200 hover:bg-slate-100 transition data-row text-center">
+
+        function toggleCentangUtama(checked) {
+            document.querySelectorAll('.cb-main').forEach(cb => cb.checked = checked);
+        }
+
+        function renderTabel() {
+            const thead = document.getElementById('thead-ks');
+            const tbody = document.getElementById('tbody-ks');
+
+            if(modeKS === 'area') {
+                thead.innerHTML = `
+                    <tr>
+                        <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer"></th>
+                        <th class="hdr-std hidden col-open">Buka</th>
+                        <th class="hdr-std w-12 col-no">No</th>
+                        <th class="hdr-std text-emerald-400 border-r border-slate-500 col-area">Area</th>
+                        <th class="hdr-std text-blue-300 col-jenis">Jenis Item</th>
+                        <th class="hdr-std text-left pl-4 col-nama">Nama Item</th>
+                        <th class="hdr-std col-pjg">Pjg</th>
+                        <th class="hdr-std col-grade">Grade</th>
+                        <th class="hdr-std col-dus">Dus</th>
+                        <th class="hdr-std border-r border-slate-500 col-shading">Shading</th>
+                        <th class="hdr-std text-orange-400 border-r border-slate-500 col-po">PO Aktual</th>
+                        <th class="hdr-std text-lg col-qty">QTY (DUS)</th>
+                    </tr>`;
+                
+                if(dataKSArea.length === 0) { tbody.innerHTML = `<tr><td colspan="12" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+
+                let h = '';
+                dataKSArea.forEach((r, i) => {
+                    const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
+                    h += `
+                        <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
+                            <td class="p-3 col-cb"><input type="checkbox" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                            <td class="p-3 hidden col-open"></td>
+                            <td class="p-3 font-bold text-slate-400 col-no">${i+1}</td>
+                            <td class="p-3 font-black text-emerald-600 bg-emerald-50/50 border-r border-slate-200 col-area">${r.area}</td>
+                            <td class="p-3 font-black text-blue-700 col-jenis">${r.jenis}</td>
+                            <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama}</td>
+                            <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg}</td>
+                            <td class="p-3 font-bold text-slate-800 col-grade">${r.grade}</td>
+                            <td class="p-3 font-bold text-slate-800 col-dus">${r.dus}</td>
+                            <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${r.shading}</td>
+                            <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-r border-slate-200 col-po">${r.po}</td>
+                            <td class="p-3 font-black text-xl text-slate-900 bg-slate-100 col-qty">${r.qty}</td>
+                        </tr>`;
+                });
+                tbody.innerHTML = h;
+
+            } else {
+                thead.innerHTML = `
+                    <tr>
+                        <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer"></th>
+                        <th class="hdr-std w-14 bg-blue-900 col-open text-blue-300">OPEN</th>
+                        <th class="hdr-std w-12 col-no">No</th>
+                        <th class="hdr-std hidden col-area">Area</th>
+                        <th class="hdr-std text-blue-300 col-jenis">Jenis Item</th>
+                        <th class="hdr-std text-left pl-4 col-nama">Nama Item</th>
+                        <th class="hdr-std col-pjg">Pjg</th>
+                        <th class="hdr-std col-grade">Grade</th>
+                        <th class="hdr-std col-dus">Dus</th>
+                        <th class="hdr-std border-r border-slate-500 col-shading">Shading</th>
+                        <th class="hdr-std text-orange-400 border-r border-slate-500 col-po">PO Aktual</th>
+                        <th class="hdr-std text-lg bg-emerald-800 col-qty">TOTAL (DUS)</th>
+                    </tr>`;
+
+                if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr><td colspan="12" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+
+                let h = '';
+                dataKSGlobal.forEach((r, i) => {
+                    h += `
+                        <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
+                            <td class="p-3 col-cb"><input type="checkbox" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                            <td class="p-2 col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-2 bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white rounded-lg shadow-sm transition flex mx-auto items-center justify-center"><i data-lucide="box" class="w-4 h-4"></i></button></td>
+                            <td class="p-3 font-bold text-slate-400 col-no">${i+1}</td>
+                            <td class="p-3 hidden col-area">GLOBAL</td>
+                            <td class="p-3 font-black text-blue-700 col-jenis">${r.jenis}</td>
+                            <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama}</td>
+                            <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg}</td>
+                            <td class="p-3 font-bold text-slate-800 col-grade">${r.grade}</td>
+                            <td class="p-3 font-bold text-slate-800 col-dus">${r.dus}</td>
+                            <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${r.shading}</td>
+                            <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-r border-slate-200 col-po">${r.po}</td>
+                            <td class="p-3 font-black text-xl text-emerald-800 bg-emerald-50 col-qty">${r.qty}</td>
+                        </tr>`;
+                });
+                tbody.innerHTML = h;
+            }
+            lucide.createIcons(); saringTabel();
+        }
+
+        // ================= FITUR BREAKDOWN (KS GLOBAL) =================
+        function bukaBreakdown(gKey) {
+            const item = dataKSGlobal.find(g => g.gKey === gKey);
+            if(!item) return;
+
+            document.getElementById('bd-title-item').innerText = `${item.nama} | ${item.pjg} | ${item.grade} | DUS: ${item.dus} | SHADING: ${item.shading}`;
+            currentBreakdownData = item.areas;
+
+            const tbody = document.getElementById('tbody-breakdown');
+            let h = '';
+            item.areas.forEach((a, i) => {
+                const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
+                h += `
+                    <tr class="border-b border-slate-200 hover:bg-slate-50 transition bd-row">
+                        <td class="p-3"><input type="checkbox" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                         <td class="p-3 font-bold text-slate-400">${i+1}</td>
-                        <td class="p-2 border-r border-slate-200"><button onclick="bukaModalMutasi('${amanData}')" class="px-3 py-1.5 bg-white text-orange-600 font-bold rounded border border-slate-300 hover:border-orange-400 text-[10px] uppercase shadow-sm flex gap-1 mx-auto"><i data-lucide="edit-3" class="w-3 h-3"></i> GANTI PO</button></td>
-                        <td class="p-3 font-black text-emerald-600 col-area">${r.area}</td>
-                        <td class="p-3 font-bold text-blue-700 col-jenis border-r border-slate-200">${r.jenis_item}</td>
-                        <td class="p-3 font-bold text-slate-800 col-nama text-left">${r.nama_item}</td>
-                        <td class="p-3 font-bold text-slate-500 col-pjg">${r.panjang}</td>
-                        <td class="p-3 font-semibold text-slate-800 col-grade">${r.grade}</td>
-                        <td class="p-3 text-slate-800 col-dus">${r.dus}</td>
-                        <td class="p-3 font-medium text-slate-600 col-shading border-r border-slate-200">${r.shading}</td>
-                        <td class="p-3 font-black text-orange-600 bg-orange-50/50 col-po border-x border-slate-200">${r.po_aktual}</td>
-                        <td class="p-3 font-black text-lg text-blue-900 col-qty">${r.qty}</td>
+                        <td class="p-3 font-black text-emerald-600">${a.area}</td>
+                        <td class="p-3 font-black text-orange-600 border-r border-slate-200 bg-orange-50/50">${a.po}</td>
+                        <td class="p-3 font-black text-lg text-slate-900 bg-slate-100">${a.qty}</td>
                     </tr>`;
             });
-            tbody.innerHTML = htmlContent; lucide.createIcons(); saringTabel();
+            tbody.innerHTML = h;
+
+            document.getElementById('modal-breakdown').classList.remove('hidden');
+            document.getElementById('overlay-klik-luar').classList.remove('hidden');
+            lucide.createIcons();
         }
+
+        function tutupModalBreakdown() { document.getElementById('modal-breakdown').classList.add('hidden'); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
+        function toggleCentangBreakdown(checked) { document.querySelectorAll('.cb-bd').forEach(cb => cb.checked = checked); }
+
+        // ================= FITUR GANTI PO =================
+        function siapkanGantiPO(context) {
+            let checkboxes = [];
+            if(context === 'main') {
+                if(modeKS !== 'area') return;
+                checkboxes = document.querySelectorAll('.cb-main:checked');
+            } else {
+                checkboxes = document.querySelectorAll('.cb-bd:checked');
+            }
+
+            if(checkboxes.length === 0) return alert('Silakan centang item / area yang ingin diganti PO-nya.');
+
+            selectedForPO = [];
+            let totalDus = 0;
+            checkboxes.forEach(cb => {
+                const qrs = JSON.parse(cb.dataset.qrs);
+                selectedForPO.push({ id_sku: cb.dataset.idsku, qrcodes: qrs });
+                totalDus += qrs.length;
+            });
+
+            sourcePOContext = context;
+            document.getElementById('info-ganti-po').innerText = `Anda akan mengubah PO Aktual untuk ${totalDus} dus barang secara permanen.`;
+            document.getElementById('input-new-po').value = '';
+            document.getElementById('modal-po').classList.remove('hidden');
+            document.getElementById('overlay-klik-luar').classList.remove('hidden');
+        }
+
+        function tutupModalPO() { 
+            document.getElementById('modal-po').classList.add('hidden'); 
+            if(document.getElementById('modal-breakdown').classList.contains('hidden')) {
+                document.getElementById('overlay-klik-luar').classList.add('hidden'); 
+            }
+        }
+
+        async function eksekusiGantiPO() {
+            const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
+            if(!newPO) return alert("Silakan ketik nomor PO Baru!");
+
+            const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...'; btn.disabled = true;
+
+            try {
+                // Loop each selected row and update its physical QR codes
+                for(let row of selectedForPO) {
+                    let parts = row.id_sku.split('_');
+                    parts[7] = newPO; // Replace part 7 (PO position)
+                    let newIdSku = parts.join('_');
+
+                    // Lakukan Update Bulk ke Database Supabase
+                    const { error } = await db.from('stok_qr').update({ id_sku: newIdSku }).in('qrcode', row.qrcodes);
+                    if(error) throw error;
+                }
+
+                alert("BERHASIL!\nPO Aktual berhasil diperbarui untuk fisik kardus terpilih.");
+                tutupModalPO();
+                if(sourcePOContext === 'breakdown') tutupModalBreakdown();
+                await muatDataStok();
+            } catch (error) { alert("GAGAL UPDATE: " + error.message); } 
+            finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
+        }
+
+        // ================= FITUR UI: FILTER, SIDEBAR, SALIN =================
+        function toggleSidebarFilter() { document.getElementById('sidebar-filter').classList.toggle('translate-x-full'); document.getElementById('overlay-klik-luar').classList.toggle('hidden'); }
+        function tutupSemuaPopups() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); document.getElementById('dropdown-kolom').classList.add('hidden'); tutupModalPO(); tutupModalBreakdown(); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
+
+        function resetFilter() {
+            const ids = ['f-area','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po'];
+            ids.forEach(id => document.getElementById(id).value = '');
+            saringTabel(); toggleSidebarFilter();
+        }
+
         function saringTabel() {
-            const filters = { area: document.getElementById('flt-area').value.toLowerCase(), jenis: document.getElementById('flt-jenis').value.toLowerCase(), nama: document.getElementById('flt-nama').value.toLowerCase(), pjg: document.getElementById('flt-pjg').value.toLowerCase(), grade: document.getElementById('flt-grade').value.toLowerCase(), shading: document.getElementById('flt-shading').value.toLowerCase(), po: document.getElementById('flt-po').value.toLowerCase() };
-            document.querySelectorAll('.data-row').forEach(row => {
-                let show = true; for(let key in filters) { if(filters[key] !== '') { const cell = row.querySelector('.col-' + key); if(cell && !cell.innerText.toLowerCase().includes(filters[key])) { show = false; break; } } }
+            const f = {
+                area: document.getElementById('f-area').value.toLowerCase(),
+                jenis: document.getElementById('f-jenis').value.toLowerCase(),
+                nama: document.getElementById('f-nama').value.toLowerCase(),
+                pjg: document.getElementById('f-pjg').value.toLowerCase(),
+                grade: document.getElementById('f-grade').value.toLowerCase(),
+                dus: document.getElementById('f-dus').value.toLowerCase(),
+                shading: document.getElementById('f-shading').value.toLowerCase(),
+                po: document.getElementById('f-po').value.toLowerCase()
+            };
+
+            document.querySelectorAll('.row-ks').forEach(row => {
+                let show = true;
+                for(let key in f) {
+                    if(f[key]) {
+                        const cell = row.querySelector('.col-' + key);
+                        if(cell && !cell.innerText.toLowerCase().includes(f[key])) { show = false; break; }
+                    }
+                }
                 row.style.display = show ? '' : 'none';
             });
         }
-        function bukaModalMutasi(jsonString) {
-            const data = JSON.parse(jsonString);
-            document.getElementById('mut-sku').value = data.id_sku; document.getElementById('mut-area').value = data.area; document.getElementById('mut-jenis').value = data.jenis_item; document.getElementById('mut-nama').value = data.nama_item; document.getElementById('mut-pjg').value = data.panjang; document.getElementById('mut-grade').value = data.grade; document.getElementById('mut-dus').value = data.dus; document.getElementById('mut-shading').value = data.shading;
-            document.getElementById('lbl-item').innerText = `${data.jenis_item} ${data.nama_item} - ${data.panjang} (${data.grade})`;
-            document.getElementById('lbl-area').innerText = data.area; document.getElementById('lbl-po').innerText = data.po_aktual; document.getElementById('lbl-qty').innerText = data.qty + " Dus";
-            document.getElementById('mut-qty-pindah').max = data.qty; document.getElementById('mut-qty-pindah').value = ''; document.getElementById('mut-po-baru').value = '';
-            document.getElementById('modal-mutasi').classList.remove('hidden');
+
+        function salinData() {
+            const cek = document.querySelectorAll('.cb-main:checked');
+            if(cek.length === 0) return alert("Pilih baris yang ingin disalin (centang).");
+
+            let copyString = "";
+            const headers = Array.from(document.querySelectorAll('#thead-ks th'))
+                .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open'))
+                .map(th => th.innerText.trim().replace(/\n/g, ' '));
+            copyString += headers.join('\t') + '\n';
+
+            cek.forEach(cb => {
+                const tr = cb.closest('tr'); const rowData = [];
+                Array.from(tr.children).forEach(td => {
+                    if(td.classList.contains('col-cb') || td.classList.contains('col-open')) return;
+                    if(window.getComputedStyle(td).display !== 'none') { rowData.push(td.innerText.trim().replace(/\n/g, ' ')); }
+                });
+                copyString += rowData.join('\t') + '\n';
+            });
+
+            navigator.clipboard.writeText(copyString).then(() => alert(`Tersalin ${cek.length} baris!\nBuka Excel lalu Paste.`));
         }
-        function tutupModal() { document.getElementById('modal-mutasi').classList.add('hidden'); }
-        async function eksekusiMutasi() {
-            const poBaru = document.getElementById('mut-po-baru').value.trim().toUpperCase(); const qtyPindah = parseInt(document.getElementById('mut-qty-pindah').value); const skuLama = document.getElementById('mut-sku').value; const maxQty = parseInt(document.getElementById('mut-qty-pindah').max); const poLama = document.getElementById('lbl-po').innerText; const namaItem = document.getElementById('lbl-item').innerText;
-            if(!poBaru) return alert("Pilih PO Tujuan!"); if(poBaru === poLama) return alert("PO Tujuan tidak boleh sama!"); if(!qtyPindah || qtyPindah <= 0 || qtyPindah > maxQty) return alert(`Qty tidak valid! (Maksimal ${maxQty})`);
-            const btnEks = document.getElementById('btn-eksekusi'); btnEks.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>'; btnEks.disabled = true;
-            const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
-            const area = document.getElementById('mut-area').value; const jenis = document.getElementById('mut-jenis').value; const nama = document.getElementById('mut-nama').value; const pjg = document.getElementById('mut-pjg').value; const grade = document.getElementById('mut-grade').value; const dus = document.getElementById('mut-dus').value; const shading = document.getElementById('mut-shading').value;
-            const skuBaru = `${area}_${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}_${poBaru}`;
-            const payloadData = { sku_lama: skuLama, sku_baru: skuBaru, qty_pindah: qtyPindah, area: area, jenis: jenis, nama: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, po_baru: poBaru, detail_log: `Mutasi ${qtyPindah} Dus [${namaItem}]. Dari PO: ${poLama} -> PO: ${poBaru}. Lokasi: ${area}.`, pic: user.username };
-            const { data, error } = await db.rpc('eksekusi_mutasi_aman', { payload: payloadData });
-            if (error || (data && data.startsWith('ERROR'))) { alert("GAGAL MUTASI: " + (error ? error.message : data)); btnEks.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4"></i> EKSEKUSI'; btnEks.disabled = false; return; }
-            alert("Mutasi PO Berhasil!"); tutupModal(); await loadData(); 
-            btnEks.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4"></i> EKSEKUSI'; btnEks.disabled = false;
+
+        function salinDataBreakdown() {
+            const cek = document.querySelectorAll('.cb-bd:checked');
+            if(cek.length === 0) return alert("Centang baris detail Area yang ingin disalin.");
+            let copyString = "Area\tPO Aktual\tQTY\n";
+            cek.forEach(cb => {
+                const tr = cb.closest('tr');
+                copyString += `${tr.children[2].innerText}\t${tr.children[3].innerText}\t${tr.children[4].innerText}\n`;
+            });
+            navigator.clipboard.writeText(copyString).then(() => alert(`Tersalin!\nBuka Excel lalu Paste.`));
+        }
+
+        function downloadXLS() {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            // Header
+            const headers = Array.from(document.querySelectorAll('#thead-ks th'))
+                .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open'))
+                .map(th => th.innerText.trim());
+            csvContent += headers.join(",") + "\n";
+
+            // Body
+            const rows = document.querySelectorAll('.row-ks');
+            rows.forEach(tr => {
+                if(tr.style.display !== 'none') {
+                    const rowData = [];
+                    Array.from(tr.children).forEach(td => {
+                        if(td.classList.contains('col-cb') || td.classList.contains('col-open')) return;
+                        if(window.getComputedStyle(td).display !== 'none') { rowData.push(`"${td.innerText.trim()}"`); }
+                    });
+                    csvContent += rowData.join(",") + "\n";
+                }
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `KartuStok_${modeKS.toUpperCase()}.csv`);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
         }
     </script>
 </body>
