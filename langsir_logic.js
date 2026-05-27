@@ -1,4 +1,4 @@
-let masterData = { kamus: [], troli: [], area: [] };
+let masterData = { kamus: [], area: [] }; // master troli tidak digunakan lagi
 let deleteStack = [], globalRowId = 0;
 let hiddenCols = [];
 
@@ -20,19 +20,14 @@ const colDefinitions = [
     { id: 'col-grade', label: 'Grade', default: true },
     { id: 'col-dus', label: 'Dus', default: true },
     { id: 'col-shading', label: 'Shading', default: true },
-    { id: 'col-po', label: 'PO Awal', default: true }
+    { id: 'col-po', label: 'PO Awal', default: true },
+    { id: 'col-ket', label: 'Keterangan', default: true }
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(async () => {
         try {
-            const { data: mData1 } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
-            if(mData1) {
-                masterData.troli = [...new Set(mData1.map(r => r.nama_troli).filter(x => x && x.trim() !== ''))]; 
-                const selTroli = document.getElementById('select-troli');
-                if(selTroli) { selTroli.innerHTML = '<option value="">-- Pilih Troli --</option>'; masterData.troli.forEach(t => selTroli.innerHTML += `<option value="${t}">${t}</option>`); }
-            }
-            
+            // Dropdown troli manual sudah dihapus dari fetch
             const { data: mDataArea } = await db.from('master_area').select('nama_area').order('id', { ascending: true });
             if(mDataArea) {
                 masterData.area = [...new Set(mDataArea.map(r => r.nama_area).filter(x => x && x.trim() !== ''))]; 
@@ -96,7 +91,8 @@ function saringTabelLangsir() {
         grade: document.getElementById('f-grade').value.toLowerCase(),
         dus: document.getElementById('f-dus').value.toLowerCase(),
         shading: document.getElementById('f-shading').value.toLowerCase(),
-        po: document.getElementById('f-po').value.toLowerCase()
+        po: document.getElementById('f-po').value.toLowerCase(),
+        ket: document.getElementById('f-ket').value.toLowerCase()
     };
 
     document.querySelectorAll('.row-item').forEach(row => {
@@ -147,16 +143,15 @@ document.addEventListener('DOMContentLoaded', () => {
             formScan.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const rawInput = document.getElementById('input-qrcode').value.trim();
-                const troli = document.getElementById('select-troli').value;
                 const area = document.getElementById('select-area').value;
-                if(!troli || !area || !rawInput) return alert("Pilih Troli, Area, dan isi QR Code!");
+                if(!area || !rawInput) return alert("Pilih Area Simpan dan isi QR Code!");
                 
                 const existingQRs = Array.from(document.querySelectorAll('.qr-val')).map(td => td.innerText);
                 const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
                 
                 codes.forEach(code => { 
                     const isLocalDuplicate = existingQRs.includes(code);
-                    addRow(troli, area, code, isLocalDuplicate); 
+                    addRow(area, code, isLocalDuplicate); 
                     existingQRs.push(code); 
                 });
                 
@@ -170,7 +165,8 @@ function toggleSemuaCentang(checked) {
     document.querySelectorAll('.cb-row').forEach(cb => cb.checked = checked);
 }
 
-function addRow(troli, area, code, isDuplicate = false) {
+// Troli diganti menjadi string default "Menunggu Cek" saat input
+function addRow(area, code, isDuplicate = false) {
     globalRowId++; const tr = document.createElement('tr'); 
     const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'hover:bg-slate-50';
     tr.className = `border-b border-slate-200 transition row-item ${rowClass}`; 
@@ -187,7 +183,7 @@ function addRow(troli, area, code, isDuplicate = false) {
         <td class="p-3 font-bold no-cell text-center text-slate-500 col-no"></td>
         <td class="p-3 font-bold text-center border-r border-slate-200 col-stbj">${stbjHtml}</td>
         <td class="p-3 font-bold text-center border-r border-slate-200 col-kode">${kodeHtml}</td>
-        <td class="p-3 troli-cell font-bold text-slate-700 col-troli">${troli}</td>
+        <td class="p-3 troli-cell font-bold text-slate-400 italic text-center col-troli text-[11px]">Tunggu Cek</td>
         <td class="p-3 area-cell font-black text-emerald-600 border-r border-slate-200 col-area">${area}</td>
         <td class="p-3 font-mono font-bold text-slate-900 qr-val border-r border-slate-200 bg-slate-50/50 tracking-wider col-qr">${code}</td>
         <td class="p-3 col-tgl text-slate-600 font-semibold">${td.tglProduksi}</td>
@@ -199,7 +195,8 @@ function addRow(troli, area, code, isDuplicate = false) {
         <td class="p-3 font-bold text-slate-800 col-grade">${td.grade}</td>
         <td class="p-3 font-bold text-slate-800 col-dus">${td.dus}</td>
         <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${td.shading}</td>
-        <td class="p-3 font-black text-center text-orange-600 bg-orange-50/50 col-po">${td.po}</td>`;
+        <td class="p-3 font-black text-center text-orange-600 bg-orange-50/50 border-r border-slate-200 col-po">${td.po}</td>
+        <td class="p-3 font-bold text-slate-500 ket-cell col-ket text-left italic text-[11px]">Tunggu Cek</td>`;
     
     document.getElementById('tbody-langsir').prepend(tr); lucide.createIcons(); updateRowNumbers();
 }
@@ -213,37 +210,53 @@ async function validasiDanCek() {
     if(rows.length === 0) return alert("Belum ada data untuk divalidasi.");
     
     const btn = document.getElementById('btn-validasi'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MEMERIKSA DATA...'; btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENGAMBIL DATA...'; btn.disabled = true;
     
     const qrs = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     
     try {
+        // PERUBAHAN: Menarik kolom troli dan keterangan sekaligus
         const [resStbj, resStok] = await Promise.all([
-            db.from('hasil_stbj').select('qrcode').in('qrcode', qrs),
+            db.from('hasil_stbj').select('qrcode, troli, keterangan').in('qrcode', qrs),
             db.from('stok_qr').select('qrcode').in('qrcode', qrs)
         ]);
 
         if(resStbj.error) throw resStbj.error;
         if(resStok.error) throw resStok.error;
 
-        const stbjList = resStbj.data.map(d => d.qrcode);
+        const stbjMap = {};
+        resStbj.data.forEach(d => { stbjMap[d.qrcode] = d; });
         const stokList = resStok.data.map(d => d.qrcode);
         let hasError = false;
 
-        // BUG FIX: Modify existing span attributes instead of replacing innerHTML with new spans
         rows.forEach(r => {
             const qr = r.querySelector('.qr-val').innerText;
             const stbjSpan = r.querySelector('.stbj-val');
             const kodeSpan = r.querySelector('.kode-val');
+            const troliCell = r.querySelector('.troli-cell');
+            const ketCell = r.querySelector('.ket-cell');
             
-            if(stbjList.includes(qr)) {
+            if(stbjMap[qr]) {
                 stbjSpan.className = 'text-white font-bold bg-blue-600 px-3 py-1.5 rounded shadow-sm text-[10px] stbj-val';
                 stbjSpan.setAttribute('data-status', 'valid');
                 stbjSpan.innerText = 'SDH STBJ';
+                
+                // Meniban kolom tabel dengan data dari Hasil STBJ
+                troliCell.innerText = stbjMap[qr].troli || '-';
+                troliCell.className = "p-3 font-bold text-slate-700 troli-cell col-troli text-center";
+                
+                ketCell.innerText = stbjMap[qr].keterangan || '-';
+                ketCell.className = "p-3 font-bold text-slate-700 ket-cell col-ket text-left";
             } else {
                 stbjSpan.className = 'text-white font-bold bg-orange-500 px-3 py-1.5 rounded shadow-sm text-[10px] stbj-val';
                 stbjSpan.setAttribute('data-status', 'invalid-stbj');
                 stbjSpan.innerText = 'BLM STBJ';
+                
+                troliCell.innerText = '-';
+                troliCell.className = "p-3 font-bold text-red-500 troli-cell col-troli text-center";
+                ketCell.innerText = '-';
+                ketCell.className = "p-3 font-bold text-red-500 ket-cell col-ket text-left";
+                
                 hasError = true;
             }
 
@@ -265,7 +278,7 @@ async function validasiDanCek() {
         });
 
         if(hasError) { alert("PERINGATAN!\nTerdapat data bermasalah (BLM STBJ / DUPLIKAT).\nSilakan pilih baris tersebut untuk dipindahkan ke HOLD LANGSIR, atau hapus barisnya."); } 
-        else { alert("MANTAP!\nSemua baris Valid (SDH STBJ & ACCEPT). Siap disimpan ke Gudang."); }
+        else { alert("MANTAP!\nSemua baris Valid (SDH STBJ & ACCEPT). Troli dan Keterangan berhasil ditarik. Siap disimpan ke Gudang."); }
     } catch (e) { alert("Koneksi Error: " + e.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
@@ -273,7 +286,6 @@ async function validasiDanCek() {
 async function saveToSupabase() {
     const btn = document.getElementById('btn-save'); const original = btn.innerHTML;
     
-    // Karena HTML sekarang tidak di-nesting, pembacaan querySelectorAll menjadi sangat akurat.
     const adaYgBelumDicek = document.querySelectorAll('span[data-status="unverified"]').length > 0;
     const adaDuplikat = document.querySelectorAll('span[data-status="invalid"]').length > 0;
     const adaBelumStbj = document.querySelectorAll('span[data-status="invalid-stbj"]').length > 0;
@@ -325,10 +337,11 @@ async function holdLangsir() {
         const area = tr.querySelector('.area-cell').innerText;
         const ketStbj = tr.querySelector('.stbj-val').innerText;
         const ketKode = tr.querySelector('.kode-val').innerText;
+        const noteKet = tr.querySelector('.ket-cell').innerText;
         
         payloadUpload.push({
             qrcode: qr, troli: troli, area: area,
-            keterangan: `STBJ: ${ketStbj} | KODE: ${ketKode}`,
+            keterangan: `STBJ: ${ketStbj} | KODE: ${ketKode} | Ket User: ${noteKet}`,
             pic_input: user.username
         });
     });
