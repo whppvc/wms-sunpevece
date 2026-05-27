@@ -401,11 +401,13 @@ async function bukaModalSTBJ() {
             return;
         }
 
-        let h = '';
+       let h = '';
         data.forEach((r, i) => {
             const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
             const td = translateBarcode(r.qrcode);
-            const statData = r.status_data === 'Collected' ? '<span class="bg-indigo-100 text-indigo-700 font-black px-2 py-1 rounded shadow-sm text-[10px]">COLLECTED</span>' : '<span class="text-slate-400 font-bold text-[10px]">-</span>';
+            
+            // FITUR BARU: Menampilkan kolom gudang secara langsung
+            const colGudang = r.gudang ? `<span class="font-black text-indigo-700 bg-indigo-50 px-2 py-1 rounded border border-indigo-200">${r.gudang}</span>` : '<span class="text-slate-400 font-bold">-</span>';
             
             h += `
                 <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-modal-stbj">
@@ -416,7 +418,7 @@ async function bukaModalSTBJ() {
                     <td class="p-3 font-bold text-blue-700 text-left">${td.namaItem}</td>
                     <td class="p-3 font-bold text-slate-600">${td.panjang}</td>
                     <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-r border-slate-200">${td.po}</td>
-                    <td class="p-3">${statData}</td>
+                    <td class="p-3">${colGudang}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
