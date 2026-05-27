@@ -12,60 +12,54 @@
         .table-container { scrollbar-width: thin; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; white-space: nowrap; }
-        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
-        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
     </style>
     <style id="dynamic-col-styles"></style>
 </head>
 <body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-20">
     <div class="w-full px-2 sm:px-4 pt-4 relative">
         
-        <!-- Header Tabs -->
-        <div class="flex border-b border-slate-200 mb-3 bg-white rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
-            <button onclick="setMode('qrcode')" id="tab-mode-qrcode" class="px-5 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs"><i data-lucide="qr-code" class="w-4 h-4"></i> MODE QRCODE</button>
-            <button onclick="setMode('item')" id="tab-mode-item" class="px-5 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs"><i data-lucide="boxes" class="w-4 h-4"></i> MODE NAMA ITEM & QTY</button>
-            <button onclick="setMode('jasper')" id="tab-mode-jasper" class="px-5 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs"><i data-lucide="file-text" class="w-4 h-4"></i> MODE NAMA JASPER & QTY</button>
+        <div class="flex border-b border-slate-200 mb-4 bg-white px-2 rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
+            <button onclick="setMode('qrcode')" id="tab-mode-qrcode" class="px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition"><i data-lucide="qr-code" class="w-4 h-4"></i> MODE QRCODE</button>
+            <button onclick="setMode('item')" id="tab-mode-item" class="px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="boxes" class="w-4 h-4"></i> MODE NAMA ITEM & QTY</button>
+            <button onclick="setMode('jasper')" id="tab-mode-jasper" class="px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="file-text" class="w-4 h-4"></i> MODE NAMA JASPER & QTY</button>
         </div>
 
-        <!-- Toolbar Section Sejajar -->
-        <div class="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm mb-3 space-y-3">
-            <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
-                <label id="lbl-pilih-tabel" class="text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-wide whitespace-nowrap">Tampilkan Data:</label>
-                <select id="select-tabel" onchange="switchTable(this.value)" class="w-full sm:w-auto p-2 border-2 border-slate-200 rounded-lg font-bold text-xs text-slate-800 outline-none focus:border-blue-600 bg-slate-50 cursor-pointer transition">
-                    <option value="hasil_stbj">TABEL HASIL STBJ (UNIQUE)</option>
-                    <option value="hold_stbj">TABEL HOLD STBJ (DUPLIKAT/HOLD)</option>
-                </select>
-            </div>
-
-            <!-- Semua Tombol Aksi Disatukan -->
-            <div class="flex flex-wrap items-center justify-between gap-2">
-                <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                    <button onclick="toggleSidebarFilter()" class="p-2 sm:px-3 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] rounded shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition uppercase" title="Filter"><i data-lucide="filter" class="w-4 h-4"></i> <span class="hidden sm:inline">FILTER</span></button>
-                    <div class="relative">
-                        <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="p-2 sm:px-3 sm:py-2 bg-white text-slate-700 hover:bg-slate-50 font-bold rounded shadow-sm border border-slate-300 text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition uppercase" title="Kolom"><i data-lucide="eye-off" class="w-4 h-4"></i> <span class="hidden sm:inline">KOLOM</span></button>
-                        <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
-                            <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
-                                <span class="text-[11px] font-black text-slate-500 uppercase">Sembunyikan</span>
-                                <button onclick="resetKolom()" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold hover:bg-blue-200">RESET</button>
-                            </div>
-                            <div class="flex flex-col gap-2 max-h-64 overflow-y-auto" id="list-kolom-toggles"></div>
-                        </div>
-                    </div>
-
-                    <div class="w-px h-6 bg-slate-200 mx-1 hidden sm:block"></div>
-
-                    <button onclick="aksiMassal('salin')" class="p-2 sm:px-3 sm:py-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold text-[11px] rounded flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase" title="Salin"><i data-lucide="copy" class="w-4 h-4"></i> <span class="hidden sm:inline">SALIN</span></button>
-                    <button onclick="aksiMassal('hapus')" class="p-2 sm:px-3 sm:py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold text-[11px] rounded flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i> <span class="hidden sm:inline">HAPUS</span></button>
-                    <button onclick="aksiMassal('hold')" class="p-2 sm:px-3 sm:py-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-[11px] rounded flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase" title="Hold/Unhold"><i data-lucide="pause-circle" class="w-4 h-4"></i> <span class="hidden sm:inline">HOLD</span></button>
-                    <button onclick="aksiMassal('xlsx')" class="p-2 sm:px-3 sm:py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-[11px] rounded flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase" title="Export Excel"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> <span class="hidden sm:inline">EXCEL</span></button>
-                    <button onclick="aksiMassal('collect')" id="btn-massal-collect" class="hidden p-2 sm:px-3 sm:py-2 bg-indigo-100 hover:bg-indigo-200 border border-indigo-300 text-indigo-800 font-bold text-[11px] rounded flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase" title="Collect Data"><i data-lucide="check-square" class="w-4 h-4"></i> <span class="hidden sm:inline">COLLECT</span></button>
+        <div class="flex flex-wrap gap-2 mb-4 justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+            <div class="flex flex-wrap gap-2 w-full sm:w-auto items-center">
+                <div class="flex items-center gap-2 bg-slate-50 border-2 border-slate-200 rounded-lg px-2 mr-2">
+                    <label id="lbl-pilih-tabel" class="text-[10px] font-black text-slate-500 uppercase tracking-wide whitespace-nowrap">Tabel:</label>
+                    <select id="select-tabel" onchange="switchTable(this.value)" class="p-2 bg-transparent font-black text-xs text-slate-800 outline-none cursor-pointer uppercase">
+                        <option value="hasil_stbj">STBJ UNIQUE</option>
+                        <option value="hold_stbj">STBJ HOLD</option>
+                    </select>
                 </div>
+
+                <button onclick="toggleSidebarFilter()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-slate-950"><i data-lucide="filter" class="w-4 h-4"></i> FILTER</button>
                 
-                <button onclick="bukaDaftarKatalog()" class="p-2 sm:px-4 sm:py-2 bg-blue-700 hover:bg-blue-800 text-white font-black text-[10px] sm:text-[11px] rounded shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition border-b-2 border-blue-900 uppercase whitespace-nowrap ml-auto"><i data-lucide="database" class="w-4 h-4"></i> <span class="hidden sm:inline">KATALOG JASPER</span></button>
+                <div class="relative">
+                    <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="px-4 py-2.5 bg-white text-slate-700 hover:bg-slate-50 font-black rounded-lg shadow-sm border-2 border-slate-200 text-xs flex items-center gap-2 active:scale-95 transition uppercase"><i data-lucide="eye-off" class="w-4 h-4"></i> KOLOM</button>
+                    <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
+                        <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
+                            <span class="text-[11px] font-black text-slate-500 uppercase">Sembunyikan</span>
+                            <button onclick="resetKolom()" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold hover:bg-blue-200">RESET</button>
+                        </div>
+                        <div class="flex flex-col gap-2 max-h-64 overflow-y-auto" id="list-kolom-toggles"></div>
+                    </div>
+                </div>
+
+                <button onclick="aksiMassal('salin')" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-blue-800"><i data-lucide="copy" class="w-4 h-4"></i> SALIN</button>
+                <button onclick="aksiMassal('xlsx')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-emerald-800"><i data-lucide="download" class="w-4 h-4"></i> EXCEL</button>
+                
+                <button onclick="aksiMassal('collect')" id="btn-massal-collect" class="hidden px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-indigo-800"><i data-lucide="check-square" class="w-4 h-4"></i> COLLECT</button>
+            </div>
+            
+            <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0 justify-end">
+                <button onclick="aksiMassal('hapus')" class="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-red-800"><i data-lucide="trash-2" class="w-4 h-4"></i> HAPUS</button>
+                <button onclick="aksiMassal('hold')" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-amber-700"><i data-lucide="pause-circle" class="w-4 h-4"></i> HOLD</button>
+                <button onclick="bukaDaftarKatalog()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-purple-800"><i data-lucide="database" class="w-4 h-4"></i> KATALOG JASPER</button>
             </div>
         </div>
 
-        <!-- Tabel Section -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative mb-4">
             <div class="overflow-x-auto w-full max-h-[60vh] hide-scrollbar">
                 <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-stbj-main">
@@ -76,37 +70,35 @@
         </div>
     </div>
 
-    <!-- Sidebar Filter -->
     <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
-        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+        <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
             <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Hasil STBJ</h3>
             <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
-        <div class="p-3 flex flex-col gap-3 overflow-y-auto">
-            <div class="grid grid-cols-2 gap-2">
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status Gudang</label><input type="text" id="f-sgudang" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status Data</label><input type="text" id="f-sdata" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Waktu</label><input type="text" id="f-waktu" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label><input type="text" id="f-troli" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="f-qr" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="text" id="f-tgl" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label><input type="text" id="f-mesin" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label><input type="text" id="f-shift" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><input type="text" id="f-jenis" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item / Jasper</label><input type="text" id="f-nama" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><input type="text" id="f-pjg" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><input type="text" id="f-grade" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><input type="text" id="f-dus" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="f-shading" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PO</label><input type="text" id="f-po" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="f-ket" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PIC Input</label><input type="text" id="f-pic" oninput="jalankanSaring()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+        <div class="p-4 flex flex-col gap-4 overflow-y-auto">
+            <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status Gudang</label><input type="text" id="f-sgudang" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status Data</label><input type="text" id="f-sdata" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Waktu</label><input type="text" id="f-waktu" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label><input type="text" id="f-troli" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="f-qr" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="text" id="f-tgl" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label><input type="text" id="f-mesin" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label><input type="text" id="f-shift" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><input type="text" id="f-jenis" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama / Jasper</label><input type="text" id="f-nama" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><input type="text" id="f-pjg" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><input type="text" id="f-grade" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><input type="text" id="f-dus" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="f-shading" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PO</label><input type="text" id="f-po" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="f-ket" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PIC Input</label><input type="text" id="f-pic" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
             </div>
-            <button onclick="bersihkanFilter()" class="mt-2 py-2.5 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-xs uppercase transition border border-slate-300">RESET FILTER</button>
+            <button onclick="bersihkanFilter()" class="mt-4 py-3 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-xs uppercase transition border border-slate-300">RESET FILTER</button>
         </div>
     </div>
 
-    <!-- Modals untuk Jasper -->
     <div id="modal-list-katalog" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[60] px-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
@@ -136,7 +128,6 @@
         </div>
     </div>
 
-    <!-- Modal Form (Hidden Placeholder) -->
     <div id="modal-katalog" class="hidden fixed inset-0 flex items-center justify-center z-[90]"></div>
     <div id="overlay-klik-luar-k" onclick="tutupPopups()" class="hidden fixed inset-0 z-30"></div>
 
@@ -298,8 +289,8 @@
             ['qrcode', 'item', 'jasper'].forEach(tab => {
                 const el = document.getElementById('tab-mode-' + tab);
                 if(el) {
-                    if(m === tab) el.className = 'px-5 py-3.5 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition bg-blue-50/50';
-                    else el.className = 'px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition hover:bg-slate-50';
+                    if(m === tab) el.className = 'px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition';
+                    else el.className = 'px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
                 }
             });
             
@@ -595,7 +586,7 @@
                 if(error) alert("Gagal Update: " + error.message); 
                 else { alert("Berhasil ditandai sebagai Collected!"); muatDataDariSupabase(); }
                 
-                btn.innerHTML = '<i data-lucide="check-square" class="w-4 h-4"></i> <span class="hidden sm:inline">COLLECT</span>'; btn.disabled = false; lucide.createIcons();
+                btn.innerHTML = '<i data-lucide="check-square" class="w-4 h-4"></i> COLLECT'; btn.disabled = false; lucide.createIcons();
             }
             else if(tipe === 'xlsx') {
                 if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
