@@ -13,10 +13,11 @@
         /* STANDARISASI HEADER TABEL */
         .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center; border: 1px solid #334155; }
     </style>
+    <style id="dynamic-col-styles"></style>
 </head>
 <body class="font-sans">
 
-    <div class="w-full">
+    <div class="w-full relative">
         <div id="view-scan" class="space-y-4">
             
             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
@@ -42,32 +43,49 @@
                 </div>
             </div>
 
-            <div class="flex justify-end gap-2 mt-2">
-                <button onclick="validasiSTBJ()" class="px-5 py-2.5 bg-white text-slate-800 font-black rounded-lg border-2 border-slate-800 hover:bg-slate-100 transition cursor-pointer text-sm flex items-center gap-2 active:scale-95 uppercase tracking-wide"><i data-lucide="shield-check" class="w-5 h-5"></i> VALIDASI STBJ</button>
-                <button onclick="cekGudang()" class="px-5 py-2.5 bg-slate-800 text-white font-black rounded-lg border-2 border-slate-800 hover:bg-slate-900 transition cursor-pointer text-sm flex items-center gap-2 active:scale-95 uppercase tracking-wide"><i data-lucide="search" class="w-5 h-5"></i> CEK GUDANG</button>
+            <div class="flex flex-col sm:flex-row justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex flex-wrap gap-2">
+                    <div class="relative">
+                        <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 font-black rounded-lg shadow-sm border border-slate-300 text-xs flex items-center gap-2 active:scale-95 transition uppercase"><i data-lucide="eye-off" class="w-4 h-4"></i> KOLOM</button>
+                        <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
+                                <span class="text-xs font-black text-slate-500 uppercase">Tampil / Sembunyi</span>
+                                <button onclick="resetKolom()" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold hover:bg-blue-200">DEFAULT</button>
+                            </div>
+                            <div class="flex flex-col gap-2 max-h-64 overflow-y-auto" id="list-kolom-toggles">
+                                </div>
+                        </div>
+                    </div>
+                    <button onclick="salinDataTabel()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-blue-800"><i data-lucide="copy" class="w-4 h-4"></i> SALIN</button>
+                    <button onclick="holdLangsir()" id="btn-hold" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-amber-700"><i data-lucide="pause-circle" class="w-4 h-4"></i> HOLD LANGSIR</button>
+                </div>
+
+                <button onclick="validasiDanCek()" id="btn-validasi" class="px-6 py-2.5 bg-slate-800 text-white font-black rounded-xl shadow-md hover:bg-slate-900 transition cursor-pointer text-sm flex items-center justify-center gap-2 active:scale-95 uppercase tracking-wide border-b-4 border-slate-950"><i data-lucide="shield-check" class="w-5 h-5"></i> VALIDASI STBJ & CEK GUDANG</button>
             </div>
 
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="table-container overflow-x-auto w-full max-h-[50vh]">
                     <table class="w-full border-collapse text-sm whitespace-nowrap" id="table-langsir">
-                        <thead class="sticky top-0 z-10 shadow-sm">
+                        <thead class="sticky top-0 z-10 shadow-sm" id="thead-langsir">
                             <tr class="uppercase text-[11px] font-bold tracking-wider">
-                                <th class="p-3 hdr-std w-10"><i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i></th>
-                                <th class="p-3 hdr-std w-12">No</th>
-                                <th class="p-3 hdr-std">Status</th>
-                                <th class="p-3 hdr-std">Troli</th>
-                                <th class="p-3 hdr-std">Area</th>
-                                <th class="p-3 hdr-std">Text QRCode</th>
-                                <th class="p-3 hdr-std">Tgl Produksi</th>
-                                <th class="p-3 hdr-std">Mesin</th>
-                                <th class="p-3 hdr-std">Shift</th>
-                                <th class="p-3 hdr-std">Jenis Item</th>
-                                <th class="p-3 hdr-std">Nama Item</th>
-                                <th class="p-3 hdr-std">Pjg</th>
-                                <th class="p-3 hdr-std">Grade</th>
-                                <th class="p-3 hdr-std">Dus</th>
-                                <th class="p-3 hdr-std">Shading</th>
-                                <th class="p-3 hdr-std">PO Awal</th>
+                                <th class="p-3 hdr-std w-10"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded"></th>
+                                <th class="p-3 hdr-std w-10 col-btn"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-slate-400"></i></th>
+                                <th class="p-3 hdr-std w-10">No</th>
+                                <th class="p-3 hdr-std border-r border-slate-500 col-stbj">Status STBJ</th>
+                                <th class="p-3 hdr-std col-kode border-r border-slate-500">Status Kode</th>
+                                <th class="p-3 hdr-std col-troli">Troli</th>
+                                <th class="p-3 hdr-std border-r border-slate-500 col-area">Area</th>
+                                <th class="p-3 hdr-std border-r border-slate-500 col-qr">Text QRCode</th>
+                                <th class="p-3 hdr-std col-tgl">Tgl Produksi</th>
+                                <th class="p-3 hdr-std col-mesin">Mesin</th>
+                                <th class="p-3 hdr-std border-r border-slate-500 col-shift">Shift</th>
+                                <th class="p-3 hdr-std text-blue-300 col-jenis">Jenis Item</th>
+                                <th class="p-3 hdr-std col-nama">Nama Item</th>
+                                <th class="p-3 hdr-std col-pjg">Pjg</th>
+                                <th class="p-3 hdr-std col-grade">Grade</th>
+                                <th class="p-3 hdr-std col-dus">Dus</th>
+                                <th class="p-3 hdr-std border-r border-slate-500 col-shading">Shading</th>
+                                <th class="p-3 hdr-std text-orange-400 col-po">PO Awal</th>
                             </tr>
                         </thead>
                         <tbody id="tbody-langsir" class="text-center text-slate-700"></tbody>
@@ -76,18 +94,22 @@
             </div>
             
             <div class="pt-2">
-                <button id="btn-save" onclick="saveToSupabase()" class="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-base tracking-widest cursor-pointer transition active:scale-95 uppercase"><i data-lucide="save" class="w-5 h-5"></i> SIMPAN DATA KE GUDANG</button>
+                <button id="btn-save" onclick="saveToSupabase()" class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-base tracking-widest cursor-pointer transition active:scale-95 uppercase border-b-4 border-emerald-800"><i data-lucide="save" class="w-5 h-5"></i> SIMPAN DATA KE GUDANG</button>
             </div>
         </div>
     </div>
+    
+    <div id="overlay-klik-luar" onclick="document.getElementById('dropdown-kolom').classList.add('hidden'); this.classList.add('hidden');" class="hidden fixed inset-0 z-30"></div>
 
     <script src="global.js"></script>
     <script src="langsir_logic.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => { 
             initModernLayout({ id: 'langsir', title: 'LANGSIR', url: 'langsir.html' }); 
-            // Pastikan tarik data Troli berjalan aman
-            if(typeof window.loadInitialData === 'function') window.loadInitialData();
+            // Pastikan overlay di klik juga
+            document.querySelector('[onclick*="dropdown-kolom"]').addEventListener('click', () => {
+                document.getElementById('overlay-klik-luar').classList.remove('hidden');
+            });
         });
     </script>
 </body>
