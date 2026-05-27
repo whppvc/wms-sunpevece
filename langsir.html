@@ -22,16 +22,12 @@
             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <div class="flex flex-col md:flex-row gap-4 relative">
                     <div class="w-full md:w-1/4">
-                        <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Pilih Troli</label>
-                        <select id="select-troli" class="w-full p-3 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-slate-800 text-slate-800 cursor-pointer bg-slate-50"></select>
-                    </div>
-                    <div class="w-full md:w-1/4">
-                        <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Pilih Area</label>
+                        <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Pilih Area Simpan</label>
                         <select id="select-area" class="w-full p-3 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-slate-800 text-slate-800 cursor-pointer bg-slate-50">
                             <option value="">-- Memuat Area --</option>
                         </select>
                     </div>
-                    <div class="w-full md:w-2/4 relative">
+                    <div class="w-full md:w-3/4 relative">
                         <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Scan Fisik Kardus</label>
                         <form id="form-scan" class="flex flex-col sm:flex-row gap-2">
                             <input type="text" id="input-qrcode" class="flex-1 p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-slate-800 font-black text-slate-800 text-lg bg-slate-50" placeholder="Arahkan scanner..." autocomplete="off">
@@ -75,8 +71,8 @@
                                 <th class="p-3 hdr-std w-10 col-no">No</th>
                                 <th class="p-3 hdr-std border-r border-slate-500 col-stbj">Status STBJ</th>
                                 <th class="p-3 hdr-std col-kode border-r border-slate-500">Status Kode</th>
-                                <th class="p-3 hdr-std col-troli">Troli</th>
-                                <th class="p-3 hdr-std border-r border-slate-500 col-area">Area</th>
+                                <th class="p-3 hdr-std text-amber-300 col-troli">Troli STBJ</th>
+                                <th class="p-3 hdr-std border-r border-slate-500 col-area">Area Simpan</th>
                                 <th class="p-3 hdr-std border-r border-slate-500 col-qr">Text QRCode</th>
                                 <th class="p-3 hdr-std col-tgl">Tgl Produksi</th>
                                 <th class="p-3 hdr-std col-mesin">Mesin</th>
@@ -87,7 +83,8 @@
                                 <th class="p-3 hdr-std col-grade">Grade</th>
                                 <th class="p-3 hdr-std col-dus">Dus</th>
                                 <th class="p-3 hdr-std border-r border-slate-500 col-shading">Shading</th>
-                                <th class="p-3 hdr-std text-orange-400 col-po">PO Awal</th>
+                                <th class="p-3 hdr-std text-orange-400 border-r border-slate-500 col-po">PO Awal</th>
+                                <th class="p-3 hdr-std col-ket">Keterangan STBJ</th>
                             </tr>
                         </thead>
                         <tbody id="tbody-langsir" class="text-center text-slate-700"></tbody>
@@ -123,6 +120,7 @@
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><input type="text" id="f-dus" oninput="saringTabelLangsir()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="f-shading" oninput="saringTabelLangsir()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PO Awal</label><input type="text" id="f-po" oninput="saringTabelLangsir()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="f-ket" oninput="saringTabelLangsir()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
             </div>
             <button onclick="resetFilter()" class="mt-4 py-3 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-xs uppercase transition border border-slate-300">RESET FILTER</button>
         </div>
@@ -136,7 +134,7 @@
         document.addEventListener('DOMContentLoaded', () => { initModernLayout({ id: 'langsir', title: 'LANGSIR', url: 'langsir.html' }); });
         function toggleSidebarFilter() { document.getElementById('sidebar-filter').classList.toggle('translate-x-full'); document.getElementById('overlay-klik-luar').classList.toggle('hidden'); }
         function tutupSemuaPopup() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); document.getElementById('dropdown-kolom').classList.add('hidden'); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
-        function resetFilter() { const ids = ['f-stbj','f-kode','f-troli','f-area','f-qr','f-tgl','f-mesin','f-shift','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po']; ids.forEach(id => document.getElementById(id).value = ''); saringTabelLangsir(); toggleSidebarFilter(); }
+        function resetFilter() { const ids = ['f-stbj','f-kode','f-troli','f-area','f-qr','f-tgl','f-mesin','f-shift','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket']; ids.forEach(id => document.getElementById(id).value = ''); saringTabelLangsir(); toggleSidebarFilter(); }
     </script>
 </body>
 </html>
