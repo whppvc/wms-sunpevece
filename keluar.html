@@ -13,24 +13,32 @@
         .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; white-space: nowrap; }
     </style>
 </head>
-<body class="font-sans">
-    <div class="w-full">
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 relative mb-4">
-            <button onclick="undoDelete()" class="absolute top-4 right-6 px-4 py-1.5 bg-slate-200 text-slate-700 font-bold rounded border border-slate-300 hover:bg-slate-300 transition cursor-pointer text-xs flex items-center gap-1 active:scale-95"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> UNDO</button>
-            <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Scan Fisik Kardus Keluar</label>
-            <form id="form-scan" class="flex gap-3">
-                <input type="text" id="input-qrcode" class="flex-1 p-3 border border-slate-300 rounded-lg outline-none focus:border-slate-800 font-bold text-slate-800 text-lg bg-slate-50" placeholder="Arahkan scanner ke kardus..." autocomplete="off">
-                <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-8 rounded-lg font-bold shadow-sm cursor-pointer transition active:scale-95 flex items-center gap-2 border-b-2 border-slate-950"><i data-lucide="corner-down-left"></i> ENTER</button>
+<body class="font-sans bg-slate-50 pb-20">
+    <div class="w-full px-2 sm:px-4 pt-4 relative">
+        
+        <div class="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200 relative mb-3">
+            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Scan Fisik Kardus Keluar</label>
+            <form id="form-scan" class="flex gap-2 items-center">
+                <div class="relative flex-1">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
+                    <input type="text" id="input-qrcode" class="w-full pl-10 p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-slate-800 font-black text-slate-800 text-sm sm:text-base bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner ke kardus..." autocomplete="off">
+                </div>
+                <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-5 sm:px-8 py-2.5 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center gap-2 border-b-2 border-slate-950 text-xs sm:text-sm uppercase"><i data-lucide="corner-down-left" class="w-4 h-4"></i> <span class="hidden sm:inline">ENTER</span></button>
             </form>
         </div>
 
-        <div class="flex flex-col sm:flex-row justify-end mt-2 mb-4 gap-3">
-            <button onclick="bukaModalReqPO()" class="px-5 py-3 bg-orange-600 text-white font-black rounded-lg shadow-sm border-b-4 border-orange-800 hover:bg-orange-700 transition cursor-pointer text-sm flex items-center justify-center gap-2 active:scale-95 uppercase tracking-wide"><i data-lucide="help-circle" class="w-4 h-4"></i> REQUEST GANTI PO</button>
-            <button onclick="crossCekOutbound()" id="btn-crosscek" class="px-5 py-3 bg-white text-slate-800 font-black rounded-lg shadow-sm border-2 border-slate-800 hover:bg-slate-100 transition cursor-pointer text-sm flex items-center justify-center gap-2 active:scale-95 uppercase tracking-wide"><i data-lucide="scan-search" class="w-4 h-4"></i> VALIDASI FISIK GUDANG</button>
+        <div class="flex flex-row justify-between items-center mb-4 gap-2 bg-white p-2.5 sm:p-3 rounded-xl border border-slate-200 shadow-sm">
+            
+            <button onclick="undoDelete()" class="p-2 sm:px-4 sm:py-2 bg-slate-100 text-slate-700 font-bold rounded shadow-sm border border-slate-300 hover:bg-slate-200 transition cursor-pointer text-[10px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 uppercase" title="Undo"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> <span class="hidden sm:inline">UNDO</span></button>
+            
+            <div class="flex gap-1.5">
+                <button onclick="bukaModalReqPO()" class="p-2 sm:px-4 sm:py-2 bg-orange-100 text-orange-800 font-black rounded shadow-sm border border-orange-300 hover:bg-orange-200 transition cursor-pointer text-[10px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 uppercase tracking-wide whitespace-nowrap"><i data-lucide="help-circle" class="w-4 h-4"></i> Req <span class="hidden sm:inline">Ganti PO</span></button>
+                <button onclick="crossCekOutbound()" id="btn-crosscek" class="px-3 py-2 sm:px-4 sm:py-2 bg-slate-900 text-white font-black rounded shadow-sm border-b-2 border-slate-950 hover:bg-black transition cursor-pointer text-[10px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 uppercase tracking-wide whitespace-nowrap"><i data-lucide="scan-search" class="w-4 h-4"></i> Validasi <span class="hidden sm:inline">Gudang</span></button>
+            </div>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
-            <div class="overflow-x-auto w-full max-h-[50vh] hide-scrollbar">
+            <div class="overflow-x-auto w-full max-h-[60vh] hide-scrollbar">
                 <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-keluar">
                     <thead class="sticky top-0 z-10 shadow-sm">
                         <tr>
@@ -56,54 +64,56 @@
                 </table>
             </div>
         </div>
-        
-        <div class="pt-4 flex flex-col md:flex-row gap-3">
-            <button id="btn-proses-keluar" onclick="bukaModalKeluar()" class="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-widest cursor-pointer transition active:scale-95 uppercase border-b-4 border-slate-950"><i data-lucide="truck-fast" class="w-5 h-5"></i> PROSES KELUAR BARANG</button>
+    </div>
+
+    <div class="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 p-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
+        <div class="w-full px-2 sm:px-4 flex justify-center md:justify-end">
+            <button id="btn-proses-keluar" onclick="bukaModalKeluar()" class="w-full md:w-auto px-8 py-2.5 sm:py-3 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-widest cursor-pointer transition active:scale-95 uppercase border-b-4 border-slate-950">
+                <i data-lucide="truck-fast" class="w-5 h-5"></i> PROSES KELUAR BARANG
+            </button>
         </div>
     </div>
 
-    <!-- Modal Keluar (Sesuai validasi PO) -->
     <div id="modal-keluar" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
-        <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
+        <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
             <h3 class="text-xl font-black mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="package-minus" class="text-slate-600"></i> Tujuan Kirim</h3>
-            <p class="text-xs font-semibold text-slate-500 mb-6 border-b border-slate-100 pb-2">Pilih PO Tujuan. Jika fisik item memiliki PO aktual yang berbeda, ia <span class="text-red-500 font-bold">TIDAK AKAN KELUAR</span>.</p>
+            <p class="text-[11px] font-semibold text-slate-500 mb-5 border-b border-slate-100 pb-3 leading-relaxed">Pilih PO Tujuan. Jika fisik item memiliki PO aktual yang berbeda, ia <span class="text-red-600 font-black">TIDAK AKAN KELUAR</span>.</p>
             <div class="space-y-4 mb-6">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Pilih PO Tujuan</label>
-                    <select id="out-po-target" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-slate-800 font-bold text-slate-800 uppercase cursor-pointer bg-slate-50"></select>
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Pilih PO Tujuan</label>
+                    <select id="out-po-target" class="w-full p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-slate-800 font-bold text-slate-800 uppercase cursor-pointer bg-slate-50 text-sm"></select>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Keterangan / Supir / Nopol</label>
-                    <input type="text" id="out-keterangan" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-slate-800 font-bold text-slate-800 bg-slate-50" placeholder="Cth: PO security, BM 1234 ...">
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Keterangan / Supir / Nopol</label>
+                    <input type="text" id="out-keterangan" class="w-full p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-slate-800 font-bold text-slate-800 bg-slate-50 text-sm" placeholder="Cth: PO security, BM 1234 ...">
                 </div>
             </div>
             <div class="flex gap-2">
-                <button type="button" onclick="document.getElementById('modal-keluar').classList.add('hidden')" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition cursor-pointer text-xs uppercase">BATAL</button>
-                <button type="button" onclick="eksekusiKeluar()" id="btn-eksekusi" class="w-2/3 py-3 bg-slate-800 font-black rounded-xl shadow-sm text-white hover:bg-slate-900 transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase border-b-4 border-slate-950"><i data-lucide="check-circle" class="w-4 h-4"></i> EKSEKUSI</button>
+                <button type="button" onclick="document.getElementById('modal-keluar').classList.add('hidden')" class="w-1/3 py-2.5 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition cursor-pointer text-xs uppercase">BATAL</button>
+                <button type="button" onclick="eksekusiKeluar()" id="btn-eksekusi" class="w-2/3 py-2.5 bg-slate-800 font-black rounded-xl shadow-sm text-white hover:bg-slate-900 transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase border-b-2 border-slate-950"><i data-lucide="check-circle" class="w-4 h-4"></i> EKSEKUSI</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal Request Ganti PO -->
     <div id="modal-req-po" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[90] px-4 backdrop-blur-sm">
-        <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
+        <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
             <h3 class="text-xl font-black mb-1 flex items-center gap-2 text-orange-600"><i data-lucide="file-warning"></i> Request Ganti PO</h3>
-            <p class="text-[11px] font-bold text-slate-500 mb-6 border-b border-slate-100 pb-2">Semua baris bermasalah (merah / belum divalidasi) akan dipindah ke tabel antrean untuk diganti PO-nya oleh CS.</p>
+            <p class="text-[11px] font-semibold text-slate-500 mb-5 border-b border-slate-100 pb-3 leading-relaxed">Semua baris bermasalah (merah / belum divalidasi) akan dipindah ke tabel antrean untuk diganti PO-nya oleh CS.</p>
             <div class="space-y-4 mb-6">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Pilih PO Tujuan</label>
-                    <select id="req-po-target" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-orange-500 font-bold text-slate-800 uppercase bg-orange-50/30 cursor-pointer">
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Pilih PO Tujuan</label>
+                    <select id="req-po-target" class="w-full p-2.5 border-2 border-orange-200 rounded-lg outline-none focus:border-orange-500 font-bold text-slate-800 uppercase bg-orange-50/50 cursor-pointer text-sm">
                         <option value="">-- MEMUAT PO --</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Alasan / Keterangan (Opsional)</label>
-                    <input type="text" id="req-keterangan" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-orange-500 font-bold text-slate-800 bg-slate-50" placeholder="Alasan ganti PO...">
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Alasan / Keterangan (Opsional)</label>
+                    <input type="text" id="req-keterangan" class="w-full p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-orange-500 font-bold text-slate-800 bg-slate-50 text-sm" placeholder="Alasan ganti PO...">
                 </div>
             </div>
             <div class="flex gap-2">
-                <button type="button" onclick="document.getElementById('modal-req-po').classList.add('hidden')" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition cursor-pointer text-xs uppercase">BATAL</button>
-                <button type="button" onclick="submitReqPO()" id="btn-submit-req" class="w-2/3 py-3 bg-orange-600 font-black rounded-xl shadow-sm text-white hover:bg-orange-700 transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase border-b-4 border-orange-800"><i data-lucide="send" class="w-4 h-4"></i> AJUKAN REQUEST</button>
+                <button type="button" onclick="document.getElementById('modal-req-po').classList.add('hidden')" class="w-1/3 py-2.5 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition cursor-pointer text-xs uppercase">BATAL</button>
+                <button type="button" onclick="submitReqPO()" id="btn-submit-req" class="w-2/3 py-2.5 bg-orange-600 font-black rounded-xl shadow-sm text-white hover:bg-orange-700 transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase border-b-2 border-orange-800"><i data-lucide="send" class="w-4 h-4"></i> REQUEST</button>
             </div>
         </div>
     </div>
