@@ -43,13 +43,12 @@
                 </div>
             </div>
 
-            <div class="flex flex-row justify-between gap-2 items-center bg-white p-2.5 sm:p-3 rounded-xl border border-slate-200 shadow-sm">
-                
-                <div class="flex gap-1.5">
-                    <button onclick="toggleSidebarFilter()" class="p-2 sm:px-3 sm:py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase" title="Filter"><i data-lucide="filter" class="w-4 h-4"></i> <span class="hidden sm:inline">Filter</span></button>
+            <div class="flex flex-wrap gap-2 mb-4 justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                    <button onclick="toggleSidebarFilter()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg shadow-sm text-xs flex items-center justify-center gap-2 active:scale-95 transition uppercase border-b-2 border-slate-950"><i data-lucide="filter" class="w-4 h-4"></i> FILTER</button>
                     
                     <div class="relative">
-                        <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="p-2 sm:px-3 sm:py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase" title="Kolom"><i data-lucide="eye-off" class="w-4 h-4"></i> <span class="hidden sm:inline">Kolom</span></button>
+                        <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="px-4 py-2.5 bg-white text-slate-700 hover:bg-slate-50 font-black rounded-lg shadow-sm border-2 border-slate-200 text-xs flex items-center gap-2 active:scale-95 transition uppercase"><i data-lucide="eye-off" class="w-4 h-4"></i> KOLOM</button>
                         <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
                             <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
                                 <span class="text-[11px] font-black text-slate-500 uppercase">Sembunyikan</span>
@@ -59,14 +58,14 @@
                         </div>
                     </div>
                     
-                    <button onclick="salinDataTabel()" class="p-2 sm:px-3 sm:py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase" title="Salin"><i data-lucide="copy" class="w-4 h-4"></i> <span class="hidden sm:inline">Salin</span></button>
-                    <button onclick="undoDelete()" class="p-2 sm:px-3 sm:py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase" title="Undo"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> <span class="hidden sm:inline">Undo</span></button>
+                    <button onclick="salinDataTabel()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-blue-800"><i data-lucide="copy" class="w-4 h-4"></i> SALIN</button>
+                    <button onclick="undoDelete()" class="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-rose-800"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> UNDO</button>
                 </div>
 
-                <div class="flex gap-1.5">
-                    <button onclick="holdLangsir()" id="btn-hold" class="p-2 sm:px-3 sm:py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 font-bold rounded shadow-sm text-[10px] sm:text-xs flex items-center justify-center gap-1.5 transition uppercase whitespace-nowrap"><i data-lucide="pause-circle" class="w-4 h-4"></i> <span class="hidden sm:inline">Hold</span></button>
-                    <button onclick="bukaModalSTBJ()" class="p-2 sm:px-3 sm:py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 border border-indigo-300 font-black rounded shadow-sm transition cursor-pointer text-[10px] sm:text-xs flex items-center justify-center gap-1.5 uppercase whitespace-nowrap"><i data-lucide="table" class="w-4 h-4"></i> <span class="hidden sm:inline">Data STBJ</span></button>
-                    <button onclick="validasiDanCek()" id="btn-validasi" class="px-3 py-2 sm:px-5 sm:py-2 bg-slate-900 text-white font-black rounded shadow-sm hover:bg-black transition cursor-pointer text-[10px] sm:text-xs flex items-center justify-center gap-1.5 uppercase border-b-2 border-slate-950 whitespace-nowrap"><i data-lucide="shield-check" class="w-4 h-4"></i> Validasi <span class="hidden sm:inline">STBJ</span></button>
+                <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0 justify-end">
+                    <button onclick="holdLangsir()" id="btn-hold" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-amber-700"><i data-lucide="pause-circle" class="w-4 h-4"></i> HOLD</button>
+                    <button onclick="bukaModalSTBJ()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-purple-800"><i data-lucide="table" class="w-4 h-4"></i> DATA STBJ</button>
+                    <button onclick="validasiDanCek()" id="btn-validasi" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-emerald-800"><i data-lucide="shield-check" class="w-4 h-4"></i> VALIDASI</button>
                 </div>
             </div>
 
@@ -115,11 +114,11 @@
     <div id="modal-stbj-langsir" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] px-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl border border-slate-200 flex flex-col max-h-[85vh]">
             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-2xl">
-                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="table" class="w-4 h-4 text-indigo-600"></i> DATA HASIL STBJ GUDANG</h3>
+                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="table" class="w-4 h-4 text-purple-600"></i> DATA HASIL STBJ GUDANG</h3>
                 <button onclick="tutupModalSTBJ()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <div class="p-3 bg-white border-b border-slate-100 flex gap-2">
-                <input type="text" id="f-stbj-modal" oninput="saringTabelModalSTBJ()" class="w-full p-2 text-sm border-2 border-slate-200 rounded-lg focus:border-indigo-500 outline-none font-bold" placeholder="Cari QRCode, Troli, Item, PO, dll...">
+                <input type="text" id="f-stbj-modal" oninput="saringTabelModalSTBJ()" class="w-full p-2 text-sm border-2 border-slate-200 rounded-lg focus:border-purple-500 outline-none font-bold" placeholder="Cari QRCode, Troli, Item, PO, dll...">
             </div>
             <div class="overflow-y-auto flex-1 hide-scrollbar p-0 bg-slate-50">
                 <table class="w-full border-collapse text-sm whitespace-nowrap bg-white text-center">
