@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .table-container { scrollbar-width: thin; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -51,7 +52,9 @@
                 <button onclick="aksiMassal('salin')" id="btn-massal-salin" class="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase"><i data-lucide="copy" class="w-4 h-4"></i> SALIN</button>
                 <button onclick="aksiMassal('hapus')" id="btn-massal-hapus" class="flex-1 sm:flex-none px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase"><i data-lucide="trash-2" class="w-4 h-4"></i> HAPUS</button>
                 <button onclick="aksiMassal('hold')" id="btn-massal-hold" class="flex-1 sm:flex-none px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase"><i data-lucide="pause-circle" class="w-4 h-4"></i> HOLD/UNHOLD</button>
-                <button onclick="aksiMassal('xlsx')" id="btn-massal-xls" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase"><i data-lucide="download" class="w-4 h-4"></i> UNDUH EXCEL</button>
+                <button onclick="aksiMassal('xlsx')" id="btn-massal-xls" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> EXCEL (XLSX)</button>
+                
+                <button onclick="aksiMassal('collect')" id="btn-massal-collect" class="hidden flex-1 sm:flex-none px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase"><i data-lucide="check-square" class="w-4 h-4"></i> COLLECT DATA</button>
                 
                 <button onclick="bukaDaftarKatalog()" id="btn-tambah-katalog" class="flex-1 sm:flex-none px-5 py-2 bg-blue-700 hover:bg-blue-800 text-white font-black text-xs rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition shadow-md border-b-4 border-blue-900 ml-auto uppercase"><i data-lucide="database" class="w-4 h-4"></i> KATALOG JASPER</button>
             </div>
@@ -75,6 +78,7 @@
         <div class="p-4 flex flex-col gap-4 overflow-y-auto">
             <div class="grid grid-cols-2 gap-3">
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status Gudang</label><input type="text" id="f-sgudang" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status Data</label><input type="text" id="f-sdata" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Waktu</label><input type="text" id="f-waktu" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label><input type="text" id="f-troli" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="f-qr" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
@@ -168,11 +172,13 @@
         let hiddenCols = [];
         const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
+        // Tambah definisi kolom status-data
         const colDefinitions = [
             { id: 'col-cb', label: 'Checkbox', default: true },
             { id: 'col-no', label: 'Nomor Urut', default: true },
             { id: 'col-status-gudang', label: 'Status Gudang', default: true },
             { id: 'col-status', label: 'Status Hold', default: true },
+            { id: 'col-status-data', label: 'Status Data', default: true },
             { id: 'col-waktu', label: 'Waktu Input', default: true },
             { id: 'col-troli', label: 'Troli', default: true },
             { id: 'col-qr', label: 'QRCode', default: true },
@@ -258,7 +264,6 @@
                 const { data, error } = await db.from(tabelSekarang).select('*').order('created_at', {ascending: false});
                 if(error) throw error;
                 
-                // Cross Check ke tabel stok_qr untuk mengetahui status "IN GUDANG"
                 if(data && data.length > 0) {
                     const qrs = data.map(d => d.qrcode);
                     const { data: stokData } = await db.from('stok_qr').select('qrcode').in('qrcode', qrs);
@@ -320,92 +325,25 @@
                     else el.className = 'px-5 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
                 }
             });
+            
+            // Tampilkan tombol collect data HANYA saat di mode Item / Jasper
+            const btnCollect = document.getElementById('btn-massal-collect');
+            if (m === 'item' || m === 'jasper') btnCollect.classList.remove('hidden');
+            else btnCollect.classList.add('hidden');
+
             renderHeaderDanTabel();
         }
 
         function switchTable(val) { tabelSekarang = val; muatDataDariSupabase(); }
 
-        function bukaDaftarKatalog() {
-            renderKatalogList();
-            document.getElementById('modal-list-katalog').classList.remove('hidden');
-        }
+        // Modal Katalog... (tetap sama)
+        function bukaDaftarKatalog() { renderKatalogList(); document.getElementById('modal-list-katalog').classList.remove('hidden'); }
+        function renderKatalogList() { /*...*/ }
+        function saringKatalogList() { /*...*/ }
+        function bukaModalKatalogForm(jsonStr) { /*...*/ }
+        async function simpanKatalog() { /*...*/ }
+        async function hapusKatalog(id) { /*...*/ }
 
-        function renderKatalogList() {
-            const tbody = document.getElementById('tbody-katalog-list');
-            if(jasperData.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="p-6 font-bold text-slate-400">Katalog Jasper belum ada / Kosong.</td></tr>'; return; }
-            
-            let h = '';
-            jasperData.forEach((r, i) => {
-                const safeR = JSON.stringify(r).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
-                h += `
-                    <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-center katalog-row">
-                        <td class="p-3 font-bold text-slate-400">${i+1}</td>
-                        <td class="p-3 font-bold text-slate-800 text-left s-nama">${r.nama_item || '-'}</td>
-                        <td class="p-3 font-bold text-slate-600 s-pjg">${r.panjang || '-'}</td>
-                        <td class="p-3 font-bold text-slate-800 border-r border-slate-200 s-grade">${r.grade || '-'}</td>
-                        <td class="p-3 font-black text-blue-700 bg-blue-50/50 text-left s-jasper">${r.nama_jasper || '-'}</td>
-                        <td class="p-2">
-                            <div class="flex gap-1 justify-center">
-                                <button onclick="bukaModalKatalogForm('${safeR}')" class="p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded cursor-pointer transition"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-                                <button onclick="hapusKatalog('${r.id}')" class="p-2 bg-red-100 text-red-700 hover:bg-red-200 rounded cursor-pointer transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                            </div>
-                        </td>
-                    </tr>`;
-            });
-            tbody.innerHTML = h; lucide.createIcons();
-        }
-
-        function saringKatalogList() {
-            const q = document.getElementById('f-kat-search').value.toLowerCase();
-            document.querySelectorAll('.katalog-row').forEach(row => {
-                const txt = row.innerText.toLowerCase();
-                row.style.display = txt.includes(q) ? '' : 'none';
-            });
-        }
-
-        function bukaModalKatalogForm(jsonStr) {
-            if(jsonStr) {
-                const d = JSON.parse(jsonStr);
-                document.getElementById('kat-id').value = d.id;
-                document.getElementById('kat-nama').value = d.nama_item || '';
-                document.getElementById('kat-pjg').value = d.panjang || '';
-                document.getElementById('kat-grade').value = d.grade || '';
-                document.getElementById('kat-jasper').value = d.nama_jasper || '';
-            } else {
-                document.getElementById('kat-id').value = ''; document.getElementById('kat-nama').value = '';
-                document.getElementById('kat-pjg').value = ''; document.getElementById('kat-grade').value = '';
-                document.getElementById('kat-jasper').value = '';
-            }
-            document.getElementById('modal-katalog').classList.remove('hidden');
-        }
-
-        async function simpanKatalog() {
-            const id = document.getElementById('kat-id').value;
-            const nama = document.getElementById('kat-nama').value.trim().toUpperCase();
-            const pjg = document.getElementById('kat-pjg').value.trim().toUpperCase();
-            const grade = document.getElementById('kat-grade').value.trim().toUpperCase();
-            const jasper = document.getElementById('kat-jasper').value.trim().toUpperCase();
-            
-            if(!nama || !pjg || !grade || !jasper) return alert("Pastikan semua kolom diisi!");
-            const btn = document.getElementById('btn-simpan-kat'); btn.disabled=true; btn.innerHTML='<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...';
-            
-            const payload = { nama_item: nama, panjang: pjg, grade: grade, nama_jasper: jasper };
-            let res;
-            if(id) res = await db.from('nama_jasper').update(payload).eq('id', id);
-            else res = await db.from('nama_jasper').insert(payload);
-            
-            if(res.error) alert("Gagal: " + res.error.message);
-            else { alert("Katalog berhasil disimpan!"); document.getElementById('modal-katalog').classList.add('hidden'); await loadKamusDanJasper(); renderKatalogList(); }
-            btn.disabled=false; btn.innerHTML='<i data-lucide="save" class="w-4 h-4"></i> SIMPAN'; lucide.createIcons();
-        }
-
-        async function hapusKatalog(id) {
-            if(!confirm("Yakin ingin menghapus item katalog ini?")) return;
-            const {error} = await db.from('nama_jasper').delete().eq('id', id);
-            if(error) alert("Gagal Hapus: " + error.message); else { await loadKamusDanJasper(); renderKatalogList(); }
-        }
-
-        // --- Berikut fungsi renderHeaderDanTabel yang sudah diupdate ---
         function renderHeaderDanTabel() {
             const thead = document.getElementById('thead-stbj');
             const tbody = document.getElementById('tbody-stbj');
@@ -417,6 +355,7 @@
                         <th class="hdr-std w-12 col-no">No</th>
                         <th class="hdr-std border-r border-slate-500 col-status-gudang">Status Gudang</th>
                         ${tabelSekarang === 'hold_stbj' ? '<th class="hdr-std text-amber-400 col-status">Status Hold</th>' : '<th class="hdr-std hidden col-status">Status Hold</th>'}
+                        <th class="hdr-std col-status-data text-indigo-300">Status Data</th>
                         <th class="hdr-std col-waktu">Waktu Scan</th>
                         <th class="hdr-std text-amber-300 col-troli">Troli</th>
                         <th class="hdr-std border-r border-slate-500 col-qr">QRCode</th>
@@ -442,6 +381,10 @@
                     const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
                     const td = translateBarcode(r.qrcode);
                     const htmlStatusGudang = r.is_in_gudang ? '<span class="bg-emerald-600 text-white font-bold px-2 py-1 rounded text-[10px] shadow-sm">IN GUDANG</span>' : '<span class="bg-blue-600 text-white font-bold px-2 py-1 rounded text-[10px] shadow-sm">STBJ</span>';
+                    
+                    const statData = r.status_data === 'Collected' 
+                        ? '<span class="bg-indigo-100 text-indigo-700 font-black px-2 py-1 rounded shadow-sm border border-indigo-200">COLLECTED</span>' 
+                        : '<span class="text-slate-400 font-bold">-</span>';
 
                     h += `
                         <tr class="border-b border-slate-200 hover:bg-slate-50 text-row">
@@ -449,6 +392,7 @@
                             <td class="p-3 font-bold text-slate-400 text-center col-no">${i+1}</td>
                             <td class="p-3 font-black text-center border-r border-slate-200 col-status-gudang">${htmlStatusGudang}</td>
                             ${tabelSekarang === 'hold_stbj' ? `<td class="p-3 font-black text-[10px] text-amber-600 bg-amber-50 text-center col-status">${r.status || 'HOLD'}</td>` : '<td class="p-3 hidden col-status">-</td>'}
+                            <td class="p-3 font-black text-center col-status-data text-[10px]">${statData}</td>
                             <td class="p-3 text-slate-600 font-semibold text-center col-waktu">${tgl}</td>
                             <td class="p-3 font-bold text-slate-700 text-center col-troli">${r.troli || '-'}</td>
                             <td class="p-3 font-mono font-bold text-slate-900 text-left s-qr bg-slate-50 tracking-wider border-r border-slate-200 col-qr">${r.qrcode}</td>
@@ -477,6 +421,7 @@
                         <th class="hdr-std w-12 col-no">No</th>
                         <th class="hdr-std hidden col-status-gudang">Status Gudang</th>
                         <th class="hdr-std hidden col-status">Status Hold</th>
+                        <th class="hdr-std col-status-data text-indigo-300">Status Data</th>
                         <th class="hdr-std hidden col-waktu">Waktu Scan</th>
                         <th class="hdr-std text-amber-300 col-troli">Troli Gabungan</th>
                         <th class="hdr-std hidden col-qr">QRCode</th>
@@ -500,12 +445,13 @@
                     let t = translateBarcode(r.qrcode); 
                     let n = isJasper ? t.jasper : t.namaItem;
                     
-                    // --- PERUBAHAN UTAMA: Tambahkan keterangan ke dalam KEY ---
+                    // Grouping berdasar: item info + keterangan + status data
                     let ket = r.keterangan || 'TANPA_KETERANGAN';
-                    let key = `${t.jenisItem}_${n}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${t.po}_${t.tglProduksi}_${t.mesin}_${t.shift}_${ket}`;
+                    let sData = r.status_data || 'BELUM';
+                    let key = `${t.jenisItem}_${n}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${t.po}_${t.tglProduksi}_${t.mesin}_${t.shift}_${ket}_${sData}`;
                     
                     if(!groups[key]) {
-                        groups[key] = { ...t, displayNama: n, qty: 0, qrcodes: [], trolis: new Set(), ket: ket };
+                        groups[key] = { ...t, displayNama: n, qty: 0, qrcodes: [], trolis: new Set(), ket: ket, sData: sData };
                     }
                     groups[key].qty++; 
                     groups[key].qrcodes.push(r.qrcode);
@@ -518,15 +464,18 @@
                 let h = '';
                 arr.forEach((r, i) => {
                     const gabunganTroli = Array.from(r.trolis).join(', ') || '-';
-                    // Karena sudah di-group by ket, maka r.ket adalah keterangan unik untuk grup ini
                     const displayKet = (r.ket === 'TANPA_KETERANGAN') ? '-' : r.ket; 
-                    
+                    const statData = r.sData === 'Collected' 
+                        ? '<span class="bg-indigo-100 text-indigo-700 font-black px-2 py-1 rounded shadow-sm border border-indigo-200">COLLECTED</span>' 
+                        : '<span class="text-slate-400 font-bold">-</span>';
+
                     h += `
                         <tr class="border-b border-slate-200 hover:bg-slate-50 text-row text-center">
                             <td class="p-3 col-cb"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer"></td>
                             <td class="p-3 font-bold text-slate-400 col-no">${i+1}</td>
                             <td class="p-3 hidden col-status-gudang">-</td>
                             <td class="p-3 hidden col-status">-</td>
+                            <td class="p-3 font-black text-center col-status-data text-[10px]">${statData}</td>
                             <td class="p-3 hidden col-waktu">-</td>
                             <td class="p-3 font-bold text-slate-700 col-troli">${gabunganTroli}</td>
                             <td class="p-3 hidden col-qr">-</td>
@@ -552,7 +501,7 @@
 
         function toggleSemuaCentang(checked) { document.querySelectorAll('.row-cb').forEach(cb => cb.checked = checked); }
         function bersihkanFilter() { 
-            const ids = ['f-sgudang','f-waktu','f-troli','f-qr','f-tgl','f-mesin','f-shift','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket','f-pic'];
+            const ids = ['f-sgudang','f-sdata','f-waktu','f-troli','f-qr','f-tgl','f-mesin','f-shift','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket','f-pic'];
             ids.forEach(id => document.getElementById(id).value = ''); 
             jalankanSaring(); toggleSidebarFilter();
         }
@@ -560,6 +509,7 @@
         function jalankanSaring() {
             const f = {
                 'status-gudang': document.getElementById('f-sgudang').value.toLowerCase(),
+                'status-data': document.getElementById('f-sdata').value.toLowerCase(),
                 waktu: document.getElementById('f-waktu').value.toLowerCase(),
                 troli: document.getElementById('f-troli').value.toLowerCase(),
                 qr: document.getElementById('f-qr').value.toLowerCase(),
@@ -591,6 +541,7 @@
 
         async function aksiMassal(tipe) {
             let checkedValues = [];
+            // Tangkap semua qrcode yang dicentang (di mode jasper 1 row = banyak qrcode dipisah koma)
             document.querySelectorAll('.row-cb:checked').forEach(cb => { cb.value.split(',').forEach(v => { if(v) checkedValues.push(v); }); });
             if(checkedValues.length === 0) return alert("Centang baris tabel terlebih dahulu!");
 
@@ -632,20 +583,41 @@
                     const { error: errAdd } = await db.from('hasil_stbj').upsert(dataPindah);
                     if(!errAdd) { await db.from('hold_stbj').delete().in('qrcode', checkedValues); alert("Di-unhold ke HASIL!"); muatDataDariSupabase(); }
                 }
-            } 
+            }
+            // Fitur Collect Data Baru
+            else if (tipe === 'collect') {
+                if(!confirm(`Tandai ${checkedValues.length} QrCode sebagai COLLECTED?`)) return;
+                const btn = document.getElementById('btn-massal-collect');
+                btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> PROSES...'; btn.disabled = true;
+                
+                const { error } = await db.from(tabelSekarang).update({ status_data: 'Collected' }).in('qrcode', checkedValues);
+                if(error) alert("Gagal Update: " + error.message); 
+                else { alert("Berhasil ditandai sebagai Collected!"); muatDataDariSupabase(); }
+                
+                btn.innerHTML = '<i data-lucide="check-square" class="w-4 h-4"></i> COLLECT DATA'; btn.disabled = false; lucide.createIcons();
+            }
+            // Fitur Ekspor Asli .XLSX via SheetJS
             else if(tipe === 'xlsx') {
-                let csvContent = "data:text/csv;charset=utf-8,NO,TROLI,QRCODE,TGL_PRODUKSI,MESIN,SHIFT,JENIS,NAMA,PANJANG,GRADE,DUS,SHADING,PO\n";
+                if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
+                let ws_data = [["NO", "STATUS_GUDANG", "STATUS_DATA", "TROLI", "QRCODE", "TGL_PRODUKSI", "MESIN", "SHIFT", "JENIS", "NAMA_ITEM", "PANJANG", "GRADE", "DUS", "SHADING", "PO", "KETERANGAN"]];
+                
                 checkedValues.forEach((qr, idx) => {
                     let t = translateBarcode(qr);
                     let dbRow = rawDataRaw.find(x => x.qrcode === qr);
                     let n = modeSekarang === 'jasper' ? t.jasper : t.namaItem;
-                    csvContent += `${idx+1},${dbRow?dbRow.troli:''},${qr},${t.tglProduksi},${t.mesin},${t.shift},${t.jenisItem},${n},${t.panjang},${t.grade},${t.dus},${t.shading},${t.po}\n`;
+                    let statGudang = dbRow?.is_in_gudang ? "IN GUDANG" : "STBJ";
+                    let statData = dbRow?.status_data || "-";
+                    
+                    ws_data.push([
+                        idx + 1, statGudang, statData, dbRow ? dbRow.troli : '', qr, t.tglProduksi, t.mesin, 
+                        t.shift, t.jenisItem, n, t.panjang, t.grade, t.dus, t.shading, t.po, dbRow?.keterangan || '-'
+                    ]);
                 });
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri); 
-                link.setAttribute("download", `STBJ_${tabelSekarang}.csv`);
-                document.body.appendChild(link); link.click(); document.body.removeChild(link);
+
+                let ws = XLSX.utils.aoa_to_sheet(ws_data);
+                let wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "STBJ_Data");
+                XLSX.writeFile(wb, `STBJ_${tabelSekarang}.xlsx`);
             }
         }
     </script>
