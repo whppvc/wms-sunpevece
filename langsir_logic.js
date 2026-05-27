@@ -151,7 +151,7 @@ function addRow(troli, area, code, isDuplicate = false) {
     
     const stbjHtml = '<span class="text-slate-400 font-bold stbj-val" data-status="unverified">-</span>';
     const kodeHtml = isDuplicate 
-        ? '<span class="text-white font-bold bg-red-600 px-2 py-1 text-[10px] rounded kode-val shadow-sm" data-status="invalid">DUPLIKAT LOKAL</span>'
+        ? '<span class="text-white font-bold bg-red-600 px-2 py-1 text-[10px] rounded kode-val shadow-sm" data-status="invalid">DUPLIKAT SCAN</span>'
         : '<span class="text-slate-400 font-bold kode-val" data-status="unverified">-</span>';
 
     tr.innerHTML = `
@@ -221,7 +221,7 @@ async function validasiDanCek() {
             }
 
             // 2. UPDATE STATUS KODE
-            // Amankan Duplikat Lokal (agar tak ditimpa menjadi Accept)
+            // Amankan DUPLIKAT SCAN (agar tak ditimpa menjadi Accept)
             if(kodeCell.innerText.includes('LOKAL')) {
                 hasError = true;
             } 
