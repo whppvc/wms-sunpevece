@@ -19,50 +19,50 @@
 </head>
 <body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-28">
 
-    <div class="w-full max-w-7xl mx-auto px-3 sm:px-4 pt-4 relative">
+    <div class="w-full px-2 sm:px-4 pt-4 relative">
         
-        <div class="flex border-b border-slate-200 mb-4 bg-white rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
-            <button onclick="switchTab('scan')" id="btn-tab-scan" class="px-6 py-4 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs"><i data-lucide="barcode" class="w-4 h-4"></i> SCAN ITEM PER DUS</button>
-            <button onclick="switchTab('csv')" id="btn-tab-csv" class="px-6 py-4 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> IMPORT CSV</button>
+        <div class="flex border-b border-slate-200 mb-3 bg-white rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
+            <button onclick="switchTab('scan')" id="btn-tab-scan" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs"><i data-lucide="barcode" class="w-4 h-4"></i> SCAN ITEM PER DUS</button>
+            <button onclick="switchTab('csv')" id="btn-tab-csv" class="px-6 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> IMPORT CSV</button>
         </div>
 
-        <div class="bg-white p-4 sm:p-6 rounded-b-xl rounded-tr-xl shadow-sm border border-slate-200 mb-4">
+        <div class="bg-white p-3 sm:p-5 rounded-b-xl rounded-tr-xl shadow-sm border border-slate-200 mb-3">
             
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 items-end mb-5 border-b border-slate-100 pb-5">
-                
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-2 sm:gap-4 items-end mb-4 border-b border-slate-100 pb-4">
                 <div class="md:col-span-3">
-                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Pilih Troli</label>
-                    <select id="select-troli" class="w-full p-2.5 sm:p-3 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-blue-600 text-slate-800 cursor-pointer bg-slate-50 text-sm">
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Pilih Troli</label>
+                    <select id="select-troli" class="w-full p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-blue-600 text-slate-800 cursor-pointer bg-slate-50 text-sm">
                         <option value="">-- Memuat Troli... --</option>
                     </select>
                 </div>
 
                 <div id="view-scan" class="md:col-span-9">
-                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Scan Fisik Kardus</label>
-                    <form id="form-scan" class="flex flex-col sm:flex-row gap-2">
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Scan Fisik Kardus</label>
+                    <form id="form-scan" class="flex gap-2">
                         <div class="relative flex-1">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
-                            <input type="text" id="input-qrcode" class="w-full pl-10 p-2.5 sm:p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-black text-slate-800 text-base bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner ke kardus..." autocomplete="off">
+                            <input type="text" id="input-qrcode" class="w-full pl-10 p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-black text-slate-800 text-sm sm:text-base bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
                         </div>
-                        <button type="submit" class="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white px-6 py-2.5 sm:py-3 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-blue-900 text-xs sm:text-sm uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> ADD</button>
+                        <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-blue-900 text-xs sm:text-sm uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> <span class="hidden sm:inline">ADD</span></button>
                     </form>
                 </div>
 
                 <div id="view-csv" class="md:col-span-9 hidden">
-                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Upload File CSV</label>
-                    <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="file" id="input-csv" accept=".csv" class="flex-1 p-2 border-2 border-slate-200 rounded-lg outline-none text-sm font-bold text-slate-700 bg-slate-50 file:mr-4 file:py-1.5 file:px-4 file:rounded-md file:border-0 file:text-[11px] file:font-black file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition cursor-pointer">
-                        <button onclick="prosesCSV()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-emerald-800 text-xs sm:text-sm uppercase"><i data-lucide="upload-cloud" class="w-4 h-4"></i> PROSES CSV</button>
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Upload File CSV</label>
+                    <div class="flex gap-2">
+                        <input type="file" id="input-csv" accept=".csv" class="flex-1 p-1.5 border-2 border-slate-200 rounded-lg outline-none text-sm font-bold text-slate-700 bg-slate-50 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-black file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition cursor-pointer">
+                        <button onclick="prosesCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-6 py-2 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-emerald-800 text-xs sm:text-sm uppercase"><i data-lucide="upload-cloud" class="w-4 h-4"></i> <span class="hidden sm:inline">PROSES</span></button>
                     </div>
                 </div>
             </div>
 
-            <div class="flex flex-col lg:flex-row justify-between gap-3">
-                <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full lg:w-auto">
-                    <button onclick="toggleSidebarFilter()" class="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
+            <div class="flex flex-row justify-between gap-2 items-center">
+                
+                <div class="flex gap-1.5">
+                    <button onclick="toggleSidebarFilter()" class="p-2 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase" title="Filter"><i data-lucide="filter" class="w-4 h-4"></i> <span class="hidden sm:inline">Filter</span></button>
                     
-                    <div class="relative w-full sm:w-auto">
-                        <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="w-full px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase"><i data-lucide="eye-off" class="w-4 h-4"></i> Kolom</button>
+                    <div class="relative">
+                        <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="p-2 sm:px-3 sm:py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase" title="Kolom"><i data-lucide="eye-off" class="w-4 h-4"></i> <span class="hidden sm:inline">Kolom</span></button>
                         <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
                             <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
                                 <span class="text-[11px] font-black text-slate-500 uppercase">Sembunyikan Kolom</span>
@@ -72,19 +72,19 @@
                         </div>
                     </div>
                     
-                    <button onclick="undoHapusSTBJ()" class="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo</button>
-                    <button onclick="hapusBarisTerpilih()" class="px-3 py-2 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus</button>
+                    <button onclick="undoHapusSTBJ()" class="p-2 sm:px-3 sm:py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase" title="Undo"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> <span class="hidden sm:inline">Undo</span></button>
+                    <button onclick="hapusBarisTerpilih()" class="p-2 sm:px-3 sm:py-2 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i> <span class="hidden sm:inline">Hapus</span></button>
                 </div>
 
-                <div class="grid grid-cols-2 sm:flex gap-2 w-full lg:w-auto">
-                    <button onclick="holdManual()" class="px-4 py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 font-black rounded-lg shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold</button>
-                    <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="col-span-2 sm:col-span-1 px-5 py-2.5 bg-slate-900 text-white font-black rounded-lg shadow-sm hover:bg-black border-b-2 border-slate-950 transition text-xs flex items-center justify-center gap-2 uppercase tracking-wide"><i data-lucide="search-check" class="w-4 h-4"></i> Validasi Duplikat</button>
+                <div class="flex gap-1.5">
+                    <button onclick="holdManual()" class="p-2 sm:px-4 sm:py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 font-black rounded-lg shadow-sm text-[10px] sm:text-xs flex items-center justify-center gap-1.5 transition uppercase whitespace-nowrap"><i data-lucide="pause-circle" class="w-4 h-4"></i> <span class="hidden sm:inline">Hold</span></button>
+                    <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="px-3 py-2 sm:px-5 sm:py-2 bg-slate-900 text-white font-black rounded-lg shadow-sm hover:bg-black border-b-2 border-slate-950 transition text-[10px] sm:text-xs flex items-center justify-center gap-1.5 uppercase whitespace-nowrap"><i data-lucide="search-check" class="w-4 h-4"></i> Validasi <span class="hidden sm:inline">Duplikat</span></button>
                 </div>
             </div>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
-            <div class="table-container overflow-x-auto w-full max-h-[55vh]">
+            <div class="table-container overflow-x-auto w-full max-h-[60vh]">
                 <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-stbj">
                     <thead class="sticky top-0 z-10 shadow-sm">
                         <tr>
@@ -116,8 +116,8 @@
     </div>
 
     <div class="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 p-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
-        <div class="max-w-7xl mx-auto flex justify-center md:justify-end">
-            <button id="btn-save" onclick="saveToDatabaseSTBJ()" class="w-full md:w-auto px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-wide cursor-pointer transition active:scale-95 uppercase border-b-2 border-emerald-800">
+        <div class="w-full px-2 sm:px-4 flex justify-center md:justify-end">
+            <button id="btn-save" onclick="saveToDatabaseSTBJ()" class="w-full md:w-auto px-8 py-2.5 sm:py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-wide cursor-pointer transition active:scale-95 uppercase border-b-2 border-emerald-800">
                 <i data-lucide="save" class="w-5 h-5"></i> 
                 <span>SIMPAN KE GUDANG</span>
                 <span class="hidden sm:inline font-semibold text-[10px] ml-2 bg-emerald-800 px-2 py-1 rounded-md opacity-90">(Unique = Hasil, Duplikat = Hold)</span>
@@ -126,29 +126,28 @@
     </div>
 
     <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
-        <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide"><i data-lucide="filter" class="w-5 h-5"></i> Filter STBJ Lengkap</h3>
-            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Tabel</h3>
+            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
-        <div class="p-4 flex flex-col gap-4 overflow-y-auto">
-            <div class="grid grid-cols-2 gap-3">
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label><input type="text" id="fs-status" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label><input type="text" id="fs-troli" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="fs-qr" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="text" id="fs-tgl" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label><input type="text" id="fs-mesin" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label><input type="text" id="fs-shift" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><input type="text" id="fs-jenis" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><input type="text" id="fs-nama" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><input type="text" id="fs-pjg" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><input type="text" id="fs-grade" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><input type="text" id="fs-dus" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="fs-shading" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PO</label><input type="text" id="fs-po" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="fs-ket" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PIC Input</label><input type="text" id="fs-pic" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+        <div class="p-3 flex flex-col gap-3 overflow-y-auto">
+            <div class="grid grid-cols-2 gap-2">
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label><input type="text" id="fs-status" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label><input type="text" id="fs-troli" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="fs-qr" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="text" id="fs-tgl" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label><input type="text" id="fs-mesin" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label><input type="text" id="fs-shift" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><input type="text" id="fs-jenis" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><input type="text" id="fs-nama" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><input type="text" id="fs-pjg" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><input type="text" id="fs-grade" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><input type="text" id="fs-dus" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="fs-shading" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PO</label><input type="text" id="fs-po" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="fs-ket" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
             </div>
-            <button onclick="resetFilterSTBJ()" class="mt-4 py-3 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-xs uppercase transition border border-slate-300">RESET FILTER</button>
+            <button onclick="resetFilterSTBJ()" class="mt-2 py-2.5 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-xs uppercase transition border border-slate-300">RESET FILTER</button>
         </div>
     </div>
 
@@ -225,8 +224,8 @@
             currentTab = tab;
             document.getElementById('view-scan').classList.toggle('hidden', tab !== 'scan');
             document.getElementById('view-csv').classList.toggle('hidden', tab !== 'csv');
-            document.getElementById('btn-tab-scan').className = tab === 'scan' ? 'px-6 py-4 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs' : 'px-6 py-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs';
-            document.getElementById('btn-tab-csv').className = tab === 'csv' ? 'px-6 py-4 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs' : 'px-6 py-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs';
+            document.getElementById('btn-tab-scan').className = tab === 'scan' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs';
+            document.getElementById('btn-tab-csv').className = tab === 'csv' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs';
         }
 
         async function loadInitialSTBJData() {
