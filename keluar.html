@@ -24,8 +24,9 @@
             </form>
         </div>
 
-        <div class="flex justify-end mt-2 mb-4">
-            <button onclick="crossCekOutbound()" id="btn-crosscek" class="px-5 py-3 bg-white text-slate-800 font-black rounded-lg border-2 border-slate-800 hover:bg-slate-100 transition cursor-pointer text-sm flex items-center gap-2 active:scale-95 uppercase tracking-wide"><i data-lucide="scan-search" class="w-4 h-4"></i> VALIDASI FISIK GUDANG</button>
+        <div class="flex flex-col sm:flex-row justify-end mt-2 mb-4 gap-3">
+            <button onclick="bukaModalReqPO()" class="px-5 py-3 bg-orange-600 text-white font-black rounded-lg shadow-sm border-b-4 border-orange-800 hover:bg-orange-700 transition cursor-pointer text-sm flex items-center justify-center gap-2 active:scale-95 uppercase tracking-wide"><i data-lucide="help-circle" class="w-4 h-4"></i> REQUEST GANTI PO</button>
+            <button onclick="crossCekOutbound()" id="btn-crosscek" class="px-5 py-3 bg-white text-slate-800 font-black rounded-lg shadow-sm border-2 border-slate-800 hover:bg-slate-100 transition cursor-pointer text-sm flex items-center justify-center gap-2 active:scale-95 uppercase tracking-wide"><i data-lucide="scan-search" class="w-4 h-4"></i> VALIDASI FISIK GUDANG</button>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
@@ -57,18 +58,18 @@
         </div>
         
         <div class="pt-4 flex flex-col md:flex-row gap-3">
-            <button onclick="bukaModalReqPO()" class="flex-1 py-4 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-widest cursor-pointer transition active:scale-95 uppercase border-b-4 border-orange-800"><i data-lucide="help-circle" class="w-5 h-5"></i> REQUEST GANTI PO</button>
-            <button id="btn-proses-keluar" onclick="bukaModalKeluar()" class="flex-1 py-4 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-widest cursor-pointer transition active:scale-95 uppercase border-b-4 border-slate-950"><i data-lucide="truck-fast" class="w-5 h-5"></i> PROSES KELUAR BARANG</button>
+            <button id="btn-proses-keluar" onclick="bukaModalKeluar()" class="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-widest cursor-pointer transition active:scale-95 uppercase border-b-4 border-slate-950"><i data-lucide="truck-fast" class="w-5 h-5"></i> PROSES KELUAR BARANG</button>
         </div>
     </div>
 
+    <!-- Modal Keluar (Sesuai validasi PO) -->
     <div id="modal-keluar" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
             <h3 class="text-xl font-black mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="package-minus" class="text-slate-600"></i> Tujuan Kirim</h3>
-            <p class="text-xs font-semibold text-slate-500 mb-6 border-b border-slate-100 pb-2">Pilih PO Target. Jika fisik item memiliki PO aktual yang berbeda, ia <span class="text-red-500 font-bold">TIDAK AKAN KELUAR</span>.</p>
+            <p class="text-xs font-semibold text-slate-500 mb-6 border-b border-slate-100 pb-2">Pilih PO Tujuan. Jika fisik item memiliki PO aktual yang berbeda, ia <span class="text-red-500 font-bold">TIDAK AKAN KELUAR</span>.</p>
             <div class="space-y-4 mb-6">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">PO Target</label>
+                    <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Pilih PO Tujuan</label>
                     <select id="out-po-target" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-slate-800 font-bold text-slate-800 uppercase cursor-pointer bg-slate-50"></select>
                 </div>
                 <div>
@@ -83,14 +84,17 @@
         </div>
     </div>
 
+    <!-- Modal Request Ganti PO -->
     <div id="modal-req-po" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[90] px-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
             <h3 class="text-xl font-black mb-1 flex items-center gap-2 text-orange-600"><i data-lucide="file-warning"></i> Request Ganti PO</h3>
             <p class="text-[11px] font-bold text-slate-500 mb-6 border-b border-slate-100 pb-2">Semua baris bermasalah (merah / belum divalidasi) akan dipindah ke tabel antrean untuk diganti PO-nya oleh CS.</p>
             <div class="space-y-4 mb-6">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Request Tujuan PO</label>
-                    <input type="text" id="req-po-target" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-orange-500 font-bold text-slate-800 uppercase bg-orange-50/30" placeholder="Ketik nomor PO yang diinginkan...">
+                    <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Pilih PO Tujuan</label>
+                    <select id="req-po-target" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-orange-500 font-bold text-slate-800 uppercase bg-orange-50/30 cursor-pointer">
+                        <option value="">-- MEMUAT PO --</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wide mb-2 text-slate-600">Alasan / Keterangan (Opsional)</label>
