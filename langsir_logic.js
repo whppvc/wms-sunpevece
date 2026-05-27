@@ -3,7 +3,9 @@ let deleteStack = [], globalRowId = 0;
 let hiddenCols = [];
 
 const colDefinitions = [
+    { id: 'col-cb', label: 'Checkbox', default: true },
     { id: 'col-btn', label: 'Action Hapus', default: true },
+    { id: 'col-no', label: 'Nomor Urut', default: true },
     { id: 'col-stbj', label: 'Status STBJ', default: true },
     { id: 'col-kode', label: 'Status Kode', default: true },
     { id: 'col-troli', label: 'Troli', default: true },
@@ -180,9 +182,9 @@ function addRow(troli, area, code, isDuplicate = false) {
         : '<span class="text-slate-400 font-bold kode-val" data-status="unverified">-</span>';
 
     tr.innerHTML = `
-        <td class="p-3"><input type="checkbox" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+        <td class="p-3 col-cb"><input type="checkbox" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
         <td class="p-3 text-center col-btn"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 cursor-pointer p-1.5 rounded bg-white shadow-sm border border-slate-200"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
-        <td class="p-3 font-bold no-cell text-center text-slate-500"></td>
+        <td class="p-3 font-bold no-cell text-center text-slate-500 col-no"></td>
         <td class="p-3 font-bold text-center border-r border-slate-200 col-stbj">${stbjHtml}</td>
         <td class="p-3 font-bold text-center border-r border-slate-200 col-kode">${kodeHtml}</td>
         <td class="p-3 troli-cell font-bold text-slate-700 col-troli">${troli}</td>
@@ -339,14 +341,14 @@ function salinDataTabel() {
 
     let copyString = "";
     const headers = Array.from(document.querySelectorAll('#thead-langsir th'))
-        .filter(th => window.getComputedStyle(th).display !== 'none' && !th.querySelector('input') && !th.querySelector('.lucide-trash-2'))
+        .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-btn'))
         .map(th => th.innerText.trim().replace(/\n/g, ' '));
     copyString += headers.join('\t') + '\n';
 
     cek.forEach(cb => {
         const tr = cb.closest('tr'); const rowData = [];
-        Array.from(tr.children).forEach((td, idx) => {
-            if(idx === 0 || idx === 1) return;
+        Array.from(tr.children).forEach(td => {
+            if(td.classList.contains('col-cb') || td.classList.contains('col-btn')) return;
             if(window.getComputedStyle(td).display !== 'none') {
                 rowData.push(td.innerText.trim().replace(/\n/g, ' '));
             }
