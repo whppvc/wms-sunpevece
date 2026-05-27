@@ -168,7 +168,6 @@
         let hiddenCols = [];
         const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
-        // Ditambahkan kolom col-status-gudang
         const colDefinitions = [
             { id: 'col-cb', label: 'Checkbox', default: true },
             { id: 'col-no', label: 'Nomor Urut', default: true },
@@ -406,6 +405,7 @@
             if(error) alert("Gagal Hapus: " + error.message); else { await loadKamusDanJasper(); renderKatalogList(); }
         }
 
+        // --- Berikut fungsi renderHeaderDanTabel yang sudah diupdate ---
         function renderHeaderDanTabel() {
             const thead = document.getElementById('thead-stbj');
             const tbody = document.getElementById('tbody-stbj');
@@ -491,7 +491,7 @@
                         <th class="hdr-std border-r border-slate-500 col-shading">Shading</th>
                         <th class="hdr-std col-po">PO Aktual</th>
                         <th class="hdr-std bg-slate-900 text-blue-300 col-qty">QTY (DUS)</th>
-                        <th class="hdr-std text-left pl-4 col-ket">Keterangan Gabungan</th>
+                        <th class="hdr-std text-left pl-4 col-ket">Keterangan</th>
                         <th class="hdr-std hidden col-pic">PIC Input</th>
                     </tr>`;
                 
@@ -499,13 +499,17 @@
                 rawDataRaw.forEach(r => {
                     let t = translateBarcode(r.qrcode); 
                     let n = isJasper ? t.jasper : t.namaItem;
-                    let key = `${t.jenisItem}_${n}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${t.po}_${t.tglProduksi}_${t.mesin}_${t.shift}`;
                     
-                    if(!groups[key]) groups[key] = { ...t, displayNama: n, qty: 0, qrcodes: [], trolis: new Set(), keterangans: new Set() };
+                    // --- PERUBAHAN UTAMA: Tambahkan keterangan ke dalam KEY ---
+                    let ket = r.keterangan || 'TANPA_KETERANGAN';
+                    let key = `${t.jenisItem}_${n}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${t.po}_${t.tglProduksi}_${t.mesin}_${t.shift}_${ket}`;
+                    
+                    if(!groups[key]) {
+                        groups[key] = { ...t, displayNama: n, qty: 0, qrcodes: [], trolis: new Set(), ket: ket };
+                    }
                     groups[key].qty++; 
                     groups[key].qrcodes.push(r.qrcode);
                     if(r.troli) groups[key].trolis.add(r.troli);
-                    if(r.keterangan) groups[key].keterangans.add(r.keterangan);
                 });
 
                 let arr = Object.values(groups);
@@ -514,7 +518,9 @@
                 let h = '';
                 arr.forEach((r, i) => {
                     const gabunganTroli = Array.from(r.trolis).join(', ') || '-';
-                    const gabunganKet = Array.from(r.keterangans).join(', ') || '-';
+                    // Karena sudah di-group by ket, maka r.ket adalah keterangan unik untuk grup ini
+                    const displayKet = (r.ket === 'TANPA_KETERANGAN') ? '-' : r.ket; 
+                    
                     h += `
                         <tr class="border-b border-slate-200 hover:bg-slate-50 text-row text-center">
                             <td class="p-3 col-cb"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer"></td>
@@ -535,7 +541,7 @@
                             <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${r.shading}</td>
                             <td class="p-3 font-black text-orange-600 bg-orange-50/40 s-po col-po">${r.po}</td>
                             <td class="p-3 font-black text-base text-slate-900 bg-slate-100 col-qty">${r.qty}</td>
-                            <td class="p-3 font-bold text-slate-600 text-left col-ket">${gabunganKet}</td>
+                            <td class="p-3 font-bold text-slate-600 text-left col-ket">${displayKet}</td>
                             <td class="p-3 hidden col-pic">-</td>
                         </tr>`;
                 });
