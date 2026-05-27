@@ -20,6 +20,7 @@
         <div class="flex border-b border-slate-200 mb-4 bg-white px-2 rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
             <button onclick="gantiModeRiwayat('qrcode')" id="tab-r-qr" class="px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition"><i data-lucide="list"></i> DETAIL QRCODE</button>
             <button onclick="gantiModeRiwayat('agregasi')" id="tab-r-agregasi" class="px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="bar-chart-3"></i> RANGKUMAN NAMA ITEM & QTY</button>
+            <button onclick="gantiModeRiwayat('hold')" id="tab-r-hold" class="px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="pause-circle"></i> TABEL HOLD</button>
         </div>
 
         <div class="flex flex-wrap gap-2 mb-4">
@@ -28,14 +29,12 @@
             <div id="toolbar-detail" class="flex flex-wrap gap-2">
                 <div class="relative">
                     <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="px-5 py-3 bg-white text-slate-700 hover:text-slate-900 font-black rounded-xl shadow-sm border-2 border-slate-200 text-xs flex items-center gap-2 active:scale-95 transition uppercase"><i data-lucide="eye-off" class="w-4 h-4"></i> KOLOM</button>
-                    
                     <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
                         <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
                             <span class="text-xs font-black text-slate-500 uppercase">Tampil / Sembunyi</span>
                             <button onclick="resetKolom()" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold hover:bg-blue-200">DEFAULT</button>
                         </div>
-                        <div class="flex flex-col gap-2 max-h-64 overflow-y-auto" id="list-kolom-toggles">
-                            </div>
+                        <div class="flex flex-col gap-2 max-h-64 overflow-y-auto" id="list-kolom-toggles"></div>
                     </div>
                 </div>
 
@@ -56,29 +55,27 @@
 
     <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
         <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide"><i data-lucide="filter" class="w-5 h-5"></i> Filter Tabel</h3>
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide"><i data-lucide="filter" class="w-5 h-5"></i> Filter Tabel Lengkap</h3>
             <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-5 h-5"></i></button>
         </div>
-        <div class="p-5 flex flex-col gap-4 overflow-y-auto">
-            <div>
-                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Cari QRCode</label>
-                <input type="text" id="flt-qr" oninput="saringTabelRiwayat()" class="w-full p-3 text-sm border-2 border-slate-200 focus:border-blue-500 font-bold rounded-lg outline-none transition" placeholder="Ketikan QRCode...">
-            </div>
-            <div>
-                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Cari Area</label>
-                <input type="text" id="flt-area" oninput="saringTabelRiwayat()" class="w-full p-3 text-sm border-2 border-slate-200 focus:border-blue-500 font-bold rounded-lg outline-none transition" placeholder="Area...">
-            </div>
-            <div>
-                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label>
-                <input type="text" id="flt-jenis" oninput="saringTabelRiwayat()" class="w-full p-3 text-sm border-2 border-slate-200 focus:border-blue-500 font-bold rounded-lg outline-none transition" placeholder="Plafon, List...">
-            </div>
-            <div>
-                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
-                <input type="text" id="flt-nama" oninput="saringTabelRiwayat()" class="w-full p-3 text-sm border-2 border-slate-200 focus:border-blue-500 font-bold rounded-lg outline-none transition" placeholder="Nama Barang...">
-            </div>
-            <div>
-                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Cari PO</label>
-                <input type="text" id="flt-po" oninput="saringTabelRiwayat()" class="w-full p-3 text-sm border-2 border-slate-200 focus:border-blue-500 font-bold rounded-lg outline-none transition" placeholder="PO Awal...">
+        <div class="p-4 flex flex-col gap-4 overflow-y-auto">
+            <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Waktu</label><input type="text" id="f-waktu" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli (Hold)</label><input type="text" id="f-troli" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label><input type="text" id="f-area" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="f-qr" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="text" id="f-tgl" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label><input type="text" id="f-mesin" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label><input type="text" id="f-shift" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><input type="text" id="f-jenis" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><input type="text" id="f-nama" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><input type="text" id="f-pjg" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><input type="text" id="f-grade" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><input type="text" id="f-dus" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="f-shading" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PO Awal</label><input type="text" id="f-po" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="f-ket" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PIC Input</label><input type="text" id="f-pic" oninput="saringTabelRiwayat()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
             </div>
             <button onclick="resetFilter()" class="mt-4 py-3 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-xs uppercase transition border border-slate-300">RESET FILTER</button>
         </div>
@@ -88,14 +85,12 @@
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200">
             <h3 class="text-lg font-black mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="map-pin" class="text-emerald-600"></i> Ganti Area Penyimpanan</h3>
             <p class="text-[11px] font-bold text-slate-500 mb-6" id="teks-info-area">Memilih X kardus untuk dipindah.</p>
-            
             <div class="mb-6">
                 <label class="block text-xs font-black uppercase tracking-wide mb-2 text-slate-600">Pindah Ke Area Baru</label>
                 <select id="select-new-area" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-emerald-600 font-bold text-slate-800 uppercase cursor-pointer bg-slate-50">
                     <option value="">-- MEMUAT AREA... --</option>
                 </select>
             </div>
-            
             <div class="flex gap-2">
                 <button type="button" onclick="tutupModalArea()" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-black rounded-xl hover:bg-slate-300 transition cursor-pointer text-xs uppercase">BATAL</button>
                 <button type="button" onclick="eksekusiGantiArea()" id="btn-eks-area" class="w-1/2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase border-b-4 border-emerald-800"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
@@ -109,12 +104,14 @@
     <script>
         let modeRiwayat = 'qrcode'; 
         let logLangsirRaw = [];
+        let holdLangsirRaw = [];
         let kamusData = [];
         let areaData = [];
         let hiddenCols = []; 
 
         const colDefinitions = [
             { id: 'col-waktu', label: 'Waktu Masuk', default: true },
+            { id: 'col-troli', label: 'Troli (Hold)', default: true },
             { id: 'col-area', label: 'Area', default: true },
             { id: 'col-qr', label: 'QRCode', default: true },
             { id: 'col-tgl', label: 'Tgl Produksi', default: true },
@@ -127,6 +124,7 @@
             { id: 'col-dus', label: 'Dus', default: true },
             { id: 'col-shading', label: 'Shading', default: true },
             { id: 'col-po', label: 'PO Awal', default: true },
+            { id: 'col-ket', label: 'Keterangan', default: true },
             { id: 'col-pic', label: 'User / PIC', default: true }
         ];
 
@@ -141,9 +139,8 @@
                     selArea.innerHTML = '<option value="">-- PILIH AREA --</option>';
                     areaData.forEach(a => selArea.innerHTML += `<option value="${a}">${a}</option>`);
                 }
-                
                 buatDropdownKolom();
-                await ambilRiwayatSupabase();
+                await ambilSemuaData();
             }, 200);
         });
 
@@ -169,8 +166,7 @@
 
         function resetKolom() {
             hiddenCols = [];
-            const checkboxes = document.querySelectorAll('#list-kolom-toggles input[type="checkbox"]');
-            checkboxes.forEach(cb => cb.checked = true);
+            document.querySelectorAll('#list-kolom-toggles input[type="checkbox"]').forEach(cb => cb.checked = true);
             terapkanStyleKolom();
         }
 
@@ -179,17 +175,19 @@
             document.getElementById('dynamic-col-styles').innerHTML = cssString;
         }
 
-        async function ambilRiwayatSupabase() {
-            document.getElementById('tbody-riwayat').innerHTML = `<tr><td colspan="16" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menarik Data Riwayat...</p></td></tr>`;
+        async function ambilSemuaData() {
+            document.getElementById('tbody-riwayat').innerHTML = `<tr><td colspan="18" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menarik Data...</p></td></tr>`;
             lucide.createIcons();
-
             try {
-                const { data, error } = await db.from('stok_qr').select('*').order('created_at', {ascending: false}).limit(1000);
-                if(error) throw error;
-                logLangsirRaw = data || [];
+                const [resRiwayat, resHold] = await Promise.all([
+                    db.from('stok_qr').select('*').order('created_at', {ascending: false}).limit(1000),
+                    db.from('hold_langsir').select('*').order('created_at', {ascending: false})
+                ]);
+                if(resRiwayat.data) logLangsirRaw = resRiwayat.data;
+                if(resHold.data) holdLangsirRaw = resHold.data;
                 renderTabelRiwayat();
             } catch(e) {
-                document.getElementById('tbody-riwayat').innerHTML = `<tr><td colspan="16" class="p-10 text-red-500 font-bold">Error: ${e.message}</td></tr>`;
+                document.getElementById('tbody-riwayat').innerHTML = `<tr><td colspan="18" class="p-10 text-red-500 font-bold">Error: ${e.message}</td></tr>`;
             }
         }
 
@@ -228,29 +226,30 @@
 
         function gantiModeRiwayat(m) {
             modeRiwayat = m;
-            document.getElementById('tab-r-qr').className = m === 'qrcode' ? 'px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition' : 'px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
-            document.getElementById('tab-r-agregasi').className = m === 'agregasi' ? 'px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition' : 'px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
-            
-            // Sembunyikan HANYA input cari QR karena di agregasi gak ada QR (Tombol toolbar tetap terlihat!)
-            document.getElementById('flt-qr').parentElement.style.display = m === 'qrcode' ? '' : 'none';
-            
+            ['qrcode', 'agregasi', 'hold'].forEach(tab => {
+                const el = document.getElementById('tab-r-' + tab);
+                if(m === tab) el.className = 'px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition';
+                else el.className = 'px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
+            });
             renderTabelRiwayat();
         }
 
-        function toggleSemuaCentang(checked) {
-            document.querySelectorAll('.cb-row').forEach(cb => cb.checked = checked);
-        }
+        function toggleSemuaCentang(checked) { document.querySelectorAll('.cb-row').forEach(cb => cb.checked = checked); }
 
         function renderTabelRiwayat() {
             const thead = document.getElementById('thead-riwayat');
             const tbody = document.getElementById('tbody-riwayat');
 
-            if(modeRiwayat === 'qrcode') {
+            if(modeRiwayat === 'qrcode' || modeRiwayat === 'hold') {
+                const isHold = modeRiwayat === 'hold';
+                const dataset = isHold ? holdLangsirRaw : logLangsirRaw;
+                
                 thead.innerHTML = `
                     <tr>
                         <th class="hdr-std w-10"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded"></th>
                         <th class="hdr-std w-12">No</th>
                         <th class="hdr-std col-waktu">Waktu Masuk</th>
+                        ${isHold ? '<th class="hdr-std col-troli text-amber-300">Troli</th>' : ''}
                         <th class="hdr-std col-area">Area</th>
                         <th class="hdr-std border-r border-slate-500 col-qr">QRCode</th>
                         <th class="hdr-std col-tgl">Tgl Produksi</th>
@@ -263,13 +262,14 @@
                         <th class="hdr-std col-dus">Dus</th>
                         <th class="hdr-std border-r border-slate-500 col-shading">Shading</th>
                         <th class="hdr-std text-orange-400 col-po">PO Awal</th>
-                        <th class="hdr-std col-pic">User / PIC</th>
+                        ${isHold ? '<th class="hdr-std col-ket text-amber-300">Keterangan</th>' : ''}
+                        <th class="hdr-std col-pic border-l border-slate-500">User / PIC</th>
                     </tr>`;
                 
-                if(logLangsirRaw.length === 0) { tbody.innerHTML = '<tr><td colspan="16" class="p-6 text-slate-400 font-bold">Belum ada riwayat.</td></tr>'; return; }
+                if(dataset.length === 0) { tbody.innerHTML = `<tr><td colspan="18" class="p-6 text-slate-400 font-bold">Belum ada data ${isHold ? 'Hold' : 'Riwayat'}.</td></tr>`; return; }
                 
                 let h = '';
-                logLangsirRaw.forEach((r, i) => {
+                dataset.forEach((r, i) => {
                     const trans = translateBarcode(r.qrcode);
                     const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
                     h += `
@@ -277,35 +277,36 @@
                             <td class="p-3"><input type="checkbox" value="${r.qrcode}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                             <td class="p-3 font-bold text-slate-400">${i+1}</td>
                             <td class="p-3 text-slate-600 font-semibold col-waktu">${tgl}</td>
-                            <td class="p-3 font-black text-emerald-600 r-area col-area">${r.area}</td>
-                            <td class="p-3 font-mono font-bold text-slate-900 text-left r-qr bg-slate-50 tracking-wider border-r border-slate-200 col-qr">${r.qrcode}</td>
+                            ${isHold ? `<td class="p-3 font-bold text-slate-700 col-troli">${r.troli || '-'}</td>` : ''}
+                            <td class="p-3 font-black text-emerald-600 col-area">${r.area}</td>
+                            <td class="p-3 font-mono font-bold text-slate-900 text-left bg-slate-50 tracking-wider border-r border-slate-200 col-qr">${r.qrcode}</td>
                             <td class="p-3 font-bold text-slate-600 col-tgl">${trans.tglProduksi}</td>
                             <td class="p-3 font-bold text-slate-600 col-mesin">${trans.mesin}</td>
                             <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shift">${trans.shift}</td>
-                            <td class="p-3 font-black text-blue-700 r-jenis col-jenis">${trans.jenis}</td>
-                            <td class="p-3 font-bold text-slate-800 text-left r-nama col-nama">${trans.nama}</td>
+                            <td class="p-3 font-black text-blue-700 col-jenis">${trans.jenis}</td>
+                            <td class="p-3 font-bold text-slate-800 text-left col-nama">${trans.nama}</td>
                             <td class="p-3 font-bold text-slate-600 col-pjg">${trans.pjg}</td>
                             <td class="p-3 font-bold text-slate-800 col-grade">${trans.grade}</td>
                             <td class="p-3 font-bold text-slate-800 col-dus">${trans.dus}</td>
                             <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${trans.shading}</td>
-                            <td class="p-3 font-black text-orange-600 bg-orange-50/50 r-po col-po">${trans.po}</td>
-                            <td class="p-3 font-bold text-[10px] uppercase text-slate-500 col-pic">${r.pic_input || '-'}</td>
+                            <td class="p-3 font-black text-orange-600 bg-orange-50/50 col-po">${trans.po}</td>
+                            ${isHold ? `<td class="p-3 font-bold text-slate-700 text-left col-ket">${r.keterangan || '-'}</td>` : ''}
+                            <td class="p-3 font-bold text-[10px] uppercase text-slate-500 col-pic border-l border-slate-200">${r.pic_input || '-'}</td>
                         </tr>`;
                 });
                 tbody.innerHTML = h;
             } 
-            else {
-                // Mode Agregasi
+            else if(modeRiwayat === 'agregasi') {
                 thead.innerHTML = `
                     <tr>
                         <th class="hdr-std w-10"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded"></th>
                         <th class="hdr-std w-12">No</th>
-                        <th class="hdr-std">Area</th>
-                        <th class="hdr-std">Jenis Item</th>
-                        <th class="hdr-std text-left pl-4">Nama Item</th>
-                        <th class="hdr-std">Panjang</th>
-                        <th class="hdr-std">Grade</th>
-                        <th class="hdr-std border-r border-slate-500">PO Bawaan</th>
+                        <th class="hdr-std col-area">Area</th>
+                        <th class="hdr-std col-jenis">Jenis Item</th>
+                        <th class="hdr-std text-left pl-4 col-nama">Nama Item</th>
+                        <th class="hdr-std col-pjg">Panjang</th>
+                        <th class="hdr-std col-grade">Grade</th>
+                        <th class="hdr-std border-r border-slate-500 col-po">PO Bawaan</th>
                         <th class="hdr-std text-emerald-400 text-lg">QTY TOTAL (DUS)</th>
                     </tr>`;
 
@@ -313,7 +314,6 @@
                 logLangsirRaw.forEach(r => {
                     const trans = translateBarcode(r.qrcode);
                     let key = `${r.area}_${trans.jenis}_${trans.nama}_${trans.pjg}_${trans.grade}_${trans.po}`;
-                    
                     if(!groups[key]) groups[key] = { area: r.area, jenis: trans.jenis, nama: trans.nama, pjg: trans.pjg, grade: trans.grade, po: trans.po, qty: 0 };
                     groups[key].qty++;
                 });
@@ -327,12 +327,12 @@
                         <tr class="border-b border-slate-200 hover:bg-slate-50 transition r-row">
                             <td class="p-3"><input type="checkbox" value="agg_${i}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                             <td class="p-3 font-bold text-slate-400">${i+1}</td>
-                            <td class="p-3 font-black text-emerald-600 r-area">${r.area}</td>
-                            <td class="p-3 font-black text-blue-700 r-jenis">${r.jenis}</td>
-                            <td class="p-3 font-bold text-slate-800 text-left r-nama">${r.nama}</td>
-                            <td class="p-3 font-bold text-slate-600">${r.pjg}</td>
-                            <td class="p-3 font-bold text-slate-800">${r.grade}</td>
-                            <td class="p-3 font-black text-orange-600 bg-orange-50/40 border-r border-slate-200 r-po">${r.po}</td>
+                            <td class="p-3 font-black text-emerald-600 col-area">${r.area}</td>
+                            <td class="p-3 font-black text-blue-700 col-jenis">${r.jenis}</td>
+                            <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama}</td>
+                            <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg}</td>
+                            <td class="p-3 font-bold text-slate-800 col-grade">${r.grade}</td>
+                            <td class="p-3 font-black text-orange-600 bg-orange-50/40 border-r border-slate-200 col-po">${r.po}</td>
                             <td class="p-3 font-black text-xl text-emerald-700 bg-emerald-50">${r.qty}</td>
                         </tr>`;
                 });
@@ -343,15 +343,8 @@
         }
 
         function toggleSidebarFilter() {
-            const sb = document.getElementById('sidebar-filter');
-            const overlay = document.getElementById('overlay-klik-luar');
-            if(sb.classList.contains('translate-x-full')) {
-                sb.classList.remove('translate-x-full');
-                overlay.classList.remove('hidden');
-            } else {
-                sb.classList.add('translate-x-full');
-                overlay.classList.add('hidden');
-            }
+            document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
+            document.getElementById('overlay-klik-luar').classList.toggle('hidden');
         }
 
         function tutupPopups() {
@@ -361,39 +354,45 @@
         }
 
         function resetFilter() {
-            ['flt-qr', 'flt-area', 'flt-jenis', 'flt-nama', 'flt-po'].forEach(id => document.getElementById(id).value = '');
-            saringTabelRiwayat();
-            toggleSidebarFilter();
+            const inputs = ['f-waktu','f-troli','f-area','f-qr','f-tgl','f-mesin','f-shift','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket','f-pic'];
+            inputs.forEach(id => document.getElementById(id).value = '');
+            saringTabelRiwayat(); toggleSidebarFilter();
         }
 
         function saringTabelRiwayat() {
-            const fQr = document.getElementById('flt-qr').value.toLowerCase();
-            const fArea = document.getElementById('flt-area').value.toLowerCase();
-            const fJenis = document.getElementById('flt-jenis').value.toLowerCase();
-            const fNama = document.getElementById('flt-nama').value.toLowerCase();
-            const fPo = document.getElementById('flt-po').value.toLowerCase();
+            const f = {
+                waktu: document.getElementById('f-waktu').value.toLowerCase(),
+                troli: document.getElementById('f-troli').value.toLowerCase(),
+                area: document.getElementById('f-area').value.toLowerCase(),
+                qr: document.getElementById('f-qr').value.toLowerCase(),
+                tgl: document.getElementById('f-tgl').value.toLowerCase(),
+                mesin: document.getElementById('f-mesin').value.toLowerCase(),
+                shift: document.getElementById('f-shift').value.toLowerCase(),
+                jenis: document.getElementById('f-jenis').value.toLowerCase(),
+                nama: document.getElementById('f-nama').value.toLowerCase(),
+                pjg: document.getElementById('f-pjg').value.toLowerCase(),
+                grade: document.getElementById('f-grade').value.toLowerCase(),
+                dus: document.getElementById('f-dus').value.toLowerCase(),
+                shading: document.getElementById('f-shading').value.toLowerCase(),
+                po: document.getElementById('f-po').value.toLowerCase(),
+                ket: document.getElementById('f-ket').value.toLowerCase(),
+                pic: document.getElementById('f-pic').value.toLowerCase()
+            };
 
             document.querySelectorAll('.r-row').forEach(row => {
                 let show = true;
-                const cQr = row.querySelector('.r-qr');
-                const cArea = row.querySelector('.r-area');
-                const cJenis = row.querySelector('.r-jenis');
-                const cNama = row.querySelector('.r-nama');
-                const cPo = row.querySelector('.r-po');
-
-                if(fQr && cQr && !cQr.innerText.toLowerCase().includes(fQr)) show = false;
-                if(fArea && cArea && !cArea.innerText.toLowerCase().includes(fArea)) show = false;
-                if(fJenis && cJenis && !cJenis.innerText.toLowerCase().includes(fJenis)) show = false;
-                if(fNama && cNama && !cNama.innerText.toLowerCase().includes(fNama)) show = false;
-                if(fPo && cPo && !cPo.innerText.toLowerCase().includes(fPo)) show = false;
-
+                for(let key in f) {
+                    if(f[key]) {
+                        const cell = row.querySelector('.col-' + key);
+                        if(cell && !cell.innerText.toLowerCase().includes(f[key])) { show = false; break; }
+                    }
+                }
                 row.style.display = show ? '' : 'none';
             });
         }
 
         function bukaModalGantiArea() {
-            if(modeRiwayat === 'agregasi') return alert("TOLAK: Ganti Area hanya bisa dilakukan di mode DETAIL QRCODE karena membutuhkan spesifikasi Barcode masing-masing dus.");
-            
+            if(modeRiwayat !== 'qrcode') return alert("Ganti Area hanya bisa dilakukan di mode DETAIL QRCODE.");
             const cek = document.querySelectorAll('.cb-row:checked');
             if(cek.length === 0) return alert("Pilih minimal 1 baris yang ingin diganti areanya!");
             
@@ -436,7 +435,7 @@
                 tutupModalArea();
                 
                 document.querySelector('input[onchange="toggleSemuaCentang(this.checked)"]').checked = false;
-                await ambilRiwayatSupabase();
+                await ambilSemuaData();
             } catch (error) {
                 alert("Gagal merubah Area: " + error.message);
             } finally {
@@ -444,7 +443,6 @@
             }
         }
 
-        // Sekarang Fitur Salin bekerja di kedua mode (Detail / Rangkuman)
         function salinDataTabel() {
             const cek = document.querySelectorAll('.cb-row:checked');
             if(cek.length === 0) return alert("Pilih baris yang ingin disalin dengan mencentang kotak di kiri tabel!");
