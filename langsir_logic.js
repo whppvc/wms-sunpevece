@@ -2,7 +2,6 @@ let masterData = { kamus: [], troli: [], area: [] };
 let deleteStack = [], globalRowId = 0;
 let hiddenCols = [];
 
-// Definisi Kolom Hide/Unhide
 const colDefinitions = [
     { id: 'col-btn', label: 'Action Hapus', default: true },
     { id: 'col-stbj', label: 'Status STBJ', default: true },
@@ -47,7 +46,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 200); 
 });
 
-// --- SISTEM HIDE/UNHIDE KOLOM ---
 function buatDropdownKolom() {
     const container = document.getElementById('list-kolom-toggles');
     if(!container) return;
@@ -80,7 +78,37 @@ function terapkanStyleKolom() {
     document.getElementById('dynamic-col-styles').innerHTML = cssString;
 }
 
-// --- SCANNER LOGIC ---
+function saringTabelLangsir() {
+    const f = {
+        stbj: document.getElementById('f-stbj').value.toLowerCase(),
+        kode: document.getElementById('f-kode').value.toLowerCase(),
+        troli: document.getElementById('f-troli').value.toLowerCase(),
+        area: document.getElementById('f-area').value.toLowerCase(),
+        qr: document.getElementById('f-qr').value.toLowerCase(),
+        tgl: document.getElementById('f-tgl').value.toLowerCase(),
+        mesin: document.getElementById('f-mesin').value.toLowerCase(),
+        shift: document.getElementById('f-shift').value.toLowerCase(),
+        jenis: document.getElementById('f-jenis').value.toLowerCase(),
+        nama: document.getElementById('f-nama').value.toLowerCase(),
+        pjg: document.getElementById('f-pjg').value.toLowerCase(),
+        grade: document.getElementById('f-grade').value.toLowerCase(),
+        dus: document.getElementById('f-dus').value.toLowerCase(),
+        shading: document.getElementById('f-shading').value.toLowerCase(),
+        po: document.getElementById('f-po').value.toLowerCase()
+    };
+
+    document.querySelectorAll('.row-item').forEach(row => {
+        let show = true;
+        for(let key in f) {
+            if(f[key]) {
+                const cell = row.querySelector('.col-' + key);
+                if(cell && !cell.innerText.toLowerCase().includes(f[key])) { show = false; break; }
+            }
+        }
+        row.style.display = show ? '' : 'none';
+    });
+}
+
 function translateBarcode(barcode) {
     const parts = barcode.split('/'); let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-' };
     if (parts.length < 4) return data;
@@ -142,16 +170,13 @@ function toggleSemuaCentang(checked) {
 
 function addRow(troli, area, code, isDuplicate = false) {
     globalRowId++; const tr = document.createElement('tr'); 
-    
-    // Baris kembar lokal langsung merah background-nya
     const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'hover:bg-slate-50';
     tr.className = `border-b border-slate-200 transition row-item ${rowClass}`; 
     
     const td = translateBarcode(code); 
-    
     const stbjHtml = '<span class="text-slate-400 font-bold stbj-val" data-status="unverified">-</span>';
     const kodeHtml = isDuplicate 
-        ? '<span class="text-white font-bold bg-red-600 px-2 py-1 text-[10px] rounded kode-val shadow-sm" data-status="invalid">DUPLIKAT SCAN</span>'
+        ? '<span class="text-white font-bold bg-red-600 px-2 py-1 text-[10px] rounded kode-val shadow-sm" data-status="invalid">DUPLIKAT LOKAL</span>'
         : '<span class="text-slate-400 font-bold kode-val" data-status="unverified">-</span>';
 
     tr.innerHTML = `
@@ -178,22 +203,19 @@ function addRow(troli, area, code, isDuplicate = false) {
 }
 
 function deleteRow(btn) { const tr = btn.closest('tr'); deleteStack.push({ parent: tr.parentNode, html: tr.outerHTML, nextSibling: tr.nextSibling }); tr.remove(); updateRowNumbers(); }
-function undoDelete() { if(deleteStack.length === 0) return; const last = deleteStack.pop(); const temp = document.createElement('tbody'); temp.innerHTML = last.html; if (last.nextSibling) last.parent.insertBefore(temp.firstChild, last.nextSibling); else last.parent.appendChild(temp.firstChild); lucide.createIcons(); updateRowNumbers(); }
+function undoDelete() { if(deleteStack.length === 0) return alert("Belum ada data yang dihapus."); const last = deleteStack.pop(); const temp = document.createElement('tbody'); temp.innerHTML = last.html; if (last.nextSibling) last.parent.insertBefore(temp.firstChild, last.nextSibling); else last.parent.appendChild(temp.firstChild); lucide.createIcons(); updateRowNumbers(); }
 function updateRowNumbers() { const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; }); }
 
-// --- FUNGSI GABUNGAN: VALIDASI STBJ & CEK KODE DB ---
 async function validasiDanCek() {
     const rows = document.querySelectorAll('.row-item');
     if(rows.length === 0) return alert("Belum ada data untuk divalidasi.");
     
-    const btn = document.getElementById('btn-validasi');
-    const ori = btn.innerHTML;
+    const btn = document.getElementById('btn-validasi'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMERIKSA DATA...'; btn.disabled = true;
     
     const qrs = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     
     try {
-        // Lakukan 2 Fetch Database secara bersamaan / berbarengan (Sangat Cepat)
         const [resStbj, resStok] = await Promise.all([
             db.from('hasil_stbj').select('qrcode').in('qrcode', qrs),
             db.from('stok_qr').select('qrcode').in('qrcode', qrs)
@@ -204,7 +226,6 @@ async function validasiDanCek() {
 
         const stbjList = resStbj.data.map(d => d.qrcode);
         const stokList = resStok.data.map(d => d.qrcode);
-
         let hasError = false;
 
         rows.forEach(r => {
@@ -212,7 +233,6 @@ async function validasiDanCek() {
             const stbjCell = r.querySelector('.stbj-val');
             const kodeCell = r.querySelector('.kode-val');
             
-            // 1. UPDATE STATUS STBJ
             if(stbjList.includes(qr)) {
                 stbjCell.innerHTML = '<span class="text-white font-bold bg-blue-600 px-3 py-1.5 rounded shadow-sm text-[10px]" data-status="valid">SDH STBJ</span>';
             } else {
@@ -220,8 +240,6 @@ async function validasiDanCek() {
                 hasError = true;
             }
 
-            // 2. UPDATE STATUS KODE
-            // Amankan DUPLIKAT SCAN (agar tak ditimpa menjadi Accept)
             if(kodeCell.innerText.includes('LOKAL')) {
                 hasError = true;
             } 
@@ -235,19 +253,12 @@ async function validasiDanCek() {
             }
         });
 
-        if(hasError) {
-            alert("PERINGATAN!\nTerdapat data bermasalah (BLM STBJ / DUPLIKAT).\nSilakan pilih baris tersebut untuk dipindahkan ke HOLD LANGSIR, atau hapus barisnya.");
-        } else {
-            alert("MANTAP!\nSemua baris Valid (SDH STBJ & ACCEPT). Siap disimpan ke Gudang.");
-        }
-    } catch (e) {
-        alert("Koneksi Error: " + e.message);
-    } finally {
-        btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
-    }
+        if(hasError) { alert("PERINGATAN!\nTerdapat data bermasalah (BLM STBJ / DUPLIKAT).\nSilakan pilih baris tersebut untuk dipindahkan ke HOLD LANGSIR, atau hapus barisnya."); } 
+        else { alert("MANTAP!\nSemua baris Valid (SDH STBJ & ACCEPT). Siap disimpan ke Gudang."); }
+    } catch (e) { alert("Koneksi Error: " + e.message); } 
+    finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
-// --- FUNGSI TOLAK SIMPAN OTOMATIS ---
 async function saveToSupabase() {
     const btn = document.getElementById('btn-save'); const original = btn.innerHTML;
     
@@ -256,7 +267,7 @@ async function saveToSupabase() {
     const adaBelumStbj = document.querySelectorAll('span[data-status="invalid-stbj"]').length > 0;
 
     if(adaYgBelumDicek || adaDuplikat || adaBelumStbj) {
-        return alert("GAGAL MENYIMPAN!\n\nTerdapat baris yang bermasalah (Belum Validasi / DUPLIKAT / BLM STBJ). Anda harus mencentang baris-baris tersebut dan menekan tombol 'HOLD LANGSIR' atau menghapusnya (Tong Sampah) sebelum sistem mengizinkan penyimpanan.");
+        return alert("GAGAL MENYIMPAN!\n\nTerdapat baris yang bermasalah (Belum Validasi / DUPLIKAT / BLM STBJ). Anda harus mencentang baris-baris tersebut dan menekan tombol 'HOLD LANGSIR' atau menghapusnya sebelum menyimpan.");
     }
     
     const rows = document.querySelectorAll('.row-item'); if(rows.length === 0) return;
@@ -285,13 +296,11 @@ async function saveToSupabase() {
     document.getElementById('tbody-langsir').innerHTML = ''; btn.innerHTML = original; btn.disabled = false;
 }
 
-// --- FUNGSI HOLD LANGSIR ---
 async function holdLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
     if(checkedBoxes.length === 0) return alert("Anda harus mencentang kotak di baris yang bermasalah terlebih dahulu untuk memindahkannya ke antrean Hold.");
 
-    const btn = document.getElementById('btn-hold');
-    const ori = btn.innerHTML;
+    const btn = document.getElementById('btn-hold'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> HOLDING...'; btn.disabled = true;
 
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
@@ -305,11 +314,8 @@ async function holdLangsir() {
         const ketStbj = tr.querySelector('.stbj-val').innerText;
         const ketKode = tr.querySelector('.kode-val').innerText;
         
-        // Peringatan: Pastikan Anda telah membuat tabel hold_langsir di Supabase
         payloadUpload.push({
-            qrcode: qr,
-            troli: troli,
-            area: area,
+            qrcode: qr, troli: troli, area: area,
             keterangan: `STBJ: ${ketStbj} | KODE: ${ketKode}`,
             pic_input: user.username
         });
@@ -319,20 +325,14 @@ async function holdLangsir() {
         const { error } = await db.from('hold_langsir').insert(payloadUpload);
         if(error) throw error;
         
-        // Hapus paksa baris yang berhasil dihold dari layar
         checkedBoxes.forEach(cb => { cb.closest('tr').remove(); });
-        updateRowNumbers();
-        document.querySelector('input[onchange="toggleSemuaCentang(this.checked)"]').checked = false;
+        updateRowNumbers(); document.querySelector('input[onchange="toggleSemuaCentang(this.checked)"]').checked = false;
         
         alert(`SUKSES!\n${payloadUpload.length} Data berhasil diasingkan ke "Hold Langsir".`);
-    } catch(e) {
-        alert("Gagal melakukan Hold: " + e.message);
-    } finally {
-        btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
-    }
+    } catch(e) { alert("Gagal melakukan Hold: " + e.message); } 
+    finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
-// --- FUNGSI SALIN TABEL ---
 function salinDataTabel() {
     const cek = document.querySelectorAll('.cb-row:checked');
     if(cek.length === 0) return alert("Pilih baris yang ingin disalin dengan mencentang kotak di kiri tabel!");
@@ -344,10 +344,9 @@ function salinDataTabel() {
     copyString += headers.join('\t') + '\n';
 
     cek.forEach(cb => {
-        const tr = cb.closest('tr');
-        const rowData = [];
+        const tr = cb.closest('tr'); const rowData = [];
         Array.from(tr.children).forEach((td, idx) => {
-            if(idx === 0 || idx === 1) return; // Lewati kolom checkbox & Hapus
+            if(idx === 0 || idx === 1) return;
             if(window.getComputedStyle(td).display !== 'none') {
                 rowData.push(td.innerText.trim().replace(/\n/g, ' '));
             }
@@ -357,7 +356,5 @@ function salinDataTabel() {
 
     navigator.clipboard.writeText(copyString).then(() => {
         alert(`Berhasil menyalin ${cek.length} baris!\nBuka Excel lalu tekan CTRL+V / Paste.`);
-    }).catch(err => {
-        alert("Browser menolak akses Clipboard. Silakan salin manual.");
-    });
+    }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
 }
