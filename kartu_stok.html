@@ -73,6 +73,7 @@
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><input type="text" id="f-dus" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="f-shading" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PO Aktual</label><input type="text" id="f-po" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="f-ket" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
             </div>
             <button onclick="resetFilter()" class="mt-4 py-3 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-xs uppercase transition border border-slate-300">RESET FILTER</button>
         </div>
@@ -101,6 +102,7 @@
                             <th class="hdr-std">No</th>
                             <th class="hdr-std">Area Penyimpanan</th>
                             <th class="hdr-std border-r border-slate-500">PO Aktual (Saat ini)</th>
+                            <th class="hdr-std border-r border-slate-500 text-left">Keterangan</th>
                             <th class="hdr-std bg-emerald-700 text-white">Total Dus (QTY)</th>
                         </tr>
                     </thead>
@@ -135,11 +137,11 @@
         let dataKSArea = [];
         let dataKSGlobal = [];
         
-        // State for Changing PO
         let selectedForPO = [];
-        let sourcePOContext = ''; // 'main' or 'breakdown'
+        let sourcePOContext = ''; 
         let currentBreakdownData = [];
 
+        // Penambahan Keterangan di definisi kolom
         const colDefinitions = [
             { id: 'col-cb', label: 'Checkbox', default: true },
             { id: 'col-open', label: 'Tombol Buka (Global)', default: true },
@@ -152,6 +154,7 @@
             { id: 'col-dus', label: 'Dus', default: true },
             { id: 'col-shading', label: 'Shading', default: true },
             { id: 'col-po', label: 'PO Aktual', default: true },
+            { id: 'col-ket', label: 'Keterangan', default: true },
             { id: 'col-qty', label: 'Total QTY (Dus)', default: true }
         ];
         let hiddenCols = [];
@@ -162,7 +165,6 @@
             setTimeout(muatDataStok, 200);
         });
 
-        // ================= KONTROL KOLOM =================
         function buatDropdownKolom() {
             const container = document.getElementById('list-kolom-toggles');
             let html = '';
@@ -182,86 +184,78 @@
             else { if(!hiddenCols.includes(colId)) hiddenCols.push(colId); }
             terapkanStyleKolom();
         }
+        function resetKolom() { hiddenCols = []; document.querySelectorAll('#list-kolom-toggles input[type="checkbox"]').forEach(cb => cb.checked = true); terapkanStyleKolom(); }
+        function terapkanStyleKolom() { document.getElementById('dynamic-col-styles').innerHTML = hiddenCols.map(id => `.${id} { display: none !important; }`).join('\n'); }
 
-        function resetKolom() {
-            hiddenCols = [];
-            document.querySelectorAll('#list-kolom-toggles input[type="checkbox"]').forEach(cb => cb.checked = true);
-            terapkanStyleKolom();
-        }
-
-        function terapkanStyleKolom() {
-            const cssString = hiddenCols.map(id => `.${id} { display: none !important; }`).join('\n');
-            document.getElementById('dynamic-col-styles').innerHTML = cssString;
-        }
-
-        // ================= PENGAMBILAN DATA (Langsung Kalkulasi dari fisik QR) =================
         async function muatDataStok() {
-            document.getElementById('tbody-ks').innerHTML = `<tr><td colspan="12" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Mengkalkulasi Kartu Stok dari Barcode Gudang...</p></td></tr>`;
+            document.getElementById('tbody-ks').innerHTML = `<tr><td colspan="13" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Mengkalkulasi Kartu Stok dari Barcode Gudang...</p></td></tr>`;
             lucide.createIcons();
             try {
-                // Ambil seluruh barcode fisik. Ini dijamin 100% akurat dengan mutasi.
-                const { data, error } = await db.from('stok_qr').select('*');
+                // 1. Ambil data fisik
+                const { data: dbStok, error } = await db.from('stok_qr').select('*');
                 if(error) throw error;
-                stokQRRaw = data || [];
+                stokQRRaw = dbStok || [];
 
-                // 1. Grouping KS AREA
+                // 2. Ambil Keterangan dari hasil_stbj agar bisa dikelompokkan secara spesifik
+                const { data: dbStbj } = await db.from('hasil_stbj').select('qrcode, keterangan');
+                let ketMap = {};
+                if(dbStbj) dbStbj.forEach(d => { ketMap[d.qrcode] = d.keterangan || '-'; });
+
+                // 3. Grouping KS AREA + Keterangan
                 let areaMap = {};
                 stokQRRaw.forEach(r => {
                     if(!r.id_sku) return;
-                    if(!areaMap[r.id_sku]) {
+                    let ket = ketMap[r.qrcode] || '-';
+                    // KEY BARU: menambahkan Keterangan di akhir agar tidak tergabung
+                    let keyArea = `${r.id_sku}_${ket}`;
+                    
+                    if(!areaMap[keyArea]) {
                         const p = r.id_sku.split('_'); 
-                        areaMap[r.id_sku] = { 
-                            id_sku: r.id_sku, area: p[0], jenis: p[1], nama: p[2], 
-                            pjg: p[3], grade: p[4], dus: p[5], shading: p[6], po: p[7], 
+                        areaMap[keyArea] = { 
+                            id_sku: r.id_sku, key_lengkap: keyArea, area: p[0], jenis: p[1], nama: p[2], 
+                            pjg: p[3], grade: p[4], dus: p[5], shading: p[6], po: p[7], ket: ket,
                             qty: 0, qrcodes: [] 
                         };
                     }
-                    areaMap[r.id_sku].qty++;
-                    areaMap[r.id_sku].qrcodes.push(r.qrcode);
+                    areaMap[keyArea].qty++;
+                    areaMap[keyArea].qrcodes.push(r.qrcode);
                 });
                 dataKSArea = Object.values(areaMap);
 
-                // 2. Grouping KS GLOBAL (Abaikan Area)
+                // 4. Grouping KS GLOBAL (Abaikan Area, tapi pisahkan berdasar Ket)
                 let globalMap = {};
                 dataKSArea.forEach(a => {
-                    let gKey = `${a.jenis}_${a.nama}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po}`;
+                    let gKey = `${a.jenis}_${a.nama}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po}_${a.ket}`;
                     if(!globalMap[gKey]) {
                         globalMap[gKey] = { 
                             gKey: gKey, jenis: a.jenis, nama: a.nama, pjg: a.pjg, 
-                            grade: a.grade, dus: a.dus, shading: a.shading, po: a.po, 
+                            grade: a.grade, dus: a.dus, shading: a.shading, po: a.po, ket: a.ket,
                             qty: 0, areas: [] 
                         };
                     }
                     globalMap[gKey].qty += a.qty;
-                    // Simpan rincian area di dalam Global Item
                     globalMap[gKey].areas.push({
-                        id_sku: a.id_sku, area: a.area, po: a.po, qty: a.qty, qrcodes: a.qrcodes
+                        id_sku: a.id_sku, key_lengkap: a.key_lengkap, area: a.area, po: a.po, ket: a.ket, qty: a.qty, qrcodes: a.qrcodes
                     });
                 });
                 dataKSGlobal = Object.values(globalMap);
 
                 renderTabel();
-            } catch(e) {
-                document.getElementById('tbody-ks').innerHTML = `<tr><td colspan="12" class="p-10 text-red-500 font-bold">Gagal memuat: ${e.message}</td></tr>`;
-            }
+            } catch(e) { document.getElementById('tbody-ks').innerHTML = `<tr><td colspan="13" class="p-10 text-red-500 font-bold">Gagal memuat: ${e.message}</td></tr>`; }
         }
 
-        // ================= RENDERING TABEL =================
         function setModeKS(m) {
             modeKS = m;
             document.getElementById('tab-area').className = m === 'area' ? 'px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition' : 'px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
             document.getElementById('tab-global').className = m === 'global' ? 'px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition' : 'px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
             
-            // Toggles
             document.getElementById('btn-ganti-po-main').classList.toggle('hidden', m === 'global');
             document.getElementById('f-area-container').classList.toggle('hidden', m === 'global');
             
             renderTabel();
         }
 
-        function toggleCentangUtama(checked) {
-            document.querySelectorAll('.cb-main').forEach(cb => cb.checked = checked);
-        }
+        function toggleCentangUtama(checked) { document.querySelectorAll('.cb-main').forEach(cb => cb.checked = checked); }
 
         function renderTabel() {
             const thead = document.getElementById('thead-ks');
@@ -281,10 +275,11 @@
                         <th class="hdr-std col-dus">Dus</th>
                         <th class="hdr-std border-r border-slate-500 col-shading">Shading</th>
                         <th class="hdr-std text-orange-400 border-r border-slate-500 col-po">PO Aktual</th>
+                        <th class="hdr-std text-left col-ket border-r border-slate-500">Keterangan</th>
                         <th class="hdr-std text-lg col-qty">QTY (DUS)</th>
                     </tr>`;
                 
-                if(dataKSArea.length === 0) { tbody.innerHTML = `<tr><td colspan="12" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+                if(dataKSArea.length === 0) { tbody.innerHTML = `<tr><td colspan="13" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
                 let h = '';
                 dataKSArea.forEach((r, i) => {
@@ -302,6 +297,7 @@
                             <td class="p-3 font-bold text-slate-800 col-dus">${r.dus}</td>
                             <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${r.shading}</td>
                             <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-r border-slate-200 col-po">${r.po}</td>
+                            <td class="p-3 font-bold text-slate-600 text-left border-r border-slate-200 col-ket">${r.ket}</td>
                             <td class="p-3 font-black text-xl text-slate-900 bg-slate-100 col-qty">${r.qty}</td>
                         </tr>`;
                 });
@@ -321,10 +317,11 @@
                         <th class="hdr-std col-dus">Dus</th>
                         <th class="hdr-std border-r border-slate-500 col-shading">Shading</th>
                         <th class="hdr-std text-orange-400 border-r border-slate-500 col-po">PO Aktual</th>
+                        <th class="hdr-std text-left col-ket border-r border-slate-500">Keterangan</th>
                         <th class="hdr-std text-lg bg-emerald-800 col-qty">TOTAL (DUS)</th>
                     </tr>`;
 
-                if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr><td colspan="12" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+                if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr><td colspan="13" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
                 let h = '';
                 dataKSGlobal.forEach((r, i) => {
@@ -341,6 +338,7 @@
                             <td class="p-3 font-bold text-slate-800 col-dus">${r.dus}</td>
                             <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${r.shading}</td>
                             <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-r border-slate-200 col-po">${r.po}</td>
+                            <td class="p-3 font-bold text-slate-600 text-left border-r border-slate-200 col-ket">${r.ket}</td>
                             <td class="p-3 font-black text-xl text-emerald-800 bg-emerald-50 col-qty">${r.qty}</td>
                         </tr>`;
                 });
@@ -349,12 +347,11 @@
             lucide.createIcons(); saringTabel();
         }
 
-        // ================= FITUR BREAKDOWN (KS GLOBAL) =================
         function bukaBreakdown(gKey) {
             const item = dataKSGlobal.find(g => g.gKey === gKey);
             if(!item) return;
 
-            document.getElementById('bd-title-item').innerText = `${item.nama} | ${item.pjg} | ${item.grade} | DUS: ${item.dus} | SHADING: ${item.shading}`;
+            document.getElementById('bd-title-item').innerText = `${item.nama} | ${item.pjg} | ${item.grade} | DUS: ${item.dus} | SHADING: ${item.shading} | KET: ${item.ket}`;
             currentBreakdownData = item.areas;
 
             const tbody = document.getElementById('tbody-breakdown');
@@ -367,6 +364,7 @@
                         <td class="p-3 font-bold text-slate-400">${i+1}</td>
                         <td class="p-3 font-black text-emerald-600">${a.area}</td>
                         <td class="p-3 font-black text-orange-600 border-r border-slate-200 bg-orange-50/50">${a.po}</td>
+                        <td class="p-3 font-bold text-slate-600 text-left border-r border-slate-200">${a.ket}</td>
                         <td class="p-3 font-black text-lg text-slate-900 bg-slate-100">${a.qty}</td>
                     </tr>`;
             });
@@ -380,20 +378,16 @@
         function tutupModalBreakdown() { document.getElementById('modal-breakdown').classList.add('hidden'); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
         function toggleCentangBreakdown(checked) { document.querySelectorAll('.cb-bd').forEach(cb => cb.checked = checked); }
 
-        // ================= FITUR GANTI PO =================
         function siapkanGantiPO(context) {
             let checkboxes = [];
             if(context === 'main') {
                 if(modeKS !== 'area') return;
                 checkboxes = document.querySelectorAll('.cb-main:checked');
-            } else {
-                checkboxes = document.querySelectorAll('.cb-bd:checked');
-            }
+            } else { checkboxes = document.querySelectorAll('.cb-bd:checked'); }
 
             if(checkboxes.length === 0) return alert('Silakan centang item / area yang ingin diganti PO-nya.');
 
-            selectedForPO = [];
-            let totalDus = 0;
+            selectedForPO = []; let totalDus = 0;
             checkboxes.forEach(cb => {
                 const qrs = JSON.parse(cb.dataset.qrs);
                 selectedForPO.push({ id_sku: cb.dataset.idsku, qrcodes: qrs });
@@ -417,52 +411,31 @@
         async function eksekusiGantiPO() {
             const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
             if(!newPO) return alert("Silakan ketik nomor PO Baru!");
-
             const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
             btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...'; btn.disabled = true;
 
             try {
-                // Loop each selected row and update its physical QR codes
                 for(let row of selectedForPO) {
                     let parts = row.id_sku.split('_');
-                    parts[7] = newPO; // Replace part 7 (PO position)
+                    parts[7] = newPO; // Posis PO di string id_sku
                     let newIdSku = parts.join('_');
-
-                    // Lakukan Update Bulk ke Database Supabase
                     const { error } = await db.from('stok_qr').update({ id_sku: newIdSku }).in('qrcode', row.qrcodes);
                     if(error) throw error;
                 }
-
                 alert("BERHASIL!\nPO Aktual berhasil diperbarui untuk fisik kardus terpilih.");
-                tutupModalPO();
-                if(sourcePOContext === 'breakdown') tutupModalBreakdown();
+                tutupModalPO(); if(sourcePOContext === 'breakdown') tutupModalBreakdown();
                 await muatDataStok();
             } catch (error) { alert("GAGAL UPDATE: " + error.message); } 
             finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
         }
 
-        // ================= FITUR UI: FILTER, SIDEBAR, SALIN =================
         function toggleSidebarFilter() { document.getElementById('sidebar-filter').classList.toggle('translate-x-full'); document.getElementById('overlay-klik-luar').classList.toggle('hidden'); }
         function tutupSemuaPopups() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); document.getElementById('dropdown-kolom').classList.add('hidden'); tutupModalPO(); tutupModalBreakdown(); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
 
-        function resetFilter() {
-            const ids = ['f-area','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po'];
-            ids.forEach(id => document.getElementById(id).value = '');
-            saringTabel(); toggleSidebarFilter();
-        }
+        function resetFilter() { const ids = ['f-area','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket']; ids.forEach(id => document.getElementById(id).value = ''); saringTabel(); toggleSidebarFilter(); }
 
         function saringTabel() {
-            const f = {
-                area: document.getElementById('f-area').value.toLowerCase(),
-                jenis: document.getElementById('f-jenis').value.toLowerCase(),
-                nama: document.getElementById('f-nama').value.toLowerCase(),
-                pjg: document.getElementById('f-pjg').value.toLowerCase(),
-                grade: document.getElementById('f-grade').value.toLowerCase(),
-                dus: document.getElementById('f-dus').value.toLowerCase(),
-                shading: document.getElementById('f-shading').value.toLowerCase(),
-                po: document.getElementById('f-po').value.toLowerCase()
-            };
-
+            const f = { area: document.getElementById('f-area').value.toLowerCase(), jenis: document.getElementById('f-jenis').value.toLowerCase(), nama: document.getElementById('f-nama').value.toLowerCase(), pjg: document.getElementById('f-pjg').value.toLowerCase(), grade: document.getElementById('f-grade').value.toLowerCase(), dus: document.getElementById('f-dus').value.toLowerCase(), shading: document.getElementById('f-shading').value.toLowerCase(), po: document.getElementById('f-po').value.toLowerCase(), ket: document.getElementById('f-ket').value.toLowerCase() };
             document.querySelectorAll('.row-ks').forEach(row => {
                 let show = true;
                 for(let key in f) {
@@ -478,13 +451,9 @@
         function salinData() {
             const cek = document.querySelectorAll('.cb-main:checked');
             if(cek.length === 0) return alert("Pilih baris yang ingin disalin (centang).");
-
             let copyString = "";
-            const headers = Array.from(document.querySelectorAll('#thead-ks th'))
-                .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open'))
-                .map(th => th.innerText.trim().replace(/\n/g, ' '));
+            const headers = Array.from(document.querySelectorAll('#thead-ks th')).filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open')).map(th => th.innerText.trim().replace(/\n/g, ' '));
             copyString += headers.join('\t') + '\n';
-
             cek.forEach(cb => {
                 const tr = cb.closest('tr'); const rowData = [];
                 Array.from(tr.children).forEach(td => {
@@ -493,32 +462,25 @@
                 });
                 copyString += rowData.join('\t') + '\n';
             });
-
             navigator.clipboard.writeText(copyString).then(() => alert(`Tersalin ${cek.length} baris!\nBuka Excel lalu Paste.`));
         }
 
         function salinDataBreakdown() {
             const cek = document.querySelectorAll('.cb-bd:checked');
             if(cek.length === 0) return alert("Centang baris detail Area yang ingin disalin.");
-            let copyString = "Area\tPO Aktual\tQTY\n";
+            let copyString = "Area\tPO Aktual\tKeterangan\tQTY\n";
             cek.forEach(cb => {
                 const tr = cb.closest('tr');
-                copyString += `${tr.children[2].innerText}\t${tr.children[3].innerText}\t${tr.children[4].innerText}\n`;
+                copyString += `${tr.children[2].innerText}\t${tr.children[3].innerText}\t${tr.children[4].innerText}\t${tr.children[5].innerText}\n`;
             });
             navigator.clipboard.writeText(copyString).then(() => alert(`Tersalin!\nBuka Excel lalu Paste.`));
         }
 
         function downloadXLS() {
             let csvContent = "data:text/csv;charset=utf-8,";
-            // Header
-            const headers = Array.from(document.querySelectorAll('#thead-ks th'))
-                .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open'))
-                .map(th => th.innerText.trim());
+            const headers = Array.from(document.querySelectorAll('#thead-ks th')).filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open')).map(th => th.innerText.trim());
             csvContent += headers.join(",") + "\n";
-
-            // Body
-            const rows = document.querySelectorAll('.row-ks');
-            rows.forEach(tr => {
+            document.querySelectorAll('.row-ks').forEach(tr => {
                 if(tr.style.display !== 'none') {
                     const rowData = [];
                     Array.from(tr.children).forEach(td => {
@@ -528,12 +490,8 @@
                     csvContent += rowData.join(",") + "\n";
                 }
             });
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `KartuStok_${modeKS.toUpperCase()}.csv`);
-            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            const link = document.createElement("a"); link.setAttribute("href", encodeURI(csvContent));
+            link.setAttribute("download", `KartuStok_${modeKS.toUpperCase()}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
         }
     </script>
 </body>
