@@ -227,3 +227,276 @@
                 if(mData2) masterKamus = mData2;
             } catch (err) { console.error("Gagal muat referensi:", err); }
         }
+
+        function translateBarcode(barcode) {
+            let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-' };
+            const parts = barcode.split('/'); if (parts.length < 4) return td;
+            
+            const hurufDepan = barcode.charAt(0).toUpperCase();
+            if (hurufDepan === 'P') td.jenisItem = 'Plafon'; else if (hurufDepan === 'L') td.jenisItem = 'List'; else if (hurufDepan === 'W') td.jenisItem = 'WPC'; else td.jenisItem = hurufDepan;
+
+            let rawItem = parts[0]; let cariItem = masterKamus.find(m => m.kode_nama_item === rawItem); 
+            td.namaItem = cariItem && cariItem.nama_item ? cariItem.nama_item : rawItem; td.shading = parts[1];
+            
+            const p2 = parts[2];
+            if (p2 && p2.length >= 4) {
+                let digitPjg = (p2.length === 5) ? 2 : 1; let rawPjg = p2.substring(0, digitPjg);
+                td.panjang = (digitPjg === 1) ? rawPjg + "M" : rawPjg[0] + "." + rawPjg[1] + "M"; 
+                let rawGrade = p2.substring(digitPjg, digitPjg + 1); td.grade = rawGrade === '1' ? 'BAGUS' : (rawGrade === '2' ? 'A' : rawGrade);
+                let rawDus = p2.substring(p2.length - 2); let cariDus = masterKamus.find(m => m.kode_dus === rawDus); td.dus = cariDus && cariDus.dus ? cariDus.dus : rawDus;
+            }
+            const p3 = parts[3];
+            if (p3.length >= 5) {
+                const dayOfYear = parseInt(p3.substring(0, 3)); const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
+                const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
+                td.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
+                let sisaString = p3.substring(5); let match = sisaString.match(/(C.*?)(S.*?)(P.*)/);
+                if (match) {
+                    let cariMesin = masterKamus.find(m => m.kode_mesin === match[1]); td.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : match[1];
+                    let cariShift = masterKamus.find(m => m.kode_shift === match[2]); td.shift = cariShift && cariShift.shift ? cariShift.shift : match[2];
+                    let cariPO = masterKamus.find(m => m.kode_po === match[3]); td.po = cariPO && cariPO.po ? cariPO.po : match[3];
+                }
+            }
+            return td;
+        }
+
+        document.getElementById('form-scan').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const troli = document.getElementById('select-troli').value;
+            const inputEl = document.getElementById('input-qrcode');
+            const rawInput = inputEl.value.trim();
+            if(!troli) return alert("Pilih Troli terlebih dahulu!");
+            if(!rawInput) return;
+
+            const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
+            codes.forEach(code => {
+                const isLocalDuplicate = dataStbj.some(d => d.qrcode === code);
+                const trans = translateBarcode(code);
+                
+                dataStbj.unshift({ 
+                    id: ++globalRowId, 
+                    qrcode: code, 
+                    troli: troli, 
+                    status: 'BELUM CEK', 
+                    keterangan: isLocalDuplicate ? 'DUPLIKAT SCAN' : '', 
+                    pic: currentUser.username, 
+                    isLocalDuplicate: isLocalDuplicate,
+                    ...trans 
+                });
+            });
+            renderTable();
+            inputEl.value = ''; inputEl.focus();
+        });
+
+        function prosesCSV() {
+            const troli = document.getElementById('select-troli').value;
+            const fileInput = document.getElementById('input-csv');
+            if(!troli) return alert("Pilih Troli terlebih dahulu!");
+            if(!fileInput.files.length) return alert("Pilih file CSV!");
+
+            Papa.parse(fileInput.files[0], {
+                header: false, skipEmptyLines: true,
+                complete: function(results) {
+                    let added = 0;
+                    results.data.forEach(row => {
+                        const code = row[0] ? row[0].trim() : '';
+                        if(code) {
+                            const isLocalDuplicate = dataStbj.some(d => d.qrcode === code);
+                            const trans = translateBarcode(code);
+                            
+                            dataStbj.push({ 
+                                id: ++globalRowId, 
+                                qrcode: code, 
+                                troli: troli, 
+                                status: 'BELUM CEK', 
+                                keterangan: isLocalDuplicate ? 'DUPLIKAT SCAN (CSV)' : 'Dari CSV', 
+                                pic: currentUser.username, 
+                                isLocalDuplicate: isLocalDuplicate, 
+                                ...trans 
+                            });
+                            added++;
+                        }
+                    });
+                    alert(`${added} QR Code dari CSV berhasil dimuat ke tabel.`); renderTable(); fileInput.value = '';
+                }
+            });
+        }
+
+        function toggleAll(checked) { document.querySelectorAll('.row-cb').forEach(cb => cb.checked = checked); }
+        function getCheckedIds() {
+            const ids = []; document.querySelectorAll('.row-cb:checked').forEach(cb => ids.push(parseInt(cb.value))); return ids;
+        }
+
+        function hapusBarisTerpilih() {
+            const ids = getCheckedIds(); if(ids.length === 0) return alert("Centang baris yang ingin dihapus!");
+            const removed = dataStbj.filter(d => ids.includes(d.id));
+            deletedStbjStack.push(removed);
+            dataStbj = dataStbj.filter(d => !ids.includes(d.id)); 
+            renderTable(); document.querySelector('input[onchange="toggleAll(this.checked)"]').checked = false;
+        }
+
+        function undoHapusSTBJ() {
+            if(deletedStbjStack.length === 0) return alert("Tidak ada histori penghapusan yang dapat di-undo.");
+            const last = deletedStbjStack.pop();
+            dataStbj = [...last, ...dataStbj];
+            renderTable();
+        }
+
+        function holdManual() {
+            const ids = getCheckedIds(); if(ids.length === 0) return alert("Centang baris yang ingin di-HOLD manual!");
+            dataStbj.forEach(d => { if(ids.includes(d.id)) d.status = 'HOLD'; });
+            renderTable(); document.querySelector('input[onchange="toggleAll(this.checked)"]').checked = false;
+        }
+
+        function toggleSidebarFilter() {
+            document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
+            document.getElementById('overlay-klik-luar').classList.toggle('hidden');
+        }
+
+        function tutupPopups() {
+            document.getElementById('sidebar-filter').classList.add('translate-x-full');
+            document.getElementById('dropdown-kolom').classList.add('hidden');
+            document.getElementById('overlay-klik-luar').classList.add('hidden');
+        }
+
+        function resetFilterSTBJ() {
+            const ids = ['fs-status','fs-troli','fs-qr','fs-tgl','fs-mesin','fs-shift','fs-jenis','fs-nama','fs-pjg','fs-grade','fs-dus','fs-shading','fs-po','fs-ket','fs-pic'];
+            ids.forEach(id => document.getElementById(id).value = '');
+            saringTabelSTBJ(); toggleSidebarFilter();
+        }
+
+        function saringTabelSTBJ() {
+            const f = {
+                status: document.getElementById('fs-status').value.toLowerCase(),
+                troli: document.getElementById('fs-troli').value.toLowerCase(),
+                qr: document.getElementById('fs-qr').value.toLowerCase(),
+                tgl: document.getElementById('fs-tgl').value.toLowerCase(),
+                mesin: document.getElementById('fs-mesin').value.toLowerCase(),
+                shift: document.getElementById('fs-shift').value.toLowerCase(),
+                jenis: document.getElementById('fs-jenis').value.toLowerCase(),
+                nama: document.getElementById('fs-nama').value.toLowerCase(),
+                pjg: document.getElementById('fs-pjg').value.toLowerCase(),
+                grade: document.getElementById('fs-grade').value.toLowerCase(),
+                dus: document.getElementById('fs-dus').value.toLowerCase(),
+                shading: document.getElementById('fs-shading').value.toLowerCase(),
+                po: document.getElementById('fs-po').value.toLowerCase(),
+                ket: document.getElementById('fs-ket').value.toLowerCase(),
+                pic: document.getElementById('fs-pic').value.toLowerCase()
+            };
+
+            document.querySelectorAll('.row-stbj').forEach(row => {
+                let show = true;
+                for(let key in f) {
+                    if(f[key]) {
+                        const cell = row.querySelector('.col-' + key);
+                        if(cell && !cell.innerText.toLowerCase().includes(f[key])) { show = false; break; }
+                    }
+                }
+                row.style.display = show ? '' : 'none';
+            });
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tbody-stbj');
+            if(dataStbj.length === 0) return tbody.innerHTML = '<tr><td colspan="17" class="p-10 text-slate-400 font-bold"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan / di-import.</td></tr>';
+            
+            let html = '';
+            dataStbj.forEach((d, index) => {
+                let badgeClass = "bg-slate-200 text-slate-700";
+                let displayStatus = d.status;
+
+                if(d.status === 'UNIQUE') badgeClass = "bg-emerald-500 text-white";
+                if(d.status === 'DUPLIKAT') badgeClass = "bg-red-600 text-white";
+                if(d.status === 'HOLD') badgeClass = "bg-amber-500 text-white";
+
+                if(d.status === 'BELUM CEK' && d.isLocalDuplicate) {
+                    badgeClass = "bg-red-600 text-white";
+                    displayStatus = "DUPLIKAT SCAN";
+                }
+
+                const isRedHighlight = d.status === 'DUPLIKAT' || d.isLocalDuplicate;
+                const trBaseClass = isRedHighlight ? 'bg-red-100 hover:bg-red-200 text-red-900' : (d.status === 'HOLD' ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-slate-50 text-slate-700');
+
+                html += `
+                    <tr class="border-b border-slate-200 transition ${trBaseClass} row-stbj">
+                        <td class="p-3 text-center col-cb"><input type="checkbox" value="${d.id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600"></td>
+                        <td class="p-3 font-bold col-no">${index + 1}</td>
+                        <td class="p-3 font-black text-[10px] border-r border-slate-200 col-status"><span class="px-3 py-1 rounded ${badgeClass}">${displayStatus}</span></td>
+                        <td class="p-3 font-bold ${isRedHighlight ? 'text-red-900' : 'text-slate-700'} col-troli">${d.troli}</td>
+                        <td class="p-3 font-mono font-bold border-r border-slate-200 tracking-wider col-qr">${d.qrcode}</td>
+                        <td class="p-3 font-bold col-tgl">${d.tglProduksi}</td>
+                        <td class="p-3 font-bold col-mesin">${d.mesin}</td>
+                        <td class="p-3 font-bold border-r border-slate-200 col-shift">${d.shift}</td>
+                        <td class="p-3 font-black ${isRedHighlight ? 'text-red-700' : 'text-blue-700'} col-jenis">${d.jenisItem}</td>
+                        <td class="p-3 font-bold text-left col-nama">${d.namaItem}</td>
+                        <td class="p-3 font-bold col-pjg">${d.panjang}</td>
+                        <td class="p-3 font-bold col-grade">${d.grade}</td>
+                        <td class="p-3 font-bold col-dus">${d.dus}</td>
+                        <td class="p-3 font-bold border-r border-slate-200 col-shading">${d.shading}</td>
+                        <td class="p-3 font-black ${isRedHighlight ? 'text-red-700' : 'text-orange-600'} col-po">${d.po}</td>
+                        <td class="p-2 col-ket"><input type="text" onchange="updateKet(${d.id}, this.value)" value="${d.keterangan}" class="w-full p-2 text-xs border border-slate-300 rounded outline-none focus:border-blue-500 bg-transparent ${isRedHighlight ? 'placeholder-red-400' : ''}" placeholder="Keterangan..."></td>
+                        <td class="p-3 font-bold uppercase text-[10px] opacity-70 col-pic">${d.pic}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html; lucide.createIcons(); saringTabelSTBJ();
+        }
+
+        function updateKet(id, val) { const item = dataStbj.find(d => d.id === id); if(item) item.keterangan = val; }
+
+        async function cekGudangSTBJ() {
+            if(dataStbj.length === 0) return alert("Belum ada data.");
+            const btn = document.getElementById('btn-cek-gudang'); const ori = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENCEK DB...'; btn.disabled = true;
+
+            const allQRs = dataStbj.map(d => d.qrcode);
+            try {
+                const { data, error } = await db.from('hasil_stbj').select('qrcode').in('qrcode', allQRs);
+                if(error) throw error;
+                
+                const existingQRs = data.map(d => d.qrcode);
+                dataStbj.forEach(d => {
+                    if(d.status === 'HOLD') return; 
+                    if(existingQRs.includes(d.qrcode) || d.isLocalDuplicate) { d.status = 'DUPLIKAT'; } 
+                    else { d.status = 'UNIQUE'; }
+                });
+                renderTable();
+                alert("Validasi Selesai!\nData telah dicocokkan dengan Database STBJ.");
+            } catch (err) { alert("Gagal cek database: " + err.message); }
+            finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
+        }
+
+        async function saveToDatabaseSTBJ() {
+            if(dataStbj.length === 0) return alert('Data kosong!');
+            const blmCek = dataStbj.filter(d => d.status === 'BELUM CEK');
+            if(blmCek.length > 0) return alert('Tekan tombol CEK STATUS DUPLIKAT terlebih dahulu sebelum menyimpan!');
+
+            const btn = document.getElementById('btn-save'); const ori = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btn.disabled = true;
+
+            const uniques = dataStbj.filter(d => d.status === 'UNIQUE');
+            const dupes = dataStbj.filter(d => d.status === 'DUPLIKAT' || d.status === 'HOLD');
+
+            try {
+                // UPDATE: Menambahkan 'troli' ke dalam object insert payload
+                if(uniques.length > 0) {
+                    const payloadHasil = uniques.map(d => ({ qrcode: d.qrcode, troli: d.troli, pic_input: d.pic, keterangan: d.keterangan }));
+                    const { error: err1 } = await db.from('hasil_stbj').insert(payloadHasil);
+                    if(err1) throw err1;
+                }
+                
+                if(dupes.length > 0) {
+                    const payloadHold = dupes.map(d => ({ qrcode: d.qrcode, troli: d.troli, pic_input: d.pic, keterangan: d.keterangan, status: d.status }));
+                    const { error: err2 } = await db.from('hold_stbj').insert(payloadHold);
+                    if(err2) throw err2;
+                }
+
+                alert(`BERHASIL DISIMPAN!\n- ${uniques.length} Barang Unique masuk ke Hasil STBJ\n- ${dupes.length} Barang Hold/Duplikat masuk ke Hold STBJ`);
+                dataStbj = []; renderTable();
+                document.querySelector('input[onchange="toggleAll(this.checked)"]').checked = false;
+            } catch (err) { alert('GAGAL MENYIMPAN: ' + err.message); } 
+            finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
+        }
+    </script>
+</body>
+</html>
