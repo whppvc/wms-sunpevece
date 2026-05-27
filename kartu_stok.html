@@ -122,7 +122,7 @@
                 <div>
                     <label class="block text-xs font-black uppercase tracking-wide mb-2 text-slate-600">Pilih PO Aktual</label>
                     <select id="input-new-po" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-orange-600 font-bold text-slate-800 uppercase bg-slate-50 cursor-pointer">
-                        <option value="">-- PILIH PO --</option>
+                        <option value="">-- MEMUAT PO... --</option>
                         </select>
                 </div>
 
@@ -152,9 +152,8 @@
         
         let selectedForPO = [];
         let sourcePOContext = ''; 
-            let currentBreakdownData = [];
+        let currentBreakdownData = [];
 
-        // Penambahan Keterangan di definisi kolom
         const colDefinitions = [
             { id: 'col-cb', label: 'Checkbox', default: true },
             { id: 'col-open', label: 'Tombol Buka (Global)', default: true },
@@ -175,8 +174,27 @@
         document.addEventListener('DOMContentLoaded', () => {
             initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
             buatDropdownKolom();
+            loadMasterPO(); // Mengambil data PO untuk opsi dropdown
             setTimeout(muatDataStok, 200);
         });
+
+        // FUNGSI BARU: Mengambil seluruh Master PO untuk opsi Dropdown
+        async function loadMasterPO() {
+            try {
+                const {data, error} = await db.from('master_2').select('po');
+                if (data) {
+                    let poSet = new Set();
+                    data.forEach(d => { if(d.po) poSet.add(d.po); });
+                    const sel = document.getElementById('input-new-po');
+                    let html = '<option value="">-- PILIH PO --</option>';
+                    Array.from(poSet).sort().forEach(po => { html += `<option value="${po}">${po}</option>`; });
+                    sel.innerHTML = html;
+                }
+            } catch (e) {
+                console.error("Gagal memuat list PO:", e);
+                document.getElementById('input-new-po').innerHTML = '<option value="">-- GAGAL MEMUAT PO --</option>';
+            }
+        }
 
         function buatDropdownKolom() {
             const container = document.getElementById('list-kolom-toggles');
@@ -204,22 +222,18 @@
             document.getElementById('tbody-ks').innerHTML = `<tr><td colspan="13" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Mengkalkulasi Kartu Stok dari Barcode Gudang...</p></td></tr>`;
             lucide.createIcons();
             try {
-                // 1. Ambil data fisik
                 const { data: dbStok, error } = await db.from('stok_qr').select('*');
                 if(error) throw error;
                 stokQRRaw = dbStok || [];
 
-                // 2. Ambil Keterangan dari hasil_stbj agar bisa dikelompokkan secara spesifik
                 const { data: dbStbj } = await db.from('hasil_stbj').select('qrcode, keterangan');
                 let ketMap = {};
                 if(dbStbj) dbStbj.forEach(d => { ketMap[d.qrcode] = d.keterangan || '-'; });
 
-                // 3. Grouping KS AREA + Keterangan
                 let areaMap = {};
                 stokQRRaw.forEach(r => {
                     if(!r.id_sku) return;
                     let ket = ketMap[r.qrcode] || '-';
-                    // KEY BARU: menambahkan Keterangan di akhir agar tidak tergabung
                     let keyArea = `${r.id_sku}_${ket}`;
                     
                     if(!areaMap[keyArea]) {
@@ -235,7 +249,6 @@
                 });
                 dataKSArea = Object.values(areaMap);
 
-                // 4. Grouping KS GLOBAL (Abaikan Area, tapi pisahkan berdasar Ket)
                 let globalMap = {};
                 dataKSArea.forEach(a => {
                     let gKey = `${a.jenis}_${a.nama}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po}_${a.ket}`;
@@ -391,6 +404,7 @@
         function tutupModalBreakdown() { document.getElementById('modal-breakdown').classList.add('hidden'); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
         function toggleCentangBreakdown(checked) { document.querySelectorAll('.cb-bd').forEach(cb => cb.checked = checked); }
 
+        // FUNGSI GANTI PO YANG SUDAH DIPERBAIKI DARI BUG
         function siapkanGantiPO(context) {
             let checkboxes = [];
             if(context === 'main') {
@@ -408,8 +422,15 @@
             });
 
             sourcePOContext = context;
-            document.getElementById('info-ganti-po').innerText = `Anda akan mengubah PO Aktual untuk ${totalDus} dus barang secara permanen.`;
+            
+            // Reset Dropdown
             document.getElementById('input-new-po').value = '';
+            
+            // Set Default Input QTY dengan total dus yang dipilih
+            const inputQty = document.getElementById('input-qty-ganti');
+            inputQty.value = totalDus;
+            inputQty.max = totalDus; // Menjaga user agar tidak mengetik lebih dari stok yang dicheck
+
             document.getElementById('modal-po').classList.remove('hidden');
             document.getElementById('overlay-klik-luar').classList.remove('hidden');
         }
@@ -421,21 +442,40 @@
             }
         }
 
+        // FUNGSI EKSEKUSI GANTI PO YANG DIUPGRADE UNTUK BISA POTONG SEBAGIAN QTY
         async function eksekusiGantiPO() {
             const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
-            if(!newPO) return alert("Silakan ketik nomor PO Baru!");
+            if(!newPO) return alert("Silakan Pilih PO Baru dari daftar dropdown!");
+
+            const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
+            if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
+
+            // Menghitung total stok maksimal dari baris yang dicentang
+            let maxDus = selectedForPO.reduce((sum, row) => sum + row.qrcodes.length, 0);
+            if(qtyDiminta > maxDus) return alert(`Jumlah maksimal yang bisa diganti adalah ${maxDus} dus dari item yang Anda centang!`);
+
             const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
             btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...'; btn.disabled = true;
 
             try {
+                let qtySisaUntukDiupdate = qtyDiminta;
+                
                 for(let row of selectedForPO) {
+                    if (qtySisaUntukDiupdate <= 0) break; // Berhenti jika target qty sudah tercapai
+                    
+                    // Ambil sebagian QRCode saja sesuai dengan QTY yang diinput
+                    let qrsUntukDiupdate = row.qrcodes.slice(0, qtySisaUntukDiupdate);
+                    qtySisaUntukDiupdate -= qrsUntukDiupdate.length;
+
                     let parts = row.id_sku.split('_');
                     parts[7] = newPO; // Posis PO di string id_sku
                     let newIdSku = parts.join('_');
-                    const { error } = await db.from('stok_qr').update({ id_sku: newIdSku }).in('qrcode', row.qrcodes);
+                    
+                    const { error } = await db.from('stok_qr').update({ id_sku: newIdSku }).in('qrcode', qrsUntukDiupdate);
                     if(error) throw error;
                 }
-                alert("BERHASIL!\nPO Aktual berhasil diperbarui untuk fisik kardus terpilih.");
+                
+                alert(`BERHASIL!\nPO Aktual berhasil diperbarui untuk ${qtyDiminta} dus barang.`);
                 tutupModalPO(); if(sourcePOContext === 'breakdown') tutupModalBreakdown();
                 await muatDataStok();
             } catch (error) { alert("GAGAL UPDATE: " + error.message); } 
