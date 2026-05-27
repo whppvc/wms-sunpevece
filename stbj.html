@@ -16,8 +16,8 @@
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 4px solid transparent; }
     </style>
 </head>
-<body class="font-sans">
-    <div class="w-full">
+<body class="font-sans overflow-x-hidden">
+    <div class="w-full relative">
         
         <div class="flex border-b border-slate-200 mb-4 bg-white px-2 rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
             <button onclick="switchTab('scan')" id="btn-tab-scan" class="px-6 py-4 tab-active transition whitespace-nowrap flex items-center gap-2"><i data-lucide="barcode" class="w-4 h-4"></i> SCAN ITEM PER DUS</button>
@@ -51,8 +51,10 @@
             </div>
 
             <div class="flex flex-col sm:flex-row justify-between gap-3 mt-4 pt-4 border-t border-slate-100">
-                <div class="flex gap-2 w-full sm:w-auto">
-                    <button onclick="hapusBarisTerpilih()" class="flex-1 sm:flex-none px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center justify-center gap-2 active:scale-95 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> HAPUS BARIS</button>
+                <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                    <button onclick="toggleSidebarFilter()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg shadow-sm border-b-2 border-slate-950 text-xs flex items-center justify-center gap-2 active:scale-95 transition uppercase"><i data-lucide="filter" class="w-4 h-4"></i> FILTER</button>
+                    <button onclick="hapusBarisTerpilih()" class="flex-1 sm:flex-none px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center justify-center gap-2 active:scale-95 transition border-b-2 border-red-800"><i data-lucide="trash-2" class="w-4 h-4"></i> HAPUS</button>
+                    <button onclick="undoHapusSTBJ()" class="flex-1 sm:flex-none px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg shadow-sm text-xs flex items-center justify-center gap-2 active:scale-95 transition border border-slate-300"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> UNDO HAPUS</button>
                 </div>
                 <div class="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
                     <button onclick="holdManual()" class="flex-1 sm:flex-none px-4 py-3 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center justify-center gap-2 active:scale-95 transition"><i data-lucide="pause-circle" class="w-4 h-4"></i> HOLD MANUAL</button>
@@ -68,21 +70,21 @@
                         <tr>
                             <th class="hdr-std w-10"><input type="checkbox" onchange="toggleAll(this.checked)" class="cursor-pointer"></th>
                             <th class="hdr-std w-12">No</th>
-                            <th class="hdr-std border-r border-slate-500">Status</th>
-                            <th class="hdr-std">Troli</th>
-                            <th class="hdr-std border-r border-slate-500">Text QRCode</th>
-                            <th class="hdr-std">Tgl Produksi</th>
-                            <th class="hdr-std">Mesin</th>
-                            <th class="hdr-std border-r border-slate-500">Shift</th>
-                            <th class="hdr-std text-blue-300">Jenis Item</th>
-                            <th class="hdr-std">Nama Item</th>
-                            <th class="hdr-std">Pjg</th>
-                            <th class="hdr-std">Grade</th>
-                            <th class="hdr-std">Dus</th>
-                            <th class="hdr-std border-r border-slate-500">Shading</th>
-                            <th class="hdr-std">PO Awal</th>
-                            <th class="hdr-std">Keterangan</th>
-                            <th class="hdr-std">PIC Input</th>
+                            <th class="hdr-std border-r border-slate-500 col-status">Status</th>
+                            <th class="hdr-std col-troli">Troli</th>
+                            <th class="hdr-std border-r border-slate-500 col-qr">Text QRCode</th>
+                            <th class="hdr-std col-tgl">Tgl Produksi</th>
+                            <th class="hdr-std col-mesin">Mesin</th>
+                            <th class="hdr-std border-r border-slate-500 col-shift">Shift</th>
+                            <th class="hdr-std text-blue-300 col-jenis">Jenis Item</th>
+                            <th class="hdr-std col-nama">Nama Item</th>
+                            <th class="hdr-std col-pjg">Pjg</th>
+                            <th class="hdr-std col-grade">Grade</th>
+                            <th class="hdr-std col-dus">Dus</th>
+                            <th class="hdr-std border-r border-slate-500 col-shading">Shading</th>
+                            <th class="hdr-std col-po">PO Awal</th>
+                            <th class="hdr-std col-ket">Keterangan</th>
+                            <th class="hdr-std col-pic">PIC Input</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-stbj" class="text-center text-slate-700">
@@ -97,10 +99,40 @@
         </div>
     </div>
 
+    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
+        <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide"><i data-lucide="filter" class="w-5 h-5"></i> Filter STBJ Lengkap</h3>
+            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-4 flex flex-col gap-4 overflow-y-auto">
+            <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label><input type="text" id="fs-status" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label><input type="text" id="fs-troli" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="fs-qr" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="text" id="fs-tgl" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label><input type="text" id="fs-mesin" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label><input type="text" id="fs-shift" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><input type="text" id="fs-jenis" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><input type="text" id="fs-nama" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><input type="text" id="fs-pjg" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><input type="text" id="fs-grade" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><input type="text" id="fs-dus" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="fs-shading" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PO</label><input type="text" id="fs-po" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="fs-ket" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PIC Input</label><input type="text" id="fs-pic" oninput="saringTabelSTBJ()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+            </div>
+            <button onclick="resetFilterSTBJ()" class="mt-4 py-3 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-xs uppercase transition border border-slate-300">RESET FILTER</button>
+        </div>
+    </div>
+
+    <div id="overlay-klik-luar" onclick="toggleSidebarFilter()" class="hidden fixed inset-0 z-30"></div>
+
     <script src="global.js"></script>
     <script>
         let currentTab = 'scan';
         let dataStbj = []; 
+        let deletedStbjStack = []; // Stack untuk Undo
         let masterKamus = [];
         let globalRowId = 0;
         const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
@@ -164,7 +196,6 @@
             return td;
         }
 
-        // --- REVISI: FORM SCAN ---
         document.getElementById('form-scan').addEventListener('submit', (e) => {
             e.preventDefault();
             const troli = document.getElementById('select-troli').value;
@@ -175,12 +206,9 @@
 
             const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
             codes.forEach(code => {
-                // PENGAMAN BARU: Cek apakah kode sudah ada di tabel saat ini (Duplikat Lokal)
                 const isLocalDuplicate = dataStbj.some(d => d.qrcode === code);
-                
                 const trans = translateBarcode(code);
                 
-                // Tetap di-push ke tabel walaupun duplikat! Tapi bawa bendera isLocalDuplicate
                 dataStbj.unshift({ 
                     id: ++globalRowId, 
                     qrcode: code, 
@@ -188,7 +216,7 @@
                     status: 'BELUM CEK', 
                     keterangan: isLocalDuplicate ? 'DUPLIKAT SCAN' : '', 
                     pic: currentUser.username, 
-                    isLocalDuplicate: isLocalDuplicate, // Bendera deteksi merah
+                    isLocalDuplicate: isLocalDuplicate,
                     ...trans 
                 });
             });
@@ -196,7 +224,6 @@
             inputEl.value = ''; inputEl.focus();
         });
 
-        // --- REVISI: IMPORT CSV ---
         function prosesCSV() {
             const troli = document.getElementById('select-troli').value;
             const fileInput = document.getElementById('input-csv');
@@ -210,7 +237,6 @@
                     results.data.forEach(row => {
                         const code = row[0] ? row[0].trim() : '';
                         if(code) {
-                            // Sama seperti form scan, cek dan biarkan masuk
                             const isLocalDuplicate = dataStbj.some(d => d.qrcode === code);
                             const trans = translateBarcode(code);
                             
@@ -239,7 +265,17 @@
 
         function hapusBarisTerpilih() {
             const ids = getCheckedIds(); if(ids.length === 0) return alert("Centang baris yang ingin dihapus!");
-            dataStbj = dataStbj.filter(d => !ids.includes(d.id)); renderTable();
+            const removed = dataStbj.filter(d => ids.includes(d.id));
+            deletedStbjStack.push(removed);
+            dataStbj = dataStbj.filter(d => !ids.includes(d.id)); 
+            renderTable();
+        }
+
+        function undoHapusSTBJ() {
+            if(deletedStbjStack.length === 0) return alert("Tidak ada histori penghapusan yang dapat di-undo.");
+            const last = deletedStbjStack.pop();
+            dataStbj = [...last, ...dataStbj]; // Taruh kembali ke atas
+            renderTable();
         }
 
         function holdManual() {
@@ -248,7 +284,49 @@
             renderTable(); document.querySelector('input[onchange="toggleAll(this.checked)"]').checked = false;
         }
 
-        // --- REVISI: RENDER TABEL (Mewarnai baris duplikat) ---
+        // --- FILTER LENGKAP STBJ ---
+        function toggleSidebarFilter() {
+            document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
+            document.getElementById('overlay-klik-luar').classList.toggle('hidden');
+        }
+
+        function resetFilterSTBJ() {
+            const ids = ['fs-status','fs-troli','fs-qr','fs-tgl','fs-mesin','fs-shift','fs-jenis','fs-nama','fs-pjg','fs-grade','fs-dus','fs-shading','fs-po','fs-ket','fs-pic'];
+            ids.forEach(id => document.getElementById(id).value = '');
+            saringTabelSTBJ(); toggleSidebarFilter();
+        }
+
+        function saringTabelSTBJ() {
+            const f = {
+                status: document.getElementById('fs-status').value.toLowerCase(),
+                troli: document.getElementById('fs-troli').value.toLowerCase(),
+                qr: document.getElementById('fs-qr').value.toLowerCase(),
+                tgl: document.getElementById('fs-tgl').value.toLowerCase(),
+                mesin: document.getElementById('fs-mesin').value.toLowerCase(),
+                shift: document.getElementById('fs-shift').value.toLowerCase(),
+                jenis: document.getElementById('fs-jenis').value.toLowerCase(),
+                nama: document.getElementById('fs-nama').value.toLowerCase(),
+                pjg: document.getElementById('fs-pjg').value.toLowerCase(),
+                grade: document.getElementById('fs-grade').value.toLowerCase(),
+                dus: document.getElementById('fs-dus').value.toLowerCase(),
+                shading: document.getElementById('fs-shading').value.toLowerCase(),
+                po: document.getElementById('fs-po').value.toLowerCase(),
+                ket: document.getElementById('fs-ket').value.toLowerCase(),
+                pic: document.getElementById('fs-pic').value.toLowerCase()
+            };
+
+            document.querySelectorAll('.row-stbj').forEach(row => {
+                let show = true;
+                for(let key in f) {
+                    if(f[key]) {
+                        const cell = row.querySelector('.col-' + key);
+                        if(cell && !cell.innerText.toLowerCase().includes(f[key])) { show = false; break; }
+                    }
+                }
+                row.style.display = show ? '' : 'none';
+            });
+        }
+
         function renderTable() {
             const tbody = document.getElementById('tbody-stbj');
             if(dataStbj.length === 0) return tbody.innerHTML = '<tr><td colspan="17" class="p-10 text-slate-400 font-bold"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan / di-import.</td></tr>';
@@ -258,49 +336,46 @@
                 let badgeClass = "bg-slate-200 text-slate-700";
                 let displayStatus = d.status;
 
-                // Pewarnaan status standar
                 if(d.status === 'UNIQUE') badgeClass = "bg-emerald-500 text-white";
                 if(d.status === 'DUPLIKAT') badgeClass = "bg-red-600 text-white";
                 if(d.status === 'HOLD') badgeClass = "bg-amber-500 text-white";
 
-                // Jika statusnya belum dicek tapi ketahuan kembar oleh layar
                 if(d.status === 'BELUM CEK' && d.isLocalDuplicate) {
                     badgeClass = "bg-red-600 text-white";
                     displayStatus = "DUPLIKAT SCAN";
                 }
 
-                // Warnai background seluruh baris (Merah untuk duplikat layar/database)
                 const isRedHighlight = d.status === 'DUPLIKAT' || d.isLocalDuplicate;
                 const trBaseClass = isRedHighlight ? 'bg-red-100 hover:bg-red-200 text-red-900' : (d.status === 'HOLD' ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-slate-50 text-slate-700');
 
                 html += `
-                    <tr class="border-b border-slate-200 transition ${trBaseClass}">
+                    <tr class="border-b border-slate-200 transition ${trBaseClass} row-stbj">
                         <td class="p-3 text-center"><input type="checkbox" value="${d.id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600"></td>
                         <td class="p-3 font-bold">${index + 1}</td>
-                        <td class="p-3 font-black text-[10px] border-r border-slate-200"><span class="px-3 py-1 rounded ${badgeClass}">${displayStatus}</span></td>
-                        <td class="p-3 font-bold ${isRedHighlight ? 'text-red-900' : 'text-slate-700'}">${d.troli}</td>
-                        <td class="p-3 font-mono font-bold border-r border-slate-200 tracking-wider">${d.qrcode}</td>
-                        <td class="p-3 font-bold">${d.tglProduksi}</td>
-                        <td class="p-3 font-bold">${d.mesin}</td>
-                        <td class="p-3 font-bold border-r border-slate-200">${d.shift}</td>
-                        <td class="p-3 font-black ${isRedHighlight ? 'text-red-700' : 'text-blue-700'}">${d.jenisItem}</td>
-                        <td class="p-3 font-bold text-left">${d.namaItem}</td>
-                        <td class="p-3 font-bold">${d.panjang}</td>
-                        <td class="p-3 font-bold">${d.grade}</td>
-                        <td class="p-3 font-bold">${d.dus}</td>
-                        <td class="p-3 font-bold border-r border-slate-200">${d.shading}</td>
-                        <td class="p-3 font-black ${isRedHighlight ? 'text-red-700' : 'text-orange-600'}">${d.po}</td>
-                        <td class="p-2"><input type="text" onchange="updateKet(${d.id}, this.value)" value="${d.keterangan}" class="w-full p-2 text-xs border border-slate-300 rounded outline-none focus:border-blue-500 bg-transparent ${isRedHighlight ? 'placeholder-red-400' : ''}" placeholder="Keterangan..."></td>
-                        <td class="p-3 font-bold uppercase text-[10px] opacity-70">${d.pic}</td>
+                        <td class="p-3 font-black text-[10px] border-r border-slate-200 col-status"><span class="px-3 py-1 rounded ${badgeClass}">${displayStatus}</span></td>
+                        <td class="p-3 font-bold ${isRedHighlight ? 'text-red-900' : 'text-slate-700'} col-troli">${d.troli}</td>
+                        <td class="p-3 font-mono font-bold border-r border-slate-200 tracking-wider col-qr">${d.qrcode}</td>
+                        <td class="p-3 font-bold col-tgl">${d.tglProduksi}</td>
+                        <td class="p-3 font-bold col-mesin">${d.mesin}</td>
+                        <td class="p-3 font-bold border-r border-slate-200 col-shift">${d.shift}</td>
+                        <td class="p-3 font-black ${isRedHighlight ? 'text-red-700' : 'text-blue-700'} col-jenis">${d.jenisItem}</td>
+                        <td class="p-3 font-bold text-left col-nama">${d.namaItem}</td>
+                        <td class="p-3 font-bold col-pjg">${d.panjang}</td>
+                        <td class="p-3 font-bold col-grade">${d.grade}</td>
+                        <td class="p-3 font-bold col-dus">${d.dus}</td>
+                        <td class="p-3 font-bold border-r border-slate-200 col-shading">${d.shading}</td>
+                        <td class="p-3 font-black ${isRedHighlight ? 'text-red-700' : 'text-orange-600'} col-po">${d.po}</td>
+                        <td class="p-2 col-ket"><input type="text" onchange="updateKet(${d.id}, this.value)" value="${d.keterangan}" class="w-full p-2 text-xs border border-slate-300 rounded outline-none focus:border-blue-500 bg-transparent ${isRedHighlight ? 'placeholder-red-400' : ''}" placeholder="Keterangan..."></td>
+                        <td class="p-3 font-bold uppercase text-[10px] opacity-70 col-pic">${d.pic}</td>
                     </tr>
                 `;
             });
             tbody.innerHTML = html; lucide.createIcons();
+            saringTabelSTBJ(); // Jalankan filter pasca-render
         }
 
         function updateKet(id, val) { const item = dataStbj.find(d => d.id === id); if(item) item.keterangan = val; }
 
-        // --- REVISI: FUNGSI CEK GUDANG (Kembali fokus cek ke Database) ---
         async function cekGudangSTBJ() {
             if(dataStbj.length === 0) return alert("Belum ada data.");
             const btn = document.getElementById('btn-cek-gudang'); const ori = btn.innerHTML;
@@ -308,16 +383,12 @@
 
             const allQRs = dataStbj.map(d => d.qrcode);
             try {
-                // Mengecek ke table hasil_stbj di Supabase
                 const { data, error } = await db.from('hasil_stbj').select('qrcode').in('qrcode', allQRs);
                 if(error) throw error;
                 
                 const existingQRs = data.map(d => d.qrcode);
-                
                 dataStbj.forEach(d => {
-                    if(d.status === 'HOLD') return; // Lewati yang sudah dihold manual
-                    
-                    // Kalau ketemu di DB ATAU itu duplikat layar, paksa jadi DUPLIKAT
+                    if(d.status === 'HOLD') return; 
                     if(existingQRs.includes(d.qrcode) || d.isLocalDuplicate) {
                         d.status = 'DUPLIKAT';
                     } else {
