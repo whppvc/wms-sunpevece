@@ -383,3 +383,53 @@ function salinDataTabel() {
         alert(`Berhasil menyalin ${cek.length} baris!\nBuka Excel lalu tekan CTRL+V / Paste.`);
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
 }
+// FITUR BARU: MODAL TABEL HASIL STBJ DI DALAM LANGSIR
+async function bukaModalSTBJ() {
+    document.getElementById('modal-stbj-langsir').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+    
+    const tbody = document.getElementById('tbody-stbj-modal');
+    tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat Data STBJ...</td></tr>';
+    lucide.createIcons();
+
+    try {
+        const { data, error } = await db.from('hasil_stbj').select('*').order('created_at', {ascending: false});
+        if(error) throw error;
+        
+        if(!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="p-6 font-bold text-slate-400">Tabel STBJ Kosong.</td></tr>';
+            return;
+        }
+
+        let h = '';
+        data.forEach((r, i) => {
+            const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+            const td = translateBarcode(r.qrcode);
+            const statData = r.status_data === 'Collected' ? '<span class="bg-indigo-100 text-indigo-700 font-black px-2 py-1 rounded shadow-sm text-[10px]">COLLECTED</span>' : '<span class="text-slate-400 font-bold text-[10px]">-</span>';
+            
+            h += `
+                <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-modal-stbj">
+                    <td class="p-3 font-bold text-slate-400">${i+1}</td>
+                    <td class="p-3 text-slate-600 font-semibold">${tgl}</td>
+                    <td class="p-3 font-bold text-slate-700">${r.troli || '-'}</td>
+                    <td class="p-3 font-mono font-bold text-slate-900 border-r border-slate-200 tracking-wider">${r.qrcode}</td>
+                    <td class="p-3 font-bold text-blue-700 text-left">${td.namaItem}</td>
+                    <td class="p-3 font-bold text-slate-600">${td.panjang}</td>
+                    <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-r border-slate-200">${td.po}</td>
+                    <td class="p-3">${statData}</td>
+                </tr>`;
+        });
+        tbody.innerHTML = h;
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="8" class="p-6 font-bold text-red-500">Gagal: ${e.message}</td></tr>`;
+    }
+}
+
+function tutupModalSTBJ() { document.getElementById('modal-stbj-langsir').classList.add('hidden'); if(document.getElementById('sidebar-filter').classList.contains('translate-x-full')) document.getElementById('overlay-klik-luar').classList.add('hidden'); }
+
+function saringTabelModalSTBJ() {
+    const q = document.getElementById('f-stbj-modal').value.toLowerCase();
+    document.querySelectorAll('.row-modal-stbj').forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
