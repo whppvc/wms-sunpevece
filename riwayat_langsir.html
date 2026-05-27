@@ -111,9 +111,8 @@
         let logLangsirRaw = [];
         let kamusData = [];
         let areaData = [];
-        let hiddenCols = []; // Array class kolom yang disembunyikan
+        let hiddenCols = []; 
 
-        // Definisi Master Kolom Detail
         const colDefinitions = [
             { id: 'col-waktu', label: 'Waktu Masuk', default: true },
             { id: 'col-area', label: 'Area', default: true },
@@ -148,7 +147,6 @@
             }, 200);
         });
 
-        // --- SISTEM HIDE/UNHIDE KOLOM ---
         function buatDropdownKolom() {
             const container = document.getElementById('list-kolom-toggles');
             let html = '';
@@ -177,12 +175,10 @@
         }
 
         function terapkanStyleKolom() {
-            // Memanipulasi CSS class agar baris yang disembunyikan benar-benar hilang (cepat dan ringan)
             const cssString = hiddenCols.map(id => `.${id} { display: none !important; }`).join('\n');
             document.getElementById('dynamic-col-styles').innerHTML = cssString;
         }
 
-        // --- LOGIKA UTAMA TABEL ---
         async function ambilRiwayatSupabase() {
             document.getElementById('tbody-riwayat').innerHTML = `<tr><td colspan="16" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menarik Data Riwayat...</p></td></tr>`;
             lucide.createIcons();
@@ -235,9 +231,7 @@
             document.getElementById('tab-r-qr').className = m === 'qrcode' ? 'px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition' : 'px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
             document.getElementById('tab-r-agregasi').className = m === 'agregasi' ? 'px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition' : 'px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
             
-            // Sembunyikan Toolbar Spesifik saat Mode Agregasi
-            document.getElementById('toolbar-detail').style.display = m === 'qrcode' ? 'flex' : 'none';
-            // Sembunyikan input QR Filter karena agregasi tidak punya QR
+            // Sembunyikan HANYA input cari QR karena di agregasi gak ada QR (Tombol toolbar tetap terlihat!)
             document.getElementById('flt-qr').parentElement.style.display = m === 'qrcode' ? '' : 'none';
             
             renderTabelRiwayat();
@@ -304,6 +298,7 @@
                 // Mode Agregasi
                 thead.innerHTML = `
                     <tr>
+                        <th class="hdr-std w-10"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded"></th>
                         <th class="hdr-std w-12">No</th>
                         <th class="hdr-std">Area</th>
                         <th class="hdr-std">Jenis Item</th>
@@ -324,12 +319,13 @@
                 });
 
                 let arr = Object.values(groups);
-                if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-slate-400 font-bold">Kosong.</td></tr>'; return; }
+                if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="9" class="p-6 text-slate-400 font-bold">Kosong.</td></tr>'; return; }
 
                 let h = '';
                 arr.forEach((r, i) => {
                     h += `
                         <tr class="border-b border-slate-200 hover:bg-slate-50 transition r-row">
+                            <td class="p-3"><input type="checkbox" value="agg_${i}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                             <td class="p-3 font-bold text-slate-400">${i+1}</td>
                             <td class="p-3 font-black text-emerald-600 r-area">${r.area}</td>
                             <td class="p-3 font-black text-blue-700 r-jenis">${r.jenis}</td>
@@ -346,7 +342,6 @@
             saringTabelRiwayat();
         }
 
-        // --- FILTER & UTILS UI ---
         function toggleSidebarFilter() {
             const sb = document.getElementById('sidebar-filter');
             const overlay = document.getElementById('overlay-klik-luar');
@@ -396,8 +391,9 @@
             });
         }
 
-        // --- FITUR GANTI AREA ---
         function bukaModalGantiArea() {
+            if(modeRiwayat === 'agregasi') return alert("TOLAK: Ganti Area hanya bisa dilakukan di mode DETAIL QRCODE karena membutuhkan spesifikasi Barcode masing-masing dus.");
+            
             const cek = document.querySelectorAll('.cb-row:checked');
             if(cek.length === 0) return alert("Pilih minimal 1 baris yang ingin diganti areanya!");
             
@@ -420,7 +416,6 @@
             const qrsToUpdate = Array.from(checkedBoxes).map(cb => cb.value);
 
             let updates = [];
-            // Merakit ulang id_sku agar prefix areanya berubah mengikuti data terbaru
             for(let qr of qrsToUpdate) {
                 let dbRow = logLangsirRaw.find(r => r.qrcode === qr);
                 if(dbRow) {
@@ -434,14 +429,12 @@
             }
 
             try {
-                // Upsert seluruh baris yang diubah secara bulk (sangat efisien)
                 const { error } = await db.from('stok_qr').upsert(updates, { onConflict: 'qrcode' });
                 if(error) throw error;
                 
                 alert("Area berhasil dipindahkan!");
                 tutupModalArea();
                 
-                // Segarkan data
                 document.querySelector('input[onchange="toggleSemuaCentang(this.checked)"]').checked = false;
                 await ambilRiwayatSupabase();
             } catch (error) {
@@ -451,10 +444,8 @@
             }
         }
 
-        // --- FITUR SALIN EXCEL (TSV) ---
+        // Sekarang Fitur Salin bekerja di kedua mode (Detail / Rangkuman)
         function salinDataTabel() {
-            if(modeRiwayat !== 'qrcode') return alert('Fitur salin hanya tersedia di mode DETAIL QRCODE.');
-            
             const cek = document.querySelectorAll('.cb-row:checked');
             if(cek.length === 0) return alert("Pilih baris yang ingin disalin dengan mencentang kotak di kiri tabel!");
 
@@ -469,7 +460,6 @@
                 const rowData = [];
                 Array.from(tr.children).forEach((td, idx) => {
                     if(idx === 0) return; // Lewati kolom checkbox
-                    // Jika kolom tersebut tidak disembunyikan (hide)
                     if(window.getComputedStyle(td).display !== 'none') {
                         rowData.push(td.innerText.trim().replace(/\n/g, ' '));
                     }
