@@ -12,70 +12,79 @@
         .table-container { scrollbar-width: thin; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; white-space: nowrap; }
-        .tab-active { border-bottom: 4px solid #1e40af; color: #1e40af; font-weight: 900; }
-        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 4px solid transparent; }
+        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
+        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
     </style>
     <style id="dynamic-col-styles"></style>
 </head>
-<body class="font-sans overflow-x-hidden">
-    <div class="w-full relative">
+<body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-28">
+
+    <div class="w-full max-w-7xl mx-auto px-3 sm:px-4 pt-4 relative">
         
-        <div class="flex border-b border-slate-200 mb-4 bg-white px-2 rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
-            <button onclick="switchTab('scan')" id="btn-tab-scan" class="px-6 py-4 tab-active transition whitespace-nowrap flex items-center gap-2"><i data-lucide="barcode" class="w-4 h-4"></i> SCAN ITEM PER DUS</button>
-            <button onclick="switchTab('csv')" id="btn-tab-csv" class="px-6 py-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> IMPORT CSV</button>
+        <div class="flex border-b border-slate-200 mb-4 bg-white rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
+            <button onclick="switchTab('scan')" id="btn-tab-scan" class="px-6 py-4 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs"><i data-lucide="barcode" class="w-4 h-4"></i> SCAN ITEM PER DUS</button>
+            <button onclick="switchTab('csv')" id="btn-tab-csv" class="px-6 py-4 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> IMPORT CSV</button>
         </div>
 
-        <div class="bg-white p-5 md:p-6 rounded-b-xl rounded-tr-xl shadow-sm border border-slate-200 relative mb-4">
-            <div class="flex flex-col md:flex-row gap-4 mb-4">
-                <div class="w-full md:w-1/3">
-                    <label class="block text-[11px] font-black uppercase tracking-wide mb-2 text-slate-600">Pilih Troli</label>
-                    <select id="select-troli" class="w-full p-3.5 border-2 border-slate-200 rounded-xl font-bold outline-none focus:border-blue-700 text-slate-800 cursor-pointer bg-slate-50 transition">
+        <div class="bg-white p-4 sm:p-6 rounded-b-xl rounded-tr-xl shadow-sm border border-slate-200 mb-4">
+            
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 items-end mb-5 border-b border-slate-100 pb-5">
+                
+                <div class="md:col-span-3">
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Pilih Troli</label>
+                    <select id="select-troli" class="w-full p-2.5 sm:p-3 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-blue-600 text-slate-800 cursor-pointer bg-slate-50 text-sm">
                         <option value="">-- Memuat Troli... --</option>
                     </select>
                 </div>
 
-                <div id="view-scan" class="w-full md:w-2/3">
-                    <label class="block text-[11px] font-black uppercase tracking-wide mb-2 text-slate-600">Scan Fisik Kardus</label>
+                <div id="view-scan" class="md:col-span-9">
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Scan Fisik Kardus</label>
                     <form id="form-scan" class="flex flex-col sm:flex-row gap-2">
-                        <input type="text" id="input-qrcode" class="flex-1 p-3.5 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-700 font-black text-slate-800 text-lg transition" placeholder="Arahkan scanner ke kardus..." autocomplete="off">
-                        <button type="submit" class="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white px-8 py-3.5 rounded-xl font-black shadow-md cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-4 border-blue-900"><i data-lucide="plus-square" class="w-5 h-5"></i> ADD</button>
+                        <div class="relative flex-1">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
+                            <input type="text" id="input-qrcode" class="w-full pl-10 p-2.5 sm:p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-black text-slate-800 text-base bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner ke kardus..." autocomplete="off">
+                        </div>
+                        <button type="submit" class="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white px-6 py-2.5 sm:py-3 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-blue-900 text-xs sm:text-sm uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> ADD</button>
                     </form>
                 </div>
 
-                <div id="view-csv" class="w-full md:w-2/3 hidden">
-                    <label class="block text-[11px] font-black uppercase tracking-wide mb-2 text-slate-600">Upload File CSV</label>
+                <div id="view-csv" class="md:col-span-9 hidden">
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Upload File CSV</label>
                     <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="file" id="input-csv" accept=".csv" class="flex-1 p-2.5 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-700 font-bold text-slate-700 bg-slate-50 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition">
-                        <button onclick="prosesCSV()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-xl font-black shadow-md cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-4 border-emerald-800"><i data-lucide="upload-cloud" class="w-5 h-5"></i> PROSES CSV</button>
+                        <input type="file" id="input-csv" accept=".csv" class="flex-1 p-2 border-2 border-slate-200 rounded-lg outline-none text-sm font-bold text-slate-700 bg-slate-50 file:mr-4 file:py-1.5 file:px-4 file:rounded-md file:border-0 file:text-[11px] file:font-black file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition cursor-pointer">
+                        <button onclick="prosesCSV()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-emerald-800 text-xs sm:text-sm uppercase"><i data-lucide="upload-cloud" class="w-4 h-4"></i> PROSES CSV</button>
                     </div>
                 </div>
             </div>
 
-            <div class="flex flex-col sm:flex-row justify-between gap-3 mt-4 pt-4 border-t border-slate-100">
-                <div class="flex flex-wrap gap-2 w-full sm:w-auto">
-                    <button onclick="toggleSidebarFilter()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg shadow-sm border-b-2 border-slate-950 text-xs flex items-center justify-center gap-2 active:scale-95 transition uppercase"><i data-lucide="filter" class="w-4 h-4"></i> FILTER</button>
-                    <div class="relative">
-                        <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="px-4 py-3 bg-slate-100 text-slate-700 hover:bg-slate-200 font-black rounded-lg shadow-sm border border-slate-300 text-xs flex items-center gap-2 active:scale-95 transition uppercase"><i data-lucide="eye-off" class="w-4 h-4"></i> KOLOM</button>
+            <div class="flex flex-col lg:flex-row justify-between gap-3">
+                <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full lg:w-auto">
+                    <button onclick="toggleSidebarFilter()" class="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
+                    
+                    <div class="relative w-full sm:w-auto">
+                        <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="w-full px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase"><i data-lucide="eye-off" class="w-4 h-4"></i> Kolom</button>
                         <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
                             <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
-                                <span class="text-xs font-black text-slate-500 uppercase">Sembunyikan</span>
+                                <span class="text-[11px] font-black text-slate-500 uppercase">Sembunyikan Kolom</span>
                                 <button onclick="resetKolom()" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold hover:bg-blue-200">RESET</button>
                             </div>
                             <div class="flex flex-col gap-2 max-h-64 overflow-y-auto" id="list-kolom-toggles"></div>
                         </div>
                     </div>
-                    <button onclick="hapusBarisTerpilih()" class="flex-1 sm:flex-none px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center justify-center gap-2 active:scale-95 transition border-b-2 border-red-800"><i data-lucide="trash-2" class="w-4 h-4"></i> HAPUS</button>
-                    <button onclick="undoHapusSTBJ()" class="flex-1 sm:flex-none px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg shadow-sm text-xs flex items-center justify-center gap-2 active:scale-95 transition border border-slate-300"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> UNDO HAPUS</button>
+                    
+                    <button onclick="undoHapusSTBJ()" class="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo</button>
+                    <button onclick="hapusBarisTerpilih()" class="px-3 py-2 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus</button>
                 </div>
-                <div class="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
-                    <button onclick="holdManual()" class="flex-1 sm:flex-none px-4 py-3 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center justify-center gap-2 active:scale-95 transition"><i data-lucide="pause-circle" class="w-4 h-4"></i> HOLD MANUAL</button>
-                    <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="flex-1 sm:flex-none px-5 py-3 bg-slate-800 text-white font-black rounded-lg shadow-sm hover:bg-slate-900 border-b-4 border-slate-900 transition text-xs flex items-center justify-center gap-2 active:scale-95 uppercase"><i data-lucide="search-check" class="w-4 h-4"></i> CEK STATUS DUPLIKAT</button>
+
+                <div class="grid grid-cols-2 sm:flex gap-2 w-full lg:w-auto">
+                    <button onclick="holdManual()" class="px-4 py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 font-black rounded-lg shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold</button>
+                    <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="col-span-2 sm:col-span-1 px-5 py-2.5 bg-slate-900 text-white font-black rounded-lg shadow-sm hover:bg-black border-b-2 border-slate-950 transition text-xs flex items-center justify-center gap-2 uppercase tracking-wide"><i data-lucide="search-check" class="w-4 h-4"></i> Validasi Duplikat</button>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative mb-4">
-            <div class="table-container overflow-x-auto w-full max-h-[50vh]">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
+            <div class="table-container overflow-x-auto w-full max-h-[55vh]">
                 <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-stbj">
                     <thead class="sticky top-0 z-10 shadow-sm">
                         <tr>
@@ -104,9 +113,15 @@
                 </table>
             </div>
         </div>
-        
-        <div class="pt-2 pb-10">
-            <button id="btn-save" onclick="saveToDatabaseSTBJ()" class="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-lg flex items-center justify-center gap-2 text-base tracking-widest cursor-pointer transition active:scale-95 uppercase border-b-4 border-black"><i data-lucide="save" class="w-5 h-5"></i> SIMPAN DATA (UNIQUE -> HASIL, DUPLIKAT/HOLD -> HOLD)</button>
+    </div>
+
+    <div class="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 p-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
+        <div class="max-w-7xl mx-auto flex justify-center md:justify-end">
+            <button id="btn-save" onclick="saveToDatabaseSTBJ()" class="w-full md:w-auto px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-wide cursor-pointer transition active:scale-95 uppercase border-b-2 border-emerald-800">
+                <i data-lucide="save" class="w-5 h-5"></i> 
+                <span>SIMPAN KE GUDANG</span>
+                <span class="hidden sm:inline font-semibold text-[10px] ml-2 bg-emerald-800 px-2 py-1 rounded-md opacity-90">(Unique = Hasil, Duplikat = Hold)</span>
+            </button>
         </div>
     </div>
 
@@ -210,8 +225,8 @@
             currentTab = tab;
             document.getElementById('view-scan').classList.toggle('hidden', tab !== 'scan');
             document.getElementById('view-csv').classList.toggle('hidden', tab !== 'csv');
-            document.getElementById('btn-tab-scan').className = tab === 'scan' ? 'px-6 py-4 tab-active transition whitespace-nowrap flex items-center gap-2' : 'px-6 py-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2';
-            document.getElementById('btn-tab-csv').className = tab === 'csv' ? 'px-6 py-4 tab-active transition whitespace-nowrap flex items-center gap-2' : 'px-6 py-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2';
+            document.getElementById('btn-tab-scan').className = tab === 'scan' ? 'px-6 py-4 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs' : 'px-6 py-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs';
+            document.getElementById('btn-tab-csv').className = tab === 'csv' ? 'px-6 py-4 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs' : 'px-6 py-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs';
         }
 
         async function loadInitialSTBJData() {
@@ -415,13 +430,13 @@
                 }
 
                 const isRedHighlight = d.status === 'DUPLIKAT' || d.isLocalDuplicate;
-                const trBaseClass = isRedHighlight ? 'bg-red-100 hover:bg-red-200 text-red-900' : (d.status === 'HOLD' ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-slate-50 text-slate-700');
+                const trBaseClass = isRedHighlight ? 'bg-red-50 hover:bg-red-100 text-red-900' : (d.status === 'HOLD' ? 'bg-amber-50 hover:bg-amber-100 text-amber-900' : 'hover:bg-slate-50 text-slate-700');
 
                 html += `
                     <tr class="border-b border-slate-200 transition ${trBaseClass} row-stbj">
-                        <td class="p-3 text-center col-cb"><input type="checkbox" value="${d.id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600"></td>
+                        <td class="p-3 text-center col-cb"><input type="checkbox" value="${d.id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                         <td class="p-3 font-bold col-no">${index + 1}</td>
-                        <td class="p-3 font-black text-[10px] border-r border-slate-200 col-status"><span class="px-3 py-1 rounded ${badgeClass}">${displayStatus}</span></td>
+                        <td class="p-3 font-black text-[10px] border-r border-slate-200 col-status"><span class="px-2 py-1 rounded shadow-sm border border-black/10 ${badgeClass}">${displayStatus}</span></td>
                         <td class="p-3 font-bold ${isRedHighlight ? 'text-red-900' : 'text-slate-700'} col-troli">${d.troli}</td>
                         <td class="p-3 font-mono font-bold border-r border-slate-200 tracking-wider col-qr">${d.qrcode}</td>
                         <td class="p-3 font-bold col-tgl">${d.tglProduksi}</td>
@@ -434,7 +449,7 @@
                         <td class="p-3 font-bold col-dus">${d.dus}</td>
                         <td class="p-3 font-bold border-r border-slate-200 col-shading">${d.shading}</td>
                         <td class="p-3 font-black ${isRedHighlight ? 'text-red-700' : 'text-orange-600'} col-po">${d.po}</td>
-                        <td class="p-2 col-ket"><input type="text" onchange="updateKet(${d.id}, this.value)" value="${d.keterangan}" class="w-full p-2 text-xs border border-slate-300 rounded outline-none focus:border-blue-500 bg-transparent ${isRedHighlight ? 'placeholder-red-400' : ''}" placeholder="Keterangan..."></td>
+                        <td class="p-2 col-ket"><input type="text" onchange="updateKet(${d.id}, this.value)" value="${d.keterangan}" class="w-full p-2 text-xs border border-slate-300 rounded outline-none focus:border-blue-500 bg-white/50 ${isRedHighlight ? 'placeholder-red-400' : ''}" placeholder="Keterangan..."></td>
                         <td class="p-3 font-bold uppercase text-[10px] opacity-70 col-pic">${d.pic}</td>
                     </tr>
                 `;
@@ -469,7 +484,7 @@
         async function saveToDatabaseSTBJ() {
             if(dataStbj.length === 0) return alert('Data kosong!');
             const blmCek = dataStbj.filter(d => d.status === 'BELUM CEK');
-            if(blmCek.length > 0) return alert('Tekan tombol CEK STATUS DUPLIKAT terlebih dahulu sebelum menyimpan!');
+            if(blmCek.length > 0) return alert('Tekan tombol VALIDASI DUPLIKAT terlebih dahulu sebelum menyimpan!');
 
             const btn = document.getElementById('btn-save'); const ori = btn.innerHTML;
             btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btn.disabled = true;
@@ -478,7 +493,6 @@
             const dupes = dataStbj.filter(d => d.status === 'DUPLIKAT' || d.status === 'HOLD');
 
             try {
-                // UPDATE: Menambahkan 'troli' ke dalam object insert payload
                 if(uniques.length > 0) {
                     const payloadHasil = uniques.map(d => ({ qrcode: d.qrcode, troli: d.troli, pic_input: d.pic, keterangan: d.keterangan }));
                     const { error: err1 } = await db.from('hasil_stbj').insert(payloadHasil);
