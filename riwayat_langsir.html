@@ -27,27 +27,43 @@
 
         <div class="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm mb-3">
             <div class="flex flex-wrap items-center justify-between gap-2">
-                <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                    
-                    <button onclick="toggleSidebarFilter()" class="p-2 sm:px-3 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] rounded shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition uppercase"><i data-lucide="filter" class="w-4 h-4"></i> <span class="hidden sm:inline">FILTER</span></button>
-                    
-                    <div class="relative">
-                        <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="p-2 sm:px-3 sm:py-2 bg-white text-slate-700 hover:bg-slate-50 font-bold rounded shadow-sm border border-slate-300 text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition uppercase"><i data-lucide="eye-off" class="w-4 h-4"></i> <span class="hidden sm:inline">KOLOM</span></button>
-                        <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
-                            <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
-                                <span class="text-[11px] font-black text-slate-500 uppercase">Sembunyikan</span>
-                                <button onclick="resetKolom()" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold hover:bg-blue-200">RESET</button>
-                            </div>
-                            <div class="flex flex-col gap-2 max-h-64 overflow-y-auto" id="list-kolom-toggles"></div>
-                        </div>
-                    </div>
-
-                    <button onclick="bukaModalGantiArea()" class="p-2 sm:px-3 sm:py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition uppercase"><i data-lucide="map-pin" class="w-4 h-4"></i> <span class="hidden sm:inline">GANTI AREA</span></button>
-                    <button onclick="salinDataTabel()" class="p-2 sm:px-3 sm:py-2 bg-blue-100 hover:bg-blue-200 border border-blue-300 text-blue-800 font-bold text-[11px] rounded flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase"><i data-lucide="copy" class="w-4 h-4"></i> <span class="hidden sm:inline">SALIN</span></button>
+    <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <!-- TOMBOL AKSI UTAMA (BIRU) -->
+        <button onclick="toggleSidebarFilter()" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white border-b-2 border-blue-800">
+            <i data-lucide="filter" class="w-4 h-4"></i> <span class="hidden sm:inline">FILTER</span>
+        </button>
+        
+        <!-- TOMBOL NETRAL (PUTIH) -->
+        <div class="relative">
+            <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border border-slate-300">
+                <i data-lucide="eye-off" class="w-4 h-4"></i> <span class="hidden sm:inline">KOLOM</span>
+            </button>
+            <!-- (Dropdown kolom tetap sama seperti aslinya...) -->
+            <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
+                    <span class="text-[11px] font-black text-slate-500 uppercase">Sembunyikan</span>
+                    <button onclick="resetKolom()" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold hover:bg-blue-200">RESET</button>
                 </div>
-                
-                <button onclick="hapusBarisRiwayat()" class="p-2 sm:px-4 sm:py-2 bg-red-600 hover:bg-red-700 text-white font-black text-[10px] sm:text-[11px] rounded shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition uppercase whitespace-nowrap ml-auto"><i data-lucide="trash-2" class="w-4 h-4"></i> <span class="hidden sm:inline">HAPUS BARIS</span></button>
+                <div class="flex flex-col gap-2 max-h-64 overflow-y-auto" id="list-kolom-toggles"></div>
             </div>
+        </div>
+
+        <!-- TOMBOL AKSI UTAMA (BIRU) -->
+        <button onclick="bukaModalGantiArea()" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white border-b-2 border-blue-800">
+            <i data-lucide="map-pin" class="w-4 h-4"></i> <span class="hidden sm:inline">GANTI AREA</span>
+        </button>
+        
+        <!-- TOMBOL INFO/OPSIONAL (SOFT BIRU) -->
+        <button onclick="salinDataTabel()" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-300">
+            <i data-lucide="copy" class="w-4 h-4"></i> <span class="hidden sm:inline">SALIN</span>
+        </button>
+    </div>
+    
+    <!-- TOMBOL BAHAYA PERMANEN (MERAH SOLID) -->
+    <button onclick="hapusBarisRiwayat()" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap ml-auto bg-red-600 hover:bg-red-700 text-white border-b-2 border-red-800">
+        <i data-lucide="trash-2" class="w-4 h-4"></i> <span class="hidden sm:inline">HAPUS BARIS</span>
+    </button>
+</div>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative mb-4">
