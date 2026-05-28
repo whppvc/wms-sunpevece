@@ -383,30 +383,7 @@ function salinDataTabel() {
         alert(`Berhasil menyalin ${cek.length} baris!\nBuka Excel lalu tekan CTRL+V / Paste.`);
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
 }
-// FITUR BARU: MODAL TABEL HASIL STBJ DI DALAM LANGSIR
-async function bukaModalSTBJ() {
-    document.getElementById('modal-stbj-langsir').classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
-    
-    const tbody = document.getElementById('tbody-stbj-modal');
-    tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat Data STBJ...</td></tr>';
-    lucide.createIcons();
 
-    try {
-        const { data, error } = await db.from('hasil_stbj').select('*').order('created_at', {ascending: false});
-        if(error) throw error;
-        
-        if(!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="p-6 font-bold text-slate-400">Tabel STBJ Kosong.</td></tr>';
-            return;
-        }
-
-       let h = '';
-        data.forEach((r, i) => {
-            const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
-            const td = translateBarcode(r.qrcode);
-            
-            // REVISI: Menampilkan status_gudang dengan badge warna dari hasil_stbj
 // FITUR BARU: MODAL TABEL HASIL STBJ DI DALAM LANGSIR
 async function bukaModalSTBJ() {
     document.getElementById('modal-stbj-langsir').classList.remove('hidden');
@@ -460,7 +437,12 @@ async function bukaModalSTBJ() {
     }
 }
 
-function tutupModalSTBJ() { document.getElementById('modal-stbj-langsir').classList.add('hidden'); if(document.getElementById('sidebar-filter').classList.contains('translate-x-full')) document.getElementById('overlay-klik-luar').classList.add('hidden'); }
+function tutupModalSTBJ() { 
+    document.getElementById('modal-stbj-langsir').classList.add('hidden'); 
+    if(document.getElementById('sidebar-filter').classList.contains('translate-x-full')) {
+        document.getElementById('overlay-klik-luar').classList.add('hidden'); 
+    }
+}
 
 function saringTabelModalSTBJ() {
     const q = document.getElementById('f-stbj-modal').value.toLowerCase();
