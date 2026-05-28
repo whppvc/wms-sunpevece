@@ -283,37 +283,6 @@ async function validasiDanCek() {
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
-async function hapusBarisLangsir() {
-    // 1. Cek apakah ada baris tabel yang dicentang
-    const checked = document.querySelectorAll('.cb-row:checked');
-    if(checked.length === 0) return alert("Pilih baris yang ingin dihapus terlebih dahulu!");
-    
-    // 2. Konfirmasi ke user
-    if(!confirm(`Apakah Anda yakin ingin MENGHAPUS PERMANEN ${checked.length} data QRCode ini dari sistem?`)) return;
-    
-    // 3. Ambil list QRCode yang akan dihapus
-    const qrsToDel = Array.from(checked).map(cb => cb.value);
-    
-    // 4. Target tabel (Sesuaikan dengan tabel database halaman langsir Anda, umumnya 'stok_qr')
-    const tableTarget = 'stok_qr'; 
-    
-    try {
-        const { error } = await db.from(tableTarget).delete().in('qrcode', qrsToDel);
-        if(error) throw error;
-        
-        alert("Berhasil dihapus!");
-        
-        // 5. REFRESH TABEL (PENTING!)
-        // Ganti 'ambilSemuaData()' di bawah ini dengan nama fungsi penarik data/render ulang tabel yang ada di langsir_logic.js Anda
-        if (typeof ambilSemuaData === 'function') {
-            await ambilSemuaData();
-        }
-        
-    } catch(e) {
-        alert("Gagal Menghapus: " + e.message);
-    }
-}
-
 async function saveToSupabase() {
     const btn = document.getElementById('btn-save'); const original = btn.innerHTML;
     
