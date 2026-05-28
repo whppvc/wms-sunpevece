@@ -407,12 +407,40 @@ async function bukaModalSTBJ() {
             const td = translateBarcode(r.qrcode);
             
             // REVISI: Menampilkan status_gudang dengan badge warna dari hasil_stbj
-const statusGdg = r.status_gudang || '-';
-const colGudang = statusGdg === 'IN GUDANG' 
-    ? '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">IN GUDANG</span>' 
-    : (statusGdg === 'STBJ' 
-        ? '<span class="bg-blue-100 text-blue-800 border border-blue-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">STBJ</span>'
-        : `<span class="bg-slate-100 text-slate-600 border border-slate-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">${statusGdg}</span>`);
+// FITUR BARU: MODAL TABEL HASIL STBJ DI DALAM LANGSIR
+async function bukaModalSTBJ() {
+    document.getElementById('modal-stbj-langsir').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+    
+    const tbody = document.getElementById('tbody-stbj-modal');
+    tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat Data STBJ...</td></tr>';
+    lucide.createIcons();
+
+    try {
+        // 1. Tarik data dari tabel hasil_stbj
+        const { data, error } = await db.from('hasil_stbj').select('*').order('created_at', {ascending: false});
+        if(error) throw error;
+        
+        if(!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="p-6 font-bold text-slate-400">Tabel STBJ Kosong.</td></tr>';
+            return;
+        }
+
+        // 2. PERBAIKAN: Tarik data dari stok_qr untuk menentukan Status Item
+        const qrs = data.map(d => d.qrcode);
+        const { data: stokData } = await db.from('stok_qr').select('qrcode').in('qrcode', qrs);
+        const stokSet = new Set((stokData || []).map(d => d.qrcode)); // Jadikan Set agar pengecekan lebih cepat
+
+        let h = '';
+        data.forEach((r, i) => {
+            const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+            const td = translateBarcode(r.qrcode);
+            
+            // 3. Logika penentuan status item
+            const isInGudang = stokSet.has(r.qrcode);
+            const colGudang = isInGudang 
+                ? '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">IN GUDANG</span>' 
+                : '<span class="bg-blue-100 text-blue-800 border border-blue-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">STBJ</span>';
             
             h += `
                 <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-modal-stbj">
