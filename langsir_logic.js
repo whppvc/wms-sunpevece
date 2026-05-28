@@ -205,11 +205,11 @@ function deleteRow(btn) { const tr = btn.closest('tr'); deleteStack.push({ paren
 function undoDelete() { if(deleteStack.length === 0) return alert("Belum ada data yang dihapus."); const last = deleteStack.pop(); const temp = document.createElement('tbody'); temp.innerHTML = last.html; if (last.nextSibling) last.parent.insertBefore(temp.firstChild, last.nextSibling); else last.parent.appendChild(temp.firstChild); lucide.createIcons(); updateRowNumbers(); }
 function updateRowNumbers() { const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; }); }
 
-async function validasiDanCek() {
+async function VerifikasiDanCek() {
     const rows = document.querySelectorAll('.row-item');
-    if(rows.length === 0) return alert("Belum ada data untuk divalidasi.");
+    if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
     
-    const btn = document.getElementById('btn-validasi'); const ori = btn.innerHTML;
+    const btn = document.getElementById('btn-Verifikasi'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENGAMBIL DATA...'; btn.disabled = true;
     
     const qrs = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
@@ -291,7 +291,7 @@ async function saveToSupabase() {
     const adaBelumStbj = document.querySelectorAll('span[data-status="invalid-stbj"]').length > 0;
 
     if(adaYgBelumDicek || adaDuplikat || adaBelumStbj) {
-        return alert("GAGAL MENYIMPAN!\n\nTerdapat baris yang bermasalah (Belum Validasi / DUPLIKAT / BLM STBJ). Anda harus mencentang baris-baris tersebut dan menekan tombol 'HOLD LANGSIR' atau menghapusnya sebelum menyimpan.");
+        return alert("GAGAL MENYIMPAN!\n\nTerdapat baris yang bermasalah (Belum Verifikasi / DUPLIKAT / BLM STBJ). Anda harus mencentang baris-baris tersebut dan menekan tombol 'HOLD LANGSIR' atau menghapusnya sebelum menyimpan.");
     }
     
     const rows = document.querySelectorAll('.row-item'); if(rows.length === 0) return;
