@@ -406,8 +406,13 @@ async function bukaModalSTBJ() {
             const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
             const td = translateBarcode(r.qrcode);
             
-            // FITUR BARU: Menampilkan kolom gudang secara langsung
-            const colGudang = r.gudang ? `<span class="font-black text-indigo-700 bg-indigo-50 px-2 py-1 rounded border border-indigo-200">${r.gudang}</span>` : '<span class="text-slate-400 font-bold">-</span>';
+            // REVISI: Menampilkan status_gudang dengan badge warna dari hasil_stbj
+const statusGdg = r.status_gudang || '-';
+const colGudang = statusGdg === 'IN GUDANG' 
+    ? '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">IN GUDANG</span>' 
+    : (statusGdg === 'STBJ' 
+        ? '<span class="bg-blue-100 text-blue-800 border border-blue-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">STBJ</span>'
+        : `<span class="bg-slate-100 text-slate-600 border border-slate-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">${statusGdg}</span>`);
             
             h += `
                 <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-modal-stbj">
