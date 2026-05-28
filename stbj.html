@@ -95,7 +95,7 @@
         
         <!-- TOMBOL AKSI UTAMA (BIRU) -->
         <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white border-b-2 border-blue-800">
-            <i data-lucide="search-check" class="w-4 h-4"></i> Validasi <span class="hidden sm:inline">Duplikat</span>
+            <i data-lucide="search-check" class="w-4 h-4"></i> Verifikasi <span class="hidden sm:inline">Duplikat</span>
         </button>
     </div>
 </div>
@@ -493,7 +493,7 @@
                     else { d.status = 'UNIQUE'; }
                 });
                 renderTable();
-                alert("Validasi Selesai!\nData telah dicocokkan dengan Database STBJ.");
+                alert("Verifikasi Selesai!\nData telah dicocokkan dengan Database STBJ.");
             } catch (err) { alert("Gagal cek database: " + err.message); }
             finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
         }
@@ -501,7 +501,7 @@
         async function saveToDatabaseSTBJ() {
             if(dataStbj.length === 0) return alert('Data kosong!');
             const blmCek = dataStbj.filter(d => d.status === 'BELUM CEK');
-            if(blmCek.length > 0) return alert('Tekan tombol VALIDASI DUPLIKAT terlebih dahulu sebelum menyimpan!');
+            if(blmCek.length > 0) return alert('Tekan tombol Verifikasi DUPLIKAT terlebih dahulu sebelum menyimpan!');
 
             const btn = document.getElementById('btn-save'); const ori = btn.innerHTML;
             btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btn.disabled = true;
