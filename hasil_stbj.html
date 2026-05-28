@@ -144,7 +144,7 @@
         const colDefinitions = [
             { id: 'col-cb', label: 'Checkbox', default: true },
             { id: 'col-no', label: 'Nomor Urut', default: true },
-            { id: 'col-status-gudang', label: 'Status Gudang', default: true },
+            { id: 'col-status-gudang', label: 'Status Item', default: true },
             { id: 'col-status', label: 'Status Hold', default: true },
             { id: 'col-status-data', label: 'Status Data', default: true },
             { id: 'col-waktu', label: 'Waktu Input', default: true },
@@ -348,7 +348,7 @@
                     <tr>
                         <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
                         <th class="hdr-std w-12 col-no">No</th>
-                        <th class="hdr-std border-r border-slate-500 col-status-gudang">Status Gudang</th>
+                        <th class="hdr-std border-r border-slate-500 col-status-gudang">Status Item</th>
                         ${tabelSekarang === 'hold_stbj' ? '<th class="hdr-std text-amber-400 col-status">Status Hold</th>' : '<th class="hdr-std hidden col-status">Status Hold</th>'}
                         <th class="hdr-std col-status-data text-indigo-300">Status Data</th>
                         <th class="hdr-std col-waktu">Waktu Scan</th>
@@ -414,7 +414,7 @@
                     <tr>
                         <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
                         <th class="hdr-std w-12 col-no">No</th>
-                        <th class="hdr-std hidden col-status-gudang">Status Gudang</th>
+                        <th class="hdr-std hidden col-status-gudang">Status Item</th>
                         <th class="hdr-std hidden col-status">Status Hold</th>
                         <th class="hdr-std col-status-data text-indigo-300">Status Data</th>
                         <th class="hdr-std hidden col-waktu">Waktu Scan</th>
