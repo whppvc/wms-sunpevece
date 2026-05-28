@@ -122,7 +122,7 @@ async function crossCekOutbound() {
     if(rows.length === 0) return alert("Belum ada data untuk dicek.");
 
     const btnCross = document.getElementById('btn-crosscek'); const originalText = btnCross.innerHTML;
-    btnCross.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMVALIDASI GUDANG...'; btnCross.disabled = true;
+    btnCross.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMVerifikasi GUDANG...'; btnCross.disabled = true;
 
     const allQRCodes = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     
@@ -187,7 +187,7 @@ async function bukaModalKeluar() {
         itemSpecs.add(`${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}`);
     });
 
-    if(hasUnverified) return alert("Silakan klik VALIDASI FISIK GUDANG terlebih dahulu.");
+    if(hasUnverified) return alert("Silakan klik Verifikasi FISIK GUDANG terlebih dahulu.");
 
     const btnBuka = document.getElementById('btn-proses-keluar');
     const oriBuka = btnBuka.innerHTML;
@@ -297,7 +297,7 @@ function bukaModalReqPO() {
         if(status === 'invalid' || r.dataset.poAktual !== '-') hasInvalid = true; 
     });
 
-    if(!hasInvalid) return alert("Semua baris tampak belum divalidasi. Validasi dulu sebelum request.");
+    if(!hasInvalid) return alert("Semua baris tampak belum diVerifikasi. Verifikasi dulu sebelum request.");
     
     const sel = document.getElementById('req-po-target');
     sel.innerHTML = '<option value="">-- PILIH PO TUJUAN --</option>';
