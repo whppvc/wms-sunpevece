@@ -57,30 +57,50 @@
             </div>
 
             <div class="flex flex-row justify-between gap-2 items-center">
-                
-                <div class="flex gap-1.5">
-                    <button onclick="toggleSidebarFilter()" class="p-2 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase" title="Filter"><i data-lucide="filter" class="w-4 h-4"></i> <span class="hidden sm:inline">Filter</span></button>
-                    
-                    <div class="relative">
-                        <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="p-2 sm:px-3 sm:py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase" title="Kolom"><i data-lucide="eye-off" class="w-4 h-4"></i> <span class="hidden sm:inline">Kolom</span></button>
-                        <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
-                            <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
-                                <span class="text-[11px] font-black text-slate-500 uppercase">Sembunyikan Kolom</span>
-                                <button onclick="resetKolom()" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold hover:bg-blue-200">RESET</button>
-                            </div>
-                            <div class="flex flex-col gap-2 max-h-64 overflow-y-auto" id="list-kolom-toggles"></div>
-                        </div>
-                    </div>
-                    
-                    <button onclick="undoHapusSTBJ()" class="p-2 sm:px-3 sm:py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase" title="Undo"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> <span class="hidden sm:inline">Undo</span></button>
-                    <button onclick="hapusBarisTerpilih()" class="p-2 sm:px-3 sm:py-2 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 font-bold rounded shadow-sm text-xs flex items-center justify-center gap-1.5 transition uppercase" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i> <span class="hidden sm:inline">Hapus</span></button>
+    <div class="flex gap-1.5">
+        <!-- TOMBOL AKSI UTAMA (BIRU) -->
+        <button onclick="toggleSidebarFilter()" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white border-b-2 border-blue-800" title="Filter">
+            <i data-lucide="filter" class="w-4 h-4"></i> <span class="hidden sm:inline">Filter</span>
+        </button>
+        
+        <!-- TOMBOL NETRAL (PUTIH) -->
+        <div class="relative">
+            <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border border-slate-300" title="Kolom">
+                <i data-lucide="eye-off" class="w-4 h-4"></i> <span class="hidden sm:inline">Kolom</span>
+            </button>
+            <!-- (Dropdown kolom tetap sama) -->
+            <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
+                    <span class="text-[11px] font-black text-slate-500 uppercase">Sembunyikan Kolom</span>
+                    <button onclick="resetKolom()" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold hover:bg-blue-200">RESET</button>
                 </div>
-
-                <div class="flex gap-1.5">
-                    <button onclick="holdManual()" class="p-2 sm:px-4 sm:py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 font-black rounded-lg shadow-sm text-[10px] sm:text-xs flex items-center justify-center gap-1.5 transition uppercase whitespace-nowrap"><i data-lucide="pause-circle" class="w-4 h-4"></i> <span class="hidden sm:inline">Hold</span></button>
-                    <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="px-3 py-2 sm:px-5 sm:py-2 bg-slate-900 text-white font-black rounded-lg shadow-sm hover:bg-black border-b-2 border-slate-950 transition text-[10px] sm:text-xs flex items-center justify-center gap-1.5 uppercase whitespace-nowrap"><i data-lucide="search-check" class="w-4 h-4"></i> Validasi <span class="hidden sm:inline">Duplikat</span></button>
-                </div>
+                <div class="flex flex-col gap-2 max-h-64 overflow-y-auto" id="list-kolom-toggles"></div>
             </div>
+        </div>
+        
+        <!-- TOMBOL NETRAL (PUTIH) -->
+        <button onclick="undoHapusSTBJ()" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border border-slate-300" title="Undo">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i> <span class="hidden sm:inline">Undo</span>
+        </button>
+
+        <!-- TOMBOL BAHAYA LOKAL (SOFT MERAH) -->
+        <button onclick="hapusBarisTerpilih()" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-red-50 hover:bg-red-100 text-red-700 border border-red-300" title="Hapus">
+            <i data-lucide="trash-2" class="w-4 h-4"></i> <span class="hidden sm:inline">Hapus</span>
+        </button>
+    </div>
+
+    <div class="flex gap-1.5">
+        <!-- TOMBOL WARNING (SOFT KUNING) -->
+        <button onclick="holdManual()" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300">
+            <i data-lucide="pause-circle" class="w-4 h-4"></i> <span class="hidden sm:inline">Hold</span>
+        </button>
+        
+        <!-- TOMBOL AKSI UTAMA (BIRU) -->
+        <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white border-b-2 border-blue-800">
+            <i data-lucide="search-check" class="w-4 h-4"></i> Validasi <span class="hidden sm:inline">Duplikat</span>
+        </button>
+    </div>
+</div>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
