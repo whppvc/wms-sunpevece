@@ -108,12 +108,13 @@
                     <button onclick="document.getElementById('modal-list-katalog').classList.add('hidden')" class="px-3 py-1.5 bg-slate-200 hover:bg-red-500 hover:text-white text-slate-600 font-bold rounded text-xs transition"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
                 </div>
             </div>
-            <div class="p-3 border-b border-slate-100">
-                <input type="text" id="f-kat-search" oninput="saringKatalogList()" class="w-full p-2.5 text-sm border-2 border-slate-200 rounded-lg outline-none focus:border-blue-500 font-bold" placeholder="Pencarian Cepat (Nama Item / Hasil Jasper)...">
-            </div>
-            <div class="overflow-y-auto p-4 flex-1 hide-scrollbar">
-                <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
-                    <thead class="sticky top-0 z-10 shadow-sm">
+            <div class="p-3 border-b border-slate-100 bg-white relative z-30">
+    <input type="text" id="f-kat-search" oninput="saringKatalogList()" class="w-full p-2.5 text-sm border-2 border-slate-200 rounded-lg outline-none focus:border-blue-500 font-bold" placeholder="Pencarian Cepat (Nama Item / Hasil Jasper)...">
+</div>
+
+                    <div class="overflow-y-auto px-4 pb-4 pt-0 flex-1 hide-scrollbar">
+                    <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+                    <thead class="sticky top-0 z-20 shadow-sm">
                         <tr>
                             <th class="hdr-std w-12">No</th>
                             <th class="hdr-std text-left pl-4">Nama Item Master</th>
