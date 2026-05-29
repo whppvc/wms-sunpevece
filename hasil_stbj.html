@@ -9,10 +9,26 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        .table-container { scrollbar-width: thin; }
-        .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; white-space: nowrap; }
-    </style>
+    .table-container { scrollbar-width: thin; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    .hdr-std { 
+        background-color: #1e293b !important; 
+        color: #ffffff !important; 
+        text-align: center !important; 
+        border: 1px solid #334155; 
+        padding: 0.75rem; 
+        text-transform: uppercase; 
+        font-size: 11px; 
+        font-weight: 900; 
+        white-space: nowrap; 
+        
+        /* --- TAMBAHAN FIX OVERLAP SCROLL --- */
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 20 !important;
+    }
+</style>
     <style id="dynamic-col-styles"></style>
 </head>
 <body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-20">
