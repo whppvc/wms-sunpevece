@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS - Riwayat Mutasi</title>
+    <title>WMS - Riwayat Konversi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -16,7 +16,7 @@
                     <thead class="sticky top-0 z-10 shadow-sm">
                         <tr>
                             <th class="hdr-std w-12">No</th>
-                            <th class="hdr-std border-r border-slate-500">WAKTU MUTASI</th>
+                            <th class="hdr-std border-r border-slate-500">WAKTU KONVERSI</th>
                             <th class="hdr-std border-r border-slate-500">PIC</th>
                             <th class="hdr-std text-left pl-4">Detail Perubahan PO</th>
                         </tr>
@@ -30,19 +30,19 @@
     <script src="global.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            initModernLayout({ id: 'riwayat_mutasi', title: 'RIWAYAT MUTASI', url: 'riwayat_mutasi.html' });
+            initModernLayout({ id: 'riwayat_Konversi', title: 'RIWAYAT Konversi', url: 'riwayat_Konversi.html' });
             setTimeout(() => { loadData(); }, 200);
         });
 
         async function loadData() {
             try {
                 // BUG FIX: Menggunakan 'created_at' bukan 'waktu'
-                const { data, error } = await db.from('log_mutasi').select('*').eq('aktifitas', 'GANTI PO (CS)').order('created_at', {ascending: false}).limit(200);
+                const { data, error } = await db.from('log_Konversi').select('*').eq('aktifitas', 'GANTI PO (CS)').order('created_at', {ascending: false}).limit(200);
                 if(error) throw error;
                 
                 const tbody = document.getElementById('data-body');
                 if(!data || data.length === 0) { 
-                    tbody.innerHTML = `<tr><td colspan="4" class="text-center p-10 text-slate-500 font-bold">Belum ada riwayat mutasi PO.</td></tr>`; 
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center p-10 text-slate-500 font-bold">Belum ada riwayat Konversi PO.</td></tr>`; 
                     lucide.createIcons(); return; 
                 }
 
