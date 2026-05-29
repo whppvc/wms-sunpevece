@@ -34,10 +34,10 @@
                     </select>
                 </div>
 
-                <button onclick="toggleSidebarFilter()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-slate-950"><i data-lucide="filter" class="w-4 h-4"></i> FILTER</button>
+                <button onclick="toggleSidebarFilter()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-slate-950"><i data-lucide="filter" class="w-4 h-4"></i> <span class="hidden sm:inline">FILTER</SPAN></button>
                 
                 <div class="relative">
-                    <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="px-4 py-2.5 bg-white text-slate-700 hover:bg-slate-50 font-black rounded-lg shadow-sm border-2 border-slate-200 text-xs flex items-center gap-2 active:scale-95 transition uppercase"><i data-lucide="eye-off" class="w-4 h-4"></i> KOLOM</button>
+                    <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="px-4 py-2.5 bg-white text-slate-700 hover:bg-slate-50 font-black rounded-lg shadow-sm border-2 border-slate-200 text-xs flex items-center gap-2 active:scale-95 transition uppercase"><i data-lucide="eye-off" class="w-4 h-4"></i> <span class="hidden sm:inline">KOLOM</SPAN></button>
                     <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
                         <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
                             <span class="text-[11px] font-black text-slate-500 uppercase">Sembunyikan</span>
@@ -47,8 +47,8 @@
                     </div>
                 </div>
 
-                <button onclick="aksiMassal('salin')" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-blue-800"><i data-lucide="copy" class="w-4 h-4"></i> SALIN</button>
-                <button onclick="aksiMassal('xlsx')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-emerald-800"><i data-lucide="download" class="w-4 h-4"></i> EXCEL</button>
+                <button onclick="aksiMassal('salin')" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-blue-800"><i data-lucide="copy" class="w-4 h-4"></i> <span class="hidden sm:inline">SALIN</SPAN></button>
+                <button onclick="aksiMassal('xlsx')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-emerald-800"><i data-lucide="download" class="w-4 h-4"></i> <span class="hidden sm:inline">EXCEL</span></button>
                 
                 <button onclick="aksiMassal('collect')" id="btn-massal-collect" class="hidden px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-indigo-800"><i data-lucide="check-square" class="w-4 h-4"></i> COLLECT</button>
             </div>
