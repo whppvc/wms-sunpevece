@@ -118,10 +118,10 @@
                         <tr>
                             <th class="hdr-std w-10">EDIT</th>
                             <th class="hdr-std w-12">No</th>
-                            <th class="hdr-std text-left pl-4">Nama Item Master</th>
+                            <th class="hdr-std text-left pl-4">Nama Item</th>
                             <th class="hdr-std">Panjang</th>
                             <th class="hdr-std border-r border-slate-500">Grade</th>
-                            <th class="hdr-std bg-slate-900 text-blue-300">NAMA OUTPUT JASPER</th>
+                            <th class="hdr-std bg-slate-900 text-blue-300">NAMA JASPER</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-katalog-list" class="text-center text-slate-700"></tbody>
@@ -130,7 +130,41 @@
         </div>
     </div>
 
-    <div id="modal-katalog" class="hidden fixed inset-0 flex items-center justify-center z-[90]"></div>
+   <div id="modal-katalog" class="hidden fixed inset-0 flex items-center justify-center z-[90] bg-slate-900/60 px-4 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden flex flex-col">
+        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 id="title-modal-jasper" class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm">
+                <i data-lucide="edit" class="w-4 h-4 text-blue-600"></i> FORM JASPER
+            </h3>
+            <button onclick="tutupModalJasperForm()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="p-4 flex flex-col gap-3">
+            <input type="hidden" id="j-id"> <!-- Menyimpan ID untuk keperluan Edit -->
+            <div>
+                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
+                <input type="text" id="j-nama" class="w-full p-2.5 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none font-bold" placeholder="Contoh: PLAFON 103 SILVER">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
+                    <input type="text" id="j-pjg" class="w-full p-2.5 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none font-bold" placeholder="Contoh: 4M / 5M">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
+                    <input type="text" id="j-grade" class="w-full p-2.5 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none font-bold" placeholder="Contoh: A / BAGUS">
+                </div>
+            </div>
+            <div>
+                <label class="block text-[10px] font-black uppercase text-blue-600 mb-1">Nama Jasper</label>
+                <input type="text" id="j-output" class="w-full p-2.5 text-sm border-2 border-blue-200 rounded-lg focus:border-blue-600 outline-none font-black text-blue-800 bg-blue-50" placeholder="Ketik nama spesifik Jasper...">
+            </div>
+        </div>
+        <div class="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50">
+            <button onclick="tutupModalJasperForm()" class="px-4 py-2 font-bold text-slate-500 hover:text-slate-700 transition text-sm">BATAL</button>
+            <button onclick="simpanDataJasper()" id="btn-save-jasper" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg shadow-sm text-sm transition flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
+        </div>
+    </div>
+</div>
     <div id="overlay-klik-luar-k" onclick="tutupPopups()" class="hidden fixed inset-0 z-30"></div>
 
     <script src="global.js"></script>
