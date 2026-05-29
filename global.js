@@ -16,7 +16,7 @@ const APP_MENUS = [
     { id: 'stbj', title: 'Scan STBJ', icon: 'shield-check', url: 'stbj.html' },
     { id: 'hasil_stbj', title: 'Hasil STBJ', icon: 'clipboard-list', url: 'hasil_stbj.html' },
     { isDivider: true, title: 'INVENTORY & AUDIT' },
-    { id: 'kartu_stok', title: 'Kartu Stok & Mutasi', icon: 'layers', url: 'kartu_stok.html' },
+    { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers', url: 'kartu_stok.html' },
     { id: 'riwayat_mutasi', title: 'Riwayat Mutasi', icon: 'arrow-right-left', url: 'riwayat_mutasi.html' },
     { id: 'opname', title: 'Stock Opname', icon: 'clipboard-check', url: 'opname.html' },
     { isDivider: true, title: 'OUTBOUND (KELUAR)' },
