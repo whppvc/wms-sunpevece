@@ -348,22 +348,31 @@
         function renderKatalogList() {
             const tbody = document.getElementById('tbody-katalog-list');
             if (!jasperData || jasperData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-slate-400 font-bold">Katalog Jasper Kosong di Database.</td></tr>'; 
+                tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-slate-400 font-bold">Katalog Jasper Kosong di Database.</td></tr>'; 
                 return;
             }
 
             let html = '';
             jasperData.forEach((d, i) => {
+                // Encode data baris agar aman dikirim ke dalam fungsi onclick (mencegah error petik/spasi)
+                const jData = encodeURIComponent(JSON.stringify(d));
+                
                 html += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 transition">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-center">
+                    <td class="p-2">
+                        <button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded shadow-sm transition active:scale-95" title="Edit Baris Ini">
+                            <i data-lucide="edit-3" class="w-4 h-4"></i>
+                        </button>
+                    </td>
                     <td class="p-3 font-bold text-slate-400">${i+1}</td>
                     <td class="p-3 font-bold text-slate-800 text-left">${d.nama_item}</td>
-                    <td class="p-3 font-bold text-slate-600">${d.panjang}</td>
-                    <td class="p-3 font-bold text-slate-600 border-r border-slate-200">${d.grade}</td>
+                    <td class="p-3 font-bold text-slate-600">${d.panjang || '-'}</td>
+                    <td class="p-3 font-bold text-slate-600 border-r border-slate-200">${d.grade || '-'}</td>
                     <td class="p-3 font-black text-blue-700 bg-blue-50/50">${d.nama_jasper}</td>
                 </tr>`;
             });
             tbody.innerHTML = html;
+            lucide.createIcons(); // Render ulang icon Edit
         }
 
         function saringKatalogList() {
@@ -373,7 +382,90 @@
                 row.style.display = text.includes(query) ? '' : 'none';
             });
         }
-        function bukaModalKatalogForm() { alert("Fitur tambah form katalog via Modal belum disambungkan ke Supabase di versi ini."); }
+        function bukaModalKatalogForm(isEdit = false, encodedData = null) {
+            document.getElementById('modal-katalog').classList.remove('hidden');
+            
+            const title = document.getElementById('title-modal-jasper');
+            title.innerHTML = isEdit 
+                ? '<i data-lucide="edit" class="w-4 h-4 text-amber-600"></i> EDIT DATA JASPER' 
+                : '<i data-lucide="plus-circle" class="w-4 h-4 text-blue-600"></i> TAMBAH JASPER BARU';
+            
+            // Jika mode Edit, isi form dengan data dari baris yang diklik
+            if(isEdit && encodedData) {
+                const d = JSON.parse(decodeURIComponent(encodedData));
+                document.getElementById('j-id').value = d.id || ''; // Pastikan tabel nama_jasper memiliki kolom 'id'
+                document.getElementById('j-nama').value = d.nama_item || '';
+                document.getElementById('j-pjg').value = d.panjang || '';
+                document.getElementById('j-grade').value = d.grade || '';
+                document.getElementById('j-output').value = d.nama_jasper || '';
+            } else {
+                // Jika mode Tambah, kosongkan form
+                document.getElementById('j-id').value = '';
+                document.getElementById('j-nama').value = '';
+                document.getElementById('j-pjg').value = '';
+                document.getElementById('j-grade').value = '';
+                document.getElementById('j-output').value = '';
+            }
+        }
+
+        function tutupModalJasperForm() {
+            document.getElementById('modal-katalog').classList.add('hidden');
+        }
+
+        async function simpanDataJasper() {
+            const id = document.getElementById('j-id').value;
+            const nama = document.getElementById('j-nama').value.trim();
+            const pjg = document.getElementById('j-pjg').value.trim();
+            const grade = document.getElementById('j-grade').value.trim();
+            const output = document.getElementById('j-output').value.trim();
+
+            if(!nama || !output) return alert("PERHATIAN: Nama Item Master dan Nama Output Jasper Wajib Diisi!");
+
+            const btn = document.getElementById('btn-save-jasper');
+            const oriTxt = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...';
+            btn.disabled = true;
+
+            const payload = {
+                nama_item: nama,
+                panjang: pjg,
+                grade: grade,
+                nama_jasper: output
+            };
+
+            try {
+                let errorRes;
+                if(id) {
+                    // Jika ada ID -> Lakukan UPDATE
+                    const { error } = await db.from('nama_jasper').update(payload).eq('id', id);
+                    errorRes = error;
+                } else {
+                    // Jika tidak ada ID -> Lakukan INSERT (Data Baru)
+                    const { error } = await db.from('nama_jasper').insert([payload]);
+                    errorRes = error;
+                }
+
+                if(errorRes) throw errorRes;
+                
+                tutupModalJasperForm();
+                
+                // Loading indikator di tabel katalog
+                document.getElementById('tbody-katalog-list').innerHTML = '<tr><td colspan="6" class="p-6 text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat ulang tabel...</td></tr>';
+                lucide.createIcons();
+                
+                // Refresh data langsung dari database
+                await loadKamusDanJasper(); 
+                renderKatalogList(); 
+                alert("Berhasil! Data Katalog Jasper telah tersimpan.");
+                
+            } catch(e) {
+                alert("GAGAL MENYIMPAN: " + e.message);
+            } finally {
+                btn.innerHTML = oriTxt;
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        }
 
         function renderHeaderDanTabel() {
             const thead = document.getElementById('thead-stbj');
