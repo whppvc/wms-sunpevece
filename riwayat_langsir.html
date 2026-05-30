@@ -137,7 +137,7 @@
         ];
 
         document.addEventListener('DOMContentLoaded', () => {
-            initModernLayout({ id: 'riwayat_langsir', title: 'RIWAYAT LANGSIR GUDANG', url: 'riwayat_langsir.html' });
+            initModernLayout({ id: 'riwayat_langsir', title: 'RIWAYAT LANGSIR', url: 'riwayat_langsir.html' });
             setTimeout(async () => {
                 const { data: mk } = await db.from('master_2').select('*'); if(mk) kamusData = mk;
                 const { data: ma } = await db.from('master_area').select('nama_area'); 
