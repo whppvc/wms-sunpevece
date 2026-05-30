@@ -6,10 +6,21 @@ async function loadInitialOutboundData() {
     if(mData2) masterData.kamus = mData2; 
 }
 
-function extractPOFromSKU(id_sku) {
-    if(!id_sku) return '-';
-    const parts = id_sku.split('_');
-    return parts.length >= 8 ? parts[7] : '-';
+// FUNGSI BARU SUPER AKURAT UNTUK MENGAMBIL PO AKTUAL
+function extractPOFromGlobalSKU(id_sku, baseSpec) {
+    if (!id_sku || !baseSpec) return '-';
+    
+    // Cara 1: Jika format id_sku adalah "Spesifikasi_PO"
+    let parts = id_sku.split(baseSpec + '_');
+    if (parts.length > 1) return parts[1].trim();
+    
+    // Cara 2: Jika format id_sku ada Area-nya (misal: "A_Spesifikasi_PO")
+    parts = id_sku.split('_' + baseSpec + '_');
+    if (parts.length > 1) return parts[1].trim();
+
+    // Cara 3: Darurat (Ambil teks paling belakang setelah garis bawah)
+    const arr = id_sku.split('_');
+    return arr.length > 1 ? arr[arr.length - 1] : '-';
 }
 
 function translateBarcode(barcode) {
@@ -147,7 +158,7 @@ async function crossCekOutbound() {
         if(foundDb) {
             validRows.push(row);
             
-            // Susun Spesifikasi Fisik Murni (tanpa embel-embel spasi lebih)
+            // Susun Spesifikasi Fisik Murni
             let jenis = row.querySelector('.col-jenis').innerText.trim();
             let nama = row.querySelector('.col-nama').innerText.trim();
             let pjg = row.querySelector('.col-pjg').innerText.trim();
@@ -159,7 +170,9 @@ async function crossCekOutbound() {
             
             row.dataset.baseSpec = baseSpec; 
             row.dataset.area = foundDb.area; 
-            row.dataset.poAsliDB = extractPOFromSKU(foundDb.id_sku); // Simpan untuk CS
+            
+            // Simpan PO Asli untuk direport ke CS jika nanti diminta
+            row.dataset.poAsliDB = extractPOFromGlobalSKU(foundDb.id_sku, baseSpec); 
             
             uniqueSpecs.add(baseSpec);
 
@@ -176,25 +189,16 @@ async function crossCekOutbound() {
         }
     });
 
-    // PENCARIAN GABUNGAN PO KE TABEL STOK_GLOBAL
+    // PENCARIAN GABUNGAN PO KE TABEL STOK_GLOBAL 
     for(let spec of uniqueSpecs) {
-        // Gunakan .ilike agar tidak sensitif huruf besar-kecil!
+        // Cari ke stok_global yang id_sku-nya mengandung spesifikasi ini dan qty > 0
         const { data: specStock } = await db.from('stok_global').select('id_sku, qty').ilike('id_sku', `%${spec}%`).gt('qty', 0);
         let poAvailable = new Set();
         
         if(specStock) {
             specStock.forEach(d => {
-                // Potong string sku menggunakan spesifikasi fisik untuk mendapatkan nama PO aslinya
-                let regex = new RegExp(`_${spec}_`, 'i');
-                let parts = d.id_sku.split(regex);
-                
-                if(parts.length > 1) {
-                    let po = parts[1].trim();
-                    if(po && po !== '-') poAvailable.add(po);
-                } else {
-                    let fallbackPo = extractPOFromSKU(d.id_sku);
-                    if(fallbackPo && fallbackPo !== '-') poAvailable.add(fallbackPo);
-                }
+                let po = extractPOFromGlobalSKU(d.id_sku, spec);
+                if(po && po !== '-') poAvailable.add(po);
             });
         }
         
@@ -269,16 +273,16 @@ async function eksekusiKeluar() {
         if (status === 'valid') specsToProcess.add(row.dataset.baseSpec);
     });
 
-    // CEK JATAH TERSEDIA DI TABEL STOK_GLOBAL
+    // 1. CARI JATAH KUOTA ASLI DI STOK_GLOBAL UNTUK PO TARGET INI
     let stockCapacity = {}; 
     try {
         for(let spec of specsToProcess) {
-            // Kita cari spek yang digabungkan dengan PO target
-            const { data } = await db.from('stok_global').select('qty').ilike('id_sku', `%_${spec}_${poTarget}`);
+            // Kita cari spek yang digabungkan persis dengan PO target yang dipilih (ilike = anti huruf besar kecil error)
+            const { data } = await db.from('stok_global').select('qty').ilike('id_sku', `%${spec}_${poTarget}%`);
             if(data) {
                 let totalQty = 0;
                 data.forEach(d => totalQty += d.qty);
-                stockCapacity[spec] = totalQty; // Simpan di memori (misal jatahnya = 2)
+                stockCapacity[spec] = totalQty; // Simpan di memori (misal jatah Banjarmasin = 2)
             } else {
                 stockCapacity[spec] = 0;
             }
@@ -293,7 +297,7 @@ async function eksekusiKeluar() {
     let matchedRows = []; 
     let unmatchedCount = 0;
 
-    // SAPU DARI ATAS: Ambil kardusnya selama memori Jatah > 0
+    // 2. SAPU DARI ATAS: Ambil kardusnya selama Jatah di memori > 0 (Terserah mau baris yang mana)
     rows.forEach(row => {
         let status = row.querySelector('span[data-status]').getAttribute('data-status');
 
@@ -341,7 +345,7 @@ async function eksekusiKeluar() {
         return;
     }
 
-    // BERSIHKAN LAYAR HANYA UNTUK KARDUS YANG TERPOTONG JATAHNYA
+    // 3. BERSIHKAN LAYAR HANYA UNTUK KARDUS YANG TERPOTONG JATAHNYA
     matchedRows.forEach(r => r.remove());
     updateRowNumbers();
 
