@@ -18,7 +18,7 @@ const APP_MENUS = [
     { isDivider: true, title: 'INVENTORY' },
     { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers', url: 'kartu_stok.html' },
     { id: 'opname', title: 'Stock Opname', icon: 'clipboard-check', url: 'opname.html' },
-    { isDivider: true, title: 'INVENTORY' },
+    { isDivider: true, title: 'KONVERSI' },
     { id: 'riwayat_mutasi', title: 'Riwayat Konversi', icon: 'arrow-right-left', url: 'riwayat_konversi.html' },
     { isDivider: true, title: 'OUTBOUND (KELUAR)' },
     { id: 'keluar', title: 'Kirim / Keluar', icon: 'truck', url: 'keluar.html' },
