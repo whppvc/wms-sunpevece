@@ -6,7 +6,6 @@ async function loadInitialOutboundData() {
     if(mData2) masterData.kamus = mData2; 
 }
 
-// Fungsi paten membaca PO dari Kartu Stok
 function extractPOFromSKU(id_sku) {
     if(!id_sku) return '-';
     const parts = id_sku.split('_');
@@ -148,7 +147,6 @@ async function crossCekOutbound() {
         if(foundDb) {
             validRows.push(row);
             
-            // Susun Spesifikasi Fisik Murni
             let jenis = row.querySelector('.col-jenis').innerText.trim();
             let nama = row.querySelector('.col-nama').innerText.trim();
             let pjg = row.querySelector('.col-pjg').innerText.trim();
@@ -177,7 +175,6 @@ async function crossCekOutbound() {
         }
     });
 
-    // PENCARIAN GABUNGAN PO LANGSUNG KE STOK_QR
     for(let spec of uniqueSpecs) {
         const { data: specStock } = await db.from('stok_qr').select('id_sku').ilike('id_sku', `%_${spec}_%`);
         let poAvailable = new Set();
@@ -239,7 +236,7 @@ async function bukaModalKeluar() {
 }
 
 // ========================================================
-// 3. EKSEKUSI CERDAS: POTONG JATAH SECARA MEMBABI BUTA!
+// 3. EKSEKUSI CERDAS: POTONG JATAH YANG BISA SAJA (NON-BLOCKING)
 // ========================================================
 async function eksekusiKeluar() {
     const poTarget = document.getElementById('out-po-target').value;
@@ -260,23 +257,24 @@ async function eksekusiKeluar() {
         if (status === 'valid') specsToProcess.add(row.dataset.baseSpec);
     });
 
-    // 1. CARI JATAH KUOTA ASLI (DIHITUNG MANUAL AGAR 100% AKURAT)
+    // 1. CARI JATAH KUOTA ASLI (DIHITUNG MANUAL AGAR KEBAL TYPO)
     let stockCapacity = {}; 
+    let totalJatahTersedia = 0;
+    
     try {
         for(let spec of specsToProcess) {
-            // Kita tarik seluruh data QR yang punya spesifikasi fisik ini
-            const { data } = await db.from('stok_qr').select('id_sku').ilike('id_sku', `%_${spec}_%`);
+            const { data } = await db.from('stok_qr').select('id_sku').ilike('id_sku', `%${spec}%`);
             let count = 0;
             if(data) {
                 data.forEach(d => {
-                    let poDB = extractPOFromSKU(d.id_sku);
-                    // Hitung jika PO aktualnya persis sama dengan PO yang dipilih PIC
-                    if(poDB && poDB.trim().toUpperCase() === poTarget.trim().toUpperCase()) {
+                    // Gunakan "includes" agar sistem tidak buta karena ada spasi nyelip
+                    if(d.id_sku.toUpperCase().includes(poTarget.toUpperCase())) {
                         count++;
                     }
                 });
             }
             stockCapacity[spec] = count; 
+            totalJatahTersedia += count;
         }
     } catch(e) {
         alert("Gagal memverifikasi kapasitas stok ke server: " + e.message);
@@ -289,14 +287,13 @@ async function eksekusiKeluar() {
     let unmatchedCount = 0;
 
     // 2. SAPU DARI ATAS: Ambil kardusnya selama Jatah di memori > 0
-    // Sesuai instruksi: Masa bodoh aslinya Banjarmasin atau bukan, kalau jatah PO Target masih ada, potong!
     rows.forEach(row => {
         let status = row.querySelector('span[data-status]').getAttribute('data-status');
 
         if (status === 'valid') {
             let area = row.dataset.area || 'A';
             let baseSpec = row.dataset.baseSpec;
-            let full_sku = `${area}_${baseSpec}_${poTarget}`; // Identitas mutlak PO Target
+            let full_sku = `${area}_${baseSpec}_${poTarget}`;
             
             // JIKA JATAH MASIH ADA, AMBIL SAJA KARDUS INI!
             if(stockCapacity[baseSpec] && stockCapacity[baseSpec] > 0) {
@@ -306,7 +303,7 @@ async function eksekusiKeluar() {
                 if(!requiredMap[full_sku]) requiredMap[full_sku] = 0;
                 requiredMap[full_sku] += 1;
                 
-                stockCapacity[baseSpec] -= 1; // POTONG JATAH agar sisa di bawahnya ditinggalkan jika habis
+                stockCapacity[baseSpec] -= 1; // POTONG JATAH
             } else {
                 unmatchedCount++; 
             }
@@ -315,9 +312,9 @@ async function eksekusiKeluar() {
         }
     });
 
-    // Validasi Jika Ternyata Jatah Memang Kosong
+    // Validasi Jika Jatah Benar-Benar Nol Besar
     if (qrList.length === 0) {
-        alert(`STOK HABIS / TIDAK ADA JATAH.\n\nJatah stok aktual untuk "${poTarget}" sudah habis/kosong di Database.\n\nSilakan klik "Req Ganti PO" agar CS mengalihkan sisa kardus di layar Anda.`);
+        alert(`❌ TIDAK ADA JATAH SAMA SEKALI.\n\nSisa stok aktual untuk "${poTarget}" adalah 0 (Kosong).\n\nSilakan klik "Req Ganti PO" agar CS mengalihkan sisa kardus di layar Anda.`);
         btnEks.innerHTML = oriBuka; btnEks.disabled = false;
         return;
     }
@@ -326,7 +323,7 @@ async function eksekusiKeluar() {
     for(let sku in requiredMap) { deductionsArray.push({ sku: sku, qty: requiredMap[sku] }); }
     const payloadData = { qrs: qrList, deductions: deductionsArray, po: poTarget, ket: keterangan, pic: user.username };
     
-    // Tembak Ke Database
+    // 3. TEMBAK KE DATABASE
     btnEks.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES KELUAR...';
     const { error } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
 
@@ -336,13 +333,14 @@ async function eksekusiKeluar() {
         return;
     }
 
-    // 3. BERSIHKAN LAYAR HANYA UNTUK KARDUS YANG SUKSES DIPROSES
+    // 4. BERSIHKAN LAYAR HANYA UNTUK KARDUS YANG SUKSES DIPROSES
     matchedRows.forEach(r => r.remove());
     updateRowNumbers();
 
-    let msg = `✅ BERHASIL KELUAR: ${qrList.length} Kardus berhasil diproses.\n`;
+    // 5. NOTIFIKASI BARU SESUAI PERMINTAAN BAPAK (JELAS & TRANSPARAN)
+    let msg = `✅ BERHASIL\n\nSisa stok ${poTarget} ada ${totalJatahTersedia}, sistem cuma bisa memproses ${qrList.length} item.`;
     if (unmatchedCount > 0) {
-        msg += `\n⚠️ SISA DI LAYAR: ${unmatchedCount} kardus ditinggalkan karena kuota stok ${poTarget} sudah habis.\n\nSilakan klik "Req Ganti PO" untuk sisa kardus tersebut.`;
+        msg += `\n\n⚠️ ${unmatchedCount} dus tidak kebagian jatah dan disisakan di layar.\nSilakan pilih baris tersebut dan klik "Req Ganti PO".`;
     }
     
     alert(msg);
