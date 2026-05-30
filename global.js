@@ -32,36 +32,19 @@ style.innerHTML = `
     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 0.05em; white-space: nowrap; }
     
-    /* 1. ATURAN BENTUK KOMPONEN UI */
     body.shape-sharp * { border-radius: 0px !important; }
-    
-    /* ====================================================
-       2. TRUE DARK MODE (Perbaikan Kontras Teks, Tombol & Hover)
-       ==================================================== */
     body.base-dark { background-color: #0f172a !important; color: #f8fafc !important; }
-    
-    /* Latar Belakang Area Konten Utama */
     body.base-dark main { background-color: #0f172a !important; }
-    
-    /* Ubah Kartu, Sidebar, dan Modal menjadi Gelap Elegan */
     body.base-dark .bg-white, body.base-dark aside { background-color: #1e293b !important; border-color: #334155 !important; color: #f8fafc !important; }
-    
-    /* FIX TOMBOL: Cegah background putih/terang pada tombol sekunder saat mode gelap */
     body.base-dark .bg-slate-50, body.base-dark .bg-slate-100 { background-color: #0f172a !important; color: #f8fafc !important; border-color: #334155 !important; }
     body.base-dark .bg-slate-200 { background-color: #334155 !important; color: #f8fafc !important; border-color: #475569 !important; }
-    
-    /* FIX HOVER/HIGHLIGHT: Jangan biarkan highlight menjadi terang/silau */
     body.base-dark .hover\\:bg-slate-100:hover, 
     body.base-dark .hover\\:bg-slate-200:hover { background-color: #334155 !important; color: #ffffff !important; }
     body.base-dark .hover\\:bg-slate-300:hover { background-color: #475569 !important; color: #ffffff !important; }
     body.base-dark .hover\\:text-slate-900:hover { color: #ffffff !important; }
-    
-    /* FIX TEKS: Balikkan Warna Teks yang awalnya Gelap agar Terang dan Terbaca */
     body.base-dark .text-slate-900, body.base-dark .text-slate-800, 
     body.base-dark .text-slate-700, body.base-dark .text-slate-600 { color: #f1f5f9 !important; }
     body.base-dark .text-slate-500, body.base-dark .text-slate-400 { color: #94a3b8 !important; }
-    
-    /* Penyesuaian Input Form dan Tabel di Mode Malam */
     body.base-dark input, body.base-dark select, body.base-dark textarea { background-color: #0f172a !important; color: #f8fafc !important; border-color: #475569 !important; }
     body.base-dark input::placeholder { color: #64748b !important; }
     body.base-dark table { background-color: #1e293b !important; color: #f8fafc !important; border-color: #334155 !important; }
@@ -69,30 +52,20 @@ style.innerHTML = `
     body.base-dark tr.hover\\:bg-slate-50:hover { background-color: #334155 !important; }
     body.base-dark thead th.hdr-std { background-color: #0f172a !important; border-color: #334155 !important; color: #ffffff !important; }
 
-    /* ====================================================
-       3. ATURAN NUANSA WARNA (Header, Sidebar Atas, Tab) 
-       ==================================================== */
-    
-    /* Nuansa Gelap (Bawaan) - Tetap Normal */
-
-    /* Nuansa Biru */
     body.nuance-biru header.bg-\\[\\#0f172a\\], body.nuance-biru aside .bg-\\[\\#0f172a\\] { background-color: #1e40af !important; border-color: #1e3a8a !important; }
     body.nuance-biru div.bg-\\[\\#1e293b\\] { background-color: #1e3a8a !important; }
     body.nuance-biru .bg-slate-800 { background-color: #2563eb !important; border-color: #1d4ed8 !important; }
     
-    /* Nuansa Abu-Abu */
     body.nuance-abu header.bg-\\[\\#0f172a\\], body.nuance-abu aside .bg-\\[\\#0f172a\\] { background-color: #4b5563 !important; border-color: #374151 !important; }
     body.nuance-abu div.bg-\\[\\#1e293b\\] { background-color: #374151 !important; }
     body.nuance-abu .bg-slate-800 { background-color: #6b7280 !important; border-color: #4b5563 !important; }
     
-    /* Nuansa Light (Putih Bersih) */
     body.nuance-light header.bg-\\[\\#0f172a\\], body.nuance-light aside .bg-\\[\\#0f172a\\] { background-color: #ffffff !important; border-color: #e2e8f0 !important; }
     body.nuance-light header.bg-\\[\\#0f172a\\] * { color: #0f172a !important; }
     body.nuance-light div.bg-\\[\\#1e293b\\] { background-color: #f1f5f9 !important; border-bottom: 1px solid #cbd5e1 !important; }
     body.nuance-light div.bg-\\[\\#1e293b\\] div { color: #475569 !important; border-right: 1px solid #cbd5e1 !important; }
     body.nuance-light .bg-slate-800 { background-color: #e2e8f0 !important; color: #0f172a !important; border: 1px solid #cbd5e1 !important; }
     
-    /* Nuansa Color (Gradient Energik) */
     body.nuance-color header.bg-\\[\\#0f172a\\], body.nuance-color aside .bg-\\[\\#0f172a\\] { background: linear-gradient(90deg, #6366f1, #a855f7) !important; border: none !important; }
     body.nuance-color div.bg-\\[\\#1e293b\\] { background-color: #4f46e5 !important; border-bottom: none !important; }
     body.nuance-color .bg-slate-800 { background-color: #ec4899 !important; color: #ffffff !important; border: none !important; }
@@ -100,12 +73,11 @@ style.innerHTML = `
 document.head.appendChild(style);
 
 function initModernLayout(pageMeta) {
-    const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'Staff'};
+    const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'Admin'}; // Role Default Sementara
     
-    // BACA SETTING TEMA DARI LOCAL STORAGE
-    const currentShape = localStorage.getItem('app_shape') || 'rounded'; // rounded, sharp
-    const currentBg = localStorage.getItem('app_bg') || 'light';         // light, dark
-    const currentNuance = localStorage.getItem('app_nuance') || 'gelap'; // gelap, biru, abu, light, color
+    const currentShape = localStorage.getItem('app_shape') || 'rounded'; 
+    const currentBg = localStorage.getItem('app_bg') || 'light';         
+    const currentNuance = localStorage.getItem('app_nuance') || 'gelap'; 
 
     let tabs = JSON.parse(localStorage.getItem('wms_tabs')) || [];
     if(!tabs.find(t => t.id === 'dashboard')) tabs.unshift({id: 'dashboard', title: 'DASHBOARD', url: 'menu.html'});
@@ -115,7 +87,6 @@ function initModernLayout(pageMeta) {
     document.body.innerHTML = ''; 
 
     const layoutWrapper = document.createElement('div');
-    // Dark Mode mengubah latar belakang pembungkus utama
     layoutWrapper.className = currentBg === 'dark' ? 'flex h-screen bg-slate-900 overflow-hidden font-sans' : 'flex h-screen bg-slate-50 overflow-hidden font-sans';
 
     // SIDEBAR 
@@ -160,7 +131,12 @@ function initModernLayout(pageMeta) {
                     <h1 class="text-lg font-black tracking-widest hidden sm:block">${pageMeta ? pageMeta.title : 'WMS PORTAL'}</h1>
                 </div>
                 
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-4">
+                    <button onclick="bukaModalInbox()" class="relative p-2 rounded-full hover:bg-slate-800 text-slate-300 transition cursor-pointer" title="Request Ganti PO">
+                        <i data-lucide="mail" class="w-5 h-5"></i>
+                        <span id="inbox-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0f172a]"></span>
+                    </button>
+
                     <div class="relative">
                         <button onclick="toggleProfileMenu()" class="flex items-center gap-2 p-1 hover:bg-slate-800 rounded-full transition pr-3 cursor-pointer">
                             <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black shadow-inner border border-blue-500">${user.username.charAt(0).toUpperCase()}</div>
@@ -182,7 +158,6 @@ function initModernLayout(pageMeta) {
 
     rightArea.innerHTML = headerHTML;
     let mainContent = document.createElement('main');
-    // PERBAIKAN DARK MODE: Latar belakang main berubah otomatis sesuai mode
     mainContent.className = currentBg === 'dark' ? 'flex-1 overflow-x-hidden overflow-y-auto bg-slate-900 p-4 md:p-6 pb-20' : 'flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 md:p-6 pb-20';
     originalNodes.forEach(node => mainContent.appendChild(node));
     rightArea.appendChild(mainContent);
@@ -234,24 +209,45 @@ function initModernLayout(pageMeta) {
                 <button onclick="tutupModal('modal-tema')" class="w-full py-2.5 bg-slate-200 text-slate-700 font-bold rounded hover:bg-slate-300 transition">Tutup Pengaturan</button>
             </div>
         </div>
+
+        <div id="modal-inbox" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-2 sm:px-4 backdrop-blur-sm">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl border border-slate-200 text-slate-800 h-[80vh] flex flex-col overflow-hidden">
+                <div class="p-4 sm:p-5 flex justify-between items-center border-b border-slate-200 bg-slate-50">
+                    <h3 class="text-lg font-black flex items-center gap-2 text-slate-800"><i data-lucide="mail-open" class="text-blue-600"></i> INBOX REQUEST GANTI PO</h3>
+                    <button onclick="tutupModal('modal-inbox')" class="text-slate-400 hover:text-red-500 transition"><i data-lucide="x"></i></button>
+                </div>
+                <div class="flex-1 overflow-x-auto overflow-y-auto hide-scrollbar bg-white">
+                    <table class="w-full text-left border-collapse text-xs whitespace-nowrap">
+                        <thead class="sticky top-0 z-10 bg-slate-100 shadow-sm border-b border-slate-200">
+                            <tr>
+                                <th class="p-3 font-black text-slate-600">PIC</th>
+                                <th class="p-3 font-black text-slate-600">QR Code</th>
+                                <th class="p-3 font-black text-slate-600">PO Aktual (Lama)</th>
+                                <th class="p-3 font-black text-orange-600 border-x border-slate-200 bg-orange-50">PO Request (Baru)</th>
+                                <th class="p-3 font-black text-slate-600">Keterangan</th>
+                                <th class="p-3 font-black text-slate-600 text-center">Aksi / Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-inbox" class="text-slate-700">
+                            <tr><td colspan="6" class="p-10 text-center text-slate-400 font-bold">Sedang memuat data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     `;
     layoutWrapper.insertAdjacentHTML('beforeend', modalsHTML);
     document.body.appendChild(layoutWrapper);
     
-    // MENERAPKAN CLASS KE BODY
     if(currentBg === 'dark') document.body.classList.add('base-dark'); 
     if(currentShape === 'sharp') document.body.classList.add('shape-sharp');
     document.body.classList.add(`nuance-${currentNuance}`);
     
     lucide.createIcons();
+    setTimeout(cekNotifikasiInbox, 1000); // Cek notifikasi 1 detik setelah load
 }
 
-// FUNGSI UNTUK MENYIMPAN KOMPONEN TEMA
-function setTheme(key, value) {
-    localStorage.setItem(key, value);
-    window.location.reload();
-}
-
+function setTheme(key, value) { localStorage.setItem(key, value); window.location.reload(); }
 function toggleSidebar() { document.getElementById('app-sidebar').classList.toggle('-translate-x-full'); document.getElementById('sidebar-overlay').classList.toggle('hidden'); }
 function toggleProfileMenu() { document.getElementById('profile-dropdown').classList.toggle('hidden'); }
 function bukaModal(id) { document.getElementById(id).classList.remove('hidden'); toggleProfileMenu(); }
@@ -263,3 +259,102 @@ function closeGlobalTab(e, idToRemove, currentId) {
     if(currentId === idToRemove) window.location.href = tabs[tabs.length-1].url; else window.location.reload(); 
 }
 document.addEventListener('click', (e) => { const dropdown = document.getElementById('profile-dropdown'); if (dropdown && !e.target.closest('.relative')) dropdown.classList.add('hidden'); });
+
+// ==========================================
+// FUNGSI INBOX REQUEST PO
+// ==========================================
+async function cekNotifikasiInbox() {
+    try {
+        const { count, error } = await db.from('request_ganti_po').select('*', { count: 'exact', head: true }).eq('status', 'PENDING');
+        const badge = document.getElementById('inbox-badge');
+        if (badge && count > 0) badge.classList.remove('hidden');
+        else if (badge) badge.classList.add('hidden');
+    } catch(e) { console.error("Gagal cek notif:", e); }
+}
+
+async function bukaModalInbox() {
+    tutupModal('profile-dropdown');
+    document.getElementById('modal-inbox').classList.remove('hidden');
+    
+    const tbody = document.getElementById('tbody-inbox');
+    tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-slate-400 font-bold"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i> Mengambil pesan...</td></tr>';
+    lucide.createIcons();
+
+    try {
+        const { data, error } = await db.from('request_ganti_po').select('*').eq('status', 'PENDING').order('created_at', { ascending: false });
+        if(error) throw error;
+        
+        if(data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-slate-400 font-bold"><i data-lucide="mail-check" class="w-8 h-8 mx-auto mb-2 opacity-50 text-emerald-500"></i> Tidak ada antrean request.</td></tr>';
+            lucide.createIcons();
+            return;
+        }
+
+        const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown', role: 'Staff'};
+        // Berikan izin "TERIMA" jika jabatannya Admin/CS. Jika nama usernya memuat kata admin, loloskan juga.
+        const canApprove = user.role === 'Admin' || user.role === 'CS' || user.username.toLowerCase().includes('admin');
+        
+        let html = '';
+        data.forEach(d => {
+            // Jika punya akses, tampilkan tombol. Jika tidak, tampilkan label "Menunggu"
+            let btnAksi = canApprove 
+                ? `<button onclick="terimaRequestPO(${d.id}, '${d.qrcode}', '${d.po_request}')" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm text-[10px] uppercase transition flex items-center gap-1 mx-auto"><i data-lucide="check-circle" class="w-3 h-3"></i> TERIMA</button>`
+                : `<span class="px-3 py-1 bg-amber-100 text-amber-700 font-bold rounded-lg text-[10px] border border-amber-300">MENUNGGU CS</span>`;
+
+            html += `
+                <tr class="border-b border-slate-200 hover:bg-slate-50 transition">
+                    <td class="p-3 font-black text-slate-800 uppercase">${d.pic_request || '-'}</td>
+                    <td class="p-3 font-mono font-bold tracking-wider">${d.qrcode}</td>
+                    <td class="p-3 font-bold text-slate-500">${d.po_awal || '-'}</td>
+                    <td class="p-3 font-black text-orange-600 border-x border-slate-200 bg-orange-50/50">${d.po_request}</td>
+                    <td class="p-3 italic text-slate-500 truncate max-w-[200px]" title="${d.keterangan || '-'}">${d.keterangan || '-'}</td>
+                    <td class="p-3 text-center">${btnAksi}</td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+        lucide.createIcons();
+
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`;
+    }
+}
+
+// FUNGSI INTI: MEMBELAH ID_SKU DAN MENGGANTI PO
+async function terimaRequestPO(idReq, qrcode, poBaru) {
+    if(!confirm(`Yakin ingin mengganti PO untuk kardus ${qrcode} menjadi ${poBaru}?`)) return;
+
+    try {
+        // 1. Ambil data stok (id_sku) dari gudang
+        const { data: stokData, error: errStok } = await db.from('stok_qr').select('id_sku').eq('qrcode', qrcode).single();
+        if(errStok || !stokData) throw new Error("Gagal mengambil kartu stok dari gudang (mungkin barang sudah keluar/terhapus).");
+
+        let id_sku = stokData.id_sku;
+        let parts = id_sku.split('_');
+        
+        // Format WMS: Area_Jenis_Nama_Panjang_Grade_Dus_Shading_PO
+        if(parts.length >= 8) {
+            parts[7] = poBaru; // Ganti elemen index ke-7 (PO)
+        } else {
+            // Jika formatnya meleset, ganti bagian paling belakang sebagai cadangan
+            parts[parts.length - 1] = poBaru;
+        }
+        
+        let sku_baru = parts.join('_'); // Gabungkan kembali
+
+        // 2. Tembak/Update ke tabel stok_qr
+        const { error: errUpdate } = await db.from('stok_qr').update({ id_sku: sku_baru }).eq('qrcode', qrcode);
+        if(errUpdate) throw errUpdate;
+
+        // 3. Ubah status Request di Inbox menjadi SELESAI
+        const { error: errReq } = await db.from('request_ganti_po').update({ status: 'SELESAI' }).eq('id', idReq);
+        if(errReq) throw errReq;
+
+        // Jika berhasil, refresh modal dan hilangkan titik merah (jika kosong)
+        bukaModalInbox(); 
+        cekNotifikasiInbox(); 
+
+    } catch(err) {
+        alert("Gagal memproses persetujuan: " + err.message);
+    }
+}
