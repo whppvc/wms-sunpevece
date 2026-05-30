@@ -398,22 +398,23 @@
         }
 
         function saringTabelSTBJ() {
+            // Gunakan tanda tanya (?) agar tidak crash jika elemen HTML-nya tidak ada
             const f = {
-                status: document.getElementById('fs-status').value.toLowerCase(),
-                troli: document.getElementById('fs-troli').value.toLowerCase(),
-                qr: document.getElementById('fs-qr').value.toLowerCase(),
-                tgl: document.getElementById('fs-tgl').value.toLowerCase(),
-                mesin: document.getElementById('fs-mesin').value.toLowerCase(),
-                shift: document.getElementById('fs-shift').value.toLowerCase(),
-                jenis: document.getElementById('fs-jenis').value.toLowerCase(),
-                nama: document.getElementById('fs-nama').value.toLowerCase(),
-                pjg: document.getElementById('fs-pjg').value.toLowerCase(),
-                grade: document.getElementById('fs-grade').value.toLowerCase(),
-                dus: document.getElementById('fs-dus').value.toLowerCase(),
-                shading: document.getElementById('fs-shading').value.toLowerCase(),
-                po: document.getElementById('fs-po').value.toLowerCase(),
-                ket: document.getElementById('fs-ket').value.toLowerCase(),
-                pic: document.getElementById('fs-pic').value.toLowerCase()
+                status: document.getElementById('fs-status')?.value.toLowerCase() || '',
+                troli: document.getElementById('fs-troli')?.value.toLowerCase() || '',
+                qr: document.getElementById('fs-qr')?.value.toLowerCase() || '',
+                tgl: document.getElementById('fs-tgl')?.value.toLowerCase() || '',
+                mesin: document.getElementById('fs-mesin')?.value.toLowerCase() || '',
+                shift: document.getElementById('fs-shift')?.value.toLowerCase() || '',
+                jenis: document.getElementById('fs-jenis')?.value.toLowerCase() || '',
+                nama: document.getElementById('fs-nama')?.value.toLowerCase() || '',
+                pjg: document.getElementById('fs-pjg')?.value.toLowerCase() || '',
+                grade: document.getElementById('fs-grade')?.value.toLowerCase() || '',
+                dus: document.getElementById('fs-dus')?.value.toLowerCase() || '',
+                shading: document.getElementById('fs-shading')?.value.toLowerCase() || '',
+                po: document.getElementById('fs-po')?.value.toLowerCase() || '',
+                ket: document.getElementById('fs-ket')?.value.toLowerCase() || '',
+                pic: document.getElementById('fs-pic')?.value.toLowerCase() || ''
             };
 
             document.querySelectorAll('.row-stbj').forEach(row => {
