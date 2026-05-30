@@ -302,13 +302,14 @@ function bukaModalReqPO() {
     const rows = document.querySelectorAll('.row-item');
     if(rows.length === 0) return alert("Tidak ada data tabel.");
     
-    let hasInvalid = false;
+    let hasVerified = false;
     rows.forEach(r => {
         let status = r.querySelector('span[data-status]').getAttribute('data-status');
-        if(status === 'invalid' || r.querySelector('.col-poaktual').innerText.includes('KOSONG')) hasInvalid = true; 
+        // Asalkan statusnya bukan 'unverified', berarti user sudah klik Verifikasi Gudang
+        if(status !== 'unverified') hasVerified = true; 
     });
 
-    if(!hasInvalid) return alert("Semua baris tampak belum diVerifikasi. Verifikasi dulu sebelum request.");
+    if(!hasVerified) return alert("Semua baris tampak belum diverifikasi. Verifikasi dulu sebelum request.");
     
     const sel = document.getElementById('req-po-target');
     sel.innerHTML = '<option value="">-- PILIH PO TUJUAN --</option>';
@@ -374,6 +375,7 @@ async function submitReqPO() {
 
         alert(`BERHASIL!\n${payloadUpload.length} QRCode bermasalah diajukan ke CS untuk ganti PO.`);
         document.getElementById('modal-req-po').classList.add('hidden');
+        if(typeof cekNotifikasiInbox === 'function') cekNotifikasiInbox();
     } catch(e) { alert("Gagal mengajukan: " + e.message); }
     finally { btn.innerHTML = ori; btn.disabled = false; }
 }
