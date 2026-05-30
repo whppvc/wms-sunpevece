@@ -232,6 +232,9 @@ async function bukaModalKeluar() {
 }
 
 // PERUBAHAN UTAMA: Memotong stok berdasarkan pilihan target PO
+// ========================================================
+// REVISI EKSEKUSI KELUAR: Ambil kardus bebas selama kuota PO masih ada!
+// ========================================================
 async function eksekusiKeluar() {
     const poTarget = document.getElementById('out-po-target').value;
     const keterangan = document.getElementById('out-keterangan').value.trim();
@@ -245,25 +248,22 @@ async function eksekusiKeluar() {
     const rows = document.querySelectorAll('.row-item');
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
     
-    // 1. Kumpulkan semua spesifikasi barang (Base Spec) yang valid di layar
+    // 1. Kumpulkan spesifikasi fisik barang yang ada di layar
     let specsToProcess = new Set();
     rows.forEach(row => {
         let status = row.querySelector('span[data-status]').getAttribute('data-status');
-        if (status === 'valid') {
-            specsToProcess.add(row.dataset.baseSpec);
-        }
+        if (status === 'valid') specsToProcess.add(row.dataset.baseSpec);
     });
 
-    // 2. Hitung KUOTA/KAPASITAS AKTUAL di database khusus untuk PO Tujuan ini
+    // 2. Hitung KUOTA AKTUAL di DB khusus untuk PO yang diplih
     let stockCapacity = {}; 
     try {
         for(let spec of specsToProcess) {
-            // Cari stok di gudang yang memuat spesifikasi ini
             const { data, error } = await db.from('stok_qr').select('id_sku, area').like('id_sku', `%_${spec}_%`);
             if(data) {
                 data.forEach(d => {
                     let po = extractPOFromSKU(d.id_sku);
-                    // Hitung jumlahnya jika PO-nya cocok dengan PO yang dipilih user
+                    // HANYA hitung stok jika PO-nya cocok dengan PO Tujuan
                     if(po === poTarget) {
                         let virtual_sku = `${d.area}_${spec}_${poTarget}`;
                         if(!stockCapacity[virtual_sku]) stockCapacity[virtual_sku] = 0;
@@ -274,80 +274,71 @@ async function eksekusiKeluar() {
         }
     } catch(e) {
         alert("Gagal memverifikasi kapasitas stok ke server: " + e.message);
-        btnEks.innerHTML = oriBuka; btnEks.disabled = false;
-        return;
+        btnEks.innerHTML = oriBuka; btnEks.disabled = false; return;
     }
 
     let qrList = []; 
     let requiredMap = {};
     let matchedRows = []; 
     let unmatchedCount = 0;
-    let outOfStockCount = 0; // Pelacak baris yang terbuang karena kehabisan jatah PO
 
-    // 3. Eksekusi baris di layar SATU PER SATU selama kuota masih ada
+    // 3. SAPU BERSIH DARI ATAS: Ambil kardus acak selama kuota masih ada!
     rows.forEach(row => {
         let status = row.querySelector('span[data-status]').getAttribute('data-status');
-        let availablePOs = row.querySelector('.col-poaktual').innerText;
 
-        if (status === 'valid' && availablePOs.includes(poTarget)) {
+        if (status === 'valid') {
             let area = row.dataset.area;
             let baseSpec = row.dataset.baseSpec;
             let virtual_sku = `${area}_${baseSpec}_${poTarget}`;
             
-            // CEK: Apakah masih ada "jatah" untuk SKU & PO ini di database?
+            // KITA GAK PEDULI PO ASLINYA APA. 
+            // Selama spek fisiknya cocok & kuota PO Target di DB masih sisa, AMBIL!
             if(stockCapacity[virtual_sku] && stockCapacity[virtual_sku] > 0) {
-                // Jatah ada! Masukkan baris ini ke daftar proses
                 matchedRows.push(row);
                 qrList.push(row.querySelector('.qr-val').innerText);
                 
                 if(!requiredMap[virtual_sku]) requiredMap[virtual_sku] = 0;
                 requiredMap[virtual_sku] += 1;
                 
-                // KURANGI JATAH (Agar baris berikutnya tidak bisa masuk jika jatah habis)
-                stockCapacity[virtual_sku] -= 1;
+                // Kurangi jatah di memori agar baris selanjutnya tidak dapat jatah kalau sudah habis
+                stockCapacity[virtual_sku] -= 1; 
             } else {
-                // Jatah Habis! (Contoh: Di scan 5, tapi di DB cuma 1. Maka 4 sisanya akan jatuh ke sini)
-                unmatchedCount++;
-                outOfStockCount++;
+                // Kuota habis! Tinggalkan kardus ini di layar.
+                unmatchedCount++; 
             }
         } else {
-            // Status invalid atau barang memang tidak punya jatah PO Target sejak awal
             unmatchedCount++;
         }
     });
 
-    // 4. Validasi Akhir sebelum dikirim ke Database
+    // 4. Validasi jika kuota DB ternyata kosong
     if (qrList.length === 0) {
-        alert("Tidak ada stok yang bisa dikeluarkan.\n(Mungkin stok untuk PO ini sudah habis / sedang diproses orang lain).");
+        alert(`STOK HABIS.\n\nJatah stok aktual untuk "${poTarget}" sudah kosong di Database.\n\nSilakan klik "Req Ganti PO" agar CS mengalihkan sisa kardus di layar Anda menjadi PO ini.`);
         btnEks.innerHTML = oriBuka; btnEks.disabled = false;
         return;
     }
 
     let deductionsArray = [];
     for(let sku in requiredMap) { deductionsArray.push({ sku: sku, qty: requiredMap[sku] }); }
-
     const payloadData = { qrs: qrList, deductions: deductionsArray, po: poTarget, ket: keterangan, pic: user.username };
     
+    // 5. Tembak ke Database
     btnEks.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES KELUAR...';
-    
     const { error } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
 
     if (error) {
-        alert(error.message || "Gagal memproses pengeluaran.");
+        alert("Transaksi Ditolak Server:\n" + error.message);
         btnEks.innerHTML = oriBuka; btnEks.disabled = false;
         return;
     }
 
-    // 5. Bersihkan hanya baris yang sukses dari layar
+    // 6. Bersihkan layar HANYA sebanyak kardus yang dapat jatah
     matchedRows.forEach(r => r.remove());
     updateRowNumbers();
 
-    // 6. Notifikasi Cerdas untuk User
     let msg = `✅ BERHASIL KELUAR: ${qrList.length} Kardus berhasil diproses.\n`;
     if (unmatchedCount > 0) {
-        msg += `\n⚠️ SISA DI LAYAR: ${unmatchedCount} baris tidak ikut diproses.`;
-        if(outOfStockCount > 0) msg += `\n(${outOfStockCount} di antaranya ditahan karena jatah pembukuan untuk PO ${poTarget} sudah habis).`;
-        msg += `\n\nSilakan klik "REQUEST GANTI PO" untuk sisa kardus di layar.`;
+        msg += `\n⚠️ SISA DI LAYAR: ${unmatchedCount} kardus ditinggalkan karena kuota stok ${poTarget} sudah habis.\n\nSilakan klik "Req Ganti PO" untuk sisa kardus tersebut.`;
     }
     
     alert(msg);
