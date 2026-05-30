@@ -118,7 +118,7 @@ function undoDelete() { if(deleteStack.length === 0) return; const lastData = de
 function updateRowNumbers() { const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; }); }
 
 // ========================================================
-// 1. Verifikasi Gudang - (Tampilkan PO Aktual per kardus)
+// 1. CROSS CEK: Tampilkan Teks PO Gabungan (UI) tapi Simpan PO Asli (di balik layar)
 // ========================================================
 async function crossCekOutbound() {
     const rows = document.querySelectorAll('.row-item');
@@ -128,58 +128,81 @@ async function crossCekOutbound() {
     btnCross.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMVERIFIKASI...'; btnCross.disabled = true;
 
     const allQRCodes = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
-    
-    // Ambil data ID SKU (PO Aktual) dari Database
     const { data: dbQRs, error } = await db.from('stok_qr').select('qrcode, area, id_sku').in('qrcode', allQRCodes);
     if(error) { alert("Koneksi gagal: " + error.message); btnCross.innerHTML = originalText; btnCross.disabled = false; return; }
 
     let missingCount = 0;
+    let uniqueSpecs = new Set();
+    let validRows = [];
 
     rows.forEach(row => {
         const qr = row.querySelector('.qr-val').innerText;
         const valCell = row.querySelector('.col-val');
         const areaCell = row.querySelector('.area-cell');
-        const poAktualCell = row.querySelector('.col-poaktual');
         
         if(valCell.innerText.includes('LOKAL')) { missingCount++; return; }
 
         let foundDb = dbQRs.find(d => d.qrcode === qr);
 
         if(foundDb) {
+            validRows.push(row);
+            
+            // SIMPAN PO ASLI DIAM-DIAM UNTUK KEBUTUHAN REQUEST CS
             let poReal = extractPOFromSKU(foundDb.id_sku);
-            row.dataset.poAktual = poReal; // Simpan PO Aktual ke dalam elemen
+            row.dataset.poAsliDB = poReal; 
 
-            // Simpan komponen spek fisik
+            // Susun base spec item
             let jenis = row.querySelector('.col-jenis').innerText; let nama = row.querySelector('.col-nama').innerText;
             let pjg = row.querySelector('.col-pjg').innerText; let grade = row.querySelector('.col-grade').innerText;
             let dus = row.querySelector('.col-dus').innerText; let shading = row.querySelector('.col-shading').innerText;
-            row.dataset.baseSpec = `${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}`;
-            row.dataset.area = foundDb.area;
+            
+            let baseSpec = `${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}`;
+            row.dataset.baseSpec = baseSpec; 
+            row.dataset.area = foundDb.area; 
+            uniqueSpecs.add(baseSpec);
 
             valCell.innerHTML = '<span class="text-emerald-700 font-black bg-emerald-100 px-3 py-1 rounded shadow-sm text-[10px] border border-emerald-300" data-status="valid">VALID FISIK</span>';
             areaCell.innerText = foundDb.area; areaCell.className = "p-3 font-black text-emerald-600 border-r border-slate-200 area-cell";
-            
-            // Tampilkan PO Aktual masing-masing kardus di layar
-            poAktualCell.innerText = poReal; 
-            poAktualCell.className = "p-3 text-center font-black text-orange-600 bg-orange-50/50 border-l border-slate-200 col-poaktual tracking-widest";
-            
             row.classList.remove('bg-red-50');
         } else {
-            row.dataset.poAktual = "-";
+            row.dataset.poAsliDB = "-";
             valCell.innerHTML = '<span class="text-white font-black bg-red-600 px-3 py-1 rounded shadow-sm text-[10px] tracking-wide" data-status="invalid">BLM STBJ / KOSONG</span>';
             areaCell.innerText = "KOSONG"; areaCell.className = "p-3 font-black text-red-600 border-r border-slate-200 area-cell";
-            poAktualCell.innerText = "-"; poAktualCell.className = "p-3 text-center font-black text-slate-400 bg-slate-100 border-l border-slate-200 col-poaktual";
+            row.querySelector('.col-poaktual').innerText = "-";
             row.classList.add('bg-red-50'); 
             missingCount++;
         }
     });
+
+    // BIKIN TEKS GABUNGAN PO DI KOLOM PO AKTUAL
+    for(let spec of uniqueSpecs) {
+        const { data: specStock } = await db.from('stok_qr').select('id_sku').like('id_sku', `%_${spec}_%`);
+        let poAvailable = new Set();
+        
+        if(specStock) {
+            specStock.forEach(d => {
+                let po = extractPOFromSKU(d.id_sku);
+                if(po && po !== '-') poAvailable.add(po);
+            });
+        }
+        
+        let poText = poAvailable.size > 0 ? Array.from(poAvailable).join(', ') : 'KOSONG/NON-PO';
+        
+        validRows.forEach(row => {
+            if(row.dataset.baseSpec === spec) {
+                let poCell = row.querySelector('.col-poaktual');
+                poCell.innerText = poText;
+                poCell.className = "p-3 text-center font-bold text-blue-700 bg-blue-50 border-l border-slate-200 col-poaktual text-[10px] whitespace-normal max-w-[150px] leading-tight";
+            }
+        });
+    }
 
     if(missingCount > 0) alert(`Selesai! Ditemukan fisik kosong / BLM STBJ (Merah).`);
     btnCross.innerHTML = originalText; btnCross.disabled = false;
 }
 
 // ========================================================
-// 2. Kumpulkan Pilihan PO dari Tabel
+// 2. BUKA MODAL: Pecah teks gabungan untuk jadi Dropdown
 // ========================================================
 async function bukaModalKeluar() {
     const rows = document.querySelectorAll('.row-item');
@@ -193,13 +216,14 @@ async function bukaModalKeluar() {
         if (status === 'unverified') hasUnverified = true;
         
         if (status === 'valid') {
-            let po = r.dataset.poAktual;
-            if(po && po !== '-' && po !== '?' && po !== 'KOSONG') poSet.add(po);
+            let cellText = r.querySelector('.col-poaktual').innerText;
+            let pos = cellText.split(',').map(s => s.trim());
+            pos.forEach(p => { if(p && p !== 'KOSONG/NON-PO' && p !== '?') poSet.add(p); });
         }
     });
 
     if(hasUnverified) return alert("Silakan klik Verifikasi FISIK GUDANG terlebih dahulu.");
-    if(poSet.size === 0) return alert("Barang yang Anda scan belum memiliki PO Aktual di Gudang. Ajukan Request Ganti PO terlebih dahulu.");
+    if(poSet.size === 0) return alert("Barang yang Anda scan belum memiliki PO di Gudang. Ajukan Request Ganti PO terlebih dahulu.");
 
     const sel = document.getElementById('out-po-target');
     sel.innerHTML = '<option value="">-- PILIH PO TUJUAN --</option>';
@@ -212,7 +236,7 @@ async function bukaModalKeluar() {
 }
 
 // ========================================================
-// 3. EKSEKUSI CERDAS: Hanya ambil baris yang PO-nya Cocok!
+// 3. EKSEKUSI CERDAS: Ambil Sembarang Selama Kuota PO Masih Ada!
 // ========================================================
 async function eksekusiKeluar() {
     const poTarget = document.getElementById('out-po-target').value;
@@ -221,33 +245,65 @@ async function eksekusiKeluar() {
 
     const btnEks = document.getElementById('btn-eksekusi');
     const oriBuka = btnEks.innerHTML;
-    btnEks.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; 
+    btnEks.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MENGHITUNG STOK DB...'; 
     btnEks.disabled = true;
 
     const rows = document.querySelectorAll('.row-item');
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
     
+    let specsToProcess = new Set();
+    rows.forEach(row => {
+        let status = row.querySelector('span[data-status]').getAttribute('data-status');
+        if (status === 'valid') specsToProcess.add(row.dataset.baseSpec);
+    });
+
+    // Hitung Kuota Asli di DB
+    let stockCapacity = {}; 
+    try {
+        for(let spec of specsToProcess) {
+            const { data, error } = await db.from('stok_qr').select('id_sku, area').like('id_sku', `%_${spec}_%`);
+            if(data) {
+                data.forEach(d => {
+                    let po = extractPOFromSKU(d.id_sku);
+                    if(po === poTarget) {
+                        let virtual_sku = `${d.area}_${spec}_${poTarget}`;
+                        if(!stockCapacity[virtual_sku]) stockCapacity[virtual_sku] = 0;
+                        stockCapacity[virtual_sku]++;
+                    }
+                });
+            }
+        }
+    } catch(e) {
+        alert("Gagal memverifikasi kapasitas stok ke server: " + e.message);
+        btnEks.innerHTML = oriBuka; btnEks.disabled = false; return;
+    }
+
     let qrList = []; 
     let requiredMap = {};
     let matchedRows = []; 
     let unmatchedCount = 0;
 
+    // SAPU DARI ATAS: Ambil berapapun asalkan Jatah Kuota masih ada
     rows.forEach(row => {
         let status = row.querySelector('span[data-status]').getAttribute('data-status');
-        let poAktual = row.dataset.poAktual;
 
         if (status === 'valid') {
-            // FILTER: Hanya eksekusi kardus yang PO Aktual-nya sama dengan Target
-            if (poAktual === poTarget) {
+            let area = row.dataset.area;
+            let baseSpec = row.dataset.baseSpec;
+            let virtual_sku = `${area}_${baseSpec}_${poTarget}`;
+            
+            if(stockCapacity[virtual_sku] && stockCapacity[virtual_sku] > 0) {
                 matchedRows.push(row);
                 qrList.push(row.querySelector('.qr-val').innerText);
                 
-                let virtual_sku = `${row.dataset.area}_${row.dataset.baseSpec}_${poTarget}`;
                 if(!requiredMap[virtual_sku]) requiredMap[virtual_sku] = 0;
                 requiredMap[virtual_sku] += 1;
+                
+                // Jatah PO terpakai 1, kurangi!
+                stockCapacity[virtual_sku] -= 1; 
             } else {
-                // Kardus ini beda PO Aktual (misal: Samarinda). Tinggalkan di layar!
-                unmatchedCount++;
+                // Jatah habis, kardus ini terpaksa ditinggal di layar
+                unmatchedCount++; 
             }
         } else {
             unmatchedCount++;
@@ -255,32 +311,30 @@ async function eksekusiKeluar() {
     });
 
     if (qrList.length === 0) {
-        alert(`TIDAK ADA KARDUS.\n\nDari fisik kardus di layar, tidak ada satupun yang PO Aktual-nya "${poTarget}".\n\nSilakan klik "Req Ganti PO".`);
+        alert(`STOK HABIS.\n\nJatah stok aktual untuk "${poTarget}" sudah kosong di Database.\n\nSilakan klik "Req Ganti PO" agar CS mengalihkan sisa kardus di layar Anda menjadi PO ini.`);
         btnEks.innerHTML = oriBuka; btnEks.disabled = false;
         return;
     }
 
     let deductionsArray = [];
     for(let sku in requiredMap) { deductionsArray.push({ sku: sku, qty: requiredMap[sku] }); }
-
     const payloadData = { qrs: qrList, deductions: deductionsArray, po: poTarget, ket: keterangan, pic: user.username };
     
-    // Tembak ke Database
+    btnEks.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES KELUAR...';
     const { error } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
 
     if (error) {
-        alert("Gagal memproses pengeluaran:\n" + error.message);
+        alert("Transaksi Ditolak Server:\n" + error.message);
         btnEks.innerHTML = oriBuka; btnEks.disabled = false;
         return;
     }
 
-    // Bersihkan HANYA baris yang sukses di layar
     matchedRows.forEach(r => r.remove());
     updateRowNumbers();
 
     let msg = `✅ BERHASIL KELUAR: ${qrList.length} Kardus berhasil diproses.\n`;
     if (unmatchedCount > 0) {
-        msg += `\n⚠️ SISA DI LAYAR: ${unmatchedCount} kardus ditinggalkan karena PO Aktual-nya bukan ${poTarget}.\n\nSilakan klik "Req Ganti PO" untuk sisa kardus tersebut.`;
+        msg += `\n⚠️ SISA DI LAYAR: ${unmatchedCount} kardus ditinggalkan karena kuota stok ${poTarget} sudah habis.\n\nSilakan klik "Req Ganti PO" untuk sisa kardus tersebut.`;
     }
     
     alert(msg);
@@ -289,7 +343,7 @@ async function eksekusiKeluar() {
 }
 
 // ========================================================
-// 4. Request Ganti PO untuk Sisa Kardus di Layar
+// 4. REQUEST CS: Tarik PO Asli dari balik layar untuk dilaporkan
 // ========================================================
 function bukaModalReqPO() {
     const rows = document.querySelectorAll('.row-item');
@@ -334,8 +388,8 @@ async function submitReqPO() {
         let status = tr.querySelector('span[data-status]').getAttribute('data-status');
         if(status !== 'unverified') {
             const qr = tr.querySelector('.qr-val').innerText;
-            // Baca PO Aktual jika ada, jika kosong ambil PO Bawaan
-            let poAsli = (tr.dataset.poAktual && tr.dataset.poAktual !== '-') ? tr.dataset.poAktual : tr.querySelector('.col-pobawaan').innerText; 
+            // AMBIL IDENTITAS PO ASLI DARI DATABASE UNTUK DILAPORKAN KE CS (Disimpan waktu Verifikasi)
+            let poAsli = (tr.dataset.poAsliDB && tr.dataset.poAsliDB !== '-') ? tr.dataset.poAsliDB : tr.querySelector('.col-pobawaan').innerText; 
             
             payloadUpload.push({
                 qrcode: qr,
