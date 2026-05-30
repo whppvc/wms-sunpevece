@@ -118,7 +118,7 @@ function undoDelete() { if(deleteStack.length === 0) return; const lastData = de
 function updateRowNumbers() { const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; }); }
 
 // ========================================================
-// 1. VERIFIKASI GUDANG (Langsung baca dari tabel STOK_QR)
+// 1. VERIFIKASI GUDANG
 // ========================================================
 async function crossCekOutbound() {
     const rows = document.querySelectorAll('.row-item');
@@ -236,7 +236,7 @@ async function bukaModalKeluar() {
 }
 
 // ========================================================
-// 3. EKSEKUSI CERDAS: POTONG JATAH YANG BISA SAJA (NON-BLOCKING)
+// 3. EKSEKUSI CERDAS: POTONG JATAH DARI TABEL "stok_aktual"
 // ========================================================
 async function eksekusiKeluar() {
     const poTarget = document.getElementById('out-po-target').value;
@@ -257,27 +257,39 @@ async function eksekusiKeluar() {
         if (status === 'valid') specsToProcess.add(row.dataset.baseSpec);
     });
 
-    // 1. CARI JATAH KUOTA ASLI (DIHITUNG MANUAL AGAR KEBAL TYPO)
+    // 1. CARI JATAH KUOTA LANGSUNG DI TABEL stok_aktual BAPAK
     let stockCapacity = {}; 
     let totalJatahTersedia = 0;
     
     try {
         for(let spec of specsToProcess) {
-            const { data } = await db.from('stok_qr').select('id_sku').ilike('id_sku', `%${spec}%`);
+            let parts = spec.split('_');
+            let nm = parts[1];
+            let pj = parts[2];
+            let gr = parts[3];
+            let ds = parts[4];
+            let sh = parts[5];
+
+            const { data, error } = await db.from('stok_aktual')
+                .select('qty')
+                .eq('nama_item', nm)
+                .eq('pjg', pj)
+                .eq('grade', gr)
+                .eq('dus', ds)
+                .eq('shading', sh)
+                .ilike('po_aktual', `%${poTarget}%`); 
+            
+            if (error) throw error;
+            
             let count = 0;
             if(data) {
-                data.forEach(d => {
-                    // Gunakan "includes" agar sistem tidak buta karena ada spasi nyelip
-                    if(d.id_sku.toUpperCase().includes(poTarget.toUpperCase())) {
-                        count++;
-                    }
-                });
+                data.forEach(d => { count += (d.qty || 0); });
             }
             stockCapacity[spec] = count; 
             totalJatahTersedia += count;
         }
     } catch(e) {
-        alert("Gagal memverifikasi kapasitas stok ke server: " + e.message);
+        alert("Gagal membaca tabel stok_aktual di Supabase: " + e.message);
         btnEks.innerHTML = oriBuka; btnEks.disabled = false; return;
     }
 
@@ -286,7 +298,7 @@ async function eksekusiKeluar() {
     let matchedRows = []; 
     let unmatchedCount = 0;
 
-    // 2. SAPU DARI ATAS: Ambil kardusnya selama Jatah di memori > 0
+    // 2. PILIH ACAK (DARI ATAS) & POTONG ITEM SEBANYAK JUMLAH SISA STOK
     rows.forEach(row => {
         let status = row.querySelector('span[data-status]').getAttribute('data-status');
 
@@ -295,7 +307,6 @@ async function eksekusiKeluar() {
             let baseSpec = row.dataset.baseSpec;
             let full_sku = `${area}_${baseSpec}_${poTarget}`;
             
-            // JIKA JATAH MASIH ADA, AMBIL SAJA KARDUS INI!
             if(stockCapacity[baseSpec] && stockCapacity[baseSpec] > 0) {
                 matchedRows.push(row);
                 qrList.push(row.querySelector('.qr-val').innerText.trim());
@@ -303,7 +314,7 @@ async function eksekusiKeluar() {
                 if(!requiredMap[full_sku]) requiredMap[full_sku] = 0;
                 requiredMap[full_sku] += 1;
                 
-                stockCapacity[baseSpec] -= 1; // POTONG JATAH
+                stockCapacity[baseSpec] -= 1; 
             } else {
                 unmatchedCount++; 
             }
@@ -312,9 +323,8 @@ async function eksekusiKeluar() {
         }
     });
 
-    // Validasi Jika Jatah Benar-Benar Nol Besar
     if (qrList.length === 0) {
-        alert(`❌ TIDAK ADA JATAH SAMA SEKALI.\n\nSisa stok aktual untuk "${poTarget}" adalah 0 (Kosong).\n\nSilakan klik "Req Ganti PO" agar CS mengalihkan sisa kardus di layar Anda.`);
+        alert(`❌ TIDAK ADA JATAH SAMA SEKALI.\n\nSisa stok di tabel stok_aktual untuk "${poTarget}" adalah 0 (Kosong).\n\nSilakan klik "Req Ganti PO" untuk sisa kardus di layar Anda.`);
         btnEks.innerHTML = oriBuka; btnEks.disabled = false;
         return;
     }
@@ -323,7 +333,7 @@ async function eksekusiKeluar() {
     for(let sku in requiredMap) { deductionsArray.push({ sku: sku, qty: requiredMap[sku] }); }
     const payloadData = { qrs: qrList, deductions: deductionsArray, po: poTarget, ket: keterangan, pic: user.username };
     
-    // 3. TEMBAK KE DATABASE
+    // 3. TEMBAK KE DATABASE & HILANGKAN BLOKIR
     btnEks.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES KELUAR...';
     const { error } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
 
@@ -333,14 +343,15 @@ async function eksekusiKeluar() {
         return;
     }
 
-    // 4. BERSIHKAN LAYAR HANYA UNTUK KARDUS YANG SUKSES DIPROSES
+    // 4. BERSIHKAN LAYAR HANYA UNTUK KARDUS YANG JATAHNYA TERPOTONG
     matchedRows.forEach(r => r.remove());
     updateRowNumbers();
 
-    // 5. NOTIFIKASI BARU SESUAI PERMINTAAN BAPAK (JELAS & TRANSPARAN)
-    let msg = `✅ BERHASIL\n\nSisa stok ${poTarget} ada ${totalJatahTersedia}, sistem cuma bisa memproses ${qrList.length} item.`;
+    // 5. NOTIFIKASI BARU YANG TRANSPARAN
+    let msg = `✅ PROSES SELESAI\n\nSisa stok ${poTarget} di gudang ada ${totalJatahTersedia} dus. Sistem berhasil memproses ${qrList.length} item.`;
+    
     if (unmatchedCount > 0) {
-        msg += `\n\n⚠️ ${unmatchedCount} dus tidak kebagian jatah dan disisakan di layar.\nSilakan pilih baris tersebut dan klik "Req Ganti PO".`;
+        msg += `\n\n⚠️ Ada ${unmatchedCount} dus tidak kebagian jatah dan ditinggalkan di layar.\nSilakan pilih baris tersebut dan klik "Req Ganti PO" agar diurus oleh CS.`;
     }
     
     alert(msg);
@@ -394,7 +405,6 @@ async function submitReqPO() {
         let status = tr.querySelector('span[data-status]').getAttribute('data-status');
         if(status !== 'unverified') {
             const qr = tr.querySelector('.qr-val').innerText.trim();
-            // Tarik data PO ASLI DATABASE untuk di-report ke CS
             let poAsli = (tr.dataset.poAsliDB && tr.dataset.poAsliDB !== '-') ? tr.dataset.poAsliDB : tr.querySelector('.col-pobawaan').innerText.trim(); 
             
             payloadUpload.push({
