@@ -238,40 +238,88 @@ async function eksekusiKeluar() {
     if(!poTarget) return alert("Pilih PO Tujuan Pengeluaran!");
 
     const btnEks = document.getElementById('btn-eksekusi');
-    btnEks.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btnEks.disabled = true;
+    const oriBuka = btnEks.innerHTML;
+    btnEks.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MENGHITUNG STOK DB...'; 
+    btnEks.disabled = true;
 
     const rows = document.querySelectorAll('.row-item');
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
     
-    let qrList = []; let requiredMap = {};
-    let matchedRows = []; let unmatchedCount = 0;
+    // 1. Kumpulkan semua spesifikasi barang (Base Spec) yang valid di layar
+    let specsToProcess = new Set();
+    rows.forEach(row => {
+        let status = row.querySelector('span[data-status]').getAttribute('data-status');
+        if (status === 'valid') {
+            specsToProcess.add(row.dataset.baseSpec);
+        }
+    });
 
+    // 2. Hitung KUOTA/KAPASITAS AKTUAL di database khusus untuk PO Tujuan ini
+    let stockCapacity = {}; 
+    try {
+        for(let spec of specsToProcess) {
+            // Cari stok di gudang yang memuat spesifikasi ini
+            const { data, error } = await db.from('stok_qr').select('id_sku, area').like('id_sku', `%_${spec}_%`);
+            if(data) {
+                data.forEach(d => {
+                    let po = extractPOFromSKU(d.id_sku);
+                    // Hitung jumlahnya jika PO-nya cocok dengan PO yang dipilih user
+                    if(po === poTarget) {
+                        let virtual_sku = `${d.area}_${spec}_${poTarget}`;
+                        if(!stockCapacity[virtual_sku]) stockCapacity[virtual_sku] = 0;
+                        stockCapacity[virtual_sku]++;
+                    }
+                });
+            }
+        }
+    } catch(e) {
+        alert("Gagal memverifikasi kapasitas stok ke server: " + e.message);
+        btnEks.innerHTML = oriBuka; btnEks.disabled = false;
+        return;
+    }
+
+    let qrList = []; 
+    let requiredMap = {};
+    let matchedRows = []; 
+    let unmatchedCount = 0;
+    let outOfStockCount = 0; // Pelacak baris yang terbuang karena kehabisan jatah PO
+
+    // 3. Eksekusi baris di layar SATU PER SATU selama kuota masih ada
     rows.forEach(row => {
         let status = row.querySelector('span[data-status]').getAttribute('data-status');
         let availablePOs = row.querySelector('.col-poaktual').innerText;
 
-        // Cek apakah PO Target yang dipilih TERSEDIA di list barang ini
         if (status === 'valid' && availablePOs.includes(poTarget)) {
-            matchedRows.push(row);
             let area = row.dataset.area;
             let baseSpec = row.dataset.baseSpec;
-            let qr = row.querySelector('.qr-val').innerText;
-            
-            qrList.push(qr);
-            
-            // Susun virtual SKU sesuai dengan PO yang dipilih (Deduction yang dinamis)
             let virtual_sku = `${area}_${baseSpec}_${poTarget}`;
             
-            if(!requiredMap[virtual_sku]) requiredMap[virtual_sku] = 0;
-            requiredMap[virtual_sku] += 1;
+            // CEK: Apakah masih ada "jatah" untuk SKU & PO ini di database?
+            if(stockCapacity[virtual_sku] && stockCapacity[virtual_sku] > 0) {
+                // Jatah ada! Masukkan baris ini ke daftar proses
+                matchedRows.push(row);
+                qrList.push(row.querySelector('.qr-val').innerText);
+                
+                if(!requiredMap[virtual_sku]) requiredMap[virtual_sku] = 0;
+                requiredMap[virtual_sku] += 1;
+                
+                // KURANGI JATAH (Agar baris berikutnya tidak bisa masuk jika jatah habis)
+                stockCapacity[virtual_sku] -= 1;
+            } else {
+                // Jatah Habis! (Contoh: Di scan 5, tapi di DB cuma 1. Maka 4 sisanya akan jatuh ke sini)
+                unmatchedCount++;
+                outOfStockCount++;
+            }
         } else {
+            // Status invalid atau barang memang tidak punya jatah PO Target sejak awal
             unmatchedCount++;
         }
     });
 
+    // 4. Validasi Akhir sebelum dikirim ke Database
     if (qrList.length === 0) {
-        alert("Tidak ada fisik barang yang cocok dengan PO Tujuan yang Anda pilih.");
-        btnEks.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4"></i> EKSEKUSI'; btnEks.disabled = false;
+        alert("Tidak ada stok yang bisa dikeluarkan.\n(Mungkin stok untuk PO ini sudah habis / sedang diproses orang lain).");
+        btnEks.innerHTML = oriBuka; btnEks.disabled = false;
         return;
     }
 
@@ -279,23 +327,32 @@ async function eksekusiKeluar() {
     for(let sku in requiredMap) { deductionsArray.push({ sku: sku, qty: requiredMap[sku] }); }
 
     const payloadData = { qrs: qrList, deductions: deductionsArray, po: poTarget, ket: keterangan, pic: user.username };
-    const { data, error } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
+    
+    btnEks.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES KELUAR...';
+    
+    const { error } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
 
     if (error) {
         alert(error.message || "Gagal memproses pengeluaran.");
-        btnEks.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4"></i> EKSEKUSI'; btnEks.disabled = false;
+        btnEks.innerHTML = oriBuka; btnEks.disabled = false;
         return;
     }
 
+    // 5. Bersihkan hanya baris yang sukses dari layar
     matchedRows.forEach(r => r.remove());
     updateRowNumbers();
 
-    let msg = `BERHASIL KELUAR: ${qrList.length} Kardus dipotong dari stok.`;
-    if (unmatchedCount > 0) msg += `\n\nSISA: ${unmatchedCount} baris bermasalah / BEDA PO tersisa di tabel layar Anda.`;
+    // 6. Notifikasi Cerdas untuk User
+    let msg = `✅ BERHASIL KELUAR: ${qrList.length} Kardus berhasil diproses.\n`;
+    if (unmatchedCount > 0) {
+        msg += `\n⚠️ SISA DI LAYAR: ${unmatchedCount} baris tidak ikut diproses.`;
+        if(outOfStockCount > 0) msg += `\n(${outOfStockCount} di antaranya ditahan karena jatah pembukuan untuk PO ${poTarget} sudah habis).`;
+        msg += `\n\nSilakan klik "REQUEST GANTI PO" untuk sisa kardus di layar.`;
+    }
     
     alert(msg);
     document.getElementById('modal-keluar').classList.add('hidden');
-    btnEks.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4"></i> EKSEKUSI'; btnEks.disabled = false;
+    btnEks.innerHTML = oriBuka; btnEks.disabled = false;
 }
 
 function bukaModalReqPO() {
