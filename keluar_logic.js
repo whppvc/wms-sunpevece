@@ -118,7 +118,7 @@ function undoDelete() { if(deleteStack.length === 0) return; const lastData = de
 function updateRowNumbers() { const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; }); }
 
 // ========================================================
-// 1. CROSS CEK: Tampilkan Teks PO Gabungan (UI) tapi Simpan PO Asli (di balik layar)
+// 1. CROSS CEK: Tampilkan Teks PO Gabungan (UI) tapi Simpan PO Asli
 // ========================================================
 async function crossCekOutbound() {
     const rows = document.querySelectorAll('.row-item');
@@ -147,11 +147,11 @@ async function crossCekOutbound() {
         if(foundDb) {
             validRows.push(row);
             
-            // SIMPAN PO ASLI DIAM-DIAM UNTUK KEBUTUHAN REQUEST CS
+            // SIMPAN PO ASLI DIAM-DIAM UNTUK REQUEST KE CS NANTI
             let poReal = extractPOFromSKU(foundDb.id_sku);
             row.dataset.poAsliDB = poReal; 
 
-            // Susun base spec item
+            // Susun base spec item fisik
             let jenis = row.querySelector('.col-jenis').innerText; let nama = row.querySelector('.col-nama').innerText;
             let pjg = row.querySelector('.col-pjg').innerText; let grade = row.querySelector('.col-grade').innerText;
             let dus = row.querySelector('.col-dus').innerText; let shading = row.querySelector('.col-shading').innerText;
@@ -202,7 +202,7 @@ async function crossCekOutbound() {
 }
 
 // ========================================================
-// 2. BUKA MODAL: Pecah teks gabungan untuk jadi Dropdown
+// 2. BUKA MODAL KELUAR: Pecah teks gabungan untuk jadi Dropdown
 // ========================================================
 async function bukaModalKeluar() {
     const rows = document.querySelectorAll('.row-item');
@@ -257,18 +257,18 @@ async function eksekusiKeluar() {
         if (status === 'valid') specsToProcess.add(row.dataset.baseSpec);
     });
 
-    // Hitung Kuota Asli di DB
+    // Hitung Kuota Asli di DB (Berbasis spek fisik tanpa pandang bulu)
     let stockCapacity = {}; 
     try {
         for(let spec of specsToProcess) {
-            const { data, error } = await db.from('stok_qr').select('id_sku, area').like('id_sku', `%_${spec}_%`);
+            const { data, error } = await db.from('stok_qr').select('id_sku').like('id_sku', `%_${spec}_%`);
             if(data) {
                 data.forEach(d => {
                     let po = extractPOFromSKU(d.id_sku);
                     if(po === poTarget) {
-                        let virtual_sku = `${d.area}_${spec}_${poTarget}`;
-                        if(!stockCapacity[virtual_sku]) stockCapacity[virtual_sku] = 0;
-                        stockCapacity[virtual_sku]++;
+                        let virtual_sku_key = `${spec}_${poTarget}`;
+                        if(!stockCapacity[virtual_sku_key]) stockCapacity[virtual_sku_key] = 0;
+                        stockCapacity[virtual_sku_key]++;
                     }
                 });
             }
@@ -288,19 +288,20 @@ async function eksekusiKeluar() {
         let status = row.querySelector('span[data-status]').getAttribute('data-status');
 
         if (status === 'valid') {
-            let area = row.dataset.area;
+            let area = row.dataset.area || 'A';
             let baseSpec = row.dataset.baseSpec;
-            let virtual_sku = `${area}_${baseSpec}_${poTarget}`;
+            let virtual_sku_key = `${baseSpec}_${poTarget}`;
+            let full_sku = `${area}_${baseSpec}_${poTarget}`; // Identitas murni untuk dikirim ke DB
             
-            if(stockCapacity[virtual_sku] && stockCapacity[virtual_sku] > 0) {
+            if(stockCapacity[virtual_sku_key] && stockCapacity[virtual_sku_key] > 0) {
                 matchedRows.push(row);
                 qrList.push(row.querySelector('.qr-val').innerText);
                 
-                if(!requiredMap[virtual_sku]) requiredMap[virtual_sku] = 0;
-                requiredMap[virtual_sku] += 1;
+                if(!requiredMap[full_sku]) requiredMap[full_sku] = 0;
+                requiredMap[full_sku] += 1;
                 
                 // Jatah PO terpakai 1, kurangi!
-                stockCapacity[virtual_sku] -= 1; 
+                stockCapacity[virtual_sku_key] -= 1; 
             } else {
                 // Jatah habis, kardus ini terpaksa ditinggal di layar
                 unmatchedCount++; 
@@ -311,7 +312,7 @@ async function eksekusiKeluar() {
     });
 
     if (qrList.length === 0) {
-        alert(`STOK HABIS.\n\nJatah stok aktual untuk "${poTarget}" sudah kosong di Database.\n\nSilakan klik "Req Ganti PO" agar CS mengalihkan sisa kardus di layar Anda menjadi PO ini.`);
+        alert(`STOK HABIS / TIDAK ADA JATAH.\n\nJatah stok aktual untuk "${poTarget}" tidak ditemukan atau sudah kosong di Database.\n\nSilakan klik "Req Ganti PO" agar CS mengalihkan sisa kardus di layar Anda menjadi PO ini.`);
         btnEks.innerHTML = oriBuka; btnEks.disabled = false;
         return;
     }
@@ -329,6 +330,7 @@ async function eksekusiKeluar() {
         return;
     }
 
+    // Bersihkan layar
     matchedRows.forEach(r => r.remove());
     updateRowNumbers();
 
