@@ -412,19 +412,22 @@ async function bukaModalSTBJ() {
             return;
         }
 
-        const qrs = data.map(d => d.qrcode);
-        const { data: stokData } = await db.from('stok_qr').select('qrcode').in('qrcode', qrs);
-        const stokSet = new Set((stokData || []).map(d => d.qrcode)); 
-
         let h = '';
         data.forEach((r, i) => {
             const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
             const td = translateBarcode(r.qrcode);
             
-            const isInGudang = stokSet.has(r.qrcode);
-            const colGudang = isInGudang 
-                ? '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">IN GUDANG</span>' 
-                : '<span class="bg-blue-100 text-blue-800 border border-blue-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">STBJ</span>';
+            // Membaca chip pelacak posisi_barang dari database
+            let statusGudang = r.posisi || 'STBJ';
+            let colGudang = '';
+            
+            if(statusGudang === 'IN GUDANG') {
+                colGudang = '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">IN GUDANG</span>';
+            } else if (statusGudang === 'KELUAR') {
+                colGudang = '<span class="bg-red-100 text-red-800 border border-red-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">KELUAR</span>';
+            } else {
+                colGudang = '<span class="bg-blue-100 text-blue-800 border border-blue-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">STBJ</span>';
+            }
             
             h += `
                 <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-modal-stbj">
