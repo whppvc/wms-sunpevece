@@ -1,4 +1,4 @@
-let masterData = { kamus: [], area: [] }; // master troli tidak digunakan lagi
+let masterData = { kamus: [], area: [] }; 
 let deleteStack = [], globalRowId = 0;
 let hiddenCols = [];
 
@@ -27,7 +27,6 @@ const colDefinitions = [
 document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(async () => {
         try {
-            // Dropdown troli manual sudah dihapus dari fetch
             const { data: mDataArea } = await db.from('master_area').select('nama_area').order('id', { ascending: true });
             if(mDataArea) {
                 masterData.area = [...new Set(mDataArea.map(r => r.nama_area).filter(x => x && x.trim() !== ''))]; 
@@ -165,7 +164,6 @@ function toggleSemuaCentang(checked) {
     document.querySelectorAll('.cb-row').forEach(cb => cb.checked = checked);
 }
 
-// Troli diganti menjadi string default "Menunggu Cek" saat input
 function addRow(area, code, isDuplicate = false) {
     globalRowId++; const tr = document.createElement('tr'); 
     const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'hover:bg-slate-50';
@@ -215,7 +213,6 @@ async function VerifikasiDanCek() {
     const qrs = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     
     try {
-        // PERUBAHAN: Menarik kolom troli dan keterangan sekaligus
         const [resStbj, resStok] = await Promise.all([
             db.from('hasil_stbj').select('qrcode, troli, keterangan').in('qrcode', qrs),
             db.from('stok_qr').select('qrcode').in('qrcode', qrs)
@@ -241,7 +238,6 @@ async function VerifikasiDanCek() {
                 stbjSpan.setAttribute('data-status', 'valid');
                 stbjSpan.innerText = 'SDH STBJ';
                 
-                // Meniban kolom tabel dengan data dari Hasil STBJ
                 troliCell.innerText = stbjMap[qr].troli || '-';
                 troliCell.className = "p-3 font-bold text-slate-700 troli-cell col-troli text-center";
                 
@@ -305,10 +301,14 @@ async function saveToSupabase() {
         let jenis = r.querySelector('.col-jenis').innerText; let nama = r.querySelector('.col-nama').innerText;
         let pjg = r.querySelector('.col-pjg').innerText; let grade = r.querySelector('.col-grade').innerText;
         let dus = r.querySelector('.col-dus').innerText; let shading = r.querySelector('.col-shading').innerText; let po = r.querySelector('.col-po').innerText;
+        let ket = r.querySelector('.col-ket').innerText;
+        
         let id_sku = `${area}_${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}_${po}`;
         
         arrFisik.push({ qrcode: qr, area: area, id_sku: id_sku, pic_input: user.username });
-        if(!mapVirtual[id_sku]) { mapVirtual[id_sku] = { id_sku: id_sku, area: area, jenis_item: jenis, nama_item: nama, panjang: pjg, grade: grade, dus: dus, shading: shading, po_aktual: po, qty: 0 }; }
+        if(!mapVirtual[id_sku]) { 
+            mapVirtual[id_sku] = { id_sku: id_sku, area: area, jenis_item: jenis, nama_item: nama, panjang: pjg, grade: grade, dus: dus, shading: shading, po_aktual: po, ket: ket, qty: 0 }; 
+        }
         mapVirtual[id_sku].qty += 1;
     });
 
@@ -316,7 +316,31 @@ async function saveToSupabase() {
     const { data, error } = await db.rpc('eksekusi_langsir_aman', { payload: payloadData });
 
     if (error || (data && data.startsWith('ERROR'))) { alert("GAGAL SERVER: " + (error ? error.message : data)); btn.innerHTML = original; btn.disabled = false; return; }
-    alert(`BERHASIL!\n${arrFisik.length} kardus telah masuk dengan aman ke Kartu Stok Gudang.`);
+    
+    // ======== FITUR BARU: AUTO-SYNC KE TABEL stok_aktual ========
+    for(let v of Object.values(mapVirtual)) {
+        try {
+            const { data: cekStok } = await db.from('stok_aktual')
+                .select('id, qty')
+                .eq('nama_item', v.nama_item).eq('pjg', v.panjang).eq('grade', v.grade)
+                .eq('dus', v.dus).eq('shading', v.shading).eq('area', v.area)
+                .eq('po_aktual', v.po_aktual).eq('keterangan', v.ket)
+                .maybeSingle();
+
+            if(cekStok) {
+                await db.from('stok_aktual').update({ qty: cekStok.qty + v.qty }).eq('id', cekStok.id);
+            } else {
+                await db.from('stok_aktual').insert([{
+                    nama_item: v.nama_item, pjg: v.panjang, grade: v.grade, 
+                    dus: v.dus, shading: v.shading, keterangan: v.ket, 
+                    po_aktual: v.po_aktual, qty: v.qty, area: v.area
+                }]);
+            }
+        } catch(e) { console.error("Gagal update stok_aktual: ", e); }
+    }
+    // ==============================================================
+
+    alert(`BERHASIL!\n${arrFisik.length} kardus telah masuk ke Gudang & Data Stok Aktual sukses terupdate.`);
     document.getElementById('tbody-langsir').innerHTML = ''; btn.innerHTML = original; btn.disabled = false;
 }
 
@@ -384,7 +408,6 @@ function salinDataTabel() {
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
 }
 
-// FITUR BARU: MODAL TABEL HASIL STBJ DI DALAM LANGSIR
 async function bukaModalSTBJ() {
     document.getElementById('modal-stbj-langsir').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
@@ -394,7 +417,6 @@ async function bukaModalSTBJ() {
     lucide.createIcons();
 
     try {
-        // 1. Tarik data dari tabel hasil_stbj
         const { data, error } = await db.from('hasil_stbj').select('*').order('created_at', {ascending: false});
         if(error) throw error;
         
@@ -403,17 +425,15 @@ async function bukaModalSTBJ() {
             return;
         }
 
-        // 2. PERBAIKAN: Tarik data dari stok_qr untuk menentukan Status Item
         const qrs = data.map(d => d.qrcode);
         const { data: stokData } = await db.from('stok_qr').select('qrcode').in('qrcode', qrs);
-        const stokSet = new Set((stokData || []).map(d => d.qrcode)); // Jadikan Set agar pengecekan lebih cepat
+        const stokSet = new Set((stokData || []).map(d => d.qrcode)); 
 
         let h = '';
         data.forEach((r, i) => {
             const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
             const td = translateBarcode(r.qrcode);
             
-            // 3. Logika penentuan status item
             const isInGudang = stokSet.has(r.qrcode);
             const colGudang = isInGudang 
                 ? '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">IN GUDANG</span>' 
