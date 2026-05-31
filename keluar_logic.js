@@ -315,7 +315,7 @@ async function eksekusiKeluar() {
     matchedRows.forEach(r => r.remove()); updateRowNumbers();
 
     let msg = `✅ SELESAI\nBerhasil memotong ${qrList.length} item dari fisik (QR), stok_aktual, dan stok_global secara permanen.`;
-    if (unmatchedCount > 0) msg += `\n\n⚠️ ${unmatchedCount} dus tidak kebagian jatah dan tersisa di layar.`;
+    if (unmatchedCount > 0) msg += `\n\n⚠️ ${unmatchedCount} dus tersisa di layar dan perlu request ganti po ek cs atau admin.`;
     alert(msg);
     document.getElementById('modal-keluar').classList.add('hidden');
     btnEks.innerHTML = oriBuka; btnEks.disabled = false;
