@@ -436,74 +436,52 @@
         }
 
         async function eksekusiGantiPO() {
-            const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
-            if(!newPO) return alert("Silakan Pilih PO Baru dari daftar dropdown!");
+    const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
+    if(!newPO) return alert("Silakan Pilih PO Baru dari daftar dropdown!");
 
-            const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
-            if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
+    const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
+    if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
 
-            let maxDus = selectedForPO.reduce((sum, row) => sum + row.qrcodes.length, 0);
-            if(qtyDiminta > maxDus) return alert(`Jumlah maksimal yang bisa diganti adalah ${maxDus} dus dari item yang Anda centang!`);
+    let maxDus = selectedForPO.reduce((sum, row) => sum + row.qrcodes.length, 0);
+    if(qtyDiminta > maxDus) return alert(`Maksimal yang bisa diganti adalah ${maxDus} dus!`);
 
-            const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...'; btn.disabled = true;
+    const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...'; btn.disabled = true;
 
-            try {
-                let qtySisaUntukDiupdate = qtyDiminta;
-                
-                for(let row of selectedForPO) {
-                    if (qtySisaUntukDiupdate <= 0) break; 
-                    
-                    let qrsUntukDiupdate = row.qrcodes.slice(0, qtySisaUntukDiupdate);
-                    let jumlahBerubah = qrsUntukDiupdate.length;
-                    qtySisaUntukDiupdate -= jumlahBerubah;
+    try {
+        let qtySisaUntukDiupdate = qtyDiminta;
+        let payloadItems = [];
+        
+        for(let row of selectedForPO) {
+            if (qtySisaUntukDiupdate <= 0) break; 
+            
+            let qrsUntukDiupdate = row.qrcodes.slice(0, qtySisaUntukDiupdate);
+            let jumlahBerubah = qrsUntukDiupdate.length;
+            qtySisaUntukDiupdate -= jumlahBerubah;
 
-                    let parts = row.id_sku.split('_');
-                    parts[7] = newPO; 
-                    let newIdSku = parts.join('_');
-                    
-                    const { error } = await db.from('stok_qr').update({ id_sku: newIdSku }).in('qrcode', qrsUntukDiupdate);
-                    if(error) throw error;
+            let parts = row.id_sku.split('_');
+            parts[7] = newPO; 
+            let newIdSku = parts.join('_');
 
-                    // ======== FITUR BARU: AUTO-SYNC KE TABEL stok_aktual ========
-                    // 1. Kurangi stok di PO Lama
-                    const { data: oldStok } = await db.from('stok_aktual')
-                        .select('id, qty')
-                        .eq('nama_item', row.nama).eq('pjg', row.pjg).eq('grade', row.grade)
-                        .eq('dus', row.dus).eq('shading', row.shading).eq('area', row.area)
-                        .eq('po_aktual', row.po).eq('keterangan', row.ket)
-                        .maybeSingle();
-                        
-                    if(oldStok) {
-                        await db.from('stok_aktual').update({ qty: Math.max(0, oldStok.qty - jumlahBerubah) }).eq('id', oldStok.id);
-                    }
-
-                    // 2. Tambah stok di PO Baru
-                    const { data: newStok } = await db.from('stok_aktual')
-                        .select('id, qty')
-                        .eq('nama_item', row.nama).eq('pjg', row.pjg).eq('grade', row.grade)
-                        .eq('dus', row.dus).eq('shading', row.shading).eq('area', row.area)
-                        .eq('po_aktual', newPO).eq('keterangan', row.ket)
-                        .maybeSingle();
-
-                    if(newStok) {
-                        await db.from('stok_aktual').update({ qty: newStok.qty + jumlahBerubah }).eq('id', newStok.id);
-                    } else {
-                        await db.from('stok_aktual').insert([{
-                            nama_item: row.nama, pjg: row.pjg, grade: row.grade, 
-                            dus: row.dus, shading: row.shading, keterangan: row.ket, 
-                            po_aktual: newPO, qty: jumlahBerubah, area: row.area
-                        }]);
-                    }
-                    // ==============================================================
-                }
-                
-                alert(`BERHASIL!\nPO Aktual & Tabel Stok Aktual berhasil diperbarui untuk ${qtyDiminta} dus barang.`);
-                tutupModalPO(); if(sourcePOContext === 'breakdown') tutupModalBreakdown();
-                await muatDataStok();
-            } catch (error) { alert("GAGAL UPDATE: " + error.message); } 
-            finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
+            payloadItems.push({
+                new_id_sku: newIdSku,
+                qrcodes: qrsUntukDiupdate,
+                nama: row.nama, pjg: row.pjg, grade: row.grade, dus: row.dus,
+                shading: row.shading, area: row.area,
+                po_lama: row.po, po_baru: newPO, ket: row.ket,
+                qty_berubah: jumlahBerubah
+            });
         }
+
+        const { error } = await db.rpc('eksekusi_ganti_po_aman', { payload: { items: payloadItems } });
+        if(error) throw error;
+        
+        alert(`BERHASIL!\nPO Aktual berhasil diubah menjadi ${newPO} untuk ${qtyDiminta} dus.`);
+        tutupModalPO(); if(sourcePOContext === 'breakdown') tutupModalBreakdown();
+        await muatDataStok();
+    } catch (error) { alert("GAGAL UPDATE: " + error.message); } 
+    finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
+}
 
         function toggleSidebarFilter() { document.getElementById('sidebar-filter').classList.toggle('translate-x-full'); document.getElementById('overlay-klik-luar').classList.toggle('hidden'); }
         function tutupSemuaPopups() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); document.getElementById('dropdown-kolom').classList.add('hidden'); tutupModalPO(); tutupModalBreakdown(); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
