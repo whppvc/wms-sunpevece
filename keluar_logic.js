@@ -128,12 +128,20 @@ async function crossCekOutbound() {
     btnCross.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMVERIFIKASI...'; btnCross.disabled = true;
 
     const allQRCodes = Array.from(rows).map(r => r.querySelector('.qr-val').innerText.trim());
-    const { data: dbQRs, error } = await db.from('stok_qr').select('qrcode, area, id_sku').in('qrcode', allQRCodes);
-    if(error) { alert("Koneksi gagal: " + error.message); btnCross.innerHTML = originalText; btnCross.disabled = false; return; }
+    
+    // Ambil Stok & Keterangan sekaligus
+    const [resStok, resStbj] = await Promise.all([
+        db.from('stok_qr').select('qrcode, area, id_sku').in('qrcode', allQRCodes),
+        db.from('hasil_stbj').select('qrcode, keterangan').in('qrcode', allQRCodes)
+    ]);
+    
+    if(resStok.error) { alert("Koneksi gagal: " + resStok.error.message); btnCross.innerHTML = originalText; btnCross.disabled = false; return; }
 
-    let missingCount = 0;
-    let uniqueSpecs = new Set();
-    let validRows = [];
+    let dbQRs = resStok.data;
+    let stbjMap = {};
+    if(resStbj.data) resStbj.data.forEach(d => stbjMap[d.qrcode] = d.keterangan || '-');
+
+    let missingCount = 0; let uniqueSpecs = new Set(); let validRows = [];
 
     rows.forEach(row => {
         const qr = row.querySelector('.qr-val').innerText.trim();
@@ -146,7 +154,6 @@ async function crossCekOutbound() {
 
         if(foundDb) {
             validRows.push(row);
-            
             let jenis = row.querySelector('.col-jenis').innerText.trim();
             let nama = row.querySelector('.col-nama').innerText.trim();
             let pjg = row.querySelector('.col-pjg').innerText.trim();
@@ -155,13 +162,12 @@ async function crossCekOutbound() {
             let shading = row.querySelector('.col-shading').innerText.trim();
             
             let baseSpec = `${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}`;
-            
             row.dataset.baseSpec = baseSpec; 
             row.dataset.area = foundDb.area; 
             row.dataset.poAsliDB = extractPOFromSKU(foundDb.id_sku); 
+            row.dataset.ket = stbjMap[qr] || '-';
             
             uniqueSpecs.add(baseSpec);
-
             valCell.innerHTML = '<span class="text-emerald-700 font-black bg-emerald-100 px-3 py-1 rounded shadow-sm text-[10px] border border-emerald-300" data-status="valid">VALID FISIK</span>';
             areaCell.innerText = foundDb.area; areaCell.className = "p-3 font-black text-emerald-600 border-r border-slate-200 area-cell";
             row.classList.remove('bg-red-50');
@@ -178,16 +184,13 @@ async function crossCekOutbound() {
     for(let spec of uniqueSpecs) {
         const { data: specStock } = await db.from('stok_qr').select('id_sku').ilike('id_sku', `%_${spec}_%`);
         let poAvailable = new Set();
-        
         if(specStock) {
             specStock.forEach(d => {
                 let po = extractPOFromSKU(d.id_sku);
                 if(po && po !== '-') poAvailable.add(po);
             });
         }
-        
         let poText = poAvailable.size > 0 ? Array.from(poAvailable).join(', ') : 'KOSONG / NON-PO';
-        
         validRows.forEach(row => {
             if(row.dataset.baseSpec === spec) {
                 let poCell = row.querySelector('.col-poaktual');
@@ -243,117 +246,76 @@ async function eksekusiKeluar() {
     const keterangan = document.getElementById('out-keterangan').value.trim();
     if(!poTarget) return alert("Pilih PO Tujuan Pengeluaran!");
 
-    const btnEks = document.getElementById('btn-eksekusi');
-    const oriBuka = btnEks.innerHTML;
-    btnEks.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MENGHITUNG STOK DB...'; 
-    btnEks.disabled = true;
+    const btnEks = document.getElementById('btn-eksekusi'); const oriBuka = btnEks.innerHTML;
+    btnEks.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES KELUAR...'; btnEks.disabled = true;
 
     const rows = document.querySelectorAll('.row-item');
-    const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
-    
     let specsToProcess = new Set();
     rows.forEach(row => {
-        let status = row.querySelector('span[data-status]').getAttribute('data-status');
-        if (status === 'valid') specsToProcess.add(row.dataset.baseSpec);
+        if (row.querySelector('span[data-status]').getAttribute('data-status') === 'valid') specsToProcess.add(row.dataset.baseSpec);
     });
 
-    // 1. CARI JATAH KUOTA LANGSUNG DI TABEL stok_aktual BAPAK
-    let stockCapacity = {}; 
-    let totalJatahTersedia = 0;
-    
+    let stockCapacity = {}; let totalJatahTersedia = 0;
     try {
         for(let spec of specsToProcess) {
             let parts = spec.split('_');
-            let nm = parts[1];
-            let pj = parts[2];
-            let gr = parts[3];
-            let ds = parts[4];
-            let sh = parts[5];
-
-            const { data, error } = await db.from('stok_aktual')
-                .select('qty')
-                .eq('nama_item', nm)
-                .eq('pjg', pj)
-                .eq('grade', gr)
-                .eq('dus', ds)
-                .eq('shading', sh)
-                .ilike('po_aktual', `%${poTarget}%`); 
-            
+            let [nm, pj, gr, ds, sh] = [parts[1], parts[2], parts[3], parts[4], parts[5]];
+            const { data, error } = await db.from('stok_aktual').select('qty').eq('nama_item', nm).eq('pjg', pj).eq('grade', gr).eq('dus', ds).eq('shading', sh).ilike('po_aktual', `%${poTarget}%`); 
             if (error) throw error;
-            
-            let count = 0;
-            if(data) {
-                data.forEach(d => { count += (d.qty || 0); });
-            }
-            stockCapacity[spec] = count; 
-            totalJatahTersedia += count;
+            let count = 0; if(data) data.forEach(d => count += (d.qty || 0));
+            stockCapacity[spec] = count; totalJatahTersedia += count;
         }
     } catch(e) {
-        alert("Gagal membaca tabel stok_aktual di Supabase: " + e.message);
-        btnEks.innerHTML = oriBuka; btnEks.disabled = false; return;
+        alert("Gagal membaca kapasitas stok_aktual: " + e.message); btnEks.innerHTML = oriBuka; btnEks.disabled = false; return;
     }
 
-    let qrList = []; 
-    let requiredMap = {};
-    let matchedRows = []; 
-    let unmatchedCount = 0;
+    let qrList = []; let mapAktual = {}; let mapGlobal = {};
+    let matchedRows = []; let unmatchedCount = 0;
 
-    // 2. PILIH ACAK (DARI ATAS) & POTONG ITEM SEBANYAK JUMLAH SISA STOK
     rows.forEach(row => {
-        let status = row.querySelector('span[data-status]').getAttribute('data-status');
-
-        if (status === 'valid') {
-            let area = row.dataset.area || 'A';
+        if (row.querySelector('span[data-status]').getAttribute('data-status') === 'valid') {
             let baseSpec = row.dataset.baseSpec;
-            let full_sku = `${area}_${baseSpec}_${poTarget}`;
-            
             if(stockCapacity[baseSpec] && stockCapacity[baseSpec] > 0) {
                 matchedRows.push(row);
-                qrList.push(row.querySelector('.qr-val').innerText.trim());
                 
-                if(!requiredMap[full_sku]) requiredMap[full_sku] = 0;
-                requiredMap[full_sku] += 1;
-                
+                let qr = row.querySelector('.qr-val').innerText.trim();
+                let nm = row.querySelector('.col-nama').innerText.trim();
+                let pj = row.querySelector('.col-pjg').innerText.trim();
+                let gr = row.querySelector('.col-grade').innerText.trim();
+                let ds = row.querySelector('.col-dus').innerText.trim();
+                let sh = row.querySelector('.col-shading').innerText.trim();
+                let area = row.dataset.area;
+                let poBawaan = row.dataset.poAsliDB || row.querySelector('.col-pobawaan').innerText.trim();
+                let ket = row.dataset.ket;
+
+                qrList.push(qr);
                 stockCapacity[baseSpec] -= 1; 
-            } else {
-                unmatchedCount++; 
-            }
-        } else {
-            unmatchedCount++;
-        }
+
+                let keyAkt = `${nm}_${pj}_${gr}_${ds}_${sh}_${area}_${poTarget}_${ket}`;
+                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { nama_item: nm, pjg: pj, grade: gr, dus: ds, shading: sh, area: area, po_aktual: poTarget, ket: ket, qty: 0 };
+                mapAktual[keyAkt].qty++;
+
+                let keyGlb = `${nm}_${pj}_${gr}_${ds}_${sh}_${poBawaan}_${ket}`;
+                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { nama_item: nm, pjg: pj, grade: gr, dus: ds, shading: sh, po_bawaan: poBawaan, ket: ket, qty: 0 };
+                mapGlobal[keyGlb].qty++;
+            } else { unmatchedCount++; }
+        } else { unmatchedCount++; }
     });
 
     if (qrList.length === 0) {
-        alert(`❌ TIDAK ADA JATAH SAMA SEKALI.\n\nSisa stok di tabel stok_aktual untuk "${poTarget}" adalah 0 (Kosong).\n\nSilakan klik "Req Ganti PO" untuk sisa kardus di layar Anda.`);
-        btnEks.innerHTML = oriBuka; btnEks.disabled = false;
-        return;
+        alert(`❌ TIDAK ADA JATAH.\nSisa stok aktual untuk "${poTarget}" adalah 0.`);
+        btnEks.innerHTML = oriBuka; btnEks.disabled = false; return;
     }
 
-    let deductionsArray = [];
-    for(let sku in requiredMap) { deductionsArray.push({ sku: sku, qty: requiredMap[sku] }); }
-    const payloadData = { qrs: qrList, deductions: deductionsArray, po: poTarget, ket: keterangan, pic: user.username };
-    
-    // 3. TEMBAK KE DATABASE & HILANGKAN BLOKIR
-    btnEks.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES KELUAR...';
+    const payloadData = { qrs: qrList, aktuals: Object.values(mapAktual), globals: Object.values(mapGlobal) };
     const { error } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
 
-    if (error) {
-        alert("Transaksi Ditolak Server:\n" + error.message);
-        btnEks.innerHTML = oriBuka; btnEks.disabled = false;
-        return;
-    }
+    if (error) { alert("Transaksi Ditolak Server:\n" + error.message); btnEks.innerHTML = oriBuka; btnEks.disabled = false; return; }
 
-    // 4. BERSIHKAN LAYAR HANYA UNTUK KARDUS YANG JATAHNYA TERPOTONG
-    matchedRows.forEach(r => r.remove());
-    updateRowNumbers();
+    matchedRows.forEach(r => r.remove()); updateRowNumbers();
 
-    // 5. NOTIFIKASI BARU YANG TRANSPARAN
-    let msg = `✅ PROSES SELESAI\n\nSisa stok ${poTarget} di gudang ada ${totalJatahTersedia} dus. Sistem berhasil memproses ${qrList.length} item.`;
-    
-    if (unmatchedCount > 0) {
-        msg += `\n\n⚠️ Ada ${unmatchedCount} dus tidak kebagian jatah dan ditinggalkan di layar.\nSilakan pilih baris tersebut dan klik "Req Ganti PO" agar diurus oleh CS.`;
-    }
-    
+    let msg = `✅ SELESAI\nBerhasil memotong ${qrList.length} item dari fisik (QR), stok_aktual, dan stok_global secara permanen.`;
+    if (unmatchedCount > 0) msg += `\n\n⚠️ ${unmatchedCount} dus tidak kebagian jatah dan tersisa di layar.`;
     alert(msg);
     document.getElementById('modal-keluar').classList.add('hidden');
     btnEks.innerHTML = oriBuka; btnEks.disabled = false;
