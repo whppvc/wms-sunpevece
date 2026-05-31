@@ -245,7 +245,9 @@
                     }
                     globalMap[gKey].qty += a.qty;
                     globalMap[gKey].areas.push({
-                        id_sku: a.id_sku, key_lengkap: a.key_lengkap, area: a.area, po: a.po, ket: a.ket, qty: a.qty, qrcodes: a.qrcodes
+                        id_sku: a.id_sku, key_lengkap: a.key_lengkap, area: a.area, 
+                        po: a.po, ket: a.ket, qty: a.qty, qrcodes: a.qrcodes,
+                        nama: a.nama, pjg: a.pjg, grade: a.grade, dus: a.dus, shading: a.shading 
                     });
                 });
                 dataKSGlobal = Object.values(globalMap);
@@ -296,7 +298,7 @@
                     const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
                     h += `
                         <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
-                            <td class="p-3 col-cb"><input type="checkbox" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                            <td class="p-3 col-cb"><input type="checkbox" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                             <td class="p-3 hidden col-open"></td>
                             <td class="p-3 font-bold text-slate-400 col-no">${i+1}</td>
                             <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.area}</td>
@@ -370,7 +372,7 @@
                 const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
                 h += `
                     <tr class="border-b border-slate-200 hover:bg-slate-50 transition bd-row">
-                        <td class="p-3"><input type="checkbox" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                        <td class="p-3"><input type="checkbox" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po}" data-ket="${a.ket}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                         <td class="p-3 font-bold text-slate-400">${i+1}</td>
                         <td class="p-3 font-black text-emerald-700 bg-emerald-50">${a.area}</td>
                         <td class="p-3 font-black text-orange-600 border-r border-slate-200 bg-orange-50/50">${a.po}</td>
@@ -400,7 +402,18 @@
             selectedForPO = []; let totalDus = 0;
             checkboxes.forEach(cb => {
                 const qrs = JSON.parse(cb.dataset.qrs);
-                selectedForPO.push({ id_sku: cb.dataset.idsku, qrcodes: qrs });
+                selectedForPO.push({ 
+                    id_sku: cb.dataset.idsku, 
+                    qrcodes: qrs,
+                    nama: cb.dataset.nama,
+                    pjg: cb.dataset.pjg,
+                    grade: cb.dataset.grade,
+                    dus: cb.dataset.dus,
+                    shading: cb.dataset.shading,
+                    area: cb.dataset.area,
+                    po: cb.dataset.po,
+                    ket: cb.dataset.ket
+                });
                 totalDus += qrs.length;
             });
 
@@ -442,7 +455,8 @@
                     if (qtySisaUntukDiupdate <= 0) break; 
                     
                     let qrsUntukDiupdate = row.qrcodes.slice(0, qtySisaUntukDiupdate);
-                    qtySisaUntukDiupdate -= qrsUntukDiupdate.length;
+                    let jumlahBerubah = qrsUntukDiupdate.length;
+                    qtySisaUntukDiupdate -= jumlahBerubah;
 
                     let parts = row.id_sku.split('_');
                     parts[7] = newPO; 
@@ -450,9 +464,41 @@
                     
                     const { error } = await db.from('stok_qr').update({ id_sku: newIdSku }).in('qrcode', qrsUntukDiupdate);
                     if(error) throw error;
+
+                    // ======== FITUR BARU: AUTO-SYNC KE TABEL stok_aktual ========
+                    // 1. Kurangi stok di PO Lama
+                    const { data: oldStok } = await db.from('stok_aktual')
+                        .select('id, qty')
+                        .eq('nama_item', row.nama).eq('pjg', row.pjg).eq('grade', row.grade)
+                        .eq('dus', row.dus).eq('shading', row.shading).eq('area', row.area)
+                        .eq('po_aktual', row.po).eq('keterangan', row.ket)
+                        .maybeSingle();
+                        
+                    if(oldStok) {
+                        await db.from('stok_aktual').update({ qty: Math.max(0, oldStok.qty - jumlahBerubah) }).eq('id', oldStok.id);
+                    }
+
+                    // 2. Tambah stok di PO Baru
+                    const { data: newStok } = await db.from('stok_aktual')
+                        .select('id, qty')
+                        .eq('nama_item', row.nama).eq('pjg', row.pjg).eq('grade', row.grade)
+                        .eq('dus', row.dus).eq('shading', row.shading).eq('area', row.area)
+                        .eq('po_aktual', newPO).eq('keterangan', row.ket)
+                        .maybeSingle();
+
+                    if(newStok) {
+                        await db.from('stok_aktual').update({ qty: newStok.qty + jumlahBerubah }).eq('id', newStok.id);
+                    } else {
+                        await db.from('stok_aktual').insert([{
+                            nama_item: row.nama, pjg: row.pjg, grade: row.grade, 
+                            dus: row.dus, shading: row.shading, keterangan: row.ket, 
+                            po_aktual: newPO, qty: jumlahBerubah, area: row.area
+                        }]);
+                    }
+                    // ==============================================================
                 }
                 
-                alert(`BERHASIL!\nPO Aktual berhasil diperbarui untuk ${qtyDiminta} dus barang.`);
+                alert(`BERHASIL!\nPO Aktual & Tabel Stok Aktual berhasil diperbarui untuk ${qtyDiminta} dus barang.`);
                 tutupModalPO(); if(sourcePOContext === 'breakdown') tutupModalBreakdown();
                 await muatDataStok();
             } catch (error) { alert("GAGAL UPDATE: " + error.message); } 
