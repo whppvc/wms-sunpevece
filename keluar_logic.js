@@ -295,8 +295,9 @@ async function eksekusiKeluar() {
                 if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { nama_item: nm, pjg: pj, grade: gr, dus: ds, shading: sh, area: area, po_aktual: poTarget, ket: ket, qty: 0 };
                 mapAktual[keyAkt].qty++;
 
-                let keyGlb = `${nm}_${pj}_${gr}_${ds}_${sh}_${poBawaan}_${ket}`;
-                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { nama_item: nm, pjg: pj, grade: gr, dus: ds, shading: sh, po_bawaan: poBawaan, ket: ket, qty: 0 };
+                // FIX 1: Ubah poBawaan menjadi poTarget agar stok_global memotong PO Banjarmasin, bukan Medan
+                let keyGlb = `${nm}_${pj}_${gr}_${ds}_${sh}_${poTarget}_${ket}`;
+                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { nama_item: nm, pjg: pj, grade: gr, dus: ds, shading: sh, po_bawaan: poTarget, ket: ket, qty: 0 };
                 mapGlobal[keyGlb].qty++;
             } else { unmatchedCount++; }
         } else { unmatchedCount++; }
@@ -307,6 +308,47 @@ async function eksekusiKeluar() {
         btnEks.innerHTML = oriBuka; btnEks.disabled = false; return;
     }
 
+    // FIX 2: Fitur Auto-Swap Alokasi di tabel stok_qr (Penyeimbang Kartu Stok)
+    try {
+        for (let row of matchedRows) {
+            let baseSpec = row.dataset.baseSpec;
+            let poBawaan = row.dataset.poAsliDB || row.querySelector('.col-pobawaan').innerText.trim();
+            
+            // Jika PIC melakukan cross-PO scan (Scan barang Medan untuk orderan Banjarmasin)
+            if (poBawaan !== poTarget) {
+                let parts = baseSpec.split('_');
+                let [nm, pj, gr, ds, sh] = [parts[1], parts[2], parts[3], parts[4], parts[5]];
+                const targetSkuPattern = `%_${nm}_${pj}_${gr}_${ds}_${sh}_${poTarget}`;
+                
+                // Cari 1 QR code di gudang yang memegang jatah asli PO Banjarmasin
+                const { data: qrToSwap, error: swapErr } = await db.from('stok_qr')
+                    .select('qrcode, id_sku')
+                    .ilike('id_sku', targetSkuPattern)
+                    .limit(1);
+                    
+                if (swapErr) throw swapErr;
+                
+                // Tukar identitas item di rak: PO Banjarmasin diubah menjadi PO Medan (karena barang Medan diambil)
+                if (qrToSwap && qrToSwap.length > 0) {
+                    const oldQr = qrToSwap[0].qrcode;
+                    const oldSku = qrToSwap[0].id_sku;
+                    const newSku = oldSku.replace(`_${poTarget}`, `_${poBawaan}`);
+                    
+                    const { error: updateErr } = await db.from('stok_qr')
+                        .update({ id_sku: newSku })
+                        .eq('qrcode', oldQr);
+                        
+                    if (updateErr) throw updateErr;
+                }
+            }
+        }
+    } catch (swapEx) {
+        alert("Gagal melakukan sinkronisasi alokasi Kartu Stok: " + swapEx.message);
+        btnEks.innerHTML = oriBuka; btnEks.disabled = false;
+        return;
+    }
+
+    // Jalankan RPC seperti biasa aman dan terkendali
     const payloadData = { qrs: qrList, aktuals: Object.values(mapAktual), globals: Object.values(mapGlobal) };
     const { error } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
 
