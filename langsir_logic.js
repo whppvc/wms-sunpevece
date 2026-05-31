@@ -312,38 +312,50 @@ async function saveToSupabase() {
         mapVirtual[id_sku].qty += 1;
     });
 
+    // 1. Eksekusi masuk ke Kartu Stok Utama (Gudang) via RPC
     const payloadData = { qrs: arrFisik, virtuals: Object.values(mapVirtual), detail_log: `Masuk ${arrFisik.length} Dus via Langsir.`, pic: user.username };
     const { data, error } = await db.rpc('eksekusi_langsir_aman', { payload: payloadData });
 
     if (error || (data && data.startsWith('ERROR'))) { alert("GAGAL SERVER: " + (error ? error.message : data)); btn.innerHTML = original; btn.disabled = false; return; }
     
-    // ======== FITUR BARU: AUTO-SYNC KE TABEL stok_aktual ========
+    // 2. ======== FITUR BARU: AUTO-SYNC KE TABEL stok_aktual ========
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-6 h-6"></i> UPDATE STOK AKTUAL...';
+    
     for(let v of Object.values(mapVirtual)) {
         try {
-            const { data: cekStok } = await db.from('stok_aktual')
+            const { data: cekStok, error: errCek } = await db.from('stok_aktual')
                 .select('id, qty')
                 .eq('nama_item', v.nama_item).eq('pjg', v.panjang).eq('grade', v.grade)
                 .eq('dus', v.dus).eq('shading', v.shading).eq('area', v.area)
                 .eq('po_aktual', v.po_aktual).eq('keterangan', v.ket)
                 .maybeSingle();
 
+            // Jika error saat membaca tabel, munculkan popup!
+            if(errCek) {
+                alert("INFO SYSTEM:\nGagal membaca tabel 'stok_aktual' di Supabase. Pesan: " + errCek.message);
+                continue;
+            }
+
             if(cekStok) {
-                await db.from('stok_aktual').update({ qty: cekStok.qty + v.qty }).eq('id', cekStok.id);
+                const { error: errUpd } = await db.from('stok_aktual').update({ qty: cekStok.qty + v.qty }).eq('id', cekStok.id);
+                if(errUpd) alert("GAGAL UPDATE: " + errUpd.message);
             } else {
-                await db.from('stok_aktual').insert([{
+                const { error: errIns } = await db.from('stok_aktual').insert([{
                     nama_item: v.nama_item, pjg: v.panjang, grade: v.grade, 
                     dus: v.dus, shading: v.shading, keterangan: v.ket, 
                     po_aktual: v.po_aktual, qty: v.qty, area: v.area
                 }]);
+                if(errIns) alert("GAGAL INSERT KE TABEL STOK AKTUAL: " + errIns.message);
             }
-        } catch(e) { console.error("Gagal update stok_aktual: ", e); }
+        } catch(e) { 
+            alert("Error Sistem Stok Aktual: " + e.message); 
+        }
     }
     // ==============================================================
 
     alert(`BERHASIL!\n${arrFisik.length} kardus telah masuk ke Gudang & Data Stok Aktual sukses terupdate.`);
     document.getElementById('tbody-langsir').innerHTML = ''; btn.innerHTML = original; btn.disabled = false;
 }
-
 async function holdLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
     if(checkedBoxes.length === 0) return alert("Anda harus mencentang kotak di baris yang bermasalah terlebih dahulu untuk memindahkannya ke antrean Hold.");
