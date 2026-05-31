@@ -302,21 +302,24 @@ async function saveToSupabase() {
         let jenis = r.querySelector('.col-jenis').innerText; let nama = r.querySelector('.col-nama').innerText;
         let pjg = r.querySelector('.col-pjg').innerText; let grade = r.querySelector('.col-grade').innerText;
         let dus = r.querySelector('.col-dus').innerText; let shading = r.querySelector('.col-shading').innerText; 
-        let po = r.querySelector('.col-po').innerText; // PO dari input/awal (po_aktual saat masuk)
+        let po = r.querySelector('.col-po').innerText; 
         let ket = r.querySelector('.col-ket').innerText;
         
+        // Ambil PO hakiki (bawaan pabrik) dari barcode
         let td = translateBarcode(qr);
-        let poBawaan = td.po; // PO Hakiki dari mesin (po_bawaan)
+        let poBawaan = td.po; 
         
         let id_sku = `${area}_${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}_${po}`;
         arrFisik.push({ qrcode: qr, area: area, id_sku: id_sku, pic_input: user.username });
         
+        // Data untuk tabel stok_aktual
         let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
-        if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, area: area, po_aktual: po, ket: ket, qty: 0 };
+        if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: jenis, nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, area: area, po_aktual: po, ket: ket, qty: 0 };
         mapAktual[keyAkt].qty += 1;
 
+        // Data untuk tabel stok_global
         let keyGlb = `${nama}_${pjg}_${grade}_${dus}_${shading}_${poBawaan}_${ket}`;
-        if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, po_bawaan: poBawaan, ket: ket, qty: 0 };
+        if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: jenis, nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, po_bawaan: poBawaan, ket: ket, qty: 0 };
         mapGlobal[keyGlb].qty += 1;
     });
 
@@ -325,7 +328,7 @@ async function saveToSupabase() {
 
     if (error) { alert("GAGAL SERVER: " + error.message); btn.innerHTML = original; btn.disabled = false; return; }
     
-    alert(`BERHASIL!\n${arrFisik.length} kardus masuk. Tabel Aktual & Global sukses terupdate secara sinkron.`);
+    alert(`BERHASIL!\n${arrFisik.length} kardus masuk.\nTabel Stok Aktual & Stok Global sukses terupdate bersamaan.`);
     document.getElementById('tbody-langsir').innerHTML = ''; btn.innerHTML = original; btn.disabled = false;
 }
 async function holdLangsir() {
