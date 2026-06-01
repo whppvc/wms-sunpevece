@@ -313,7 +313,8 @@ async function eksekusiSimpanFinal() {
     const poTarget = document.getElementById('out-po-target').value;
     if(!poTarget) return alert("Wajib memilih PO Tujuan Konversi!");
 
-    const aktifitas = document.getElementById('select-aktifitas').value;
+    const rawAktifitas = document.getElementById('select-aktifitas').value;
+    const aktifitas = "OUT - " + rawAktifitas;
     const keterangan = document.getElementById('input-keterangan').value.trim();
 
     const btn = document.getElementById('btn-eksekusi-final');
