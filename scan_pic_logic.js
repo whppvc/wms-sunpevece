@@ -313,24 +313,26 @@ async function eksekusiSimpanFinal() {
     const poTarget = document.getElementById('out-po-target').value;
     if(!poTarget) return alert("Wajib memilih PO Tujuan Konversi!");
 
+    // Ambil nilai asli dari dropdown
     const rawAktifitas = document.getElementById('select-aktifitas').value;
-    const aktifitas = "OUT - " + rawAktifitas;
-    const keterangan = document.getElementById('input-keterangan').value.trim();
+    
+    // Tambahkan awalan OUT - untuk disimpan ke database
+    const aktifitas = "OUT - " + rawAktifitas; 
 
     const btn = document.getElementById('btn-eksekusi-final');
     const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...';
     btn.disabled = true;
 
-    // 1. GENERATE PREFIX KODE
+    // 1. GENERATE PREFIX KODE (Gunakan rawAktifitas untuk pengecekan!)
     let prefix = "";
-    if(aktifitas === "Ganti nama item") prefix = "NA";
-    else if(aktifitas === "Potong panjang") prefix = "PJG";
-    else if(aktifitas === "Ganti grade") prefix = "GR";
-    else if(aktifitas === "Ganti dus") prefix = "D";
-    else if(aktifitas === "Ganti shading") prefix = "SH";
-    else if(aktifitas === "Ganti label/qrcode") prefix = "QR";
-    else if(aktifitas === "Sampel") prefix = "SM";
+    if(rawAktifitas === "Ganti nama item") prefix = "NA";
+    else if(rawAktifitas === "Potong panjang") prefix = "PJG";
+    else if(rawAktifitas === "Ganti grade") prefix = "GR";
+    else if(rawAktifitas === "Ganti dus") prefix = "D";
+    else if(rawAktifitas === "Ganti shading") prefix = "SH";
+    else if(rawAktifitas === "Ganti label/qrcode") prefix = "QR";
+    else if(rawAktifitas === "Sampel") prefix = "SM";
     else prefix = "XX";
 
     // 2. CEK KAPASITAS JATAH DI STOK_AKTUAL
