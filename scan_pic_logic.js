@@ -429,8 +429,12 @@ async function eksekusiSimpanFinal() {
         const payloadLog = {
             kode_konversi: kodeKonversi,
             aktifitas: aktifitas,
-            qrcode: allQRs,
-            detail: keterangan || '-',
+            qrcode: qrList.join(', '), 
+            detail: JSON.stringify({
+                keterangan: keterangan || '-',
+                po_target: poTarget,
+                items: matchedRows // Menyimpan seluruh spesifikasi fisik kardus
+            }),
             qty_total: qrList.length,
             pic: currentUser.username
         };
