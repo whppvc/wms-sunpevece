@@ -5,14 +5,20 @@ document.addEventListener('DOMContentLoaded', () => {
     muatDataRiwayat();
 });
 
+// ========================================================
+// 1. FETCH DATA DARI SUPABASE
+// ========================================================
 async function muatDataRiwayat() {
     const tbody = document.getElementById('tbody-riwayat');
-    tbody.innerHTML = `<tr><td colspan="10" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500 text-xs">Menarik histori...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500 text-xs">Menarik histori dari laporan_konversi...</p></td></tr>`;
     lucide.createIcons();
 
     try {
-        const { data, error } = await db.from('laporan_konversi').select('*').order('created_at', { ascending: false });
+        const { data, error } = await db.from('laporan_konversi')
+                                        .select('*')
+                                        .order('created_at', { ascending: false });
         if (error) throw error;
+
         dataRiwayat = data || [];
         renderTabel(dataRiwayat);
     } catch (error) {
@@ -20,6 +26,7 @@ async function muatDataRiwayat() {
     }
 }
 
+// Format Tanggal jadi nyaman dibaca (DD/MM/YYYY HH:mm)
 function formatTanggal(isoString) {
     if (!isoString) return '-';
     const d = new Date(isoString);
@@ -50,6 +57,9 @@ function parseDetail(detailString) {
     return res;
 }
 
+// ========================================================
+// 2. RENDER TABEL UTAMA
+// ========================================================
 function renderTabel(data) {
     const tbody = document.getElementById('tbody-riwayat');
     if(data.length === 0) {
@@ -87,7 +97,9 @@ function renderTabel(data) {
     lucide.createIcons();
 }
 
-// --- POP UP DETAIL ITEM ---
+// ========================================================
+// 3. POP UP DETAIL ITEM
+// ========================================================
 function bukaModalDetail(id) {
     const row = dataRiwayat.find(r => r.id == id);
     if (!row) return;
@@ -122,14 +134,19 @@ function bukaModalDetail(id) {
     tbody.innerHTML = html;
     document.getElementById('modal-detail').classList.remove('hidden');
 }
-function tutupModalDetail() { document.getElementById('modal-detail').classList.add('hidden'); }
 
-// --- CHECKBOX LOGIC ---
+function tutupModalDetail() { 
+    document.getElementById('modal-detail').classList.add('hidden'); 
+}
+
+
+// ========================================================
+// 4. CHECKBOX & CANCEL KONVERSI
+// ========================================================
 function toggleCentangSemua(checked) {
     document.querySelectorAll('.cb-row').forEach(cb => cb.checked = checked);
 }
 
-// --- FUNGSI CANCEL KONVERSI ---
 function bukaModalCancel() {
     const cbs = document.querySelectorAll('.cb-row:checked');
     if (cbs.length === 0) return alert("Pilih minimal 1 baris konversi yang ingin dibatalkan (Cancel) dengan mencentang kotaknya.");
@@ -146,17 +163,13 @@ async function eksekusiCancelKonversi() {
     btn.disabled = true;
 
     try {
-        // PERHATIAN TECH LEAD: 
-        // Logika untuk MEMASUKKAN KEMBALI stok fisik (Inbound) ke tabel stok_qr & stok_aktual
-        // menunggu konfirmasi dari Anda apakah kita memakai RPC eksekusi_langsir_aman atau membuat RPC baru.
-        // Di bawah ini adalah contoh logika hapus log nya saja:
-        
+        // Hapus log dari tabel laporan_konversi
         const { error } = await db.from('laporan_konversi').delete().in('id', idsToDelete);
         if (error) throw error;
 
         alert(`✅ ${idsToDelete.length} Data Konversi berhasil dibatalkan dan log-nya dihapus!\n\n(Catatan: Pengembalian nilai QTY fisik di Kartu Stok menunggu sinkronisasi RPC Inbound dari Tech Lead).`);
         document.getElementById('modal-cancel').classList.add('hidden');
-        muatDataRiwayat(); // Reload
+        muatDataRiwayat(); // Reload Tabel
         
     } catch (e) {
         alert("Gagal membatalkan konversi: " + e.message);
@@ -165,5 +178,80 @@ async function eksekusiCancelKonversi() {
     }
 }
 
-// --- FILTER & EXCEL TETAP SAMA ---
-// (Fungsi toggleFilter, saringTabel, salinData, dan downloadExcel yang lama biarkan utuh jika diperlukan. Saya potong agar ringkas di sini, Anda bisa menempelkannya dari versi sebelumnya).
+// ========================================================
+// 5. LOGIKA FILTER (Sidebar Slide)
+// ========================================================
+function toggleFilter() {
+    const sidebar = document.getElementById('sidebar-filter');
+    const overlay = document.getElementById('overlay-klik-luar');
+    if (sidebar.classList.contains('translate-x-full')) {
+        sidebar.classList.remove('translate-x-full');
+        overlay.classList.remove('hidden');
+    } else {
+        sidebar.classList.add('translate-x-full');
+        overlay.classList.add('hidden');
+    }
+}
+
+function saringTabel() {
+    const fKode = document.getElementById('f-kode').value.toLowerCase();
+    const fAktifitas = document.getElementById('f-aktifitas').value.toLowerCase();
+    const fPic = document.getElementById('f-pic').value.toLowerCase();
+    const fQr = document.getElementById('f-qr').value.toLowerCase();
+
+    const filtered = dataRiwayat.filter(r => {
+        const matchKode = (r.kode_konversi || '').toLowerCase().includes(fKode);
+        const matchAktifitas = (r.aktifitas || '').toLowerCase().includes(fAktifitas);
+        const matchPic = (r.pic || '').toLowerCase().includes(fPic);
+        const matchQr = (r.qrcode || '').toLowerCase().includes(fQr);
+        return matchKode && matchAktifitas && matchPic && matchQr;
+    });
+
+    renderTabel(filtered);
+}
+
+function resetFilter() {
+    document.getElementById('f-kode').value = '';
+    document.getElementById('f-aktifitas').value = '';
+    document.getElementById('f-pic').value = '';
+    document.getElementById('f-qr').value = '';
+    renderTabel(dataRiwayat);
+}
+
+// ========================================================
+// 6. EKSPOR KE CLIPBOARD & EXCEL (Tanpa Library Eksternal)
+// ========================================================
+function salinData() {
+    if(dataRiwayat.length === 0) return alert('Tidak ada data untuk disalin');
+    
+    let text = "Waktu\tID Konversi\tAktifitas\tTotal Dus\tPIC\tDetail Keterangan\tQRCode\n";
+    dataRiwayat.forEach(r => {
+        text += `${formatTanggal(r.created_at)}\t${r.kode_konversi || '-'}\t${r.aktifitas || '-'}\t${r.qty_total || 0}\t${r.pic || '-'}\t${r.detail || '-'}\t${r.qrcode || '-'}\n`;
+    });
+    
+    navigator.clipboard.writeText(text).then(() => {
+        alert("Berhasil! Data telah disalin ke Clipboard. Silakan Paste (CTRL+V) di Notepad / Excel Anda.");
+    }).catch(err => alert("Sistem browser gagal menyalin: " + err));
+}
+
+function downloadExcel() {
+    if(dataRiwayat.length === 0) return alert('Tidak ada data untuk didownload');
+    
+    let csv = "Waktu,ID Konversi,Aktifitas,Total Dus,PIC,Detail Keterangan,QRCode\n";
+    dataRiwayat.forEach(r => {
+        const safeDetail = (r.detail || '-').replace(/"/g, '""');
+        const safeQR = (r.qrcode || '-').replace(/"/g, '""');
+        
+        csv += `"${formatTanggal(r.created_at)}","${r.kode_konversi || '-'}","${r.aktifitas || '-'}","${r.qty_total || 0}","${r.pic || '-'}","${safeDetail}","${safeQR}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "Audit_Konversi_" + new Date().toISOString().slice(0,10) + ".csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
