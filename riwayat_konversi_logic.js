@@ -55,7 +55,7 @@ function parseDetail(detailString) {
 }
 
 // ========================================================
-// 2. RENDER TABEL UTAMA (Sesuai Urutan Header Baru)
+// 2. RENDER TABEL UTAMA
 // ========================================================
 function renderTabel(data) {
     const tbody = document.getElementById('tbody-riwayat');
@@ -68,20 +68,20 @@ function renderTabel(data) {
     data.forEach((r, i) => {
         const pd = parseDetail(r.detail);
         
-        // Urutan: Checkbox | No | Waktu | Kode Konversi | Aktifitas | Keterangan | Detail Item | Total Dus | PIC | Detail (Button)
+        // REVISI: Penyeragaman ukuran font utama menjadi text-[11px] (kecuali Total Dus yang perlu agak besar)
         html += `
-            <tr class="border-b border-slate-200 hover:bg-slate-50 transition">
+            <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-[11px]">
                 <td class="p-3"><input type="checkbox" class="cb-row cursor-pointer w-4 h-4 text-rose-600 rounded" data-id="${r.id}"></td>
-                <td class="p-3 font-bold text-slate-400">${i + 1}</td>
-                <td class="p-3 font-semibold text-slate-600 text-xs">${formatTanggal(r.created_at)}</td>
-                <td class="p-3 font-black text-blue-700 bg-blue-50/50 text-[11px] border-x border-slate-200">${r.kode_konversi || '-'}</td>
-                <td class="p-3 font-black text-rose-600 text-xs uppercase">${r.aktifitas || '-'}</td>
+                <td class="p-3 font-bold text-slate-500">${i + 1}</td>
+                <td class="p-3 font-semibold text-slate-600">${formatTanggal(r.created_at)}</td>
+                <td class="p-3 font-black text-blue-700 bg-blue-50/50 border-x border-slate-200">${r.kode_konversi || '-'}</td>
+                <td class="p-3 font-black text-rose-600 uppercase">${r.aktifitas || '-'}</td>
                 
-                <td class="p-3 font-semibold text-slate-600 text-left text-[11px] whitespace-normal min-w-[150px] leading-relaxed">${pd.ket}</td>
-                <td class="p-3 font-semibold text-slate-600 text-left text-[11px] whitespace-normal min-w-[200px] leading-relaxed">${pd.rangkuman}</td>
+                <td class="p-3 font-semibold text-slate-600 text-left whitespace-normal min-w-[150px] leading-relaxed">${pd.ket}</td>
+                <td class="p-3 font-semibold text-slate-600 text-left whitespace-normal min-w-[200px] leading-relaxed">${pd.rangkuman}</td>
                 
-                <td class="p-3 font-black text-emerald-800 bg-emerald-100 border-x border-slate-200 text-base">${r.qty_total || 0}</td>
-                <td class="p-3 font-black text-slate-800 text-xs uppercase">${r.pic || '-'}</td>
+                <td class="p-3 font-black text-emerald-800 bg-emerald-100 border-x border-slate-200 text-sm">${r.qty_total || 0}</td>
+                <td class="p-3 font-black text-slate-800 uppercase">${r.pic || '-'}</td>
                 
                 <td class="p-3 border-l border-slate-200">
                     <button onclick="bukaModalDetail('${r.id}')" class="p-1.5 px-3 bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white font-bold text-[10px] uppercase rounded shadow-sm transition flex mx-auto items-center justify-center gap-1">
