@@ -1,28 +1,6 @@
 let masterData = { kamus: [], area: [] }; 
 let deleteStack = [], globalRowId = 0;
-let hiddenCols = [];
-
-const colDefinitions = [
-    { id: 'col-cb', label: 'Checkbox', default: true },
-    { id: 'col-btn', label: 'Action Hapus', default: true },
-    { id: 'col-no', label: 'Nomor Urut', default: true },
-    { id: 'col-stbj', label: 'Status STBJ', default: true },
-    { id: 'col-kode', label: 'Status Kode', default: true },
-    { id: 'col-troli', label: 'Troli', default: true },
-    { id: 'col-area', label: 'Area', default: true },
-    { id: 'col-qr', label: 'QRCode', default: true },
-    { id: 'col-tgl', label: 'Tgl Produksi', default: true },
-    { id: 'col-mesin', label: 'Mesin', default: true },
-    { id: 'col-shift', label: 'Shift', default: true },
-    { id: 'col-jenis', label: 'Jenis Item', default: true },
-    { id: 'col-nama', label: 'Nama Item', default: true },
-    { id: 'col-pjg', label: 'Pjg', default: true },
-    { id: 'col-grade', label: 'Grade', default: true },
-    { id: 'col-dus', label: 'Dus', default: true },
-    { id: 'col-shading', label: 'Shading', default: true },
-    { id: 'col-po', label: 'PO Awal', default: true },
-    { id: 'col-ket', label: 'Keterangan', default: true }
-];
+let sortState = {}; // REVISI 3: Objek pelacak status sorting
 
 document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(async () => {
@@ -37,41 +15,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             const { data: mData2 } = await db.from('master_2').select('*');
             if(mData2) masterData.kamus = mData2; 
 
-            buatDropdownKolom();
+            // REVISI 2: buatDropdownKolom() telah dihapus
         } catch (e) { console.error("Gagal muat dropdown:", e); }
     }, 200); 
 });
 
-function buatDropdownKolom() {
-    const container = document.getElementById('list-kolom-toggles');
-    if(!container) return;
-    let html = '';
-    colDefinitions.forEach(col => {
-        html += `
-            <label class="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-slate-50 rounded">
-                <input type="checkbox" checked onchange="toggleKolom('${col.id}', this.checked)" class="w-4 h-4 cursor-pointer text-blue-600 rounded border-slate-300 focus:ring-blue-500">
-                <span class="text-xs font-bold text-slate-700">${col.label}</span>
-            </label>
-        `;
+// REVISI 3: FUNGSI SORT TABEL A-Z, Z-A
+function sortTable(colIndex, headerEl) {
+    const tbody = document.getElementById('tbody-langsir');
+    const rows = Array.from(tbody.querySelectorAll('tr.row-item'));
+    
+    // Cek apakah sedang Ascending atau Descending
+    let isAsc = sortState[colIndex] !== 'asc';
+    sortState[colIndex] = isAsc ? 'asc' : 'desc';
+    
+    rows.sort((a, b) => {
+        let valA = a.cells[colIndex].innerText.trim();
+        let valB = b.cells[colIndex].innerText.trim();
+        
+        // Coba konversi ke angka jika itu adalah nilai numerik (contoh: No)
+        let numA = parseFloat(valA);
+        let numB = parseFloat(valB);
+        
+        if(!isNaN(numA) && !isNaN(numB)) {
+            return isAsc ? numA - numB : numB - numA;
+        } else {
+            return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
     });
-    container.innerHTML = html;
-}
-
-function toggleKolom(colId, isVisible) {
-    if(isVisible) { hiddenCols = hiddenCols.filter(id => id !== colId); } 
-    else { if(!hiddenCols.includes(colId)) hiddenCols.push(colId); }
-    terapkanStyleKolom();
-}
-
-function resetKolom() {
-    hiddenCols = [];
-    document.querySelectorAll('#list-kolom-toggles input[type="checkbox"]').forEach(cb => cb.checked = true);
-    terapkanStyleKolom();
-}
-
-function terapkanStyleKolom() {
-    const cssString = hiddenCols.map(id => `.${id} { display: none !important; }`).join('\n');
-    document.getElementById('dynamic-col-styles').innerHTML = cssString;
+    
+    // Terapkan hasil urutan ke dalam tabel HTML
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Update Ikon Lucide di Header
+    document.querySelectorAll('.sort-icon').forEach(icon => {
+        icon.setAttribute('data-lucide', 'arrow-up-down'); // Reset semua icon
+        icon.classList.add('opacity-50');
+    });
+    
+    const icon = headerEl.querySelector('.sort-icon');
+    if(icon) {
+        icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a');
+        icon.classList.remove('opacity-50');
+        lucide.createIcons();
+    }
 }
 
 function saringTabelLangsir() {
@@ -201,6 +188,9 @@ function addRow(area, code, isDuplicate = false) {
 
 function deleteRow(btn) { const tr = btn.closest('tr'); deleteStack.push({ parent: tr.parentNode, html: tr.outerHTML, nextSibling: tr.nextSibling }); tr.remove(); updateRowNumbers(); }
 function undoDelete() { if(deleteStack.length === 0) return alert("Belum ada data yang dihapus."); const last = deleteStack.pop(); const temp = document.createElement('tbody'); temp.innerHTML = last.html; if (last.nextSibling) last.parent.insertBefore(temp.firstChild, last.nextSibling); else last.parent.appendChild(temp.firstChild); lucide.createIcons(); updateRowNumbers(); }
+
+// Kita tidak menghitung ulang No secara manual saat di-sort, karena agar urutannya mengacu pada index aslinya.
+// Fungsi updateRowNumbers hanya berjalan pas penambahan/penghapusan row.
 function updateRowNumbers() { const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; }); }
 
 async function VerifikasiDanCek() {
@@ -305,19 +295,16 @@ async function saveToSupabase() {
         let po = r.querySelector('.col-po').innerText; 
         let ket = r.querySelector('.col-ket').innerText;
         
-        // Ambil PO hakiki (bawaan pabrik) dari barcode
         let td = translateBarcode(qr);
         let poBawaan = td.po; 
         
         let id_sku = `${area}_${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}_${po}`;
         arrFisik.push({ qrcode: qr, area: area, id_sku: id_sku, pic_input: user.username });
         
-        // Data untuk tabel stok_aktual
         let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
         if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: jenis, nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, area: area, po_aktual: po, ket: ket, qty: 0 };
         mapAktual[keyAkt].qty += 1;
 
-        // Data untuk tabel stok_global
         let keyGlb = `${nama}_${pjg}_${grade}_${dus}_${shading}_${poBawaan}_${ket}`;
         if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: jenis, nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, po_bawaan: poBawaan, ket: ket, qty: 0 };
         mapGlobal[keyGlb].qty += 1;
@@ -331,6 +318,7 @@ async function saveToSupabase() {
     alert(`BERHASIL!\n${arrFisik.length} kardus masuk.\nTabel Stok Aktual & Stok Global sukses terupdate bersamaan.`);
     document.getElementById('tbody-langsir').innerHTML = ''; btn.innerHTML = original; btn.disabled = false;
 }
+
 async function holdLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
     if(checkedBoxes.length === 0) return alert("Anda harus mencentang kotak di baris yang bermasalah terlebih dahulu untuk memindahkannya ke antrean Hold.");
@@ -417,7 +405,6 @@ async function bukaModalSTBJ() {
             const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
             const td = translateBarcode(r.qrcode);
             
-            // Membaca chip pelacak posisi_barang dari database
             let statusGudang = r.posisi || 'STBJ';
             let colGudang = '';
             
