@@ -308,6 +308,7 @@ function bukaModalSimpan() {
     document.getElementById('modal-po-target').classList.remove('hidden');
 }
 
+// --- FUNGSI BUKA MODAL PO & EKSEKUSI ---
 async function eksekusiSimpanFinal() {
     const poTarget = document.getElementById('out-po-target').value;
     if(!poTarget) return alert("Wajib memilih PO Tujuan Konversi!");
@@ -320,6 +321,7 @@ async function eksekusiSimpanFinal() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...';
     btn.disabled = true;
 
+    // 1. GENERATE PREFIX KODE
     let prefix = "";
     if(aktifitas === "Ganti nama item") prefix = "NA";
     else if(aktifitas === "Potong panjang") prefix = "PJG";
@@ -330,33 +332,116 @@ async function eksekusiSimpanFinal() {
     else if(aktifitas === "Sampel") prefix = "SM";
     else prefix = "XX";
 
+    // 2. CEK KAPASITAS JATAH DI STOK_AKTUAL
+    let stockCapacity = {};
+    let specsToProcess = new Set();
+    dataPic.forEach(row => {
+        if (row.status === 'VALID') specsToProcess.add(row.baseSpec);
+    });
+
     try {
+        for(let spec of specsToProcess) {
+            let parts = spec.split('_');
+            let [nm, pj, gr, ds, sh] = [parts[1], parts[2], parts[3], parts[4], parts[5]];
+            const { data, error } = await db.from('stok_aktual').select('qty')
+                .eq('nama_item', nm).eq('pjg', pj).eq('grade', gr).eq('dus', ds).eq('shading', sh)
+                .ilike('po_aktual', `%${poTarget}%`); 
+            if (error) throw error;
+            let count = 0; if(data) data.forEach(d => count += (d.qty || 0));
+            stockCapacity[spec] = count;
+        }
+    } catch(e) {
+        alert("Gagal membaca kapasitas stok_aktual: " + e.message); 
+        btn.innerHTML = ori; btn.disabled = false; return;
+    }
+
+    // 3. SIAPKAN PAYLOAD UNTUK PEMOTONGAN
+    let qrList = []; let mapAktual = {}; let mapGlobal = {};
+    let matchedRows = []; let unmatchedCount = 0;
+
+    dataPic.forEach(d => {
+        if (d.status === 'VALID') {
+            let baseSpec = d.baseSpec;
+            if(stockCapacity[baseSpec] && stockCapacity[baseSpec] > 0) {
+                matchedRows.push(d);
+                qrList.push(d.qrcode);
+                stockCapacity[baseSpec] -= 1; 
+
+                // Payload Aktual
+                let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${poTarget}_${d.ket_baris || '-'}`;
+                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, po_aktual: poTarget, ket: d.ket_baris || '-', qty: 0 };
+                mapAktual[keyAkt].qty++;
+
+                // Payload Global (Potong target)
+                let keyGlb = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${poTarget}_${d.ket_baris || '-'}`;
+                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, po_bawaan: poTarget, ket: d.ket_baris || '-', qty: 0 };
+                mapGlobal[keyGlb].qty++;
+            } else { unmatchedCount++; }
+        } else { unmatchedCount++; }
+    });
+
+    if (qrList.length === 0) {
+        alert(`❌ TIDAK ADA JATAH.\nSisa stok aktual untuk PO "${poTarget}" adalah 0.`);
+        btn.innerHTML = ori; btn.disabled = false; return;
+    }
+
+    // 4. EKSEKUSI DATABASE
+    try {
+        // A. Fitur Auto-Swap PO (Jika Scan Cross-PO)
+        for (let row of matchedRows) {
+            let baseSpec = row.baseSpec;
+            let poBawaan = row.poAsliDB;
+            
+            if (poBawaan !== poTarget) {
+                let parts = baseSpec.split('_');
+                let [nm, pj, gr, ds, sh] = [parts[1], parts[2], parts[3], parts[4], parts[5]];
+                const targetSkuPattern = `%_${nm}_${pj}_${gr}_${ds}_${sh}_${poTarget}`;
+                
+                const { data: qrToSwap, error: swapErr } = await db.from('stok_qr').select('qrcode, id_sku').ilike('id_sku', targetSkuPattern).limit(1);
+                if (swapErr) throw swapErr;
+                
+                if (qrToSwap && qrToSwap.length > 0) {
+                    const oldQr = qrToSwap[0].qrcode;
+                    const oldSku = qrToSwap[0].id_sku;
+                    const newSku = oldSku.replace(`_${poTarget}`, `_${poBawaan}`);
+                    
+                    const { error: updateErr } = await db.from('stok_qr').update({ id_sku: newSku }).eq('qrcode', oldQr);
+                    if (updateErr) throw updateErr;
+                }
+            }
+        }
+
+        // B. Hapus Fisik & Potong Kartu Stok via RPC
+        const payloadData = { qrs: qrList, aktuals: Object.values(mapAktual), globals: Object.values(mapGlobal) };
+        const { error: rpcError } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
+        if (rpcError) throw rpcError;
+
+        // C. Simpan ke Laporan Konversi (Audit Log)
         const { count, error: errCount } = await db.from('laporan_konversi').select('*', { count: 'exact', head: true });
         if(errCount) throw errCount;
 
         let nextNum = (count || 0) + 1;
         let kodeKonversi = `${prefix}-${String(nextNum).padStart(5, '0')}`;
 
-        let allQRs = dataPic.map(d => d.qrcode).join(', ');
+        // Hanya masukkan QR yang lolos dipotong ke laporan audit
+        let allQRs = qrList.join(', ');
 
-        const payload = {
+        const payloadLog = {
             kode_konversi: kodeKonversi,
             aktifitas: aktifitas,
             qrcode: allQRs,
             detail: keterangan || '-',
-            qty_total: dataPic.length,
+            qty_total: qrList.length,
             pic: currentUser.username
         };
 
-        const { error: errInsert } = await db.from('laporan_konversi').insert([payload]);
+        const { error: errInsert } = await db.from('laporan_konversi').insert([payloadLog]);
         if (errInsert) throw errInsert;
 
-        /* =======================================================
-           CATATAN TECH LEAD:
-           Logika mutasi stok ke Supabase ditaruh disini nanti.
-           ======================================================= */
-
-        alert(`✅ EKSEKUSI BERHASIL!\n\nData aktivitas masuk ke audit trail dengan ID: ${kodeKonversi}\nPO Target: ${poTarget}\nTotal Item: ${dataPic.length} Kardus.`);
+        // 5. SELESAI
+        let msg = `✅ EKSEKUSI KONVERSI OUT BERHASIL!\n\nID Audit: ${kodeKonversi}\nPO Target: ${poTarget}\nBerhasil dipotong dari Kartu Stok: ${qrList.length} Dus.`;
+        if (unmatchedCount > 0) msg += `\n\n⚠️ ${unmatchedCount} dus tidak diproses karena jatah PO kurang atau status fisik belum VALID.`;
+        alert(msg);
         
         tutupModalPO();
         dataPic = [];
@@ -365,7 +450,7 @@ async function eksekusiSimpanFinal() {
         document.getElementById('select-aktifitas').value = '';
 
     } catch(e) {
-        alert("Terjadi kesalahan saat menyimpan konversi: " + e.message);
+        alert("Terjadi kesalahan saat memotong stok & menyimpan konversi: " + e.message);
     } finally {
         btn.innerHTML = ori; btn.disabled = false;
     }
