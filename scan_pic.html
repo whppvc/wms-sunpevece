@@ -23,7 +23,7 @@
             <button class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="log-out" class="w-4 h-4"></i> KONVERSI OUT</button>
             <button class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase opacity-50"><i data-lucide="log-in" class="w-4 h-4"></i> KONVERSI IN</button>
             <button class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase opacity-50"><i data-lucide="arrow-left-right" class="w-4 h-4"></i> PINDAH AREA</button>
-            <button class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase opacity-50"><i data-lucide="arrow-left-right" class="w-4 h-4"></i> CASE KHUSUS</button>
+            <button class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase opacity-50"><i data-lucide="alert-triangle" class="w-4 h-4"></i> CASE KHUSUS</button>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 mb-3 overflow-hidden">
@@ -50,7 +50,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Keteranga</label>
+                        <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Keterangan / Alasan</label>
                         <input type="text" id="input-keterangan" class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-rose-500 text-slate-800 bg-slate-50 text-xs" placeholder="Ketik keterangan...">
                     </div>
                 </div>
@@ -64,16 +64,16 @@
             
             <form id="form-scan" class="flex gap-2 mb-4">
                 <div class="relative flex-1">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
-                    <input type="text" id="input-qrcode" class="w-full pl-10 p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-rose-500 font-black text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
+                    <input type="text" id="input-qrcode" class="w-full pl-12 p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-rose-500 font-black text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
                 </div>
                 <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-black shadow-sm transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-slate-950 text-xs uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> ADD</button>
             </form>
 
             <div class="flex gap-2 overflow-x-auto pt-1 pb-4 px-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none" style="-webkit-overflow-scrolling: touch;">
-                <button class="p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-blue-600 text-white border-b-2 border-blue-800"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
-                <button class="p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-red-600 text-white border-b-2 border-red-800"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus</button>
-                <button onclick="verifikasiKeluar()" class="p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-rose-600 text-white border-b-2 border-rose-800"><i data-lucide="shield-check" class="w-4 h-4"></i> Verifikasi Gudang</button>
+                <button onclick="toggleFilter()" class="p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-blue-600 text-white border-b-2 border-blue-800 active:scale-95 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
+                
+                <button onclick="verifikasiKeluar()" id="btn-verifikasi" class="p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-rose-600 hover:bg-rose-700 text-white border-b-2 border-rose-800 active:scale-95 transition"><i data-lucide="shield-check" class="w-4 h-4"></i> Verifikasi Gudang</button>
             </div>
             <div class="text-[9px] text-slate-400 text-center font-black uppercase tracking-wider -mt-2.5 mb-2 pointer-events-none flex items-center justify-center gap-1 animate-pulse">
                 <i data-lucide="arrow-left-right" class="w-3 h-3"></i> Geser menu aksi ke kanan-kiri
@@ -85,14 +85,11 @@
                 <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
                     <thead class="sticky top-0 z-10 shadow-sm">
                         <tr>
-                            <th class="hdr-std w-10"><input type="checkbox" class="cursor-pointer"></th>
+                            <th class="hdr-std w-10"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-rose-400"></i></th>
                             <th class="hdr-std w-12">No</th>
                             <th class="hdr-std border-r border-slate-500">Status</th>
                             <th class="hdr-std text-amber-300">Area</th>
                             <th class="hdr-std border-r border-slate-500">Text QRCode</th>
-                            <th class="hdr-std">Tgl Produksi</th>
-                            <th class="hdr-std">Mesin</th>
-                            <th class="hdr-std">Shift</th>
                             <th class="hdr-std text-blue-300">Jenis Item</th>
                             <th class="hdr-std">Nama Item</th>
                             <th class="hdr-std">Pjg</th>
@@ -104,7 +101,7 @@
                         </tr>
                     </thead>
                     <tbody id="tbody-pic" class="text-center text-slate-700">
-                        <tr><td colspan="16" class="p-10 text-slate-400 font-bold"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan.</td></tr>
+                        <tr><td colspan="13" class="p-10 text-slate-400 font-bold"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -118,6 +115,22 @@
             </button>
         </div>
     </div>
+
+    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
+        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Barcode</h3>
+            <button onclick="toggleFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition active:scale-95"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="p-4 flex flex-col gap-4 overflow-y-auto">
+            <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label><input type="text" id="f-status" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+            <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><input type="text" id="f-nama" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+            <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Kode QR</label><input type="text" id="f-qr" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+            
+            <button onclick="resetFilter()" class="mt-4 py-3 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-xs uppercase transition border border-slate-300 shadow-sm active:scale-95">RESET FILTER</button>
+        </div>
+    </div>
+    
+    <div id="overlay-klik-luar" onclick="toggleFilter()" class="hidden fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="global.js"></script>
     <script src="scan_pic_logic.js"></script>
