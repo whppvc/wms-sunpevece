@@ -26,14 +26,12 @@ async function muatDataRiwayat() {
     }
 }
 
-// Format Tanggal jadi nyaman dibaca (DD/MM/YYYY HH:mm)
 function formatTanggal(isoString) {
     if (!isoString) return '-';
     const d = new Date(isoString);
     return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 }
 
-// Ekstrak string JSON dari DB (Jika format lama, kembalikan default)
 function parseDetail(detailString) {
     let res = { ket: detailString, po_target: '-', items: [], rangkuman: 'Format Lama (Tanpa Rincian)' };
     try {
@@ -43,7 +41,6 @@ function parseDetail(detailString) {
             res.po_target = parsed.po_target || '-';
             res.items = parsed.items;
             
-            // Buat rangkuman "Plafon 4M (2 Dus), WPC 3M (1 Dus)"
             let mapItem = {};
             parsed.items.forEach(d => {
                 let namaLengkap = `${d.namaItem} ${d.panjang} ${d.grade} ${d.dus} ${d.shading}`;
@@ -53,12 +50,12 @@ function parseDetail(detailString) {
             for (let k in mapItem) txt.push(`<b>${k}</b> (${mapItem[k]} Dus)`);
             res.rangkuman = txt.join(', ');
         }
-    } catch(e) {} // Abaikan jika error parse (berarti data lama)
+    } catch(e) {} 
     return res;
 }
 
 // ========================================================
-// 2. RENDER TABEL UTAMA
+// 2. RENDER TABEL UTAMA (Sesuai Urutan Header Baru)
 // ========================================================
 function renderTabel(data) {
     const tbody = document.getElementById('tbody-riwayat');
@@ -71,6 +68,7 @@ function renderTabel(data) {
     data.forEach((r, i) => {
         const pd = parseDetail(r.detail);
         
+        // Urutan: Checkbox | No | Waktu | Kode Konversi | Aktifitas | Keterangan | Detail Item | Total Dus | PIC | Detail (Button)
         html += `
             <tr class="border-b border-slate-200 hover:bg-slate-50 transition">
                 <td class="p-3"><input type="checkbox" class="cb-row cursor-pointer w-4 h-4 text-rose-600 rounded" data-id="${r.id}"></td>
@@ -79,11 +77,11 @@ function renderTabel(data) {
                 <td class="p-3 font-black text-blue-700 bg-blue-50/50 text-[11px] border-x border-slate-200">${r.kode_konversi || '-'}</td>
                 <td class="p-3 font-black text-rose-600 text-xs uppercase">${r.aktifitas || '-'}</td>
                 
+                <td class="p-3 font-semibold text-slate-600 text-left text-[11px] whitespace-normal min-w-[150px] leading-relaxed">${pd.ket}</td>
                 <td class="p-3 font-semibold text-slate-600 text-left text-[11px] whitespace-normal min-w-[200px] leading-relaxed">${pd.rangkuman}</td>
                 
                 <td class="p-3 font-black text-emerald-800 bg-emerald-100 border-x border-slate-200 text-base">${r.qty_total || 0}</td>
                 <td class="p-3 font-black text-slate-800 text-xs uppercase">${r.pic || '-'}</td>
-                <td class="p-3 font-semibold text-slate-600 text-left text-[11px] whitespace-normal min-w-[150px] leading-relaxed">${pd.ket}</td>
                 
                 <td class="p-3 border-l border-slate-200">
                     <button onclick="bukaModalDetail('${r.id}')" class="p-1.5 px-3 bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white font-bold text-[10px] uppercase rounded shadow-sm transition flex mx-auto items-center justify-center gap-1">
@@ -141,7 +139,7 @@ function tutupModalDetail() {
 
 
 // ========================================================
-// 4. CHECKBOX & CANCEL KONVERSI
+// 4. CHECKBOX & CANCEL KONVERSI (KEMBALIKAN KE KARTU STOK)
 // ========================================================
 function toggleCentangSemua(checked) {
     document.querySelectorAll('.cb-row').forEach(cb => cb.checked = checked);
@@ -163,16 +161,76 @@ async function eksekusiCancelKonversi() {
     btn.disabled = true;
 
     try {
-        // Hapus log dari tabel laporan_konversi
-        const { error } = await db.from('laporan_konversi').delete().in('id', idsToDelete);
-        if (error) throw error;
+        // Kumpulkan semua item dari log yang di-cancel untuk dikembalikan
+        let allPayloadFisik = [];
+        let mapAktual = {};
+        let mapGlobal = {};
 
-        alert(`✅ ${idsToDelete.length} Data Konversi berhasil dibatalkan dan log-nya dihapus!\n\n(Catatan: Pengembalian nilai QTY fisik di Kartu Stok menunggu sinkronisasi RPC Inbound dari Tech Lead).`);
+        for (let id of idsToDelete) {
+            const rowLog = dataRiwayat.find(r => r.id == id);
+            if (rowLog) {
+                const pd = parseDetail(rowLog.detail);
+                
+                // Jika data lama tidak punya rincian item, skip proses kartu stoknya (Hanya hapus log)
+                if(pd.items.length === 0) continue;
+
+                // Rekonstruksi Payload untuk Inbound (Langsir)
+                pd.items.forEach(d => {
+                    // ID SKU: [Area]_[Jenis]_[Nama]_[Panjang]_[Grade]_[Dus]_[Shading]_[PO_Asli]
+                    // Perhatikan: Barang dikembalikan dengan poAsliDB-nya, bukan po_target konversi.
+                    const sku = `${d.area}_${d.jenisItem}_${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.poAsliDB}`;
+                    
+                    allPayloadFisik.push({
+                        qrcode: d.qrcode,
+                        id_sku: sku,
+                        area: d.area
+                    });
+
+                    // Agregasi Stok Aktual (Area, PO Target) - Kita kembalikan jatah PO yang terpotong saat konversi
+                    let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${pd.po_target}_${d.ket_baris || '-'}`;
+                    if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { 
+                        nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, 
+                        area: d.area, po_aktual: pd.po_target, ket: d.ket_baris || '-', qty: 0 
+                    };
+                    mapAktual[keyAkt].qty++;
+
+                    // Agregasi Stok Global (PO Bawaan)
+                    let keyGlb = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${pd.po_target}_${d.ket_baris || '-'}`;
+                    if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { 
+                        nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, 
+                        po_bawaan: pd.po_target, ket: d.ket_baris || '-', qty: 0 
+                    };
+                    mapGlobal[keyGlb].qty++;
+                });
+            }
+        }
+
+        // Tembak RPC Langsir untuk mengembalikan stok (Jika ada item fisik yang valid)
+        if (allPayloadFisik.length > 0) {
+            const payloadData = { 
+                fisiks: allPayloadFisik, 
+                aktuals: Object.values(mapAktual), 
+                globals: Object.values(mapGlobal) 
+            };
+            
+            // Gunakan RPC eksekusi_langsir_aman (sama seperti proses barang masuk)
+            const { error: rpcErr } = await db.rpc('eksekusi_langsir_aman', { payload: payloadData });
+            if (rpcErr) throw rpcErr;
+        }
+
+        // Jika RPC sukses (Atau data lama tanpa fisik), Hapus log dari tabel laporan_konversi
+        const { error: delErr } = await db.from('laporan_konversi').delete().in('id', idsToDelete);
+        if (delErr) throw delErr;
+
+        let msg = `✅ ${idsToDelete.length} Konversi dibatalkan.`;
+        if(allPayloadFisik.length > 0) msg += `\n${allPayloadFisik.length} Fisik kardus telah dikembalikan ke Kartu Stok!`;
+        
+        alert(msg);
         document.getElementById('modal-cancel').classList.add('hidden');
         muatDataRiwayat(); // Reload Tabel
         
     } catch (e) {
-        alert("Gagal membatalkan konversi: " + e.message);
+        alert("Gagal membatalkan konversi. Terjadi rollback sistem.\nError: " + e.message);
     } finally {
         btn.innerHTML = ori; btn.disabled = false;
     }
@@ -219,14 +277,15 @@ function resetFilter() {
 }
 
 // ========================================================
-// 6. EKSPOR KE CLIPBOARD & EXCEL (Tanpa Library Eksternal)
+// 6. EKSPOR KE CLIPBOARD & EXCEL
 // ========================================================
 function salinData() {
     if(dataRiwayat.length === 0) return alert('Tidak ada data untuk disalin');
     
-    let text = "Waktu\tID Konversi\tAktifitas\tTotal Dus\tPIC\tDetail Keterangan\tQRCode\n";
+    let text = "Waktu\tKode Konversi\tAktifitas\tKeterangan\tDetail Item\tTotal Dus\tPIC\tQRCode Fisik\n";
     dataRiwayat.forEach(r => {
-        text += `${formatTanggal(r.created_at)}\t${r.kode_konversi || '-'}\t${r.aktifitas || '-'}\t${r.qty_total || 0}\t${r.pic || '-'}\t${r.detail || '-'}\t${r.qrcode || '-'}\n`;
+        const pd = parseDetail(r.detail);
+        text += `${formatTanggal(r.created_at)}\t${r.kode_konversi || '-'}\t${r.aktifitas || '-'}\t${pd.ket}\t${pd.rangkuman}\t${r.qty_total || 0}\t${r.pic || '-'}\t${r.qrcode || '-'}\n`;
     });
     
     navigator.clipboard.writeText(text).then(() => {
@@ -237,12 +296,14 @@ function salinData() {
 function downloadExcel() {
     if(dataRiwayat.length === 0) return alert('Tidak ada data untuk didownload');
     
-    let csv = "Waktu,ID Konversi,Aktifitas,Total Dus,PIC,Detail Keterangan,QRCode\n";
+    let csv = "Waktu,Kode Konversi,Aktifitas,Keterangan,Detail Item,Total Dus,PIC,QRCode Fisik\n";
     dataRiwayat.forEach(r => {
-        const safeDetail = (r.detail || '-').replace(/"/g, '""');
+        const pd = parseDetail(r.detail);
+        const safeKet = pd.ket.replace(/"/g, '""');
+        const safeRangkuman = pd.rangkuman.replace(/<b>|<\/b>/g, '').replace(/"/g, '""'); // Buang tag HTML
         const safeQR = (r.qrcode || '-').replace(/"/g, '""');
         
-        csv += `"${formatTanggal(r.created_at)}","${r.kode_konversi || '-'}","${r.aktifitas || '-'}","${r.qty_total || 0}","${r.pic || '-'}","${safeDetail}","${safeQR}"\n`;
+        csv += `"${formatTanggal(r.created_at)}","${r.kode_konversi || '-'}","${r.aktifitas || '-'}","${safeKet}","${safeRangkuman}","${r.qty_total || 0}","${r.pic || '-'}","${safeQR}"\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
