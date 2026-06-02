@@ -1,4 +1,5 @@
 let dataRiwayat = [];
+const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
 document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'riwayat_konversi', title: 'RIWAYAT KONVERSI', url: 'riwayat_konversi.html' });
@@ -14,9 +15,7 @@ async function muatDataRiwayat() {
     lucide.createIcons();
 
     try {
-        const { data, error } = await db.from('laporan_konversi')
-                                        .select('*')
-                                        .order('created_at', { ascending: false });
+        const { data, error } = await db.from('laporan_konversi').select('*').order('created_at', { ascending: false });
         if (error) throw error;
 
         dataRiwayat = data || [];
@@ -68,7 +67,6 @@ function renderTabel(data) {
     data.forEach((r, i) => {
         const pd = parseDetail(r.detail);
         
-        // REVISI: Penyeragaman ukuran font utama menjadi text-[11px] (kecuali Total Dus yang perlu agak besar)
         html += `
             <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-[11px]">
                 <td class="p-3"><input type="checkbox" class="cb-row cursor-pointer w-4 h-4 text-rose-600 rounded" data-id="${r.id}"></td>
@@ -124,7 +122,7 @@ function bukaModalDetail(id) {
                 <td class="p-2 font-bold border-r border-slate-200">${d.shading || '-'}</td>
                 <td class="p-2 text-center font-bold text-slate-400">${d.poAsliDB || '-'}</td>
                 <td class="p-2 text-center font-black text-orange-600 bg-orange-50 border-l border-slate-200">${pd.po_target}</td>
-                <td class="p-2 font-semibold text-[10px] text-slate-600">${d.ket_baris || '-'}</td>
+                <td class="p-2 font-semibold text-[10px] text-slate-600">-</td>
             </tr>
         `;
     });
@@ -137,9 +135,8 @@ function tutupModalDetail() {
     document.getElementById('modal-detail').classList.add('hidden'); 
 }
 
-
 // ========================================================
-// 4. CHECKBOX & CANCEL KONVERSI (KEMBALIKAN KE KARTU STOK)
+// 4. CHECKBOX & CANCEL KONVERSI OUT (KEMBALIKAN KE KARTU STOK)
 // ========================================================
 function toggleCentangSemua(checked) {
     document.querySelectorAll('.cb-row').forEach(cb => cb.checked = checked);
@@ -161,76 +158,73 @@ async function eksekusiCancelKonversi() {
     btn.disabled = true;
 
     try {
-        // Kumpulkan semua item dari log yang di-cancel untuk dikembalikan
-        let allPayloadFisik = [];
-        let mapAktual = {};
-        let mapGlobal = {};
+        // 1. Ambil data log untuk mendapatkan kode_konversi dan tipe aktifitasnya
+        const { data: logs, error: errLogs } = await db.from('laporan_konversi').select('kode_konversi, aktifitas').in('id', idsToDelete);
+        if (errLogs) throw errLogs;
 
-        for (let id of idsToDelete) {
-            const rowLog = dataRiwayat.find(r => r.id == id);
-            if (rowLog) {
-                const pd = parseDetail(rowLog.detail);
-                
-                // Jika data lama tidak punya rincian item, skip proses kartu stoknya (Hanya hapus log)
-                if(pd.items.length === 0) continue;
+        const kodeList = logs.map(l => l.kode_konversi);
 
-                // Rekonstruksi Payload untuk Inbound (Langsir)
-                pd.items.forEach(d => {
-                    // ID SKU: [Area]_[Jenis]_[Nama]_[Panjang]_[Grade]_[Dus]_[Shading]_[PO_Asli]
-                    // Perhatikan: Barang dikembalikan dengan poAsliDB-nya, bukan po_target konversi.
-                    const sku = `${d.area}_${d.jenisItem}_${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.poAsliDB}`;
-                    
-                    allPayloadFisik.push({
-                        qrcode: d.qrcode,
-                        id_sku: sku,
-                        area: d.area
-                    });
+        // 2. Tarik fisik asli dari stok_konversi
+        const { data: dataKonversi, error: errTarik } = await db.from('stok_konversi').select('*').in('kode_konversi', kodeList);
+        if (errTarik) throw errTarik;
 
-                    // Agregasi Stok Aktual (Area, PO Target) - Kita kembalikan jatah PO yang terpotong saat konversi
-                    let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${pd.po_target}_${d.ket_baris || '-'}`;
-                    if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { 
-                        nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, 
-                        area: d.area, po_aktual: pd.po_target, ket: d.ket_baris || '-', qty: 0 
-                    };
-                    mapAktual[keyAkt].qty++;
+        let arrRestoreFisik = [];
+        let mapRestoreAktual = {};
+        let mapRestoreGlobal = {};
 
-                    // Agregasi Stok Global (PO Bawaan)
-                    let keyGlb = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${pd.po_target}_${d.ket_baris || '-'}`;
-                    if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { 
-                        nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, 
-                        po_bawaan: pd.po_target, ket: d.ket_baris || '-', qty: 0 
-                    };
-                    mapGlobal[keyGlb].qty++;
-                });
-            }
-        }
-
-        // Tembak RPC Langsir untuk mengembalikan stok (Jika ada item fisik yang valid)
-        if (allPayloadFisik.length > 0) {
-            const payloadData = { 
-                fisiks: allPayloadFisik, 
-                aktuals: Object.values(mapAktual), 
-                globals: Object.values(mapGlobal) 
-            };
+        dataKonversi.forEach(d => {
+            const logInduk = logs.find(l => l.kode_konversi === d.kode_konversi);
             
-            // Gunakan RPC eksekusi_langsir_aman (sama seperti proses barang masuk)
+            // SAAT INI KITA FOKUS PADA CANCEL KONVERSI OUT (Mengembalikan ke Gudang)
+            if (logInduk && logInduk.aktifitas.startsWith('OUT')) {
+                // Skema ID SKU di Gudang: Area_Jenis_Nama_Pjg_Grade_Dus_Shading_PO Bawaan
+                const sku = `${d.area}_${d.jenis_item}_${d.nama_item}_${d.pjg}_${d.grade}_${d.dus}_${d.shading}_${d.po_bawaan}`;
+                
+                arrRestoreFisik.push({
+                    qrcode: d.qrcode,
+                    area: d.area,
+                    id_sku: sku,
+                    pic_input: currentUser.username
+                });
+
+                // Kembalikan Jatah ke Stok Aktual (Sesuai PO Target Konversi Dulu)
+                let keyAkt = `${d.nama_item}_${d.pjg}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${d.po_aktual}_-`;
+                if(!mapRestoreAktual[keyAkt]) mapRestoreAktual[keyAkt] = { 
+                    jenis_item: d.jenis_item, nama_item: d.nama_item, pjg: d.pjg, grade: d.grade, dus: d.dus, shading: d.shading, 
+                    area: d.area, po_aktual: d.po_aktual, ket: '-', qty: 0 
+                };
+                mapRestoreAktual[keyAkt].qty++;
+
+                // Kembalikan Jatah ke Stok Global (Sesuai PO Bawaan aslinya)
+                let keyGlb = `${d.nama_item}_${d.pjg}_${d.grade}_${d.dus}_${d.shading}_${d.po_bawaan}_-`;
+                if(!mapRestoreGlobal[keyGlb]) mapRestoreGlobal[keyGlb] = { 
+                    jenis_item: d.jenis_item, nama_item: d.nama_item, pjg: d.pjg, grade: d.grade, dus: d.dus, shading: d.shading, 
+                    po_bawaan: d.po_bawaan, ket: '-', qty: 0 
+                };
+                mapRestoreGlobal[keyGlb].qty++;
+            }
+        });
+
+        // 3. Tembak RPC Langsir agar Fisik Kembali dan QTY bertambah!
+        if (arrRestoreFisik.length > 0) {
+            const payloadData = { qrs: arrRestoreFisik, aktuals: Object.values(mapRestoreAktual), globals: Object.values(mapRestoreGlobal) };
             const { error: rpcErr } = await db.rpc('eksekusi_langsir_aman', { payload: payloadData });
             if (rpcErr) throw rpcErr;
         }
 
-        // Jika RPC sukses (Atau data lama tanpa fisik), Hapus log dari tabel laporan_konversi
+        // 4. Bersihkan Jejak dari Tabel Karantina (stok_konversi) dan Log (laporan_konversi)
+        if (kodeList.length > 0) {
+            await db.from('stok_konversi').delete().in('kode_konversi', kodeList);
+        }
         const { error: delErr } = await db.from('laporan_konversi').delete().in('id', idsToDelete);
         if (delErr) throw delErr;
 
-        let msg = `✅ ${idsToDelete.length} Konversi dibatalkan.`;
-        if(allPayloadFisik.length > 0) msg += `\n${allPayloadFisik.length} Fisik kardus telah dikembalikan ke Kartu Stok!`;
-        
-        alert(msg);
+        alert(`✅ SUKSES DIBATALKAN!\nFisik kardus telah disedot dari stok_konversi dan dikembalikan secara presisi ke Kartu Stok.`);
         document.getElementById('modal-cancel').classList.add('hidden');
-        muatDataRiwayat(); // Reload Tabel
+        muatDataRiwayat(); // Reload
         
     } catch (e) {
-        alert("Gagal membatalkan konversi. Terjadi rollback sistem.\nError: " + e.message);
+        alert("Gagal membatalkan konversi. Error: " + e.message);
     } finally {
         btn.innerHTML = ori; btn.disabled = false;
     }
@@ -300,7 +294,7 @@ function downloadExcel() {
     dataRiwayat.forEach(r => {
         const pd = parseDetail(r.detail);
         const safeKet = pd.ket.replace(/"/g, '""');
-        const safeRangkuman = pd.rangkuman.replace(/<b>|<\/b>/g, '').replace(/"/g, '""'); // Buang tag HTML
+        const safeRangkuman = pd.rangkuman.replace(/<b>|<\/b>/g, '').replace(/"/g, '""');
         const safeQR = (r.qrcode || '-').replace(/"/g, '""');
         
         csv += `"${formatTanggal(r.created_at)}","${r.kode_konversi || '-'}","${r.aktifitas || '-'}","${safeKet}","${safeRangkuman}","${r.qty_total || 0}","${r.pic || '-'}","${safeQR}"\n`;
