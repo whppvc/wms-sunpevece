@@ -5,10 +5,9 @@ let masterData = { kamus: [] };
 
 document.addEventListener('DOMContentLoaded', async () => { 
     initModernLayout({ id: 'scan_pic', title: 'SCAN PIC AREA', url: 'scan_pic.html' }); 
-    loadInitialData(); // Load master dictionary WMS
+    loadInitialData();
 });
 
-// --- FUNGSI LOAD MASTER DATA (Kamus WMS) ---
 async function loadInitialData() {
     try {
         const { data: mData2 } = await db.from('master_2').select('*');
@@ -24,7 +23,6 @@ function extractPOFromSKU(id_sku) {
     return parts.length >= 8 ? parts[7] : '-';
 }
 
-// Fungsi Penerjemah Barcode
 function translateBarcode(barcode) {
     const parts = barcode.split('/');
     let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', poBawaan: '-' };
@@ -69,7 +67,6 @@ function translateBarcode(barcode) {
     return data;
 }
 
-// --- FUNGSI MINIMIZE/MAXIMIZE BOX AKTIFITAS ---
 function toggleAktifitas() {
     const body = document.getElementById('body-aktifitas');
     const icon = document.getElementById('icon-toggle-aktifitas');
@@ -83,7 +80,6 @@ function toggleAktifitas() {
     }
 }
 
-// --- FUNGSI SCAN BARCODE ---
 document.getElementById('form-scan').addEventListener('submit', (e) => {
     e.preventDefault();
     const inputEl = document.getElementById('input-qrcode');
@@ -95,8 +91,6 @@ document.getElementById('form-scan').addEventListener('submit', (e) => {
     
     codes.forEach(code => {
         const isDuplicate = dataPic.some(d => d.qrcode === code);
-        
-        // Terjemahkan murni dari fungsi translateBarcode
         const trans = translateBarcode(code);
         
         dataPic.unshift({ 
@@ -107,8 +101,7 @@ document.getElementById('form-scan').addEventListener('submit', (e) => {
             ...trans,
             poAktualUI: 'Cek Stok...',
             baseSpec: '',
-            poAsliDB: '-',
-            ket_baris: ''
+            poAsliDB: '-'
         });
     });
 
@@ -116,21 +109,15 @@ document.getElementById('form-scan').addEventListener('submit', (e) => {
     inputEl.value = ''; inputEl.focus();
 });
 
-// --- FUNGSI RENDER TABEL & HAPUS BARIS ---
 function hapusBaris(qrCode) {
     dataPic = dataPic.filter(d => d.qrcode !== qrCode);
     saringTabel();
 }
 
-function updateKetBaris(input, qrCode) {
-    let row = dataPic.find(d => d.qrcode === qrCode);
-    if(row) row.ket_baris = input.value;
-}
-
 function renderTablePic(dataToRender) {
     const tbody = document.getElementById('tbody-pic');
     if(dataToRender.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="17" class="p-10 text-slate-400 font-bold"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan / filter kosong.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="16" class="p-10 text-slate-400 font-bold"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan / filter kosong.</td></tr>';
         lucide.createIcons();
         return;
     }
@@ -165,7 +152,6 @@ function renderTablePic(dataToRender) {
                 <td class="p-2 font-bold border-r border-slate-200">${d.shading || '-'}</td>
                 <td class="p-2 text-center font-bold text-slate-500">${d.poBawaan || '-'}</td>
                 <td class="p-2 text-center font-black text-orange-600 bg-slate-100 border-l border-slate-200 text-[10px] whitespace-normal leading-tight max-w-[150px]">${d.poAktualUI || 'Cek Stok...'}</td>
-                <td class="p-2"><input type="text" onchange="updateKetBaris(this, '${d.qrcode}')" value="${d.ket_baris || ''}" class="w-full p-1.5 text-[11px] font-bold border border-slate-300 rounded focus:border-blue-500 outline-none" placeholder="Ket..."></td>
             </tr>
         `;
     });
@@ -173,7 +159,6 @@ function renderTablePic(dataToRender) {
     lucide.createIcons();
 }
 
-// --- FUNGSI FILTER SIDEBAR ---
 function toggleFilter() {
     const sidebar = document.getElementById('sidebar-filter');
     const overlay = document.getElementById('overlay-klik-luar');
@@ -208,7 +193,6 @@ function resetFilter() {
     renderTablePic(dataPic);
 }
 
-// --- FUNGSI VERIFIKASI GUDANG & HITUNG PO AKTUAL ---
 async function verifikasiKeluar() {
     if(dataPic.length === 0) return alert("Belum ada data untuk diverifikasi!");
 
@@ -271,8 +255,6 @@ async function verifikasiKeluar() {
     }
 }
 
-
-// --- FUNGSI BUKA MODAL PO & EKSEKUSI ---
 function tutupModalPO() {
     document.getElementById('modal-po-target').classList.add('hidden');
 }
@@ -282,6 +264,9 @@ function bukaModalSimpan() {
     const keterangan = document.getElementById('input-keterangan').value.trim();
 
     if(!aktifitas) return alert("GAGAL! Anda wajib memilih Jenis Aktifitas terlebih dahulu.");
+    // CEGAT JIKA KETERANGAN KOSONG
+    if(!keterangan) return alert("GAGAL! Anda wajib mengisi Keterangan / Alasan konversi.");
+    
     if(dataPic.length === 0) return alert("GAGAL! Belum ada item fisik yang di-scan.");
 
     let unverified = dataPic.filter(d => d.status !== 'VALID');
@@ -308,23 +293,21 @@ function bukaModalSimpan() {
     document.getElementById('modal-po-target').classList.remove('hidden');
 }
 
-// --- FUNGSI BUKA MODAL PO & EKSEKUSI ---
 async function eksekusiSimpanFinal() {
     const poTarget = document.getElementById('out-po-target').value;
     if(!poTarget) return alert("Wajib memilih PO Tujuan Konversi!");
 
-    // Ambil nilai asli dari dropdown
     const rawAktifitas = document.getElementById('select-aktifitas').value;
-    
-    // Tambahkan awalan OUT - untuk disimpan ke database
     const aktifitas = "OUT - " + rawAktifitas; 
+    
+    // VARIABEL INI YANG KEMARIN HILANG, SEKARANG SUDAH AMAN:
+    const keterangan = document.getElementById('input-keterangan').value.trim();
 
     const btn = document.getElementById('btn-eksekusi-final');
     const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...';
     btn.disabled = true;
 
-    // 1. GENERATE PREFIX KODE (Gunakan rawAktifitas untuk pengecekan!)
     let prefix = "";
     if(rawAktifitas === "Ganti nama item") prefix = "NA";
     else if(rawAktifitas === "Potong panjang") prefix = "PJG";
@@ -335,7 +318,6 @@ async function eksekusiSimpanFinal() {
     else if(rawAktifitas === "Sampel") prefix = "SM";
     else prefix = "XX";
 
-    // 2. CEK KAPASITAS JATAH DI STOK_AKTUAL
     let stockCapacity = {};
     let specsToProcess = new Set();
     dataPic.forEach(row => {
@@ -358,7 +340,6 @@ async function eksekusiSimpanFinal() {
         btn.innerHTML = ori; btn.disabled = false; return;
     }
 
-    // 3. SIAPKAN PAYLOAD UNTUK PEMOTONGAN
     let qrList = []; let mapAktual = {}; let mapGlobal = {};
     let matchedRows = []; let unmatchedCount = 0;
 
@@ -370,14 +351,13 @@ async function eksekusiSimpanFinal() {
                 qrList.push(d.qrcode);
                 stockCapacity[baseSpec] -= 1; 
 
-                // Payload Aktual
-                let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${poTarget}_${d.ket_baris || '-'}`;
-                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, po_aktual: poTarget, ket: d.ket_baris || '-', qty: 0 };
+                // Ket di tabel stok murni pakai strip (-) karena input keterangan baris sudah dihilangkan
+                let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${poTarget}_-`;
+                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, po_aktual: poTarget, ket: '-', qty: 0 };
                 mapAktual[keyAkt].qty++;
 
-                // Payload Global (Potong target)
-                let keyGlb = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${poTarget}_${d.ket_baris || '-'}`;
-                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, po_bawaan: poTarget, ket: d.ket_baris || '-', qty: 0 };
+                let keyGlb = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${poTarget}_-`;
+                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, po_bawaan: poTarget, ket: '-', qty: 0 };
                 mapGlobal[keyGlb].qty++;
             } else { unmatchedCount++; }
         } else { unmatchedCount++; }
@@ -388,9 +368,7 @@ async function eksekusiSimpanFinal() {
         btn.innerHTML = ori; btn.disabled = false; return;
     }
 
-    // 4. EKSEKUSI DATABASE
     try {
-        // A. Fitur Auto-Swap PO (Jika Scan Cross-PO)
         for (let row of matchedRows) {
             let baseSpec = row.baseSpec;
             let poBawaan = row.poAsliDB;
@@ -414,29 +392,25 @@ async function eksekusiSimpanFinal() {
             }
         }
 
-        // B. Hapus Fisik & Potong Kartu Stok via RPC
         const payloadData = { qrs: qrList, aktuals: Object.values(mapAktual), globals: Object.values(mapGlobal) };
         const { error: rpcError } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
         if (rpcError) throw rpcError;
 
-        // C. Simpan ke Laporan Konversi (Audit Log)
         const { count, error: errCount } = await db.from('laporan_konversi').select('*', { count: 'exact', head: true });
         if(errCount) throw errCount;
 
         let nextNum = (count || 0) + 1;
         let kodeKonversi = `${prefix}-${String(nextNum).padStart(5, '0')}`;
-
-        // Hanya masukkan QR yang lolos dipotong ke laporan audit
         let allQRs = qrList.join(', ');
 
         const payloadLog = {
             kode_konversi: kodeKonversi,
             aktifitas: aktifitas,
-            qrcode: qrList.join(', '), 
+            qrcode: allQRs,
             detail: JSON.stringify({
                 keterangan: keterangan || '-',
                 po_target: poTarget,
-                items: matchedRows // Menyimpan seluruh spesifikasi fisik kardus
+                items: matchedRows
             }),
             qty_total: qrList.length,
             pic: currentUser.username
@@ -445,7 +419,6 @@ async function eksekusiSimpanFinal() {
         const { error: errInsert } = await db.from('laporan_konversi').insert([payloadLog]);
         if (errInsert) throw errInsert;
 
-        // 5. SELESAI
         let msg = `✅ EKSEKUSI KONVERSI OUT BERHASIL!\n\nID Audit: ${kodeKonversi}\nPO Target: ${poTarget}\nBerhasil dipotong dari Kartu Stok: ${qrList.length} Dus.`;
         if (unmatchedCount > 0) msg += `\n\n⚠️ ${unmatchedCount} dus tidak diproses karena jatah PO kurang atau status fisik belum VALID.`;
         alert(msg);
