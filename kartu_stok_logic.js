@@ -5,12 +5,25 @@ let selectedForPO = []; let sourcePOContext = ''; let currentBreakdownData = [];
 let sortState = {};
 let masterData = { kamus: [] };
 
-function safeJSONParse(str, fallback) {
-    try { return str && str !== 'undefined' ? JSON.parse(str) : fallback; }
-    catch(e) { return fallback; }
+// ========================================================
+// 1. REFACTOR: ADVANCED JSON PARSING
+// ========================================================
+function safeJSONParse(data, fallback = null) {
+    if (!data || data === 'undefined' || data === 'null') return fallback;
+    if (typeof data !== 'string') return data; // Jika sudah bentuk object, return langsung
+    try {
+        return JSON.parse(data);
+    } catch (e) {
+        console.warn("JSON Parse Error dicegat:", e.message);
+        return fallback;
+    }
 }
 
-// LOGIKA STYLING (SETTING TABEL)
+const currentUser = safeJSONParse(localStorage.getItem('user_session'), { username: 'Admin', role: 'admin' });
+
+// ========================================================
+// 2. STYLING MANAGEMENT (GEAR SETTINGS)
+// ========================================================
 const defaultSettings = { thBg: '#1e293b', thColor: '#ffffff', thSize: 11, thAlign: 'center', tdColor: '#334155', tdSize: 12, tdAlign: 'center' };
 
 function terapkanSettingAwal() {
@@ -21,23 +34,27 @@ function terapkanSettingAwal() {
 
 function applyCSS(s) {
     const styleEl = document.getElementById('dynamic-table-settings');
-    styleEl.innerHTML = `
-        #main-table th.hdr-std { background-color: ${s.thBg} !important; color: ${s.thColor} !important; font-size: ${s.thSize}px !important; text-align: ${s.thAlign} !important; justify-content: ${s.thAlign === 'left' ? 'flex-start' : (s.thAlign === 'right' ? 'flex-end' : 'center')} !important; }
-        #main-table td { color: ${s.tdColor} !important; font-size: ${s.tdSize}px !important; text-align: ${s.tdAlign} !important; }
-    `;
+    if (styleEl) {
+        const justify = s.thAlign === 'left' ? 'flex-start' : (s.thAlign === 'right' ? 'flex-end' : 'center');
+        styleEl.innerHTML = `
+            #main-table th.hdr-std { background-color: ${s.thBg} !important; color: ${s.thColor} !important; font-size: ${s.thSize}px !important; text-align: ${s.thAlign} !important; }
+            #main-table th.hdr-std > div { justify-content: ${justify} !important; }
+            #main-table td { color: ${s.tdColor} !important; font-size: ${s.tdSize}px !important; text-align: ${s.tdAlign} !important; }
+        `;
+    }
 }
 
 function bukaModalSetting() {
     let s = safeJSONParse(localStorage.getItem('wms_table_settings'), defaultSettings);
     if (!s || !s.thBg) s = defaultSettings;
 
-    document.getElementById('set-th-bg').value = s.thBg;
-    document.getElementById('set-th-color').value = s.thColor;
-    document.getElementById('set-th-size').value = s.thSize;
-    document.getElementById('set-th-align').value = s.thAlign;
-    document.getElementById('set-td-color').value = s.tdColor;
-    document.getElementById('set-td-size').value = s.tdSize;
-    document.getElementById('set-td-align').value = s.tdAlign;
+    ['th-bg', 'th-color', 'th-size', 'th-align', 'td-color', 'td-size', 'td-align'].forEach(key => {
+        const el = document.getElementById(`set-${key}`);
+        if(el) {
+            const camelKey = key.split('-').map((word, index) => index == 0 ? word : word[0].toUpperCase() + word.slice(1)).join('');
+            el.value = s[camelKey];
+        }
+    });
 
     document.getElementById('modal-setting').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
@@ -64,34 +81,15 @@ function resetSettingDefault() {
     tutupSemuaPopups();
 }
 
+// ========================================================
+// 3. CORE INITIALIZATION & DATA TRANSLATION
+// ========================================================
 document.addEventListener('DOMContentLoaded', async () => {
     initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
     terapkanSettingAwal(); 
     await loadMasterData();
     setTimeout(muatDataStok, 200);
 });
-
-// LOGIKA SORT TABEL
-function sortTable(colIndex, headerEl) {
-    const tbody = document.getElementById('tbody-ks');
-    const rows = Array.from(tbody.querySelectorAll('tr.row-ks'));
-    
-    let isAsc = sortState[colIndex] !== 'asc';
-    sortState[colIndex] = isAsc ? 'asc' : 'desc';
-    
-    rows.sort((a, b) => {
-        let valA = a.cells[colIndex].innerText.trim();
-        let valB = b.cells[colIndex].innerText.trim();
-        let numA = parseFloat(valA); let numB = parseFloat(valB);
-        if(!isNaN(numA) && !isNaN(numB)) { return isAsc ? numA - numB : numB - numA; } 
-        else { return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA); }
-    });
-    
-    rows.forEach(row => tbody.appendChild(row));
-    document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-50'); });
-    const icon = headerEl.querySelector('.sort-icon');
-    if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-50'); lucide.createIcons(); }
-}
 
 async function loadMasterData() {
     try {
@@ -102,9 +100,11 @@ async function loadMasterData() {
             const sel = document.getElementById('input-new-po');
             let html = '<option value="">-- PILIH PO --</option>';
             Array.from(poSet).sort().forEach(po => { html += `<option value="${po}">${po}</option>`; });
-            sel.innerHTML = html;
+            if(sel) sel.innerHTML = html;
         }
-    } catch (e) { console.error("Gagal muat master_2:", e); }
+    } catch (e) { 
+        if(document.getElementById('input-new-po')) document.getElementById('input-new-po').innerHTML = '<option value="">-- GAGAL MEMUAT PO --</option>'; 
+    }
 }
 
 function translateBarcode(barcode) {
@@ -136,8 +136,12 @@ function translateBarcode(barcode) {
     return data;
 }
 
+// ========================================================
+// 4. DATA FETCHING & AGGREGATION
+// ========================================================
 async function muatDataStok() {
-    document.getElementById('tbody-ks').innerHTML = `<tr><td colspan="17" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menghubungkan ke Gudang Supabase...</p></td></tr>`;
+    const tbody = document.getElementById('tbody-ks');
+    tbody.innerHTML = `<tr><td colspan="17" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menghubungkan ke Gudang Supabase...</p></td></tr>`;
     lucide.createIcons();
 
     try {
@@ -172,7 +176,6 @@ async function muatDataStok() {
             let dusBarang = r.dus || p[5] || t.dus;
             let shadingBarang = r.shading || p[6] || t.shading;
 
-            // PENERJEMAHAN KODE DENGAN SAFE TRIM() ANTI-SPASI
             let rawMesin = (r.mesin || t.mesin || '').toString().trim();
             let cM = masterData.kamus.find(m => m.kode_mesin && m.kode_mesin.toString().trim() === rawMesin);
             let txtMesin = cM && cM.mesin ? cM.mesin : rawMesin;
@@ -190,29 +193,17 @@ async function muatDataStok() {
             let txtPoAktual = cPA && cPA.po ? cPA.po : rawPoAktual;
 
             dataKSQR.push({
-                qrcode: trimQR || '-',
-                id_sku: r.id_sku || '-',
-                area: areaBarang || '-',
-                tglProduksi: r.tgl_produksi || t.tglProduksi || '-',
-                mesin: txtMesin || '-',
-                shift: txtShift || '-',
-                jenis: jenisBarang || '-',
-                nama: namaBarang || '-',
-                pjg: panjangBarang || '-',
-                grade: gradeBarang || '-',
-                dus: dusBarang || '-',
-                shading: shadingBarang || '-',
-                po_bawaan: txtPoBawaan || '-',
-                po_aktual: txtPoAktual || '-',
-                ket: ket
+                qrcode: trimQR || '-', id_sku: r.id_sku || '-', area: areaBarang || '-', tglProduksi: r.tgl_produksi || t.tglProduksi || '-',
+                mesin: txtMesin || '-', shift: txtShift || '-', jenis: jenisBarang || '-', nama: namaBarang || '-',
+                pjg: panjangBarang || '-', grade: gradeBarang || '-', dus: dusBarang || '-', shading: shadingBarang || '-',
+                po_bawaan: txtPoBawaan || '-', po_aktual: txtPoAktual || '-', ket: ket
             });
 
             let keyArea = `${r.id_sku}_${ket}`;
             if(!areaMap[keyArea]) {
                 areaMap[keyArea] = { 
                     id_sku: r.id_sku, key_lengkap: keyArea, area: areaBarang, jenis: jenisBarang, nama: namaBarang, 
-                    pjg: panjangBarang, grade: gradeBarang, dus: dusBarang, shading: shadingBarang, po: txtPoAktual, ket: ket,
-                    qty: 0, qrcodes: [] 
+                    pjg: panjangBarang, grade: gradeBarang, dus: dusBarang, shading: shadingBarang, po: txtPoAktual, ket: ket, qty: 0, qrcodes: [] 
                 };
             }
             areaMap[keyArea].qty++;
@@ -224,11 +215,7 @@ async function muatDataStok() {
         dataKSArea.forEach(a => {
             let gKey = `${a.jenis}_${a.nama}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po}_${a.ket}`;
             if(!globalMap[gKey]) {
-                globalMap[gKey] = { 
-                    gKey: gKey, jenis: a.jenis, nama: a.nama, pjg: a.pjg, 
-                    grade: a.grade, dus: a.dus, shading: a.shading, po: a.po, ket: a.ket,
-                    qty: 0, areas: [] 
-                };
+                globalMap[gKey] = { gKey: gKey, jenis: a.jenis, nama: a.nama, pjg: a.pjg, grade: a.grade, dus: a.dus, shading: a.shading, po: a.po, ket: a.ket, qty: 0, areas: [] };
             }
             globalMap[gKey].qty += a.qty;
             globalMap[gKey].areas.push({
@@ -239,9 +226,14 @@ async function muatDataStok() {
         dataKSGlobal = Object.values(globalMap);
 
         renderTabel();
-    } catch(e) { document.getElementById('tbody-ks').innerHTML = `<tr><td colspan="17" class="p-10 text-red-500 font-bold">Gagal mengolah data: ${e.message}</td></tr>`; }
+    } catch(e) { 
+        tbody.innerHTML = `<tr><td colspan="17" class="p-10 text-red-500 font-bold">Gagal mengolah data: ${e.message}</td></tr>`; 
+    }
 }
 
+// ========================================================
+// 5. REFACTOR: IMPROVE TABLE RENDERING
+// ========================================================
 function setModeKS(m) {
     modeKS = m;
     ['qr', 'area', 'global', 'lembaran'].forEach(tab => {
@@ -256,6 +248,30 @@ function setModeKS(m) {
     renderTabel();
 }
 
+function sortTable(colIndex, headerEl) {
+    const tbody = document.getElementById('tbody-ks');
+    const rows = Array.from(tbody.querySelectorAll('tr.row-ks'));
+    
+    let isAsc = sortState[colIndex] !== 'asc';
+    sortState[colIndex] = isAsc ? 'asc' : 'desc';
+    
+    rows.sort((a, b) => {
+        let valA = a.cells[colIndex].innerText.trim();
+        let valB = b.cells[colIndex].innerText.trim();
+        let numA = parseFloat(valA); let numB = parseFloat(valB);
+        if(!isNaN(numA) && !isNaN(numB)) { return isAsc ? numA - numB : numB - numA; } 
+        else { return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA); }
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+    document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-50'); });
+    const icon = headerEl.querySelector('.sort-icon');
+    if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-50'); lucide.createIcons(); }
+}
+
+// Table Header Helper Component
+const thSort = (idx, label, cls = "") => `<th class="hdr-std ${cls} cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(${idx}, this)"><div class="flex items-center gap-1">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>`;
+
 function renderTabel() {
     const thead = document.getElementById('thead-ks');
     const tbody = document.getElementById('tbody-ks');
@@ -264,31 +280,30 @@ function renderTabel() {
     if(modeKS === 'qr') {
         thead.innerHTML = `
             <tr>
-                <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
-                <th class="hdr-std w-12 col-no cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(1, this)"><div class="flex items-center justify-center gap-1">No <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std border-r border-slate-500 col-area cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(2, this)"><div class="flex items-center justify-center gap-1">Area <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-qr cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(3, this)"><div class="flex items-center justify-center gap-1">QRCode <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-tgl cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(4, this)"><div class="flex items-center justify-center gap-1">Tgl Produksi <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-mesin cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(5, this)"><div class="flex items-center justify-center gap-1">Mesin <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std border-r border-slate-500 col-shift cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(6, this)"><div class="flex items-center justify-center gap-1">Shift <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std text-blue-300 col-jenis cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(7, this)"><div class="flex items-center justify-center gap-1">Jenis Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-nama cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(8, this)"><div class="flex items-center justify-center gap-1">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-pjg cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(9, this)"><div class="flex items-center justify-center gap-1">Pjg <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-grade cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(10, this)"><div class="flex items-center justify-center gap-1">Grade <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-dus cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(11, this)"><div class="flex items-center justify-center gap-1">Dus <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std border-r border-slate-500 col-shading cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(12, this)"><div class="flex items-center justify-center gap-1">Shading <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std border-r border-slate-500 text-slate-400 col-po-bawaan cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(13, this)"><div class="flex items-center justify-center gap-1">PO Bawaan <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std text-orange-400 bg-orange-900 border-r border-slate-500 col-po cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(14, this)"><div class="flex items-center justify-center gap-1">PO Aktual <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std text-center col-ket cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(15, this)"><div class="flex items-center justify-center gap-1">Keterangan <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded border-slate-300"></th>
+                ${thSort(1, 'No', 'w-12 col-no')}
+                ${thSort(2, 'Area', 'border-r border-slate-500 col-area')}
+                ${thSort(3, 'QRCode', 'border-r border-slate-500 col-qr')}
+                ${thSort(4, 'Tgl Produksi', 'col-tgl')}
+                ${thSort(5, 'Mesin', 'col-mesin')}
+                ${thSort(6, 'Shift', 'border-r border-slate-500 col-shift')}
+                ${thSort(7, 'Jenis Item', 'text-blue-300 col-jenis')}
+                ${thSort(8, 'Nama Item', 'col-nama')}
+                ${thSort(9, 'Pjg', 'col-pjg')}
+                ${thSort(10, 'Grade', 'col-grade')}
+                ${thSort(11, 'Dus', 'col-dus')}
+                ${thSort(12, 'Shading', 'border-r border-slate-500 col-shading')}
+                ${thSort(13, 'PO Bawaan', 'text-slate-400 border-r border-slate-500 col-po-bawaan')}
+                ${thSort(14, 'PO Aktual', 'text-orange-400 bg-orange-900 border-r border-slate-500 col-po')}
+                ${thSort(15, 'Keterangan', 'col-ket')}
             </tr>`;
         
-        if(dataKSQR.length === 0) { tbody.innerHTML = `<tr><td colspan="16" class="p-6 font-bold text-slate-400">Gudang Kosong.</td></tr>`; return; }
+        if(dataKSQR.length === 0) { tbody.innerHTML = `<tr><td colspan="16" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
-        let h = '';
-        dataKSQR.forEach((r, i) => {
+        tbody.innerHTML = dataKSQR.map((r, i) => {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
-            h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
+            return `
+                <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks text-xs">
                     <td class="p-3 col-cb"><input type="checkbox" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                     <td class="p-3 font-bold opacity-50 col-no">${i+1}</td>
                     <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.area}</td>
@@ -306,120 +321,111 @@ function renderTabel() {
                     <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-r border-slate-200 col-po">${r.po_aktual}</td>
                     <td class="p-3 font-semibold opacity-70 col-ket">${r.ket}</td>
                 </tr>`;
-        });
-        tbody.innerHTML = h;
+        }).join('');
     }
     else if(modeKS === 'area') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
-                <th class="hdr-std w-12 col-no cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(1, this)"><div class="flex items-center justify-center gap-1">No <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std border-r border-slate-500 col-area cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(2, this)"><div class="flex items-center justify-center gap-1">Area <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std text-blue-300 col-jenis cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(3, this)"><div class="flex items-center justify-center gap-1">Jenis Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-nama cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(4, this)"><div class="flex items-center justify-center gap-1">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-pjg cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(5, this)"><div class="flex items-center justify-center gap-1">Pjg <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-grade cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(6, this)"><div class="flex items-center justify-center gap-1">Grade <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-dus border-r border-slate-500 cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(7, this)"><div class="flex items-center justify-center gap-1">Dus <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-shading cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(8, this)"><div class="flex items-center justify-center gap-1">Shading <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std text-orange-300 bg-slate-900 border-x border-slate-500 col-po cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(9, this)"><div class="flex items-center justify-center gap-1">PO Aktual <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-ket border-r border-slate-500 cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(10, this)"><div class="flex items-center justify-center gap-1">Keterangan <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std text-emerald-300 bg-slate-900 col-qty cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(11, this)"><div class="flex items-center justify-center gap-1">QTY (DUS) <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                ${thSort(1, 'No', 'w-12 col-no')}
+                ${thSort(2, 'Area', 'border-r border-slate-500 col-area')}
+                ${thSort(3, 'Jenis Item', 'text-blue-300 col-jenis')}
+                ${thSort(4, 'Nama Item', 'col-nama')}
+                ${thSort(5, 'Pjg', 'col-pjg')}
+                ${thSort(6, 'Grade', 'col-grade')}
+                ${thSort(7, 'Dus', 'border-r border-slate-500 col-dus')}
+                ${thSort(8, 'Shading', 'col-shading')}
+                ${thSort(9, 'PO Aktual', 'text-orange-300 bg-slate-900 border-x border-slate-500 col-po')}
+                ${thSort(10, 'Keterangan', 'border-r border-slate-500 col-ket')}
+                ${thSort(11, 'QTY (DUS)', 'text-emerald-300 bg-slate-900 col-qty')}
             </tr>`;
         
         if(dataKSArea.length === 0) { tbody.innerHTML = `<tr><td colspan="12" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
-        let h = '';
-        dataKSArea.forEach((r, i) => {
+        tbody.innerHTML = dataKSArea.map((r, i) => {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
-            h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
+            return `
+                <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks text-xs">
                     <td class="p-3 col-cb"><input type="checkbox" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                     <td class="p-3 font-bold opacity-50 col-no">${i+1}</td>
                     <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.area}</td>
                     <td class="p-3 font-black text-blue-700 col-jenis">${r.jenis}</td>
-                    <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama}</td>
-                    <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg}</td>
-                    <td class="p-3 font-bold text-slate-800 col-grade">${r.grade}</td>
+                    <td class="p-3 font-bold text-left col-nama">${r.nama}</td>
+                    <td class="p-3 font-bold col-pjg">${r.pjg}</td>
+                    <td class="p-3 font-bold col-grade">${r.grade}</td>
                     <td class="p-3 font-bold border-r border-slate-200 col-dus">${r.dus}</td>
                     <td class="p-3 font-bold col-shading">${r.shading}</td>
                     <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-x border-slate-200 col-po">${r.po}</td>
                     <td class="p-3 font-semibold opacity-70 border-r border-slate-200 col-ket">${r.ket}</td>
                     <td class="p-3 font-black text-slate-900 bg-slate-100 col-qty">${r.qty}</td>
                 </tr>`;
-        });
-        tbody.innerHTML = h;
-
-    } else if (modeKS === 'global') {
+        }).join('');
+    } 
+    else if (modeKS === 'global') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
                 <th class="hdr-std w-12 bg-slate-900 text-blue-300 col-open">OPEN</th>
-                <th class="hdr-std w-12 col-no cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(2, this)"><div class="flex items-center justify-center gap-1">No <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std text-blue-300 border-l border-slate-500 col-jenis cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(3, this)"><div class="flex items-center justify-center gap-1">Jenis Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-nama cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(4, this)"><div class="flex items-center justify-center gap-1">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-pjg cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(5, this)"><div class="flex items-center justify-center gap-1">Pjg <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-grade cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(6, this)"><div class="flex items-center justify-center gap-1">Grade <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std border-r border-slate-500 col-dus cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(7, this)"><div class="flex items-center justify-center gap-1">Dus <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-shading cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(8, this)"><div class="flex items-center justify-center gap-1">Shading <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std text-orange-300 bg-slate-900 border-x border-slate-500 w-48 col-po cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(9, this)"><div class="flex items-center justify-center gap-1">PO Aktual <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-ket border-r border-slate-500 cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(10, this)"><div class="flex items-center justify-center gap-1">Keterangan <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std text-emerald-300 bg-slate-900 col-qty cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(11, this)"><div class="flex items-center justify-center gap-1">TOTAL (DUS) <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                ${thSort(2, 'No', 'w-12 col-no')}
+                ${thSort(3, 'Jenis Item', 'text-blue-300 border-l border-slate-500 col-jenis')}
+                ${thSort(4, 'Nama Item', 'col-nama')}
+                ${thSort(5, 'Pjg', 'col-pjg')}
+                ${thSort(6, 'Grade', 'col-grade')}
+                ${thSort(7, 'Dus', 'border-r border-slate-500 col-dus')}
+                ${thSort(8, 'Shading', 'col-shading')}
+                ${thSort(9, 'PO Aktual', 'text-orange-300 bg-slate-900 border-x border-slate-500 w-48 col-po')}
+                ${thSort(10, 'Keterangan', 'border-r border-slate-500 col-ket')}
+                ${thSort(11, 'TOTAL (DUS)', 'text-emerald-300 bg-slate-900 col-qty')}
             </tr>`;
 
         if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr><td colspan="12" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
-        let h = '';
-        dataKSGlobal.forEach((r, i) => {
-            h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
-                    <td class="p-3 col-cb"><input type="checkbox" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-                    <td class="p-2 col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white rounded shadow-sm transition flex mx-auto items-center justify-center"><i data-lucide="box" class="w-4 h-4"></i></button></td>
-                    <td class="p-3 font-bold opacity-50 col-no">${i+1}</td>
-                    <td class="p-3 font-black text-blue-700 border-l border-slate-200 col-jenis">${r.jenis}</td>
-                    <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama}</td>
-                    <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg}</td>
-                    <td class="p-3 font-bold text-slate-800 col-grade">${r.grade}</td>
-                    <td class="p-3 font-bold text-slate-800 border-r border-slate-200 col-dus">${r.dus}</td>
-                    <td class="p-3 font-bold text-slate-600 col-shading">${r.shading}</td>
-                    <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-x border-slate-200 col-po">${r.po}</td>
-                    <td class="p-3 font-semibold opacity-70 border-r border-slate-200 col-ket">${r.ket}</td>
-                    <td class="p-3 font-black text-slate-900 bg-slate-100 col-qty">${r.qty}</td>
-                </tr>`;
-        });
-        tbody.innerHTML = h;
+        tbody.innerHTML = dataKSGlobal.map((r, i) => `
+            <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks text-xs">
+                <td class="p-3 col-cb"><input type="checkbox" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                <td class="p-2 col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white rounded shadow-sm transition flex mx-auto items-center justify-center"><i data-lucide="box" class="w-4 h-4"></i></button></td>
+                <td class="p-3 font-bold opacity-50 col-no">${i+1}</td>
+                <td class="p-3 font-black text-blue-700 border-l border-slate-200 col-jenis">${r.jenis}</td>
+                <td class="p-3 font-bold text-left col-nama">${r.nama}</td>
+                <td class="p-3 font-bold col-pjg">${r.pjg}</td>
+                <td class="p-3 font-bold col-grade">${r.grade}</td>
+                <td class="p-3 font-bold border-r border-slate-200 col-dus">${r.dus}</td>
+                <td class="p-3 font-bold col-shading">${r.shading}</td>
+                <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-x border-slate-200 col-po">${r.po}</td>
+                <td class="p-3 font-semibold opacity-70 border-r border-slate-200 col-ket">${r.ket}</td>
+                <td class="p-3 font-black text-slate-900 bg-slate-100 col-qty">${r.qty}</td>
+            </tr>
+        `).join('');
     } 
     else if (modeKS === 'lembaran') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
-                <th class="hdr-std w-12 col-no cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(1, this)"><div class="flex items-center justify-center gap-1">No <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std border-r border-slate-500 col-area cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(2, this)"><div class="flex items-center justify-center gap-1">Kode Master <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-nama cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(3, this)"><div class="flex items-center justify-center gap-1">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-pjg cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(4, this)"><div class="flex items-center justify-center gap-1">Pjg <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-grade cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(5, this)"><div class="flex items-center justify-center gap-1">Grade <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-dus cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(6, this)"><div class="flex items-center justify-center gap-1">Dus <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std border-r border-slate-500 col-shading cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(7, this)"><div class="flex items-center justify-center gap-1">Shading <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                <th class="hdr-std col-ket cursor-pointer hover:bg-slate-700 transition" onclick="sortTable(8, this)"><div class="flex items-center justify-center gap-1">Keterangan <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                ${thSort(1, 'No', 'w-12 col-no')}
+                ${thSort(2, 'Kode Master', 'border-r border-slate-500 col-area')}
+                ${thSort(3, 'Nama Item', 'col-nama')}
+                ${thSort(4, 'Pjg', 'col-pjg')}
+                ${thSort(5, 'Grade', 'col-grade')}
+                ${thSort(6, 'Dus', 'col-dus')}
+                ${thSort(7, 'Shading', 'border-r border-slate-500 col-shading')}
+                ${thSort(8, 'Keterangan', 'col-ket')}
             </tr>`;
         
         if(stokLembaranRaw.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="p-6 font-bold text-slate-400">Tidak ada data stok lembaran.</td></tr>`; return; }
 
-        let h = '';
-        stokLembaranRaw.forEach((r, i) => {
-            h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
-                    <td class="p-3 col-cb"><input type="checkbox" value="${r.id}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-                    <td class="p-3 font-bold opacity-50 col-no">${i+1}</td>
-                    <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.kode_master || '-'}</td>
-                    <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama_item || '-'}</td>
-                    <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg || '-'}</td>
-                    <td class="p-3 font-bold text-slate-800 col-grade">${r.grade || '-'}</td>
-                    <td class="p-3 font-bold text-slate-800 col-dus">${r.dus || '-'}</td>
-                    <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${r.shading || '-'}</td>
-                    <td class="p-3 font-semibold opacity-70 col-ket">${r.keterangan || '-'}</td>
-                </tr>`;
-        });
-        tbody.innerHTML = h;
+        tbody.innerHTML = stokLembaranRaw.map((r, i) => `
+            <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks text-xs">
+                <td class="p-3 col-cb"><input type="checkbox" value="${r.id}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                <td class="p-3 font-bold opacity-50 col-no">${i+1}</td>
+                <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.kode_master || '-'}</td>
+                <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama_item || '-'}</td>
+                <td class="p-3 font-bold col-pjg">${r.pjg || '-'}</td>
+                <td class="p-3 font-bold col-grade">${r.grade || '-'}</td>
+                <td class="p-3 font-bold col-dus">${r.dus || '-'}</td>
+                <td class="p-3 font-bold border-r border-slate-200 col-shading">${r.shading || '-'}</td>
+                <td class="p-3 font-semibold opacity-70 col-ket">${r.keterangan || '-'}</td>
+            </tr>
+        `).join('');
     }
 
     lucide.createIcons(); 
@@ -428,6 +434,9 @@ function renderTabel() {
 
 function toggleCentangUtama(checked) { document.querySelectorAll('.cb-main').forEach(cb => cb.checked = checked); }
 
+// ========================================================
+// 6. EVENT HANDLERS & MODAL MANAGEMENT
+// ========================================================
 function bukaBreakdown(gKey) {
     const item = dataKSGlobal.find(g => g.gKey === gKey);
     if(!item) return;
@@ -436,11 +445,10 @@ function bukaBreakdown(gKey) {
     currentBreakdownData = item.areas;
 
     const tbody = document.getElementById('tbody-breakdown');
-    let h = '';
-    item.areas.forEach((a, i) => {
+    tbody.innerHTML = item.areas.map((a, i) => {
         const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
-        h += `
-            <tr class="border-b border-slate-200 hover:bg-slate-50 transition bd-row">
+        return `
+            <tr class="border-b border-slate-200 hover:bg-slate-50 transition bd-row text-xs">
                 <td class="p-3"><input type="checkbox" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po}" data-ket="${a.ket}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                 <td class="p-3 font-bold opacity-50">${i+1}</td>
                 <td class="p-3 font-black text-emerald-700 bg-emerald-50">${a.area}</td>
@@ -448,8 +456,7 @@ function bukaBreakdown(gKey) {
                 <td class="p-3 font-semibold opacity-70 border-r border-slate-200">${a.ket}</td>
                 <td class="p-3 font-black text-slate-900 bg-slate-100">${a.qty}</td>
             </tr>`;
-    });
-    tbody.innerHTML = h;
+    }).join('');
 
     document.getElementById('modal-breakdown').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
@@ -470,7 +477,8 @@ function siapkanGantiPO(context) {
 
     selectedForPO = []; let totalDus = 0;
     checkboxes.forEach(cb => {
-        const qrs = JSON.parse(cb.dataset.qrs);
+        // REFAKTOR: Menggunakan safeJSONParse untuk mengamankan data
+        const qrs = safeJSONParse(cb.dataset.qrs, []);
         selectedForPO.push({ 
             id_sku: cb.dataset.idsku, qrcodes: qrs, jenis: cb.dataset.jenis, nama: cb.dataset.nama,
             pjg: cb.dataset.pjg, grade: cb.dataset.grade, dus: cb.dataset.dus, shading: cb.dataset.shading,
@@ -590,4 +598,3 @@ function downloadXLS() {
     });
     const link = document.createElement("a"); link.setAttribute("href", encodeURI(csvContent)); link.setAttribute("download", `KartuStok_${modeKS.toUpperCase()}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
 }
-    </script>
