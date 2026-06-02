@@ -14,7 +14,6 @@
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
     </style>
-    <style id="dynamic-col-styles"></style>
 </head>
 <body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-20">
     <div class="w-full px-2 sm:px-4 pt-4 relative">
@@ -25,39 +24,18 @@
             <button onclick="gantiModeRiwayat('hold')" id="tab-r-hold" class="px-5 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs"><i data-lucide="pause-circle" class="w-4 h-4"></i> TABEL HOLD</button>
         </div>
 
-        <div class="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm mb-3">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-    <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
-        <!-- TOMBOL AKSI UTAMA (BIRU) -->
-        <button onclick="toggleSidebarFilter()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-slate-950"><i data-lucide="filter" class="w-4 h-4"></i> FILTER</button>
-        
-        <!-- TOMBOL NETRAL (PUTIH) -->
-        <div class="relative">
-            <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="p-2.5 sm:px-4 sm:py-2.5 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border border-slate-300">
-                <i data-lucide="eye-off" class="w-4 h-4"></i> KOLOM</button>
-            <!-- (Dropdown kolom tetap sama seperti aslinya...) -->
-            <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
-                <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
-                    <span class="text-[11px] font-black text-slate-500 uppercase">Sembunyikan</span>
-                    <button onclick="resetKolom()" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold hover:bg-blue-200">RESET</button>
-                </div>
-                <div class="flex flex-col gap-2 max-h-64 overflow-y-auto" id="list-kolom-toggles"></div>
+        <div class="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
+            <div class="flex gap-2 overflow-x-auto pt-1 pb-4 px-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none" style="-webkit-overflow-scrolling: touch;">
+                <button onclick="toggleSidebarFilter()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-slate-800 text-white border-b-2 border-slate-950 active:scale-95 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
+                <button onclick="salinDataTabel()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-blue-600 hover:bg-blue-700 text-white border-b-2 border-blue-800 active:scale-95 transition"><i data-lucide="copy" class="w-4 h-4"></i> Salin</button>
+                <button onclick="bukaModalGantiArea()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-orange-600 hover:bg-orange-700 text-white border-b-2 border-orange-800 active:scale-95 transition"><i data-lucide="map-pin" class="w-4 h-4"></i> Ganti Area</button>
+                
+                <div class="w-px h-8 bg-slate-300 mx-1"></div> <button onclick="hapusBarisRiwayat()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-red-600 hover:bg-red-700 text-white border-b-2 border-red-800 active:scale-95 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Baris</button>
             </div>
-        </div>
-
-        <!-- TOMBOL AKSI UTAMA (BIRU) -->
-        <button onclick="bukaModalGantiArea()" class="p-2.5 sm:px-4 sm:py-2.5 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-orange-600 hover:bg-orange-700 text-white border-b-2 border-orange-800">
-    <i data-lucide="map-pin" class="w-4 h-4"></i> GANTI AREA</button>
-        
-        <!-- TOMBOL INFO/OPSIONAL (SOFT BIRU) -->
-        <button onclick="salinDataTabel()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-blue-800"><i data-lucide="copy" class="w-4 h-4"></i> SALIN</button>
-    </div>
-    
-    <!-- TOMBOL BAHAYA PERMANEN (MERAH SOLID) -->
-    <button onclick="hapusBarisRiwayat()" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap ml-auto bg-red-600 hover:bg-red-700 text-white border-b-2 border-red-800">
-        <i data-lucide="trash-2" class="w-4 h-4"></i> <span class="hidden sm:inline">HAPUS BARIS</span>
-    </button>
-</div>
+            
+            <div class="text-[9px] text-slate-400 text-center font-black uppercase tracking-wider -mt-2.5 mb-1 pointer-events-none flex items-center justify-center gap-1 animate-pulse">
+                <i data-lucide="arrow-left-right" class="w-3 h-3"></i> Geser menu aksi ke kanan-kiri
+            </div>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative mb-4">
@@ -115,26 +93,14 @@
         </div>
     </div>
 
-    <div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-30"></div>
+    <div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="global.js"></script>
     <script>
         let modeRiwayat = 'qr'; 
         let logLangsirRaw = []; let holdLangsirRaw = [];
-        let kamusData = []; let areaData = []; let hiddenCols = []; 
-
-        const colDefinitions = [
-            { id: 'col-cb', label: 'Checkbox', default: true }, { id: 'col-no', label: 'Nomor Urut', default: true },
-            { id: 'col-waktu', label: 'Waktu Masuk', default: true }, { id: 'col-troli', label: 'Troli (Hold)', default: true },
-            { id: 'col-area', label: 'Area', default: true }, { id: 'col-qr', label: 'QRCode', default: true },
-            { id: 'col-tgl', label: 'Tgl Produksi', default: true }, { id: 'col-mesin', label: 'Mesin', default: true },
-            { id: 'col-shift', label: 'Shift', default: true }, { id: 'col-jenis', label: 'Jenis Item', default: true },
-            { id: 'col-nama', label: 'Nama Item', default: true }, { id: 'col-pjg', label: 'Pjg', default: true },
-            { id: 'col-grade', label: 'Grade', default: true }, { id: 'col-dus', label: 'Dus', default: true },
-            { id: 'col-shading', label: 'Shading', default: true }, { id: 'col-po', label: 'PO Awal', default: true },
-            { id: 'col-ket', label: 'Keterangan', default: true }, { id: 'col-pic', label: 'User / PIC', default: true },
-            { id: 'col-qty', label: 'QTY Total (Agregasi)', default: true }
-        ];
+        let kamusData = []; let areaData = []; 
+        let sortState = {}; // Untuk menyimpan status A-Z / Z-A tabel
 
         document.addEventListener('DOMContentLoaded', () => {
             initModernLayout({ id: 'riwayat_langsir', title: 'RIWAYAT LANGSIR', url: 'riwayat_langsir.html' });
@@ -147,35 +113,45 @@
                     selArea.innerHTML = '<option value="">-- PILIH AREA --</option>';
                     areaData.forEach(a => selArea.innerHTML += `<option value="${a}">${a}</option>`);
                 }
-                buatDropdownKolom();
                 await ambilSemuaData();
             }, 200);
         });
 
-        function buatDropdownKolom() {
-            const container = document.getElementById('list-kolom-toggles'); let html = '';
-            colDefinitions.forEach(col => {
-                html += `<label class="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-slate-50 rounded">
-                            <input type="checkbox" checked onchange="toggleKolom('${col.id}', this.checked)" class="w-4 h-4 cursor-pointer text-blue-600 rounded border-slate-300 focus:ring-blue-500">
-                            <span class="text-xs font-bold text-slate-700">${col.label}</span>
-                        </label>`;
+        // REVISI: Fungsi Sortir Tabel
+        function sortTable(colIndex, headerEl) {
+            const tbody = document.getElementById('tbody-riwayat');
+            const rows = Array.from(tbody.querySelectorAll('tr.r-row'));
+            
+            let isAsc = sortState[colIndex] !== 'asc';
+            sortState[colIndex] = isAsc ? 'asc' : 'desc';
+            
+            rows.sort((a, b) => {
+                let valA = a.cells[colIndex].innerText.trim();
+                let valB = b.cells[colIndex].innerText.trim();
+                
+                let numA = parseFloat(valA);
+                let numB = parseFloat(valB);
+                
+                if(!isNaN(numA) && !isNaN(numB)) {
+                    return isAsc ? numA - numB : numB - numA;
+                } else {
+                    return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                }
             });
-            container.innerHTML = html;
-        }
-
-        function toggleKolom(colId, isVisible) {
-            if(isVisible) { hiddenCols = hiddenCols.filter(id => id !== colId); } 
-            else { if(!hiddenCols.includes(colId)) hiddenCols.push(colId); }
-            terapkanStyleKolom();
-        }
-
-        function resetKolom() {
-            hiddenCols = []; document.querySelectorAll('#list-kolom-toggles input[type="checkbox"]').forEach(cb => cb.checked = true); terapkanStyleKolom();
-        }
-
-        function terapkanStyleKolom() {
-            const cssString = hiddenCols.map(id => `.${id} { display: none !important; }`).join('\n');
-            document.getElementById('dynamic-col-styles').innerHTML = cssString;
+            
+            rows.forEach(row => tbody.appendChild(row));
+            
+            document.querySelectorAll('.sort-icon').forEach(icon => {
+                icon.setAttribute('data-lucide', 'arrow-up-down'); 
+                icon.classList.add('opacity-50');
+            });
+            
+            const icon = headerEl.querySelector('.sort-icon');
+            if(icon) {
+                icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a');
+                icon.classList.remove('opacity-50');
+                lucide.createIcons();
+            }
         }
 
         async function ambilSemuaData() {
@@ -243,39 +219,50 @@
             try {
                 const thead = document.getElementById('thead-riwayat');
                 const tbody = document.getElementById('tbody-riwayat');
+                sortState = {}; // Reset sort state when rendering table
 
                 if(modeRiwayat === 'qr' || modeRiwayat === 'hold') {
                     const isHold = modeRiwayat === 'hold';
                     const dataset = isHold ? holdLangsirRaw : logLangsirRaw;
                     
+                    // REVISI: Header Tabel dengan Ikon Sort (arrow-up-down)
                     thead.innerHTML = `
                         <tr>
                             <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded"></th>
-                            <th class="hdr-std w-12 col-no">No</th>
-                            <th class="hdr-std border-r border-slate-500 col-waktu">Waktu Masuk</th>
-                            ${isHold ? '<th class="hdr-std col-troli text-amber-300">Troli</th>' : '<th class="hdr-std col-troli hidden">Troli</th>'}
-                            <th class="hdr-std border-r border-slate-500 col-area">Area</th>
-                            <th class="hdr-std border-r border-slate-500 text-center col-qr">QRCode</th>
-                            <th class="hdr-std col-tgl">Tgl Produksi</th>
-                            <th class="hdr-std col-mesin">Mesin</th>
-                            <th class="hdr-std border-r border-slate-500 col-shift">Shift</th>
-                            <th class="hdr-std text-blue-300 col-jenis">Jenis Item</th>
-                            <th class="hdr-std text-left pl-4 col-nama">Nama Item</th>
-                            <th class="hdr-std col-pjg">Pjg</th>
-                            <th class="hdr-std col-grade">Grade</th>
-                            <th class="hdr-std border-r border-slate-500 col-dus">Dus</th>
-                            <th class="hdr-std col-shading">Shading</th>
-                            <th class="hdr-std border-r border-slate-500 text-orange-400 col-po">PO Awal</th>
-                            ${isHold ? '<th class="hdr-std col-ket text-amber-300">Keterangan</th>' : '<th class="hdr-std col-ket hidden">Keterangan</th>'}
-                            <th class="hdr-std bg-slate-900 text-slate-300 col-pic">User / PIC</th>
+                            <th class="hdr-std w-12 col-no cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(1, this)"><div class="flex items-center justify-center gap-1">No <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std border-r border-slate-500 col-waktu cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(2, this)"><div class="flex items-center justify-center gap-1">Waktu Masuk <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            ${isHold ? `<th class="hdr-std col-troli text-amber-300 cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(3, this)"><div class="flex items-center justify-center gap-1">Troli <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>` : `<th class="hdr-std col-troli hidden">Troli</th>`}
+                            <th class="hdr-std border-r border-slate-500 col-area cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(4, this)"><div class="flex items-center justify-center gap-1">Area <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std border-r border-slate-500 text-center col-qr cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(5, this)"><div class="flex items-center justify-center gap-1">QRCode <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-tgl cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(6, this)"><div class="flex items-center justify-center gap-1">Tgl Produksi <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-mesin cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(7, this)"><div class="flex items-center justify-center gap-1">Mesin <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std border-r border-slate-500 col-shift cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(8, this)"><div class="flex items-center justify-center gap-1">Shift <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std text-blue-300 col-jenis cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(9, this)"><div class="flex items-center justify-center gap-1">Jenis Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std text-left pl-4 col-nama cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(10, this)"><div class="flex items-center gap-1">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-pjg cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(11, this)"><div class="flex items-center justify-center gap-1">Pjg <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-grade cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(12, this)"><div class="flex items-center justify-center gap-1">Grade <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std border-r border-slate-500 col-dus cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(13, this)"><div class="flex items-center justify-center gap-1">Dus <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-shading cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(14, this)"><div class="flex items-center justify-center gap-1">Shading <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std border-r border-slate-500 text-orange-400 col-po cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(15, this)"><div class="flex items-center justify-center gap-1">PO Awal <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            ${isHold ? `<th class="hdr-std col-ket text-amber-300 cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(16, this)"><div class="flex items-center justify-center gap-1">Keterangan <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>` : `<th class="hdr-std col-ket hidden">Keterangan</th>`}
+                            <th class="hdr-std bg-slate-900 text-slate-300 col-pic cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(17, this)"><div class="flex items-center justify-center gap-1">User / PIC <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                         </tr>`;
                     
-                    if(dataset.length === 0) { tbody.innerHTML = `<tr><td colspan="19" class="p-6 text-slate-400 font-bold">Belum ada data ${isHold ? 'Hold' : 'Riwayat'}.</td></tr>`; return; }
+                    if(dataset.length === 0) { tbody.innerHTML = `<tr><td colspan="18" class="p-6 text-slate-400 font-bold">Belum ada data ${isHold ? 'Hold' : 'Riwayat'}.</td></tr>`; return; }
                     
                     let h = '';
                     dataset.forEach((r, i) => {
                         const trans = translateBarcode(r.qrcode);
-                        const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+                        
+                        // REVISI: Format Tanggal DD/MM/YY HH:mm
+                        const dt = new Date(r.created_at);
+                        const dd = String(dt.getDate()).padStart(2, '0');
+                        const mm = String(dt.getMonth() + 1).padStart(2, '0');
+                        const yy = String(dt.getFullYear()).slice(-2);
+                        const hh = String(dt.getHours()).padStart(2, '0');
+                        const min = String(dt.getMinutes()).padStart(2, '0');
+                        const tgl = `${dd}/${mm}/${yy}, ${hh}:${min}`;
+
                         h += `
                             <tr class="border-b border-slate-200 hover:bg-slate-100 transition r-row">
                                 <td class="p-3 col-cb"><input type="checkbox" value="${r.qrcode}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
@@ -304,14 +291,14 @@
                     thead.innerHTML = `
                         <tr>
                             <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded"></th>
-                            <th class="hdr-std w-12 col-no">No</th>
-                            <th class="hdr-std border-r border-slate-500 col-area">Area</th>
-                            <th class="hdr-std text-blue-300 col-jenis">Jenis Item</th>
-                            <th class="hdr-std text-left pl-4 col-nama">Nama Item</th>
-                            <th class="hdr-std col-pjg">Panjang</th>
-                            <th class="hdr-std col-grade">Grade</th>
-                            <th class="hdr-std border-r border-slate-500 col-po">PO Bawaan</th>
-                            <th class="hdr-std text-emerald-300 bg-slate-900 col-qty">QTY TOTAL (DUS)</th>
+                            <th class="hdr-std w-12 col-no cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(1, this)"><div class="flex items-center justify-center gap-1">No <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std border-r border-slate-500 col-area cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(2, this)"><div class="flex items-center justify-center gap-1">Area <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std text-blue-300 col-jenis cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(3, this)"><div class="flex items-center justify-center gap-1">Jenis Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std text-left pl-4 col-nama cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(4, this)"><div class="flex items-center gap-1">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-pjg cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(5, this)"><div class="flex items-center justify-center gap-1">Panjang <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-grade cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(6, this)"><div class="flex items-center justify-center gap-1">Grade <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std border-r border-slate-500 col-po cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(7, this)"><div class="flex items-center justify-center gap-1">PO Bawaan <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std text-emerald-300 bg-slate-900 col-qty cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(8, this)"><div class="flex items-center justify-center gap-1">QTY TOTAL (DUS) <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                         </tr>`;
 
                     let groups = {};
@@ -363,7 +350,7 @@
         }
 
         function toggleSidebarFilter() { document.getElementById('sidebar-filter').classList.toggle('translate-x-full'); document.getElementById('overlay-klik-luar').classList.toggle('hidden'); }
-        function tutupPopups() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); document.getElementById('dropdown-kolom').classList.add('hidden'); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
+        function tutupPopups() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
 
         function resetFilter() {
             const inputs = ['f-waktu','f-troli','f-area','f-qr','f-tgl','f-mesin','f-shift','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket','f-pic'];
