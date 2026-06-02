@@ -170,6 +170,7 @@ function toggleFilter() {
         overlay.classList.add('hidden');
     }
 }
+
 function saringTabel() {
     const fStatus = document.getElementById('f-status').value.toLowerCase();
     const fNama = document.getElementById('f-nama').value.toLowerCase();
@@ -183,11 +184,13 @@ function saringTabel() {
     });
     renderTablePic(filtered);
 }
+
 function resetFilterWithoutRender() {
     document.getElementById('f-status').value = '';
     document.getElementById('f-nama').value = '';
     document.getElementById('f-qr').value = '';
 }
+
 function resetFilter() {
     resetFilterWithoutRender();
     renderTablePic(dataPic);
@@ -264,7 +267,6 @@ function bukaModalSimpan() {
     const keterangan = document.getElementById('input-keterangan').value.trim();
 
     if(!aktifitas) return alert("GAGAL! Anda wajib memilih Jenis Aktifitas terlebih dahulu.");
-    // CEGAT JIKA KETERANGAN KOSONG
     if(!keterangan) return alert("GAGAL! Anda wajib mengisi Keterangan / Alasan konversi.");
     
     if(dataPic.length === 0) return alert("GAGAL! Belum ada item fisik yang di-scan.");
@@ -299,8 +301,6 @@ async function eksekusiSimpanFinal() {
 
     const rawAktifitas = document.getElementById('select-aktifitas').value;
     const aktifitas = "OUT - " + rawAktifitas; 
-    
-    // VARIABEL INI YANG KEMARIN HILANG, SEKARANG SUDAH AMAN:
     const keterangan = document.getElementById('input-keterangan').value.trim();
 
     const btn = document.getElementById('btn-eksekusi-final');
@@ -351,13 +351,13 @@ async function eksekusiSimpanFinal() {
                 qrList.push(d.qrcode);
                 stockCapacity[baseSpec] -= 1; 
 
-                // Ket di tabel stok murni pakai strip (-) karena input keterangan baris sudah dihilangkan
+                // NOTE: Disuntikkan jenis_item agar map RPC aktual/global tidak gagal membaca tipe item.
                 let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${poTarget}_-`;
-                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, po_aktual: poTarget, ket: '-', qty: 0 };
+                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: d.jenisItem, nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, po_aktual: poTarget, ket: '-', qty: 0 };
                 mapAktual[keyAkt].qty++;
 
                 let keyGlb = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${poTarget}_-`;
-                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, po_bawaan: poTarget, ket: '-', qty: 0 };
+                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: d.jenisItem, nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, po_bawaan: poTarget, ket: '-', qty: 0 };
                 mapGlobal[keyGlb].qty++;
             } else { unmatchedCount++; }
         } else { unmatchedCount++; }
@@ -369,6 +369,7 @@ async function eksekusiSimpanFinal() {
     }
 
     try {
+        // A. Proses Mutasi (Swap PO Silang)
         for (let row of matchedRows) {
             let baseSpec = row.baseSpec;
             let poBawaan = row.poAsliDB;
@@ -392,10 +393,12 @@ async function eksekusiSimpanFinal() {
             }
         }
 
+        // B. Eksekusi RPC Outbound
         const payloadData = { qrs: qrList, aktuals: Object.values(mapAktual), globals: Object.values(mapGlobal) };
         const { error: rpcError } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
         if (rpcError) throw rpcError;
 
+        // C. Hitung Generate Kode Konversi
         const { count, error: errCount } = await db.from('laporan_konversi').select('*', { count: 'exact', head: true });
         if(errCount) throw errCount;
 
@@ -403,6 +406,36 @@ async function eksekusiSimpanFinal() {
         let kodeKonversi = `${prefix}-${String(nextNum).padStart(5, '0')}`;
         let allQRs = qrList.join(', ');
 
+        // D. INSERT KE TABEL BARU (stok_konversi)
+        let arrStokKonversi = [];
+        matchedRows.forEach(d => {
+            arrStokKonversi.push({
+                kode_konversi: kodeKonversi,
+                aktifitas: aktifitas,
+                qrcode: d.qrcode,
+                tgl_produksi: d.tglProduksi || '-',
+                mesin: d.mesin || '-',
+                shift: d.shift || '-',
+                jenis_item: d.jenisItem || '-',
+                nama_item: d.namaItem || '-',
+                pjg: d.panjang || '-',
+                grade: d.grade || '-',
+                dus: d.dus || '-',
+                shading: d.shading || '-',
+                po_bawaan: d.poAsliDB || '-', 
+                po_aktual: poTarget, // PO yang dipilih di modal
+                keterangan: keterangan || '-',
+                pic: currentUser.username,
+                area: d.area || '-'
+            });
+        });
+
+        if(arrStokKonversi.length > 0) {
+            const { error: errSk } = await db.from('stok_konversi').insert(arrStokKonversi);
+            if(errSk) throw errSk;
+        }
+
+        // E. INSERT LOG KE LAPORAN_KONVERSI
         const payloadLog = {
             kode_konversi: kodeKonversi,
             aktifitas: aktifitas,
@@ -419,7 +452,7 @@ async function eksekusiSimpanFinal() {
         const { error: errInsert } = await db.from('laporan_konversi').insert([payloadLog]);
         if (errInsert) throw errInsert;
 
-        let msg = `✅ EKSEKUSI KONVERSI OUT BERHASIL!\n\nID Audit: ${kodeKonversi}\nPO Target: ${poTarget}\nBerhasil dipotong dari Kartu Stok: ${qrList.length} Dus.`;
+        let msg = `✅ EKSEKUSI KONVERSI OUT BERHASIL!\n\nID Audit: ${kodeKonversi}\nPO Target: ${poTarget}\nBerhasil dipotong dari Kartu Stok: ${qrList.length} Dus dan dimasukkan ke Stok Konversi.`;
         if (unmatchedCount > 0) msg += `\n\n⚠️ ${unmatchedCount} dus tidak diproses karena jatah PO kurang atau status fisik belum VALID.`;
         alert(msg);
         
