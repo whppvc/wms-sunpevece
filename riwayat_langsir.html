@@ -26,11 +26,16 @@
 
         <div class="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
             <div class="flex gap-2 overflow-x-auto pt-1 pb-4 px-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none" style="-webkit-overflow-scrolling: touch;">
-                <button onclick="toggleSidebarFilter()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-slate-800 text-white border-b-2 border-slate-950 active:scale-95 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
-                <button onclick="salinDataTabel()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-blue-600 hover:bg-blue-700 text-white border-b-2 border-blue-800 active:scale-95 transition"><i data-lucide="copy" class="w-4 h-4"></i> Salin</button>
-                <button onclick="bukaModalGantiArea()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-orange-600 hover:bg-orange-700 text-white border-b-2 border-orange-800 active:scale-95 transition"><i data-lucide="map-pin" class="w-4 h-4"></i> Ganti Area</button>
                 
-                <div class="w-px h-8 bg-slate-300 mx-1"></div> <button onclick="hapusBarisRiwayat()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-red-600 hover:bg-red-700 text-white border-b-2 border-red-800 active:scale-95 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Baris</button>
+                <button onclick="bukaModalGantiArea()" id="btn-ganti-area" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-orange-600 hover:bg-orange-700 text-white border-b-2 border-orange-800 active:scale-95 transition"><i data-lucide="map-pin" class="w-4 h-4"></i> Ganti Area</button>
+                <button onclick="bukaModalSTBJ()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-purple-600 hover:bg-purple-700 text-white border-b-2 border-purple-800 active:scale-95 transition"><i data-lucide="table" class="w-4 h-4"></i> Data STBJ</button>
+                
+                <div class="w-px h-8 bg-slate-300 mx-1"></div> <button onclick="cancelLangsir()" id="btn-cancel-langsir" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-rose-600 hover:bg-rose-700 text-white border-b-2 border-rose-800 active:scale-95 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Cancel Langsir</button>
+                <button onclick="hapusBarisHold()" id="btn-hapus-hold" class="hidden p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-red-600 hover:bg-red-700 text-white border-b-2 border-red-900 active:scale-95 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Permanen</button>
+
+                <div class="w-px h-8 bg-slate-300 mx-1"></div> <button onclick="toggleSidebarFilter()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-slate-800 text-white border-b-2 border-slate-950 active:scale-95 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
+                <button onclick="salinDataTabel()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-blue-600 hover:bg-blue-700 text-white border-b-2 border-blue-800 active:scale-95 transition"><i data-lucide="copy" class="w-4 h-4"></i> Salin</button>
+                
             </div>
             
             <div class="text-[9px] text-slate-400 text-center font-black uppercase tracking-wider -mt-2.5 mb-1 pointer-events-none flex items-center justify-center gap-1 animate-pulse">
@@ -93,6 +98,35 @@
         </div>
     </div>
 
+    <div id="modal-stbj-langsir" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] px-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl border border-slate-200 flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="table" class="w-4 h-4 text-purple-600"></i> DATA HASIL STBJ GUDANG</h3>
+                <button onclick="tutupModalSTBJ()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="p-3 bg-white border-b border-slate-100 flex gap-2">
+                <input type="text" id="f-stbj-modal" oninput="saringTabelModalSTBJ()" class="w-full p-2 text-sm border-2 border-slate-200 rounded-lg focus:border-purple-500 outline-none font-bold" placeholder="Cari QRCode, Troli, Item, PO, dll...">
+            </div>
+            <div class="overflow-y-auto flex-1 hide-scrollbar p-0 bg-slate-50">
+                <table class="w-full border-collapse text-sm whitespace-nowrap bg-white text-center">
+                    <thead class="sticky top-0 shadow-sm z-10">
+                        <tr>
+                            <th class="hdr-std w-10">No</th>
+                            <th class="hdr-std">Waktu</th>
+                            <th class="hdr-std text-amber-300">Troli</th>
+                            <th class="hdr-std border-r border-slate-500">QRCode</th>
+                            <th class="hdr-std text-blue-300">Item</th>
+                            <th class="hdr-std">Pjg</th>
+                            <th class="hdr-std border-r border-slate-500">PO</th>
+                            <th class="hdr-std text-indigo-300">Status Item</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-stbj-modal" class="text-slate-700"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="global.js"></script>
@@ -100,7 +134,10 @@
         let modeRiwayat = 'qr'; 
         let logLangsirRaw = []; let holdLangsirRaw = [];
         let kamusData = []; let areaData = []; 
-        let sortState = {}; // Untuk menyimpan status A-Z / Z-A tabel
+        let sortState = {}; 
+        
+        // Mengambil profil untuk check Role (Hapus Hold)
+        const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'admin'};
 
         document.addEventListener('DOMContentLoaded', () => {
             initModernLayout({ id: 'riwayat_langsir', title: 'RIWAYAT LANGSIR', url: 'riwayat_langsir.html' });
@@ -114,10 +151,10 @@
                     areaData.forEach(a => selArea.innerHTML += `<option value="${a}">${a}</option>`);
                 }
                 await ambilSemuaData();
+                gantiModeRiwayat('qr'); // Memicu role check default
             }, 200);
         });
 
-        // REVISI: Fungsi Sortir Tabel
         function sortTable(colIndex, headerEl) {
             const tbody = document.getElementById('tbody-riwayat');
             const rows = Array.from(tbody.querySelectorAll('tr.r-row'));
@@ -210,6 +247,22 @@
                     else el.className = 'px-5 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs';
                 }
             });
+            
+            // Pengaturan Visibilitas Tombol
+            document.getElementById('btn-ganti-area').classList.toggle('hidden', m !== 'qr');
+            document.getElementById('btn-cancel-langsir').classList.toggle('hidden', m !== 'qr');
+            
+            // Logika Hak Akses Hapus Hold
+            const userRole = (currentUser.role || '').toLowerCase();
+            const canDeleteHold = ['creator', 'admin', 'pic area'].includes(userRole);
+            const btnHapusHold = document.getElementById('btn-hapus-hold');
+            
+            if(m === 'hold' && canDeleteHold) {
+                btnHapusHold.classList.remove('hidden');
+            } else {
+                btnHapusHold.classList.add('hidden');
+            }
+
             renderTabelRiwayat();
         }
 
@@ -219,13 +272,12 @@
             try {
                 const thead = document.getElementById('thead-riwayat');
                 const tbody = document.getElementById('tbody-riwayat');
-                sortState = {}; // Reset sort state when rendering table
+                sortState = {}; 
 
                 if(modeRiwayat === 'qr' || modeRiwayat === 'hold') {
                     const isHold = modeRiwayat === 'hold';
                     const dataset = isHold ? holdLangsirRaw : logLangsirRaw;
                     
-                    // REVISI: Header Tabel dengan Ikon Sort (arrow-up-down)
                     thead.innerHTML = `
                         <tr>
                             <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded"></th>
@@ -238,7 +290,7 @@
                             <th class="hdr-std col-mesin cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(7, this)"><div class="flex items-center justify-center gap-1">Mesin <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std border-r border-slate-500 col-shift cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(8, this)"><div class="flex items-center justify-center gap-1">Shift <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std text-blue-300 col-jenis cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(9, this)"><div class="flex items-center justify-center gap-1">Jenis Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                            <th class="hdr-std !text-center pl-4 col-nama cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(10, this)"><div class="flex items-center gap-1">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std text-left pl-4 col-nama cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(10, this)"><div class="flex items-center gap-1">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std col-pjg cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(11, this)"><div class="flex items-center justify-center gap-1">Pjg <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std col-grade cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(12, this)"><div class="flex items-center justify-center gap-1">Grade <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std border-r border-slate-500 col-dus cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(13, this)"><div class="flex items-center justify-center gap-1">Dus <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
@@ -253,8 +305,6 @@
                     let h = '';
                     dataset.forEach((r, i) => {
                         const trans = translateBarcode(r.qrcode);
-                        
-                        // REVISI: Format Tanggal DD/MM/YY HH:mm
                         const dt = new Date(r.created_at);
                         const dd = String(dt.getDate()).padStart(2, '0');
                         const mm = String(dt.getMonth() + 1).padStart(2, '0');
@@ -264,7 +314,7 @@
                         const tgl = `${dd}/${mm}/${yy}, ${hh}:${min}`;
 
                         h += `
-                            <tr class="border-b border-slate-200 hover:bg-slate-100 transition r-row">
+                            <tr class="border-b border-slate-200 hover:bg-slate-100 transition r-row text-[11px]">
                                 <td class="p-3 col-cb"><input type="checkbox" value="${r.qrcode}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                                 <td class="p-3 font-bold text-slate-400 col-no">${i+1}</td>
                                 <td class="p-3 text-slate-600 border-r border-slate-200 font-semibold col-waktu">${tgl}</td>
@@ -275,55 +325,62 @@
                                 <td class="p-3 font-bold text-slate-600 col-mesin">${trans.mesin}</td>
                                 <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shift">${trans.shift}</td>
                                 <td class="p-3 font-black text-blue-700 col-jenis">${trans.jenis}</td>
-                                <td class="p-3 font-bold text-slate-800 text-center col-nama">${trans.nama}</td>
+                                <td class="p-3 font-bold text-slate-800 text-left col-nama">${trans.nama}</td>
                                 <td class="p-3 font-bold text-slate-600 col-pjg">${trans.pjg}</td>
                                 <td class="p-3 font-bold text-slate-800 col-grade">${trans.grade}</td>
                                 <td class="p-3 font-bold text-slate-800 border-r border-slate-200 col-dus">${trans.dus}</td>
                                 <td class="p-3 font-bold text-slate-600 col-shading">${trans.shading}</td>
                                 <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-r border-slate-200 col-po">${trans.po}</td>
                                 ${isHold ? `<td class="p-3 font-bold text-slate-700 text-left col-ket">${r.keterangan || '-'}</td>` : `<td class="p-3 hidden col-ket">-</td>`}
-                                <td class="p-3 font-bold text-[10px] uppercase text-slate-400 col-pic">${r.pic_input || '-'}</td>
+                                <td class="p-3 font-bold uppercase text-[10px] text-slate-400 col-pic">${r.pic_input || '-'}</td>
                             </tr>`;
                     });
                     tbody.innerHTML = h;
                 } 
                 else if(modeRiwayat === 'agregasi') {
+                    // REVISI: Tambahan Kolom Dus, Shading, dan PIC Input
                     thead.innerHTML = `
                         <tr>
                             <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded"></th>
                             <th class="hdr-std w-12 col-no cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(1, this)"><div class="flex items-center justify-center gap-1">No <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std border-r border-slate-500 col-area cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(2, this)"><div class="flex items-center justify-center gap-1">Area <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std text-blue-300 col-jenis cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(3, this)"><div class="flex items-center justify-center gap-1">Jenis Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                            <th class="hdr-std !text-center pl-4 col-nama cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(4, this)"><div class="flex items-center gap-1">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std text-left pl-4 col-nama cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(4, this)"><div class="flex items-center gap-1">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std col-pjg cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(5, this)"><div class="flex items-center justify-center gap-1">Panjang <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std col-grade cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(6, this)"><div class="flex items-center justify-center gap-1">Grade <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                            <th class="hdr-std border-r border-slate-500 col-po cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(7, this)"><div class="flex items-center justify-center gap-1">PO Bawaan <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                            <th class="hdr-std text-emerald-300 bg-slate-900 col-qty cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(8, this)"><div class="flex items-center justify-center gap-1">QTY TOTAL (DUS) <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-dus cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(7, this)"><div class="flex items-center justify-center gap-1">Dus <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-shading cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(8, this)"><div class="flex items-center justify-center gap-1">Shading <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std border-r border-slate-500 col-po cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(9, this)"><div class="flex items-center justify-center gap-1">PO Bawaan <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-pic cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(10, this)"><div class="flex items-center justify-center gap-1">PIC Input <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std text-emerald-300 bg-slate-900 col-qty cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(11, this)"><div class="flex items-center justify-center gap-1">QTY TOTAL (DUS) <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                         </tr>`;
 
                     let groups = {};
                     logLangsirRaw.forEach(r => {
                         const trans = translateBarcode(r.qrcode);
-                        let key = `${r.area}_${trans.jenis}_${trans.nama}_${trans.pjg}_${trans.grade}_${trans.po}`;
-                        if(!groups[key]) groups[key] = { area: r.area, jenis: trans.jenis, nama: trans.nama, pjg: trans.pjg, grade: trans.grade, po: trans.po, qty: 0 };
+                        let key = `${r.area}_${trans.jenis}_${trans.nama}_${trans.pjg}_${trans.grade}_${trans.dus}_${trans.shading}_${trans.po}_${r.pic_input}`;
+                        if(!groups[key]) groups[key] = { area: r.area, jenis: trans.jenis, nama: trans.nama, pjg: trans.pjg, grade: trans.grade, dus: trans.dus, shading: trans.shading, po: trans.po, pic: r.pic_input, qty: 0 };
                         groups[key].qty++;
                     });
 
                     let arr = Object.values(groups);
-                    if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="9" class="p-6 text-slate-400 font-bold">Kosong.</td></tr>'; return; }
+                    if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="12" class="p-6 text-slate-400 font-bold">Kosong.</td></tr>'; return; }
 
                     let h = '';
                     arr.forEach((r, i) => {
                         h += `
-                            <tr class="border-b border-slate-200 hover:bg-slate-50 transition r-row">
+                            <tr class="border-b border-slate-200 hover:bg-slate-50 transition r-row text-[11px]">
                                 <td class="p-3 col-cb"><input type="checkbox" value="agg_${i}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                                 <td class="p-3 font-bold text-slate-400 col-no">${i+1}</td>
                                 <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.area}</td>
                                 <td class="p-3 font-black text-blue-700 col-jenis">${r.jenis}</td>
-                                <td class="p-3 font-bold text-slate-800 text-center col-nama">${r.nama}</td>
+                                <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama}</td>
                                 <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg}</td>
                                 <td class="p-3 font-bold text-slate-800 col-grade">${r.grade}</td>
+                                <td class="p-3 font-bold text-slate-800 col-dus">${r.dus}</td>
+                                <td class="p-3 font-bold text-slate-600 col-shading">${r.shading}</td>
                                 <td class="p-3 font-black text-orange-600 bg-orange-50/40 border-r border-slate-200 col-po">${r.po}</td>
+                                <td class="p-3 font-bold uppercase text-[10px] text-slate-500 col-pic">${r.pic || '-'}</td>
                                 <td class="p-3 font-black text-xl text-slate-900 bg-slate-100 col-qty">${r.qty}</td>
                             </tr>`;
                     });
@@ -333,24 +390,89 @@
             } catch(err) { console.error("Gagal Render Tabel:", err); }
         }
 
-        async function hapusBarisRiwayat() {
-            if(modeRiwayat === 'agregasi') return alert("Tindakan Hapus tidak dapat dilakukan pada mode Rangkuman.");
-            const checked = document.querySelectorAll('.cb-row:checked');
-            if(checked.length === 0) return alert("Pilih baris yang ingin dihapus terlebih dahulu!");
-            if(!confirm(`Apakah Anda yakin ingin MENGHAPUS PERMANEN ${checked.length} data QRCode ini dari sistem?`)) return;
+        // REVISI: Fungsi CANCEL LANGSIR (Rollback ke Gudang dan Lempar ke Hold)
+        async function cancelLangsir() {
+            const checkedBoxes = document.querySelectorAll('.cb-row:checked');
+            if(checkedBoxes.length === 0) return alert("Pilih minimal 1 baris yang ingin di-cancel Langsirnya!");
+            
+            if(!confirm(`Apakah Anda yakin ingin MEMBATALKAN LANGSIR untuk ${checkedBoxes.length} kardus ini?\nSistem akan memotong Kartu Stok Aktual & memindahkan fisik kembali ke Tabel Hold.`)) return;
 
-            const qrsToDel = Array.from(checked).map(cb => cb.value);
-            const tableTarget = modeRiwayat === 'hold' ? 'hold_langsir' : 'stok_qr';
+            const btn = document.getElementById('btn-cancel-langsir');
+            const ori = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> PROSES...';
+            btn.disabled = true;
+
+            let arrFisik = [];
+            let mapAktual = {};
+            let mapGlobal = {};
+            let payloadHold = [];
+
+            checkedBoxes.forEach(cb => {
+                const qr = cb.value;
+                const r = logLangsirRaw.find(x => x.qrcode === qr);
+                if(r) {
+                    const trans = translateBarcode(qr);
+                    
+                    // Siapkan Data Potong Stok (Negasi dari Langsir/Masuk)
+                    let keyAkt = `${trans.nama}_${trans.pjg}_${trans.grade}_${trans.dus}_${trans.shading}_${r.area}_${trans.po}_-`;
+                    if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: trans.jenis, nama_item: trans.nama, pjg: trans.pjg, grade: trans.grade, dus: trans.dus, shading: trans.shading, area: r.area, po_aktual: trans.po, ket: '-', qty: 0 };
+                    mapAktual[keyAkt].qty++;
+
+                    let keyGlb = `${trans.nama}_${trans.pjg}_${trans.grade}_${trans.dus}_${trans.shading}_${trans.po}_-`;
+                    if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: trans.jenis, nama_item: trans.nama, pjg: trans.pjg, grade: trans.grade, dus: trans.dus, shading: trans.shading, po_bawaan: trans.po, ket: '-', qty: 0 };
+                    mapGlobal[keyGlb].qty++;
+
+                    arrFisik.push(qr);
+                    
+                    payloadHold.push({
+                        qrcode: qr,
+                        troli: r.troli || '-',
+                        area: r.area || '-',
+                        keterangan: 'Cancel Langsir (Stok telah dipotong ulang)',
+                        pic_input: currentUser.username
+                    });
+                }
+            });
 
             try {
-                const { error } = await db.from(tableTarget).delete().in('qrcode', qrsToDel);
+                // 1. Kurangi QTY dari Kartu Stok Aktual/Global & Hapus fisik dari stok_qr menggunakan RPC Aman
+                const payloadData = { qrs: arrFisik, aktuals: Object.values(mapAktual), globals: Object.values(mapGlobal) };
+                const { error: rpcErr } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
+                if(rpcErr) throw rpcErr;
+
+                // 2. Karantina Fisik Kardus ke Tabel hold_langsir
+                const { error: holdErr } = await db.from('hold_langsir').insert(payloadHold);
+                if(holdErr) throw holdErr;
+
+                alert(`✅ SUKSES DIBATALKAN!\n${arrFisik.length} kardus telah ditarik dari Kartu Stok (dikurangi) dan dipindahkan ke Tabel Hold untuk dikarantina.`);
+                document.querySelector('input[onchange="toggleSemuaCentang(this.checked)"]').checked = false;
+                await ambilSemuaData();
+            } catch (e) {
+                alert("Gagal melakukan Cancel Langsir: " + e.message);
+            } finally {
+                btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
+            }
+        }
+
+        // REVISI: Fungsi Hapus Permanen Hold
+        async function hapusBarisHold() {
+            if(modeRiwayat !== 'hold') return;
+            const checked = document.querySelectorAll('.cb-row:checked');
+            if(checked.length === 0) return alert("Pilih baris yang ingin dihapus terlebih dahulu!");
+            if(!confirm(`Apakah Anda yakin ingin MENGHAPUS PERMANEN ${checked.length} data HOLD ini dari sistem?`)) return;
+
+            const qrsToDel = Array.from(checked).map(cb => cb.value);
+            try {
+                const { error } = await db.from('hold_langsir').delete().in('qrcode', qrsToDel);
                 if(error) throw error;
-                alert("Berhasil dihapus!"); await ambilSemuaData();
+                alert("Berhasil dihapus permanen dari Hold!"); 
+                document.querySelector('input[onchange="toggleSemuaCentang(this.checked)"]').checked = false;
+                await ambilSemuaData();
             } catch(e) { alert("Gagal Menghapus: " + e.message); }
         }
 
         function toggleSidebarFilter() { document.getElementById('sidebar-filter').classList.toggle('translate-x-full'); document.getElementById('overlay-klik-luar').classList.toggle('hidden'); }
-        function tutupPopups() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
+        function tutupPopups() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); document.getElementById('overlay-klik-luar').classList.add('hidden'); tutupModalSTBJ(); }
 
         function resetFilter() {
             const inputs = ['f-waktu','f-troli','f-area','f-qr','f-tgl','f-mesin','f-shift','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket','f-pic'];
@@ -446,6 +568,72 @@
             navigator.clipboard.writeText(copyString).then(() => {
                 alert(`Berhasil menyalin ${cek.length} baris!\nBuka Excel lalu tekan CTRL+V / Paste.`);
             }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
+        }
+
+        // --- FUNGSI MODAL DATA STBJ (Ditanamkan Seperti di Menu Langsir) ---
+        async function bukaModalSTBJ() {
+            document.getElementById('modal-stbj-langsir').classList.remove('hidden');
+            document.getElementById('overlay-klik-luar').classList.remove('hidden');
+            
+            const tbody = document.getElementById('tbody-stbj-modal');
+            tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat Data STBJ...</td></tr>';
+            lucide.createIcons();
+
+            try {
+                const { data, error } = await db.from('hasil_stbj').select('*').order('created_at', {ascending: false});
+                if(error) throw error;
+                
+                if(!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="p-6 font-bold text-slate-400">Tabel STBJ Kosong.</td></tr>';
+                    return;
+                }
+
+                let h = '';
+                data.forEach((r, i) => {
+                    const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+                    const td = translateBarcode(r.qrcode);
+                    
+                    let statusGudang = r.posisi || 'STBJ';
+                    let colGudang = '';
+                    
+                    if(statusGudang === 'IN GUDANG') {
+                        colGudang = '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">IN GUDANG</span>';
+                    } else if (statusGudang === 'KELUAR') {
+                        colGudang = '<span class="bg-red-100 text-red-800 border border-red-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">KELUAR</span>';
+                    } else {
+                        colGudang = '<span class="bg-blue-100 text-blue-800 border border-blue-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">STBJ</span>';
+                    }
+                    
+                    h += `
+                        <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-modal-stbj">
+                            <td class="p-3 font-bold text-slate-400">${i+1}</td>
+                            <td class="p-3 text-slate-600 font-semibold">${tgl}</td>
+                            <td class="p-3 font-bold text-slate-700">${r.troli || '-'}</td>
+                            <td class="p-3 font-mono font-bold text-slate-900 border-r border-slate-200 tracking-wider">${r.qrcode}</td>
+                            <td class="p-3 font-bold text-blue-700 text-left">${td.nama}</td>
+                            <td class="p-3 font-bold text-slate-600">${td.pjg}</td>
+                            <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-r border-slate-200">${td.po}</td>
+                            <td class="p-3">${colGudang}</td>
+                        </tr>`;
+                });
+                tbody.innerHTML = h;
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 font-bold text-red-500">Gagal: ${e.message}</td></tr>`;
+            }
+        }
+
+        function tutupModalSTBJ() { 
+            document.getElementById('modal-stbj-langsir').classList.add('hidden'); 
+            if(document.getElementById('sidebar-filter').classList.contains('translate-x-full') && document.getElementById('modal-ganti-area').classList.contains('hidden')) {
+                document.getElementById('overlay-klik-luar').classList.add('hidden'); 
+            }
+        }
+
+        function saringTabelModalSTBJ() {
+            const q = document.getElementById('f-stbj-modal').value.toLowerCase();
+            document.querySelectorAll('.row-modal-stbj').forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+            });
         }
     </script>
 </body>
