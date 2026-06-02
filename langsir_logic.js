@@ -1,6 +1,6 @@
 let masterData = { kamus: [], area: [] }; 
 let deleteStack = [], globalRowId = 0;
-let sortState = {}; // REVISI 3: Objek pelacak status sorting
+let sortState = {}; 
 
 document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(async () => {
@@ -15,17 +15,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const { data: mData2 } = await db.from('master_2').select('*');
             if(mData2) masterData.kamus = mData2; 
 
-            // REVISI 2: buatDropdownKolom() telah dihapus
         } catch (e) { console.error("Gagal muat dropdown:", e); }
     }, 200); 
 });
 
-// REVISI 3: FUNGSI SORT TABEL A-Z, Z-A
 function sortTable(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-langsir');
     const rows = Array.from(tbody.querySelectorAll('tr.row-item'));
     
-    // Cek apakah sedang Ascending atau Descending
     let isAsc = sortState[colIndex] !== 'asc';
     sortState[colIndex] = isAsc ? 'asc' : 'desc';
     
@@ -33,7 +30,6 @@ function sortTable(colIndex, headerEl) {
         let valA = a.cells[colIndex].innerText.trim();
         let valB = b.cells[colIndex].innerText.trim();
         
-        // Coba konversi ke angka jika itu adalah nilai numerik (contoh: No)
         let numA = parseFloat(valA);
         let numB = parseFloat(valB);
         
@@ -44,12 +40,10 @@ function sortTable(colIndex, headerEl) {
         }
     });
     
-    // Terapkan hasil urutan ke dalam tabel HTML
     rows.forEach(row => tbody.appendChild(row));
     
-    // Update Ikon Lucide di Header
     document.querySelectorAll('.sort-icon').forEach(icon => {
-        icon.setAttribute('data-lucide', 'arrow-up-down'); // Reset semua icon
+        icon.setAttribute('data-lucide', 'arrow-up-down'); 
         icon.classList.add('opacity-50');
     });
     
@@ -188,9 +182,6 @@ function addRow(area, code, isDuplicate = false) {
 
 function deleteRow(btn) { const tr = btn.closest('tr'); deleteStack.push({ parent: tr.parentNode, html: tr.outerHTML, nextSibling: tr.nextSibling }); tr.remove(); updateRowNumbers(); }
 function undoDelete() { if(deleteStack.length === 0) return alert("Belum ada data yang dihapus."); const last = deleteStack.pop(); const temp = document.createElement('tbody'); temp.innerHTML = last.html; if (last.nextSibling) last.parent.insertBefore(temp.firstChild, last.nextSibling); else last.parent.appendChild(temp.firstChild); lucide.createIcons(); updateRowNumbers(); }
-
-// Kita tidak menghitung ulang No secara manual saat di-sort, karena agar urutannya mengacu pada index aslinya.
-// Fungsi updateRowNumbers hanya berjalan pas penambahan/penghapusan row.
 function updateRowNumbers() { const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; }); }
 
 async function VerifikasiDanCek() {
@@ -299,7 +290,9 @@ async function saveToSupabase() {
         let poBawaan = td.po; 
         
         let id_sku = `${area}_${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}_${po}`;
-        arrFisik.push({ qrcode: qr, area: area, id_sku: id_sku, pic_input: user.username });
+        
+        // REVISI: Mengubah pic_input menjadi pic agar diterima dengan benar oleh Tabel stok_qr
+        arrFisik.push({ qrcode: qr, area: area, id_sku: id_sku, pic: user.username });
         
         let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
         if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: jenis, nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, area: area, po_aktual: po, ket: ket, qty: 0 };
