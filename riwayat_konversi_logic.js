@@ -219,7 +219,7 @@ async function eksekusiCancelKonversi() {
         const { error: delErr } = await db.from('laporan_konversi').delete().in('id', idsToDelete);
         if (delErr) throw delErr;
 
-        alert(`✅ SUKSES DIBATALKAN!\nFisik kardus telah disedot dari stok_konversi dan dikembalikan secara presisi ke Kartu Stok.`);
+        alert(`✅ SUKSES DIBATALKAN!\nstok telah dikembalikan ke Kartu Stok.`);
         document.getElementById('modal-cancel').classList.add('hidden');
         muatDataRiwayat(); // Reload
         
