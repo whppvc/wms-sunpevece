@@ -184,6 +184,30 @@ function deleteRow(btn) { const tr = btn.closest('tr'); deleteStack.push({ paren
 function undoDelete() { if(deleteStack.length === 0) return alert("Belum ada data yang dihapus."); const last = deleteStack.pop(); const temp = document.createElement('tbody'); temp.innerHTML = last.html; if (last.nextSibling) last.parent.insertBefore(temp.firstChild, last.nextSibling); else last.parent.appendChild(temp.firstChild); lucide.createIcons(); updateRowNumbers(); }
 function updateRowNumbers() { const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; }); }
 
+// REVISI: Fungsi Mengedit Keterangan Massal
+function editKeteranganMassal() {
+    const checkedBoxes = document.querySelectorAll('.cb-row:checked');
+    if (checkedBoxes.length === 0) return alert("Pilih / centang baris yang keterangannya ingin diedit!");
+
+    const newKet = prompt(`Masukkan keterangan baru untuk ${checkedBoxes.length} baris terpilih:\n(Catatan: Akan menimpa Keterangan hasil Verifikasi)`);
+    if (newKet === null) return; 
+
+    checkedBoxes.forEach(cb => {
+        const tr = cb.closest('tr');
+        const ketCell = tr.querySelector('.ket-cell');
+        if (ketCell) {
+            ketCell.innerText = newKet.trim() || '-';
+            ketCell.classList.remove('italic', 'text-red-500', 'text-slate-500'); 
+            ketCell.classList.add('text-blue-700'); // Mengubah warna text untuk nandain kalau ini manual edit
+        }
+    });
+    
+    // Uncheck semua setelah selesai agar tidak salah eksekusi hold
+    document.querySelector('input[onchange="toggleSemuaCentang(this.checked)"]').checked = false;
+    toggleSemuaCentang(false);
+    alert("Keterangan berhasil diperbarui secara lokal!");
+}
+
 async function VerifikasiDanCek() {
     const rows = document.querySelectorAll('.row-item');
     if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
@@ -222,8 +246,11 @@ async function VerifikasiDanCek() {
                 troliCell.innerText = stbjMap[qr].troli || '-';
                 troliCell.className = "p-3 font-bold text-slate-700 troli-cell col-troli text-center";
                 
-                ketCell.innerText = stbjMap[qr].keterangan || '-';
-                ketCell.className = "p-3 font-bold text-slate-700 ket-cell col-ket text-left";
+                // Jangan timpa jika user sudah pernah mengedit manual dan teksnya biru
+                if(!ketCell.classList.contains('text-blue-700')) {
+                    ketCell.innerText = stbjMap[qr].keterangan || '-';
+                    ketCell.className = "p-3 font-bold text-slate-700 ket-cell col-ket text-left";
+                }
             } else {
                 stbjSpan.className = 'text-white font-bold bg-orange-500 px-3 py-1.5 rounded shadow-sm text-[10px] stbj-val';
                 stbjSpan.setAttribute('data-status', 'invalid-stbj');
@@ -290,8 +317,6 @@ async function saveToSupabase() {
         let poBawaan = td.po; 
         
         let id_sku = `${area}_${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}_${po}`;
-        
-        // REVISI: Mengubah pic_input menjadi pic agar diterima dengan benar oleh Tabel stok_qr
         arrFisik.push({ qrcode: qr, area: area, id_sku: id_sku, pic: user.username });
         
         let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
