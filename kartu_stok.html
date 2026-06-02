@@ -247,7 +247,7 @@
                     globalMap[gKey].areas.push({
                         id_sku: a.id_sku, key_lengkap: a.key_lengkap, area: a.area, 
                         po: a.po, ket: a.ket, qty: a.qty, qrcodes: a.qrcodes,
-                        nama: a.nama, pjg: a.pjg, grade: a.grade, dus: a.dus, shading: a.shading 
+                        nama: a.nama, pjg: a.pjg, grade: a.grade, dus: a.dus, shading: a.shading, jenis: a.jenis 
                     });
                 });
                 dataKSGlobal = Object.values(globalMap);
@@ -296,9 +296,10 @@
                 let h = '';
                 dataKSArea.forEach((r, i) => {
                     const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
+                    // REVISI: Selipkan data-jenis di checkbox utama agar terbawa saat Ganti PO
                     h += `
                         <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
-                            <td class="p-3 col-cb"><input type="checkbox" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                            <td class="p-3 col-cb"><input type="checkbox" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                             <td class="p-3 hidden col-open"></td>
                             <td class="p-3 font-bold text-slate-400 col-no">${i+1}</td>
                             <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.area}</td>
@@ -370,9 +371,10 @@
             let h = '';
             item.areas.forEach((a, i) => {
                 const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
+                // REVISI: Selipkan data-jenis di checkbox breakdown
                 h += `
                     <tr class="border-b border-slate-200 hover:bg-slate-50 transition bd-row">
-                        <td class="p-3"><input type="checkbox" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po}" data-ket="${a.ket}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                        <td class="p-3"><input type="checkbox" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po}" data-ket="${a.ket}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                         <td class="p-3 font-bold text-slate-400">${i+1}</td>
                         <td class="p-3 font-black text-emerald-700 bg-emerald-50">${a.area}</td>
                         <td class="p-3 font-black text-orange-600 border-r border-slate-200 bg-orange-50/50">${a.po}</td>
@@ -405,6 +407,7 @@
                 selectedForPO.push({ 
                     id_sku: cb.dataset.idsku, 
                     qrcodes: qrs,
+                    jenis: cb.dataset.jenis, // REVISI: Ambil dari dataset jenis
                     nama: cb.dataset.nama,
                     pjg: cb.dataset.pjg,
                     grade: cb.dataset.grade,
@@ -436,52 +439,54 @@
         }
 
         async function eksekusiGantiPO() {
-    const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
-    if(!newPO) return alert("Silakan Pilih PO Baru dari daftar dropdown!");
+            const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
+            if(!newPO) return alert("Silakan Pilih PO Baru dari daftar dropdown!");
 
-    const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
-    if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
+            const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
+            if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
 
-    let maxDus = selectedForPO.reduce((sum, row) => sum + row.qrcodes.length, 0);
-    if(qtyDiminta > maxDus) return alert(`Maksimal yang bisa diganti adalah ${maxDus} dus!`);
+            let maxDus = selectedForPO.reduce((sum, row) => sum + row.qrcodes.length, 0);
+            if(qtyDiminta > maxDus) return alert(`Maksimal yang bisa diganti adalah ${maxDus} dus!`);
 
-    const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...'; btn.disabled = true;
+            const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...'; btn.disabled = true;
 
-    try {
-        let qtySisaUntukDiupdate = qtyDiminta;
-        let payloadItems = [];
-        
-        for(let row of selectedForPO) {
-            if (qtySisaUntukDiupdate <= 0) break; 
-            
-            let qrsUntukDiupdate = row.qrcodes.slice(0, qtySisaUntukDiupdate);
-            let jumlahBerubah = qrsUntukDiupdate.length;
-            qtySisaUntukDiupdate -= jumlahBerubah;
+            try {
+                let qtySisaUntukDiupdate = qtyDiminta;
+                let payloadItems = [];
+                
+                for(let row of selectedForPO) {
+                    if (qtySisaUntukDiupdate <= 0) break; 
+                    
+                    let qrsUntukDiupdate = row.qrcodes.slice(0, qtySisaUntukDiupdate);
+                    let jumlahBerubah = qrsUntukDiupdate.length;
+                    qtySisaUntukDiupdate -= jumlahBerubah;
 
-            let parts = row.id_sku.split('_');
-            parts[7] = newPO; 
-            let newIdSku = parts.join('_');
+                    let parts = row.id_sku.split('_');
+                    parts[7] = newPO; 
+                    let newIdSku = parts.join('_');
 
-            payloadItems.push({
-                new_id_sku: newIdSku,
-                qrcodes: qrsUntukDiupdate,
-                nama: row.nama, pjg: row.pjg, grade: row.grade, dus: row.dus,
-                shading: row.shading, area: row.area,
-                po_lama: row.po, po_baru: newPO, ket: row.ket,
-                qty_berubah: jumlahBerubah
-            });
+                    // REVISI: Sisipkan jenis_item ke Payload agar RPC eksekusi_ganti_po_aman sukses
+                    payloadItems.push({
+                        new_id_sku: newIdSku,
+                        qrcodes: qrsUntukDiupdate,
+                        jenis_item: row.jenis, 
+                        nama: row.nama, pjg: row.pjg, grade: row.grade, dus: row.dus,
+                        shading: row.shading, area: row.area,
+                        po_lama: row.po, po_baru: newPO, ket: row.ket,
+                        qty_berubah: jumlahBerubah
+                    });
+                }
+
+                const { error } = await db.rpc('eksekusi_ganti_po_aman', { payload: { items: payloadItems } });
+                if(error) throw error;
+                
+                alert(`BERHASIL!\nPO Aktual berhasil diubah menjadi ${newPO} untuk ${qtyDiminta} dus.`);
+                tutupModalPO(); if(sourcePOContext === 'breakdown') tutupModalBreakdown();
+                await muatDataStok();
+            } catch (error) { alert("GAGAL UPDATE: " + error.message); } 
+            finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
         }
-
-        const { error } = await db.rpc('eksekusi_ganti_po_aman', { payload: { items: payloadItems } });
-        if(error) throw error;
-        
-        alert(`BERHASIL!\nPO Aktual berhasil diubah menjadi ${newPO} untuk ${qtyDiminta} dus.`);
-        tutupModalPO(); if(sourcePOContext === 'breakdown') tutupModalBreakdown();
-        await muatDataStok();
-    } catch (error) { alert("GAGAL UPDATE: " + error.message); } 
-    finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
-}
 
         function toggleSidebarFilter() { document.getElementById('sidebar-filter').classList.toggle('translate-x-full'); document.getElementById('overlay-klik-luar').classList.toggle('hidden'); }
         function tutupSemuaPopups() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); document.getElementById('dropdown-kolom').classList.add('hidden'); tutupModalPO(); tutupModalBreakdown(); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
