@@ -41,13 +41,17 @@
 
             <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-slate-200 mb-4">
                 <div class="flex gap-2 overflow-x-auto pt-1 pb-4 px-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none" style="-webkit-overflow-scrolling: touch;">
+                    
+                    <button onclick="bukaModalSTBJ()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-purple-600 hover:bg-purple-700 text-white border-b-2 border-purple-800 active:scale-95 transition"><i data-lucide="table" class="w-4 h-4"></i> Data STBJ</button>
+                    <button onclick="VerifikasiDanCek()" id="btn-Verifikasi" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-slate-900 text-white border-b-2 border-black active:scale-95 transition"><i data-lucide="shield-check" class="w-4 h-4"></i> Verifikasi</button>
+                    
+                    <div class="w-px h-8 bg-slate-300 mx-1"></div> <button onclick="editKeteranganMassal()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-sky-600 hover:bg-sky-700 text-white border-b-2 border-sky-800 active:scale-95 transition"><i data-lucide="edit-3" class="w-4 h-4"></i> Edit Ket</button>
+                    
                     <button onclick="toggleSidebarFilter()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-slate-800 text-white border-b-2 border-slate-950 active:scale-95 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
                     <button onclick="salinDataTabel()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-blue-600 hover:bg-blue-700 text-white border-b-2 border-blue-800 active:scale-95 transition"><i data-lucide="copy" class="w-4 h-4"></i> Salin</button>
                     <button onclick="undoDelete()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-rose-600 hover:bg-rose-700 text-white border-b-2 border-rose-800 active:scale-95 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo</button>
                     <button onclick="holdLangsir()" id="btn-hold" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-amber-500 hover:bg-amber-600 text-white border-b-2 border-amber-700 active:scale-95 transition"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold</button>
                     
-                    <div class="w-px h-8 bg-slate-300 mx-1"></div> <button onclick="bukaModalSTBJ()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-purple-600 hover:bg-purple-700 text-white border-b-2 border-purple-800 active:scale-95 transition"><i data-lucide="table" class="w-4 h-4"></i> Data STBJ</button>
-                    <button onclick="VerifikasiDanCek()" id="btn-Verifikasi" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-emerald-600 hover:bg-emerald-700 text-white border-b-2 border-emerald-800 active:scale-95 transition"><i data-lucide="shield-check" class="w-4 h-4"></i> Verifikasi</button>
                 </div>
                 <div class="text-[9px] text-slate-400 text-center font-black uppercase tracking-wider -mt-2.5 mb-1 pointer-events-none flex items-center justify-center gap-1 animate-pulse">
                     <i data-lucide="arrow-left-right" class="w-3 h-3"></i> Geser menu aksi ke kanan-kiri
