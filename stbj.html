@@ -15,7 +15,6 @@
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
     </style>
-    <style id="dynamic-col-styles"></style>
 </head>
 <body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-28">
 
@@ -56,49 +55,17 @@
                 </div>
             </div>
 
-            <div class="flex flex-row justify-between gap-2 items-center">
-    <div class="flex gap-1.5">
-        <!-- TOMBOL AKSI UTAMA (BIRU) -->
-        <button onclick="toggleSidebarFilter()" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white border-b-2 border-blue-800" title="Filter">
-            <i data-lucide="filter" class="w-4 h-4"></i> <span class="hidden sm:inline">Filter</span>
-        </button>
-        
-        <!-- TOMBOL NETRAL (PUTIH) -->
-        <div class="relative">
-            <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border border-slate-300" title="Kolom">
-                <i data-lucide="eye-off" class="w-4 h-4"></i> <span class="hidden sm:inline">Kolom</span>
-            </button>
-            <!-- (Dropdown kolom tetap sama) -->
-            <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
-                <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
-                    <span class="text-[11px] font-black text-slate-500 uppercase">Sembunyikan Kolom</span>
-                    <button onclick="resetKolom()" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold hover:bg-blue-200">RESET</button>
-                </div>
-                <div class="flex flex-col gap-2 max-h-64 overflow-y-auto" id="list-kolom-toggles"></div>
+            <div class="flex gap-2 overflow-x-auto pt-1 pb-4 px-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none" style="-webkit-overflow-scrolling: touch;">
+                <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-slate-900 text-white border-b-2 border-black active:scale-95 transition"><i data-lucide="search-check" class="w-4 h-4"></i> Verifikasi Duplikat</button>
+                
+                <div class="w-px h-8 bg-slate-300 mx-1"></div> <button onclick="toggleSidebarFilter()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-blue-600 hover:bg-blue-700 text-white border-b-2 border-blue-800 active:scale-95 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
+                <button onclick="undoHapusSTBJ()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-rose-600 hover:bg-rose-700 text-white border-b-2 border-rose-800 active:scale-95 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo</button>
+                <button onclick="holdManual()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-amber-500 hover:bg-amber-600 text-white border-b-2 border-amber-700 active:scale-95 transition"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Terpilih</button>
             </div>
-        </div>
-        
-        <!-- TOMBOL NETRAL (PUTIH) -->
-        <button onclick="undoHapusSTBJ()" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-rose-800"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> <span class="hidden sm:inline">UNDO</span></button>
-
-        <!-- TOMBOL BAHAYA LOKAL (SOFT MERAH) -->
-        <button onclick="hapusBarisTerpilih()" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-red-600 hover:bg-red-700 text-white border-b-2 border-red-800" title="Hapus">
-            <i data-lucide="trash-2" class="w-4 h-4"></i> <span class="hidden sm:inline">Hapus</span>
-        </button>
-    </div>
-
-    <div class="flex gap-1.5">
-        <!-- TOMBOL WARNING (SOFT KUNING) -->
-        <button onclick="holdManual()" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg shadow-sm border-amber-800">
-            <i data-lucide="pause-circle" class="w-4 h-4"></i> <span class="hidden sm:inline">Hold</span>
-        </button>
-        
-        <!-- TOMBOL AKSI UTAMA (BIRU) -->
-        <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="p-2 sm:px-3 sm:py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm uppercase whitespace-nowrap bg-slate-900 text-white font-black rounded shadow-sm border-b-2 border-blue-800">
-            <i data-lucide="search-check" class="w-4 h-4"></i> Verifikasi <span class="hidden sm:inline">Duplikat</span>
-        </button>
-    </div>
-</div>
+            
+            <div class="text-[9px] text-slate-400 text-center font-black uppercase tracking-wider -mt-2.5 mb-1 pointer-events-none flex items-center justify-center gap-1 animate-pulse">
+                <i data-lucide="arrow-left-right" class="w-3 h-3"></i> Geser menu aksi ke kanan-kiri
+            </div>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
@@ -106,27 +73,28 @@
                 <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-stbj">
                     <thead class="sticky top-0 z-10 shadow-sm">
                         <tr>
-                            <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleAll(this.checked)" class="cursor-pointer"></th>
-                            <th class="hdr-std w-12 col-no">No</th>
-                            <th class="hdr-std border-r border-slate-500 col-status">Status</th>
-                            <th class="hdr-std col-troli text-amber-300">Troli</th>
-                            <th class="hdr-std border-r border-slate-500 col-qr">Text QRCode</th>
-                            <th class="hdr-std col-tgl">Tgl Produksi</th>
-                            <th class="hdr-std col-mesin">Mesin</th>
-                            <th class="hdr-std border-r border-slate-500 col-shift">Shift</th>
-                            <th class="hdr-std text-blue-300 col-jenis">Jenis Item</th>
-                            <th class="hdr-std col-nama">Nama Item</th>
-                            <th class="hdr-std col-pjg">Pjg</th>
-                            <th class="hdr-std col-grade">Grade</th>
-                            <th class="hdr-std col-dus">Dus</th>
-                            <th class="hdr-std border-r border-slate-500 col-shading">Shading</th>
-                            <th class="hdr-std col-po">PO Awal</th>
-                            <th class="hdr-std col-ket">Keterangan</th>
-                            <th class="hdr-std col-pic">PIC Input</th>
+                            <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleAll(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded"></th>
+                            <th class="hdr-std w-10 col-btn"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-slate-400"></i></th>
+                            <th class="hdr-std w-12 col-no cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(2, this)"><div class="flex items-center justify-center gap-1">No <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std border-r border-slate-500 col-status cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(3, this)"><div class="flex items-center justify-center gap-1">Status <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-troli text-amber-300 cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(4, this)"><div class="flex items-center justify-center gap-1">Troli <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std border-r border-slate-500 col-qr cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(5, this)"><div class="flex items-center justify-center gap-1">Text QRCode <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-tgl cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(6, this)"><div class="flex items-center justify-center gap-1">Tgl Produksi <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-mesin cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(7, this)"><div class="flex items-center justify-center gap-1">Mesin <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std border-r border-slate-500 col-shift cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(8, this)"><div class="flex items-center justify-center gap-1">Shift <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std text-blue-300 col-jenis cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(9, this)"><div class="flex items-center justify-center gap-1">Jenis Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-nama cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(10, this)"><div class="flex items-center gap-1">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-pjg cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(11, this)"><div class="flex items-center justify-center gap-1">Pjg <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-grade cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(12, this)"><div class="flex items-center justify-center gap-1">Grade <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-dus cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(13, this)"><div class="flex items-center justify-center gap-1">Dus <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std border-r border-slate-500 col-shading cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(14, this)"><div class="flex items-center justify-center gap-1">Shading <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-po cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(15, this)"><div class="flex items-center justify-center gap-1">PO Awal <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-ket cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(16, this)"><div class="flex items-center gap-1">Keterangan <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-pic cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(17, this)"><div class="flex items-center justify-center gap-1">PIC Input <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                         </tr>
                     </thead>
                     <tbody id="tbody-stbj" class="text-center text-slate-700">
-                        <tr><td colspan="17" class="p-10 text-slate-400 font-bold"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan / di-import.</td></tr>
+                        <tr><td colspan="18" class="p-10 text-slate-400 font-bold"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan / di-import.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -169,7 +137,7 @@
         </div>
     </div>
 
-    <div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-30"></div>
+    <div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="global.js"></script>
     <script>
@@ -178,64 +146,53 @@
         let deletedStbjStack = []; 
         let masterKamus = [];
         let globalRowId = 0;
-        let hiddenCols = [];
+        let sortState = {}; // Menyimpan status sortir tabel
         const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
-
-        const colDefinitions = [
-            { id: 'col-cb', label: 'Checkbox', default: true },
-            { id: 'col-no', label: 'Nomor Urut', default: true },
-            { id: 'col-status', label: 'Status Hold', default: true },
-            { id: 'col-troli', label: 'Troli', default: true },
-            { id: 'col-qr', label: 'QRCode', default: true },
-            { id: 'col-tgl', label: 'Tgl Produksi', default: true },
-            { id: 'col-mesin', label: 'Mesin', default: true },
-            { id: 'col-shift', label: 'Shift', default: true },
-            { id: 'col-jenis', label: 'Jenis Item', default: true },
-            { id: 'col-nama', label: 'Nama Item', default: true },
-            { id: 'col-pjg', label: 'Pjg', default: true },
-            { id: 'col-grade', label: 'Grade', default: true },
-            { id: 'col-dus', label: 'Dus', default: true },
-            { id: 'col-shading', label: 'Shading', default: true },
-            { id: 'col-po', label: 'PO Awal', default: true },
-            { id: 'col-ket', label: 'Keterangan', default: true },
-            { id: 'col-pic', label: 'PIC Input', default: true }
-        ];
 
         document.addEventListener('DOMContentLoaded', async () => { 
             initModernLayout({ id: 'stbj', title: 'SCAN STBJ', url: 'stbj.html' }); 
-            buatDropdownKolom();
             await loadInitialSTBJData();
         });
 
-        function buatDropdownKolom() {
-            const container = document.getElementById('list-kolom-toggles');
-            let html = '';
-            colDefinitions.forEach(col => {
-                html += `
-                    <label class="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-slate-50 rounded">
-                        <input type="checkbox" checked onchange="toggleKolom('${col.id}', this.checked)" class="w-4 h-4 cursor-pointer text-blue-600 rounded border-slate-300 focus:ring-blue-500">
-                        <span class="text-xs font-bold text-slate-700">${col.label}</span>
-                    </label>
-                `;
+        // REVISI: Fungsi Sortir Tabel A-Z, Z-A
+        function sortTable(colIndex, headerEl) {
+            const tbody = document.getElementById('tbody-stbj');
+            const rows = Array.from(tbody.querySelectorAll('tr.row-stbj'));
+            
+            let isAsc = sortState[colIndex] !== 'asc';
+            sortState[colIndex] = isAsc ? 'asc' : 'desc';
+            
+            rows.sort((a, b) => {
+                // Untuk handle kolom input (Keterangan), kita tarik valuenya jika ada
+                let cellA = a.cells[colIndex];
+                let cellB = b.cells[colIndex];
+                
+                let valA = cellA.querySelector('input') ? cellA.querySelector('input').value.trim() : cellA.innerText.trim();
+                let valB = cellB.querySelector('input') ? cellB.querySelector('input').value.trim() : cellB.innerText.trim();
+                
+                let numA = parseFloat(valA);
+                let numB = parseFloat(valB);
+                
+                if(!isNaN(numA) && !isNaN(numB)) {
+                    return isAsc ? numA - numB : numB - numA;
+                } else {
+                    return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                }
             });
-            container.innerHTML = html;
-        }
-
-        function toggleKolom(colId, isVisible) {
-            if(isVisible) { hiddenCols = hiddenCols.filter(id => id !== colId); } 
-            else { if(!hiddenCols.includes(colId)) hiddenCols.push(colId); }
-            terapkanStyleKolom();
-        }
-
-        function resetKolom() {
-            hiddenCols = [];
-            document.querySelectorAll('#list-kolom-toggles input[type="checkbox"]').forEach(cb => cb.checked = true);
-            terapkanStyleKolom();
-        }
-
-        function terapkanStyleKolom() {
-            const cssString = hiddenCols.map(id => `.${id} { display: none !important; }`).join('\n');
-            document.getElementById('dynamic-col-styles').innerHTML = cssString;
+            
+            rows.forEach(row => tbody.appendChild(row));
+            
+            document.querySelectorAll('.sort-icon').forEach(icon => {
+                icon.setAttribute('data-lucide', 'arrow-up-down'); 
+                icon.classList.add('opacity-50');
+            });
+            
+            const icon = headerEl.querySelector('.sort-icon');
+            if(icon) {
+                icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a');
+                icon.classList.remove('opacity-50');
+                lucide.createIcons();
+            }
         }
 
         function switchTab(tab) {
@@ -359,12 +316,14 @@
             const ids = []; document.querySelectorAll('.row-cb:checked').forEach(cb => ids.push(parseInt(cb.value))); return ids;
         }
 
-        function hapusBarisTerpilih() {
-            const ids = getCheckedIds(); if(ids.length === 0) return alert("Centang baris yang ingin dihapus!");
-            const removed = dataStbj.filter(d => ids.includes(d.id));
-            deletedStbjStack.push(removed);
-            dataStbj = dataStbj.filter(d => !ids.includes(d.id)); 
-            renderTable(); document.querySelector('input[onchange="toggleAll(this.checked)"]').checked = false;
+        // REVISI: Fungsi hapus dipisah per baris
+        function hapusBaris(id) {
+            const removed = dataStbj.find(d => d.id === id);
+            if(removed) {
+                deletedStbjStack.push([removed]);
+                dataStbj = dataStbj.filter(d => d.id !== id);
+                renderTable();
+            }
         }
 
         function undoHapusSTBJ() {
@@ -376,7 +335,7 @@
 
         function holdManual() {
             const ids = getCheckedIds(); if(ids.length === 0) return alert("Centang baris yang ingin di-HOLD manual!");
-            dataStbj.forEach(d => { if(ids.includes(d.id)) d.status = 'HOLD'; });
+            dataStbj.forEach(d => { if(ids.includes(d.id)) { d.status = 'HOLD'; d.keterangan = 'Dihold Manual'; } });
             renderTable(); document.querySelector('input[onchange="toggleAll(this.checked)"]').checked = false;
         }
 
@@ -387,18 +346,16 @@
 
         function tutupPopups() {
             document.getElementById('sidebar-filter').classList.add('translate-x-full');
-            document.getElementById('dropdown-kolom').classList.add('hidden');
             document.getElementById('overlay-klik-luar').classList.add('hidden');
         }
 
         function resetFilterSTBJ() {
             const ids = ['fs-status','fs-troli','fs-qr','fs-tgl','fs-mesin','fs-shift','fs-jenis','fs-nama','fs-pjg','fs-grade','fs-dus','fs-shading','fs-po','fs-ket','fs-pic'];
-            ids.forEach(id => document.getElementById(id).value = '');
+            ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; });
             saringTabelSTBJ(); toggleSidebarFilter();
         }
 
         function saringTabelSTBJ() {
-            // Gunakan tanda tanya (?) agar tidak crash jika elemen HTML-nya tidak ada
             const f = {
                 status: document.getElementById('fs-status')?.value.toLowerCase() || '',
                 troli: document.getElementById('fs-troli')?.value.toLowerCase() || '',
@@ -431,7 +388,7 @@
 
         function renderTable() {
             const tbody = document.getElementById('tbody-stbj');
-            if(dataStbj.length === 0) return tbody.innerHTML = '<tr><td colspan="17" class="p-10 text-slate-400 font-bold"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan / di-import.</td></tr>';
+            if(dataStbj.length === 0) return tbody.innerHTML = '<tr><td colspan="18" class="p-10 text-slate-400 font-bold"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan / di-import.</td></tr>';
             
             let html = '';
             dataStbj.forEach((d, index) => {
@@ -439,7 +396,7 @@
                 let displayStatus = d.status;
 
                 if(d.status === 'UNIQUE') badgeClass = "bg-emerald-500 text-white";
-                if(d.status === 'DUPLIKAT') badgeClass = "bg-red-600 text-white";
+                if(d.status === 'DUPLIKAT') badgeClass = "bg-red-600 text-white border border-red-700";
                 if(d.status === 'HOLD') badgeClass = "bg-amber-500 text-white";
 
                 if(d.status === 'BELUM CEK' && d.isLocalDuplicate) {
@@ -450,9 +407,15 @@
                 const isRedHighlight = d.status === 'DUPLIKAT' || d.isLocalDuplicate;
                 const trBaseClass = isRedHighlight ? 'bg-red-50 hover:bg-red-100 text-red-900' : (d.status === 'HOLD' ? 'bg-amber-50 hover:bg-amber-100 text-amber-900' : 'hover:bg-slate-50 text-slate-700');
 
+                // REVISI: Penambahan kolom Action Hapus
                 html += `
-                    <tr class="border-b border-slate-200 transition ${trBaseClass} row-stbj">
+                    <tr class="border-b border-slate-200 transition ${trBaseClass} row-stbj text-[11px]">
                         <td class="p-3 text-center col-cb"><input type="checkbox" value="${d.id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                        <td class="p-2 text-center col-btn">
+                            <button onclick="hapusBaris(${d.id})" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </td>
                         <td class="p-3 font-bold col-no">${index + 1}</td>
                         <td class="p-3 font-black text-[10px] border-r border-slate-200 col-status"><span class="px-2 py-1 rounded shadow-sm border border-black/10 ${badgeClass}">${displayStatus}</span></td>
                         <td class="p-3 font-bold ${isRedHighlight ? 'text-red-900' : 'text-slate-700'} col-troli">${d.troli}</td>
@@ -477,6 +440,7 @@
 
         function updateKet(id, val) { const item = dataStbj.find(d => d.id === id); if(item) item.keterangan = val; }
 
+        // REVISI: Pengecekan Cerdas ke 2 Tabel (hasil_stbj & stok_qr)
         async function cekGudangSTBJ() {
             if(dataStbj.length === 0) return alert("Belum ada data.");
             const btn = document.getElementById('btn-cek-gudang'); const ori = btn.innerHTML;
@@ -484,17 +448,41 @@
 
             const allQRs = dataStbj.map(d => d.qrcode);
             try {
-                const { data, error } = await db.from('hasil_stbj').select('qrcode').in('qrcode', allQRs);
-                if(error) throw error;
+                // Tembak dua tabel sekaligus secara paralel
+                const [resStbj, resStok] = await Promise.all([
+                    db.from('hasil_stbj').select('qrcode').in('qrcode', allQRs),
+                    db.from('stok_qr').select('qrcode').in('qrcode', allQRs)
+                ]);
                 
-                const existingQRs = data.map(d => d.qrcode);
+                if(resStbj.error) throw resStbj.error;
+                if(resStok.error) throw resStok.error;
+                
+                const existingStbj = resStbj.data.map(d => d.qrcode);
+                const existingStok = resStok.data.map(d => d.qrcode);
+
+                let infoDuplikat = 0;
                 dataStbj.forEach(d => {
                     if(d.status === 'HOLD') return; 
-                    if(existingQRs.includes(d.qrcode) || d.isLocalDuplicate) { d.status = 'DUPLIKAT'; } 
-                    else { d.status = 'UNIQUE'; }
+                    
+                    if (existingStok.includes(d.qrcode)) {
+                        d.status = 'DUPLIKAT';
+                        d.keterangan = 'SUDAH IN GUDANG (stok_qr)';
+                        infoDuplikat++;
+                    } else if (existingStbj.includes(d.qrcode)) {
+                        d.status = 'DUPLIKAT';
+                        d.keterangan = 'SDH PERNAH STBJ';
+                        infoDuplikat++;
+                    } else if (d.isLocalDuplicate) {
+                        d.status = 'DUPLIKAT';
+                    } else {
+                        d.status = 'UNIQUE';
+                    }
                 });
+
                 renderTable();
-                alert("Verifikasi Selesai!\nData telah dicocokkan dengan Database STBJ.");
+                if(infoDuplikat > 0) alert(`Verifikasi Selesai!\nDitemukan ${infoDuplikat} data DUPLIKAT (sudah ada di STBJ atau Gudang).`);
+                else alert("Verifikasi Selesai!\nSemua data UNIQUE dan aman untuk disimpan.");
+
             } catch (err) { alert("Gagal cek database: " + err.message); }
             finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
         }
