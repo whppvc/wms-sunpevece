@@ -325,15 +325,16 @@ function renderHeaderDanTabel() {
                 ? '<span class="bg-indigo-100 text-indigo-700 font-black px-2 py-1 rounded shadow-sm border border-indigo-200">COLLECTED</span>' 
                 : '<span class="text-slate-400 font-bold">-</span>';
 
+            // REVISI: text-[11px] dihapus agar font mengikuti standar text-xs
             h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row transition text-[11px]">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row transition text-xs">
                     <td class="p-3 text-center col-cb"><input type="checkbox" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                     <td class="p-2 text-center col-btn">
                         <button onclick="aksiHapusPerBaris('${r.qrcode}')" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex">
                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </button>
                     </td>
-                    <td class="p-3 font-bold text-slate-400 text-center col-no">${i+1}</td>
+                    <td class="p-3 font-bold text-slate-500 text-center col-no">${i+1}</td>
                     <td class="p-3 font-black text-center border-r border-slate-200 col-status-gudang">${htmlStatusGudang}</td>
                     ${tabelSekarang === 'hold_stbj' ? `<td class="p-3 font-black text-[10px] text-amber-600 bg-amber-50 text-center col-status">${r.status || 'HOLD'}</td>` : '<td class="p-3 hidden col-status">-</td>'}
                     <td class="p-3 font-black text-center col-status-data text-[10px]">${statData}</td>
@@ -350,7 +351,7 @@ function renderHeaderDanTabel() {
                     <td class="p-3 font-bold text-slate-800 text-center col-dus">${td.dus}</td>
                     <td class="p-3 font-bold text-slate-600 text-center border-r border-slate-200 col-shading">${td.shading}</td>
                     <td class="p-3 font-black text-orange-600 bg-orange-50/50 s-po text-center col-po">${td.po}</td>
-                    <td class="p-3 text-slate-600 font-semibold text-center col-ket text-[11px]">${r.keterangan || '-'}</td>
+                    <td class="p-3 text-slate-600 font-semibold text-center col-ket">${r.keterangan || '-'}</td>
                     <td class="p-3 font-bold uppercase text-[10px] text-slate-400 text-center border-l border-slate-200 col-pic">${r.pic_input || '-'}</td>
                 </tr>`;
         });
@@ -412,14 +413,14 @@ function renderHeaderDanTabel() {
                 : '<span class="text-slate-400 font-bold">-</span>';
 
             h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row text-center transition text-[11px]">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row text-center transition text-xs">
                     <td class="p-3 col-cb"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-                    <td class="p-3 font-bold text-slate-400 col-no">${i+1}</td>
+                    <td class="p-3 font-bold text-slate-500 col-no">${i+1}</td>
                     <td class="p-3 hidden col-status-gudang">-</td>
                     <td class="p-3 hidden col-status">-</td>
                     <td class="p-3 font-black text-center col-status-data text-[10px]">${statData}</td>
                     <td class="p-3 hidden col-waktu">-</td>
-                    <td class="p-3 font-bold text-slate-700 col-troli text-[11px]">${gabunganTroli}</td>
+                    <td class="p-3 font-bold text-slate-700 col-troli">${gabunganTroli}</td>
                     <td class="p-3 hidden col-qr">-</td>
                     <td class="p-3 font-bold text-slate-600 col-tgl">${r.tglProduksi}</td>
                     <td class="p-3 font-bold text-slate-600 col-mesin">${r.mesin}</td>
@@ -432,7 +433,7 @@ function renderHeaderDanTabel() {
                     <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${r.shading}</td>
                     <td class="p-3 font-black text-orange-600 bg-orange-50/40 s-po col-po">${r.po}</td>
                     <td class="p-3 font-black text-base text-blue-700 bg-blue-50 border-l border-r border-slate-200 col-qty">${r.qty}</td>
-                    <td class="p-3 font-bold text-slate-600 text-left col-ket text-[11px] border-r border-slate-200">${displayKet}</td>
+                    <td class="p-3 font-bold text-slate-600 text-left col-ket border-r border-slate-200">${displayKet}</td>
                     <td class="p-3 hidden col-pic">-</td>
                 </tr>`;
         });
@@ -482,7 +483,7 @@ function jalankanSaring() {
     });
 }
 
-// REVISI: Fungsi Hapus Baris
+// FUNGSI HAPUS BARIS
 async function aksiHapusPerBaris(qrcode) {
     if(!confirm(`Hapus permanen QRCode ini dari tabel ${tabelSekarang}?`)) return;
     try {
@@ -553,7 +554,6 @@ async function aksiMassal(tipe) {
             let statGudang = dbRow?.is_in_gudang ? "IN GUDANG" : "STBJ";
             let statData = dbRow?.status_data || "-";
             
-            // REVISI 8: Gunakan String.slice() atau localeString untuk format di excel (terserah, karena CSV murni text)
             const dt = new Date(dbRow?.created_at || new Date());
             const formattedTgl = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
 
