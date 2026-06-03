@@ -1,7 +1,7 @@
 let currentMode = 'out';
 let dataPic = [];
 let picRowId = 0;
-let riwayatKonversiList = []; // Array simpan list modal
+let riwayatKonversiList = [];
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 let masterData = { kamus: [] };
 
@@ -94,32 +94,30 @@ function setModeKonversi(mode) {
     const panelPindah = document.getElementById('panel-pindah');
     const boxScanUmum = document.getElementById('box-scan-umum');
     
-    const btnVerif = document.getElementById('btn-verifikasi');
+    const btnVerifUmum = document.getElementById('btn-verifikasi-umum');
     const btnSave = document.getElementById('btn-save-awal');
     const textSave = document.getElementById('text-save-awal');
 
-    // Reset Semua Kelas Tab
     [tabOut, tabIn, tabPindah].forEach(t => t.className = 'px-6 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs uppercase hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2');
 
     if(mode === 'out') {
         tabOut.className = 'px-6 py-3.5 border-b-4 border-rose-600 text-rose-600 bg-rose-50 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2';
         panelOut.classList.remove('hidden'); panelIn.classList.add('hidden'); panelPindah.classList.add('hidden'); boxScanUmum.classList.remove('hidden');
         
-        btnVerif.className = 'p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-rose-600 hover:bg-rose-700 text-white border-b-2 border-rose-800 active:scale-95 transition';
+        btnVerifUmum.className = 'p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-rose-600 hover:bg-rose-700 text-white border-b-2 border-rose-800 active:scale-95 transition';
         btnSave.className = 'w-full md:w-auto px-8 py-2.5 sm:py-3 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-wide cursor-pointer transition active:scale-95 uppercase border-b-2 border-rose-800';
         textSave.innerText = "SIMPAN & EKSEKUSI";
     } else if(mode === 'in') {
         tabIn.className = 'px-6 py-3.5 border-b-4 border-emerald-600 text-emerald-600 bg-emerald-50 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2';
         panelIn.classList.remove('hidden'); panelOut.classList.add('hidden'); panelPindah.classList.add('hidden'); boxScanUmum.classList.remove('hidden');
         
-        btnVerif.className = 'p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-emerald-600 hover:bg-emerald-700 text-white border-b-2 border-emerald-800 active:scale-95 transition';
+        btnVerifUmum.className = 'p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-emerald-600 hover:bg-emerald-700 text-white border-b-2 border-emerald-800 active:scale-95 transition';
         btnSave.className = 'w-full md:w-auto px-8 py-2.5 sm:py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-wide cursor-pointer transition active:scale-95 uppercase border-b-2 border-emerald-800';
         textSave.innerText = "SIMPAN KE KARTU STOK";
     } else if(mode === 'pindah') {
         tabPindah.className = 'px-6 py-3.5 border-b-4 border-indigo-600 text-indigo-600 bg-indigo-50 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2';
         panelPindah.classList.remove('hidden'); panelOut.classList.add('hidden'); panelIn.classList.add('hidden'); boxScanUmum.classList.add('hidden');
         
-        btnVerif.className = 'p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-indigo-600 hover:bg-indigo-700 text-white border-b-2 border-indigo-800 active:scale-95 transition';
         btnSave.className = 'w-full md:w-auto px-8 py-2.5 sm:py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-wide cursor-pointer transition active:scale-95 uppercase border-b-2 border-indigo-800';
         textSave.innerText = "SIMPAN PINDAH AREA";
     }
@@ -145,7 +143,7 @@ async function bukaModalRiwayatKonversi() {
         if(error) throw error;
         if(!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="p-10 font-bold text-slate-400">Tidak ada riwayat konversi OUT.</td></tr>`; return; }
 
-        riwayatKonversiList = data; // Simpan ke global
+        riwayatKonversiList = data; 
         let h = '';
         data.forEach(d => {
             const dt = new Date(d.created_at);
@@ -196,7 +194,7 @@ function lihatDetailKonversi(kode) {
                 </thead>
                 <tbody>`;
     items.forEach((item, idx) => {
-        t += `<tr class="border-b text-center">
+        t += `<tr class="border-b text-center hover:bg-slate-50">
                 <td class="p-2">${idx+1}</td>
                 <td class="p-2 font-mono font-bold">${item.qrcode}</td>
                 <td class="p-2 text-left font-bold text-blue-700">${item.namaItem || item.nama_item}</td>
@@ -220,13 +218,50 @@ function pilihKodeKonversi(kode, aktifitas) {
     tutupSemuaModal();
 }
 
+async function bukaModalRiwayatPindah() {
+    const tbody = document.getElementById('tbody-riwayat-pindah');
+    tbody.innerHTML = `<tr><td colspan="12" class="p-10"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-indigo-500"></i></td></tr>`;
+    lucide.createIcons();
+    document.getElementById('modal-riwayat-pindah').classList.remove('hidden');
+
+    try {
+        const { data, error } = await db.from('barang_pindah').select('*').order('created_at', {ascending: false}).limit(100);
+        if(error) throw error;
+        if(!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="12" class="p-10 font-bold text-slate-400">Tidak ada riwayat pindah area.</td></tr>`; return; }
+
+        let h = '';
+        data.forEach((d, i) => {
+            const dt = new Date(d.created_at);
+            const waktu = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+            
+            h += `
+                <tr class="border-b hover:bg-slate-50 text-xs transition text-center">
+                    <td class="p-2 font-bold text-slate-500">${i+1}</td>
+                    <td class="p-2 font-semibold text-slate-500">${waktu}</td>
+                    <td class="p-2 font-black text-indigo-700 bg-indigo-50 border-r border-slate-200">${d.area_awal} ➔ ${d.area_akhir}</td>
+                    <td class="p-2 font-mono font-bold tracking-wider text-slate-800 border-r border-slate-200">${d.qrcode}</td>
+                    <td class="p-2 font-bold text-blue-700 text-left">${d.nama_item}</td>
+                    <td class="p-2 font-bold text-slate-600">${d.panjang}</td>
+                    <td class="p-2 font-bold text-slate-800">${d.grade}</td>
+                    <td class="p-2 font-bold text-slate-800">${d.dus}</td>
+                    <td class="p-2 font-bold text-slate-600 border-r border-slate-200">${d.shading}</td>
+                    <td class="p-2 font-black text-orange-600">${d.po}</td>
+                    <td class="p-2 font-medium text-slate-600 text-left border-r border-slate-200">${d.keterangan || '-'}</td>
+                    <td class="p-2 uppercase opacity-70 font-bold text-slate-500">${d.pic}</td>
+                </tr>`;
+        });
+        tbody.innerHTML = h;
+    } catch(e) { tbody.innerHTML = `<tr><td colspan="12" class="p-5 text-red-500">${e.message}</td></tr>`; }
+    finally { lucide.createIcons(); }
+}
+
 function tutupSemuaModal() {
     document.getElementById('modal-po-target').classList.add('hidden');
     document.getElementById('modal-riwayat-konversi').classList.add('hidden');
 }
 
 // ==========================================
-// SCANNING HANDLER (UMUM & PINDAH)
+// SCANNING HANDLER
 // ==========================================
 document.getElementById('form-scan-umum').addEventListener('submit', (e) => { e.preventDefault(); handleScan(document.getElementById('input-qrcode-umum')); });
 document.getElementById('form-scan-pindah').addEventListener('submit', (e) => { e.preventDefault(); handleScan(document.getElementById('input-qrcode-pindah')); });
@@ -329,8 +364,12 @@ function resetFilter() { resetFilterWithoutRender(); renderTablePic(dataPic); }
 async function verifikasiGudang() {
     if(dataPic.length === 0) return alert("Belum ada data untuk diverifikasi!");
 
-    const btn = document.getElementById('btn-verifikasi'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENGECEK...'; btn.disabled = true;
+    // Menangani tombol dari tab manapun
+    const btnId = currentMode === 'pindah' ? 'btn-verifikasi-umum' : (currentMode === 'out' ? 'btn-verifikasi-umum' : 'btn-verifikasi-umum'); 
+    // Wait, let's just grab the active one by matching text or just updating all buttons that could be the trigger
+    const btns = document.querySelectorAll('button[onclick="verifikasiGudang()"]');
+    let originalTexts = [];
+    btns.forEach((btn, idx) => { originalTexts[idx] = btn.innerHTML; btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENGECEK...'; btn.disabled = true; });
 
     const allQRs = dataPic.map(d => d.qrcode);
 
@@ -342,7 +381,6 @@ async function verifikasiGudang() {
         let uniqueSpecs = new Set();
 
         if (currentMode === 'out' || currentMode === 'pindah') {
-            // LOGIKA OUT & PINDAH: Harus ada di stok_qr
             dataPic.forEach(d => {
                 let matched = foundDb.find(dbItem => dbItem.qrcode === d.qrcode);
                 if (matched) {
@@ -364,7 +402,6 @@ async function verifikasiGudang() {
             alert(`Selesai memverifikasi fisik Gudang untuk Mode ${currentMode.toUpperCase()}!`);
 
         } else if (currentMode === 'in') {
-            // LOGIKA IN: Harus TIDAK ADA di stok_qr
             const existingQRs = foundDb.map(d => d.qrcode);
             dataPic.forEach(d => {
                 if (existingQRs.includes(d.qrcode)) {
@@ -380,7 +417,11 @@ async function verifikasiGudang() {
             alert("Selesai memverifikasi fisik Gudang IN!\nBarcode yang VALID siap dimasukkan.");
         }
     } catch(err) { alert("Gagal koneksi ke Supabase: " + err.message); } 
-    finally { saringTabel(); btn.innerHTML = ori; btn.disabled = false; }
+    finally { 
+        saringTabel(); 
+        btns.forEach((btn, idx) => { btn.innerHTML = originalTexts[idx]; btn.disabled = false; });
+        lucide.createIcons();
+    }
 }
 
 // ==========================================
@@ -654,11 +695,9 @@ async function eksekusiPindahArea() {
             let poBawaanAsli = item.poAsliDB && item.poAsliDB !== '-' ? item.poAsliDB : '-';
             let id_sku_baru = `${areaTarget}_${item.jenisItem}_${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${poBawaanAsli}`;
             
-            // 1. UPDATE STOK_QR (Ubah area dan id_sku)
             const { error: errUpdate } = await db.from('stok_qr').update({ area: areaTarget, id_sku: id_sku_baru }).eq('qrcode', item.qrcode);
             if (errUpdate) throw errUpdate;
 
-            // 2. Siapkan data untuk riwayat
             payloadBarangPindah.push({
                 qrcode: item.qrcode,
                 tgl_produksi: item.tglProduksi || '-',
@@ -671,13 +710,12 @@ async function eksekusiPindahArea() {
                 shading: item.shading || '-',
                 po: poBawaanAsli,
                 keterangan: 'Pindah Area',
-                area_awal: item.area, // Area awal yang ditarik saat verifikasi
+                area_awal: item.area, 
                 area_akhir: areaTarget,
                 pic: currentUser.username
             });
         }
 
-        // 3. INSERT KE BARANG_PINDAH
         if (payloadBarangPindah.length > 0) {
             const { error: errPindah } = await db.from('barang_pindah').insert(payloadBarangPindah);
             if (errPindah) throw errPindah;
