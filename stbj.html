@@ -39,8 +39,8 @@
                     <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Scan Fisik Kardus</label>
                     <form id="form-scan" class="flex gap-2">
                         <div class="relative flex-1">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
-                            <input type="text" id="input-qrcode" class="w-full pl-10 p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-black text-slate-800 text-sm sm:text-base bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
+                            <input type="text" id="input-qrcode" class="w-full pl-12 p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-black text-slate-800 text-sm sm:text-base bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
                         </div>
                         <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-blue-900 text-xs sm:text-sm uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> <span class="hidden sm:inline">ADD</span></button>
                     </form>
@@ -146,7 +146,7 @@
         let deletedStbjStack = []; 
         let masterKamus = [];
         let globalRowId = 0;
-        let sortState = {}; // Menyimpan status sortir tabel
+        let sortState = {}; 
         const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
         document.addEventListener('DOMContentLoaded', async () => { 
@@ -154,7 +154,6 @@
             await loadInitialSTBJData();
         });
 
-        // REVISI: Fungsi Sortir Tabel A-Z, Z-A
         function sortTable(colIndex, headerEl) {
             const tbody = document.getElementById('tbody-stbj');
             const rows = Array.from(tbody.querySelectorAll('tr.row-stbj'));
@@ -163,7 +162,6 @@
             sortState[colIndex] = isAsc ? 'asc' : 'desc';
             
             rows.sort((a, b) => {
-                // Untuk handle kolom input (Keterangan), kita tarik valuenya jika ada
                 let cellA = a.cells[colIndex];
                 let cellB = b.cells[colIndex];
                 
@@ -316,7 +314,6 @@
             const ids = []; document.querySelectorAll('.row-cb:checked').forEach(cb => ids.push(parseInt(cb.value))); return ids;
         }
 
-        // REVISI: Fungsi hapus dipisah per baris
         function hapusBaris(id) {
             const removed = dataStbj.find(d => d.id === id);
             if(removed) {
@@ -350,7 +347,7 @@
         }
 
         function resetFilterSTBJ() {
-            const ids = ['fs-status','fs-troli','fs-qr','fs-tgl','fs-mesin','fs-shift','fs-jenis','fs-nama','fs-pjg','fs-grade','fs-dus','fs-shading','fs-po','fs-ket','fs-pic'];
+            const ids = ['fs-status','fs-troli','fs-qr','fs-tgl','fs-mesin','fs-shift','fs-jenis','fs-nama','fs-pjg','fs-grade','fs-dus','fs-shading','fs-po','fs-ket'];
             ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; });
             saringTabelSTBJ(); toggleSidebarFilter();
         }
@@ -370,8 +367,7 @@
                 dus: document.getElementById('fs-dus')?.value.toLowerCase() || '',
                 shading: document.getElementById('fs-shading')?.value.toLowerCase() || '',
                 po: document.getElementById('fs-po')?.value.toLowerCase() || '',
-                ket: document.getElementById('fs-ket')?.value.toLowerCase() || '',
-                pic: document.getElementById('fs-pic')?.value.toLowerCase() || ''
+                ket: document.getElementById('fs-ket')?.value.toLowerCase() || ''
             };
 
             document.querySelectorAll('.row-stbj').forEach(row => {
@@ -407,9 +403,9 @@
                 const isRedHighlight = d.status === 'DUPLIKAT' || d.isLocalDuplicate;
                 const trBaseClass = isRedHighlight ? 'bg-red-50 hover:bg-red-100 text-red-900' : (d.status === 'HOLD' ? 'bg-amber-50 hover:bg-amber-100 text-amber-900' : 'hover:bg-slate-50 text-slate-700');
 
-                // REVISI: Penambahan kolom Action Hapus
+                // REVISI: text-[11px] pada <tr> dihapus, diganti menjadi text-sm.
                 html += `
-                    <tr class="border-b border-slate-200 transition ${trBaseClass} row-stbj text-[11px]">
+                    <tr class="border-b border-slate-200 transition ${trBaseClass} row-stbj text-sm">
                         <td class="p-3 text-center col-cb"><input type="checkbox" value="${d.id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                         <td class="p-2 text-center col-btn">
                             <button onclick="hapusBaris(${d.id})" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex">
@@ -417,7 +413,7 @@
                             </button>
                         </td>
                         <td class="p-3 font-bold col-no">${index + 1}</td>
-                        <td class="p-3 font-black text-[10px] border-r border-slate-200 col-status"><span class="px-2 py-1 rounded shadow-sm border border-black/10 ${badgeClass}">${displayStatus}</span></td>
+                        <td class="p-3 font-black text-xs border-r border-slate-200 col-status"><span class="px-2 py-1 rounded shadow-sm border border-black/10 ${badgeClass}">${displayStatus}</span></td>
                         <td class="p-3 font-bold ${isRedHighlight ? 'text-red-900' : 'text-slate-700'} col-troli">${d.troli}</td>
                         <td class="p-3 font-mono font-bold border-r border-slate-200 tracking-wider col-qr">${d.qrcode}</td>
                         <td class="p-3 font-bold col-tgl">${d.tglProduksi}</td>
@@ -430,8 +426,8 @@
                         <td class="p-3 font-bold col-dus">${d.dus}</td>
                         <td class="p-3 font-bold border-r border-slate-200 col-shading">${d.shading}</td>
                         <td class="p-3 font-black ${isRedHighlight ? 'text-red-700' : 'text-orange-600'} col-po">${d.po}</td>
-                        <td class="p-2 col-ket"><input type="text" onchange="updateKet(${d.id}, this.value)" value="${d.keterangan}" class="w-full p-2 text-xs border border-slate-300 rounded outline-none focus:border-blue-500 bg-white/50 ${isRedHighlight ? 'placeholder-red-400' : ''}" placeholder="Keterangan..."></td>
-                        <td class="p-3 font-bold uppercase text-[10px] opacity-70 col-pic">${d.pic}</td>
+                        <td class="p-2 col-ket"><input type="text" onchange="updateKet(${d.id}, this.value)" value="${d.keterangan}" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-blue-500 bg-white/50 ${isRedHighlight ? 'placeholder-red-400' : ''}" placeholder="Keterangan..."></td>
+                        <td class="p-3 font-bold uppercase text-xs opacity-70 col-pic">${d.pic}</td>
                     </tr>
                 `;
             });
@@ -440,7 +436,6 @@
 
         function updateKet(id, val) { const item = dataStbj.find(d => d.id === id); if(item) item.keterangan = val; }
 
-        // REVISI: Pengecekan Cerdas ke 2 Tabel (hasil_stbj & stok_qr)
         async function cekGudangSTBJ() {
             if(dataStbj.length === 0) return alert("Belum ada data.");
             const btn = document.getElementById('btn-cek-gudang'); const ori = btn.innerHTML;
@@ -448,7 +443,6 @@
 
             const allQRs = dataStbj.map(d => d.qrcode);
             try {
-                // Tembak dua tabel sekaligus secara paralel
                 const [resStbj, resStok] = await Promise.all([
                     db.from('hasil_stbj').select('qrcode').in('qrcode', allQRs),
                     db.from('stok_qr').select('qrcode').in('qrcode', allQRs)
@@ -490,7 +484,7 @@
         async function saveToDatabaseSTBJ() {
             if(dataStbj.length === 0) return alert('Data kosong!');
             const blmCek = dataStbj.filter(d => d.status === 'BELUM CEK');
-            if(blmCek.length > 0) return alert('Tekan tombol Verifikasi DUPLIKAT terlebih dahulu sebelum menyimpan!');
+            if(blmCek.length > 0) return alert('Tekan tombol Verifikasi Duplikat terlebih dahulu sebelum menyimpan!');
 
             const btn = document.getElementById('btn-save'); const ori = btn.innerHTML;
             btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btn.disabled = true;
