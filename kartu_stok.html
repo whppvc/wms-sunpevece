@@ -12,23 +12,8 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
-        
-        /* CSS VARIABLES: Super Ringan & Anti Lag! */
-        :root {
-            --th-bg: #1e293b; --th-color: #ffffff; --th-size: 11px; --th-align: center; --th-flex: center;
-            --td-color: #334155; --td-size: 12px; --td-align: center;
-            --td-po-color: #ea580c; --td-po-size: 12px; --td-po-align: center;
-        }
-
-        #main-table th.hdr-std { 
-            background-color: var(--th-bg) !important; color: var(--th-color) !important; 
-            font-size: var(--th-size) !important; text-align: var(--th-align) !important;
-            border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-weight: 900; white-space: nowrap; 
-        }
-        #main-table th.hdr-std > div { justify-content: var(--th-flex) !important; }
-        #main-table td { color: var(--td-color) !important; font-size: var(--td-size) !important; text-align: var(--td-align) !important; }
-        #main-table td.col-po { color: var(--td-po-color) !important; font-size: var(--td-po-size) !important; text-align: var(--td-po-align) !important; font-weight: 900; background-color: rgba(255, 237, 213, 0.3); }
     </style>
+    <style id="dynamic-table-settings"></style>
     <style id="dynamic-col-styles"></style>
 </head>
 <body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-20">
@@ -197,10 +182,10 @@
                 </div>
 
                 <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/50">
-                    <h4 class="font-black text-xs text-emerald-600 mb-3 uppercase flex items-center gap-1"><i data-lucide="table-2" class="w-3.5 h-3.5"></i> Styling Isi Tabel (Data)</h4>
+                    <h4 class="font-black text-xs text-emerald-600 mb-3 uppercase flex items-center gap-1"><i data-lucide="table-2" class="w-3.5 h-3.5"></i> Styling Isi Tabel (Umum)</h4>
                     <div class="space-y-3">
                         <div class="flex items-center justify-between">
-                            <label class="text-xs font-bold text-slate-600">Warna Teks (Umum)</label>
+                            <label class="text-xs font-bold text-slate-600">Warna Teks</label>
                             <input type="color" id="set-td-color" class="w-10 h-8 cursor-pointer rounded border border-slate-300">
                         </div>
                         <div class="flex items-center justify-between">
@@ -217,29 +202,52 @@
                 </div>
 
                 <div class="border border-orange-200 rounded-xl p-4 bg-orange-50/50">
-                    <h4 class="font-black text-xs text-orange-600 mb-3 uppercase flex items-center gap-1"><i data-lucide="list-filter" class="w-3.5 h-3.5"></i> Styling Khusus (Kolom PO Aktual)</h4>
+                    <h4 class="font-black text-xs text-orange-600 mb-3 uppercase flex items-center gap-1"><i data-lucide="paintbrush" class="w-3.5 h-3.5"></i> Styling Khusus (Per Kolom)</h4>
                     <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Pilih Kolom Tabel</label>
+                            <select id="select-custom-col" onchange="loadCustomColSetting()" class="w-full p-2 text-xs font-bold border border-slate-300 rounded outline-none cursor-pointer bg-white">
+                                <option value="">-- Pilih Kolom --</option>
+                                <option value="col-no">No</option>
+                                <option value="col-area">Area</option>
+                                <option value="col-qr">QRCode</option>
+                                <option value="col-tgl">Tgl Produksi</option>
+                                <option value="col-mesin">Mesin</option>
+                                <option value="col-shift">Shift</option>
+                                <option value="col-jenis">Jenis Item</option>
+                                <option value="col-nama">Nama Item</option>
+                                <option value="col-pjg">Panjang</option>
+                                <option value="col-grade">Grade</option>
+                                <option value="col-dus">Dus</option>
+                                <option value="col-shading">Shading</option>
+                                <option value="col-po-bawaan">PO Bawaan</option>
+                                <option value="col-po">PO Aktual</option>
+                                <option value="col-ket">Keterangan</option>
+                                <option value="col-qty">Total QTY</option>
+                            </select>
+                        </div>
                         <div class="flex items-center justify-between">
                             <label class="text-xs font-bold text-slate-600">Warna Teks (HEX)</label>
-                            <input type="color" id="set-td-po-color" class="w-10 h-8 cursor-pointer rounded border border-slate-300">
+                            <input type="color" id="set-custom-color" class="w-10 h-8 cursor-pointer rounded border border-slate-300">
                         </div>
                         <div class="flex items-center justify-between">
                             <label class="text-xs font-bold text-slate-600">Ukuran Font (px)</label>
-                            <input type="number" id="set-td-po-size" class="w-20 p-1.5 text-center text-xs font-bold border border-slate-300 rounded" min="8" max="24">
+                            <input type="number" id="set-custom-size" class="w-20 p-1.5 text-center text-xs font-bold border border-slate-300 rounded" min="8" max="24">
                         </div>
                         <div class="flex items-center justify-between">
                             <label class="text-xs font-bold text-slate-600">Perataan Teks (Align)</label>
-                            <select id="set-td-po-align" class="w-24 p-1.5 text-xs font-bold border border-slate-300 rounded outline-none cursor-pointer">
+                            <select id="set-custom-align" class="w-24 p-1.5 text-xs font-bold border border-slate-300 rounded outline-none cursor-pointer">
                                 <option value="left">Kiri</option><option value="center">Tengah</option><option value="right">Kanan</option>
                             </select>
                         </div>
+                        <button onclick="resetCustomCol()" class="w-full p-2 mt-1 bg-white hover:bg-slate-100 text-red-600 font-bold border border-slate-300 rounded text-xs transition">Hapus Style Khusus Kolom Ini</button>
                     </div>
                 </div>
 
             </div>
             <div class="p-4 border-t border-slate-100 flex justify-between bg-slate-50 items-center rounded-b-2xl">
-                <button onclick="resetSettingDefault()" class="text-[10px] font-black text-red-500 hover:text-red-700 underline uppercase">Reset</button>
-                <button onclick="tutupSemuaPopups()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg shadow-sm text-xs transition flex items-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> TUTUP</button>
+                <button onclick="resetSettingDefault()" class="text-[10px] font-black text-red-500 hover:text-red-700 underline uppercase">Reset Semua</button>
+                <button onclick="simpanSettingTabel()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg shadow-sm text-xs transition flex items-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> TERAPKAN</button>
             </div>
         </div>
     </div>
