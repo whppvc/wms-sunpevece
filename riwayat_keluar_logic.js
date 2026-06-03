@@ -48,12 +48,12 @@ function tutupPopups() {
     document.getElementById('overlay-klik-luar-k').classList.add('hidden');
 }
 
-// Fungsi Tarik Master Area untuk Dropdown Pop up Cancel
+// REVISI: Fungsi Tarik Master Area dari tabel "master_area"
 async function loadAreasForCancel() {
     try {
-        const { data } = await db.from('master_1').select('nama_area').not('nama_area', 'is', null);
+        const { data } = await db.from('master_area').select('*');
         if (data) {
-            const areas = [...new Set(data.map(d => d.nama_area.trim()).filter(Boolean))];
+            const areas = [...new Set(data.map(d => (d.nama_area || d.area || '').trim()).filter(Boolean))];
             const sel = document.getElementById('cancel-area');
             sel.innerHTML = '<option value="">-- PILIH AREA GUDANG --</option>';
             areas.sort().forEach(a => sel.innerHTML += `<option value="${a}">${a}</option>`);
@@ -195,7 +195,7 @@ function renderHeaderDanTabel() {
             const dt = new Date(r.created_at);
             const tglKeluar = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
             const td = translateBarcode(r.qrcode);
-            const poTarget = extractPOFromSKU(r.id_sku); // Tarik PO Target
+            const poTarget = extractPOFromSKU(r.id_sku); 
 
             h += `
                 <tr class="border-b border-slate-200 hover:bg-slate-50 text-row transition text-sm">
@@ -398,7 +398,6 @@ async function aksiMassal(tipe) {
     else if(tipe === 'cancel') {
         if(modeSekarang !== 'hold') return alert("CANCEL hanya bisa dilakukan dari Tabel Hold.");
         
-        // Simpan data centang ke global variabel untuk diproses pop-up
         globalCheckedCancel = checkedValues;
         
         document.getElementById('cancel-ket').value = '';
@@ -415,7 +414,7 @@ async function eksekusiCancelHold() {
     const ketCancel = document.getElementById('cancel-ket').value.trim();
 
     if(!areaCancel) return alert("Pilih Area Pengembalian terlebih dahulu!");
-    if(!ketCancel) return alert("Keterangan retur wajib diisi!");
+    if(!ketCancel) return alert("Keterangan wajib diisi!");
 
     const btn = document.getElementById('btn-submit-cancel'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> RETUR STOK...'; btn.disabled = true;
@@ -428,7 +427,7 @@ async function eksekusiCancelHold() {
         let parts = item.id_sku.split('_');
         let po = '-';
         if(parts.length >= 8) {
-            parts[0] = areaCancel; // Timpa Area di SKU dengan pilihan dari Pop Up
+            parts[0] = areaCancel; 
             item.id_sku = parts.join('_');
             po = parts[7];
             
@@ -438,21 +437,18 @@ async function eksekusiCancelHold() {
             aktualUpdates[key].qty++;
         }
 
-        // Kembalikan ke fisik stok_qr
         insertsStokQr.push({
             qrcode: item.qrcode,
             id_sku: item.id_sku,
             area: areaCancel, 
-            keterangan: ketCancel // Keterangan ini akan tampil cantik di Kartu Stok
+            keterangan: ketCancel 
         });
     });
 
     try {
-        // 1. Masukkan fisik ke stok_qr
         const { error: e1 } = await db.from('stok_qr').insert(insertsStokQr);
         if(e1) throw e1;
 
-        // 2. Kembalikan tabungan di stok_aktual
         for(let key in aktualUpdates) {
             let u = aktualUpdates[key];
             const {data: curData} = await db.from('stok_aktual').select('id, qty').eq('nama_item', u.nama_item).eq('pjg', u.pjg).eq('grade', u.grade).eq('dus', u.dus).eq('shading', u.shading).eq('po_aktual', u.po_aktual).single();
@@ -463,7 +459,6 @@ async function eksekusiCancelHold() {
             }
         }
 
-        // 3. Bersihkan dari tabel hold_keluar (karena sudah sukses diretur)
         const { error: e3 } = await db.from('hold_keluar').delete().in('qrcode', globalCheckedCancel);
         if(e3) throw e3;
 
