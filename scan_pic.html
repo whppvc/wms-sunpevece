@@ -11,29 +11,25 @@
         .table-container { scrollbar-width: thin; position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; white-space: nowrap; position: sticky; top: 0; z-index: 20; background-clip: padding-box;}
-        .tab-active { border-bottom: 3px solid #e11d48; color: #e11d48; font-weight: 900; background-color: #fff1f2; }
-        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
     </style>
 </head>
 <body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-28">
 
     <div class="w-full px-2 sm:px-4 pt-4 relative">
         
-        <!-- TABS MENU -->
-        <div class="flex border-b border-slate-200 mb-3 bg-white rounded-xl shadow-sm overflow-x-auto hide-scrollbar">
-            <button onclick="setModeKonversi('out')" id="tab-out" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="log-out" class="w-4 h-4"></i> KONVERSI OUT</button>
-            <button onclick="setModeKonversi('in')" id="tab-in" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="log-in" class="w-4 h-4"></i> KONVERSI IN</button>
-            <button class="px-6 py-3.5 tab-inactive transition whitespace-nowrap flex items-center gap-2 text-xs uppercase opacity-40 cursor-not-allowed"><i data-lucide="arrow-left-right" class="w-4 h-4"></i> PINDAH AREA</button>
-            <button class="px-6 py-3.5 tab-inactive transition whitespace-nowrap flex items-center gap-2 text-xs uppercase opacity-40 cursor-not-allowed"><i data-lucide="alert-triangle" class="w-4 h-4"></i> CASE KHUSUS</button>
+        <div class="flex border-b border-slate-200 mb-3 bg-white rounded-xl shadow-sm overflow-x-auto hide-scrollbar" id="tab-container">
+            <button onclick="setModeKonversi('out')" id="tab-out" class="px-6 py-3.5 border-b-4 border-rose-600 text-rose-600 bg-rose-50 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> KONVERSI OUT</button>
+            <button onclick="setModeKonversi('in')" id="tab-in" class="px-6 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs uppercase hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2"><i data-lucide="log-in" class="w-4 h-4"></i> KONVERSI IN</button>
+            <button onclick="setModeKonversi('pindah')" id="tab-pindah" class="px-6 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs uppercase hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2"><i data-lucide="arrow-left-right" class="w-4 h-4"></i> PINDAH AREA</button>
+            <button class="px-6 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs uppercase hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 opacity-50 cursor-not-allowed"><i data-lucide="alert-triangle" class="w-4 h-4"></i> CASE KHUSUS</button>
         </div>
 
-        <!-- PANEL OUT -->
-        <div id="panel-out" class="bg-white rounded-xl shadow-sm border border-slate-200 mb-3 overflow-hidden">
-            <button onclick="toggleAktifitas()" class="w-full bg-slate-100 p-3 flex justify-between items-center border-b border-slate-200 hover:bg-slate-200 transition active:bg-slate-300">
-                <span class="font-black text-[11px] uppercase tracking-wide text-slate-700 flex items-center gap-2"><i data-lucide="activity" class="w-4 h-4 text-rose-600"></i> INPUT AKTIFITAS OUT</span>
-                <i data-lucide="chevron-up" id="icon-toggle-aktifitas" class="w-4 h-4 text-slate-500 transition-transform duration-300"></i>
+        <div id="panel-out" class="bg-white rounded-xl shadow-sm border border-slate-200 mb-3 overflow-hidden border-l-4 border-l-rose-600">
+            <button onclick="toggleAktifitas('out')" class="w-full bg-rose-50 p-3 flex justify-between items-center border-b border-slate-200 hover:bg-rose-100 transition active:bg-rose-200">
+                <span class="font-black text-[11px] uppercase tracking-wide text-rose-700 flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> INPUT AKTIFITAS OUT</span>
+                <i data-lucide="chevron-up" id="icon-toggle-out" class="w-4 h-4 text-slate-500 transition-transform duration-300"></i>
             </button>
-            <div id="body-aktifitas" class="p-3 sm:p-4 transition-all duration-300 origin-top">
+            <div id="body-aktifitas-out" class="p-3 sm:p-4 transition-all duration-300 origin-top">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Pilih Aktifitas</label>
@@ -55,11 +51,10 @@
             </div>
         </div>
 
-        <!-- PANEL IN -->
-        <div id="panel-in" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 mb-3 overflow-hidden border-l-4 border-l-blue-600">
-            <button onclick="toggleAktifitasIn()" class="w-full bg-blue-50 p-3 flex justify-between items-center border-b border-slate-200 hover:bg-blue-100 transition active:bg-blue-200">
-                <span class="font-black text-[11px] uppercase tracking-wide text-blue-700 flex items-center gap-2"><i data-lucide="log-in" class="w-4 h-4 text-blue-600"></i> INPUT AKTIFITAS IN</span>
-                <i data-lucide="chevron-up" id="icon-toggle-aktifitas-in" class="w-4 h-4 text-slate-500 transition-transform duration-300"></i>
+        <div id="panel-in" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 mb-3 overflow-hidden border-l-4 border-l-emerald-600">
+            <button onclick="toggleAktifitas('in')" class="w-full bg-emerald-50 p-3 flex justify-between items-center border-b border-slate-200 hover:bg-emerald-100 transition active:bg-emerald-200">
+                <span class="font-black text-[11px] uppercase tracking-wide text-emerald-700 flex items-center gap-2"><i data-lucide="log-in" class="w-4 h-4"></i> INPUT AKTIFITAS IN</span>
+                <i data-lucide="chevron-up" id="icon-toggle-in" class="w-4 h-4 text-slate-500 transition-transform duration-300"></i>
             </button>
             <div id="body-aktifitas-in" class="p-3 sm:p-4 transition-all duration-300 origin-top">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 border-b border-slate-100 pb-3">
@@ -68,42 +63,59 @@
                         <div class="flex gap-2">
                             <input type="text" id="in-kode-konversi" readonly class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold bg-slate-100 text-slate-600 text-xs" placeholder="-- Pilih dari riwayat out --">
                             <input type="hidden" id="in-aktifitas-ref">
-                            <button type="button" onclick="bukaModalRiwayatKonversi()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-black shadow-sm text-xs transition active:scale-95 whitespace-nowrap">PILIH KODE</button>
+                            <button type="button" onclick="bukaModalRiwayatKonversi()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-black shadow-sm text-xs transition active:scale-95 whitespace-nowrap">PILIH KODE</button>
                         </div>
                     </div>
                     <div>
                         <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">PILIH AREA TUJUAN GUDANG</label>
-                        <select id="in-area" class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-blue-500 text-slate-800 cursor-pointer bg-slate-50 text-xs">
+                        <select id="in-area" class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-emerald-500 text-slate-800 cursor-pointer bg-slate-50 text-xs">
                             <option value="">-- Memuat Area... --</option>
                         </select>
                     </div>
                 </div>
                 <div>
                     <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">KETERANGAN / ALASAN (OPSIONAL)</label>
-                    <input type="text" id="input-keterangan-in" class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-blue-500 text-slate-800 bg-slate-50 text-xs" placeholder="Ketik keterangan IN...">
+                    <input type="text" id="input-keterangan-in" class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-emerald-500 text-slate-800 bg-slate-50 text-xs" placeholder="Ketik keterangan IN...">
                 </div>
             </div>
         </div>
 
-        <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-slate-200 mb-3">
+        <div id="panel-pindah" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 mb-3 p-3 sm:p-4 border-l-4 border-l-indigo-600">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                <div class="md:col-span-3">
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">PILIH AREA SIMPAN</label>
+                    <select id="pindah-area-target" class="w-full p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-indigo-500 text-slate-800 cursor-pointer bg-slate-50 text-sm">
+                        <option value="">-- Pilih Area --</option>
+                    </select>
+                </div>
+                <div class="md:col-span-9">
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">SCAN FISIK KARDUS</label>
+                    <form id="form-scan-pindah" class="flex gap-2">
+                        <div class="relative flex-1">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
+                            <input type="text" id="input-qrcode-pindah" class="w-full pl-12 p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-indigo-500 font-black text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
+                        </div>
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-black shadow-sm transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-indigo-800 text-xs sm:text-sm uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> ADD</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div id="box-scan-umum" class="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-slate-200 mb-3">
             <h3 class="font-black text-[11px] uppercase tracking-wide text-slate-700 mb-3 flex items-center gap-2 border-b border-slate-100 pb-2">
                 <i data-lucide="package-search" class="w-4 h-4 text-slate-600"></i> INPUT ITEM (SCAN FISIK)
             </h3>
-            
-            <form id="form-scan" class="flex gap-2 mb-4">
+            <form id="form-scan-umum" class="flex gap-2 mb-4">
                 <div class="relative flex-1">
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
-                    <input type="text" id="input-qrcode" class="w-full pl-12 p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-rose-500 font-black text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
+                    <input type="text" id="input-qrcode-umum" class="w-full pl-12 p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg outline-none font-black text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition focus:border-blue-600" placeholder="Arahkan scanner..." autocomplete="off">
                 </div>
                 <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-black shadow-sm transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-slate-950 text-xs uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> ADD</button>
             </form>
 
-            <div class="flex gap-2 overflow-x-auto pt-1 pb-4 px-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none" style="-webkit-overflow-scrolling: touch;">
+            <div class="flex gap-2 overflow-x-auto pt-1 pb-4 px-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none">
                 <button onclick="toggleFilter()" class="p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-blue-600 text-white border-b-2 border-blue-800 active:scale-95 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
                 <button onclick="verifikasiGudang()" id="btn-verifikasi" class="p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-rose-600 hover:bg-rose-700 text-white border-b-2 border-rose-800 active:scale-95 transition"><i data-lucide="shield-check" class="w-4 h-4"></i> Verifikasi Gudang</button>
-            </div>
-            <div class="text-[9px] text-slate-400 text-center font-black uppercase tracking-wider -mt-2.5 mb-2 pointer-events-none flex items-center justify-center gap-1 animate-pulse">
-                <i data-lucide="arrow-left-right" class="w-3 h-3"></i> Geser menu aksi ke kanan-kiri
             </div>
         </div>
 
@@ -138,16 +150,14 @@
         </div>
     </div>
 
-    <!-- FLOATING SAVE BUTTON -->
     <div class="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 p-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
         <div class="w-full px-2 sm:px-4 flex justify-center md:justify-end">
             <button onclick="bukaModalSimpan()" id="btn-save-awal" class="w-full md:w-auto px-8 py-2.5 sm:py-3 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-wide cursor-pointer transition active:scale-95 uppercase border-b-2 border-rose-800">
-                <i data-lucide="save" class="w-5 h-5"></i> <span>SIMPAN & EKSEKUSI</span>
+                <i data-lucide="save" class="w-5 h-5"></i> <span id="text-save-awal">SIMPAN & EKSEKUSI</span>
             </button>
         </div>
     </div>
 
-    <!-- MODAL PO TARGET (OUT MODE) -->
     <div id="modal-po-target" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
         <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
             <h3 class="text-xl font-black mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="package-minus" class="text-rose-600"></i> Tujuan PO Konversi Out</h3>
@@ -165,11 +175,10 @@
         </div>
     </div>
 
-    <!-- MODAL PILIH RIWAYAT KONVERSI OUT (IN MODE) -->
     <div id="modal-riwayat-konversi" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-5xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-6xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
              <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                 <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="history" class="w-4 h-4 text-blue-600"></i> Pilih Referensi Konversi OUT</h3>
+                 <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="history" class="w-4 h-4 text-emerald-600"></i> Pilih Referensi Konversi OUT</h3>
                  <button onclick="tutupSemuaModal()" class="text-slate-400 hover:text-red-500 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
              </div>
              <div class="overflow-y-auto flex-1 p-0 hide-scrollbar">
@@ -177,6 +186,7 @@
                      <thead class="sticky top-0 bg-slate-800 shadow-sm z-10">
                          <tr>
                              <th class="hdr-std w-16">PILIH</th>
+                             <th class="hdr-std">CEK DETAIL</th>
                              <th class="hdr-std border-r border-slate-600">KODE KONVERSI</th>
                              <th class="hdr-std">WAKTU</th>
                              <th class="hdr-std border-r border-slate-600">AKTIFITAS ASAL</th>
@@ -192,7 +202,18 @@
         </div>
     </div>
 
-    <!-- SIDEBAR FILTER -->
+    <div id="modal-detail-items" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/80 z-[100] px-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm">
+                    <i data-lucide="list" class="w-4 h-4 text-blue-600"></i> DETAIL ITEM: <span id="lbl-detail-kode" class="text-blue-700"></span>
+                </h3>
+                <button onclick="document.getElementById('modal-detail-items').classList.add('hidden')" class="text-slate-400 hover:text-red-500 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="overflow-y-auto p-4 text-sm" id="detail-items-content"></div>
+        </div>
+    </div>
+
     <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
             <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Barcode</h3>
