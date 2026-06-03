@@ -59,18 +59,8 @@ async function muatDataDariSupabase() {
     tbody.innerHTML = `<tr><td colspan="22" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data Keluar...</p></td></tr>`;
     lucide.createIcons();
     
-    const rentang = document.getElementById('select-rentang').value;
     let queryKeluar = db.from('stok_keluar').select('*').order('created_at', {ascending: false}); 
     let queryHold = db.from('hold_keluar').select('*').order('created_at', {ascending: false}); 
-    
-    if (rentang !== 'all') {
-        const today = new Date(); let pastDate = new Date();
-        if(rentang === 'today') pastDate.setHours(0,0,0,0);
-        else if (rentang === 'week') pastDate.setDate(today.getDate() - 7);
-        else if (rentang === 'month') pastDate.setDate(today.getDate() - 30);
-        queryKeluar = queryKeluar.gte('created_at', pastDate.toISOString());
-        queryHold = queryHold.gte('created_at', pastDate.toISOString());
-    }
 
     try {
         const [resK, resH] = await Promise.all([queryKeluar, queryHold]);
@@ -324,7 +314,6 @@ async function aksiMassal(tipe) {
     document.querySelectorAll('.row-cb:checked').forEach(cb => { cb.value.split(',').forEach(v => { if(v) checkedValues.push(v); }); });
     if(checkedValues.length === 0) return alert("Centang baris tabel terlebih dahulu!");
 
-    // FITUR SALIN KE EXCEL (TEXT/TSV)
     if(tipe === 'salin') {
         let textSalin = "";
         const headers = Array.from(document.querySelectorAll('#thead-keluar th'))
@@ -343,7 +332,6 @@ async function aksiMassal(tipe) {
         navigator.clipboard.writeText(textSalin);
         alert(`Tersalin! Buka Excel dan Paste (Ctrl+V).`);
     } 
-    // FITUR DOWNLOAD EXCEL NATIVE
     else if(tipe === 'xlsx') {
         if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat.");
         let ws_data = [];
@@ -360,12 +348,12 @@ async function aksiMassal(tipe) {
                 ws_data.push(rowData);
             }
         });
+
         let ws = XLSX.utils.aoa_to_sheet(ws_data);
         let wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Keluar_Data");
         XLSX.writeFile(wb, `Riwayat_Keluar.xlsx`);
     }
-    // FITUR PINDAH KE HOLD
     else if(tipe === 'hold') {
         if(modeSekarang !== 'qrcode') return alert("HOLD hanya bisa dilakukan dari Mode QRCODE.");
         if(!confirm(`Yakin ingin menahan (HOLD) ${checkedValues.length} item ini?\n\n(Tindakan ini hanya memindahkan riwayat, TIDAK MENGEMBALIKAN barang ke Kartu Stok. Jika ingin mengembalikan stok, lakukan "Cancel Keluar" dari Tabel Hold nantinya).`)) return;
@@ -389,7 +377,6 @@ async function aksiMassal(tipe) {
         } catch(e) { alert("GAGAL HOLD: " + e.message); }
         finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
     }
-    // FITUR CANCEL KELUAR (KEMBALIKAN KE STOK GUDANG)
     else if(tipe === 'cancel') {
         if(modeSekarang !== 'hold') return alert("CANCEL hanya bisa dilakukan dari Tabel Hold.");
         const ketCancel = prompt(`Anda akan MENGEMBALIKAN ${checkedValues.length} item ini ke Gudang (Kartu Stok).\n\nMasukkan Keterangan (Wajib):`);
@@ -403,7 +390,6 @@ async function aksiMassal(tipe) {
         let aktualUpdates = {};
 
         dataReturn.forEach(item => {
-            // Siapkan fisik kembali ke stok_qr (Di area "HOLD")
             insertsStokQr.push({
                 qrcode: item.qrcode,
                 id_sku: item.id_sku,
@@ -411,7 +397,6 @@ async function aksiMassal(tipe) {
                 keterangan: ketCancel
             });
 
-            // Parse ID SKU untuk mengembalikan jatah tabungan stok_aktual
             let parts = item.id_sku.split('_');
             if(parts.length >= 8) {
                 let [area, jenis, nama, pjg, grade, dus, shading, po] = parts;
@@ -422,11 +407,9 @@ async function aksiMassal(tipe) {
         });
 
         try {
-            // 1. Masukkan fisik ke stok_qr
             const { error: e1 } = await db.from('stok_qr').insert(insertsStokQr);
             if(e1) throw e1;
 
-            // 2. Kembalikan tabungan di stok_aktual
             for(let key in aktualUpdates) {
                 let u = aktualUpdates[key];
                 const {data: curData} = await db.from('stok_aktual').select('id, qty').eq('nama_item', u.nama_item).eq('pjg', u.pjg).eq('grade', u.grade).eq('dus', u.dus).eq('shading', u.shading).eq('po_aktual', u.po_aktual).single();
@@ -437,7 +420,6 @@ async function aksiMassal(tipe) {
                 }
             }
 
-            // 3. Bersihkan dari hold_keluar
             const { error: e3 } = await db.from('hold_keluar').delete().in('qrcode', checkedValues);
             if(e3) throw e3;
 
