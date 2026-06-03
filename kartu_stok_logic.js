@@ -5,26 +5,23 @@ let selectedForPO = []; let sourcePOContext = ''; let currentBreakdownData = [];
 let sortState = {};
 let masterData = { kamus: [] };
 
-// ========================================================
-// 1. REFACTOR: ADVANCED JSON PARSING
-// ========================================================
+// FUNGSI AMAN PARSE JSON
 function safeJSONParse(data, fallback = null) {
     if (!data || data === 'undefined' || data === 'null') return fallback;
-    if (typeof data !== 'string') return data; // Jika sudah bentuk object, return langsung
-    try {
-        return JSON.parse(data);
-    } catch (e) {
-        console.warn("JSON Parse Error dicegat:", e.message);
-        return fallback;
-    }
+    if (typeof data !== 'string') return data; 
+    try { return JSON.parse(data); } catch (e) { return fallback; }
 }
 
 const currentUser = safeJSONParse(localStorage.getItem('user_session'), { username: 'Admin', role: 'admin' });
 
 // ========================================================
-// 2. STYLING MANAGEMENT (GEAR SETTINGS)
+// 1. DYNAMIC STYLING MANAGEMENT (GEAR SETTING CSS VARIABLES)
 // ========================================================
-const defaultSettings = { thBg: '#1e293b', thColor: '#ffffff', thSize: 11, thAlign: 'center', tdColor: '#334155', tdSize: 12, tdAlign: 'center' };
+const defaultSettings = { 
+    thBg: '#1e293b', thColor: '#ffffff', thSize: 11, thAlign: 'center', 
+    tdColor: '#334155', tdSize: 12, tdAlign: 'center',
+    tdPoColor: '#ea580c', tdPoSize: 12, tdPoAlign: 'center'
+};
 
 function terapkanSettingAwal() {
     let saved = safeJSONParse(localStorage.getItem('wms_table_settings'), defaultSettings);
@@ -33,34 +30,46 @@ function terapkanSettingAwal() {
 }
 
 function applyCSS(s) {
-    const styleEl = document.getElementById('dynamic-table-settings');
-    if (styleEl) {
-        const justify = s.thAlign === 'left' ? 'flex-start' : (s.thAlign === 'right' ? 'flex-end' : 'center');
-        styleEl.innerHTML = `
-            #main-table th.hdr-std { background-color: ${s.thBg} !important; color: ${s.thColor} !important; font-size: ${s.thSize}px !important; text-align: ${s.thAlign} !important; }
-            #main-table th.hdr-std > div { justify-content: ${justify} !important; }
-            #main-table td { color: ${s.tdColor} !important; font-size: ${s.tdSize}px !important; text-align: ${s.tdAlign} !important; }
-        `;
-    }
+    const r = document.documentElement;
+    const justify = s.thAlign === 'left' ? 'flex-start' : (s.thAlign === 'right' ? 'flex-end' : 'center');
+    
+    r.style.setProperty('--th-bg', s.thBg);
+    r.style.setProperty('--th-color', s.thColor);
+    r.style.setProperty('--th-size', s.thSize + 'px');
+    r.style.setProperty('--th-align', s.thAlign);
+    r.style.setProperty('--th-flex', justify);
+
+    r.style.setProperty('--td-color', s.tdColor);
+    r.style.setProperty('--td-size', s.tdSize + 'px');
+    r.style.setProperty('--td-align', s.tdAlign);
+
+    r.style.setProperty('--td-po-color', s.tdPoColor || '#ea580c');
+    r.style.setProperty('--td-po-size', (s.tdPoSize || s.tdSize) + 'px');
+    r.style.setProperty('--td-po-align', s.tdPoAlign || 'center');
 }
 
 function bukaModalSetting() {
     let s = safeJSONParse(localStorage.getItem('wms_table_settings'), defaultSettings);
     if (!s || !s.thBg) s = defaultSettings;
 
-    ['th-bg', 'th-color', 'th-size', 'th-align', 'td-color', 'td-size', 'td-align'].forEach(key => {
-        const el = document.getElementById(`set-${key}`);
-        if(el) {
-            const camelKey = key.split('-').map((word, index) => index == 0 ? word : word[0].toUpperCase() + word.slice(1)).join('');
-            el.value = s[camelKey];
-        }
-    });
+    document.getElementById('set-th-bg').value = s.thBg;
+    document.getElementById('set-th-color').value = s.thColor;
+    document.getElementById('set-th-size').value = s.thSize;
+    document.getElementById('set-th-align').value = s.thAlign;
+    
+    document.getElementById('set-td-color').value = s.tdColor;
+    document.getElementById('set-td-size').value = s.tdSize;
+    document.getElementById('set-td-align').value = s.tdAlign;
+
+    document.getElementById('set-td-po-color').value = s.tdPoColor || '#ea580c';
+    document.getElementById('set-td-po-size').value = s.tdPoSize || s.tdSize;
+    document.getElementById('set-td-po-align').value = s.tdPoAlign || 'center';
 
     document.getElementById('modal-setting').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
 }
 
-function simpanSettingTabel() {
+function simpanSettingLive() {
     let s = {
         thBg: document.getElementById('set-th-bg').value,
         thColor: document.getElementById('set-th-color').value,
@@ -68,12 +77,20 @@ function simpanSettingTabel() {
         thAlign: document.getElementById('set-th-align').value,
         tdColor: document.getElementById('set-td-color').value,
         tdSize: parseInt(document.getElementById('set-td-size').value) || 12,
-        tdAlign: document.getElementById('set-td-align').value
+        tdAlign: document.getElementById('set-td-align').value,
+        tdPoColor: document.getElementById('set-td-po-color').value,
+        tdPoSize: parseInt(document.getElementById('set-td-po-size').value) || 12,
+        tdPoAlign: document.getElementById('set-td-po-align').value
     };
     localStorage.setItem('wms_table_settings', JSON.stringify(s));
     applyCSS(s);
-    tutupSemuaPopups();
 }
+
+// REALTIME EVENT LISTENERS UNTUK SETTINGS (Anti Lag)
+['th-bg', 'th-color', 'th-size', 'th-align', 'td-color', 'td-size', 'td-align', 'td-po-color', 'td-po-size', 'td-po-align'].forEach(id => {
+    const el = document.getElementById(`set-${id}`);
+    if(el) el.addEventListener('input', simpanSettingLive);
+});
 
 function resetSettingDefault() {
     localStorage.removeItem('wms_table_settings');
@@ -82,7 +99,7 @@ function resetSettingDefault() {
 }
 
 // ========================================================
-// 3. CORE INITIALIZATION & DATA TRANSLATION
+// 2. CORE DATA INITIALIZATION
 // ========================================================
 document.addEventListener('DOMContentLoaded', async () => {
     initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
@@ -137,7 +154,7 @@ function translateBarcode(barcode) {
 }
 
 // ========================================================
-// 4. DATA FETCHING & AGGREGATION
+// 3. FETCHING & AGGREGATION ENGINE (MENGGUNAKAN PO GABUNGAN)
 // ========================================================
 async function muatDataStok() {
     const tbody = document.getElementById('tbody-ks');
@@ -145,15 +162,26 @@ async function muatDataStok() {
     lucide.createIcons();
 
     try {
-        const [resStok, resSTBJ, resLembaran] = await Promise.all([
+        const [resStok, resSTBJ, resLembaran, resAktual] = await Promise.all([
             db.from('stok_qr').select('*'),
             db.from('hasil_stbj').select('qrcode, keterangan'),
-            db.from('stok_lembaran').select('*').order('created_at', {ascending: false})
+            db.from('stok_lembaran').select('*').order('created_at', {ascending: false}),
+            db.from('stok_aktual').select('nama_item, pjg, grade, dus, shading, po_aktual, qty').gt('qty', 0) // Tarik data Tabungan PO
         ]);
         
         if(resStok.error) throw resStok.error;
         stokQRRaw = resStok.data || [];
         stokLembaranRaw = resLembaran.data || [];
+
+        // Mapping Jatah PO Gabungan berdasarkan Spek dari stok_aktual
+        let aktualMap = {};
+        if(resAktual.data) {
+            resAktual.data.forEach(a => {
+                let key = `${a.nama_item}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}`;
+                if(!aktualMap[key]) aktualMap[key] = new Set();
+                if(a.po_aktual && a.po_aktual !== '-') aktualMap[key].add(a.po_aktual.trim());
+            });
+        }
 
         let ketMap = {};
         if(resSTBJ.data) resSTBJ.data.forEach(d => { if(d.qrcode) ketMap[d.qrcode.trim()] = d.keterangan || '-'; });
@@ -188,15 +216,16 @@ async function muatDataStok() {
             let cP = masterData.kamus.find(m => m.kode_po && m.kode_po.toString().trim() === rawPoBawaan);
             let txtPoBawaan = cP && cP.po ? cP.po : rawPoBawaan;
 
-            let rawPoAktual = (p.length >= 8 ? p[7] : rawPoBawaan).toString().trim();
-            let cPA = masterData.kamus.find(m => m.kode_po && m.kode_po.toString().trim() === rawPoAktual);
-            let txtPoAktual = cPA && cPA.po ? cPA.po : rawPoAktual;
+            // AMBIL PO AKTUAL GABUNGAN DARI TABUNGAN STOK AKTUAL!
+            let specKey = `${namaBarang}_${panjangBarang}_${gradeBarang}_${dusBarang}_${shadingBarang}`;
+            let poGabunganArray = aktualMap[specKey] ? Array.from(aktualMap[specKey]) : [];
+            let txtPoAktual = poGabunganArray.length > 0 ? poGabunganArray.join(', ') : 'NON-PO / KOSONG';
 
             dataKSQR.push({
                 qrcode: trimQR || '-', id_sku: r.id_sku || '-', area: areaBarang || '-', tglProduksi: r.tgl_produksi || t.tglProduksi || '-',
                 mesin: txtMesin || '-', shift: txtShift || '-', jenis: jenisBarang || '-', nama: namaBarang || '-',
                 pjg: panjangBarang || '-', grade: gradeBarang || '-', dus: dusBarang || '-', shading: shadingBarang || '-',
-                po_bawaan: txtPoBawaan || '-', po_aktual: txtPoAktual || '-', ket: ket
+                po_bawaan: txtPoBawaan || '-', po_aktual: txtPoAktual, ket: ket
             });
 
             let keyArea = `${r.id_sku}_${ket}`;
@@ -232,22 +261,8 @@ async function muatDataStok() {
 }
 
 // ========================================================
-// 5. REFACTOR: IMPROVE TABLE RENDERING
+// 5. TABLE RENDERING COMPONENT
 // ========================================================
-function setModeKS(m) {
-    modeKS = m;
-    ['qr', 'area', 'global', 'lembaran'].forEach(tab => {
-        const el = document.getElementById('tab-' + tab);
-        if(el) el.className = (m === tab) ? 'px-5 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-5 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-    });
-    
-    document.getElementById('btn-ganti-po-main').classList.toggle('hidden', m === 'global' || m === 'lembaran');
-    document.getElementById('f-qr-container').classList.toggle('hidden', m !== 'qr');
-    document.getElementById('f-area-container').classList.toggle('hidden', m === 'global' || m === 'lembaran');
-    
-    renderTabel();
-}
-
 function sortTable(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-ks');
     const rows = Array.from(tbody.querySelectorAll('tr.row-ks'));
@@ -269,8 +284,21 @@ function sortTable(colIndex, headerEl) {
     if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-50'); lucide.createIcons(); }
 }
 
-// Table Header Helper Component
 const thSort = (idx, label, cls = "") => `<th class="hdr-std ${cls} cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(${idx}, this)"><div class="flex items-center gap-1">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>`;
+
+function setModeKS(m) {
+    modeKS = m;
+    ['qr', 'area', 'global', 'lembaran'].forEach(tab => {
+        const el = document.getElementById('tab-' + tab);
+        if(el) el.className = (m === tab) ? 'px-5 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-5 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    });
+    
+    document.getElementById('btn-ganti-po-main').classList.toggle('hidden', m === 'global' || m === 'lembaran');
+    document.getElementById('f-qr-container').classList.toggle('hidden', m !== 'qr');
+    document.getElementById('f-area-container').classList.toggle('hidden', m === 'global' || m === 'lembaran');
+    
+    renderTabel();
+}
 
 function renderTabel() {
     const thead = document.getElementById('thead-ks');
@@ -282,19 +310,19 @@ function renderTabel() {
             <tr>
                 <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded border-slate-300"></th>
                 ${thSort(1, 'No', 'w-12 col-no')}
-                ${thSort(2, 'Area', 'border-r border-slate-500 col-area')}
-                ${thSort(3, 'QRCode', 'border-r border-slate-500 col-qr')}
+                ${thSort(2, 'Area', 'col-area')}
+                ${thSort(3, 'QRCode', 'col-qr')}
                 ${thSort(4, 'Tgl Produksi', 'col-tgl')}
                 ${thSort(5, 'Mesin', 'col-mesin')}
-                ${thSort(6, 'Shift', 'border-r border-slate-500 col-shift')}
-                ${thSort(7, 'Jenis Item', 'text-blue-300 col-jenis')}
+                ${thSort(6, 'Shift', 'col-shift')}
+                ${thSort(7, 'Jenis Item', 'col-jenis')}
                 ${thSort(8, 'Nama Item', 'col-nama')}
                 ${thSort(9, 'Pjg', 'col-pjg')}
                 ${thSort(10, 'Grade', 'col-grade')}
                 ${thSort(11, 'Dus', 'col-dus')}
-                ${thSort(12, 'Shading', 'border-r border-slate-500 col-shading')}
-                ${thSort(13, 'PO Bawaan', 'text-slate-400 border-r border-slate-500 col-po-bawaan')}
-                ${thSort(14, 'PO Aktual', 'text-orange-400 bg-orange-900 border-r border-slate-500 col-po')}
+                ${thSort(12, 'Shading', 'col-shading')}
+                ${thSort(13, 'PO Bawaan', 'col-po-bawaan')}
+                ${thSort(14, 'PO Aktual', 'col-po')}
                 ${thSort(15, 'Keterangan', 'col-ket')}
             </tr>`;
         
@@ -303,7 +331,7 @@ function renderTabel() {
         tbody.innerHTML = dataKSQR.map((r, i) => {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
             return `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks text-xs">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
                     <td class="p-3 col-cb"><input type="checkbox" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                     <td class="p-3 font-bold opacity-50 col-no">${i+1}</td>
                     <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.area}</td>
@@ -318,7 +346,7 @@ function renderTabel() {
                     <td class="p-3 font-bold col-dus">${r.dus}</td>
                     <td class="p-3 font-bold border-r border-slate-200 col-shading">${r.shading}</td>
                     <td class="p-3 font-bold border-r border-slate-200 col-po-bawaan opacity-50">${r.po_bawaan}</td>
-                    <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-r border-slate-200 col-po">${r.po_aktual}</td>
+                    <td class="p-3 col-po">${r.po_aktual}</td>
                     <td class="p-3 font-semibold opacity-70 col-ket">${r.ket}</td>
                 </tr>`;
         }).join('');
@@ -328,16 +356,16 @@ function renderTabel() {
             <tr>
                 <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
                 ${thSort(1, 'No', 'w-12 col-no')}
-                ${thSort(2, 'Area', 'border-r border-slate-500 col-area')}
-                ${thSort(3, 'Jenis Item', 'text-blue-300 col-jenis')}
+                ${thSort(2, 'Area', 'col-area')}
+                ${thSort(3, 'Jenis Item', 'col-jenis')}
                 ${thSort(4, 'Nama Item', 'col-nama')}
                 ${thSort(5, 'Pjg', 'col-pjg')}
                 ${thSort(6, 'Grade', 'col-grade')}
-                ${thSort(7, 'Dus', 'border-r border-slate-500 col-dus')}
+                ${thSort(7, 'Dus', 'col-dus')}
                 ${thSort(8, 'Shading', 'col-shading')}
-                ${thSort(9, 'PO Aktual', 'text-orange-300 bg-slate-900 border-x border-slate-500 col-po')}
-                ${thSort(10, 'Keterangan', 'border-r border-slate-500 col-ket')}
-                ${thSort(11, 'QTY (DUS)', 'text-emerald-300 bg-slate-900 col-qty')}
+                ${thSort(9, 'PO Aktual', 'col-po')}
+                ${thSort(10, 'Keterangan', 'col-ket')}
+                ${thSort(11, 'QTY (DUS)', 'col-qty')}
             </tr>`;
         
         if(dataKSArea.length === 0) { tbody.innerHTML = `<tr><td colspan="12" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
@@ -345,7 +373,7 @@ function renderTabel() {
         tbody.innerHTML = dataKSArea.map((r, i) => {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             return `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks text-xs">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
                     <td class="p-3 col-cb"><input type="checkbox" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                     <td class="p-3 font-bold opacity-50 col-no">${i+1}</td>
                     <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.area}</td>
@@ -355,7 +383,7 @@ function renderTabel() {
                     <td class="p-3 font-bold col-grade">${r.grade}</td>
                     <td class="p-3 font-bold border-r border-slate-200 col-dus">${r.dus}</td>
                     <td class="p-3 font-bold col-shading">${r.shading}</td>
-                    <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-x border-slate-200 col-po">${r.po}</td>
+                    <td class="p-3 col-po">${r.po}</td>
                     <td class="p-3 font-semibold opacity-70 border-r border-slate-200 col-ket">${r.ket}</td>
                     <td class="p-3 font-black text-slate-900 bg-slate-100 col-qty">${r.qty}</td>
                 </tr>`;
@@ -367,21 +395,21 @@ function renderTabel() {
                 <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
                 <th class="hdr-std w-12 bg-slate-900 text-blue-300 col-open">OPEN</th>
                 ${thSort(2, 'No', 'w-12 col-no')}
-                ${thSort(3, 'Jenis Item', 'text-blue-300 border-l border-slate-500 col-jenis')}
+                ${thSort(3, 'Jenis Item', 'col-jenis')}
                 ${thSort(4, 'Nama Item', 'col-nama')}
                 ${thSort(5, 'Pjg', 'col-pjg')}
                 ${thSort(6, 'Grade', 'col-grade')}
-                ${thSort(7, 'Dus', 'border-r border-slate-500 col-dus')}
+                ${thSort(7, 'Dus', 'col-dus')}
                 ${thSort(8, 'Shading', 'col-shading')}
-                ${thSort(9, 'PO Aktual', 'text-orange-300 bg-slate-900 border-x border-slate-500 w-48 col-po')}
-                ${thSort(10, 'Keterangan', 'border-r border-slate-500 col-ket')}
-                ${thSort(11, 'TOTAL (DUS)', 'text-emerald-300 bg-slate-900 col-qty')}
+                ${thSort(9, 'PO Aktual', 'col-po')}
+                ${thSort(10, 'Keterangan', 'col-ket')}
+                ${thSort(11, 'TOTAL (DUS)', 'col-qty')}
             </tr>`;
 
         if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr><td colspan="12" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = dataKSGlobal.map((r, i) => `
-            <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks text-xs">
+            <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
                 <td class="p-3 col-cb"><input type="checkbox" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                 <td class="p-2 col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white rounded shadow-sm transition flex mx-auto items-center justify-center"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="p-3 font-bold opacity-50 col-no">${i+1}</td>
@@ -391,7 +419,7 @@ function renderTabel() {
                 <td class="p-3 font-bold col-grade">${r.grade}</td>
                 <td class="p-3 font-bold border-r border-slate-200 col-dus">${r.dus}</td>
                 <td class="p-3 font-bold col-shading">${r.shading}</td>
-                <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-x border-slate-200 col-po">${r.po}</td>
+                <td class="p-3 col-po">${r.po}</td>
                 <td class="p-3 font-semibold opacity-70 border-r border-slate-200 col-ket">${r.ket}</td>
                 <td class="p-3 font-black text-slate-900 bg-slate-100 col-qty">${r.qty}</td>
             </tr>
@@ -402,19 +430,19 @@ function renderTabel() {
             <tr>
                 <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
                 ${thSort(1, 'No', 'w-12 col-no')}
-                ${thSort(2, 'Kode Master', 'border-r border-slate-500 col-area')}
+                ${thSort(2, 'Kode Master', 'col-area')}
                 ${thSort(3, 'Nama Item', 'col-nama')}
                 ${thSort(4, 'Pjg', 'col-pjg')}
                 ${thSort(5, 'Grade', 'col-grade')}
                 ${thSort(6, 'Dus', 'col-dus')}
-                ${thSort(7, 'Shading', 'border-r border-slate-500 col-shading')}
+                ${thSort(7, 'Shading', 'col-shading')}
                 ${thSort(8, 'Keterangan', 'col-ket')}
             </tr>`;
         
         if(stokLembaranRaw.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="p-6 font-bold text-slate-400">Tidak ada data stok lembaran.</td></tr>`; return; }
 
         tbody.innerHTML = stokLembaranRaw.map((r, i) => `
-            <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks text-xs">
+            <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
                 <td class="p-3 col-cb"><input type="checkbox" value="${r.id}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                 <td class="p-3 font-bold opacity-50 col-no">${i+1}</td>
                 <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.kode_master || '-'}</td>
@@ -435,11 +463,10 @@ function renderTabel() {
 function toggleCentangUtama(checked) { document.querySelectorAll('.cb-main').forEach(cb => cb.checked = checked); }
 
 // ========================================================
-// 6. EVENT HANDLERS & MODAL MANAGEMENT
+// 6. ACTION HANDLERS & MODALS
 // ========================================================
 function bukaBreakdown(gKey) {
-    const item = dataKSGlobal.find(g => g.gKey === gKey);
-    if(!item) return;
+    const item = dataKSGlobal.find(g => g.gKey === gKey); if(!item) return;
 
     document.getElementById('bd-title-item').innerText = `${item.nama} | ${item.pjg} | ${item.grade} | DUS: ${item.dus} | SHADING: ${item.shading} | KET: ${item.ket}`;
     currentBreakdownData = item.areas;
@@ -448,11 +475,11 @@ function bukaBreakdown(gKey) {
     tbody.innerHTML = item.areas.map((a, i) => {
         const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
         return `
-            <tr class="border-b border-slate-200 hover:bg-slate-50 transition bd-row text-xs">
+            <tr class="border-b border-slate-200 hover:bg-slate-50 transition bd-row">
                 <td class="p-3"><input type="checkbox" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po}" data-ket="${a.ket}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                 <td class="p-3 font-bold opacity-50">${i+1}</td>
                 <td class="p-3 font-black text-emerald-700 bg-emerald-50">${a.area}</td>
-                <td class="p-3 font-black text-orange-600 border-r border-slate-200 bg-orange-50/50">${a.po}</td>
+                <td class="p-3 col-po">${a.po}</td>
                 <td class="p-3 font-semibold opacity-70 border-r border-slate-200">${a.ket}</td>
                 <td class="p-3 font-black text-slate-900 bg-slate-100">${a.qty}</td>
             </tr>`;
@@ -477,7 +504,6 @@ function siapkanGantiPO(context) {
 
     selectedForPO = []; let totalDus = 0;
     checkboxes.forEach(cb => {
-        // REFAKTOR: Menggunakan safeJSONParse untuk mengamankan data
         const qrs = safeJSONParse(cb.dataset.qrs, []);
         selectedForPO.push({ 
             id_sku: cb.dataset.idsku, qrcodes: qrs, jenis: cb.dataset.jenis, nama: cb.dataset.nama,
@@ -505,13 +531,13 @@ function tutupModalPO() {
 
 async function eksekusiGantiPO() {
     const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
-    if(!newPO) return alert("Silakan Pilih PO Baru dari daftar dropdown!");
+    if(!newPO) return alert("Silakan Pilih PO Baru!");
 
     const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
     if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
 
     let maxDus = selectedForPO.reduce((sum, row) => sum + row.qrcodes.length, 0);
-    if(qtyDiminta > maxDus) return alert(`Maksimal yang bisa diganti adalah ${maxDus} dus!`);
+    if(qtyDiminta > maxDus) return alert(`Maksimal jatah adalah ${maxDus} dus!`);
 
     const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...'; btn.disabled = true;
