@@ -9,9 +9,15 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        .table-container { scrollbar-width: thin; }
+        .table-container { scrollbar-width: thin; position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; white-space: nowrap; }
+        .hdr-std { 
+            background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; 
+            border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 13px; font-weight: 800; 
+            white-space: nowrap; position: sticky; top: 0; z-index: 20; background-clip: padding-box;
+        }
+        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
+        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
     </style>
 </head>
 <body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-20">
@@ -19,8 +25,9 @@
         
         <div class="flex border-b border-slate-200 mb-4 bg-white px-2 rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
             <button onclick="setMode('qrcode')" id="tab-mode-qrcode" class="px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition"><i data-lucide="qr-code" class="w-4 h-4"></i> MODE QRCODE</button>
-            <button onclick="setMode('item')" id="tab-mode-item" class="px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="boxes" class="w-4 h-4"></i> MODE NAMA ITEM & QTY</button>
-            <button onclick="setMode('jasper')" id="tab-mode-jasper" class="px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="file-text" class="w-4 h-4"></i> MODE NAMA JASPER & QTY</button>
+            <button onclick="setMode('item')" id="tab-mode-item" class="px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="boxes" class="w-4 h-4"></i> RANGKUMAN ITEM & QTY</button>
+            <button onclick="setMode('jasper')" id="tab-mode-jasper" class="px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="file-text" class="w-4 h-4"></i> RANGKUMAN JASPER & QTY</button>
+            <button onclick="setMode('hold')" id="tab-mode-hold" class="px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="pause-circle" class="w-4 h-4"></i> TABEL HOLD KELUAR</button>
         </div>
 
         <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-slate-200 mb-4">
@@ -36,6 +43,11 @@
             </div>
 
             <div class="flex gap-2 items-center overflow-x-auto pt-1 pb-4 px-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none" style="-webkit-overflow-scrolling: touch;">
+                
+                <button onclick="aksiMassal('hold')" id="btn-hold" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-amber-700"><i data-lucide="pause-circle" class="w-4 h-4"></i> HOLD ITEM</button>
+                <button onclick="aksiMassal('cancel')" id="btn-cancel" class="hidden px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-rose-800"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> CANCEL KELUAR</button>
+
+                <div class="w-px h-8 bg-slate-300 mx-1"></div>
                 <button onclick="toggleSidebarFilter()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-slate-950"><i data-lucide="filter" class="w-4 h-4"></i> FILTER</button>
                 <button onclick="aksiMassal('salin')" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-blue-800"><i data-lucide="copy" class="w-4 h-4"></i> SALIN</button>
                 <button onclick="aksiMassal('xlsx')" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-emerald-800"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> EXCEL</button>
@@ -46,9 +58,9 @@
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative mb-4">
-            <div class="overflow-x-auto w-full max-h-[60vh] hide-scrollbar">
-                <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-keluar-main">
-                    <thead class="sticky top-0 z-10 shadow-sm" id="thead-keluar"></thead>
+            <div class="table-container overflow-x-auto w-full max-h-[60vh]">
+                <table class="w-full text-center border-collapse text-sm whitespace-nowrap" id="table-keluar-main">
+                    <thead class="sticky top-0 z-20 shadow-sm bg-slate-800" id="thead-keluar"></thead>
                     <tbody id="tbody-keluar" class="text-center text-slate-700"></tbody>
                 </table>
             </div>
