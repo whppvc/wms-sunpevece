@@ -1,13 +1,14 @@
 let currentMode = 'out';
 let dataPic = [];
 let picRowId = 0;
+let riwayatKonversiList = []; // Array simpan list modal
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 let masterData = { kamus: [] };
 
 document.addEventListener('DOMContentLoaded', async () => { 
     initModernLayout({ id: 'scan_pic', title: 'SCAN PIC AREA', url: 'scan_pic.html' }); 
     await loadInitialData();
-    await loadAreas(); // Load Master Area untuk Inbound
+    await loadAreas(); 
 });
 
 async function loadInitialData() {
@@ -21,11 +22,14 @@ async function loadAreas() {
     try {
         const { data } = await db.from('master_area').select('*');
         if (data) {
-            const sel = document.getElementById('in-area');
-            sel.innerHTML = '<option value="">-- PILIH AREA GUDANG --</option>';
+            const selIn = document.getElementById('in-area');
+            const selPindah = document.getElementById('pindah-area-target');
+            let ops = '<option value="">-- Pilih Area Gudang --</option>';
             [...new Set(data.map(d => (d.nama_area || d.area || '').trim()).filter(Boolean))].sort().forEach(a => {
-                sel.innerHTML += `<option value="${a}">${a}</option>`;
+                ops += `<option value="${a}">${a}</option>`;
             });
+            selIn.innerHTML = ops;
+            selPindah.innerHTML = ops;
         }
     } catch (e) { console.error("Gagal load area:", e); }
 }
@@ -83,76 +87,130 @@ function setModeKonversi(mode) {
     currentMode = mode;
     const tabOut = document.getElementById('tab-out');
     const tabIn = document.getElementById('tab-in');
+    const tabPindah = document.getElementById('tab-pindah');
+    
     const panelOut = document.getElementById('panel-out');
     const panelIn = document.getElementById('panel-in');
+    const panelPindah = document.getElementById('panel-pindah');
+    const boxScanUmum = document.getElementById('box-scan-umum');
+    
+    const btnVerif = document.getElementById('btn-verifikasi');
+    const btnSave = document.getElementById('btn-save-awal');
+    const textSave = document.getElementById('text-save-awal');
+
+    // Reset Semua Kelas Tab
+    [tabOut, tabIn, tabPindah].forEach(t => t.className = 'px-6 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs uppercase hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2');
 
     if(mode === 'out') {
-        tabOut.className = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-        tabIn.className = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-        panelOut.classList.remove('hidden'); panelIn.classList.add('hidden');
-    } else {
-        tabIn.className = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase text-blue-600 border-blue-600';
-        tabOut.className = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-        panelIn.classList.remove('hidden'); panelOut.classList.add('hidden');
+        tabOut.className = 'px-6 py-3.5 border-b-4 border-rose-600 text-rose-600 bg-rose-50 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2';
+        panelOut.classList.remove('hidden'); panelIn.classList.add('hidden'); panelPindah.classList.add('hidden'); boxScanUmum.classList.remove('hidden');
+        
+        btnVerif.className = 'p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-rose-600 hover:bg-rose-700 text-white border-b-2 border-rose-800 active:scale-95 transition';
+        btnSave.className = 'w-full md:w-auto px-8 py-2.5 sm:py-3 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-wide cursor-pointer transition active:scale-95 uppercase border-b-2 border-rose-800';
+        textSave.innerText = "SIMPAN & EKSEKUSI";
+    } else if(mode === 'in') {
+        tabIn.className = 'px-6 py-3.5 border-b-4 border-emerald-600 text-emerald-600 bg-emerald-50 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2';
+        panelIn.classList.remove('hidden'); panelOut.classList.add('hidden'); panelPindah.classList.add('hidden'); boxScanUmum.classList.remove('hidden');
+        
+        btnVerif.className = 'p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-emerald-600 hover:bg-emerald-700 text-white border-b-2 border-emerald-800 active:scale-95 transition';
+        btnSave.className = 'w-full md:w-auto px-8 py-2.5 sm:py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-wide cursor-pointer transition active:scale-95 uppercase border-b-2 border-emerald-800';
+        textSave.innerText = "SIMPAN KE KARTU STOK";
+    } else if(mode === 'pindah') {
+        tabPindah.className = 'px-6 py-3.5 border-b-4 border-indigo-600 text-indigo-600 bg-indigo-50 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2';
+        panelPindah.classList.remove('hidden'); panelOut.classList.add('hidden'); panelIn.classList.add('hidden'); boxScanUmum.classList.add('hidden');
+        
+        btnVerif.className = 'p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-indigo-600 hover:bg-indigo-700 text-white border-b-2 border-indigo-800 active:scale-95 transition';
+        btnSave.className = 'w-full md:w-auto px-8 py-2.5 sm:py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-wide cursor-pointer transition active:scale-95 uppercase border-b-2 border-indigo-800';
+        textSave.innerText = "SIMPAN PINDAH AREA";
     }
 
     dataPic = []; renderTablePic(dataPic);
 }
 
-function toggleAktifitas() {
-    const body = document.getElementById('body-aktifitas'); const icon = document.getElementById('icon-toggle-aktifitas');
-    if (body.classList.contains('hidden')) { body.classList.remove('hidden'); icon.classList.remove('rotate-180'); } 
-    else { body.classList.add('hidden'); icon.classList.add('rotate-180'); }
-}
-
-function toggleAktifitasIn() {
-    const body = document.getElementById('body-aktifitas-in'); const icon = document.getElementById('icon-toggle-aktifitas-in');
+function toggleAktifitas(target) {
+    const body = document.getElementById(target === 'out' ? 'body-aktifitas-out' : 'body-aktifitas-in');
+    const icon = document.getElementById(target === 'out' ? 'icon-toggle-out' : 'icon-toggle-in');
     if (body.classList.contains('hidden')) { body.classList.remove('hidden'); icon.classList.remove('rotate-180'); } 
     else { body.classList.add('hidden'); icon.classList.add('rotate-180'); }
 }
 
 async function bukaModalRiwayatKonversi() {
     const tbody = document.getElementById('tbody-modal-konversi');
-    tbody.innerHTML = `<tr><td colspan="8" class="p-10"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-blue-500"></i></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="p-10"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-emerald-500"></i></td></tr>`;
     lucide.createIcons();
     document.getElementById('modal-riwayat-konversi').classList.remove('hidden');
 
     try {
         const { data, error } = await db.from('laporan_konversi').select('*').ilike('aktifitas', 'OUT - %').order('created_at', {ascending: false}).limit(100);
         if(error) throw error;
-        if(!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="p-10 font-bold text-slate-400">Tidak ada riwayat konversi OUT.</td></tr>`; return; }
+        if(!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="p-10 font-bold text-slate-400">Tidak ada riwayat konversi OUT.</td></tr>`; return; }
 
+        riwayatKonversiList = data; // Simpan ke global
         let h = '';
         data.forEach(d => {
             const dt = new Date(d.created_at);
             const waktu = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
             
-            // Ekstrak detail JSON
-            let detailObj = {};
-            try { detailObj = JSON.parse(d.detail); } catch(e){}
+            let detailObj = {}; try { detailObj = JSON.parse(d.detail); } catch(e){}
             let ket = detailObj.keterangan || '-';
             let detailItem = '-';
             
             if(detailObj.items && detailObj.items.length > 0) {
                 let item = detailObj.items[0];
-                detailItem = `<span class="text-blue-700">${item.namaItem}</span> | ${item.panjang} | ${item.grade} | ${item.dus} | ${item.shading}`;
+                detailItem = `<span class="text-blue-700">${item.namaItem || item.nama_item}</span> | ${item.panjang || item.pjg} | ${item.grade} | ${item.dus} | ${item.shading}`;
                 if(detailObj.items.length > 1) detailItem += ` <br><span class="text-[10px] text-slate-400 font-black bg-slate-100 px-1 rounded">(+${detailObj.items.length - 1} item lain)</span>`;
             }
 
             h += `
                 <tr class="border-b hover:bg-slate-50 text-xs transition">
-                    <td class="p-2"><button onclick="pilihKodeKonversi('${d.kode_konversi}', '${d.aktifitas}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg shadow-sm transition active:scale-95">PILIH</button></td>
+                    <td class="p-2"><button onclick="pilihKodeKonversi('${d.kode_konversi}', '${d.aktifitas}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg shadow-sm transition active:scale-95">PILIH</button></td>
+                    <td class="p-2">
+                        <button onclick="lihatDetailKonversi('${d.kode_konversi}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition active:scale-95 mx-auto flex" title="Lihat Detail Item">
+                            <i data-lucide="list" class="w-4 h-4"></i>
+                        </button>
+                    </td>
                     <td class="p-2 font-mono font-bold tracking-wider text-slate-800 border-r border-slate-200">${d.kode_konversi}</td>
                     <td class="p-2 font-semibold text-slate-500">${waktu}</td>
                     <td class="p-2 font-black text-rose-600 border-r border-slate-200">${d.aktifitas}</td>
-                    <td class="p-3 font-bold text-slate-700 text-left whitespace-normal max-w-[200px] leading-tight">${detailItem}</td>
-                    <td class="p-3 font-medium text-slate-600 text-left whitespace-normal max-w-[150px] leading-tight border-r border-slate-200">${ket}</td>
+                    <td class="p-3 font-bold text-slate-700 text-left whitespace-normal max-w-[400px] leading-relaxed">${detailItem}</td>
+                    <td class="p-3 font-medium text-slate-600 text-left whitespace-normal max-w-[200px] leading-tight border-r border-slate-200">${ket}</td>
                     <td class="p-2 font-black text-emerald-600 bg-emerald-50">${d.qty_total}</td>
                     <td class="p-2 uppercase opacity-70 font-bold text-slate-500">${d.pic}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
-    } catch(e) { tbody.innerHTML = `<tr><td colspan="8" class="p-5 text-red-500">${e.message}</td></tr>`; }
+    } catch(e) { tbody.innerHTML = `<tr><td colspan="9" class="p-5 text-red-500">${e.message}</td></tr>`; }
+    finally { lucide.createIcons(); }
+}
+
+function lihatDetailKonversi(kode) {
+    const data = riwayatKonversiList.find(r => r.kode_konversi === kode);
+    if(!data) return;
+
+    let detailObj = {}; try { detailObj = JSON.parse(data.detail); } catch(e){}
+    let items = detailObj.items || [];
+    
+    let t = `<table class="w-full text-left border-collapse text-xs whitespace-nowrap">
+                <thead class="bg-slate-800 text-white text-center">
+                    <tr><th class="p-2">No</th><th class="p-2">QRCode</th><th class="p-2">Nama Item</th><th class="p-2">Pjg</th><th class="p-2">Grade</th><th class="p-2">Dus</th><th class="p-2">Shading</th></tr>
+                </thead>
+                <tbody>`;
+    items.forEach((item, idx) => {
+        t += `<tr class="border-b text-center">
+                <td class="p-2">${idx+1}</td>
+                <td class="p-2 font-mono font-bold">${item.qrcode}</td>
+                <td class="p-2 text-left font-bold text-blue-700">${item.namaItem || item.nama_item}</td>
+                <td class="p-2 font-bold">${item.panjang || item.pjg}</td>
+                <td class="p-2 font-bold">${item.grade}</td>
+                <td class="p-2 font-bold">${item.dus}</td>
+                <td class="p-2 font-bold">${item.shading}</td>
+              </tr>`;
+    });
+    t += `</tbody></table>`;
+    
+    document.getElementById('lbl-detail-kode').innerText = kode;
+    document.getElementById('detail-items-content').innerHTML = t;
+    document.getElementById('modal-detail-items').classList.remove('hidden');
 }
 
 function pilihKodeKonversi(kode, aktifitas) {
@@ -168,11 +226,12 @@ function tutupSemuaModal() {
 }
 
 // ==========================================
-// SCANNING & TABLE RENDERING
+// SCANNING HANDLER (UMUM & PINDAH)
 // ==========================================
-document.getElementById('form-scan').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const inputEl = document.getElementById('input-qrcode');
+document.getElementById('form-scan-umum').addEventListener('submit', (e) => { e.preventDefault(); handleScan(document.getElementById('input-qrcode-umum')); });
+document.getElementById('form-scan-pindah').addEventListener('submit', (e) => { e.preventDefault(); handleScan(document.getElementById('input-qrcode-pindah')); });
+
+function handleScan(inputEl) {
     const rawInput = inputEl.value.trim();
     if(!rawInput) return;
 
@@ -192,7 +251,7 @@ document.getElementById('form-scan').addEventListener('submit', (e) => {
 
     renderTablePic(dataPic);
     inputEl.value = ''; inputEl.focus();
-});
+}
 
 function hapusBaris(qrCode) {
     dataPic = dataPic.filter(d => d.qrcode !== qrCode);
@@ -265,7 +324,7 @@ function resetFilterWithoutRender() { document.getElementById('f-status').value 
 function resetFilter() { resetFilterWithoutRender(); renderTablePic(dataPic); }
 
 // ==========================================
-// VERIFIKASI GUDANG (PINTAR OUT/IN)
+// VERIFIKASI GUDANG (PINTAR OUT/IN/PINDAH)
 // ==========================================
 async function verifikasiGudang() {
     if(dataPic.length === 0) return alert("Belum ada data untuk diverifikasi!");
@@ -282,8 +341,8 @@ async function verifikasiGudang() {
         let foundDb = dbQRs || [];
         let uniqueSpecs = new Set();
 
-        if (currentMode === 'out') {
-            // LOGIKA OUT: Harus ada di stok_qr
+        if (currentMode === 'out' || currentMode === 'pindah') {
+            // LOGIKA OUT & PINDAH: Harus ada di stok_qr
             dataPic.forEach(d => {
                 let matched = foundDb.find(dbItem => dbItem.qrcode === d.qrcode);
                 if (matched) {
@@ -302,20 +361,20 @@ async function verifikasiGudang() {
                 let poText = poAvailable.size > 0 ? Array.from(poAvailable).join(', ') : 'KOSONG / NON-PO';
                 dataPic.forEach(d => { if (d.status === 'VALID' && d.baseSpec === spec) d.poAktualUI = poText; });
             }
-            alert("Selesai memverifikasi fisik Gudang OUT!");
+            alert(`Selesai memverifikasi fisik Gudang untuk Mode ${currentMode.toUpperCase()}!`);
 
-        } else {
-            // LOGIKA IN (LANGSIR INBOUND): Harus TIDAK ADA di stok_qr
+        } else if (currentMode === 'in') {
+            // LOGIKA IN: Harus TIDAK ADA di stok_qr
             const existingQRs = foundDb.map(d => d.qrcode);
             dataPic.forEach(d => {
                 if (existingQRs.includes(d.qrcode)) {
-                    d.status = 'DUPLIKAT LOKAL'; // Barcode sudah eksis di gudang
+                    d.status = 'DUPLIKAT LOKAL'; 
                     d.poAktualUI = '-';
                     d.area = 'TOLAK';
                 } else {
                     d.status = 'VALID';
-                    d.poAktualUI = d.poBawaan || '-'; // Inbound po aktual nya mengikuti po bawaan barcode
-                    d.area = 'OK'; // Tunggu area dari dropdown
+                    d.poAktualUI = d.poBawaan || '-'; 
+                    d.area = 'OK'; 
                 }
             });
             alert("Selesai memverifikasi fisik Gudang IN!\nBarcode yang VALID siap dimasukkan.");
@@ -329,7 +388,8 @@ async function verifikasiGudang() {
 // ==========================================
 function bukaModalSimpan() {
     if (currentMode === 'out') bukaModalSimpanOut();
-    else eksekusiSimpanFinalIn();
+    else if (currentMode === 'in') eksekusiSimpanFinalIn();
+    else if (currentMode === 'pindah') eksekusiPindahArea();
 }
 
 function bukaModalSimpanOut() {
@@ -416,7 +476,6 @@ async function eksekusiSimpanFinalOut() {
     if (qrList.length === 0) { alert(`❌ TIDAK ADA JATAH.\nSisa stok aktual untuk PO "${poTarget}" adalah 0.`); btn.innerHTML = ori; btn.disabled = false; return; }
 
     try {
-        // A. Mutasi
         for (let row of matchedRows) {
             if (row.poAsliDB !== poTarget) {
                 let parts = row.baseSpec.split('_'); let [nm, pj, gr, ds, sh] = [parts[1], parts[2], parts[3], parts[4], parts[5]];
@@ -431,19 +490,16 @@ async function eksekusiSimpanFinalOut() {
             }
         }
 
-        // B. Eksekusi
         const payloadData = { qrs: qrList, aktuals: Object.values(mapAktual), globals: Object.values(mapGlobal) };
         const { error: rpcError } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
         if (rpcError) throw rpcError;
 
-        // C. Generate Kode
         const { count, error: errCount } = await db.from('laporan_konversi').select('*', { count: 'exact', head: true });
         if(errCount) throw errCount;
         let nextNum = (count || 0) + 1;
         let kodeKonversi = `${prefix}-${String(nextNum).padStart(5, '0')}`;
         let allQRs = qrList.join(', ');
 
-        // D. Insert stok_konversi
         let arrStokKonversi = [];
         matchedRows.forEach(d => {
             arrStokKonversi.push({
@@ -460,7 +516,6 @@ async function eksekusiSimpanFinalOut() {
             if(errSk) throw errSk;
         }
 
-        // E. Laporan
         const payloadLog = {
             kode_konversi: kodeKonversi, aktifitas: aktifitas, qrcode: allQRs,
             detail: JSON.stringify({ keterangan: keterangan || '-', po_target: poTarget, items: matchedRows }),
@@ -496,7 +551,7 @@ async function eksekusiSimpanFinalIn() {
     if(duplicateItems.length > 0) return alert("Masih ada barcode DUPLIKAT di dalam tabel! Hapus baris merah terlebih dahulu.");
     if(validItems.length === 0) return alert("Tidak ada item VALID untuk disimpan!");
 
-    if(!confirm(`Lanjutkan memasukkan ${validItems.length} Kardus ke stok Gudang (Area: ${areaTujuan})?\nDengan Kode Induk Konversi: ${kodeRef}`)) return;
+    if(!confirm(`Lanjutkan memasukkan ${validItems.length} Kardus ke stok Gudang (Area: ${areaTujuan})?\nDengan Kode Konversi: ${kodeRef}`)) return;
 
     const btn = document.getElementById('btn-save-awal'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES IN...'; btn.disabled = true;
@@ -522,7 +577,6 @@ async function eksekusiSimpanFinalIn() {
         }
         aktualUpdates[keyAkt].qty++;
 
-        // REVISI: Kode konversi menggunakan kode yang persis sama, tanpa tambahan "-IN"
         arrStokKonversi.push({
             kode_konversi: kodeRef,
             aktifitas: `IN - ${aktifitasRef}`,
@@ -579,4 +633,63 @@ async function eksekusiSimpanFinalIn() {
         
     } catch(err) { alert("GAGAL MENYIMPAN: " + err.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
+}
+
+async function eksekusiPindahArea() {
+    const areaTarget = document.getElementById('pindah-area-target').value;
+    if(!areaTarget) return alert("Pilih Area Simpan Tujuan terlebih dahulu!");
+
+    let validItems = dataPic.filter(d => d.status === 'VALID');
+    if(validItems.length === 0) return alert("Tidak ada item berstatus VALID (Verifikasi Gudang Dulu).");
+
+    if(!confirm(`Pindahkan ${validItems.length} item secara permanen ke Area: ${areaTarget}?`)) return;
+
+    const btn = document.getElementById('btn-save-awal'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMINDAHKAN...'; btn.disabled = true;
+
+    let payloadBarangPindah = [];
+    
+    try {
+        for (let item of validItems) {
+            let poBawaanAsli = item.poAsliDB && item.poAsliDB !== '-' ? item.poAsliDB : '-';
+            let id_sku_baru = `${areaTarget}_${item.jenisItem}_${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${poBawaanAsli}`;
+            
+            // 1. UPDATE STOK_QR (Ubah area dan id_sku)
+            const { error: errUpdate } = await db.from('stok_qr').update({ area: areaTarget, id_sku: id_sku_baru }).eq('qrcode', item.qrcode);
+            if (errUpdate) throw errUpdate;
+
+            // 2. Siapkan data untuk riwayat
+            payloadBarangPindah.push({
+                qrcode: item.qrcode,
+                tgl_produksi: item.tglProduksi || '-',
+                mesin: item.mesin || '-',
+                shift: item.shift || '-',
+                nama_item: item.namaItem || '-',
+                panjang: item.panjang || '-',
+                grade: item.grade || '-',
+                dus: item.dus || '-',
+                shading: item.shading || '-',
+                po: poBawaanAsli,
+                keterangan: 'Pindah Area',
+                area_awal: item.area, // Area awal yang ditarik saat verifikasi
+                area_akhir: areaTarget,
+                pic: currentUser.username
+            });
+        }
+
+        // 3. INSERT KE BARANG_PINDAH
+        if (payloadBarangPindah.length > 0) {
+            const { error: errPindah } = await db.from('barang_pindah').insert(payloadBarangPindah);
+            if (errPindah) throw errPindah;
+        }
+
+        alert(`✅ SUKSES PINDAH AREA!\n${validItems.length} Item berhasil dipindahkan ke area ${areaTarget}.`);
+        dataPic = []; renderTablePic(dataPic);
+        document.getElementById('pindah-area-target').value = '';
+
+    } catch(e) {
+        alert("GAGAL PINDAH AREA: " + e.message);
+    } finally {
+        btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
+    }
 }
