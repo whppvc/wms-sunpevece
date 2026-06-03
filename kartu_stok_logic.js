@@ -25,7 +25,7 @@ const currentUser = safeJSONParse(localStorage.getItem('user_session'), { userna
 const defaultSettings = { 
     thBg: '#1e293b', thColor: '#ffffff', thSize: 11, thAlign: 'center', 
     tdColor: '#334155', tdSize: 12, tdAlign: 'center',
-    customCols: {} // Tempat menyimpan styling per kolom { 'col-po': { color: 'red', size: 14, align: 'center' } }
+    customCols: {} 
 };
 
 let currentSettings = null;
@@ -43,8 +43,18 @@ function applyCSS(s) {
 
     const justify = s.thAlign === 'left' ? 'flex-start' : (s.thAlign === 'right' ? 'flex-end' : 'center');
     
-    // Bangun CSS dinamis untuk kolom yang di-custom
-    let customCSS = '';
+    // Header Style
+    let customCSS = `
+        #main-table th.hdr-std { background-color: ${s.thBg} !important; color: ${s.thColor} !important; font-size: ${s.thSize}px !important; text-align: ${s.thAlign} !important; }
+        #main-table th.hdr-std > div { justify-content: ${justify} !important; }
+    `;
+
+    // Terapkan Styling Umum Isi Tabel HANYA jika nilainya bukan bawaan (agar Tailwind bawaan tetap nyala)
+    if (s.tdColor !== defaultSettings.tdColor) customCSS += `#main-table td { color: ${s.tdColor} !important; } \n`;
+    if (s.tdSize !== defaultSettings.tdSize) customCSS += `#main-table td { font-size: ${s.tdSize}px !important; } \n`;
+    if (s.tdAlign !== defaultSettings.tdAlign) customCSS += `#main-table td { text-align: ${s.tdAlign} !important; } \n`;
+
+    // Styling Spesifik Kolom
     for (let colClass in s.customCols) {
         let cs = s.customCols[colClass];
         customCSS += `
@@ -52,26 +62,14 @@ function applyCSS(s) {
                 color: ${cs.color} !important; 
                 font-size: ${cs.size}px !important; 
                 text-align: ${cs.align} !important; 
-                font-weight: 900 !important;
             }
         `;
     }
 
-    styleEl.innerHTML = `
-        /* Styling Header */
-        #main-table th.hdr-std { background-color: ${s.thBg} !important; color: ${s.thColor} !important; font-size: ${s.thSize}px !important; text-align: ${s.thAlign} !important; }
-        #main-table th.hdr-std > div { justify-content: ${justify} !important; }
-        
-        /* Styling Default Data */
-        #main-table td { color: ${s.tdColor} !important; font-size: ${s.tdSize}px !important; text-align: ${s.tdAlign} !important; }
-        
-        /* Injection Styling Khusus Per Kolom */
-        ${customCSS}
-    `;
+    styleEl.innerHTML = customCSS;
 }
 
 function bukaModalSetting() {
-    // Isi nilai input umum
     document.getElementById('set-th-bg').value = currentSettings.thBg;
     document.getElementById('set-th-color').value = currentSettings.thColor;
     document.getElementById('set-th-size').value = currentSettings.thSize;
@@ -81,15 +79,13 @@ function bukaModalSetting() {
     document.getElementById('set-td-size').value = currentSettings.tdSize;
     document.getElementById('set-td-align').value = currentSettings.tdAlign;
 
-    // Reset dropdown custom kolom
     document.getElementById('select-custom-col').value = '';
-    loadCustomColSetting(); // Reset input custom
+    loadCustomColSetting(); 
 
     document.getElementById('modal-setting').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
 }
 
-// Handler Dropdown Pilih Kolom
 function loadCustomColSetting() {
     const col = document.getElementById('select-custom-col').value;
     const colorInput = document.getElementById('set-custom-color');
@@ -97,22 +93,14 @@ function loadCustomColSetting() {
     const alignInput = document.getElementById('set-custom-align');
 
     if (col && currentSettings.customCols[col]) {
-        // Jika kolom punya custom style, tampilkan
         let cs = currentSettings.customCols[col];
-        colorInput.value = cs.color;
-        sizeInput.value = cs.size;
-        alignInput.value = cs.align;
+        colorInput.value = cs.color; sizeInput.value = cs.size; alignInput.value = cs.align;
     } else {
-        // Jika tidak, tampilkan nilai bawaan (Umum)
-        colorInput.value = currentSettings.tdColor;
-        sizeInput.value = currentSettings.tdSize;
-        alignInput.value = currentSettings.tdAlign;
+        colorInput.value = currentSettings.tdColor; sizeInput.value = currentSettings.tdSize; alignInput.value = currentSettings.tdAlign;
     }
 }
 
-// Live Preview tanpa menghajar localStorage (Mencegah Lag)
 function livePreviewSetting() {
-    // Update memory
     currentSettings.thBg = document.getElementById('set-th-bg').value;
     currentSettings.thColor = document.getElementById('set-th-color').value;
     currentSettings.thSize = parseInt(document.getElementById('set-th-size').value) || 11;
@@ -130,8 +118,6 @@ function livePreviewSetting() {
             align: document.getElementById('set-custom-align').value
         };
     }
-    
-    // Hanya apply ke CSS, tidak di-save ke storage (Super Ringan)
     applyCSS(currentSettings);
 }
 
@@ -139,21 +125,16 @@ function resetCustomCol() {
     const col = document.getElementById('select-custom-col').value;
     if (col && currentSettings.customCols[col]) {
         delete currentSettings.customCols[col];
-        loadCustomColSetting(); // Kembalikan nilai input ke default umum
-        applyCSS(currentSettings); // Update view
-    } else {
-        alert('Pilih kolom yang ingin di-reset terlebih dahulu dari Dropdown!');
-    }
+        loadCustomColSetting(); applyCSS(currentSettings); 
+    } else { alert('Pilih kolom yang ingin di-reset terlebih dahulu dari Dropdown!'); }
 }
 
-// Event listener untuk preview instan saat user otak-atik input
 ['set-th-bg', 'set-th-color', 'set-th-size', 'set-th-align', 'set-td-color', 'set-td-size', 'set-td-align', 'set-custom-color', 'set-custom-size', 'set-custom-align'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.addEventListener('input', livePreviewSetting);
 });
 
 function simpanSettingTabel() {
-    // Baru save ke storage saat di-klik Terapkan
     livePreviewSetting(); 
     localStorage.setItem('wms_table_settings', JSON.stringify(currentSettings));
     tutupSemuaPopups();
@@ -167,7 +148,7 @@ function resetSettingDefault() {
 }
 
 // ========================================================
-// 2. CORE INITIALIZATION & DATA TRANSLATION
+// 2. CORE INITIALIZATION & TRANSLATION
 // ========================================================
 document.addEventListener('DOMContentLoaded', async () => {
     initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
@@ -187,9 +168,7 @@ async function loadMasterData() {
             Array.from(poSet).sort().forEach(po => { html += `<option value="${po}">${po}</option>`; });
             if(sel) sel.innerHTML = html;
         }
-    } catch (e) { 
-        if(document.getElementById('input-new-po')) document.getElementById('input-new-po').innerHTML = '<option value="">-- GAGAL MEMUAT PO --</option>'; 
-    }
+    } catch (e) { if(document.getElementById('input-new-po')) document.getElementById('input-new-po').innerHTML = '<option value="">-- GAGAL MEMUAT PO --</option>'; }
 }
 
 function translateBarcode(barcode) {
@@ -222,7 +201,7 @@ function translateBarcode(barcode) {
 }
 
 // ========================================================
-// 3. DATA FETCHING & AGGREGATION
+// 3. FETCHING & AGGREGATION ENGINE (GABUNGAN HANYA DI QR)
 // ========================================================
 async function muatDataStok() {
     const tbody = document.getElementById('tbody-ks');
@@ -234,14 +213,13 @@ async function muatDataStok() {
             db.from('stok_qr').select('*'),
             db.from('hasil_stbj').select('qrcode, keterangan'),
             db.from('stok_lembaran').select('*').order('created_at', {ascending: false}),
-            db.from('stok_aktual').select('nama_item, pjg, grade, dus, shading, po_aktual, qty').gt('qty', 0) // Tarik data Tabungan PO
+            db.from('stok_aktual').select('nama_item, pjg, grade, dus, shading, po_aktual, qty').gt('qty', 0)
         ]);
         
         if(resStok.error) throw resStok.error;
         stokQRRaw = resStok.data || [];
         stokLembaranRaw = resLembaran.data || [];
 
-        // Mapping Jatah PO Gabungan berdasarkan Spek dari stok_aktual
         let aktualMap = {};
         if(resAktual.data) {
             resAktual.data.forEach(a => {
@@ -284,23 +262,30 @@ async function muatDataStok() {
             let cP = masterData.kamus.find(m => m.kode_po && m.kode_po.toString().trim() === rawPoBawaan);
             let txtPoBawaan = cP && cP.po ? cP.po : rawPoBawaan;
 
-            // AMBIL PO AKTUAL GABUNGAN DARI TABUNGAN STOK AKTUAL!
+            let rawPoAktual = (p.length >= 8 ? p[7] : rawPoBawaan).toString().trim();
+            let cPA = masterData.kamus.find(m => m.kode_po && m.kode_po.toString().trim() === rawPoAktual);
+            
+            // PO SPESIFIK (Untuk Area & Global)
+            let txtPoAktualSpesifik = cPA && cPA.po ? cPA.po : rawPoAktual;
+
+            // PO GABUNGAN (Hanya untuk Mode QR)
             let specKey = `${namaBarang}_${panjangBarang}_${gradeBarang}_${dusBarang}_${shadingBarang}`;
             let poGabunganArray = aktualMap[specKey] ? Array.from(aktualMap[specKey]) : [];
-            let txtPoAktual = poGabunganArray.length > 0 ? poGabunganArray.join(', ') : 'NON-PO / KOSONG';
+            let txtPoAktualGabungan = poGabunganArray.length > 0 ? poGabunganArray.join(', ') : 'NON-PO / KOSONG';
 
             dataKSQR.push({
                 qrcode: trimQR || '-', id_sku: r.id_sku || '-', area: areaBarang || '-', tglProduksi: r.tgl_produksi || t.tglProduksi || '-',
                 mesin: txtMesin || '-', shift: txtShift || '-', jenis: jenisBarang || '-', nama: namaBarang || '-',
                 pjg: panjangBarang || '-', grade: gradeBarang || '-', dus: dusBarang || '-', shading: shadingBarang || '-',
-                po_bawaan: txtPoBawaan || '-', po_aktual: txtPoAktual, ket: ket
+                po_bawaan: txtPoBawaan || '-', po_aktual_spesifik: txtPoAktualSpesifik, po_aktual_gabungan: txtPoAktualGabungan, ket: ket
             });
 
+            // GROUPING AREA & GLOBAL MENGGUNAKAN PO SPESIFIK !
             let keyArea = `${r.id_sku}_${ket}`;
             if(!areaMap[keyArea]) {
                 areaMap[keyArea] = { 
                     id_sku: r.id_sku, key_lengkap: keyArea, area: areaBarang, jenis: jenisBarang, nama: namaBarang, 
-                    pjg: panjangBarang, grade: gradeBarang, dus: dusBarang, shading: shadingBarang, po: txtPoAktual, ket: ket, qty: 0, qrcodes: [] 
+                    pjg: panjangBarang, grade: gradeBarang, dus: dusBarang, shading: shadingBarang, po: txtPoAktualSpesifik, ket: ket, qty: 0, qrcodes: [] 
                 };
             }
             areaMap[keyArea].qty++;
@@ -323,9 +308,7 @@ async function muatDataStok() {
         dataKSGlobal = Object.values(globalMap);
 
         renderTabel();
-    } catch(e) { 
-        tbody.innerHTML = `<tr><td colspan="17" class="p-10 text-red-500 font-bold">Gagal mengolah data: ${e.message}</td></tr>`; 
-    }
+    } catch(e) { tbody.innerHTML = `<tr><td colspan="17" class="p-10 text-red-500 font-bold">Gagal mengolah data: ${e.message}</td></tr>`; }
 }
 
 // ========================================================
@@ -366,7 +349,6 @@ function sortTable(colIndex, headerEl) {
     if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-50'); lucide.createIcons(); }
 }
 
-// Table Header Helper Component
 const thSort = (idx, label, cls = "") => `<th class="hdr-std ${cls} cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(${idx}, this)"><div class="flex items-center gap-1">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>`;
 
 function renderTabel() {
@@ -401,22 +383,22 @@ function renderTabel() {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
             return `
                 <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
-                    <td class="p-3 col-cb"><input type="checkbox" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-                    <td class="p-3 col-no opacity-60">${i+1}</td>
-                    <td class="p-3 col-area">${r.area}</td>
-                    <td class="p-3 col-qr">${r.qrcode}</td>
-                    <td class="p-3 col-tgl">${r.tglProduksi}</td>
-                    <td class="p-3 col-mesin">${r.mesin}</td>
-                    <td class="p-3 col-shift">${r.shift}</td>
-                    <td class="p-3 col-jenis">${r.jenis}</td>
-                    <td class="p-3 col-nama">${r.nama}</td>
-                    <td class="p-3 col-pjg">${r.pjg}</td>
-                    <td class="p-3 col-grade">${r.grade}</td>
-                    <td class="p-3 col-dus">${r.dus}</td>
-                    <td class="p-3 col-shading">${r.shading}</td>
-                    <td class="p-3 col-po-bawaan">${r.po_bawaan}</td>
-                    <td class="p-3 col-po">${r.po_aktual}</td>
-                    <td class="p-3 col-ket">${r.ket}</td>
+                    <td class="p-3 col-cb"><input type="checkbox" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual_spesifik}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                    <td class="p-3 font-bold opacity-50 text-slate-500 col-no">${i+1}</td>
+                    <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.area}</td>
+                    <td class="p-3 font-mono font-bold tracking-wide border-r border-slate-200 text-slate-900 col-qr text-left">${r.qrcode}</td>
+                    <td class="p-3 font-bold opacity-80 text-slate-600 col-tgl">${r.tglProduksi}</td>
+                    <td class="p-3 font-bold opacity-80 text-slate-600 col-mesin">${r.mesin}</td>
+                    <td class="p-3 font-bold opacity-80 text-slate-600 border-r border-slate-200 col-shift">${r.shift}</td>
+                    <td class="p-3 font-black text-blue-700 col-jenis">${r.jenis}</td>
+                    <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama}</td>
+                    <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg}</td>
+                    <td class="p-3 font-bold text-slate-800 col-grade">${r.grade}</td>
+                    <td class="p-3 font-bold text-slate-800 col-dus">${r.dus}</td>
+                    <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${r.shading}</td>
+                    <td class="p-3 font-bold text-slate-400 border-r border-slate-200 col-po-bawaan">${r.po_bawaan}</td>
+                    <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-r border-slate-200 whitespace-normal leading-relaxed min-w-[200px] col-po">${r.po_aktual_gabungan}</td>
+                    <td class="p-3 font-semibold text-slate-500 opacity-80 col-ket">${r.ket}</td>
                 </tr>`;
         }).join('');
     }
@@ -444,17 +426,17 @@ function renderTabel() {
             return `
                 <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
                     <td class="p-3 col-cb"><input type="checkbox" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-                    <td class="p-3 col-no opacity-60">${i+1}</td>
-                    <td class="p-3 col-area">${r.area}</td>
-                    <td class="p-3 col-jenis">${r.jenis}</td>
-                    <td class="p-3 col-nama">${r.nama}</td>
-                    <td class="p-3 col-pjg">${r.pjg}</td>
-                    <td class="p-3 col-grade">${r.grade}</td>
-                    <td class="p-3 col-dus">${r.dus}</td>
-                    <td class="p-3 col-shading">${r.shading}</td>
-                    <td class="p-3 col-po">${r.po}</td>
-                    <td class="p-3 col-ket">${r.ket}</td>
-                    <td class="p-3 col-qty">${r.qty}</td>
+                    <td class="p-3 font-bold opacity-50 text-slate-500 col-no">${i+1}</td>
+                    <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.area}</td>
+                    <td class="p-3 font-black text-blue-700 col-jenis">${r.jenis}</td>
+                    <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama}</td>
+                    <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg}</td>
+                    <td class="p-3 font-bold text-slate-800 col-grade">${r.grade}</td>
+                    <td class="p-3 font-bold text-slate-800 border-r border-slate-200 col-dus">${r.dus}</td>
+                    <td class="p-3 font-bold text-slate-600 col-shading">${r.shading}</td>
+                    <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-x border-slate-200 col-po">${r.po}</td>
+                    <td class="p-3 font-semibold text-slate-500 opacity-80 border-r border-slate-200 col-ket">${r.ket}</td>
+                    <td class="p-3 font-black text-slate-900 bg-slate-100 col-qty text-base">${r.qty}</td>
                 </tr>`;
         }).join('');
     } 
@@ -464,7 +446,7 @@ function renderTabel() {
                 <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
                 <th class="hdr-std w-12 bg-slate-900 text-blue-300 col-open">OPEN</th>
                 ${thSort(2, 'No', 'w-12 col-no')}
-                ${thSort(3, 'Jenis Item', 'col-jenis')}
+                ${thSort(3, 'Jenis Item', 'border-l border-slate-500 col-jenis')}
                 ${thSort(4, 'Nama Item', 'col-nama')}
                 ${thSort(5, 'Pjg', 'col-pjg')}
                 ${thSort(6, 'Grade', 'col-grade')}
@@ -481,16 +463,16 @@ function renderTabel() {
             <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
                 <td class="p-3 col-cb"><input type="checkbox" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                 <td class="p-2 col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white rounded shadow-sm transition flex mx-auto items-center justify-center"><i data-lucide="box" class="w-4 h-4"></i></button></td>
-                <td class="p-3 col-no opacity-60">${i+1}</td>
-                <td class="p-3 col-jenis">${r.jenis}</td>
-                <td class="p-3 col-nama">${r.nama}</td>
-                <td class="p-3 col-pjg">${r.pjg}</td>
-                <td class="p-3 col-grade">${r.grade}</td>
-                <td class="p-3 col-dus">${r.dus}</td>
-                <td class="p-3 col-shading">${r.shading}</td>
-                <td class="p-3 col-po">${r.po}</td>
-                <td class="p-3 col-ket">${r.ket}</td>
-                <td class="p-3 col-qty">${r.qty}</td>
+                <td class="p-3 font-bold opacity-50 text-slate-500 col-no">${i+1}</td>
+                <td class="p-3 font-black text-blue-700 border-l border-slate-200 col-jenis">${r.jenis}</td>
+                <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama}</td>
+                <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg}</td>
+                <td class="p-3 font-bold text-slate-800 col-grade">${r.grade}</td>
+                <td class="p-3 font-bold text-slate-800 border-r border-slate-200 col-dus">${r.dus}</td>
+                <td class="p-3 font-bold text-slate-600 col-shading">${r.shading}</td>
+                <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-x border-slate-200 col-po">${r.po}</td>
+                <td class="p-3 font-semibold text-slate-500 opacity-80 border-r border-slate-200 col-ket">${r.ket}</td>
+                <td class="p-3 font-black text-slate-900 bg-slate-100 col-qty text-base">${r.qty}</td>
             </tr>
         `).join('');
     } 
@@ -513,14 +495,14 @@ function renderTabel() {
         tbody.innerHTML = stokLembaranRaw.map((r, i) => `
             <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
                 <td class="p-3 col-cb"><input type="checkbox" value="${r.id}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-                <td class="p-3 col-no opacity-60">${i+1}</td>
-                <td class="p-3 col-area">${r.kode_master || '-'}</td>
-                <td class="p-3 col-nama">${r.nama_item || '-'}</td>
-                <td class="p-3 col-pjg">${r.pjg || '-'}</td>
-                <td class="p-3 col-grade">${r.grade || '-'}</td>
-                <td class="p-3 col-dus">${r.dus || '-'}</td>
-                <td class="p-3 col-shading">${r.shading || '-'}</td>
-                <td class="p-3 col-ket">${r.keterangan || '-'}</td>
+                <td class="p-3 font-bold opacity-50 text-slate-500 col-no">${i+1}</td>
+                <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.kode_master || '-'}</td>
+                <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama_item || '-'}</td>
+                <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg || '-'}</td>
+                <td class="p-3 font-bold text-slate-800 col-grade">${r.grade || '-'}</td>
+                <td class="p-3 font-bold text-slate-800 col-dus">${r.dus || '-'}</td>
+                <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${r.shading || '-'}</td>
+                <td class="p-3 font-semibold text-slate-500 opacity-80 col-ket">${r.keterangan || '-'}</td>
             </tr>
         `).join('');
     }
@@ -548,8 +530,8 @@ function bukaBreakdown(gKey) {
                 <td class="p-3"><input type="checkbox" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po}" data-ket="${a.ket}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                 <td class="p-3 font-bold opacity-50">${i+1}</td>
                 <td class="p-3 font-black text-emerald-700 bg-emerald-50">${a.area}</td>
-                <td class="p-3 col-po">${a.po}</td>
-                <td class="p-3 font-semibold opacity-70 border-r border-slate-200">${a.ket}</td>
+                <td class="p-3 font-black text-orange-600 border-r border-slate-200 bg-orange-50/50 col-po">${a.po}</td>
+                <td class="p-3 font-semibold text-slate-500 opacity-80 border-r border-slate-200">${a.ket}</td>
                 <td class="p-3 font-black text-slate-900 bg-slate-100">${a.qty}</td>
             </tr>`;
     }).join('');
