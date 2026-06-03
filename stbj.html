@@ -9,9 +9,26 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        .table-container { scrollbar-width: thin; }
+        .table-container { scrollbar-width: thin; position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; white-space: nowrap; }
+        
+        /* REVISI 1 & 2: Header Seragam Besar & Anti Tembus Pandang (Bleeding) */
+        .hdr-std { 
+            background-color: #1e293b !important; 
+            color: #ffffff !important; 
+            text-align: center !important; 
+            border: 1px solid #334155; 
+            padding: 0.75rem; 
+            text-transform: uppercase; 
+            font-family: inherit; /* Seragam dengan isi */
+            font-size: 13px; /* Ukuran proporsional dengan isi (text-sm) */
+            font-weight: 800; 
+            white-space: nowrap; 
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background-clip: padding-box; /* Obat ampuh agar isi tabel tidak bocor menyundul border atas header */
+        }
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
     </style>
@@ -39,8 +56,9 @@
                     <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Scan Fisik Kardus</label>
                     <form id="form-scan" class="flex gap-2">
                         <div class="relative flex-1">
-                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
-                            <input type="text" id="input-qrcode" class="w-full !pl-10 p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-black text-slate-800 text-sm sm:text-base bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
+                            <!-- REVISI 3: Ditambahkan pl-11 agar tulisan tidak menabrak icon scanner -->
+                            <input type="text" id="input-qrcode" class="w-full pl-11 p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-black text-slate-800 text-sm sm:text-base bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
                         </div>
                         <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-blue-900 text-xs sm:text-sm uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> <span class="hidden sm:inline">ADD</span></button>
                     </form>
@@ -70,8 +88,9 @@
 
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
             <div class="table-container overflow-x-auto w-full max-h-[60vh]">
-                <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-stbj">
-                    <thead class="sticky top-0 z-10 shadow-sm">
+                <!-- REVISI: Semua Header 100% Rata Tengah (justify-center) -->
+                <table class="w-full text-center border-collapse text-sm whitespace-nowrap" id="table-stbj">
+                    <thead class="sticky top-0 z-20 shadow-sm bg-slate-800">
                         <tr>
                             <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleAll(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded"></th>
                             <th class="hdr-std w-10 col-btn"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-slate-400"></i></th>
@@ -83,13 +102,13 @@
                             <th class="hdr-std col-mesin cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(7, this)"><div class="flex items-center justify-center gap-1">Mesin <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std border-r border-slate-500 col-shift cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(8, this)"><div class="flex items-center justify-center gap-1">Shift <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std text-blue-300 col-jenis cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(9, this)"><div class="flex items-center justify-center gap-1">Jenis Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                            <th class="hdr-std col-nama cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(10, this)"><div class="flex items-center gap-1">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-nama cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(10, this)"><div class="flex items-center justify-center gap-1">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std col-pjg cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(11, this)"><div class="flex items-center justify-center gap-1">Pjg <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std col-grade cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(12, this)"><div class="flex items-center justify-center gap-1">Grade <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std col-dus cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(13, this)"><div class="flex items-center justify-center gap-1">Dus <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std border-r border-slate-500 col-shading cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(14, this)"><div class="flex items-center justify-center gap-1">Shading <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std col-po cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(15, this)"><div class="flex items-center justify-center gap-1">PO Awal <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                            <th class="hdr-std col-ket cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(16, this)"><div class="flex items-center gap-1">Keterangan <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                            <th class="hdr-std col-ket cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(16, this)"><div class="flex items-center justify-center gap-1">Keterangan <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                             <th class="hdr-std col-pic cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(17, this)"><div class="flex items-center justify-center gap-1">PIC Input <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                         </tr>
                     </thead>
@@ -403,7 +422,7 @@
                 const isRedHighlight = d.status === 'DUPLIKAT' || d.isLocalDuplicate;
                 const trBaseClass = isRedHighlight ? 'bg-red-50 hover:bg-red-100 text-red-900' : (d.status === 'HOLD' ? 'bg-amber-50 hover:bg-amber-100 text-amber-900' : 'hover:bg-slate-50 text-slate-700');
 
-                // REVISI: text-[11px] pada <tr> dihapus, diganti menjadi text-sm.
+                // REVISI 4: Kelas text-[11px] diganti text-sm agar tulisan besar & nyaman dibaca.
                 html += `
                     <tr class="border-b border-slate-200 transition ${trBaseClass} row-stbj text-sm">
                         <td class="p-3 text-center col-cb"><input type="checkbox" value="${d.id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
@@ -420,13 +439,13 @@
                         <td class="p-3 font-bold col-mesin">${d.mesin}</td>
                         <td class="p-3 font-bold border-r border-slate-200 col-shift">${d.shift}</td>
                         <td class="p-3 font-black ${isRedHighlight ? 'text-red-700' : 'text-blue-700'} col-jenis">${d.jenisItem}</td>
-                        <td class="p-3 font-bold text-left col-nama">${d.namaItem}</td>
+                        <td class="p-3 font-bold text-center col-nama">${d.namaItem}</td>
                         <td class="p-3 font-bold col-pjg">${d.panjang}</td>
                         <td class="p-3 font-bold col-grade">${d.grade}</td>
                         <td class="p-3 font-bold col-dus">${d.dus}</td>
                         <td class="p-3 font-bold border-r border-slate-200 col-shading">${d.shading}</td>
                         <td class="p-3 font-black ${isRedHighlight ? 'text-red-700' : 'text-orange-600'} col-po">${d.po}</td>
-                        <td class="p-2 col-ket"><input type="text" onchange="updateKet(${d.id}, this.value)" value="${d.keterangan}" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-blue-500 bg-white/50 ${isRedHighlight ? 'placeholder-red-400' : ''}" placeholder="Keterangan..."></td>
+                        <td class="p-2 col-ket text-center"><input type="text" onchange="updateKet(${d.id}, this.value)" value="${d.keterangan}" class="w-full p-2 text-sm text-center border border-slate-300 rounded outline-none focus:border-blue-500 bg-white/50 ${isRedHighlight ? 'placeholder-red-400' : ''}" placeholder="Keterangan..."></td>
                         <td class="p-3 font-bold uppercase text-xs opacity-70 col-pic">${d.pic}</td>
                     </tr>
                 `;
