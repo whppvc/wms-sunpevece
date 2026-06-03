@@ -5,101 +5,169 @@ let selectedForPO = []; let sourcePOContext = ''; let currentBreakdownData = [];
 let sortState = {};
 let masterData = { kamus: [] };
 
-// FUNGSI AMAN PARSE JSON
+// FUNGSI AMAN PARSE JSON AGAR TIDAK BLANK / CRASH
 function safeJSONParse(data, fallback = null) {
     if (!data || data === 'undefined' || data === 'null') return fallback;
     if (typeof data !== 'string') return data; 
-    try { return JSON.parse(data); } catch (e) { return fallback; }
+    try {
+        return JSON.parse(data);
+    } catch (e) {
+        console.warn("JSON Parse Error dicegat:", e.message);
+        return fallback;
+    }
 }
 
 const currentUser = safeJSONParse(localStorage.getItem('user_session'), { username: 'Admin', role: 'admin' });
 
 // ========================================================
-// 1. DYNAMIC STYLING MANAGEMENT (GEAR SETTING CSS VARIABLES)
+// 1. STYLING MANAGEMENT (GEAR SETTINGS & CUSTOM COLUMNS)
 // ========================================================
 const defaultSettings = { 
     thBg: '#1e293b', thColor: '#ffffff', thSize: 11, thAlign: 'center', 
     tdColor: '#334155', tdSize: 12, tdAlign: 'center',
-    tdPoColor: '#ea580c', tdPoSize: 12, tdPoAlign: 'center'
+    customCols: {} // Tempat menyimpan styling per kolom { 'col-po': { color: 'red', size: 14, align: 'center' } }
 };
 
+let currentSettings = null;
+
 function terapkanSettingAwal() {
-    let saved = safeJSONParse(localStorage.getItem('wms_table_settings'), defaultSettings);
-    if (!saved || !saved.thBg) saved = defaultSettings;
-    applyCSS(saved);
+    currentSettings = safeJSONParse(localStorage.getItem('wms_table_settings'), defaultSettings);
+    if (!currentSettings || !currentSettings.thBg) currentSettings = JSON.parse(JSON.stringify(defaultSettings));
+    if (!currentSettings.customCols) currentSettings.customCols = {};
+    applyCSS(currentSettings);
 }
 
 function applyCSS(s) {
-    const r = document.documentElement;
+    const styleEl = document.getElementById('dynamic-table-settings');
+    if (!styleEl) return;
+
     const justify = s.thAlign === 'left' ? 'flex-start' : (s.thAlign === 'right' ? 'flex-end' : 'center');
     
-    r.style.setProperty('--th-bg', s.thBg);
-    r.style.setProperty('--th-color', s.thColor);
-    r.style.setProperty('--th-size', s.thSize + 'px');
-    r.style.setProperty('--th-align', s.thAlign);
-    r.style.setProperty('--th-flex', justify);
+    // Bangun CSS dinamis untuk kolom yang di-custom
+    let customCSS = '';
+    for (let colClass in s.customCols) {
+        let cs = s.customCols[colClass];
+        customCSS += `
+            #main-table td.${colClass} { 
+                color: ${cs.color} !important; 
+                font-size: ${cs.size}px !important; 
+                text-align: ${cs.align} !important; 
+                font-weight: 900 !important;
+            }
+        `;
+    }
 
-    r.style.setProperty('--td-color', s.tdColor);
-    r.style.setProperty('--td-size', s.tdSize + 'px');
-    r.style.setProperty('--td-align', s.tdAlign);
-
-    r.style.setProperty('--td-po-color', s.tdPoColor || '#ea580c');
-    r.style.setProperty('--td-po-size', (s.tdPoSize || s.tdSize) + 'px');
-    r.style.setProperty('--td-po-align', s.tdPoAlign || 'center');
+    styleEl.innerHTML = `
+        /* Styling Header */
+        #main-table th.hdr-std { background-color: ${s.thBg} !important; color: ${s.thColor} !important; font-size: ${s.thSize}px !important; text-align: ${s.thAlign} !important; }
+        #main-table th.hdr-std > div { justify-content: ${justify} !important; }
+        
+        /* Styling Default Data */
+        #main-table td { color: ${s.tdColor} !important; font-size: ${s.tdSize}px !important; text-align: ${s.tdAlign} !important; }
+        
+        /* Injection Styling Khusus Per Kolom */
+        ${customCSS}
+    `;
 }
 
 function bukaModalSetting() {
-    let s = safeJSONParse(localStorage.getItem('wms_table_settings'), defaultSettings);
-    if (!s || !s.thBg) s = defaultSettings;
-
-    document.getElementById('set-th-bg').value = s.thBg;
-    document.getElementById('set-th-color').value = s.thColor;
-    document.getElementById('set-th-size').value = s.thSize;
-    document.getElementById('set-th-align').value = s.thAlign;
+    // Isi nilai input umum
+    document.getElementById('set-th-bg').value = currentSettings.thBg;
+    document.getElementById('set-th-color').value = currentSettings.thColor;
+    document.getElementById('set-th-size').value = currentSettings.thSize;
+    document.getElementById('set-th-align').value = currentSettings.thAlign;
     
-    document.getElementById('set-td-color').value = s.tdColor;
-    document.getElementById('set-td-size').value = s.tdSize;
-    document.getElementById('set-td-align').value = s.tdAlign;
+    document.getElementById('set-td-color').value = currentSettings.tdColor;
+    document.getElementById('set-td-size').value = currentSettings.tdSize;
+    document.getElementById('set-td-align').value = currentSettings.tdAlign;
 
-    document.getElementById('set-td-po-color').value = s.tdPoColor || '#ea580c';
-    document.getElementById('set-td-po-size').value = s.tdPoSize || s.tdSize;
-    document.getElementById('set-td-po-align').value = s.tdPoAlign || 'center';
+    // Reset dropdown custom kolom
+    document.getElementById('select-custom-col').value = '';
+    loadCustomColSetting(); // Reset input custom
 
     document.getElementById('modal-setting').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
 }
 
-function simpanSettingLive() {
-    let s = {
-        thBg: document.getElementById('set-th-bg').value,
-        thColor: document.getElementById('set-th-color').value,
-        thSize: parseInt(document.getElementById('set-th-size').value) || 11,
-        thAlign: document.getElementById('set-th-align').value,
-        tdColor: document.getElementById('set-td-color').value,
-        tdSize: parseInt(document.getElementById('set-td-size').value) || 12,
-        tdAlign: document.getElementById('set-td-align').value,
-        tdPoColor: document.getElementById('set-td-po-color').value,
-        tdPoSize: parseInt(document.getElementById('set-td-po-size').value) || 12,
-        tdPoAlign: document.getElementById('set-td-po-align').value
-    };
-    localStorage.setItem('wms_table_settings', JSON.stringify(s));
-    applyCSS(s);
+// Handler Dropdown Pilih Kolom
+function loadCustomColSetting() {
+    const col = document.getElementById('select-custom-col').value;
+    const colorInput = document.getElementById('set-custom-color');
+    const sizeInput = document.getElementById('set-custom-size');
+    const alignInput = document.getElementById('set-custom-align');
+
+    if (col && currentSettings.customCols[col]) {
+        // Jika kolom punya custom style, tampilkan
+        let cs = currentSettings.customCols[col];
+        colorInput.value = cs.color;
+        sizeInput.value = cs.size;
+        alignInput.value = cs.align;
+    } else {
+        // Jika tidak, tampilkan nilai bawaan (Umum)
+        colorInput.value = currentSettings.tdColor;
+        sizeInput.value = currentSettings.tdSize;
+        alignInput.value = currentSettings.tdAlign;
+    }
 }
 
-// REALTIME EVENT LISTENERS UNTUK SETTINGS (Anti Lag)
-['th-bg', 'th-color', 'th-size', 'th-align', 'td-color', 'td-size', 'td-align', 'td-po-color', 'td-po-size', 'td-po-align'].forEach(id => {
-    const el = document.getElementById(`set-${id}`);
-    if(el) el.addEventListener('input', simpanSettingLive);
+// Live Preview tanpa menghajar localStorage (Mencegah Lag)
+function livePreviewSetting() {
+    // Update memory
+    currentSettings.thBg = document.getElementById('set-th-bg').value;
+    currentSettings.thColor = document.getElementById('set-th-color').value;
+    currentSettings.thSize = parseInt(document.getElementById('set-th-size').value) || 11;
+    currentSettings.thAlign = document.getElementById('set-th-align').value;
+
+    currentSettings.tdColor = document.getElementById('set-td-color').value;
+    currentSettings.tdSize = parseInt(document.getElementById('set-td-size').value) || 12;
+    currentSettings.tdAlign = document.getElementById('set-td-align').value;
+
+    const col = document.getElementById('select-custom-col').value;
+    if (col) {
+        currentSettings.customCols[col] = {
+            color: document.getElementById('set-custom-color').value,
+            size: parseInt(document.getElementById('set-custom-size').value) || 12,
+            align: document.getElementById('set-custom-align').value
+        };
+    }
+    
+    // Hanya apply ke CSS, tidak di-save ke storage (Super Ringan)
+    applyCSS(currentSettings);
+}
+
+function resetCustomCol() {
+    const col = document.getElementById('select-custom-col').value;
+    if (col && currentSettings.customCols[col]) {
+        delete currentSettings.customCols[col];
+        loadCustomColSetting(); // Kembalikan nilai input ke default umum
+        applyCSS(currentSettings); // Update view
+    } else {
+        alert('Pilih kolom yang ingin di-reset terlebih dahulu dari Dropdown!');
+    }
+}
+
+// Event listener untuk preview instan saat user otak-atik input
+['set-th-bg', 'set-th-color', 'set-th-size', 'set-th-align', 'set-td-color', 'set-td-size', 'set-td-align', 'set-custom-color', 'set-custom-size', 'set-custom-align'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', livePreviewSetting);
 });
+
+function simpanSettingTabel() {
+    // Baru save ke storage saat di-klik Terapkan
+    livePreviewSetting(); 
+    localStorage.setItem('wms_table_settings', JSON.stringify(currentSettings));
+    tutupSemuaPopups();
+}
 
 function resetSettingDefault() {
     localStorage.removeItem('wms_table_settings');
-    applyCSS(defaultSettings);
+    currentSettings = JSON.parse(JSON.stringify(defaultSettings));
+    applyCSS(currentSettings);
     tutupSemuaPopups();
 }
 
 // ========================================================
-// 2. CORE DATA INITIALIZATION
+// 2. CORE INITIALIZATION & DATA TRANSLATION
 // ========================================================
 document.addEventListener('DOMContentLoaded', async () => {
     initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
@@ -154,7 +222,7 @@ function translateBarcode(barcode) {
 }
 
 // ========================================================
-// 3. FETCHING & AGGREGATION ENGINE (MENGGUNAKAN PO GABUNGAN)
+// 3. DATA FETCHING & AGGREGATION
 // ========================================================
 async function muatDataStok() {
     const tbody = document.getElementById('tbody-ks');
@@ -261,8 +329,22 @@ async function muatDataStok() {
 }
 
 // ========================================================
-// 5. TABLE RENDERING COMPONENT
+// 4. IMPROVE TABLE RENDERING (Clean Code via Mapping)
 // ========================================================
+function setModeKS(m) {
+    modeKS = m;
+    ['qr', 'area', 'global', 'lembaran'].forEach(tab => {
+        const el = document.getElementById('tab-' + tab);
+        if(el) el.className = (m === tab) ? 'px-5 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-5 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    });
+    
+    document.getElementById('btn-ganti-po-main').classList.toggle('hidden', m === 'global' || m === 'lembaran');
+    document.getElementById('f-qr-container').classList.toggle('hidden', m !== 'qr');
+    document.getElementById('f-area-container').classList.toggle('hidden', m === 'global' || m === 'lembaran');
+    
+    renderTabel();
+}
+
 function sortTable(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-ks');
     const rows = Array.from(tbody.querySelectorAll('tr.row-ks'));
@@ -284,21 +366,8 @@ function sortTable(colIndex, headerEl) {
     if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-50'); lucide.createIcons(); }
 }
 
+// Table Header Helper Component
 const thSort = (idx, label, cls = "") => `<th class="hdr-std ${cls} cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(${idx}, this)"><div class="flex items-center gap-1">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>`;
-
-function setModeKS(m) {
-    modeKS = m;
-    ['qr', 'area', 'global', 'lembaran'].forEach(tab => {
-        const el = document.getElementById('tab-' + tab);
-        if(el) el.className = (m === tab) ? 'px-5 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-5 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-    });
-    
-    document.getElementById('btn-ganti-po-main').classList.toggle('hidden', m === 'global' || m === 'lembaran');
-    document.getElementById('f-qr-container').classList.toggle('hidden', m !== 'qr');
-    document.getElementById('f-area-container').classList.toggle('hidden', m === 'global' || m === 'lembaran');
-    
-    renderTabel();
-}
 
 function renderTabel() {
     const thead = document.getElementById('thead-ks');
@@ -333,21 +402,21 @@ function renderTabel() {
             return `
                 <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
                     <td class="p-3 col-cb"><input type="checkbox" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-                    <td class="p-3 font-bold opacity-50 col-no">${i+1}</td>
-                    <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.area}</td>
-                    <td class="p-3 font-mono font-bold tracking-wide border-r border-slate-200 col-qr text-left">${r.qrcode}</td>
-                    <td class="p-3 font-bold opacity-80 col-tgl">${r.tglProduksi}</td>
-                    <td class="p-3 font-bold opacity-80 col-mesin">${r.mesin}</td>
-                    <td class="p-3 font-bold opacity-80 border-r border-slate-200 col-shift">${r.shift}</td>
-                    <td class="p-3 font-black text-blue-700 col-jenis">${r.jenis}</td>
-                    <td class="p-3 font-bold text-left col-nama">${r.nama}</td>
-                    <td class="p-3 font-bold col-pjg">${r.pjg}</td>
-                    <td class="p-3 font-bold col-grade">${r.grade}</td>
-                    <td class="p-3 font-bold col-dus">${r.dus}</td>
-                    <td class="p-3 font-bold border-r border-slate-200 col-shading">${r.shading}</td>
-                    <td class="p-3 font-bold border-r border-slate-200 col-po-bawaan opacity-50">${r.po_bawaan}</td>
+                    <td class="p-3 col-no opacity-60">${i+1}</td>
+                    <td class="p-3 col-area">${r.area}</td>
+                    <td class="p-3 col-qr">${r.qrcode}</td>
+                    <td class="p-3 col-tgl">${r.tglProduksi}</td>
+                    <td class="p-3 col-mesin">${r.mesin}</td>
+                    <td class="p-3 col-shift">${r.shift}</td>
+                    <td class="p-3 col-jenis">${r.jenis}</td>
+                    <td class="p-3 col-nama">${r.nama}</td>
+                    <td class="p-3 col-pjg">${r.pjg}</td>
+                    <td class="p-3 col-grade">${r.grade}</td>
+                    <td class="p-3 col-dus">${r.dus}</td>
+                    <td class="p-3 col-shading">${r.shading}</td>
+                    <td class="p-3 col-po-bawaan">${r.po_bawaan}</td>
                     <td class="p-3 col-po">${r.po_aktual}</td>
-                    <td class="p-3 font-semibold opacity-70 col-ket">${r.ket}</td>
+                    <td class="p-3 col-ket">${r.ket}</td>
                 </tr>`;
         }).join('');
     }
@@ -375,17 +444,17 @@ function renderTabel() {
             return `
                 <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
                     <td class="p-3 col-cb"><input type="checkbox" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-                    <td class="p-3 font-bold opacity-50 col-no">${i+1}</td>
-                    <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.area}</td>
-                    <td class="p-3 font-black text-blue-700 col-jenis">${r.jenis}</td>
-                    <td class="p-3 font-bold text-left col-nama">${r.nama}</td>
-                    <td class="p-3 font-bold col-pjg">${r.pjg}</td>
-                    <td class="p-3 font-bold col-grade">${r.grade}</td>
-                    <td class="p-3 font-bold border-r border-slate-200 col-dus">${r.dus}</td>
-                    <td class="p-3 font-bold col-shading">${r.shading}</td>
+                    <td class="p-3 col-no opacity-60">${i+1}</td>
+                    <td class="p-3 col-area">${r.area}</td>
+                    <td class="p-3 col-jenis">${r.jenis}</td>
+                    <td class="p-3 col-nama">${r.nama}</td>
+                    <td class="p-3 col-pjg">${r.pjg}</td>
+                    <td class="p-3 col-grade">${r.grade}</td>
+                    <td class="p-3 col-dus">${r.dus}</td>
+                    <td class="p-3 col-shading">${r.shading}</td>
                     <td class="p-3 col-po">${r.po}</td>
-                    <td class="p-3 font-semibold opacity-70 border-r border-slate-200 col-ket">${r.ket}</td>
-                    <td class="p-3 font-black text-slate-900 bg-slate-100 col-qty">${r.qty}</td>
+                    <td class="p-3 col-ket">${r.ket}</td>
+                    <td class="p-3 col-qty">${r.qty}</td>
                 </tr>`;
         }).join('');
     } 
@@ -412,16 +481,16 @@ function renderTabel() {
             <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
                 <td class="p-3 col-cb"><input type="checkbox" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                 <td class="p-2 col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white rounded shadow-sm transition flex mx-auto items-center justify-center"><i data-lucide="box" class="w-4 h-4"></i></button></td>
-                <td class="p-3 font-bold opacity-50 col-no">${i+1}</td>
-                <td class="p-3 font-black text-blue-700 border-l border-slate-200 col-jenis">${r.jenis}</td>
-                <td class="p-3 font-bold text-left col-nama">${r.nama}</td>
-                <td class="p-3 font-bold col-pjg">${r.pjg}</td>
-                <td class="p-3 font-bold col-grade">${r.grade}</td>
-                <td class="p-3 font-bold border-r border-slate-200 col-dus">${r.dus}</td>
-                <td class="p-3 font-bold col-shading">${r.shading}</td>
+                <td class="p-3 col-no opacity-60">${i+1}</td>
+                <td class="p-3 col-jenis">${r.jenis}</td>
+                <td class="p-3 col-nama">${r.nama}</td>
+                <td class="p-3 col-pjg">${r.pjg}</td>
+                <td class="p-3 col-grade">${r.grade}</td>
+                <td class="p-3 col-dus">${r.dus}</td>
+                <td class="p-3 col-shading">${r.shading}</td>
                 <td class="p-3 col-po">${r.po}</td>
-                <td class="p-3 font-semibold opacity-70 border-r border-slate-200 col-ket">${r.ket}</td>
-                <td class="p-3 font-black text-slate-900 bg-slate-100 col-qty">${r.qty}</td>
+                <td class="p-3 col-ket">${r.ket}</td>
+                <td class="p-3 col-qty">${r.qty}</td>
             </tr>
         `).join('');
     } 
@@ -444,14 +513,14 @@ function renderTabel() {
         tbody.innerHTML = stokLembaranRaw.map((r, i) => `
             <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
                 <td class="p-3 col-cb"><input type="checkbox" value="${r.id}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-                <td class="p-3 font-bold opacity-50 col-no">${i+1}</td>
-                <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.kode_master || '-'}</td>
-                <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama_item || '-'}</td>
-                <td class="p-3 font-bold col-pjg">${r.pjg || '-'}</td>
-                <td class="p-3 font-bold col-grade">${r.grade || '-'}</td>
-                <td class="p-3 font-bold col-dus">${r.dus || '-'}</td>
-                <td class="p-3 font-bold border-r border-slate-200 col-shading">${r.shading || '-'}</td>
-                <td class="p-3 font-semibold opacity-70 col-ket">${r.keterangan || '-'}</td>
+                <td class="p-3 col-no opacity-60">${i+1}</td>
+                <td class="p-3 col-area">${r.kode_master || '-'}</td>
+                <td class="p-3 col-nama">${r.nama_item || '-'}</td>
+                <td class="p-3 col-pjg">${r.pjg || '-'}</td>
+                <td class="p-3 col-grade">${r.grade || '-'}</td>
+                <td class="p-3 col-dus">${r.dus || '-'}</td>
+                <td class="p-3 col-shading">${r.shading || '-'}</td>
+                <td class="p-3 col-ket">${r.keterangan || '-'}</td>
             </tr>
         `).join('');
     }
@@ -531,7 +600,7 @@ function tutupModalPO() {
 
 async function eksekusiGantiPO() {
     const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
-    if(!newPO) return alert("Silakan Pilih PO Baru!");
+    if(!newPO) return alert("Silakan Pilih PO Baru dari daftar dropdown!");
 
     const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
     if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
