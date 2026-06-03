@@ -1,0 +1,370 @@
+let modeSekarang = 'qrcode'; 
+let rawDataRaw = [];
+let kamusData = [];
+let jasperData = [];
+let sortState = {}; 
+const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
+
+document.addEventListener('DOMContentLoaded', () => {
+    initModernLayout({ id: 'riwayat_keluar', title: 'RIWAYAT KELUAR', url: 'riwayat_keluar.html' });
+    setTimeout(async () => {
+        await loadKamusDanJasper();
+        await muatDataDariSupabase();
+    }, 200);
+});
+
+// FUNGSI SORT TABEL
+function sortTable(colIndex, headerEl) {
+    const tbody = document.getElementById('tbody-keluar');
+    const rows = Array.from(tbody.querySelectorAll('tr.text-row'));
+    
+    let isAsc = sortState[colIndex] !== 'asc';
+    sortState[colIndex] = isAsc ? 'asc' : 'desc';
+    
+    rows.sort((a, b) => {
+        let valA = a.cells[colIndex].innerText.trim();
+        let valB = b.cells[colIndex].innerText.trim();
+        
+        let numA = parseFloat(valA);
+        let numB = parseFloat(valB);
+        
+        if(!isNaN(numA) && !isNaN(numB)) {
+            return isAsc ? numA - numB : numB - numA;
+        } else {
+            return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+    document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-50'); });
+    const icon = headerEl.querySelector('.sort-icon');
+    if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-50'); lucide.createIcons(); }
+}
+
+function toggleSidebarFilter() {
+    document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
+    document.getElementById('overlay-klik-luar-k').classList.toggle('hidden');
+}
+
+function tutupPopups() {
+    document.getElementById('sidebar-filter').classList.add('translate-x-full');
+    document.getElementById('overlay-klik-luar-k').classList.add('hidden');
+}
+
+async function loadKamusDanJasper() {
+    const { data: d2 } = await db.from('master_2').select('*'); if(d2) kamusData = d2;
+    try {
+        const { data: dj } = await db.from('nama_jasper').select('*').order('created_at', {ascending: false});
+        if(dj) jasperData = dj;
+    } catch(e) { console.log("Tabel nama_jasper belum siap."); }
+}
+
+async function muatDataDariSupabase() {
+    const tbody = document.getElementById('tbody-keluar');
+    tbody.innerHTML = `<tr><td colspan="22" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data Keluar...</p></td></tr>`;
+    lucide.createIcons();
+    
+    const rentang = document.getElementById('select-rentang').value;
+    let query = db.from('stok_keluar').select('*').order('created_at', {ascending: false}); // Menggunakan tabel baru stok_keluar
+    
+    // Filter Rentang Waktu
+    if (rentang !== 'all') {
+        const today = new Date();
+        let pastDate = new Date();
+        if(rentang === 'today') pastDate.setHours(0,0,0,0);
+        else if (rentang === 'week') pastDate.setDate(today.getDate() - 7);
+        else if (rentang === 'month') pastDate.setDate(today.getDate() - 30);
+        
+        query = query.gte('created_at', pastDate.toISOString());
+    }
+
+    try {
+        const { data, error } = await query;
+        if(error) throw error;
+        rawDataRaw = data || [];
+        renderHeaderDanTabel();
+    } catch(err) { 
+        // Fallback sementara jika tabel stok_keluar belum ada (biar nggak blank)
+        if(err.message.includes('relation "stok_keluar" does not exist')) {
+             tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-red-500 font-bold bg-red-50 text-center border-2 border-red-300 rounded-xl"><i data-lucide="database" class="w-8 h-8 mx-auto mb-2 text-red-500"></i><p>Tabel <b>stok_keluar</b> belum dibuat di Supabase Bapak.</p><p class="text-xs text-slate-500 mt-2">Buat tabel <b>stok_keluar</b> dengan kolom minimal:<br>qrcode, id_sku, surat_jalan, tujuan, keterangan, pic_keluar, created_at</p></td></tr>`;
+             lucide.createIcons();
+        } else {
+             tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; 
+        }
+    }
+}
+
+function translateBarcode(barcode) {
+    let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-', jasper: '-' };
+    if(!barcode) return td;
+    const parts = barcode.split('/'); if (parts.length < 1) return td;
+    
+    const hurufDepan = barcode.charAt(0).toUpperCase();
+    if (hurufDepan === 'P') td.jenisItem = 'Plafon'; else if (hurufDepan === 'L') td.jenisItem = 'List'; else if (hurufDepan === 'W') td.jenisItem = 'WPC'; else td.jenisItem = hurufDepan;
+
+    let rawItem = parts[0]; let cariItem = kamusData.find(m => m.kode_nama_item === rawItem); 
+    td.namaItem = cariItem && cariItem.nama_item ? cariItem.nama_item : rawItem; td.shading = parts[1] || '-';
+    
+    const p2 = parts[2];
+    if (p2 && p2.length >= 4) {
+        let dP = (p2.length === 5) ? 2 : 1; let rP = p2.substring(0, dP); td.panjang = (dP === 1) ? rP + "M" : rP[0] + "." + rP[1] + "M"; 
+        let rG = p2.substring(dP, dP + 1); td.grade = rG === '1' ? 'BAGUS' : (rG === '2' ? 'A' : rG);
+        let rD = p2.substring(p2.length - 2); let cD = kamusData.find(m => m.kode_dus === rD); td.dus = cD && cD.dus ? cD.dus : rD;
+    }
+    const p3 = parts[3];
+    if (p3 && p3.length >= 5) {
+        const dayOfYear = parseInt(p3.substring(0, 3)); const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
+        if (!isNaN(dayOfYear) && !isNaN(realYear)) {
+            const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
+            td.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
+        }
+        let s = p3.substring(5); let m = s.match(/(C.*?)(S.*?)(P.*)/);
+        if (m) {
+            let cM = kamusData.find(x => x.kode_mesin === m[1]); td.mesin = cM && cM.mesin ? cM.mesin : m[1];
+            let cS = kamusData.find(x => x.kode_shift === m[2]); td.shift = cS && cS.shift ? cS.shift : m[2];
+            let cPO = kamusData.find(x => x.kode_po === m[3]); td.po = cPO && cPO.po ? cPO.po : m[3];
+        }
+    }
+
+    if(jasperData && jasperData.length > 0) {
+        const cJasper = jasperData.find(j => j.nama_item === td.namaItem && j.panjang === td.panjang && j.grade === td.grade);
+        td.jasper = cJasper ? cJasper.nama_jasper : `JAS-${td.namaItem}`;
+    } else { td.jasper = `JAS-${td.namaItem}`; }
+
+    return td;
+}
+
+function setMode(m) {
+    modeSekarang = m;
+    ['qrcode', 'item', 'jasper'].forEach(tab => {
+        const el = document.getElementById('tab-mode-' + tab);
+        if(el) {
+            if(m === tab) el.className = 'px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition';
+            else el.className = 'px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
+        }
+    });
+
+    renderHeaderDanTabel();
+}
+
+const thSort = (idx, label, cls = "") => `<th class="hdr-std ${cls} cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(${idx}, this)"><div class="flex items-center justify-center gap-1">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>`;
+
+function renderHeaderDanTabel() {
+    const thead = document.getElementById('thead-keluar');
+    const tbody = document.getElementById('tbody-keluar');
+    sortState = {};
+
+    if(modeSekarang === 'qrcode') {
+        thead.innerHTML = `
+            <tr>
+                <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
+                ${thSort(1, 'No', 'w-12 col-no')}
+                ${thSort(2, 'Surat Jalan/DO', 'text-indigo-300 col-do')}
+                ${thSort(3, 'Waktu Keluar', 'col-waktu')}
+                ${thSort(4, 'Tujuan', 'text-amber-300 col-tujuan')}
+                ${thSort(5, 'QRCode', 'border-r border-slate-500 col-qr')}
+                ${thSort(6, 'Tgl Produksi', 'col-tgl')}
+                ${thSort(7, 'Mesin', 'col-mesin')}
+                ${thSort(8, 'Shift', 'border-r border-slate-500 col-shift')}
+                ${thSort(9, 'Jenis Item', 'text-blue-300 col-jenis')}
+                ${thSort(10, 'Nama Item', 'col-nama')}
+                ${thSort(11, 'Pjg', 'col-pjg')}
+                ${thSort(12, 'Grade', 'col-grade')}
+                ${thSort(13, 'Dus', 'col-dus')}
+                ${thSort(14, 'Shading', 'border-r border-slate-500 col-shading')}
+                ${thSort(15, 'PO Bawaan', 'col-po')}
+                ${thSort(16, 'Keterangan', 'col-ket border-r border-slate-500')}
+                ${thSort(17, 'PIC Keluar', 'col-pic')}
+            </tr>`;
+        
+        if(rawDataRaw.length === 0) { tbody.innerHTML = '<tr><td colspan="18" class="p-6 font-bold text-slate-400">Tidak ada data keluar.</td></tr>'; return; }
+        
+        let h = '';
+        rawDataRaw.forEach((r, i) => {
+            const dt = new Date(r.created_at);
+            const tglKeluar = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+            const td = translateBarcode(r.qrcode);
+
+            h += `
+                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row transition text-xs">
+                    <td class="p-3 text-center col-cb"><input type="checkbox" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                    <td class="p-3 font-bold text-slate-500 text-center col-no">${i+1}</td>
+                    <td class="p-3 font-black text-center col-do text-indigo-700 bg-indigo-50">${r.surat_jalan || '-'}</td>
+                    <td class="p-3 text-slate-600 font-semibold text-center col-waktu">${tglKeluar}</td>
+                    <td class="p-3 font-bold text-slate-700 text-center col-tujuan">${r.tujuan || '-'}</td>
+                    <td class="p-3 font-mono font-bold text-slate-900 text-left bg-slate-50/50 tracking-wider border-r border-slate-200 col-qr">${r.qrcode}</td>
+                    <td class="p-3 font-bold text-slate-600 text-center col-tgl">${td.tglProduksi}</td>
+                    <td class="p-3 font-bold text-slate-600 text-center col-mesin">${td.mesin}</td>
+                    <td class="p-3 font-bold text-slate-600 text-center border-r border-slate-200 col-shift">${td.shift}</td>
+                    <td class="p-3 font-black text-blue-700 text-center col-jenis">${td.jenisItem}</td>
+                    <td class="p-3 font-bold text-slate-800 text-left col-nama">${td.namaItem}</td>
+                    <td class="p-3 font-bold text-slate-600 text-center col-pjg">${td.panjang}</td>
+                    <td class="p-3 font-bold text-slate-800 text-center col-grade">${td.grade}</td>
+                    <td class="p-3 font-bold text-slate-800 text-center col-dus">${td.dus}</td>
+                    <td class="p-3 font-bold text-slate-600 text-center border-r border-slate-200 col-shading">${td.shading}</td>
+                    <td class="p-3 font-black text-orange-600 bg-orange-50/50 text-center col-po">${td.po}</td>
+                    <td class="p-3 text-slate-600 font-semibold text-center border-r border-slate-200 col-ket">${r.keterangan || '-'}</td>
+                    <td class="p-3 font-bold uppercase text-[10px] text-slate-400 text-center col-pic">${r.pic_keluar || '-'}</td>
+                </tr>`;
+        });
+        tbody.innerHTML = h;
+    } 
+    else if(modeSekarang === 'item' || modeSekarang === 'jasper') {
+        const isJasper = modeSekarang === 'jasper';
+        thead.innerHTML = `
+            <tr>
+                <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
+                ${thSort(1, 'No', 'w-12 col-no')}
+                ${thSort(2, 'Surat Jalan/DO', 'text-indigo-300 col-do')}
+                ${thSort(3, 'Tujuan', 'text-amber-300 col-tujuan')}
+                ${thSort(4, 'Tgl Produksi', 'col-tgl')}
+                ${thSort(5, 'Mesin', 'col-mesin')}
+                ${thSort(6, 'Shift', 'border-r border-slate-500 col-shift')}
+                ${thSort(7, 'Jenis Item', 'col-jenis')}
+                ${thSort(8, isJasper ? 'Nama Barang Jasper' : 'Nama Item', 'col-nama')}
+                ${thSort(9, 'Pjg', 'col-pjg')}
+                ${thSort(10, 'Grade', 'col-grade')}
+                ${thSort(11, 'Dus', 'col-dus')}
+                ${thSort(12, 'Shading', 'border-r border-slate-500 col-shading')}
+                ${thSort(13, 'PO Bawaan', 'col-po')}
+                ${thSort(14, 'QTY KELUAR (DUS)', 'bg-slate-900 text-emerald-300 border-l border-slate-500 border-r col-qty')}
+                ${thSort(15, 'Keterangan', 'border-r border-slate-500 col-ket')}
+            </tr>`;
+        
+        let groups = {};
+        rawDataRaw.forEach(r => {
+            let t = translateBarcode(r.qrcode); 
+            let n = isJasper ? t.jasper : t.namaItem;
+            
+            let ket = r.keterangan || 'TANPA_KETERANGAN';
+            let sj = r.surat_jalan || 'TANPA_DO';
+            let tj = r.tujuan || 'TANPA_TUJUAN';
+            let key = `${sj}_${tj}_${t.jenisItem}_${n}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${t.po}_${t.tglProduksi}_${t.mesin}_${t.shift}_${ket}`;
+            
+            if(!groups[key]) {
+                groups[key] = { ...t, displayNama: n, qty: 0, qrcodes: [], sj: sj, tj: tj, ket: ket };
+            }
+            groups[key].qty++; 
+            groups[key].qrcodes.push(r.qrcode);
+        });
+
+        let arr = Object.values(groups);
+        if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="16" class="p-6 font-bold text-slate-400">Kosong.</td></tr>'; return; }
+
+        let h = '';
+        arr.forEach((r, i) => {
+            const displayKet = (r.ket === 'TANPA_KETERANGAN') ? '-' : r.ket; 
+            h += `
+                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row text-center transition text-xs">
+                    <td class="p-3 col-cb"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                    <td class="p-3 font-bold text-slate-500 col-no">${i+1}</td>
+                    <td class="p-3 font-black text-center col-do text-indigo-700 bg-indigo-50">${r.sj}</td>
+                    <td class="p-3 font-bold text-slate-700 col-tujuan">${r.tj}</td>
+                    <td class="p-3 font-bold text-slate-600 col-tgl">${r.tglProduksi}</td>
+                    <td class="p-3 font-bold text-slate-600 col-mesin">${r.mesin}</td>
+                    <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shift">${r.shift}</td>
+                    <td class="p-3 font-black text-blue-700 col-jenis">${r.jenisItem}</td>
+                    <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.displayNama}</td>
+                    <td class="p-3 font-bold text-slate-500 col-pjg">${r.panjang}</td>
+                    <td class="p-3 font-semibold text-slate-800 col-grade">${r.grade}</td>
+                    <td class="p-3 font-bold text-slate-800 col-dus">${r.dus}</td>
+                    <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${r.shading}</td>
+                    <td class="p-3 font-black text-orange-600 bg-orange-50/40 col-po">${r.po}</td>
+                    <td class="p-3 font-black text-base text-emerald-700 bg-emerald-50 border-l border-r border-slate-200 col-qty">${r.qty}</td>
+                    <td class="p-3 font-bold text-slate-600 text-left col-ket border-r border-slate-200">${displayKet}</td>
+                </tr>`;
+        });
+        tbody.innerHTML = h;
+    }
+    lucide.createIcons(); jalankanSaring();
+}
+
+function toggleSemuaCentang(checked) { document.querySelectorAll('.row-cb').forEach(cb => cb.checked = checked); }
+
+function bersihkanFilter() { 
+    const ids = ['f-do','f-waktu','f-tujuan','f-qr','f-tgl','f-mesin','f-shift','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket','f-pic'];
+    ids.forEach(id => document.getElementById(id).value = ''); 
+    jalankanSaring(); toggleSidebarFilter();
+}
+
+function jalankanSaring() {
+    const f = {
+        do: document.getElementById('f-do').value.toLowerCase(),
+        waktu: document.getElementById('f-waktu').value.toLowerCase(),
+        tujuan: document.getElementById('f-tujuan').value.toLowerCase(),
+        qr: document.getElementById('f-qr').value.toLowerCase(),
+        tgl: document.getElementById('f-tgl').value.toLowerCase(),
+        mesin: document.getElementById('f-mesin').value.toLowerCase(),
+        shift: document.getElementById('f-shift').value.toLowerCase(),
+        jenis: document.getElementById('f-jenis').value.toLowerCase(),
+        nama: document.getElementById('f-nama').value.toLowerCase(),
+        pjg: document.getElementById('f-pjg').value.toLowerCase(),
+        grade: document.getElementById('f-grade').value.toLowerCase(),
+        dus: document.getElementById('f-dus').value.toLowerCase(),
+        shading: document.getElementById('f-shading').value.toLowerCase(),
+        po: document.getElementById('f-po').value.toLowerCase(),
+        ket: document.getElementById('f-ket').value.toLowerCase(),
+        pic: document.getElementById('f-pic').value.toLowerCase()
+    };
+
+    document.querySelectorAll('.text-row').forEach(row => {
+        let show = true;
+        for(let key in f) {
+            if(f[key]) {
+                const cell = row.querySelector('.col-' + key);
+                if(cell && !cell.innerText.toLowerCase().includes(f[key])) { show = false; break; }
+            }
+        }
+        row.style.display = show ? '' : 'none';
+    });
+}
+
+async function aksiMassal(tipe) {
+    let checkedValues = [];
+    document.querySelectorAll('.row-cb:checked').forEach(cb => { cb.value.split(',').forEach(v => { if(v) checkedValues.push(v); }); });
+    if(checkedValues.length === 0) return alert("Centang baris tabel terlebih dahulu!");
+
+    if(tipe === 'salin') {
+        let textSalin = "";
+        const headers = Array.from(document.querySelectorAll('#thead-keluar th'))
+            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb'))
+            .map(th => th.innerText.trim().replace(/\n/g, ' '));
+        textSalin += headers.join('\t') + '\n';
+
+        document.querySelectorAll('.row-cb:checked').forEach(cb => {
+            const tr = cb.closest('tr'); const rowData = [];
+            Array.from(tr.children).forEach(td => {
+                if(td.classList.contains('col-cb')) return;
+                if(window.getComputedStyle(td).display !== 'none') { rowData.push(td.innerText.trim().replace(/\n/g, ' ')); }
+            });
+            textSalin += rowData.join('\t') + '\n';
+        });
+        navigator.clipboard.writeText(textSalin);
+        alert(`Tersalin! Buka Excel dan Paste (Ctrl+V).`);
+    } 
+    else if(tipe === 'xlsx') {
+        if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat.");
+        let ws_data = [];
+        
+        // Ambil Header
+        const headers = Array.from(document.querySelectorAll('#thead-keluar th')).filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb')).map(th => th.innerText.trim());
+        ws_data.push(headers);
+        
+        // Ambil Data Terlihat Saja
+        document.querySelectorAll('.text-row').forEach(tr => {
+            if(tr.style.display !== 'none' && tr.querySelector('.row-cb:checked')) {
+                const rowData = [];
+                Array.from(tr.children).forEach(td => {
+                    if(td.classList.contains('col-cb')) return;
+                    if(window.getComputedStyle(td).display !== 'none') { rowData.push(`"${td.innerText.trim()}"`); }
+                });
+                ws_data.push(rowData);
+            }
+        });
+
+        let ws = XLSX.utils.aoa_to_sheet(ws_data);
+        let wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Keluar_Data");
+        XLSX.writeFile(wb, `Riwayat_Keluar.xlsx`);
+    }
+}
