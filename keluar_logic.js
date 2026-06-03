@@ -118,9 +118,6 @@ function deleteRow(btn) { const tr = btn.closest('tr'); deleteStack.push({ paren
 function undoDelete() { if(deleteStack.length === 0) return; const lastData = deleteStack.pop(); const tempDiv = document.createElement('tbody'); tempDiv.innerHTML = lastData.html; if (lastData.nextSibling) lastData.parent.insertBefore(tempDiv.firstChild, lastData.nextSibling); else lastData.parent.appendChild(tempDiv.firstChild); lucide.createIcons(); updateRowNumbers(); }
 function updateRowNumbers() { const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; }); }
 
-// ========================================================
-// 1. VERIFIKASI GUDANG
-// ========================================================
 async function crossCekOutbound() {
     const rows = document.querySelectorAll('.row-item');
     if(rows.length === 0) return alert("Belum ada data untuk dicek.");
@@ -204,9 +201,6 @@ async function crossCekOutbound() {
     btnCross.innerHTML = originalText; btnCross.disabled = false;
 }
 
-// ========================================================
-// 2. BUKA MODAL KELUAR
-// ========================================================
 async function bukaModalKeluar() {
     const rows = document.querySelectorAll('.row-item');
     if(rows.length === 0) return alert("Belum ada data.");
@@ -241,7 +235,7 @@ async function bukaModalKeluar() {
 }
 
 // ========================================================
-// 3. EKSEKUSI CERDAS (POTONG & SIMPAN KE STOK KELUAR)
+// REVISI UTAMA: EKSEKUSI DENGAN DETEKSI ERROR LENGKAP
 // ========================================================
 async function eksekusiKeluar() {
     const doInput = document.getElementById('out-do') ? document.getElementById('out-do').value.trim() : '-';
@@ -276,7 +270,7 @@ async function eksekusiKeluar() {
 
     let qrList = []; let mapAktual = {}; let mapGlobal = {};
     let matchedRows = []; let unmatchedCount = 0;
-    let payloadRiwayatKeluar = []; // Payload untuk tabel riwayat stok_keluar
+    let payloadRiwayatKeluar = []; 
 
     rows.forEach(row => {
         if (row.querySelector('span[data-status]').getAttribute('data-status') === 'valid') {
@@ -305,7 +299,6 @@ async function eksekusiKeluar() {
                 if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { nama_item: nm, pjg: pj, grade: gr, dus: ds, shading: sh, po_bawaan: poTarget, ket: ket, qty: 0 };
                 mapGlobal[keyGlb].qty++;
 
-                // Siapkan data sejarah untuk tabel stok_keluar
                 let id_sku_lengkap = `${area}_${row.querySelector('.col-jenis').innerText.trim()}_${nm}_${pj}_${gr}_${ds}_${sh}_${poTarget}`;
                 payloadRiwayatKeluar.push({
                     qrcode: qr,
@@ -336,7 +329,6 @@ async function eksekusiKeluar() {
                 const targetSkuPattern = `%_${nm}_${pj}_${gr}_${ds}_${sh}_${poTarget}`;
                 
                 const { data: qrToSwap, error: swapErr } = await db.from('stok_qr').select('qrcode, id_sku').ilike('id_sku', targetSkuPattern).limit(1);
-                    
                 if (swapErr) throw swapErr;
                 
                 if (qrToSwap && qrToSwap.length > 0) {
@@ -355,23 +347,105 @@ async function eksekusiKeluar() {
         return;
     }
 
-    // Eksekusi Potong Stok Database
+    // 1. Eksekusi Potong Stok Database (RPC)
     const payloadData = { qrs: qrList, aktuals: Object.values(mapAktual), globals: Object.values(mapGlobal) };
-    const { error } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
+    const { error: rpcError } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
 
-    if (error) { alert("Transaksi Ditolak Server:\n" + error.message); btnEks.innerHTML = oriBuka; btnEks.disabled = false; return; }
+    if (rpcError) { 
+        alert("Transaksi Ditolak Server RPC:\n" + rpcError.message); 
+        btnEks.innerHTML = oriBuka; btnEks.disabled = false; 
+        return; 
+    }
 
-    // REVISI TERPENTING: CATAT SEJARAH KE TABEL stok_keluar
+    // 2. REVISI PROTEKSI: JALANKAN INSERT SEJARAH DENGAN NOTIFIKASI ERROR JIKA TERTOLAK
     try {
         const { error: errKeluar } = await db.from('stok_keluar').insert(payloadRiwayatKeluar);
-        if(errKeluar) console.error("Gagal simpan riwayat keluar: ", errKeluar);
-    } catch(errLog) {}
+        if(errKeluar) {
+            alert(`⚠️ WARNING STOK TERPOTONG, TAPI RIWAYAT GAGAL MASUK!\n\nAlasan server menolak tabel stok_keluar: ${errKeluar.message}\nKode Error: ${errKeluar.code}`);
+            console.error("Gagal simpan riwayat keluar: ", errKeluar);
+        }
+    } catch(errLog) {
+        alert("Terjadi crash sistem saat mencoba mencatat riwayat keluar: " + errLog.message);
+    }
 
     matchedRows.forEach(r => r.remove()); updateRowNumbers();
 
-    let msg = `✅ SELESAI\nBerhasil memotong ${qrList.length} item secara permanen & tersimpan di Riwayat Keluar.`;
-    if (unmatchedCount > 0) msg += `\n\n⚠️ ${unmatchedCount} dus tersisa di layar (kosong/beda po).`;
+    let msg = `✅ SELESAI\nBerhasil memproses pengeluaran gudang untuk ${qrList.length} item.`;
+    if (unmatchedCount > 0) msg += `\n\n⚠️ ${unmatchedCount} dus tersisa di layar karena tidak lolos verifikasi jatah.`;
     alert(msg);
-    document.getElementById('modal-keluar').classList.add('hidden');
+    if(document.getElementById('modal-keluar')) document.getElementById('modal-keluar').classList.add('hidden');
     btnEks.innerHTML = oriBuka; btnEks.disabled = false;
+}
+
+function bukaModalReqPO() {
+    const rows = document.querySelectorAll('.row-item');
+    if(rows.length === 0) return alert("Tidak ada data tabel.");
+    
+    let hasVerified = false;
+    rows.forEach(r => {
+        let status = r.querySelector('span[data-status]').getAttribute('data-status');
+        if(status !== 'unverified') hasVerified = true; 
+    });
+
+    if(!hasVerified) return alert("Semua baris tampak belum diverifikasi. Verifikasi dulu sebelum request.");
+    
+    const sel = document.getElementById('req-po-target');
+    sel.innerHTML = '<option value="">-- PILIH PO TUJUAN --</option>';
+    
+    let poAcuan = new Set();
+    masterData.kamus.forEach(m => { if(m.po) poAcuan.add(m.po); });
+    Array.from(poAcuan).sort().forEach(po => {
+        sel.innerHTML += `<option value="${po}">${po}</option>`;
+    });
+
+    document.getElementById('req-keterangan').value = '';
+    document.getElementById('modal-req-po').classList.remove('hidden');
+}
+
+async function submitReqPO() {
+    const poRequest = document.getElementById('req-po-target').value;
+    const ketReq = document.getElementById('req-keterangan').value.trim();
+    if(!poRequest) return alert("Pilih PO Tujuan untuk pengajuan!");
+
+    const btn = document.getElementById('btn-submit-req'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENGAJUKAN...'; btn.disabled = true;
+
+    const rows = document.querySelectorAll('.row-item');
+    const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
+    let payloadUpload = [];
+
+    rows.forEach(tr => {
+        let status = tr.querySelector('span[data-status]').getAttribute('data-status');
+        if(status !== 'unverified') {
+            const qr = tr.querySelector('.qr-val').innerText.trim();
+            let poAsli = (tr.dataset.poAsliDB && tr.dataset.poAsliDB !== '-') ? tr.dataset.poAsliDB : tr.querySelector('.col-pobawaan').innerText.trim(); 
+            
+            payloadUpload.push({
+                qrcode: qr, po_awal: poAsli, po_request: poRequest, keterangan: ketReq, status: 'PENDING', pic_request: user.username
+            });
+        }
+    });
+
+    if(payloadUpload.length === 0) {
+        alert("Tidak ada baris yang bisa diajukan.");
+        btn.innerHTML = ori; btn.disabled = false; return;
+    }
+
+    try {
+        const { error } = await db.from('request_ganti_po').insert(payloadUpload);
+        if(error) {
+            if(error.code === '42P01') alert("Tabel 'request_ganti_po' belum dibuat di Database Supabase Anda!");
+            else throw error;
+            return;
+        }
+        
+        rows.forEach(tr => {
+            if(tr.querySelector('span[data-status]').getAttribute('data-status') !== 'unverified') tr.remove();
+        });
+        updateRowNumbers();
+
+        alert(`BERHASIL!\n${payloadUpload.length} QRCode bermasalah diajukan ke CS untuk ganti PO.`);
+        document.getElementById('modal-req-po').classList.add('hidden');
+    } catch(e) { alert("Gagal mengajukan: " + e.message); }
+    finally { btn.innerHTML = ori; btn.disabled = false; }
 }
