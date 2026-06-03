@@ -19,6 +19,7 @@
 
     <div class="w-full px-2 sm:px-4 pt-4 relative">
         
+        <!-- TABS MENU -->
         <div class="flex border-b border-slate-200 mb-3 bg-white rounded-xl shadow-sm overflow-x-auto hide-scrollbar">
             <button onclick="setModeKonversi('out')" id="tab-out" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="log-out" class="w-4 h-4"></i> KONVERSI OUT</button>
             <button onclick="setModeKonversi('in')" id="tab-in" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="log-in" class="w-4 h-4"></i> KONVERSI IN</button>
@@ -26,6 +27,7 @@
             <button class="px-6 py-3.5 tab-inactive transition whitespace-nowrap flex items-center gap-2 text-xs uppercase opacity-40 cursor-not-allowed"><i data-lucide="alert-triangle" class="w-4 h-4"></i> CASE KHUSUS</button>
         </div>
 
+        <!-- PANEL OUT -->
         <div id="panel-out" class="bg-white rounded-xl shadow-sm border border-slate-200 mb-3 overflow-hidden">
             <button onclick="toggleAktifitas()" class="w-full bg-slate-100 p-3 flex justify-between items-center border-b border-slate-200 hover:bg-slate-200 transition active:bg-slate-300">
                 <span class="font-black text-[11px] uppercase tracking-wide text-slate-700 flex items-center gap-2"><i data-lucide="activity" class="w-4 h-4 text-rose-600"></i> INPUT AKTIFITAS OUT</span>
@@ -53,29 +55,33 @@
             </div>
         </div>
 
-        <div id="panel-in" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 mb-3 p-3 sm:p-4 border-l-4 border-l-blue-600">
-            <h3 class="font-black text-[11px] uppercase tracking-wide text-blue-700 mb-3 flex items-center gap-2 border-b border-slate-100 pb-2">
-                <i data-lucide="link" class="w-4 h-4"></i> REFERENSI KONVERSI MASUK (IN)
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 border-b border-slate-100 pb-3">
-                <div>
-                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Kode Konversi (Teruskan)</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="in-kode-konversi" readonly class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold bg-slate-100 text-slate-600 text-xs" placeholder="-- Pilih dari riwayat out --">
-                        <input type="hidden" id="in-aktifitas-ref">
-                        <button type="button" onclick="bukaModalRiwayatKonversi()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-black shadow-sm text-xs transition active:scale-95 whitespace-nowrap">PILIH KODE</button>
+        <!-- PANEL IN -->
+        <div id="panel-in" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 mb-3 overflow-hidden border-l-4 border-l-blue-600">
+            <button onclick="toggleAktifitasIn()" class="w-full bg-blue-50 p-3 flex justify-between items-center border-b border-slate-200 hover:bg-blue-100 transition active:bg-blue-200">
+                <span class="font-black text-[11px] uppercase tracking-wide text-blue-700 flex items-center gap-2"><i data-lucide="log-in" class="w-4 h-4 text-blue-600"></i> INPUT AKTIFITAS IN</span>
+                <i data-lucide="chevron-up" id="icon-toggle-aktifitas-in" class="w-4 h-4 text-slate-500 transition-transform duration-300"></i>
+            </button>
+            <div id="body-aktifitas-in" class="p-3 sm:p-4 transition-all duration-300 origin-top">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 border-b border-slate-100 pb-3">
+                    <div>
+                        <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">KODE KONVERSI</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="in-kode-konversi" readonly class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold bg-slate-100 text-slate-600 text-xs" placeholder="-- Pilih dari riwayat out --">
+                            <input type="hidden" id="in-aktifitas-ref">
+                            <button type="button" onclick="bukaModalRiwayatKonversi()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-black shadow-sm text-xs transition active:scale-95 whitespace-nowrap">PILIH KODE</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">PILIH AREA TUJUAN GUDANG</label>
+                        <select id="in-area" class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-blue-500 text-slate-800 cursor-pointer bg-slate-50 text-xs">
+                            <option value="">-- Memuat Area... --</option>
+                        </select>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Pilih Area Tujuan Gudang</label>
-                    <select id="in-area" class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-blue-500 text-slate-800 cursor-pointer bg-slate-50 text-xs">
-                        <option value="">-- Memuat Area... --</option>
-                    </select>
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">KETERANGAN / ALASAN (OPSIONAL)</label>
+                    <input type="text" id="input-keterangan-in" class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-blue-500 text-slate-800 bg-slate-50 text-xs" placeholder="Ketik keterangan IN...">
                 </div>
-            </div>
-            <div>
-                <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Keterangan / Alasan (Opsional)</label>
-                <input type="text" id="input-keterangan-in" class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-blue-500 text-slate-800 bg-slate-50 text-xs" placeholder="Ketik keterangan IN...">
             </div>
         </div>
 
@@ -132,6 +138,7 @@
         </div>
     </div>
 
+    <!-- FLOATING SAVE BUTTON -->
     <div class="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 p-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
         <div class="w-full px-2 sm:px-4 flex justify-center md:justify-end">
             <button onclick="bukaModalSimpan()" id="btn-save-awal" class="w-full md:w-auto px-8 py-2.5 sm:py-3 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-wide cursor-pointer transition active:scale-95 uppercase border-b-2 border-rose-800">
@@ -140,6 +147,7 @@
         </div>
     </div>
 
+    <!-- MODAL PO TARGET (OUT MODE) -->
     <div id="modal-po-target" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
         <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
             <h3 class="text-xl font-black mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="package-minus" class="text-rose-600"></i> Tujuan PO Konversi Out</h3>
@@ -157,8 +165,9 @@
         </div>
     </div>
 
+    <!-- MODAL PILIH RIWAYAT KONVERSI OUT (IN MODE) -->
     <div id="modal-riwayat-konversi" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-4xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-5xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
              <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                  <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="history" class="w-4 h-4 text-blue-600"></i> Pilih Referensi Konversi OUT</h3>
                  <button onclick="tutupSemuaModal()" class="text-slate-400 hover:text-red-500 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -168,10 +177,12 @@
                      <thead class="sticky top-0 bg-slate-800 shadow-sm z-10">
                          <tr>
                              <th class="hdr-std w-16">PILIH</th>
-                             <th class="hdr-std">Kode Konversi</th>
-                             <th class="hdr-std">Waktu</th>
-                             <th class="hdr-std">Aktifitas Asal</th>
-                             <th class="hdr-std">Total QTY</th>
+                             <th class="hdr-std border-r border-slate-600">KODE KONVERSI</th>
+                             <th class="hdr-std">WAKTU</th>
+                             <th class="hdr-std border-r border-slate-600">AKTIFITAS ASAL</th>
+                             <th class="hdr-std text-left pl-4">DETAIL ITEM</th>
+                             <th class="hdr-std text-left pl-4 border-r border-slate-600">KETERANGAN</th>
+                             <th class="hdr-std text-emerald-300">TOTAL QTY</th>
                              <th class="hdr-std">PIC</th>
                          </tr>
                      </thead>
@@ -181,6 +192,7 @@
         </div>
     </div>
 
+    <!-- SIDEBAR FILTER -->
     <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
             <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Barcode</h3>
