@@ -22,6 +22,7 @@ const APP_MENUS = [
     { id: 'scan_pic', title: 'Scan PIC Area', icon: 'user-check', url: 'scan_pic.html' },
     { id: 'riwayat_mutasi', title: 'Riwayat Konversi', icon: 'arrow-right-left', url: 'riwayat_konversi.html' },
     { isDivider: true, title: 'OUTBOUND (KELUAR)' },
+    { id: 'keluar', title: 'Estimasi Pengiriman', icon: 'Box', url: 'estimasi_pengiriman.html' },
     { id: 'keluar', title: 'Kirim / Keluar', icon: 'truck', url: 'keluar.html' },
     { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' }
 ];
