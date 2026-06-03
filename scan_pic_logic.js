@@ -105,33 +105,54 @@ function toggleAktifitas() {
     else { body.classList.add('hidden'); icon.classList.add('rotate-180'); }
 }
 
+function toggleAktifitasIn() {
+    const body = document.getElementById('body-aktifitas-in'); const icon = document.getElementById('icon-toggle-aktifitas-in');
+    if (body.classList.contains('hidden')) { body.classList.remove('hidden'); icon.classList.remove('rotate-180'); } 
+    else { body.classList.add('hidden'); icon.classList.add('rotate-180'); }
+}
+
 async function bukaModalRiwayatKonversi() {
     const tbody = document.getElementById('tbody-modal-konversi');
-    tbody.innerHTML = `<tr><td colspan="6" class="p-10"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-blue-500"></i></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="p-10"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-blue-500"></i></td></tr>`;
     lucide.createIcons();
     document.getElementById('modal-riwayat-konversi').classList.remove('hidden');
 
     try {
         const { data, error } = await db.from('laporan_konversi').select('*').ilike('aktifitas', 'OUT - %').order('created_at', {ascending: false}).limit(100);
         if(error) throw error;
-        if(!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="p-10 font-bold text-slate-400">Tidak ada riwayat konversi OUT.</td></tr>`; return; }
+        if(!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="p-10 font-bold text-slate-400">Tidak ada riwayat konversi OUT.</td></tr>`; return; }
 
         let h = '';
         data.forEach(d => {
             const dt = new Date(d.created_at);
             const waktu = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+            
+            // Ekstrak detail JSON
+            let detailObj = {};
+            try { detailObj = JSON.parse(d.detail); } catch(e){}
+            let ket = detailObj.keterangan || '-';
+            let detailItem = '-';
+            
+            if(detailObj.items && detailObj.items.length > 0) {
+                let item = detailObj.items[0];
+                detailItem = `<span class="text-blue-700">${item.namaItem}</span> | ${item.panjang} | ${item.grade} | ${item.dus} | ${item.shading}`;
+                if(detailObj.items.length > 1) detailItem += ` <br><span class="text-[10px] text-slate-400 font-black bg-slate-100 px-1 rounded">(+${detailObj.items.length - 1} item lain)</span>`;
+            }
+
             h += `
                 <tr class="border-b hover:bg-slate-50 text-xs transition">
                     <td class="p-2"><button onclick="pilihKodeKonversi('${d.kode_konversi}', '${d.aktifitas}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg shadow-sm transition active:scale-95">PILIH</button></td>
-                    <td class="p-2 font-mono font-bold tracking-wider text-slate-800">${d.kode_konversi}</td>
+                    <td class="p-2 font-mono font-bold tracking-wider text-slate-800 border-r border-slate-200">${d.kode_konversi}</td>
                     <td class="p-2 font-semibold text-slate-500">${waktu}</td>
-                    <td class="p-2 font-black text-rose-600">${d.aktifitas}</td>
-                    <td class="p-2 font-black text-blue-700">${d.qty_total}</td>
+                    <td class="p-2 font-black text-rose-600 border-r border-slate-200">${d.aktifitas}</td>
+                    <td class="p-3 font-bold text-slate-700 text-left whitespace-normal max-w-[200px] leading-tight">${detailItem}</td>
+                    <td class="p-3 font-medium text-slate-600 text-left whitespace-normal max-w-[150px] leading-tight border-r border-slate-200">${ket}</td>
+                    <td class="p-2 font-black text-emerald-600 bg-emerald-50">${d.qty_total}</td>
                     <td class="p-2 uppercase opacity-70 font-bold text-slate-500">${d.pic}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
-    } catch(e) { tbody.innerHTML = `<tr><td colspan="6" class="p-5 text-red-500">${e.message}</td></tr>`; }
+    } catch(e) { tbody.innerHTML = `<tr><td colspan="8" class="p-5 text-red-500">${e.message}</td></tr>`; }
 }
 
 function pilihKodeKonversi(kode, aktifitas) {
@@ -431,7 +452,7 @@ async function eksekusiSimpanFinalOut() {
                 jenis_item: d.jenisItem || '-', nama_item: d.namaItem || '-', pjg: d.panjang || '-',
                 grade: d.grade || '-', dus: d.dus || '-', shading: d.shading || '-',
                 po_bawaan: d.poAsliDB || '-', po_aktual: poTarget, keterangan: keterangan || '-',
-                pic: currentUser.username, area: d.area || '-'
+                pic: currentUser.username, area: d.area || '-', status: 'PENDING'
             });
         });
         if(arrStokKonversi.length > 0) {
@@ -448,8 +469,8 @@ async function eksekusiSimpanFinalOut() {
         const { error: errInsert } = await db.from('laporan_konversi').insert([payloadLog]);
         if (errInsert) throw errInsert;
 
-        let msg = `✅ EKSEKUSI KONVERSI OUT BERHASIL!\n\nID Audit: ${kodeKonversi}\nPO Target: ${poTarget}\nBerhasil dipotong dari Kartu Stok: ${qrList.length} Dus.`;
-        if (unmatchedCount > 0) msg += `\n\n⚠️ ${unmatchedCount} dus tidak diproses karena jatah PO kurang atau status belum VALID.`;
+        let msg = `✅ EKSEKUSI KONVERSI OUT BERHASIL!\n\nID Audit: ${kodeKonversi}\nPO Target: ${poTarget}\nBerhasil dipotong dari Kartu Stok: ${qrList.length} Dus dan dimasukkan ke Stok Konversi.`;
+        if (unmatchedCount > 0) msg += `\n\n⚠️ ${unmatchedCount} dus tidak diproses karena jatah PO kurang atau status fisik belum VALID.`;
         alert(msg);
         
         tutupSemuaModal(); dataPic = []; resetFilter();
@@ -464,7 +485,7 @@ async function eksekusiSimpanFinalIn() {
     const kodeRef = document.getElementById('in-kode-konversi').value;
     const aktifitasRef = document.getElementById('in-aktifitas-ref').value;
     const areaTujuan = document.getElementById('in-area').value;
-    const ket = document.getElementById('input-keterangan-in').value.trim();
+    const ket = document.getElementById('input-keterangan-in').value.trim() || '-';
 
     if(!kodeRef) return alert("Pilih Kode Konversi OUT (PILIH KODE) sebagai referensi!");
     if(!areaTujuan) return alert("Pilih Area Tujuan Gudang terlebih dahulu!");
@@ -475,7 +496,7 @@ async function eksekusiSimpanFinalIn() {
     if(duplicateItems.length > 0) return alert("Masih ada barcode DUPLIKAT di dalam tabel! Hapus baris merah terlebih dahulu.");
     if(validItems.length === 0) return alert("Tidak ada item VALID untuk disimpan!");
 
-    if(!confirm(`Lanjutkan memasukkan ${validItems.length} Kardus ke stok Gudang (Area: ${areaTujuan})?`)) return;
+    if(!confirm(`Lanjutkan memasukkan ${validItems.length} Kardus ke stok Gudang (Area: ${areaTujuan})?\nDengan Kode Induk Konversi: ${kodeRef}`)) return;
 
     const btn = document.getElementById('btn-save-awal'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES IN...'; btn.disabled = true;
@@ -492,7 +513,7 @@ async function eksekusiSimpanFinalIn() {
             qrcode: d.qrcode,
             id_sku: id_sku_baru,
             area: areaTujuan,
-            keterangan: ket || 'Konversi IN'
+            keterangan: ket
         });
 
         let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${poBawaanAsli}`;
@@ -501,6 +522,7 @@ async function eksekusiSimpanFinalIn() {
         }
         aktualUpdates[keyAkt].qty++;
 
+        // REVISI: Kode konversi menggunakan kode yang persis sama, tanpa tambahan "-IN"
         arrStokKonversi.push({
             kode_konversi: kodeRef,
             aktifitas: `IN - ${aktifitasRef}`,
@@ -516,9 +538,10 @@ async function eksekusiSimpanFinalIn() {
             shading: d.shading || '-',
             po_bawaan: poBawaanAsli,
             po_aktual: poBawaanAsli,
-            keterangan: ket || '-',
+            keterangan: ket,
             pic: currentUser.username,
-            area: areaTujuan
+            area: areaTujuan,
+            status: 'PENDING'
         });
     });
 
@@ -540,10 +563,10 @@ async function eksekusiSimpanFinalIn() {
         if(e3) throw e3;
 
         const payloadLog = {
-            kode_konversi: kodeRef + "-IN", 
+            kode_konversi: kodeRef, 
             aktifitas: `IN - ${aktifitasRef}`,
             qrcode: validItems.map(d=>d.qrcode).join(', '),
-            detail: JSON.stringify({ keterangan: ket, area_tujuan: areaTujuan }),
+            detail: JSON.stringify({ keterangan: ket, area_tujuan: areaTujuan, items: validItems }),
             qty_total: validItems.length,
             pic: currentUser.username
         };
