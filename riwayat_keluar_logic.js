@@ -1,5 +1,6 @@
 let modeSekarang = 'qrcode'; 
 let rawDataRaw = [];
+let holdDataRaw = [];
 let kamusData = [];
 let jasperData = [];
 let sortState = {}; 
@@ -24,15 +25,9 @@ function sortTable(colIndex, headerEl) {
     rows.sort((a, b) => {
         let valA = a.cells[colIndex].innerText.trim();
         let valB = b.cells[colIndex].innerText.trim();
-        
-        let numA = parseFloat(valA);
-        let numB = parseFloat(valB);
-        
-        if(!isNaN(numA) && !isNaN(numB)) {
-            return isAsc ? numA - numB : numB - numA;
-        } else {
-            return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        }
+        let numA = parseFloat(valA); let numB = parseFloat(valB);
+        if(!isNaN(numA) && !isNaN(numB)) { return isAsc ? numA - numB : numB - numA; } 
+        else { return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA); }
     });
     
     rows.forEach(row => tbody.appendChild(row));
@@ -65,32 +60,28 @@ async function muatDataDariSupabase() {
     lucide.createIcons();
     
     const rentang = document.getElementById('select-rentang').value;
-    let query = db.from('stok_keluar').select('*').order('created_at', {ascending: false}); // Menggunakan tabel baru stok_keluar
+    let queryKeluar = db.from('stok_keluar').select('*').order('created_at', {ascending: false}); 
+    let queryHold = db.from('hold_keluar').select('*').order('created_at', {ascending: false}); 
     
-    // Filter Rentang Waktu
     if (rentang !== 'all') {
-        const today = new Date();
-        let pastDate = new Date();
+        const today = new Date(); let pastDate = new Date();
         if(rentang === 'today') pastDate.setHours(0,0,0,0);
         else if (rentang === 'week') pastDate.setDate(today.getDate() - 7);
         else if (rentang === 'month') pastDate.setDate(today.getDate() - 30);
-        
-        query = query.gte('created_at', pastDate.toISOString());
+        queryKeluar = queryKeluar.gte('created_at', pastDate.toISOString());
+        queryHold = queryHold.gte('created_at', pastDate.toISOString());
     }
 
     try {
-        const { data, error } = await query;
-        if(error) throw error;
-        rawDataRaw = data || [];
+        const [resK, resH] = await Promise.all([queryKeluar, queryHold]);
+        if(resK.error) throw resK.error;
+        if(resH.error) throw resH.error;
+        
+        rawDataRaw = resK.data || [];
+        holdDataRaw = resH.data || [];
         renderHeaderDanTabel();
     } catch(err) { 
-        // Fallback sementara jika tabel stok_keluar belum ada (biar nggak blank)
-        if(err.message.includes('relation "stok_keluar" does not exist')) {
-             tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-red-500 font-bold bg-red-50 text-center border-2 border-red-300 rounded-xl"><i data-lucide="database" class="w-8 h-8 mx-auto mb-2 text-red-500"></i><p>Tabel <b>stok_keluar</b> belum dibuat di Supabase Bapak.</p><p class="text-xs text-slate-500 mt-2">Buat tabel <b>stok_keluar</b> dengan kolom minimal:<br>qrcode, id_sku, surat_jalan, tujuan, keterangan, pic_keluar, created_at</p></td></tr>`;
-             lucide.createIcons();
-        } else {
-             tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; 
-        }
+        tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; 
     }
 }
 
@@ -136,13 +127,20 @@ function translateBarcode(barcode) {
 
 function setMode(m) {
     modeSekarang = m;
-    ['qrcode', 'item', 'jasper'].forEach(tab => {
+    ['qrcode', 'item', 'jasper', 'hold'].forEach(tab => {
         const el = document.getElementById('tab-mode-' + tab);
         if(el) {
             if(m === tab) el.className = 'px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition';
             else el.className = 'px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
         }
     });
+
+    const btnHold = document.getElementById('btn-hold');
+    const btnCancel = document.getElementById('btn-cancel');
+
+    if(m === 'qrcode') { btnHold.classList.remove('hidden'); btnCancel.classList.add('hidden'); }
+    else if(m === 'hold') { btnHold.classList.add('hidden'); btnCancel.classList.remove('hidden'); }
+    else { btnHold.classList.add('hidden'); btnCancel.classList.add('hidden'); }
 
     renderHeaderDanTabel();
 }
@@ -154,10 +152,12 @@ function renderHeaderDanTabel() {
     const tbody = document.getElementById('tbody-keluar');
     sortState = {};
 
-    if(modeSekarang === 'qrcode') {
+    let targetData = modeSekarang === 'hold' ? holdDataRaw : rawDataRaw;
+
+    if(modeSekarang === 'qrcode' || modeSekarang === 'hold') {
         thead.innerHTML = `
             <tr>
-                <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
+                <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded border-slate-300"></th>
                 ${thSort(1, 'No', 'w-12 col-no')}
                 ${thSort(2, 'Surat Jalan/DO', 'text-indigo-300 col-do')}
                 ${thSort(3, 'Waktu Keluar', 'col-waktu')}
@@ -177,16 +177,16 @@ function renderHeaderDanTabel() {
                 ${thSort(17, 'PIC Keluar', 'col-pic')}
             </tr>`;
         
-        if(rawDataRaw.length === 0) { tbody.innerHTML = '<tr><td colspan="18" class="p-6 font-bold text-slate-400">Tidak ada data keluar.</td></tr>'; return; }
+        if(targetData.length === 0) { tbody.innerHTML = '<tr><td colspan="18" class="p-6 font-bold text-slate-400">Tidak ada data.</td></tr>'; return; }
         
         let h = '';
-        rawDataRaw.forEach((r, i) => {
+        targetData.forEach((r, i) => {
             const dt = new Date(r.created_at);
             const tglKeluar = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
             const td = translateBarcode(r.qrcode);
 
             h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row transition text-xs">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row transition text-sm">
                     <td class="p-3 text-center col-cb"><input type="checkbox" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                     <td class="p-3 font-bold text-slate-500 text-center col-no">${i+1}</td>
                     <td class="p-3 font-black text-center col-do text-indigo-700 bg-indigo-50">${r.surat_jalan || '-'}</td>
@@ -197,14 +197,14 @@ function renderHeaderDanTabel() {
                     <td class="p-3 font-bold text-slate-600 text-center col-mesin">${td.mesin}</td>
                     <td class="p-3 font-bold text-slate-600 text-center border-r border-slate-200 col-shift">${td.shift}</td>
                     <td class="p-3 font-black text-blue-700 text-center col-jenis">${td.jenisItem}</td>
-                    <td class="p-3 font-bold text-slate-800 text-left col-nama">${td.namaItem}</td>
+                    <td class="p-3 font-bold text-slate-800 text-center col-nama">${td.namaItem}</td>
                     <td class="p-3 font-bold text-slate-600 text-center col-pjg">${td.panjang}</td>
                     <td class="p-3 font-bold text-slate-800 text-center col-grade">${td.grade}</td>
                     <td class="p-3 font-bold text-slate-800 text-center col-dus">${td.dus}</td>
                     <td class="p-3 font-bold text-slate-600 text-center border-r border-slate-200 col-shading">${td.shading}</td>
                     <td class="p-3 font-black text-orange-600 bg-orange-50/50 text-center col-po">${td.po}</td>
                     <td class="p-3 text-slate-600 font-semibold text-center border-r border-slate-200 col-ket">${r.keterangan || '-'}</td>
-                    <td class="p-3 font-bold uppercase text-[10px] text-slate-400 text-center col-pic">${r.pic_keluar || '-'}</td>
+                    <td class="p-3 font-bold uppercase text-xs text-slate-400 text-center col-pic">${r.pic_keluar || '-'}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
@@ -213,7 +213,7 @@ function renderHeaderDanTabel() {
         const isJasper = modeSekarang === 'jasper';
         thead.innerHTML = `
             <tr>
-                <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
+                <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded border-slate-300"></th>
                 ${thSort(1, 'No', 'w-12 col-no')}
                 ${thSort(2, 'Surat Jalan/DO', 'text-indigo-300 col-do')}
                 ${thSort(3, 'Tujuan', 'text-amber-300 col-tujuan')}
@@ -232,7 +232,7 @@ function renderHeaderDanTabel() {
             </tr>`;
         
         let groups = {};
-        rawDataRaw.forEach(r => {
+        targetData.forEach(r => {
             let t = translateBarcode(r.qrcode); 
             let n = isJasper ? t.jasper : t.namaItem;
             
@@ -255,7 +255,7 @@ function renderHeaderDanTabel() {
         arr.forEach((r, i) => {
             const displayKet = (r.ket === 'TANPA_KETERANGAN') ? '-' : r.ket; 
             h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row text-center transition text-xs">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row text-center transition text-sm">
                     <td class="p-3 col-cb"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                     <td class="p-3 font-bold text-slate-500 col-no">${i+1}</td>
                     <td class="p-3 font-black text-center col-do text-indigo-700 bg-indigo-50">${r.sj}</td>
@@ -264,14 +264,14 @@ function renderHeaderDanTabel() {
                     <td class="p-3 font-bold text-slate-600 col-mesin">${r.mesin}</td>
                     <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shift">${r.shift}</td>
                     <td class="p-3 font-black text-blue-700 col-jenis">${r.jenisItem}</td>
-                    <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.displayNama}</td>
+                    <td class="p-3 font-bold text-slate-800 text-center col-nama">${r.displayNama}</td>
                     <td class="p-3 font-bold text-slate-500 col-pjg">${r.panjang}</td>
                     <td class="p-3 font-semibold text-slate-800 col-grade">${r.grade}</td>
                     <td class="p-3 font-bold text-slate-800 col-dus">${r.dus}</td>
                     <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${r.shading}</td>
                     <td class="p-3 font-black text-orange-600 bg-orange-50/40 col-po">${r.po}</td>
                     <td class="p-3 font-black text-base text-emerald-700 bg-emerald-50 border-l border-r border-slate-200 col-qty">${r.qty}</td>
-                    <td class="p-3 font-bold text-slate-600 text-left col-ket border-r border-slate-200">${displayKet}</td>
+                    <td class="p-3 font-bold text-slate-600 text-center col-ket border-r border-slate-200">${displayKet}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
@@ -324,6 +324,7 @@ async function aksiMassal(tipe) {
     document.querySelectorAll('.row-cb:checked').forEach(cb => { cb.value.split(',').forEach(v => { if(v) checkedValues.push(v); }); });
     if(checkedValues.length === 0) return alert("Centang baris tabel terlebih dahulu!");
 
+    // FITUR SALIN KE EXCEL (TEXT/TSV)
     if(tipe === 'salin') {
         let textSalin = "";
         const headers = Array.from(document.querySelectorAll('#thead-keluar th'))
@@ -342,15 +343,13 @@ async function aksiMassal(tipe) {
         navigator.clipboard.writeText(textSalin);
         alert(`Tersalin! Buka Excel dan Paste (Ctrl+V).`);
     } 
+    // FITUR DOWNLOAD EXCEL NATIVE
     else if(tipe === 'xlsx') {
         if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat.");
         let ws_data = [];
-        
-        // Ambil Header
         const headers = Array.from(document.querySelectorAll('#thead-keluar th')).filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb')).map(th => th.innerText.trim());
         ws_data.push(headers);
         
-        // Ambil Data Terlihat Saja
         document.querySelectorAll('.text-row').forEach(tr => {
             if(tr.style.display !== 'none' && tr.querySelector('.row-cb:checked')) {
                 const rowData = [];
@@ -361,10 +360,90 @@ async function aksiMassal(tipe) {
                 ws_data.push(rowData);
             }
         });
-
         let ws = XLSX.utils.aoa_to_sheet(ws_data);
         let wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Keluar_Data");
         XLSX.writeFile(wb, `Riwayat_Keluar.xlsx`);
+    }
+    // FITUR PINDAH KE HOLD
+    else if(tipe === 'hold') {
+        if(modeSekarang !== 'qrcode') return alert("HOLD hanya bisa dilakukan dari Mode QRCODE.");
+        if(!confirm(`Yakin ingin menahan (HOLD) ${checkedValues.length} item ini?\n\n(Tindakan ini hanya memindahkan riwayat, TIDAK MENGEMBALIKAN barang ke Kartu Stok. Jika ingin mengembalikan stok, lakukan "Cancel Keluar" dari Tabel Hold nantinya).`)) return;
+        
+        const btn = document.getElementById('btn-hold'); const ori = btn.innerHTML;
+        btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> PROSES...'; btn.disabled = true;
+
+        const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({
+            qrcode: r.qrcode, id_sku: r.id_sku, surat_jalan: r.surat_jalan, tujuan: r.tujuan, 
+            keterangan: 'DI-HOLD dari Riwayat', pic_keluar: r.pic_keluar
+        }));
+
+        try {
+            const { error: errAdd } = await db.from('hold_keluar').insert(dataPindah);
+            if(errAdd) throw errAdd;
+            const { error: errDel } = await db.from('stok_keluar').delete().in('qrcode', checkedValues);
+            if(errDel) throw errDel;
+            
+            alert(`Berhasil Memindahkan ${checkedValues.length} Item ke TABEL HOLD.`);
+            muatDataDariSupabase();
+        } catch(e) { alert("GAGAL HOLD: " + e.message); }
+        finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
+    }
+    // FITUR CANCEL KELUAR (KEMBALIKAN KE STOK GUDANG)
+    else if(tipe === 'cancel') {
+        if(modeSekarang !== 'hold') return alert("CANCEL hanya bisa dilakukan dari Tabel Hold.");
+        const ketCancel = prompt(`Anda akan MENGEMBALIKAN ${checkedValues.length} item ini ke Gudang (Kartu Stok).\n\nMasukkan Keterangan (Wajib):`);
+        if(!ketCancel) return alert("Dibatalkan. Keterangan wajib diisi.");
+
+        const btn = document.getElementById('btn-cancel'); const ori = btn.innerHTML;
+        btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENGEMBALIKAN STOK...'; btn.disabled = true;
+
+        const dataReturn = holdDataRaw.filter(r => checkedValues.includes(r.qrcode));
+        let insertsStokQr = [];
+        let aktualUpdates = {};
+
+        dataReturn.forEach(item => {
+            // Siapkan fisik kembali ke stok_qr (Di area "HOLD")
+            insertsStokQr.push({
+                qrcode: item.qrcode,
+                id_sku: item.id_sku,
+                area: 'HOLD', // default area karantina
+                keterangan: ketCancel
+            });
+
+            // Parse ID SKU untuk mengembalikan jatah tabungan stok_aktual
+            let parts = item.id_sku.split('_');
+            if(parts.length >= 8) {
+                let [area, jenis, nama, pjg, grade, dus, shading, po] = parts;
+                let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${po}`;
+                if(!aktualUpdates[key]) aktualUpdates[key] = { nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, po_aktual: po, qty: 0 };
+                aktualUpdates[key].qty++;
+            }
+        });
+
+        try {
+            // 1. Masukkan fisik ke stok_qr
+            const { error: e1 } = await db.from('stok_qr').insert(insertsStokQr);
+            if(e1) throw e1;
+
+            // 2. Kembalikan tabungan di stok_aktual
+            for(let key in aktualUpdates) {
+                let u = aktualUpdates[key];
+                const {data: curData} = await db.from('stok_aktual').select('id, qty').eq('nama_item', u.nama_item).eq('pjg', u.pjg).eq('grade', u.grade).eq('dus', u.dus).eq('shading', u.shading).eq('po_aktual', u.po_aktual).single();
+                if(curData) {
+                    await db.from('stok_aktual').update({qty: curData.qty + u.qty}).eq('id', curData.id);
+                } else {
+                    await db.from('stok_aktual').insert([{...u}]); 
+                }
+            }
+
+            // 3. Bersihkan dari hold_keluar
+            const { error: e3 } = await db.from('hold_keluar').delete().in('qrcode', checkedValues);
+            if(e3) throw e3;
+
+            alert(`✅ SUKSES CANCEL KELUAR!\n${checkedValues.length} item telah dikembalikan ke Kartu Stok dengan Area "HOLD" dan Jatah PO telah ditambah kembali.`);
+            muatDataDariSupabase();
+        } catch(e) { alert("GAGAL CANCEL: " + e.message); }
+        finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
     }
 }
