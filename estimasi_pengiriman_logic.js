@@ -40,8 +40,8 @@ async function ambilReferensiMaster2() {
 function isiDropdown(elId, dataArray, placeholderText) {
     const el = document.getElementById(elId);
     if (!el) return;
-    let html = <option value="">${placeholderText}</option>;
-    dataArray.forEach(val => html += <option value="${val}">${val}</option>);
+    let html = `<option value="">${placeholderText}</option>`;
+    dataArray.forEach(val => html += `<option value="${val}">${val}</option>`);
     el.innerHTML = html;
 }
 
@@ -179,11 +179,11 @@ async function simpanMassalKeDatabase() {
     try {
         const { error } = await db.from('estimasi_pengiriman').insert(payload);
         if (error) {
-            alert(GAGAL MENYIMPAN KE SUPABASE!\nError: ${error.message}\n\nPastikan RLS pada tabel 'estimasi_pengiriman' sudah di-DISABLE (Unrestricted).);
+            alert(`GAGAL MENYIMPAN KE SUPABASE!\nError: ${error.message}\n\nPastikan RLS pada tabel 'estimasi_pengiriman' sudah di-DISABLE (Unrestricted).`);
             throw error;
         }
 
-        alert(🚀 BERHASIL!\nSebanyak ${payload.length} data estimasi pengiriman sukses masuk database server.);
+        alert(`🚀 BERHASIL!\nSebanyak ${payload.length} data estimasi pengiriman sukses masuk database server.`);
         stagingData = [];
         renderTabelStaging();
     } catch (e) {
@@ -200,13 +200,13 @@ async function simpanMassalKeDatabase() {
 // ========================================================
 async function muatDataEstimasiDB() {
     const tbody = document.getElementById('tbody-database');
-    tbody.innerHTML = <tr><td colspan="9" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data Estimasi...</p></td></tr>;
+    tbody.innerHTML = `<tr><td colspan="9" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data Estimasi...</p></td></tr>`;
     lucide.createIcons();
 
     try {
         const { data, error } = await db.from('estimasi_pengiriman').select('*').order('created_at', { ascending: false });
         if (error) {
-            alert(GAGAL MENARIK DATA!\nError: ${error.message}\n\nPastikan RLS pada tabel 'estimasi_pengiriman' sudah di-DISABLE (Unrestricted).);
+            alert(`GAGAL MENARIK DATA!\nError: ${error.message}\n\nPastikan RLS pada tabel 'estimasi_pengiriman' sudah di-DISABLE (Unrestricted).`);
             throw error;
         }
 
@@ -238,7 +238,7 @@ async function muatDataEstimasiDB() {
 
         renderTableDatabase();
     } catch (e) {
-        tbody.innerHTML = <tr><td colspan="9" class="p-5 text-red-500 font-bold">Error load: ${e.message}</td></tr>;
+        tbody.innerHTML = `<tr><td colspan="9" class="p-5 text-red-500 font-bold">Error load: ${e.message}</td></tr>`;
     }
 }
 
