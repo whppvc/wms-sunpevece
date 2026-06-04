@@ -22,15 +22,15 @@ async function ambilReferensiMaster2() {
         if (error) throw error;
         masterKamus = data || [];
 
-        // Ambil set unik untuk nama item, pjg, dan grade
+        // Ambil set unik untuk nama item, po, dan grade
         const namaSet = [...new Set(masterKamus.map(x => (x.nama_item || '').trim()).filter(Boolean))].sort();
-        const pjgSet = [...new Set(masterKamus.map(x => (x.panjang || '').trim()).filter(Boolean))].sort();
         const gradeSet = [...new Set(masterKamus.map(x => (x.grade || '').trim()).filter(Boolean))].sort();
+        const poSet = [...new Set(masterKamus.map(x => (x.po || '').trim()).filter(Boolean))].sort();
 
         // Inject ke Dropdown Input
         isiDropdown('in-nama-item', namaSet, '-- Pilih Item --');
-        isiDropdown('in-panjang', pjgSet, '-- Pilih Pjg --');
         isiDropdown('in-grade', gradeSet, '-- Pilih Grade --');
+        isiDropdown('in-po', poSet, '-- Pilih PO --');
 
     } catch (e) {
         console.error("Gagal memuat dropdown acuan:", e.message);
@@ -63,14 +63,21 @@ function switchTab(mode) {
 // 3. TAMBAH DATA KE TABEL SEMENTARA (STAGING)
 function addEstimasiLokal() {
     const tgl = document.getElementById('in-tanggal').value;
-    const po = document.getElementById('in-po').value.trim().toUpperCase();
+    const po = document.getElementById('in-po').value;
     const nama = document.getElementById('in-nama-item').value;
-    const pjg = document.getElementById('in-panjang').value;
+    let pjg = document.getElementById('in-panjang').value.trim();
     const grade = document.getElementById('in-grade').value;
     const note = document.getElementById('in-note').value.trim();
 
     if (!tgl || !po || !nama || !pjg || !grade) {
         return alert("PERHATIAN: Semua kolom variabel wajib dipilih/diisi kecuali Note!");
+    }
+
+    // REVISI: Otomatis tambahkan "M" jika belum ada
+    if (pjg && !pjg.toUpperCase().endsWith('M')) {
+        pjg = pjg + "M";
+    } else {
+        pjg = pjg.toUpperCase();
     }
 
     stagingData.unshift({
@@ -128,6 +135,7 @@ function renderTabelStaging() {
 }
 
 function saringTabelStaging() {
+    // Di mode staging, input PO sekarang bentuk select, jadi value-nya pasti match persis
     const filterPo = document.getElementById('in-po').value.toLowerCase();
     const filterNama = document.getElementById('in-nama-item').value.toLowerCase();
 
@@ -151,7 +159,6 @@ async function simpanMassalKeDatabase() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES SUBMIT MASSAL...';
     btn.disabled = true;
 
-    // Bersihkan id lokal, tambahkan pic pengguna aktif
     const payload = stagingData.map(d => ({
         tanggal_estimasi: d.tanggal_estimasi,
         po_estimasi: d.po_estimasi,
@@ -192,7 +199,6 @@ async function muatDataEstimasiDB() {
 
         dbRecordsRaw = data || [];
         
-        // Bangun Filter Dropdown Berdasarkan Data Riwayat yang ada secara dinamis
         const tglUnik = [...new Set(dbRecordsRaw.map(x => x.tanggal_estimasi))].sort().reverse();
         const poUnik = [...new Set(dbRecordsRaw.map(x => (x.po_estimasi || '').trim()))].sort();
 
@@ -202,7 +208,6 @@ async function muatDataEstimasiDB() {
         isiDropdown('filter-db-tanggal', tglUnik, '-- SEMUA TANGGAL --');
         isiDropdown('filter-db-po', poUnik, '-- SEMUA PO --');
 
-        // Kembalikan nilai filter sebelumnya agar tidak ke-reset saat refresh data
         document.getElementById('filter-db-tanggal').value = curTglSelect || 'ALL';
         document.getElementById('filter-db-po').value = curPoSelect || 'ALL';
 
@@ -217,7 +222,6 @@ function renderTableDatabase() {
     const filterTgl = document.getElementById('filter-db-tanggal').value;
     const filterPo = document.getElementById('filter-db-po').value;
 
-    // Filter array data raw lokal
     const filteredRecords = dbRecordsRaw.filter(r => {
         const matchTgl = (filterTgl === 'ALL' || !filterTgl) ? true : r.tanggal_estimasi === filterTgl;
         const matchPo = (filterPo === 'ALL' || !filterPo) ? true : r.po_estimasi === filterPo;
@@ -233,11 +237,11 @@ function renderTableDatabase() {
         <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-sm">
             <td class="p-3 font-bold text-slate-400">${i + 1}</td>
             <td class="p-3 font-semibold text-slate-600">${r.tanggal_estimasi}</td>
-            <td class="p-3 font-black text-slate-800">${r.po_estimasi}</td>
+            <td class="p-3 font-black text-slate-800 border-r border-slate-200">${r.po_estimasi}</td>
             <td class="p-3 font-black text-blue-700">${r.nama_item}</td>
             <td class="p-3 font-bold text-slate-600">${r.panjang}</td>
             <td class="p-3 font-bold text-slate-800">${r.grade}</td>
-            <td class="p-3 text-left font-medium text-slate-600 pl-4 whitespace-normal max-w-[200px] leading-tight">${r.note || '-'}</td>
+            <td class="p-3 text-left font-medium text-slate-600 pl-4 whitespace-normal max-w-[200px] leading-tight border-l border-slate-200">${r.note || '-'}</td>
             <td class="p-3 uppercase font-bold text-xs text-slate-400">${r.pic || '-'}</td>
         </tr>
     `).join('');
