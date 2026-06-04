@@ -11,16 +11,16 @@
         .table-container { scrollbar-width: thin; position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* STANDAR HEADER OPTIMAL */
+        /* DESAIN HEADER BARU: Lebih gelap, lebih padat (seperti mockup gambar) */
         .hdr-std { 
-            background-color: #1e293b !important; 
-            color: #ffffff !important; 
+            background-color: #0f172a !important; /* bg-slate-900 */
+            color: #f1f5f9 !important; /* text-slate-100 */
             text-align: center !important; 
             border: 1px solid #334155; 
-            padding: 0.75rem; 
+            padding: 0.5rem 0.75rem; 
             text-transform: uppercase; 
             font-family: inherit; 
-            font-size: 12px; 
+            font-size: 10px; 
             font-weight: 800; 
             white-space: nowrap; 
             position: sticky;
@@ -28,54 +28,80 @@
             z-index: 20;
             background-clip: padding-box; 
         }
-        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
-        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
+        
+        /* DESAIN TAB BARU: Garis bawah, background putih bersih */
+        .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: 900; background-color: #ffffff; }
+        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; background-color: #ffffff; }
     </style>
 </head>
-<body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-20">
-    <div class="w-full px-2 sm:px-4 pt-4 relative">
+<!-- Background Body putih bersih agar menyatu dengan elemen -->
+<body class="font-sans bg-white overflow-x-hidden text-slate-800 pb-20">
+
+    <!-- Kontainer Edge-to-Edge (Tanpa padding pinggir px-4 & rounded) -->
+    <div class="w-full flex flex-col h-screen">
         
-        <div class="flex border-b border-slate-200 mb-3 bg-white rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
-            <button onclick="gantiModeRiwayat('qr')" id="tab-r-qr" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="list" class="w-4 h-4"></i> DETAIL QRCODE</button>
-            <button onclick="gantiModeRiwayat('agregasi')" id="tab-r-agregasi" class="px-6 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="bar-chart-2" class="w-4 h-4"></i> RANGKUMAN NAMA ITEM & QTY</button>
-            <button onclick="gantiModeRiwayat('hold')" id="tab-r-hold" class="px-6 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="pause-circle" class="w-4 h-4"></i> TABEL HOLD</button>
+        <!-- NAVIGASI TAB MENU (FLAT) -->
+        <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar sticky top-0 z-30 shrink-0">
+            <button onclick="gantiModeRiwayat('qr')" id="tab-r-qr" class="px-5 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-[11px] uppercase"><i data-lucide="list" class="w-4 h-4"></i> DETAIL QRCODE</button>
+            <button onclick="gantiModeRiwayat('agregasi')" id="tab-r-agregasi" class="px-5 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-[11px] uppercase"><i data-lucide="bar-chart-2" class="w-4 h-4"></i> RANGKUMAN NAMA ITEM & QTY</button>
+            <button onclick="gantiModeRiwayat('hold')" id="tab-r-hold" class="px-5 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-[11px] uppercase"><i data-lucide="pause-circle" class="w-4 h-4"></i> TABEL HOLD</button>
         </div>
 
-        <div class="bg-white p-3 rounded-b-xl rounded-tr-xl shadow-sm border border-slate-200 mb-3">
-            <div class="flex gap-2 overflow-x-auto pb-2 px-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none" style="-webkit-overflow-scrolling: touch;">
+        <!-- TOOLBAR RINGKAS (DESAIN MOCKUP) -->
+        <div class="bg-white p-2 border-b border-slate-200 flex flex-col gap-1.5 shrink-0">
+            <div class="flex items-center gap-2 overflow-x-auto px-1 pb-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none" style="-webkit-overflow-scrolling: touch;">
                 
-                <button onclick="bukaModalGantiArea()" id="btn-ganti-area" class="p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-orange-600 hover:bg-orange-700 text-white border-b-2 border-orange-800 active:scale-95 transition"><i data-lucide="map-pin" class="w-4 h-4"></i> Ganti Area</button>
-                <button onclick="bukaModalSTBJ()" class="p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-purple-600 hover:bg-purple-700 text-white border-b-2 border-purple-800 active:scale-95 transition"><i data-lucide="table" class="w-4 h-4"></i> Data STBJ</button>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider mr-1 hidden sm:inline">Aksi:</span>
                 
-                <div class="w-px h-6 bg-slate-300 mx-1 self-center"></div> 
+                <!-- Tombol-tombol dibuat ringkas (pills) dengan warna solid seperti gambar -->
+                <button onclick="bukaModalGantiArea()" id="btn-ganti-area" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 shadow-sm shrink-0 transition active:scale-95">
+                    <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Ganti Area
+                </button>
+                <button onclick="bukaModalSTBJ()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 shadow-sm shrink-0 transition active:scale-95">
+                    <i data-lucide="table" class="w-3.5 h-3.5"></i> Data STBJ
+                </button>
                 
-                <button onclick="cancelLangsir()" id="btn-cancel-langsir" class="p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-rose-600 hover:bg-rose-700 text-white border-b-2 border-rose-800 active:scale-95 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Cancel Langsir</button>
-                <button onclick="hapusBarisHold()" id="btn-hapus-hold" class="hidden p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-red-600 hover:bg-red-700 text-white border-b-2 border-red-800 active:scale-95 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Permanen</button>
+                <div class="w-px h-5 bg-slate-300 mx-0.5 self-center shrink-0"></div> 
+                
+                <button onclick="cancelLangsir()" id="btn-cancel-langsir" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 shadow-sm shrink-0 transition active:scale-95">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Cancel Langsir
+                </button>
+                <button onclick="hapusBarisHold()" id="btn-hapus-hold" class="hidden bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 shadow-sm shrink-0 transition active:scale-95">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Hapus
+                </button>
 
-                <div class="w-px h-6 bg-slate-300 mx-1 self-center"></div> 
+                <div class="w-px h-5 bg-slate-300 mx-0.5 self-center shrink-0"></div> 
                 
-                <button onclick="toggleSidebarFilter()" class="p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-slate-800 text-white border-b-2 border-slate-950 active:scale-95 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
-                <button onclick="salinDataTabel()" class="p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-blue-600 hover:bg-blue-700 text-white border-b-2 border-blue-800 active:scale-95 transition"><i data-lucide="copy" class="w-4 h-4"></i> Salin</button>
+                <button onclick="toggleSidebarFilter()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 shadow-sm shrink-0 transition active:scale-95">
+                    <i data-lucide="filter" class="w-3.5 h-3.5"></i> Filter
+                </button>
+                <button onclick="salinDataTabel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 shadow-sm shrink-0 transition active:scale-95">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i> Salin
+                </button>
                 
             </div>
-            <div class="text-[9px] text-slate-400 text-center font-black uppercase tracking-wider mt-1 pointer-events-none flex items-center justify-center gap-1 animate-pulse">
+            <!-- REVISI PENULISAN: Menggunakan "Geser menu tombol ke kanan-kiri" -->
+            <div class="text-[9px] text-slate-400 text-center font-black uppercase tracking-wider pointer-events-none flex items-center justify-center gap-1">
                 <i data-lucide="arrow-left-right" class="w-3 h-3"></i> Geser menu tombol ke kanan-kiri
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative mb-4">
-            <div class="table-container overflow-x-auto w-full max-h-[65vh] hide-scrollbar">
-                <table class="w-full border-collapse text-sm whitespace-nowrap" id="main-table">
-                    <thead class="sticky top-0 z-20 shadow-sm bg-slate-800" id="thead-riwayat"></thead>
+        <!-- TABEL DATA EDGE-TO-EDGE -->
+        <div class="bg-white flex-1 overflow-hidden relative">
+            <div class="table-container overflow-x-auto w-full h-full max-h-full hide-scrollbar">
+                <table class="w-full border-collapse whitespace-nowrap" id="main-table">
+                    <!-- Header sangat gelap (slate-900) dengan z-20 -->
+                    <thead class="sticky top-0 z-20 shadow-sm" id="thead-riwayat"></thead>
                     <tbody id="tbody-riwayat" class="text-center text-slate-700"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
+    <!-- SIDEBAR FILTER -->
     <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Tabel Lengkap</h3>
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4 text-blue-600"></i> Filter Tabel Lengkap</h3>
             <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
         <div class="p-4 flex flex-col gap-4 overflow-y-auto">
@@ -101,6 +127,7 @@
         </div>
     </div>
 
+    <!-- MODAL GANTI AREA -->
     <div id="modal-ganti-area" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
         <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200">
             <h3 class="text-lg font-black mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="map-pin" class="text-emerald-600"></i> Ganti Area Penyimpanan</h3>
@@ -118,6 +145,7 @@
         </div>
     </div>
 
+    <!-- MODAL DATA STBJ -->
     <div id="modal-stbj-langsir" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] px-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl border border-slate-200 flex flex-col max-h-[85vh]">
             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-2xl">
