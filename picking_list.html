@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WMS - Picking List</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .table-container { scrollbar-width: thin; position: relative; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .hdr-std { 
+            background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; 
+            border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; 
+            white-space: nowrap; position: sticky; top: 0; z-index: 20; background-clip: padding-box;
+        }
+        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
+        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
+    </style>
+</head>
+<body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-28">
+
+    <div class="w-full px-2 sm:px-4 pt-4 relative">
+        
+        <div class="flex border-b border-slate-200 mb-4 bg-white rounded-xl shadow-sm overflow-x-auto hide-scrollbar">
+            <button onclick="switchTab('pilih')" id="tab-pilih" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="package-search" class="w-4 h-4"></i> Pilih Item Gudang</button>
+            <button onclick="switchTab('picking')" id="tab-picking" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="clipboard-list" class="w-4 h-4"></i> Picking List</button>
+        </div>
+
+        <div id="view-pilih" class="space-y-4">
+            <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-black uppercase text-black mb-1">Tanggal Estimasi</label>
+                        <select id="filter-est-tanggal" onchange="saringTabelUtamaEstimasi()" class="w-full p-2.5 border-2 border-slate-200 rounded-lg font-black text-xs bg-slate-50 text-slate-800 outline-none uppercase cursor-pointer">
+                            <option value="ALL">-- SEMUA TANGGAL --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black uppercase text-black mb-1">PO Estimasi</label>
+                        <select id="filter-est-po" onchange="saringTabelUtamaEstimasi()" class="w-full p-2.5 border-2 border-slate-200 rounded-lg font-black text-xs bg-slate-50 text-slate-800 outline-none uppercase cursor-pointer">
+                            <option value="ALL">-- SEMUA PO --</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
+                <div class="table-container overflow-x-auto w-full max-h-[60vh] hide-scrollbar">
+                    <table class="w-full border-collapse text-sm text-center whitespace-nowrap" id="table-utama-estimasi">
+                        <thead class="sticky top-0 z-10 shadow-sm bg-slate-800">
+                            <tr>
+                                <th class="hdr-std w-12">No</th>
+                                <th class="hdr-std border-r border-slate-500 w-16">Input</th>
+                                <th class="hdr-std">Tgl Estimasi</th>
+                                <th class="hdr-std border-r border-slate-500">PO Estimasi</th>
+                                <th class="hdr-std text-blue-300">Nama Item</th>
+                                <th class="hdr-std">Panjang</th>
+                                <th class="hdr-std">Grade</th>
+                                <th class="hdr-std text-orange-300 border-l border-slate-500">Jumlah PO</th>
+                                <th class="hdr-std text-emerald-300 border-l border-slate-500">Picked QTY</th>
+                                <th class="hdr-std text-left pl-4 border-l border-slate-500">Note</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-utama-estimasi" class="text-slate-700">
+                            <tr><td colspan="10" class="p-10 text-slate-400 font-bold"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2 text-slate-400"></i> Memuat Data Estimasi...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-picking" class="hidden bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center">
+            <i data-lucide="construction" class="w-12 h-12 mx-auto text-indigo-500 mb-2 animate-bounce"></i>
+            <h4 class="font-black text-slate-800 uppercase text-sm">Tab Picking List</h4>
+            <p class="text-xs text-slate-400 mt-1">Modul ringkasan final picking list sedang dipersiapkan untuk integrasi Surat Jalan.</p>
+        </div>
+
+    </div>
+
+    <div id="modal-gudang-stok" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-start">
+                <div>
+                    <h3 id="pop-title-spec" class="text-lg font-black text-slate-800 tracking-wide uppercase">Nama Item - Pjg - Grade</h3>
+                    <div class="flex gap-4 mt-1 text-xs font-bold text-slate-500">
+                        <p class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200">Jumlah PO = <span id="pop-lbl-qty-po" class="font-black">0</span></p>
+                        <p class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200">Jumlah Diambil = <span id="pop-lbl-qty-picked" class="font-black">0</span></p>
+                    </div>
+                </div>
+                <button onclick="tutupModalStok()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition shadow-sm"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="p-3 bg-white border-b border-slate-100 grid grid-cols-2 md:grid-cols-5 gap-2">
+                <input type="text" id="fp-shading" oninput="saringTabelPopupInternal()" class="p-2 text-xs border-2 border-slate-200 rounded-lg outline-none focus:border-blue-500 font-bold" placeholder="Cari Shading...">
+                <input type="text" id="fp-poaktual" oninput="saringTabelPopupInternal()" class="p-2 text-xs border-2 border-slate-200 rounded-lg outline-none focus:border-blue-500 font-bold" placeholder="Cari PO Aktual...">
+                <input type="text" id="fp-area" oninput="saringTabelPopupInternal()" class="p-2 text-xs border-2 border-slate-200 rounded-lg outline-none focus:border-blue-500 font-bold" placeholder="Cari Area/Rak...">
+                <input type="text" id="fp-ket" oninput="saringTabelPopupInternal()" class="p-2 text-xs border-2 border-slate-200 rounded-lg outline-none focus:border-blue-500 font-bold" placeholder="Cari Keterangan...">
+                <button onclick="resetFilterPopupInternal()" class="p-2 bg-slate-100 border border-slate-300 font-black text-xs rounded-lg hover:bg-slate-200 text-slate-700 transition uppercase">Reset Filter</button>
+            </div>
+
+            <div class="overflow-y-auto flex-1 p-0 hide-scrollbar">
+                <table class="w-full text-center border-collapse text-sm whitespace-nowrap" id="table-popup-stok">
+                    <thead class="sticky top-0 bg-slate-800 shadow-sm z-10">
+                        <tr>
+                            <th class="hdr-std w-16">PILIH</th>
+                            <th class="hdr-std w-12">No</th>
+                            <th class="hdr-std border-r border-slate-600">PO TERPILIH (ALOKASI)</th>
+                            <th class="hdr-std cursor-pointer hover:bg-slate-700 select-none" onclick="sortPopupTable(3, this)"><div class="flex items-center justify-center gap-1">Shading <i data-lucide="arrow-up-down" class="w-3 h-3 opacity-50 sort-icon"></i></div></th>
+                            <th class="hdr-std cursor-pointer hover:bg-slate-700 select-none" onclick="sortPopupTable(4, this)"><div class="flex items-center justify-center gap-1">PO Aktual <i data-lucide="arrow-up-down" class="w-3 h-3 opacity-50 sort-icon"></i></div></th>
+                            <th class="hdr-std cursor-pointer hover:bg-slate-700 select-none text-emerald-300" onclick="sortPopupTable(5, this)"><div class="flex items-center justify-center gap-1">Qty Stok <i data-lucide="arrow-up-down" class="w-3 h-3 opacity-50 sort-icon"></i></div></th>
+                            <th class="hdr-std cursor-pointer hover:bg-slate-700 select-none text-amber-300 border-l border-slate-600" onclick="sortPopupTable(6, this)"><div class="flex items-center justify-center gap-1">Area <i data-lucide="arrow-up-down" class="w-3 h-3 opacity-50 sort-icon"></i></div></th>
+                            <th class="hdr-std text-left pl-4 border-l border-slate-600" onclick="sortPopupTable(7, this)">Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-popup-stok" class="text-slate-700"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-input-qty" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
+        <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200">
+            <h3 class="text-base font-black mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="shopping-bag" class="text-blue-600"></i> Ambil Stok Kardus</h3>
+            <p class="text-[11px] font-bold text-slate-400 mb-4">Masukkan jumlah kuantitas dus yang ingin dialokasikan.</p>
+            <div class="space-y-3 mb-5">
+                <div>
+                    <div class="flex justify-between text-[11px] font-black uppercase text-slate-500 mb-1">
+                        <span>Jumlah Dus Ambil</span>
+                        <span class="text-blue-600">Maks: <span id="lbl-max-qty">0</span> Dus</span>
+                    </div>
+                    <input type="number" id="input-qty-ambil" min="1" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-600 font-black text-center text-lg text-slate-800 bg-slate-50" placeholder="0">
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('modal-input-qty').classList.add('hidden')" class="w-1/3 py-2.5 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase cursor-pointer">Batal</button>
+                <button type="button" onclick="simpanKuotaAmbilLokal()" class="w-2/3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 border-b-2 border-blue-900 flex justify-center items-center gap-1 cursor-pointer"><i data-lucide="check"></i> Simpan Alokasi</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="global.js"></script>
+    <script src="picking_list_logic.js"></script>
+</body>
+</html>
