@@ -15,6 +15,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     await ambilReferensiMaster2();
 });
 
+// REVISI: Fungsi Helper untuk Format Tanggal ke DD/MM/YYYY
+function formatTglIntl(tglStr) {
+    if(!tglStr) return '-';
+    const p = tglStr.split('-');
+    if(p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`; // YYYY-MM-DD -> DD/MM/YYYY
+    return tglStr;
+}
+
 // 1. AMBIL DATA REFERENSI UNTUK DROPDOWN DARI MASTER_2
 async function ambilReferensiMaster2() {
     try {
@@ -22,12 +30,10 @@ async function ambilReferensiMaster2() {
         if (error) throw error;
         masterKamus = data || [];
 
-        // Ambil set unik untuk nama item, po, dan grade
         const namaSet = [...new Set(masterKamus.map(x => (x.nama_item || '').trim()).filter(Boolean))].sort();
         const gradeSet = [...new Set(masterKamus.map(x => (x.grade || '').trim()).filter(Boolean))].sort();
         const poSet = [...new Set(masterKamus.map(x => (x.po || '').trim()).filter(Boolean))].sort();
 
-        // Inject ke Dropdown Input
         isiDropdown('in-nama-item', namaSet, '-- Pilih Item --');
         isiDropdown('in-grade', gradeSet, '-- Pilih Grade --');
         isiDropdown('in-po', poSet, '-- Pilih PO --');
@@ -45,6 +51,28 @@ function isiDropdown(elId, dataArray, placeholderText) {
     el.innerHTML = html;
 }
 
+// REVISI: Fungsi Khusus untuk Dropdown DB agar value yang sedang terpilih tidak hilang
+function isiDropdownDB(elId, dataArray, placeholderText, isDate = false) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const currentVal = el.value; // simpan value lama
+    let html = `<option value="ALL">${placeholderText}</option>`;
+    
+    dataArray.forEach(val => {
+        let displayVal = isDate ? formatTglIntl(val) : val;
+        html += `<option value="${val}">${displayVal}</option>`;
+    });
+    
+    el.innerHTML = html;
+    
+    // Jika value lama masih ada di list yang baru difilter, pertahankan. Jika tidak, reset ke ALL.
+    if (dataArray.includes(currentVal)) {
+        el.value = currentVal;
+    } else {
+        el.value = 'ALL';
+    }
+}
+
 // 2. TABS MANAGEMENT
 function switchTab(mode) {
     currentMode = mode;
@@ -55,7 +83,6 @@ function switchTab(mode) {
     document.getElementById('tab-input').className = mode === 'input' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs';
     document.getElementById('tab-tabel').className = mode === 'tabel' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs';
 
-    // Jika tab Tabel Estimasi dibuka, langsung tarik data dari Supabase
     if (mode === 'tabel') {
         muatDataEstimasiDB();
     }
@@ -71,12 +98,10 @@ function addEstimasiLokal() {
     const jumlahPo = document.getElementById('in-jumlah-po').value.trim();
     const note = document.getElementById('in-note').value.trim();
 
-    // Validasi Wajib Isi
     if (!tgl || !po || !nama || !pjg || !grade || !jumlahPo) {
         return alert("PERHATIAN: Semua kolom variabel (termasuk Jumlah PO) wajib diisi kecuali Note!");
     }
 
-    // Otomatis tambahkan "M" di belakang panjang jika belum ada
     if (pjg && !pjg.toUpperCase().endsWith('M')) {
         pjg = pjg + "M";
     } else {
@@ -96,7 +121,6 @@ function addEstimasiLokal() {
 
     renderTabelStaging();
     
-    // Kosongkan inputan spesifik agar user mudah tambah item berikutnya
     document.getElementById('in-nama-item').value = '';
     document.getElementById('in-panjang').value = '';
     document.getElementById('in-grade').value = '';
@@ -120,6 +144,7 @@ function renderTabelStaging() {
         lucide.createIcons(); return;
     }
 
+    // REVISI: Tampilan Tanggal di Staging menjadi DD/MM/YYYY
     tbody.innerHTML = stagingData.map((d, i) => `
         <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-sm row-staging-item">
             <td class="p-3"><input type="checkbox" value="${d.id}" class="cb-staging cursor-pointer w-4 h-4 rounded"></td>
@@ -129,7 +154,7 @@ function renderTabelStaging() {
                 </button>
             </td>
             <td class="p-3 font-bold text-slate-400">${i + 1}</td>
-            <td class="p-3 font-semibold text-slate-600 col-stg-tgl">${d.tanggal_estimasi}</td>
+            <td class="p-3 font-semibold text-slate-600 col-stg-tgl">${formatTglIntl(d.tanggal_estimasi)}</td>
             <td class="p-3 font-black text-slate-800 col-stg-po">${d.po_estimasi}</td>
             <td class="p-3 font-black text-blue-700 col-stg-nama">${d.nama_item}</td>
             <td class="p-3 font-bold text-slate-600">${d.panjang}</td>
@@ -162,7 +187,7 @@ async function simpanMassalKeDatabase() {
     
     const btn = document.getElementById('btn-submit-db');
     const oriText = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MENYIMPAN...';
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES SUBMIT MASSAL...';
     btn.disabled = true;
 
     const payload = stagingData.map(d => ({
@@ -183,7 +208,7 @@ async function simpanMassalKeDatabase() {
             throw error;
         }
 
-        alert(`🚀 BERHASIL!\nSebanyak ${payload.length} data estimasi pengiriman sukses masuk database server.`);
+        alert(`🚀 BERHASIL MASSAL!\nSebanyak ${payload.length} data estimasi pengiriman sukses masuk database server.`);
         stagingData = [];
         renderTabelStaging();
     } catch (e) {
@@ -196,11 +221,11 @@ async function simpanMassalKeDatabase() {
 }
 
 // ========================================================
-// MODE 2: MANAGEMENT TABEL VIEW DATABASE & FILTERS
+// MODE 2: MANAGEMENT TABEL VIEW DATABASE & FILTERS (CROSS-FILTERING)
 // ========================================================
 async function muatDataEstimasiDB() {
     const tbody = document.getElementById('tbody-database');
-    tbody.innerHTML = `<tr><td colspan="9" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data Estimasi...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Sejarah Estimasi...</p></td></tr>`;
     lucide.createIcons();
 
     try {
@@ -212,34 +237,47 @@ async function muatDataEstimasiDB() {
 
         dbRecordsRaw = data || [];
         
-        // Pengecekan jika database benar-benar kosong
         if (dbRecordsRaw.length === 0) {
             tbody.innerHTML = '<tr><td colspan="9" class="p-10 text-slate-400 font-bold"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Tidak ditemukan data riwayat estimasi pengiriman.</td></tr>';
             lucide.createIcons();
             
-            // Render dropdown filter kosong
-            isiDropdown('filter-db-tanggal', [], '-- SEMUA TANGGAL --');
-            isiDropdown('filter-db-po', [], '-- SEMUA PO --');
+            isiDropdownDB('filter-db-tanggal', [], '-- SEMUA TANGGAL --', true);
+            isiDropdownDB('filter-db-po', [], '-- SEMUA PO --', false);
             return;
         }
 
-        // Bangun Filter Dropdown Berdasarkan Data Riwayat yang ada
+        // Inisialisasi awal dropdown dengan semua data yang ada
         const tglUnik = [...new Set(dbRecordsRaw.map(x => x.tanggal_estimasi))].sort().reverse();
         const poUnik = [...new Set(dbRecordsRaw.map(x => (x.po_estimasi || '').trim()))].sort();
 
-        const curTglSelect = document.getElementById('filter-db-tanggal').value;
-        const curPoSelect = document.getElementById('filter-db-po').value;
-
-        isiDropdown('filter-db-tanggal', tglUnik, '-- SEMUA TANGGAL --');
-        isiDropdown('filter-db-po', poUnik, '-- SEMUA PO --');
-
-        document.getElementById('filter-db-tanggal').value = curTglSelect || 'ALL';
-        document.getElementById('filter-db-po').value = curPoSelect || 'ALL';
+        isiDropdownDB('filter-db-tanggal', tglUnik, '-- SEMUA TANGGAL --', true);
+        isiDropdownDB('filter-db-po', poUnik, '-- SEMUA PO --', false);
 
         renderTableDatabase();
     } catch (e) {
         tbody.innerHTML = `<tr><td colspan="9" class="p-5 text-red-500 font-bold">Error load: ${e.message}</td></tr>`;
     }
+}
+
+// REVISI: Fungsi Cross-Filtering Cerdas
+function handleFilterChange(trigger) {
+    let selDate = document.getElementById('filter-db-tanggal').value;
+    let selPo = document.getElementById('filter-db-po').value;
+
+    if (trigger === 'tanggal') {
+        // Jika filter tanggal berubah, update pilihan di dropdown PO
+        let filteredRecordsForPO = selDate === 'ALL' ? dbRecordsRaw : dbRecordsRaw.filter(r => r.tanggal_estimasi === selDate);
+        let poUnikLanjutan = [...new Set(filteredRecordsForPO.map(x => (x.po_estimasi || '').trim()))].sort();
+        isiDropdownDB('filter-db-po', poUnikLanjutan, '-- SEMUA PO --', false);
+    } 
+    else if (trigger === 'po') {
+        // Jika filter PO berubah, update pilihan di dropdown Tanggal
+        let filteredRecordsForTgl = selPo === 'ALL' ? dbRecordsRaw : dbRecordsRaw.filter(r => r.po_estimasi === selPo);
+        let tglUnikLanjutan = [...new Set(filteredRecordsForTgl.map(x => x.tanggal_estimasi))].sort().reverse();
+        isiDropdownDB('filter-db-tanggal', tglUnikLanjutan, '-- SEMUA TANGGAL --', true);
+    }
+
+    renderTableDatabase();
 }
 
 function renderTableDatabase() {
@@ -258,10 +296,11 @@ function renderTableDatabase() {
         lucide.createIcons(); return;
     }
 
+    // REVISI: Tampilan Tanggal di Tabel DB menjadi DD/MM/YYYY
     tbody.innerHTML = filteredRecords.map((r, i) => `
         <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-sm">
             <td class="p-3 font-bold text-slate-400">${i + 1}</td>
-            <td class="p-3 font-semibold text-slate-600">${r.tanggal_estimasi}</td>
+            <td class="p-3 font-semibold text-slate-600">${formatTglIntl(r.tanggal_estimasi)}</td>
             <td class="p-3 font-black text-slate-800 border-r border-slate-500">${r.po_estimasi}</td>
             <td class="p-3 font-black text-blue-700">${r.nama_item}</td>
             <td class="p-3 font-bold text-slate-600">${r.panjang}</td>
