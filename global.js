@@ -22,8 +22,8 @@ const APP_MENUS = [
     { id: 'scan_pic', title: 'Scan PIC Area', icon: 'user-check', url: 'scan_pic.html' },
     { id: 'riwayat_mutasi', title: 'Riwayat Konversi', icon: 'arrow-right-left', url: 'riwayat_konversi.html' },
     { isDivider: true, title: 'OUTBOUND (KELUAR)' },
-    { id: 'estimasi_pengiriman', title: 'Estimasi Pengiriman', icon: 'Box', url: 'estimasi_pengiriman.html' },
-    { id: 'picking_list', title: 'Picking List', icon: 'Box', url: 'picking_list.html' },
+    { id: 'estimasi_pengiriman', title: 'Estimasi Pengiriman', icon: 'clipboard-check', url: 'estimasi_pengiriman.html' },
+    { id: 'picking_list', title: 'Picking List', icon: 'clipboard-pen', url: 'picking_list.html' },
     { id: 'keluar', title: 'Kirim / Keluar', icon: 'truck', url: 'keluar.html' },
     { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' }
 ];
