@@ -8,22 +8,26 @@ const currentUser = JSON.parse(localStorage.getItem('user_session')) || { userna
 document.addEventListener('DOMContentLoaded', async () => {
     initModernLayout({ id: 'estimasi_pengiriman', title: 'ESTIMASI PENGIRIMAN', url: 'estimasi_pengiriman.html' });
     
+    // Set default tanggal hari ini agar user tidak repot mengisi
     const tglEl = document.getElementById('in-tanggal');
     if(tglEl) tglEl.value = new Date().toISOString().split('T')[0];
 
     await ambilReferensiMaster2();
 });
 
+// 1. AMBIL DATA REFERENSI UNTUK DROPDOWN DARI MASTER_2
 async function ambilReferensiMaster2() {
     try {
         const { data, error } = await db.from('master_2').select('*');
         if (error) throw error;
         masterKamus = data || [];
 
+        // Ambil set unik untuk nama item, po, dan grade
         const namaSet = [...new Set(masterKamus.map(x => (x.nama_item || '').trim()).filter(Boolean))].sort();
         const gradeSet = [...new Set(masterKamus.map(x => (x.grade || '').trim()).filter(Boolean))].sort();
         const poSet = [...new Set(masterKamus.map(x => (x.po || '').trim()).filter(Boolean))].sort();
 
+        // Inject ke Dropdown Input
         isiDropdown('in-nama-item', namaSet, '-- Pilih Item --');
         isiDropdown('in-grade', gradeSet, '-- Pilih Grade --');
         isiDropdown('in-po', poSet, '-- Pilih PO --');
@@ -36,11 +40,12 @@ async function ambilReferensiMaster2() {
 function isiDropdown(elId, dataArray, placeholderText) {
     const el = document.getElementById(elId);
     if (!el) return;
-    let html = `<option value="">${placeholderText}</option>`;
-    dataArray.forEach(val => html += `<option value="${val}">${val}</option>`);
+    let html = <option value="">${placeholderText}</option>;
+    dataArray.forEach(val => html += <option value="${val}">${val}</option>);
     el.innerHTML = html;
 }
 
+// 2. TABS MANAGEMENT
 function switchTab(mode) {
     currentMode = mode;
     document.getElementById('view-input').classList.toggle('hidden', mode !== 'input');
@@ -50,25 +55,28 @@ function switchTab(mode) {
     document.getElementById('tab-input').className = mode === 'input' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs';
     document.getElementById('tab-tabel').className = mode === 'tabel' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs';
 
+    // Jika tab Tabel Estimasi dibuka, langsung tarik data dari Supabase
     if (mode === 'tabel') {
         muatDataEstimasiDB();
     }
 }
 
+// 3. TAMBAH DATA KE TABEL SEMENTARA (STAGING)
 function addEstimasiLokal() {
     const tgl = document.getElementById('in-tanggal').value;
     const po = document.getElementById('in-po').value;
     const nama = document.getElementById('in-nama-item').value;
     let pjg = document.getElementById('in-panjang').value.trim();
     const grade = document.getElementById('in-grade').value;
-    const jumlahPo = document.getElementById('in-jumlah-po').value.trim(); // REVISI: Tarik Input Jumlah PO
+    const jumlahPo = document.getElementById('in-jumlah-po').value.trim();
     const note = document.getElementById('in-note').value.trim();
 
-    // REVISI: Validasi jumlah_po ditambahkan
+    // Validasi Wajib Isi
     if (!tgl || !po || !nama || !pjg || !grade || !jumlahPo) {
-        return alert("PERHATIAN: Semua kolom variabel wajib dipilih/diisi kecuali Note!");
+        return alert("PERHATIAN: Semua kolom variabel (termasuk Jumlah PO) wajib diisi kecuali Note!");
     }
 
+    // Otomatis tambahkan "M" di belakang panjang jika belum ada
     if (pjg && !pjg.toUpperCase().endsWith('M')) {
         pjg = pjg + "M";
     } else {
@@ -82,13 +90,13 @@ function addEstimasiLokal() {
         nama_item: nama,
         panjang: pjg,
         grade: grade,
-        jumlah_po: jumlahPo, // REVISI: Simpan jumlah PO
+        jumlah_po: jumlahPo,
         note: note || '-'
     });
 
     renderTabelStaging();
     
-    // Kosongkan input agar user enak nge-add selanjutnya
+    // Kosongkan inputan spesifik agar user mudah tambah item berikutnya
     document.getElementById('in-nama-item').value = '';
     document.getElementById('in-panjang').value = '';
     document.getElementById('in-grade').value = '';
@@ -126,7 +134,8 @@ function renderTabelStaging() {
             <td class="p-3 font-black text-blue-700 col-stg-nama">${d.nama_item}</td>
             <td class="p-3 font-bold text-slate-600">${d.panjang}</td>
             <td class="p-3 font-bold text-slate-800">${d.grade}</td>
-            <td class="p-3 font-black text-orange-600 bg-orange-50 border-l border-slate-200">${d.jumlah_po}</td> <td class="p-3 text-left font-medium text-slate-600 pl-4 whitespace-normal max-w-[200px] leading-tight border-l border-slate-200">${d.note}</td>
+            <td class="p-3 font-black text-orange-600 bg-orange-50 border-l border-slate-200">${d.jumlah_po}</td>
+            <td class="p-3 text-left font-medium text-slate-600 pl-4 whitespace-normal max-w-[200px] leading-tight border-l border-slate-200">${d.note}</td>
         </tr>
     `).join('');
     lucide.createIcons();
@@ -153,7 +162,7 @@ async function simpanMassalKeDatabase() {
     
     const btn = document.getElementById('btn-submit-db');
     const oriText = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES SUBMIT MASSAL...';
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MENYIMPAN...';
     btn.disabled = true;
 
     const payload = stagingData.map(d => ({
@@ -162,20 +171,23 @@ async function simpanMassalKeDatabase() {
         nama_item: d.nama_item,
         panjang: d.panjang,
         grade: d.grade,
-        jumlah_po: d.jumlah_po, // REVISI: Payload inject ke supabase
+        jumlah_po: d.jumlah_po,
         note: d.note,
         pic: currentUser.username
     }));
 
     try {
         const { error } = await db.from('estimasi_pengiriman').insert(payload);
-        if (error) throw error;
+        if (error) {
+            alert(GAGAL MENYIMPAN KE SUPABASE!\nError: ${error.message}\n\nPastikan RLS pada tabel 'estimasi_pengiriman' sudah di-DISABLE (Unrestricted).);
+            throw error;
+        }
 
-        alert(`🚀 BERHASIL MASSAL!\nSebanyak ${payload.length} data estimasi pengiriman sukses masuk database server.`);
+        alert(🚀 BERHASIL!\nSebanyak ${payload.length} data estimasi pengiriman sukses masuk database server.);
         stagingData = [];
         renderTabelStaging();
     } catch (e) {
-        alert("GAGAL INSERT KE SUPABASE: " + e.message);
+        console.error("Insert Error: ", e);
     } finally {
         btn.innerHTML = oriText;
         btn.disabled = false;
@@ -188,15 +200,30 @@ async function simpanMassalKeDatabase() {
 // ========================================================
 async function muatDataEstimasiDB() {
     const tbody = document.getElementById('tbody-database');
-    tbody.innerHTML = `<tr><td colspan="9" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Sejarah Estimasi...</p></td></tr>`;
+    tbody.innerHTML = <tr><td colspan="9" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data Estimasi...</p></td></tr>;
     lucide.createIcons();
 
     try {
         const { data, error } = await db.from('estimasi_pengiriman').select('*').order('created_at', { ascending: false });
-        if (error) throw error;
+        if (error) {
+            alert(GAGAL MENARIK DATA!\nError: ${error.message}\n\nPastikan RLS pada tabel 'estimasi_pengiriman' sudah di-DISABLE (Unrestricted).);
+            throw error;
+        }
 
         dbRecordsRaw = data || [];
         
+        // Pengecekan jika database benar-benar kosong
+        if (dbRecordsRaw.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="p-10 text-slate-400 font-bold"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Tidak ditemukan data riwayat estimasi pengiriman.</td></tr>';
+            lucide.createIcons();
+            
+            // Render dropdown filter kosong
+            isiDropdown('filter-db-tanggal', [], '-- SEMUA TANGGAL --');
+            isiDropdown('filter-db-po', [], '-- SEMUA PO --');
+            return;
+        }
+
+        // Bangun Filter Dropdown Berdasarkan Data Riwayat yang ada
         const tglUnik = [...new Set(dbRecordsRaw.map(x => x.tanggal_estimasi))].sort().reverse();
         const poUnik = [...new Set(dbRecordsRaw.map(x => (x.po_estimasi || '').trim()))].sort();
 
@@ -211,7 +238,7 @@ async function muatDataEstimasiDB() {
 
         renderTableDatabase();
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="9" class="p-5 text-red-500 font-bold">Error load: ${e.message}</td></tr>`;
+        tbody.innerHTML = <tr><td colspan="9" class="p-5 text-red-500 font-bold">Error load: ${e.message}</td></tr>;
     }
 }
 
@@ -235,11 +262,12 @@ function renderTableDatabase() {
         <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-sm">
             <td class="p-3 font-bold text-slate-400">${i + 1}</td>
             <td class="p-3 font-semibold text-slate-600">${r.tanggal_estimasi}</td>
-            <td class="p-3 font-black text-slate-800 border-r border-slate-200">${r.po_estimasi}</td>
+            <td class="p-3 font-black text-slate-800 border-r border-slate-500">${r.po_estimasi}</td>
             <td class="p-3 font-black text-blue-700">${r.nama_item}</td>
             <td class="p-3 font-bold text-slate-600">${r.panjang}</td>
             <td class="p-3 font-bold text-slate-800">${r.grade}</td>
-            <td class="p-3 font-black text-orange-600 bg-orange-50 border-l border-slate-200">${r.jumlah_po || '-'}</td> <td class="p-3 text-left font-medium text-slate-600 pl-4 whitespace-normal max-w-[200px] leading-tight border-l border-slate-200">${r.note || '-'}</td>
+            <td class="p-3 font-black text-orange-600 bg-orange-50 border-l border-slate-200">${r.jumlah_po || '-'}</td>
+            <td class="p-3 text-left font-medium text-slate-600 pl-4 whitespace-normal max-w-[200px] leading-tight border-l border-slate-200">${r.note || '-'}</td>
             <td class="p-3 uppercase font-bold text-xs text-slate-400 border-l border-slate-200">${r.pic || '-'}</td>
         </tr>
     `).join('');
