@@ -12,7 +12,6 @@
         .table-container { scrollbar-width: thin; position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* REVISI 1 & 2: Header Seragam Besar & Anti Tembus Pandang (Bleeding) */
         .hdr-std { 
             background-color: #1e293b !important; 
             color: #ffffff !important; 
@@ -20,14 +19,14 @@
             border: 1px solid #334155; 
             padding: 0.75rem; 
             text-transform: uppercase; 
-            font-family: inherit; /* Seragam dengan isi */
-            font-size: 13px; /* Ukuran proporsional dengan isi (text-sm) */
+            font-family: inherit; 
+            font-size: 12px; 
             font-weight: 800; 
             white-space: nowrap; 
             position: sticky;
             top: 0;
             z-index: 20;
-            background-clip: padding-box; /* Obat ampuh agar isi tabel tidak bocor menyundul border atas header */
+            background-clip: padding-box; 
         }
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
@@ -37,58 +36,75 @@
 
     <div class="w-full px-2 sm:px-4 pt-4 relative">
         
+        <!-- NAVIGASI TAB -->
         <div class="flex border-b border-slate-200 mb-3 bg-white rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
-            <button onclick="switchTab('scan')" id="btn-tab-scan" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs"><i data-lucide="barcode" class="w-4 h-4"></i> SCAN ITEM PER DUS</button>
-            <button onclick="switchTab('csv')" id="btn-tab-csv" class="px-6 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> IMPORT CSV</button>
+            <button onclick="switchTab('scan')" id="btn-tab-scan" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="barcode" class="w-4 h-4"></i> SCAN ITEM PER DUS</button>
+            <button onclick="switchTab('csv')" id="btn-tab-csv" class="px-6 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> IMPORT CSV</button>
         </div>
 
-        <div class="bg-white p-3 sm:p-5 rounded-b-xl rounded-tr-xl shadow-sm border border-slate-200 mb-3">
+        <!-- TOOLBAR RINGKAS (DESAIN BARU) -->
+        <div class="bg-white p-3 rounded-b-xl rounded-tr-xl shadow-sm border border-slate-200 mb-3">
             
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-2 sm:gap-4 items-end mb-4 border-b border-slate-100 pb-4">
-                <div class="md:col-span-3">
-                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Pilih Troli</label>
-                    <select id="select-troli" class="w-full p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-blue-600 text-slate-800 cursor-pointer bg-slate-50 text-sm">
-                        <option value="">-- Memuat Troli... --</option>
+            <!-- Baris Input -->
+            <div class="flex flex-col md:flex-row gap-3 mb-3 border-b border-slate-100 pb-3">
+                <!-- Dropdown Troli -->
+                <div class="flex items-center gap-2 w-full md:w-auto min-w-[200px]">
+                    <label class="text-[11px] font-black uppercase text-slate-500 whitespace-nowrap">Tabel:</label>
+                    <select id="select-troli" class="w-full p-2.5 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-blue-600 text-slate-800 cursor-pointer bg-slate-50 text-xs uppercase">
+                        <option value="">-- PILIH TROLI --</option>
                     </select>
                 </div>
 
-                <div id="view-scan" class="md:col-span-9">
-                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Scan Fisik Kardus</label>
-                    <form id="form-scan" class="flex gap-2">
+                <!-- Input Scanner -->
+                <div id="view-scan" class="flex-1 w-full">
+                    <form id="form-scan" class="flex gap-2 w-full">
                         <div class="relative flex-1">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
-                            <!-- REVISI 3: Ditambahkan pl-11 agar tulisan tidak menabrak icon scanner -->
-                            <input type="text" id="input-qrcode" class="w-full pl-11 p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-black text-slate-800 text-sm sm:text-base bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                <i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i>
+                            </div>
+                            <input type="text" id="input-qrcode" class="w-full !pl-12 p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-black text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
                         </div>
-                        <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-blue-900 text-xs sm:text-sm uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> <span class="hidden sm:inline">ADD</span></button>
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-blue-800 text-xs uppercase">
+                            <i data-lucide="plus-square" class="w-4 h-4"></i> ADD
+                        </button>
                     </form>
                 </div>
 
-                <div id="view-csv" class="md:col-span-9 hidden">
-                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Upload File CSV</label>
-                    <div class="flex gap-2">
-                        <input type="file" id="input-csv" accept=".csv" class="flex-1 p-1.5 border-2 border-slate-200 rounded-lg outline-none text-sm font-bold text-slate-700 bg-slate-50 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-black file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition cursor-pointer">
-                        <button onclick="prosesCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-6 py-2 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-emerald-800 text-xs sm:text-sm uppercase"><i data-lucide="upload-cloud" class="w-4 h-4"></i> <span class="hidden sm:inline">PROSES</span></button>
+                <!-- Input CSV (Tersembunyi by default) -->
+                <div id="view-csv" class="flex-1 w-full hidden">
+                    <div class="flex gap-2 w-full">
+                        <input type="file" id="input-csv" accept=".csv" class="flex-1 p-1.5 border-2 border-slate-200 rounded-lg outline-none text-xs font-bold text-slate-700 bg-slate-50 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-black file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition cursor-pointer">
+                        <button onclick="prosesCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-emerald-800 text-xs uppercase">
+                            <i data-lucide="upload-cloud" class="w-4 h-4"></i> PROSES
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <div class="flex gap-2 overflow-x-auto pt-1 pb-4 px-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none" style="-webkit-overflow-scrolling: touch;">
-                <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-slate-900 text-white border-b-2 border-black active:scale-95 transition"><i data-lucide="search-check" class="w-4 h-4"></i> Verifikasi Duplikat</button>
-                
-                <div class="w-px h-8 bg-slate-300 mx-1"></div> <button onclick="toggleSidebarFilter()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-blue-600 hover:bg-blue-700 text-white border-b-2 border-blue-800 active:scale-95 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
-                <button onclick="undoHapusSTBJ()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-rose-600 hover:bg-rose-700 text-white border-b-2 border-rose-800 active:scale-95 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo</button>
-                <button onclick="holdManual()" class="p-2.5 px-5 rounded-lg font-black text-xs flex items-center gap-2 shadow-sm uppercase bg-amber-500 hover:bg-amber-600 text-white border-b-2 border-amber-700 active:scale-95 transition"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Item</button>
+            <!-- Baris Tombol Aksi -->
+            <div class="flex gap-2 overflow-x-auto pb-2 px-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none">
+                <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-slate-800 hover:bg-slate-900 text-white border-b-2 border-slate-950 active:scale-95 transition">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i> Verifikasi Duplikat
+                </button>
+                <div class="w-px h-6 bg-slate-300 mx-1 self-center"></div> 
+                <button onclick="toggleSidebarFilter()" class="p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-blue-600 hover:bg-blue-700 text-white border-b-2 border-blue-800 active:scale-95 transition">
+                    <i data-lucide="filter" class="w-4 h-4"></i> Filter
+                </button>
+                <button onclick="undoHapusSTBJ()" class="p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-rose-600 hover:bg-rose-700 text-white border-b-2 border-rose-800 active:scale-95 transition">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo
+                </button>
+                <button onclick="holdManual()" class="p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-amber-500 hover:bg-amber-600 text-white border-b-2 border-amber-700 active:scale-95 transition">
+                    <i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Item
+                </button>
             </div>
-            
-            <div class="text-[9px] text-slate-400 text-center font-black uppercase tracking-wider -mt-2.5 mb-1 pointer-events-none flex items-center justify-center gap-1 animate-pulse">
+            <div class="text-[9px] text-slate-400 text-center font-black uppercase tracking-wider mt-1 pointer-events-none flex items-center justify-center gap-1 animate-pulse">
                 <i data-lucide="arrow-left-right" class="w-3 h-3"></i> Geser menu tombol ke kanan-kiri
             </div>
         </div>
 
+        <!-- TABEL DATA (STRUKTUR TIDAK DIUBAH) -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
             <div class="table-container overflow-x-auto w-full max-h-[60vh]">
-                <!-- REVISI: Semua Header 100% Rata Tengah (justify-center) -->
                 <table class="w-full text-center border-collapse text-sm whitespace-nowrap" id="table-stbj">
                     <thead class="sticky top-0 z-20 shadow-sm bg-slate-800">
                         <tr>
@@ -120,6 +136,7 @@
         </div>
     </div>
 
+    <!-- FLOATING BOTTOM SAVE BUTTON -->
     <div class="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 p-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
         <div class="w-full px-2 sm:px-4 flex justify-center md:justify-end">
             <button id="btn-save" onclick="saveToDatabaseSTBJ()" class="w-full md:w-auto px-8 py-2.5 sm:py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-wide cursor-pointer transition active:scale-95 uppercase border-b-2 border-emerald-800">
@@ -130,6 +147,7 @@
         </div>
     </div>
 
+    <!-- SIDEBAR FILTER -->
     <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
             <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Tabel</h3>
@@ -216,8 +234,8 @@
             currentTab = tab;
             document.getElementById('view-scan').classList.toggle('hidden', tab !== 'scan');
             document.getElementById('view-csv').classList.toggle('hidden', tab !== 'csv');
-            document.getElementById('btn-tab-scan').className = tab === 'scan' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs';
-            document.getElementById('btn-tab-csv').className = tab === 'csv' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs';
+            document.getElementById('btn-tab-scan').className = tab === 'scan' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+            document.getElementById('btn-tab-csv').className = tab === 'csv' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
         }
 
         async function loadInitialSTBJData() {
@@ -422,7 +440,6 @@
                 const isRedHighlight = d.status === 'DUPLIKAT' || d.isLocalDuplicate;
                 const trBaseClass = isRedHighlight ? 'bg-red-50 hover:bg-red-100 text-red-900' : (d.status === 'HOLD' ? 'bg-amber-50 hover:bg-amber-100 text-amber-900' : 'hover:bg-slate-50 text-slate-700');
 
-                // REVISI 4: Kelas text-[11px] diganti text-sm agar tulisan besar & nyaman dibaca.
                 html += `
                     <tr class="border-b border-slate-200 transition ${trBaseClass} row-stbj text-sm">
                         <td class="p-3 text-center col-cb"><input type="checkbox" value="${d.id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
