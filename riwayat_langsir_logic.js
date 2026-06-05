@@ -31,30 +31,15 @@ function sortTable(colIndex, headerEl) {
     rows.sort((a, b) => {
         let valA = a.cells[colIndex].innerText.trim();
         let valB = b.cells[colIndex].innerText.trim();
-        
-        let numA = parseFloat(valA);
-        let numB = parseFloat(valB);
-        
-        if(!isNaN(numA) && !isNaN(numB)) {
-            return isAsc ? numA - numB : numB - numA;
-        } else {
-            return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        }
+        let numA = parseFloat(valA); let numB = parseFloat(valB);
+        if(!isNaN(numA) && !isNaN(numB)) return isAsc ? numA - numB : numB - numA;
+        return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
     });
     
     rows.forEach(row => tbody.appendChild(row));
-    
-    document.querySelectorAll('.sort-icon').forEach(icon => {
-        icon.setAttribute('data-lucide', 'arrow-up-down'); 
-        icon.classList.add('opacity-50');
-    });
-    
+    document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-50'); });
     const icon = headerEl.querySelector('.sort-icon');
-    if(icon) {
-        icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a');
-        icon.classList.remove('opacity-50');
-        lucide.createIcons();
-    }
+    if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-50'); lucide.createIcons(); }
 }
 
 async function ambilSemuaData() {
@@ -104,6 +89,50 @@ function translateBarcode(barcode) {
     return data;
 }
 
+// ========================================================
+// REVISI FITUR: SINKRONISASI STOK_AKTUAL SETELAH GANTI AREA
+// ========================================================
+async function sinkronisasiUlangStokAktual() {
+    try {
+        const { data: fisikQr, error: errQr } = await db.from('stok_qr').select('*');
+        if(errQr) throw errQr;
+        
+        let mapAgg = {};
+        (fisikQr || []).forEach(r => {
+            let p = r.id_sku ? r.id_sku.split('_') : [];
+            let t = translateBarcode(r.qrcode);
+            
+            let area = r.area || p[0] || '-';
+            let nama = r.nama_item || p[2] || t.nama; 
+            let pjg = r.panjang || p[3] || t.pjg;
+            let grade = r.grade || p[4] || t.grade;
+            let dus = r.dus || p[5] || t.dus;
+            let shading = r.shading || p[6] || t.shading;
+            let po = p.length >= 8 ? p[7] : (r.po_bawaan || t.po || '-');
+            let ket = r.keterangan || '-';
+
+            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
+            if(!mapAgg[key]) {
+                mapAgg[key] = { nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, area: area, po_aktual: po, keterangan: ket, qty: 0 };
+            }
+            mapAgg[key].qty++;
+        });
+
+        let dataAktualBaru = Object.values(mapAgg);
+        
+        const { error: errDel } = await db.from('stok_aktual').delete().neq('qty', -99999);
+        if(errDel) throw errDel; 
+
+        for(let i = 0; i < dataAktualBaru.length; i += 500) {
+            const { error: errIns } = await db.from('stok_aktual').insert(dataAktualBaru.slice(i, i + 500));
+            if(errIns) throw errIns;
+        }
+    } catch(e) {
+        alert("⚠️ GAGAL SINKRONISASI STOK AKTUAL KE SUPABASE!\n\nPastikan RLS (Gembok) pada tabel 'stok_aktual' di Supabase sudah di-DISABLE (Turn off RLS).\n\nDetail Error: " + e.message);
+    }
+}
+
+
 function gantiModeRiwayat(m) {
     modeRiwayat = m;
     ['qr', 'agregasi', 'hold'].forEach(tab => {
@@ -121,11 +150,8 @@ function gantiModeRiwayat(m) {
     const canDeleteHold = ['creator', 'admin', 'pic area'].includes(userRole);
     const btnHapusHold = document.getElementById('btn-hapus-hold');
     
-    if(m === 'hold' && canDeleteHold) {
-        btnHapusHold.classList.remove('hidden');
-    } else {
-        btnHapusHold.classList.add('hidden');
-    }
+    if(m === 'hold' && canDeleteHold) { btnHapusHold.classList.remove('hidden'); } 
+    else { btnHapusHold.classList.add('hidden'); }
 
     renderTabelRiwayat();
 }
@@ -208,14 +234,14 @@ function renderTabelRiwayat() {
                     <th class="hdr-std w-12 col-no cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(1, this)"><div class="flex items-center justify-center gap-1">No <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                     <th class="hdr-std border-r border-slate-500 col-area cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(2, this)"><div class="flex items-center justify-center gap-1">Area <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                     <th class="hdr-std text-blue-300 col-jenis cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(3, this)"><div class="flex items-center justify-center gap-1">Jenis Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                    <th class="hdr-std col-nama cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(4, this)"><div class="flex items-center justify-center gap-1">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                    <th class="hdr-std text-center pl-4 col-nama cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(4, this)"><div class="flex items-center justify-center gap-1">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                     <th class="hdr-std col-pjg cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(5, this)"><div class="flex items-center justify-center gap-1">Panjang <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                     <th class="hdr-std col-grade cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(6, this)"><div class="flex items-center justify-center gap-1">Grade <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                     <th class="hdr-std col-dus cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(7, this)"><div class="flex items-center justify-center gap-1">Dus <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                     <th class="hdr-std col-shading cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(8, this)"><div class="flex items-center justify-center gap-1">Shading <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                     <th class="hdr-std border-r border-slate-500 col-po cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(9, this)"><div class="flex items-center justify-center gap-1">PO Bawaan <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                     <th class="hdr-std col-pic cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(10, this)"><div class="flex items-center justify-center gap-1">PIC Input <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
-                    <th class="hdr-std text-emerald-300 col-qty cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(11, this)"><div class="flex items-center justify-center gap-1">QTY TOTAL (DUS) <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
+                    <th class="hdr-std text-emerald-300 bg-slate-900 col-qty cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(11, this)"><div class="flex items-center justify-center gap-1">QTY TOTAL (DUS) <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>
                 </tr>`;
 
             let groups = {};
@@ -305,6 +331,10 @@ async function cancelLangsir() {
 
         alert(`✅ SUKSES DIBATALKAN!\n${arrFisik.length} kardus telah ditarik dari Kartu Stok (dikurangi) and dipindahkan ke Tabel Hold untuk dikarantina.`);
         document.querySelector('input[onchange="toggleSemuaCentang(this.checked)"]').checked = false;
+        
+        // PANGGIL SINKRONISASI STOK AKTUAL DB AGAR SEMUANYA TERUPADATE!
+        await sinkronisasiUlangStokAktual();
+        
         await ambilSemuaData();
     } catch (e) {
         alert("Gagal melakukan Cancel Langsir: " + e.message);
@@ -401,6 +431,10 @@ async function eksekusiGantiArea() {
         
         alert("Area berhasil dipindahkan!"); tutupModalArea();
         document.querySelector('input[onchange="toggleSemuaCentang(this.checked)"]').checked = false;
+        
+        // PANGGIL SINKRONISASI STOK AKTUAL DB AGAR SEMUANYA TERUPADATE!
+        await sinkronisasiUlangStokAktual();
+        
         await ambilSemuaData();
     } catch (error) { alert("Gagal merubah Area: " + error.message); } 
     finally { btn.innerHTML = original; btn.disabled = false; lucide.createIcons(); }
