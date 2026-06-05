@@ -201,6 +201,73 @@ function translateBarcode(barcode) {
 }
 
 // ========================================================
+// REVISI FITUR: FUNGSI SINKRONISASI STOK_AKTUAL DARI STOK_QR
+// ========================================================
+async function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
+    const btn = document.getElementById('btn-sync-db');
+    if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYINKRONKAN...'; btn.disabled = true; }
+
+    try {
+        // 1. Tarik seluruh data fisik (stok_qr)
+        const { data: fisikQr, error: errQr } = await db.from('stok_qr').select('*');
+        if(errQr) throw errQr;
+        if(!fisikQr) return;
+
+        // 2. Agregasi super akurat di memori
+        let mapAgg = {};
+        fisikQr.forEach(r => {
+            let p = r.id_sku ? r.id_sku.split('_') : [];
+            let t = translateBarcode(r.qrcode);
+            
+            let area = r.area || p[0] || '-';
+            let nama = r.nama_item || p[2] || t.namaItem;
+            let pjg = r.panjang || p[3] || t.panjang;
+            let grade = r.grade || p[4] || t.grade;
+            let dus = r.dus || p[5] || t.dus;
+            let shading = r.shading || p[6] || t.shading;
+            let po = p.length >= 8 ? p[7] : (r.po_bawaan || t.po || '-');
+            let ket = r.keterangan || '-';
+
+            // Kunci unik: Area, Nama, Pjg, Grade, Dus, Shading, PO, Ket
+            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
+            if(!mapAgg[key]) {
+                mapAgg[key] = {
+                    nama_item: nama,
+                    pjg: pjg,
+                    grade: grade,
+                    dus: dus,
+                    shading: shading,
+                    area: area,
+                    po_aktual: po,
+                    keterangan: ket,
+                    qty: 0
+                };
+            }
+            mapAgg[key].qty++;
+        });
+
+        let dataAktualBaru = Object.values(mapAgg);
+
+        // 3. Timpa tabel stok_aktual di Supabase (Hapus total, lalu Insert)
+        // (Aman jika RLS dimatikan atau user membolehkan penghapusan)
+        await db.from('stok_aktual').delete().neq('qty', -99999); 
+        
+        // 4. Proses Insert Massal per 500 Baris (Menghindari Limit Server)
+        for(let i = 0; i < dataAktualBaru.length; i += 500) {
+            await db.from('stok_aktual').insert(dataAktualBaru.slice(i, i + 500));
+        }
+        
+        if(tampilkanAlert) alert("✅ Sinkronisasi Selesai!\nTabel stok_aktual di database telah diperbarui 100% mengikuti data asli stok_qr.");
+    } catch(e) {
+        console.error("Gagal sinkronisasi stok_aktual:", e);
+        if(tampilkanAlert) alert("Gagal Sinkronisasi DB: " + e.message);
+    } finally {
+        if(btn) { btn.innerHTML = '<i data-lucide="refresh-cw" class="w-4 h-4"></i> SINKRON DB'; btn.disabled = false; lucide.createIcons(); }
+    }
+}
+
+
+// ========================================================
 // 3. FETCHING & AGGREGATION ENGINE (GABUNGAN HANYA DI QR)
 // ========================================================
 async function muatDataStok() {
@@ -209,25 +276,34 @@ async function muatDataStok() {
     lucide.createIcons();
 
     try {
-        const [resStok, resSTBJ, resLembaran, resAktual] = await Promise.all([
+        // PERBAIKAN: Karena data stok_aktual sekarang dibangun ulang dari stok_qr,
+        // Kita tidak perlu memanggil db.from('stok_aktual') di sini. Kita rakit langsung dari stokQRRaw agar lebih cepat dan aman!
+        const [resStok, resSTBJ, resLembaran] = await Promise.all([
             db.from('stok_qr').select('*'),
             db.from('hasil_stbj').select('qrcode, keterangan'),
-            db.from('stok_lembaran').select('*').order('created_at', {ascending: false}),
-            db.from('stok_aktual').select('nama_item, pjg, grade, dus, shading, po_aktual, qty').gt('qty', 0)
+            db.from('stok_lembaran').select('*').order('created_at', {ascending: false})
         ]);
         
         if(resStok.error) throw resStok.error;
         stokQRRaw = resStok.data || [];
         stokLembaranRaw = resLembaran.data || [];
 
+        // Rakit aktualMap secara internal dari fisik stok_qr
         let aktualMap = {};
-        if(resAktual.data) {
-            resAktual.data.forEach(a => {
-                let key = `${a.nama_item}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}`;
-                if(!aktualMap[key]) aktualMap[key] = new Set();
-                if(a.po_aktual && a.po_aktual !== '-') aktualMap[key].add(a.po_aktual.trim());
-            });
-        }
+        stokQRRaw.forEach(r => {
+            let p = r.id_sku ? r.id_sku.split('_') : [];
+            let t = translateBarcode(r.qrcode);
+            let nama = r.nama_item || p[2] || t.namaItem;
+            let pjg = r.panjang || p[3] || t.panjang;
+            let grade = r.grade || p[4] || t.grade;
+            let dus = r.dus || p[5] || t.dus;
+            let shading = r.shading || p[6] || t.shading;
+            let poAktual = p.length >= 8 ? p[7] : (r.po_bawaan || t.po || '-');
+
+            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}`;
+            if(!aktualMap[key]) aktualMap[key] = new Set();
+            if(poAktual && poAktual !== '-') aktualMap[key].add(poAktual.trim());
+        });
 
         let ketMap = {};
         if(resSTBJ.data) resSTBJ.data.forEach(d => { if(d.qrcode) ketMap[d.qrcode.trim()] = d.keterangan || '-'; });
@@ -612,6 +688,10 @@ async function eksekusiGantiPO() {
         
         alert(`BERHASIL! PO Aktual berubah ke ${newPO}.`);
         tutupModalPO(); if(sourcePOContext === 'breakdown') tutupModalBreakdown();
+        
+        // PANGGIL SINKRONISASI STOK AKTUAL DB AGAR SEMUANYA TERUPADATE!
+        await sinkronisasiUlangStokAktual();
+        
         await muatDataStok();
     } catch (error) { alert("GAGAL UPDATE: " + error.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
