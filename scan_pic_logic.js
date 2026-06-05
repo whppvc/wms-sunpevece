@@ -364,9 +364,6 @@ function resetFilter() { resetFilterWithoutRender(); renderTablePic(dataPic); }
 async function verifikasiGudang() {
     if(dataPic.length === 0) return alert("Belum ada data untuk diverifikasi!");
 
-    // Menangani tombol dari tab manapun
-    const btnId = currentMode === 'pindah' ? 'btn-verifikasi-umum' : (currentMode === 'out' ? 'btn-verifikasi-umum' : 'btn-verifikasi-umum'); 
-    // Wait, let's just grab the active one by matching text or just updating all buttons that could be the trigger
     const btns = document.querySelectorAll('button[onclick="verifikasiGudang()"]');
     let originalTexts = [];
     btns.forEach((btn, idx) => { originalTexts[idx] = btn.innerHTML; btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENGECEK...'; btn.disabled = true; });
@@ -458,6 +455,48 @@ function bukaModalSimpanOut() {
 
     document.getElementById('modal-po-target').classList.remove('hidden');
 }
+
+// ========================================================
+// FUNGSI SINKRONISASI DATABASE (DIPANGGIL OTOMATIS)
+// ========================================================
+async function sinkronisasiUlangStokAktual() {
+    try {
+        const { data: fisikQr, error: errQr } = await db.from('stok_qr').select('*');
+        if(errQr) throw errQr;
+        
+        let mapAgg = {};
+        (fisikQr || []).forEach(r => {
+            let p = r.id_sku ? r.id_sku.split('_') : [];
+            let t = translateBarcode(r.qrcode);
+            
+            let area = r.area || p[0] || '-';
+            let nama = r.nama_item || p[2] || t.namaItem;
+            let pjg = r.panjang || p[3] || t.panjang;
+            let grade = r.grade || p[4] || t.grade;
+            let dus = r.dus || p[5] || t.dus;
+            let shading = r.shading || p[6] || t.shading;
+            let po = p.length >= 8 ? p[7] : (r.po_bawaan || t.poBawaan || '-');
+            let ket = r.keterangan || '-';
+
+            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
+            if(!mapAgg[key]) {
+                mapAgg[key] = { nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, area: area, po_aktual: po, keterangan: ket, qty: 0 };
+            }
+            mapAgg[key].qty++;
+        });
+
+        let dataAktualBaru = Object.values(mapAgg);
+        
+        await db.from('stok_aktual').delete().neq('qty', -99999); 
+
+        for(let i = 0; i < dataAktualBaru.length; i += 500) {
+            await db.from('stok_aktual').insert(dataAktualBaru.slice(i, i + 500));
+        }
+    } catch(e) {
+        console.error("Gagal sinkronisasi stok_aktual otomatis:", e.message);
+    }
+}
+
 
 async function eksekusiSimpanFinalOut() {
     const poTarget = document.getElementById('out-po-target').value;
@@ -565,6 +604,9 @@ async function eksekusiSimpanFinalOut() {
         const { error: errInsert } = await db.from('laporan_konversi').insert([payloadLog]);
         if (errInsert) throw errInsert;
 
+        // PEMANGGILAN SINKRONISASI 100% AKURAT
+        await sinkronisasiUlangStokAktual();
+
         let msg = `✅ EKSEKUSI KONVERSI OUT BERHASIL!\n\nID Audit: ${kodeKonversi}\nPO Target: ${poTarget}\nBerhasil dipotong dari Kartu Stok: ${qrList.length} Dus dan dimasukkan ke Stok Konversi.`;
         if (unmatchedCount > 0) msg += `\n\n⚠️ ${unmatchedCount} dus tidak diproses karena jatah PO kurang atau status fisik belum VALID.`;
         alert(msg);
@@ -598,7 +640,6 @@ async function eksekusiSimpanFinalIn() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES IN...'; btn.disabled = true;
 
     let insertsStokQr = [];
-    let aktualUpdates = {};
     let arrStokKonversi = [];
 
     validItems.forEach(d => {
@@ -611,12 +652,6 @@ async function eksekusiSimpanFinalIn() {
             area: areaTujuan,
             keterangan: ket
         });
-
-        let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${poBawaanAsli}`;
-        if(!aktualUpdates[keyAkt]) {
-            aktualUpdates[keyAkt] = { nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, po_aktual: poBawaanAsli, qty: 0 };
-        }
-        aktualUpdates[keyAkt].qty++;
 
         arrStokKonversi.push({
             kode_konversi: kodeRef,
@@ -644,16 +679,6 @@ async function eksekusiSimpanFinalIn() {
         const { error: e1 } = await db.from('stok_qr').insert(insertsStokQr);
         if(e1) throw e1;
 
-        for(let key in aktualUpdates) {
-            let u = aktualUpdates[key];
-            const {data: curData} = await db.from('stok_aktual').select('id, qty').eq('nama_item', u.nama_item).eq('pjg', u.pjg).eq('grade', u.grade).eq('dus', u.dus).eq('shading', u.shading).eq('po_aktual', u.po_aktual).single();
-            if(curData) {
-                await db.from('stok_aktual').update({qty: curData.qty + u.qty}).eq('id', curData.id);
-            } else {
-                await db.from('stok_aktual').insert([{...u}]); 
-            }
-        }
-
         const { error: e3 } = await db.from('stok_konversi').insert(arrStokKonversi);
         if(e3) throw e3;
 
@@ -666,6 +691,9 @@ async function eksekusiSimpanFinalIn() {
             pic: currentUser.username
         };
         await db.from('laporan_konversi').insert([payloadLog]);
+
+        // PEMANGGILAN SINKRONISASI 100% AKURAT
+        await sinkronisasiUlangStokAktual();
 
         alert(`✅ BERHASIL KONVERSI IN!\n${validItems.length} dus masuk ke gudang pada area ${areaTujuan} & Saldo bertambah.`);
         dataPic = []; renderTablePic(dataPic);
@@ -720,6 +748,9 @@ async function eksekusiPindahArea() {
             const { error: errPindah } = await db.from('barang_pindah').insert(payloadBarangPindah);
             if (errPindah) throw errPindah;
         }
+
+        // PEMANGGILAN SINKRONISASI 100% AKURAT
+        await sinkronisasiUlangStokAktual();
 
         alert(`✅ SUKSES PINDAH AREA!\n${validItems.length} Item berhasil dipindahkan ke area ${areaTarget}.`);
         dataPic = []; renderTablePic(dataPic);
