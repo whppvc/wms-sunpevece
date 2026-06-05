@@ -12,14 +12,31 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
+        
+        /* REVISI 2: HEADER TABEL (Warna Soft Navy, Padding Lega, Tanpa Uppercase Paksa) */
+        .hdr-std { 
+            background-color: #1e3a8a !important; 
+            color: #ffffff !important; 
+            text-align: center !important; 
+            border: 1px solid #334155; 
+            padding: 1rem 0.75rem; 
+            font-size: 12px; 
+            font-weight: 700; 
+            white-space: nowrap; 
+            position: sticky; 
+            top: 0; 
+            z-index: 20; 
+            background-clip: padding-box; 
+        }
     </style>
     <style id="dynamic-table-settings"></style>
     <style id="dynamic-col-styles"></style>
 </head>
 <body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-20">
-    <div class="w-full px-2 sm:px-4 pt-4 relative">
+    <div class="w-full px-2 sm:px-4 relative">
         
-        <div class="flex border-b border-slate-200 mb-3 bg-white rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
+        <!-- REVISI 3: HIRARKI NAVIGASI (Ditambah mt-5 agar tidak menempel dengan menu utama) -->
+        <div class="flex border-b border-slate-200 mt-5 mb-3 bg-white rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
             <button onclick="setModeKS('qr')" id="tab-qr" class="px-5 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="qr-code" class="w-4 h-4"></i> KS QR (DETAIL)</button>
             <button onclick="setModeKS('area')" id="tab-area" class="px-5 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="map" class="w-4 h-4"></i> KS AREA (LOKASI)</button>
             <button onclick="setModeKS('global')" id="tab-global" class="px-5 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="globe-2" class="w-4 h-4"></i> KS GLOBAL (KUMULATIF)</button>
@@ -29,19 +46,21 @@
         <div class="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm mb-3 flex items-center justify-between gap-2 overflow-hidden">
             <div class="flex gap-2 items-center overflow-x-auto pt-1 pb-2 hide-scrollbar whitespace-nowrap scroll-smooth select-none w-full" style="-webkit-overflow-scrolling: touch;">
                 
-                <button id="btn-ganti-po-main" onclick="siapkanGantiPO('main')" class="p-2.5 px-4 bg-orange-600 hover:bg-orange-700 text-white font-black text-xs rounded-lg shadow-sm flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-orange-800"><i data-lucide="edit-3" class="w-4 h-4"></i> GANTI PO AKTUAL</button>
-                <button id="btn-edit-ket" onclick="siapkanEditKet('main')" class="p-2.5 px-4 bg-yellow-500 hover:bg-yellow-600 text-white font-black text-xs rounded-lg shadow-sm flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-yellow-700"><i data-lucide="edit-2" class="w-4 h-4"></i> EDIT KETERANGAN</button>
-                <button id="btn-sync-db" onclick="sinkronisasiUlangStokAktual(true)" class="p-2.5 px-4 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-lg shadow-sm flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-teal-800" title="Menyelaraskan tabel stok_aktual secara paksa berdasarkan data fisik stok_qr."><i data-lucide="refresh-cw" class="w-4 h-4"></i> SINKRON DB</button>
-                <button onclick="alert('Fitur Konversi akan dibahas dan dikembangkan lebih lanjut.')" class="p-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-purple-800"><i data-lucide="refresh-cw" class="w-4 h-4"></i> KONVERSI</button>
-                <button onclick="alert('Fitur Note akan dibahas dan dikembangkan lebih lanjut.')" class="p-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-amber-700"><i data-lucide="file-text" class="w-4 h-4"></i> NOTE</button>
-                <button onclick="downloadXLS()" class="p-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-emerald-800"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> EXCEL</button>
-
+                <!-- REVISI 1: TOMBOL AKSI UTAMA (Biru Seragam) -->
+                <button id="btn-ganti-po-main" onclick="siapkanGantiPO('main')" class="p-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-2 active:scale-95 transition border border-blue-700"><i data-lucide="edit-3" class="w-4 h-4"></i> Ganti PO Aktual</button>
+                <button id="btn-edit-ket" onclick="siapkanEditKet('main')" class="p-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-2 active:scale-95 transition border border-blue-700"><i data-lucide="edit-2" class="w-4 h-4"></i> Edit Keterangan</button>
+                <button onclick="alert('Fitur Konversi akan dibahas dan dikembangkan lebih lanjut.')" class="p-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-2 active:scale-95 transition border border-blue-700"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Konversi</button>
+                
                 <div class="w-px h-8 bg-slate-300 mx-1"></div>
 
-                <button onclick="toggleSidebarFilter()" class="p-2.5 px-4 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-slate-950"><i data-lucide="filter" class="w-4 h-4"></i> FILTER</button>
+                <!-- REVISI 1: TOMBOL SEKUNDER / UTILITAS (Netral Putih Bergaris) -->
+                <button id="btn-sync-db" onclick="sinkronisasiUlangStokAktual(true)" class="p-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold text-xs rounded-lg shadow-sm flex items-center gap-2 active:scale-95 transition" title="Menyelaraskan tabel stok_aktual secara paksa berdasarkan data fisik stok_qr."><i data-lucide="refresh-cw" class="w-4 h-4 text-teal-600"></i> Sinkron DB</button>
+                <button onclick="alert('Fitur Note akan dibahas dan dikembangkan lebih lanjut.')" class="p-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold text-xs rounded-lg shadow-sm flex items-center gap-2 active:scale-95 transition"><i data-lucide="file-text" class="w-4 h-4 text-amber-500"></i> Note</button>
+                <button onclick="downloadXLS()" class="p-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold text-xs rounded-lg shadow-sm flex items-center gap-2 active:scale-95 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Excel</button>
+                <button onclick="toggleSidebarFilter()" class="p-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold text-xs rounded-lg shadow-sm flex items-center gap-2 active:scale-95 transition"><i data-lucide="filter" class="w-4 h-4 text-slate-800"></i> Filter</button>
                 
                 <div class="relative">
-                    <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="p-2.5 px-5 bg-white text-slate-700 hover:bg-slate-50 font-black rounded-lg shadow-sm border-2 border-slate-200 text-xs flex items-center gap-2 active:scale-95 transition uppercase"><i data-lucide="eye-off" class="w-4 h-4"></i> KOLOM</button>
+                    <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="p-2.5 px-5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition"><i data-lucide="eye-off" class="w-4 h-4 text-slate-600"></i> Kolom</button>
                     <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-3 z-40">
                         <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
                             <span class="text-xs font-black text-slate-500 uppercase">Sembunyikan</span>
@@ -51,8 +70,7 @@
                     </div>
                 </div>
 
-                <button onclick="salinData()" class="p-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-blue-800"><i data-lucide="copy" class="w-4 h-4"></i> SALIN</button>
-
+                <button onclick="salinData()" class="p-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold text-xs rounded-lg shadow-sm flex items-center gap-2 active:scale-95 transition"><i data-lucide="copy" class="w-4 h-4 text-blue-600"></i> Salin</button>
             </div>
 
             <button onclick="bukaModalSetting()" class="ml-1 p-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black rounded-lg shadow-sm flex items-center justify-center active:scale-95 transition border-b-2 border-slate-300 flex-shrink-0" title="Pengaturan Tampilan Tabel">
@@ -71,21 +89,24 @@
                     <tbody id="tbody-ks" class="text-center text-slate-700"></tbody>
                 </table>
             </div>
-            <div class="p-3 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs font-bold text-slate-600 w-full z-20">
+            <!-- FOOTER PAGINASI ERP -->
+            <div class="p-3 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-bold text-slate-600 w-full z-20">
                 <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
-                    <span class="bg-slate-200 px-2.5 py-1.5 rounded-lg text-slate-700 shadow-sm">Total: <span id="lbl-total-baris" class="text-black font-black">0</span></span>
-                    <span class="bg-blue-100 px-2.5 py-1.5 rounded-lg text-blue-700 shadow-sm">Tampil: <span id="lbl-tampil-baris" class="text-blue-900 font-black">0</span></span>
-                    <span class="bg-emerald-100 px-2.5 py-1.5 rounded-lg text-emerald-700 shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-black">0</span></span>
+                    <span class="bg-slate-200 px-3 py-1.5 rounded-lg text-slate-700 shadow-sm">Total: <span id="lbl-total-baris" class="text-black font-black">0</span></span>
+                    <span class="bg-blue-100 px-3 py-1.5 rounded-lg text-blue-700 shadow-sm">Tampil: <span id="lbl-tampil-baris" class="text-blue-900 font-black">0</span></span>
+                    <span class="bg-emerald-100 px-3 py-1.5 rounded-lg text-emerald-700 shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-black">0</span></span>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="prevPage()" class="p-1.5 bg-white border-2 border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 hover:border-slate-400 active:scale-95 transition shadow-sm"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                    <span class="px-2 font-black uppercase text-[10px] tracking-widest text-slate-500">Hal <span id="lbl-halaman" class="text-blue-600 text-xs">1</span> / <span id="lbl-total-halaman" class="text-black text-xs">1</span></span>
-                    <button onclick="nextPage()" class="p-1.5 bg-white border-2 border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 hover:border-slate-400 active:scale-95 transition shadow-sm"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                <!-- REVISI 4: TOMBOL PAGINASI DIBESARKAN (Anti Fat-Finger) -->
+                <div class="flex items-center gap-3">
+                    <button onclick="prevPage()" class="p-2 sm:p-3 px-3 sm:px-5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 hover:border-slate-400 active:scale-95 transition shadow-sm"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+                    <span class="px-2 font-black uppercase text-xs tracking-widest text-slate-500">Hal <span id="lbl-halaman" class="text-blue-600 text-sm">1</span> / <span id="lbl-total-halaman" class="text-black text-sm">1</span></span>
+                    <button onclick="nextPage()" class="p-2 sm:p-3 px-3 sm:px-5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 hover:border-slate-400 active:scale-95 transition shadow-sm"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- SEMUA MODAL POPUP -->
     <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
             <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Kartu Stok</h3>
@@ -140,44 +161,47 @@
         </div>
     </div>
 
+    <!-- MODAL EDIT KETERANGAN -->
     <div id="modal-ket" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200">
-            <h3 class="text-lg font-black mb-6 flex items-center gap-2 text-slate-800"><i data-lucide="edit-2" class="text-yellow-600"></i> Edit Keterangan Item</h3>
+            <h3 class="text-lg font-black mb-6 flex items-center gap-2 text-slate-800"><i data-lucide="edit-2" class="text-blue-600"></i> Edit Keterangan Item</h3>
             <div class="space-y-4 mb-6">
                 <div>
                     <label class="block text-xs font-black uppercase tracking-wide mb-2 text-slate-600">Keterangan Baru</label>
-                    <textarea id="input-new-ket" rows="3" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-yellow-500 font-bold text-slate-800 bg-slate-50 resize-none" placeholder="Ketik keterangan di sini..."></textarea>
+                    <textarea id="input-new-ket" rows="3" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-500 font-bold text-slate-800 bg-slate-50 resize-none" placeholder="Ketik keterangan di sini..."></textarea>
                 </div>
             </div>
             <div class="flex gap-2">
                 <button type="button" onclick="tutupModalKet()" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-black rounded-xl hover:bg-slate-300 transition cursor-pointer text-xs uppercase">BATAL</button>
-                <button type="button" onclick="eksekusiEditKet()" id="btn-simpan-ket" class="w-1/2 py-3 bg-yellow-500 hover:bg-yellow-600 text-white font-black rounded-xl shadow-md transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase border-b-4 border-yellow-700"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
+                <button type="button" onclick="eksekusiEditKet()" id="btn-simpan-ket" class="w-1/2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-md transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase border-b border-blue-800"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
             </div>
         </div>
     </div>
 
+    <!-- MODAL PO LAMA -->
     <div id="modal-po" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200">
-            <h3 class="text-lg font-black mb-6 flex items-center gap-2 text-slate-800"><i data-lucide="edit-3" class="text-orange-600"></i> Ganti PO Aktual</h3>
+            <h3 class="text-lg font-black mb-6 flex items-center gap-2 text-slate-800"><i data-lucide="edit-3" class="text-blue-600"></i> Ganti PO Aktual</h3>
             <div class="space-y-4 mb-6">
                 <div>
                     <label class="block text-xs font-black uppercase tracking-wide mb-2 text-slate-600">Pilih PO Aktual</label>
-                    <select id="input-new-po" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-orange-600 font-bold text-slate-800 uppercase bg-slate-50 cursor-pointer">
+                    <select id="input-new-po" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-600 font-bold text-slate-800 uppercase bg-slate-50 cursor-pointer">
                         <option value="">-- MEMUAT PO... --</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-xs font-black uppercase tracking-wide mb-2 text-slate-600">Jumlah Dus</label>
-                    <input type="number" id="input-qty-ganti" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-orange-600 font-bold text-slate-800 bg-slate-50" placeholder="Contoh: 5" min="1">
+                    <input type="number" id="input-qty-ganti" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-600 font-bold text-slate-800 bg-slate-50" placeholder="Contoh: 5" min="1">
                 </div>
             </div>
             <div class="flex gap-2">
                 <button type="button" onclick="tutupModalPO()" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-black rounded-xl hover:bg-slate-300 transition cursor-pointer text-xs uppercase">BATAL</button>
-                <button type="button" onclick="eksekusiGantiPO()" id="btn-simpan-po" class="w-1/2 py-3 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl shadow-md transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase border-b-4 border-orange-800"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
+                <button type="button" onclick="eksekusiGantiPO()" id="btn-simpan-po" class="w-1/2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-md transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase border-b border-blue-800"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
             </div>
         </div>
     </div>
 
+    <!-- MODAL SETTING TAMPILAN -->
     <div id="modal-setting" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[90] px-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden flex flex-col">
             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
