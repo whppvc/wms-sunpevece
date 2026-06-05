@@ -18,10 +18,10 @@ function safeJSONParse(data, fallback = null) {
 const currentUser = safeJSONParse(localStorage.getItem('user_session'), { username: 'Admin', role: 'admin' });
 
 // ========================================================
-// 1. STYLING MANAGEMENT (GEAR SETTINGS & CUSTOM COLUMNS)
+// 1. STYLING MANAGEMENT
 // ========================================================
 const defaultSettings = { 
-    thBg: '#1e293b', thColor: '#ffffff', thSize: 11, thAlign: 'center', 
+    thBg: '#1e3a8a', thColor: '#ffffff', thSize: 12, thAlign: 'center', 
     tdColor: '#334155', tdSize: 12, tdAlign: 'center',
     customCols: {} 
 };
@@ -75,7 +75,7 @@ function loadCustomColSetting() {
 }
 
 function livePreviewSetting() {
-    currentSettings.thBg = document.getElementById('set-th-bg').value; currentSettings.thColor = document.getElementById('set-th-color').value; currentSettings.thSize = parseInt(document.getElementById('set-th-size').value) || 11; currentSettings.thAlign = document.getElementById('set-th-align').value;
+    currentSettings.thBg = document.getElementById('set-th-bg').value; currentSettings.thColor = document.getElementById('set-th-color').value; currentSettings.thSize = parseInt(document.getElementById('set-th-size').value) || 12; currentSettings.thAlign = document.getElementById('set-th-align').value;
     currentSettings.tdColor = document.getElementById('set-td-color').value; currentSettings.tdSize = parseInt(document.getElementById('set-td-size').value) || 12; currentSettings.tdAlign = document.getElementById('set-td-align').value;
     const col = document.getElementById('select-custom-col').value;
     if (col) { currentSettings.customCols[col] = { color: document.getElementById('set-custom-color').value, size: parseInt(document.getElementById('set-custom-size').value) || 12, align: document.getElementById('set-custom-align').value }; }
@@ -188,7 +188,7 @@ async function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
         console.error("Gagal sinkronisasi stok_aktual:", e);
         alert("⚠️ GAGAL SINKRONISASI STOK AKTUAL KE SUPABASE!\n\nPastikan RLS (Gembok) pada tabel 'stok_aktual' di Supabase sudah di-DISABLE (Turn off RLS).\n\nDetail Error: " + e.message);
     } finally {
-        if(btn) { btn.innerHTML = '<i data-lucide="refresh-cw" class="w-4 h-4"></i> SINKRON DB'; btn.disabled = false; lucide.createIcons(); }
+        if(btn) { btn.innerHTML = '<i data-lucide="refresh-cw" class="w-4 h-4 text-teal-600"></i> Sinkron DB'; btn.disabled = false; lucide.createIcons(); }
     }
 }
 
@@ -271,7 +271,7 @@ async function muatDataStok() {
                 mesin: txtMesin || '-', shift: txtShift || '-', jenis: jenisBarang || '-', nama: namaBarang || '-',
                 pjg: panjangBarang || '-', grade: gradeBarang || '-', dus: dusBarang || '-', shading: shadingBarang || '-',
                 po_bawaan: txtPoBawaan || '-', po_aktual_spesifik: txtPoAktualSpesifik, po_aktual_gabungan: txtPoAktualGabungan, ket: ket,
-                id: r.id // Disimpan untuk kebutuhan lembaran (jika ada overlap, walau biasanya lembaran terpisah)
+                id: r.id 
             });
 
             let keyArea = `${r.id_sku}_${ket}`;
@@ -308,7 +308,7 @@ function setModeKS(m) {
     modeKS = m;
     ['qr', 'area', 'global', 'lembaran'].forEach(tab => {
         const el = document.getElementById('tab-' + tab);
-        if(el) el.className = (m === tab) ? 'px-5 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-5 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+        if(el) el.className = (m === tab) ? 'px-5 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-sm font-bold' : 'px-5 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-sm font-bold';
     });
     
     document.getElementById('btn-ganti-po-main').classList.toggle('hidden', m === 'global' || m === 'lembaran');
@@ -338,11 +338,10 @@ function sortTable(colIndex, headerEl) {
     const icon = headerEl.querySelector('.sort-icon');
     if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-50'); lucide.createIcons(); }
     
-    // Setelah sort DOM, rapikan ulang paginasinya
     applyPagination();
 }
 
-const thSort = (idx, label, cls = "") => `<th class="hdr-std ${cls} cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(${idx}, this)"><div class="flex items-center gap-1">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>`;
+const thSort = (idx, label, cls = "") => `<th class="hdr-std ${cls} cursor-pointer hover:bg-blue-900 transition select-none" onclick="sortTable(${idx}, this)"><div class="flex items-center gap-1">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>`;
 
 function renderTabel() {
     const thead = document.getElementById('thead-ks');
@@ -353,29 +352,31 @@ function renderTabel() {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded border-slate-300"></th>
-                ${thSort(1, 'Area', 'col-area')}
-                ${thSort(2, 'QRCode', 'col-qr')}
-                ${thSort(3, 'Tgl Produksi', 'col-tgl')}
-                ${thSort(4, 'Mesin', 'col-mesin')}
-                ${thSort(5, 'Shift', 'col-shift')}
-                ${thSort(6, 'Jenis Item', 'col-jenis')}
-                ${thSort(7, 'Nama Item', 'col-nama')}
-                ${thSort(8, 'Pjg', 'col-pjg')}
-                ${thSort(9, 'Grade', 'col-grade')}
-                ${thSort(10, 'Dus', 'col-dus')}
-                ${thSort(11, 'Shading', 'col-shading')}
-                ${thSort(12, 'PO Bawaan', 'col-po-bawaan')}
-                ${thSort(13, 'PO Aktual', 'col-po')}
-                ${thSort(14, 'Keterangan', 'col-ket')}
+                ${thSort(1, 'No', 'w-12 col-no')}
+                ${thSort(2, 'Area', 'col-area')}
+                ${thSort(3, 'QRCode', 'col-qr')}
+                ${thSort(4, 'Tgl Produksi', 'col-tgl')}
+                ${thSort(5, 'Mesin', 'col-mesin')}
+                ${thSort(6, 'Shift', 'col-shift')}
+                ${thSort(7, 'Jenis Item', 'col-jenis')}
+                ${thSort(8, 'Nama Item', 'col-nama')}
+                ${thSort(9, 'Panjang', 'col-pjg')}
+                ${thSort(10, 'Grade', 'col-grade')}
+                ${thSort(11, 'Dus', 'col-dus')}
+                ${thSort(12, 'Shading', 'col-shading')}
+                ${thSort(13, 'PO Bawaan', 'col-po-bawaan')}
+                ${thSort(14, 'PO Aktual', 'col-po')}
+                ${thSort(15, 'Keterangan', 'col-ket')}
             </tr>`;
         
-        if(dataKSQR.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="15" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSQR.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="16" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = dataKSQR.map((r, i) => {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
             return `
                 <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
                     <td class="p-3 col-cb"><input type="checkbox" onchange="updateSelectedCount()" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual_spesifik}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                    <td class="p-3 font-bold opacity-50 text-slate-500 col-no">${i+1}</td>
                     <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.area}</td>
                     <td class="p-3 font-mono font-bold tracking-wide border-r border-slate-200 text-slate-900 col-qr text-left">${r.qrcode}</td>
                     <td class="p-3 font-bold opacity-80 text-slate-600 col-tgl">${r.tglProduksi}</td>
@@ -392,31 +393,33 @@ function renderTabel() {
                     <td class="p-3 font-semibold text-slate-500 opacity-80 col-ket">${r.ket}</td>
                 </tr>`;
         }).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="15" class="p-6 font-bold text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="16" class="p-6 font-bold text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     }
     else if(modeKS === 'area') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
-                ${thSort(1, 'Area', 'col-area')}
-                ${thSort(2, 'Jenis Item', 'col-jenis')}
-                ${thSort(3, 'Nama Item', 'col-nama')}
-                ${thSort(4, 'Pjg', 'col-pjg')}
-                ${thSort(5, 'Grade', 'col-grade')}
-                ${thSort(6, 'Dus', 'col-dus')}
-                ${thSort(7, 'Shading', 'col-shading')}
-                ${thSort(8, 'PO Aktual', 'col-po')}
-                ${thSort(9, 'Keterangan', 'col-ket')}
-                ${thSort(10, 'QTY (DUS)', 'col-qty')}
+                ${thSort(1, 'No', 'w-12 col-no')}
+                ${thSort(2, 'Area', 'col-area')}
+                ${thSort(3, 'Jenis Item', 'col-jenis')}
+                ${thSort(4, 'Nama Item', 'col-nama')}
+                ${thSort(5, 'Panjang', 'col-pjg')}
+                ${thSort(6, 'Grade', 'col-grade')}
+                ${thSort(7, 'Dus', 'col-dus')}
+                ${thSort(8, 'Shading', 'col-shading')}
+                ${thSort(9, 'PO Aktual', 'col-po')}
+                ${thSort(10, 'Keterangan', 'col-ket')}
+                ${thSort(11, 'Total Qty (Dus)', 'col-qty')}
             </tr>`;
         
-        if(dataKSArea.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="11" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSArea.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="12" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = dataKSArea.map((r, i) => {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             return `
                 <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
                     <td class="p-3 col-cb"><input type="checkbox" onchange="updateSelectedCount()" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                    <td class="p-3 font-bold opacity-50 text-slate-500 col-no">${i+1}</td>
                     <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.area}</td>
                     <td class="p-3 font-black text-blue-700 col-jenis">${r.jenis}</td>
                     <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama}</td>
@@ -429,30 +432,32 @@ function renderTabel() {
                     <td class="p-3 font-black text-slate-900 bg-slate-100 col-qty text-base">${r.qty}</td>
                 </tr>`;
         }).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="11" class="p-6 font-bold text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="12" class="p-6 font-bold text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
     else if (modeKS === 'global') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
-                <th class="hdr-std w-12 bg-slate-900 text-blue-300 col-open">OPEN</th>
-                ${thSort(2, 'Jenis Item', 'border-l border-slate-500 col-jenis')}
-                ${thSort(3, 'Nama Item', 'col-nama')}
-                ${thSort(4, 'Pjg', 'col-pjg')}
-                ${thSort(5, 'Grade', 'col-grade')}
-                ${thSort(6, 'Dus', 'col-dus')}
-                ${thSort(7, 'Shading', 'col-shading')}
-                ${thSort(8, 'PO Aktual', 'col-po')}
-                ${thSort(9, 'Keterangan', 'col-ket')}
-                ${thSort(10, 'TOTAL (DUS)', 'col-qty')}
+                <th class="hdr-std w-12 bg-blue-900 text-blue-100 col-open">Detail</th>
+                ${thSort(2, 'No', 'w-12 col-no')}
+                ${thSort(3, 'Jenis Item', 'border-l border-slate-500 col-jenis')}
+                ${thSort(4, 'Nama Item', 'col-nama')}
+                ${thSort(5, 'Panjang', 'col-pjg')}
+                ${thSort(6, 'Grade', 'col-grade')}
+                ${thSort(7, 'Dus', 'col-dus')}
+                ${thSort(8, 'Shading', 'col-shading')}
+                ${thSort(9, 'PO Aktual', 'col-po')}
+                ${thSort(10, 'Keterangan', 'col-ket')}
+                ${thSort(11, 'Total Qty (Dus)', 'col-qty')}
             </tr>`;
 
-        if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="11" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="12" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = dataKSGlobal.map((r, i) => `
             <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
                 <td class="p-3 col-cb"><input type="checkbox" onchange="updateSelectedCount()" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                 <td class="p-2 col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white rounded shadow-sm transition flex mx-auto items-center justify-center"><i data-lucide="box" class="w-4 h-4"></i></button></td>
+                <td class="p-3 font-bold opacity-50 text-slate-500 col-no">${i+1}</td>
                 <td class="p-3 font-black text-blue-700 border-l border-slate-200 col-jenis">${r.jenis}</td>
                 <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama}</td>
                 <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg}</td>
@@ -464,26 +469,28 @@ function renderTabel() {
                 <td class="p-3 font-black text-slate-900 bg-slate-100 col-qty text-base">${r.qty}</td>
             </tr>
         `).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="11" class="p-6 font-bold text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="12" class="p-6 font-bold text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
     else if (modeKS === 'lembaran') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600"></th>
-                ${thSort(1, 'Kode Master', 'col-area')}
-                ${thSort(2, 'Nama Item', 'col-nama')}
-                ${thSort(3, 'Pjg', 'col-pjg')}
-                ${thSort(4, 'Grade', 'col-grade')}
-                ${thSort(5, 'Dus', 'col-dus')}
-                ${thSort(6, 'Shading', 'col-shading')}
-                ${thSort(7, 'Keterangan', 'col-ket')}
+                ${thSort(1, 'No', 'w-12 col-no')}
+                ${thSort(2, 'Kode Master', 'col-area')}
+                ${thSort(3, 'Nama Item', 'col-nama')}
+                ${thSort(4, 'Panjang', 'col-pjg')}
+                ${thSort(5, 'Grade', 'col-grade')}
+                ${thSort(6, 'Dus', 'col-dus')}
+                ${thSort(7, 'Shading', 'col-shading')}
+                ${thSort(8, 'Keterangan', 'col-ket')}
             </tr>`;
         
-        if(stokLembaranRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="8" class="p-6 font-bold text-slate-400">Tidak ada data stok lembaran.</td></tr>`; return; }
+        if(stokLembaranRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="9" class="p-6 font-bold text-slate-400">Tidak ada data stok lembaran.</td></tr>`; return; }
 
         tbody.innerHTML = stokLembaranRaw.map((r, i) => `
             <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-ks">
                 <td class="p-3 col-cb"><input type="checkbox" value="${r.id}" onchange="updateSelectedCount()" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                <td class="p-3 font-bold opacity-50 text-slate-500 col-no">${i+1}</td>
                 <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area">${r.kode_master || '-'}</td>
                 <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama_item || '-'}</td>
                 <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg || '-'}</td>
@@ -493,11 +500,12 @@ function renderTabel() {
                 <td class="p-3 font-semibold text-slate-500 opacity-80 col-ket">${r.keterangan || '-'}</td>
             </tr>
         `).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="8" class="p-6 font-bold text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="9" class="p-6 font-bold text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     }
 
     lucide.createIcons(); 
-    if(modeKS !== 'lembaran') saringTabel(); else applyPagination(); // Lembaran doesnt use standard saringTabel currently but needs pagination
+    currentPage = 1;
+    applyPagination(); 
 }
 
 // ========================================================
@@ -550,7 +558,6 @@ function nextPage() {
 function toggleCentangUtama(checked) { 
     document.querySelectorAll('.cb-main').forEach(cb => {
         const row = cb.closest('tr');
-        // Hanya centang baris yang SEDANG TAMPIL di halaman saat ini
         if (row.style.display !== 'none' && !row.classList.contains('filtered-out')) {
             cb.checked = checked;
         }
@@ -644,7 +651,6 @@ async function eksekusiEditKet() {
             const {error} = await db.from('stok_qr').update({keterangan: newKet}).in('qrcode', allQrs);
             if(error) throw error;
             
-            // PANGGIL SINKRONISASI STOK AKTUAL AGAR LANGSUNG MERUBAH TABEL
             await sinkronisasiUlangStokAktual();
         }
         
@@ -731,9 +737,7 @@ async function eksekusiGantiPO() {
         alert(`BERHASIL! PO Aktual berubah ke ${newPO}.`);
         tutupModalPO(); if(sourcePOContext === 'breakdown') tutupModalBreakdown();
         
-        // PANGGIL SINKRONISASI STOK AKTUAL DB AGAR SEMUANYA TERUPADATE!
         await sinkronisasiUlangStokAktual();
-        
         await muatDataStok();
     } catch (error) { alert("GAGAL UPDATE: " + error.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
@@ -789,7 +793,6 @@ function downloadXLS() {
     const headers = Array.from(document.querySelectorAll('#thead-ks th')).filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open')).map(th => th.innerText.trim());
     csvContent += headers.join(",") + "\n";
     
-    // Tarik semua data yang masuk filter (bukan cuma halaman saat ini)
     document.querySelectorAll('.row-ks:not(.filtered-out)').forEach(tr => {
         const rowData = [];
         Array.from(tr.children).forEach(td => {
