@@ -5,23 +5,14 @@ let selectedForPO = []; let sourcePOContext = ''; let currentBreakdownData = [];
 let sortState = {};
 let masterData = { kamus: [] };
 
-// FUNGSI AMAN PARSE JSON AGAR TIDAK BLANK / CRASH
 function safeJSONParse(data, fallback = null) {
     if (!data || data === 'undefined' || data === 'null') return fallback;
     if (typeof data !== 'string') return data; 
-    try {
-        return JSON.parse(data);
-    } catch (e) {
-        console.warn("JSON Parse Error dicegat:", e.message);
-        return fallback;
-    }
+    try { return JSON.parse(data); } catch (e) { return fallback; }
 }
 
 const currentUser = safeJSONParse(localStorage.getItem('user_session'), { username: 'Admin', role: 'admin' });
 
-// ========================================================
-// 1. STYLING MANAGEMENT (GEAR SETTINGS & CUSTOM COLUMNS)
-// ========================================================
 const defaultSettings = { 
     thBg: '#1e293b', thColor: '#ffffff', thSize: 11, thAlign: 'center', 
     tdColor: '#334155', tdSize: 12, tdAlign: 'center',
@@ -40,32 +31,15 @@ function terapkanSettingAwal() {
 function applyCSS(s) {
     const styleEl = document.getElementById('dynamic-table-settings');
     if (!styleEl) return;
-
     const justify = s.thAlign === 'left' ? 'flex-start' : (s.thAlign === 'right' ? 'flex-end' : 'center');
-    
-    // Header Style
-    let customCSS = `
-        #main-table th.hdr-std { background-color: ${s.thBg} !important; color: ${s.thColor} !important; font-size: ${s.thSize}px !important; text-align: ${s.thAlign} !important; }
-        #main-table th.hdr-std > div { justify-content: ${justify} !important; }
-    `;
-
-    // Terapkan Styling Umum Isi Tabel HANYA jika nilainya bukan bawaan (agar Tailwind bawaan tetap nyala)
+    let customCSS = `#main-table th.hdr-std { background-color: ${s.thBg} !important; color: ${s.thColor} !important; font-size: ${s.thSize}px !important; text-align: ${s.thAlign} !important; } #main-table th.hdr-std > div { justify-content: ${justify} !important; }`;
     if (s.tdColor !== defaultSettings.tdColor) customCSS += `#main-table td { color: ${s.tdColor} !important; } \n`;
     if (s.tdSize !== defaultSettings.tdSize) customCSS += `#main-table td { font-size: ${s.tdSize}px !important; } \n`;
     if (s.tdAlign !== defaultSettings.tdAlign) customCSS += `#main-table td { text-align: ${s.tdAlign} !important; } \n`;
-
-    // Styling Spesifik Kolom
     for (let colClass in s.customCols) {
         let cs = s.customCols[colClass];
-        customCSS += `
-            #main-table td.${colClass} { 
-                color: ${cs.color} !important; 
-                font-size: ${cs.size}px !important; 
-                text-align: ${cs.align} !important; 
-            }
-        `;
+        customCSS += `#main-table td.${colClass} { color: ${cs.color} !important; font-size: ${cs.size}px !important; text-align: ${cs.align} !important; }`;
     }
-
     styleEl.innerHTML = customCSS;
 }
 
@@ -74,82 +48,45 @@ function bukaModalSetting() {
     document.getElementById('set-th-color').value = currentSettings.thColor;
     document.getElementById('set-th-size').value = currentSettings.thSize;
     document.getElementById('set-th-align').value = currentSettings.thAlign;
-    
     document.getElementById('set-td-color').value = currentSettings.tdColor;
     document.getElementById('set-td-size').value = currentSettings.tdSize;
     document.getElementById('set-td-align').value = currentSettings.tdAlign;
-
     document.getElementById('select-custom-col').value = '';
     loadCustomColSetting(); 
-
     document.getElementById('modal-setting').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
 }
 
 function loadCustomColSetting() {
     const col = document.getElementById('select-custom-col').value;
-    const colorInput = document.getElementById('set-custom-color');
-    const sizeInput = document.getElementById('set-custom-size');
-    const alignInput = document.getElementById('set-custom-align');
-
     if (col && currentSettings.customCols[col]) {
         let cs = currentSettings.customCols[col];
-        colorInput.value = cs.color; sizeInput.value = cs.size; alignInput.value = cs.align;
+        document.getElementById('set-custom-color').value = cs.color; document.getElementById('set-custom-size').value = cs.size; document.getElementById('set-custom-align').value = cs.align;
     } else {
-        colorInput.value = currentSettings.tdColor; sizeInput.value = currentSettings.tdSize; alignInput.value = currentSettings.tdAlign;
+        document.getElementById('set-custom-color').value = currentSettings.tdColor; document.getElementById('set-custom-size').value = currentSettings.tdSize; document.getElementById('set-custom-align').value = currentSettings.tdAlign;
     }
 }
 
 function livePreviewSetting() {
-    currentSettings.thBg = document.getElementById('set-th-bg').value;
-    currentSettings.thColor = document.getElementById('set-th-color').value;
-    currentSettings.thSize = parseInt(document.getElementById('set-th-size').value) || 11;
-    currentSettings.thAlign = document.getElementById('set-th-align').value;
-
-    currentSettings.tdColor = document.getElementById('set-td-color').value;
-    currentSettings.tdSize = parseInt(document.getElementById('set-td-size').value) || 12;
-    currentSettings.tdAlign = document.getElementById('set-td-align').value;
-
+    currentSettings.thBg = document.getElementById('set-th-bg').value; currentSettings.thColor = document.getElementById('set-th-color').value; currentSettings.thSize = parseInt(document.getElementById('set-th-size').value) || 11; currentSettings.thAlign = document.getElementById('set-th-align').value;
+    currentSettings.tdColor = document.getElementById('set-td-color').value; currentSettings.tdSize = parseInt(document.getElementById('set-td-size').value) || 12; currentSettings.tdAlign = document.getElementById('set-td-align').value;
     const col = document.getElementById('select-custom-col').value;
-    if (col) {
-        currentSettings.customCols[col] = {
-            color: document.getElementById('set-custom-color').value,
-            size: parseInt(document.getElementById('set-custom-size').value) || 12,
-            align: document.getElementById('set-custom-align').value
-        };
-    }
+    if (col) { currentSettings.customCols[col] = { color: document.getElementById('set-custom-color').value, size: parseInt(document.getElementById('set-custom-size').value) || 12, align: document.getElementById('set-custom-align').value }; }
     applyCSS(currentSettings);
 }
 
 function resetCustomCol() {
     const col = document.getElementById('select-custom-col').value;
-    if (col && currentSettings.customCols[col]) {
-        delete currentSettings.customCols[col];
-        loadCustomColSetting(); applyCSS(currentSettings); 
-    } else { alert('Pilih kolom yang ingin di-reset terlebih dahulu dari Dropdown!'); }
+    if (col && currentSettings.customCols[col]) { delete currentSettings.customCols[col]; loadCustomColSetting(); applyCSS(currentSettings); } 
+    else { alert('Pilih kolom yang ingin di-reset terlebih dahulu dari Dropdown!'); }
 }
 
-['set-th-bg', 'set-th-color', 'set-th-size', 'set-th-align', 'set-td-color', 'set-td-size', 'set-td-align', 'set-custom-color', 'set-custom-size', 'set-custom-align'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.addEventListener('input', livePreviewSetting);
-});
+['set-th-bg', 'set-th-color', 'set-th-size', 'set-th-align', 'set-td-color', 'set-td-size', 'set-td-align', 'set-custom-color', 'set-custom-size', 'set-custom-align'].forEach(id => { const el = document.getElementById(id); if(el) el.addEventListener('input', livePreviewSetting); });
 
-function simpanSettingTabel() {
-    livePreviewSetting(); 
-    localStorage.setItem('wms_table_settings', JSON.stringify(currentSettings));
-    tutupSemuaPopups();
-}
+function simpanSettingTabel() { livePreviewSetting(); localStorage.setItem('wms_table_settings', JSON.stringify(currentSettings)); tutupSemuaPopups(); }
 
-function resetSettingDefault() {
-    localStorage.removeItem('wms_table_settings');
-    currentSettings = JSON.parse(JSON.stringify(defaultSettings));
-    applyCSS(currentSettings);
-    tutupSemuaPopups();
-}
+function resetSettingDefault() { localStorage.removeItem('wms_table_settings'); currentSettings = JSON.parse(JSON.stringify(defaultSettings)); applyCSS(currentSettings); tutupSemuaPopups(); }
 
-// ========================================================
-// 2. CORE INITIALIZATION & TRANSLATION
-// ========================================================
 document.addEventListener('DOMContentLoaded', async () => {
     initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
     terapkanSettingAwal(); 
@@ -161,10 +98,8 @@ async function loadMasterData() {
     try {
         const {data, error} = await db.from('master_2').select('*');
         if (data) {
-            masterData.kamus = data;
-            let poSet = new Set(); data.forEach(d => { if(d.po) poSet.add(d.po.trim()); });
-            const sel = document.getElementById('input-new-po');
-            let html = '<option value="">-- PILIH PO --</option>';
+            masterData.kamus = data; let poSet = new Set(); data.forEach(d => { if(d.po) poSet.add(d.po.trim()); });
+            const sel = document.getElementById('input-new-po'); let html = '<option value="">-- PILIH PO --</option>';
             Array.from(poSet).sort().forEach(po => { html += `<option value="${po}">${po}</option>`; });
             if(sel) sel.innerHTML = html;
         }
@@ -175,7 +110,6 @@ function translateBarcode(barcode) {
     let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-' };
     if(!barcode) return data;
     const parts = barcode.split('/'); if (parts.length < 1) return data;
-    
     const h = barcode.charAt(0).toUpperCase();
     if (h === 'P') data.jenisItem = 'Plafon'; else if (h === 'L') data.jenisItem = 'List'; else if (h === 'W') data.jenisItem = 'WPC'; else data.jenisItem = h;
 
@@ -201,21 +135,18 @@ function translateBarcode(barcode) {
 }
 
 // ========================================================
-// REVISI FITUR: FUNGSI SINKRONISASI STOK_AKTUAL DARI STOK_QR
+// REVISI FITUR: FUNGSI SINKRONISASI STOK_AKTUAL DARI STOK_QR (DIAMANKAN ALERT RLS)
 // ========================================================
 async function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
     const btn = document.getElementById('btn-sync-db');
-    if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYINKRONKAN...'; btn.disabled = true; }
+    if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENSINKRON...'; btn.disabled = true; }
 
     try {
-        // 1. Tarik seluruh data fisik (stok_qr)
         const { data: fisikQr, error: errQr } = await db.from('stok_qr').select('*');
         if(errQr) throw errQr;
-        if(!fisikQr) return;
-
-        // 2. Agregasi super akurat di memori
+        
         let mapAgg = {};
-        fisikQr.forEach(r => {
+        (fisikQr || []).forEach(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
             let t = translateBarcode(r.qrcode);
             
@@ -228,56 +159,39 @@ async function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
             let po = p.length >= 8 ? p[7] : (r.po_bawaan || t.po || '-');
             let ket = r.keterangan || '-';
 
-            // Kunci unik: Area, Nama, Pjg, Grade, Dus, Shading, PO, Ket
             let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
             if(!mapAgg[key]) {
-                mapAgg[key] = {
-                    nama_item: nama,
-                    pjg: pjg,
-                    grade: grade,
-                    dus: dus,
-                    shading: shading,
-                    area: area,
-                    po_aktual: po,
-                    keterangan: ket,
-                    qty: 0
-                };
+                mapAgg[key] = { nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, area: area, po_aktual: po, keterangan: ket, qty: 0 };
             }
             mapAgg[key].qty++;
         });
 
         let dataAktualBaru = Object.values(mapAgg);
-
-        // 3. Timpa tabel stok_aktual di Supabase (Hapus total, lalu Insert)
-        // (Aman jika RLS dimatikan atau user membolehkan penghapusan)
-        await db.from('stok_aktual').delete().neq('qty', -99999); 
         
-        // 4. Proses Insert Massal per 500 Baris (Menghindari Limit Server)
+        const { error: errDel } = await db.from('stok_aktual').delete().neq('qty', -99999);
+        if(errDel) throw errDel; 
+
         for(let i = 0; i < dataAktualBaru.length; i += 500) {
-            await db.from('stok_aktual').insert(dataAktualBaru.slice(i, i + 500));
+            const { error: errIns } = await db.from('stok_aktual').insert(dataAktualBaru.slice(i, i + 500));
+            if(errIns) throw errIns;
         }
         
-        if(tampilkanAlert) alert("✅ Sinkronisasi Selesai!\nTabel stok_aktual di database telah diperbarui 100% mengikuti data asli stok_qr.");
+        if(tampilkanAlert) alert("✅ Sinkronisasi Selesai!\nTabel stok_aktual di database telah diperbarui 100% mengikuti data fisik stok_qr.");
     } catch(e) {
         console.error("Gagal sinkronisasi stok_aktual:", e);
-        if(tampilkanAlert) alert("Gagal Sinkronisasi DB: " + e.message);
+        // Error handling khusus RLS agar Pak Bos tahu penyebabnya!
+        alert("⚠️ GAGAL SINKRONISASI STOK AKTUAL KE SUPABASE!\n\nPastikan RLS (Gembok) pada tabel 'stok_aktual' di Supabase sudah di-DISABLE (Turn off RLS).\n\nDetail Error: " + e.message);
     } finally {
         if(btn) { btn.innerHTML = '<i data-lucide="refresh-cw" class="w-4 h-4"></i> SINKRON DB'; btn.disabled = false; lucide.createIcons(); }
     }
 }
 
-
-// ========================================================
-// 3. FETCHING & AGGREGATION ENGINE (GABUNGAN HANYA DI QR)
-// ========================================================
 async function muatDataStok() {
     const tbody = document.getElementById('tbody-ks');
     tbody.innerHTML = `<tr><td colspan="17" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menghubungkan ke Gudang Supabase...</p></td></tr>`;
     lucide.createIcons();
 
     try {
-        // PERBAIKAN: Karena data stok_aktual sekarang dibangun ulang dari stok_qr,
-        // Kita tidak perlu memanggil db.from('stok_aktual') di sini. Kita rakit langsung dari stokQRRaw agar lebih cepat dan aman!
         const [resStok, resSTBJ, resLembaran] = await Promise.all([
             db.from('stok_qr').select('*'),
             db.from('hasil_stbj').select('qrcode, keterangan'),
@@ -288,7 +202,6 @@ async function muatDataStok() {
         stokQRRaw = resStok.data || [];
         stokLembaranRaw = resLembaran.data || [];
 
-        // Rakit aktualMap secara internal dari fisik stok_qr
         let aktualMap = {};
         stokQRRaw.forEach(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
@@ -341,10 +254,8 @@ async function muatDataStok() {
             let rawPoAktual = (p.length >= 8 ? p[7] : rawPoBawaan).toString().trim();
             let cPA = masterData.kamus.find(m => m.kode_po && m.kode_po.toString().trim() === rawPoAktual);
             
-            // PO SPESIFIK (Untuk Area & Global)
             let txtPoAktualSpesifik = cPA && cPA.po ? cPA.po : rawPoAktual;
 
-            // PO GABUNGAN (Hanya untuk Mode QR)
             let specKey = `${namaBarang}_${panjangBarang}_${gradeBarang}_${dusBarang}_${shadingBarang}`;
             let poGabunganArray = aktualMap[specKey] ? Array.from(aktualMap[specKey]) : [];
             let txtPoAktualGabungan = poGabunganArray.length > 0 ? poGabunganArray.join(', ') : 'NON-PO / KOSONG';
@@ -356,7 +267,6 @@ async function muatDataStok() {
                 po_bawaan: txtPoBawaan || '-', po_aktual_spesifik: txtPoAktualSpesifik, po_aktual_gabungan: txtPoAktualGabungan, ket: ket
             });
 
-            // GROUPING AREA & GLOBAL MENGGUNAKAN PO SPESIFIK !
             let keyArea = `${r.id_sku}_${ket}`;
             if(!areaMap[keyArea]) {
                 areaMap[keyArea] = { 
@@ -387,9 +297,6 @@ async function muatDataStok() {
     } catch(e) { tbody.innerHTML = `<tr><td colspan="17" class="p-10 text-red-500 font-bold">Gagal mengolah data: ${e.message}</td></tr>`; }
 }
 
-// ========================================================
-// 4. IMPROVE TABLE RENDERING (Clean Code via Mapping)
-// ========================================================
 function setModeKS(m) {
     modeKS = m;
     ['qr', 'area', 'global', 'lembaran'].forEach(tab => {
@@ -689,7 +596,7 @@ async function eksekusiGantiPO() {
         alert(`BERHASIL! PO Aktual berubah ke ${newPO}.`);
         tutupModalPO(); if(sourcePOContext === 'breakdown') tutupModalBreakdown();
         
-        // PANGGIL SINKRONISASI STOK AKTUAL DB AGAR SEMUANYA TERUPADATE!
+        // PANGGIL SINKRONISASI STOK AKTUAL AGAR LANGSUNG MERUBAH TABEL
         await sinkronisasiUlangStokAktual();
         
         await muatDataStok();
