@@ -15,7 +15,7 @@
             background-color: #1e293b !important; 
             color: #ffffff !important; 
             text-align: center !important; 
-            padding: 0.85rem 1rem !important; 
+            padding: 0.85rem 0.5rem !important; 
             font-size: 11px !important; 
             font-weight: 700 !important; 
             text-transform: uppercase !important;
@@ -28,9 +28,12 @@
         }
         #main-table td { border-bottom: 1px solid #e2e8f0 !important; border-right: 1px solid #e2e8f0 !important; }
         #main-table { border: 1px solid #e2e8f0; border-collapse: collapse; }
+
+        /* Highlight Row Terpilih */
+        tr.selected-row td { background-color: #dbeafe !important; } /* Blue-100 Tailwind */
     </style>
 </head>
-<body class="font-sans bg-[#ecf0f1] overflow-x-hidden text-slate-800 pb-20">
+<body class="font-sans bg-[#ecf0f1] overflow-x-hidden text-slate-800 pb-20 relative">
     <div class="w-full px-2 sm:px-4 relative pt-4">
         
         <div class="flex mb-4 overflow-x-auto hide-scrollbar border-b-2 border-slate-800" id="tab-container">
@@ -43,14 +46,14 @@
         <div class="bg-white p-3 border border-slate-200 mb-4 flex items-center justify-between gap-2 overflow-hidden shadow-sm rounded">
             <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar whitespace-nowrap scroll-smooth select-none w-full" style="-webkit-overflow-scrolling: touch;">
                 
-                <button id="btn-ganti-po-main" onclick="siapkanGantiPO('main')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-blue-700">
-                    <div class="bg-blue-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="tags" class="w-4 h-4"></i></div>
-                    <div class="bg-blue-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-blue-500 transition">Ganti PO Aktual</div>
+                <button id="btn-ganti-po-main" onclick="siapkanGantiPO('main')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden">
+                    <div class="bg-orange-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="tags" class="w-4 h-4"></i></div>
+                    <div class="bg-orange-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-orange-500 transition">Ganti PO Aktual</div>
                 </button>
 
-                <button id="btn-edit-ket" onclick="siapkanEditKet('main')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-amber-600">
-                    <div class="bg-amber-600 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="edit-2" class="w-4 h-4"></i></div>
-                    <div class="bg-amber-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-amber-400 transition">Edit Keterangan</div>
+                <button id="btn-edit-ket" onclick="siapkanEditKet('main')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden">
+                    <div class="bg-slate-600 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="edit-2" class="w-4 h-4"></i></div>
+                    <div class="bg-slate-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-400 transition">Edit Keterangan</div>
                 </button>
 
                 <div class="w-px h-8 bg-slate-300 mx-1 shrink-0"></div>
@@ -60,19 +63,14 @@
                     <div class="bg-white text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-50 transition">Sinkron DB</div>
                 </button>
 
-                <button onclick="downloadXLS()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-emerald-700">
+                <button onclick="downloadXLS()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden">
                     <div class="bg-emerald-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i></div>
                     <div class="bg-emerald-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-emerald-500 transition">Excel</div>
                 </button>
 
-                <button onclick="toggleSidebarFilter()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-slate-300">
-                    <div class="bg-slate-100 text-slate-800 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="filter" class="w-4 h-4"></i></div>
-                    <div class="bg-white text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-50 transition">Filter</div>
-                </button>
-
-                <button onclick="salinData()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-slate-300">
-                    <div class="bg-slate-100 text-blue-600 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="copy" class="w-4 h-4"></i></div>
-                    <div class="bg-white text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-50 transition">Salin</div>
+                <button onclick="salinData()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden">
+                    <div class="bg-slate-800 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="copy" class="w-4 h-4"></i></div>
+                    <div class="bg-slate-700 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-600 transition">Salin</div>
                 </button>
             </div>
         </div>
@@ -82,7 +80,7 @@
         </div>
 
         <div class="bg-white border border-slate-200 relative mb-4 flex flex-col shadow-sm rounded-t-md">
-            <div class="table-container overflow-x-auto w-full min-h-[50vh] flex-1 hide-scrollbar">
+            <div class="table-container overflow-x-auto w-full min-h-[50vh] flex-1 hide-scrollbar" id="wrapper-table-ks">
                 <table class="w-full text-sm whitespace-nowrap" id="main-table">
                     <thead class="sticky top-0 z-10 shadow-sm" id="thead-ks"></thead>
                     <tbody id="tbody-ks" class="text-center text-slate-700"></tbody>
@@ -92,8 +90,8 @@
             <div class="p-3.5 border-t border-slate-200 bg-[#f8fafc] flex flex-col md:flex-row justify-between items-center gap-4 w-full z-20">
                 <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
                     <span class="bg-slate-200 border border-slate-300 px-3 py-1.5 rounded text-slate-600 text-xs font-bold shadow-sm">Total Baris: <span id="lbl-total-baris" class="text-black font-black">0</span></span>
-                    <span class="bg-blue-100 border border-blue-200 px-3 py-1.5 rounded text-blue-800 text-xs font-bold shadow-sm">Tampil: <span id="lbl-tampil-baris" class="text-blue-900 font-black">0</span></span>
-                    <span class="bg-amber-100 border border-amber-200 px-3 py-1.5 rounded text-amber-800 text-xs font-bold shadow-sm">Total Item (QTY): <span id="lbl-total-qty" class="text-amber-900 font-black">0</span></span>
+                    <span class="bg-blue-100 border border-blue-200 px-3 py-1.5 rounded text-blue-800 text-xs font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-black">0</span></span>
+                    <span class="bg-amber-100 border border-amber-200 px-3 py-1.5 rounded text-amber-800 text-xs font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-amber-900 font-black">0</span></span>
                     <span class="bg-emerald-100 border border-emerald-300 px-3 py-1.5 rounded text-emerald-800 text-xs font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-black">0</span></span>
                 </div>
                 <div class="flex items-center gap-3 bg-white border border-slate-200 p-1.5 rounded shadow-sm">
@@ -105,55 +103,22 @@
         </div>
     </div>
 
-    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-300 transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
-        <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-100">
-            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Tabel</h3>
-            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-300 p-1.5 transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+    <div id="excel-filter-menu" class="hidden absolute bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm">
+        <div class="p-3 border-b border-slate-200 bg-slate-100 flex justify-between items-center rounded-t-lg">
+            <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
+            <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-rose-500 bg-white p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
         </div>
-        <div class="p-5 flex flex-col gap-4 overflow-y-auto bg-slate-50 flex-1">
-            <div class="grid grid-cols-2 gap-4">
-                <div id="f-area-container">
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label>
-                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-area" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition"></div>
-                </div>
-                <div id="f-qr-container">
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label>
-                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-qr" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition"></div>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label>
-                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-jenis" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition"></div>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
-                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-nama" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition"></div>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
-                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-pjg" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition"></div>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
-                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-grade" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition"></div>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label>
-                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-dus" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition"></div>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label>
-                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-shading" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition"></div>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PO Aktual</label>
-                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-po" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition"></div>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label>
-                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-ket" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition"></div>
-                </div>
+        <div class="p-2 border-b border-slate-200 bg-white">
+            <div class="relative">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2"></i>
+                <input type="text" id="filter-search-input" oninput="searchFilterList(this.value)" class="w-full pl-8 p-1.5 text-xs font-bold border border-slate-300 bg-slate-50 rounded focus:border-blue-500 focus:bg-white outline-none transition" placeholder="Cari Spesifik...">
             </div>
-            <button onclick="resetFilter()" class="mt-4 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black text-xs uppercase transition shadow-sm rounded border-b-4 border-black active:scale-95">RESET FILTER</button>
+        </div>
+        <div class="p-2 max-h-48 overflow-y-auto flex flex-col gap-1 text-xs bg-white" id="filter-values-list">
+            </div>
+        <div class="p-2 border-t border-slate-200 bg-slate-50 flex justify-between gap-2 rounded-b-lg">
+            <button onclick="clearFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100 transition shadow-sm">Reset</button>
+            <button onclick="applyFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-700 transition shadow-sm">Terapkan</button>
         </div>
     </div>
 
@@ -161,36 +126,36 @@
         <div class="bg-white shadow-2xl w-full max-w-sm border border-slate-300 rounded overflow-hidden">
             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-100">
                 <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="tags" class="w-4 h-4 text-orange-600"></i> DETAIL PO AKTUAL</h3>
-                <button onclick="document.getElementById('modal-lihat-po').classList.add('hidden')" class="text-slate-400 hover:text-red-500 transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+                <button onclick="document.getElementById('modal-lihat-po').classList.add('hidden')" class="text-slate-400 hover:text-red-500 transition bg-white p-1 rounded shadow-sm"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <div class="p-5 max-h-[60vh] overflow-y-auto bg-slate-50">
                 <ul id="list-po-aktual" class="space-y-2 text-sm font-bold text-slate-700"></ul>
             </div>
             <div class="p-3 bg-white border-t border-slate-200">
-                <button onclick="document.getElementById('modal-lihat-po').classList.add('hidden')" class="w-full py-2 bg-slate-800 text-white font-black text-xs uppercase hover:bg-slate-900 transition rounded active:scale-95">TUTUP</button>
+                <button onclick="document.getElementById('modal-lihat-po').classList.add('hidden')" class="w-full py-2.5 bg-slate-800 text-white font-black text-xs uppercase hover:bg-slate-900 transition rounded active:scale-95 shadow-sm">TUTUP PENGINTIP</button>
             </div>
         </div>
     </div>
 
     <div id="modal-breakdown" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] px-4 backdrop-blur-sm">
-        <div class="bg-white shadow-2xl w-full max-w-4xl border border-slate-300 flex flex-col max-h-[85vh] rounded">
-            <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-100">
+        <div class="bg-white shadow-2xl w-full max-w-4xl border border-slate-300 flex flex-col max-h-[85vh] rounded overflow-hidden">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-100">
                 <h3 class="font-black text-slate-800 flex flex-col gap-1 uppercase tracking-wide">
                     <span class="flex items-center gap-2"><i data-lucide="package-open" class="w-5 h-5 text-blue-600"></i> DETAIL AREA ITEM</span>
                     <span id="bd-title-item" class="text-xs text-blue-700 font-bold ml-7">NAMA ITEM - 4M - BAGUS</span>
                 </h3>
-                <button onclick="tutupModalBreakdown()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-300 p-2 transition rounded"><i data-lucide="x" class="w-4 h-4"></i></button>
+                <button onclick="tutupModalBreakdown()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-300 p-1.5 transition rounded"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-            <div class="p-3 bg-white border-b border-slate-200 flex gap-2">
-                <button onclick="salinDataBreakdown()" class="px-4 py-2.5 bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition uppercase rounded"><i data-lucide="copy" class="w-4 h-4"></i> SALIN DETAIL</button>
-                <button onclick="siapkanGantiPO('breakdown')" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition uppercase rounded"><i data-lucide="tags" class="w-4 h-4"></i> GANTI PO AKTUAL</button>
-                <button onclick="siapkanEditKet('breakdown')" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition uppercase rounded"><i data-lucide="edit-2" class="w-4 h-4"></i> EDIT KETERANGAN</button>
+            <div class="p-3 bg-white border-b border-slate-200 flex gap-2 overflow-x-auto hide-scrollbar">
+                <button onclick="salinDataBreakdown()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-[11px] flex items-center gap-2 shadow-sm transition uppercase rounded shrink-0"><i data-lucide="copy" class="w-3.5 h-3.5"></i> SALIN DETAIL</button>
+                <button onclick="siapkanGantiPO('breakdown')" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-[11px] flex items-center gap-2 shadow-sm transition uppercase rounded shrink-0"><i data-lucide="tags" class="w-3.5 h-3.5"></i> GANTI PO AKTUAL</button>
+                <button onclick="siapkanEditKet('breakdown')" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white font-bold text-[11px] flex items-center gap-2 shadow-sm transition uppercase rounded shrink-0"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i> EDIT KETERANGAN</button>
             </div>
             <div class="overflow-y-auto flex-1 hide-scrollbar bg-slate-50 p-4">
-                <table class="w-full border-collapse text-sm whitespace-nowrap bg-white border border-slate-200" id="table-breakdown">
+                <table class="w-full border-collapse text-sm whitespace-nowrap bg-white border border-slate-200 shadow-sm" id="table-breakdown">
                     <thead>
                         <tr>
-                            <th class="hdr-std w-10"><input type="checkbox" onchange="toggleCentangBreakdown(this.checked)" class="cursor-pointer"></th>
+                            <th class="hdr-std w-10"><input type="checkbox" onchange="toggleCentangBreakdown(this.checked)" class="cursor-pointer rounded border-slate-300 text-blue-600"></th>
                             <th class="hdr-std">Area Penyimpanan</th>
                             <th class="hdr-std border-r border-slate-500">PO Aktual (Saat ini)</th>
                             <th class="hdr-std border-r border-slate-500 text-left">Keterangan</th>
@@ -205,38 +170,38 @@
 
     <div id="modal-ket" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
         <div class="bg-white p-6 shadow-2xl w-full max-w-sm border border-slate-300 rounded">
-            <h3 class="text-lg font-black mb-6 flex items-center gap-2 text-slate-800"><i data-lucide="edit-2" class="text-amber-500"></i> Edit Keterangan Item</h3>
+            <h3 class="text-lg font-black mb-6 flex items-center gap-2 text-slate-800"><i data-lucide="edit-2" class="text-slate-600"></i> Edit Keterangan Item</h3>
             <div class="space-y-4 mb-6">
                 <div>
                     <label class="block text-xs font-black uppercase tracking-wide mb-2 text-slate-600">Keterangan Baru</label>
-                    <textarea id="input-new-ket" rows="3" class="w-full p-3 border border-slate-300 outline-none focus:border-amber-500 font-bold text-slate-800 bg-slate-50 resize-none rounded" placeholder="Ketik keterangan di sini..."></textarea>
+                    <textarea id="input-new-ket" rows="3" class="w-full p-3 border border-slate-300 outline-none focus:border-slate-500 font-bold text-slate-800 bg-slate-50 resize-none rounded shadow-inner" placeholder="Ketik keterangan di sini..."></textarea>
                 </div>
             </div>
             <div class="flex gap-2">
                 <button type="button" onclick="tutupModalKet()" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-black hover:bg-slate-300 transition cursor-pointer text-xs uppercase rounded">BATAL</button>
-                <button type="button" onclick="eksekusiEditKet()" id="btn-simpan-ket" class="w-1/2 py-3 bg-amber-500 hover:bg-amber-600 text-white font-black shadow-md transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase rounded"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
+                <button type="button" onclick="eksekusiEditKet()" id="btn-simpan-ket" class="w-1/2 py-3 bg-slate-600 hover:bg-slate-700 text-white font-black shadow-md transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase rounded"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
             </div>
         </div>
     </div>
 
     <div id="modal-po" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
         <div class="bg-white p-6 shadow-2xl w-full max-w-sm border border-slate-300 rounded">
-            <h3 class="text-lg font-black mb-6 flex items-center gap-2 text-slate-800"><i data-lucide="tags" class="text-blue-600"></i> Ganti PO Aktual</h3>
+            <h3 class="text-lg font-black mb-6 flex items-center gap-2 text-slate-800"><i data-lucide="tags" class="text-orange-600"></i> Ganti PO Aktual</h3>
             <div class="space-y-4 mb-6">
                 <div>
                     <label class="block text-xs font-black uppercase tracking-wide mb-2 text-slate-600">Pilih PO Aktual</label>
-                    <select id="input-new-po" class="w-full p-3 border border-slate-300 outline-none focus:border-blue-600 font-bold text-slate-800 uppercase bg-slate-50 cursor-pointer rounded">
+                    <select id="input-new-po" class="w-full p-3 border border-slate-300 outline-none focus:border-orange-600 font-bold text-slate-800 uppercase bg-slate-50 cursor-pointer rounded shadow-inner">
                         <option value="">-- MEMUAT PO... --</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-xs font-black uppercase tracking-wide mb-2 text-slate-600">Jumlah Dus</label>
-                    <input type="number" id="input-qty-ganti" class="w-full p-3 border border-slate-300 outline-none focus:border-blue-600 font-bold text-slate-800 bg-slate-50 rounded" placeholder="Contoh: 5" min="1">
+                    <input type="number" id="input-qty-ganti" class="w-full p-3 border border-slate-300 outline-none focus:border-orange-600 font-bold text-slate-800 bg-slate-50 rounded shadow-inner" placeholder="Contoh: 5" min="1">
                 </div>
             </div>
             <div class="flex gap-2">
                 <button type="button" onclick="tutupModalPO()" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-black hover:bg-slate-300 transition cursor-pointer text-xs uppercase rounded">BATAL</button>
-                <button type="button" onclick="eksekusiGantiPO()" id="btn-simpan-po" class="w-1/2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black shadow-md transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase rounded"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
+                <button type="button" onclick="eksekusiGantiPO()" id="btn-simpan-po" class="w-1/2 py-3 bg-orange-600 hover:bg-orange-700 text-white font-black shadow-md transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase rounded"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
             </div>
         </div>
     </div>
