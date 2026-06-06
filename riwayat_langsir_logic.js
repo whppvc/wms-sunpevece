@@ -193,7 +193,7 @@ function renderTabelRiwayat() {
             if(dataset.length === 0) { tbody.innerHTML = `<tr><td colspan="18" class="p-6 text-slate-400 font-bold">Belum ada data ${isHold ? 'Hold' : 'Riwayat'}.</td></tr>`; return; }
             
             let h = '';
-            dataset.forEach((r, i) => {
+            dataset.forEach((r) => {
                 const trans = translateBarcode(r.qrcode);
                 const dt = new Date(r.created_at);
                 const dd = String(dt.getDate()).padStart(2, '0');
@@ -204,25 +204,24 @@ function renderTabelRiwayat() {
                 const tgl = `${dd}/${mm}/${yy}, ${hh}:${min}`;
 
                 h += `
-                    <tr class="border-b border-slate-200 hover:bg-slate-100 transition r-row text-xs">
-                        <td class="p-3 col-cb"><input type="checkbox" value="${r.qrcode}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-                        <td class="p-3 font-bold text-slate-400 col-no">${i+1}</td>
-                        <td class="p-3 text-slate-600 border-r border-slate-200 font-semibold col-waktu">${tgl}</td>
-                        ${isHold ? `<td class="p-3 font-bold text-slate-700 col-troli">${r.troli || '-'}</td>` : `<td class="p-3 hidden col-troli">-</td>`}
-                        <td class="p-3 font-black text-emerald-600 border-r border-slate-200 col-area">${r.area || '-'}</td>
+                    <tr class="row-ks hover:bg-slate-100 transition r-row text-xs bg-white border-b border-slate-200">
+                        <td class="p-3 col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
+                        <td class="p-3 text-slate-600 font-semibold text-center col-waktu border-r border-slate-200">${tgl}</td>
+                        ${isHold ? `<td class="p-3 font-bold text-slate-700 text-center col-troli border-r border-slate-200">${r.troli || '-'}</td>` : `<td class="p-3 hidden col-troli">-</td>`}
+                        <td class="p-3 font-bold text-emerald-700 bg-emerald-50/50 text-center col-area border-r border-slate-200">${r.area || '-'}</td>
                         <td class="p-3 font-mono font-bold text-slate-900 text-left bg-slate-50 tracking-wider border-r border-slate-200 col-qr">${r.qrcode}</td>
-                        <td class="p-3 font-bold text-slate-600 col-tgl">${trans.tglProduksi}</td>
-                        <td class="p-3 font-bold text-slate-600 col-mesin">${trans.mesin}</td>
-                        <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shift">${trans.shift}</td>
-                        <td class="p-3 font-black text-blue-700 col-jenis">${trans.jenis}</td>
-                        <td class="p-3 font-bold text-slate-800 text-center col-nama">${trans.nama}</td>
-                        <td class="p-3 font-bold text-slate-600 col-pjg">${trans.pjg}</td>
-                        <td class="p-3 font-bold text-slate-800 col-grade">${trans.grade}</td>
-                        <td class="p-3 font-bold text-slate-800 border-r border-slate-200 col-dus">${trans.dus}</td>
-                        <td class="p-3 font-bold text-slate-600 col-shading">${trans.shading}</td>
-                        <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-r border-slate-200 col-po">${trans.po}</td>
-                        ${isHold ? `<td class="p-3 font-bold text-slate-700 text-left col-ket">${r.keterangan || '-'}</td>` : `<td class="p-3 hidden col-ket">-</td>`}
-                        <td class="p-3 font-bold text-[10px] uppercase text-slate-400 col-pic">${r.pic_input || '-'}</td>
+                        <td class="p-3 font-semibold text-slate-500 text-center col-tgl border-r border-slate-200">${trans.tglProduksi}</td>
+                        <td class="p-3 font-semibold text-slate-500 text-center col-mesin border-r border-slate-200">${trans.mesin}</td>
+                        <td class="p-3 font-semibold text-slate-500 text-center border-r border-slate-200 col-shift">${trans.shift}</td>
+                        <td class="p-3 font-bold text-blue-600 text-center col-jenis border-r border-slate-200">${trans.jenis}</td>
+                        <td class="p-3 font-bold text-black text-center col-nama border-r border-slate-200">${trans.nama}</td>
+                        <td class="p-3 font-bold text-black text-center col-pjg border-r border-slate-200">${trans.pjg}</td>
+                        <td class="p-3 font-bold text-black text-center col-grade border-r border-slate-200">${trans.grade}</td>
+                        <td class="p-3 font-bold text-black text-center border-r border-slate-200 col-dus">${trans.dus}</td>
+                        <td class="p-3 font-bold text-black text-center border-r border-slate-200 col-shading">${trans.shading}</td>
+                        <td class="p-3 font-black text-cyan-600 bg-cyan-50/40 border-r border-slate-200 text-center col-po">${trans.po}</td>
+                        ${isHold ? `<td class="p-3 font-semibold text-slate-500 text-left col-ket border-r border-slate-200">${r.keterangan || '-'}</td>` : `<td class="p-3 hidden col-ket">-</td>`}
+                        <td class="p-3 font-bold uppercase text-[10px] text-slate-400 text-center col-pic">${r.pic_input || '-'}</td>
                     </tr>`;
             });
             tbody.innerHTML = h;
