@@ -66,6 +66,19 @@ async function ambilSemuaData() {
         ]);
         if(resRiwayat.data) logLangsirRaw = resRiwayat.data;
         if(resHold.data) holdLangsirRaw = resHold.data;
+
+        // BIKIN INDEXING MEMORI (Agar translate barcode secepat kilat)
+        window.itemMap = {}; window.dusMap = {}; window.mesinMap = {}; window.shiftMap = {}; window.poMap = {};
+        if(kamusData) {
+            kamusData.forEach(m => {
+                if(m.kode_nama_item) window.itemMap[m.kode_nama_item] = m.nama_item;
+                if(m.kode_dus) window.dusMap[m.kode_dus] = m.dus;
+                if(m.kode_mesin) window.mesinMap[m.kode_mesin] = m.mesin;
+                if(m.kode_shift) window.searchShift = m.shift; // sesuaikan jika ada map khusus
+                if(m.kode_po) window.poMap[m.kode_po] = m.po;
+            });
+        }
+
         renderTabelRiwayat();
     } catch(e) { document.getElementById('tbody-riwayat').innerHTML = `<tr><td colspan="19" class="p-10 text-red-500 font-bold">Error: ${e.message}</td></tr>`; }
 }
@@ -77,15 +90,18 @@ function translateBarcode(barcode) {
     const h = barcode.charAt(0).toUpperCase();
     if (h === 'P') data.jenis = 'Plafon'; else if (h === 'L') data.jenis = 'List'; else if (h === 'W') data.jenis = 'WPC'; else data.jenis = h;
 
-    let rawItem = parts[0]; let cariItem = kamusData.find(m => m.kode_nama_item === rawItem);
-    data.nama = cariItem && cariItem.nama_item ? cariItem.nama_item : rawItem; data.shading = parts[1] || '-';
+    let rawItem = parts[0]; 
+    // Pakai Map Indexing (Instant)
+    data.nama = window.itemMap && window.itemMap[rawItem] ? window.itemMap[rawItem] : rawItem; 
+    data.shading = parts[1] || '-';
 
     const p2 = parts[2];
     if(p2 && p2.length >= 4) {
         let digitPjg = (p2.length === 5) ? 2 : 1; let rawPjg = p2.substring(0, digitPjg);
         data.pjg = (digitPjg === 1) ? rawPjg + "M" : rawPjg[0] + "." + rawPjg[1] + "M";
         let rawGrade = p2.substring(digitPjg, digitPjg + 1); data.grade = rawGrade === '1' ? 'BAGUS' : (rawGrade === '2' ? 'A' : rawGrade);
-        let rawDus = p2.substring(p2.length - 2); let cariDus = kamusData.find(m => m.kode_dus === rawDus); data.dus = cariDus ? cariDus.dus : rawDus;
+        let rawDus = p2.substring(p2.length - 2); 
+        data.dus = window.dusMap && window.dusMap[rawDus] ? window.dusMap[rawDus] : rawDus;
     }
 
     const p3 = parts[3];
@@ -96,9 +112,9 @@ function translateBarcode(barcode) {
         
         let sisaString = p3.substring(5); let match = sisaString.match(/(C.*?)(S.*?)(P.*)/);
         if(match) {
-            let cMesin = kamusData.find(m => m.kode_mesin === match[1]); data.mesin = cMesin ? cMesin.mesin : match[1];
-            let cShift = kamusData.find(m => m.kode_shift === match[2]); data.shift = cShift ? cShift.shift : match[2];
-            let cPO = kamusData.find(m => m.kode_po === match[3]); data.po = cPO ? cPO.po : match[3];
+            data.mesin = window.mesinMap && window.mesinMap[match[1]] ? window.mesinMap[match[1]] : match[1];
+            data.shift = match[2]; // atau sesuaikan jika ada mapping khusus shift
+            data.po = window.poMap && window.poMap[match[3]] ? window.poMap[match[3]] : match[3];
         }
     }
     return data;
