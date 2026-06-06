@@ -5,7 +5,6 @@ let selectedForAction = []; let sourcePOContext = ''; let currentBreakdownData =
 let sortState = {};
 let masterData = { kamus: [] };
 
-// Variabel Paginasi Kencang (8 Baris)
 let currentPage = 1;
 const rowsPerPage = 8;
 
@@ -20,7 +19,6 @@ const currentUser = safeJSONParse(localStorage.getItem('user_session'), { userna
 // ========================================================
 // 1. STYLING MANAGEMENT 
 // ========================================================
-// REVISI: Nilai Default disetel ke Warna Flat Navy agar cantik sejak awal dibuka
 const defaultSettings = { 
     thBg: '#2c3e50', thColor: '#ffffff', thSize: 11, thAlign: 'center', 
     tdColor: '#334155', tdSize: 12, tdAlign: 'center',
@@ -41,7 +39,6 @@ function applyCSS(s) {
     if (!styleEl) return;
     const justify = s.thAlign === 'left' ? 'flex-start' : (s.thAlign === 'right' ? 'flex-end' : 'center');
     
-    // REVISI: Modifikasi CSS Injeksi untuk membersihkan border kaku bawaan
     let customCSS = `:root { --th-bg: ${s.thBg}; --th-color: ${s.thColor}; --th-size: ${s.thSize}px; } \n`;
     customCSS += `#main-table th.hdr-std > div { justify-content: ${justify} !important; text-align: ${s.thAlign} !important; } \n`;
     if (s.tdColor !== defaultSettings.tdColor) customCSS += `#main-table td { color: ${s.tdColor} !important; } \n`;
@@ -127,7 +124,7 @@ function translateBarcode(barcode) {
 
 async function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
     const btn = document.getElementById('btn-sync-db');
-    if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>'; btn.disabled = true; }
+    if(btn) { btn.innerHTML = '<div class="bg-teal-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-teal-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wider">Sinkron DB</div>'; btn.disabled = true; }
 
     try {
         const { data: fisikQr, error: errQr } = await db.from('stok_qr').select('*');
@@ -167,7 +164,7 @@ async function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
     } catch(e) {
         alert("⚠️ GAGAL SINKRONISASI STOK AKTUAL KE SUPABASE!\nPastikan RLS pada tabel 'stok_aktual' sudah dimatikan.");
     } finally {
-        if(btn) { btn.innerHTML = '<i data-lucide="database-backup" class="w-4 h-4"></i>'; btn.disabled = false; lucide.createIcons(); }
+        if(btn) { btn.innerHTML = '<div class="bg-teal-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="database-backup" class="w-4 h-4"></i></div><div class="bg-teal-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wider">Sinkron DB</div>'; btn.disabled = false; lucide.createIcons(); }
     }
 }
 
@@ -283,11 +280,11 @@ async function muatDataStok() {
     } catch(e) { tbody.innerHTML = `<tr><td colspan="17" class="p-10 text-red-500 font-bold">Gagal mengolah data: ${e.message}</td></tr>`; }
 }
 
-// REVISI 3: Kelas Aktif dan Inaktif TABS dirubah menjadi "Solid Block"
+// REVISI TABS: Styling Blocky Metro Design saat diganti mode
 function setModeKS(m) {
     modeKS = m;
-    const activeClass = 'px-5 py-3 rounded-t-md font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-[#2c3e50] text-white shadow-sm';
-    const inactiveClass = 'px-5 py-3 rounded-t-md font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-200 text-slate-500 hover:bg-slate-300';
+    const activeClass = 'px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-[#2c3e50] text-white';
+    const inactiveClass = 'px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-800';
     
     ['qr', 'area', 'global', 'lembaran'].forEach(tab => {
         const el = document.getElementById('tab-' + tab);
@@ -320,7 +317,6 @@ function sortTable(colIndex, headerEl) {
     applyPagination();
 }
 
-// REVISI: Class css border tebal dibuang dari helper TH ini
 const thSort = (idx, label, cls = "") => `<th class="hdr-std ${cls} cursor-pointer hover:bg-black/10 transition select-none" onclick="sortTable(${idx}, this)"><div class="flex items-center gap-1.5">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></div></th>`;
 
 function renderTabel() {
@@ -557,13 +553,13 @@ function bukaBreakdown(gKey) {
     tbody.innerHTML = item.areas.map((a, i) => {
         const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
         return `
-            <tr class="border-b border-slate-200 hover:bg-slate-50 transition bd-row">
-                <td class="p-3"><input type="checkbox" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po}" data-ket="${a.ket}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-                <td class="p-3 font-bold opacity-50">${i+1}</td>
-                <td class="p-3 font-black text-emerald-700 bg-emerald-50">${a.area}</td>
-                <td class="p-3 font-black text-orange-600 bg-orange-50/50 col-po">${a.po}</td>
-                <td class="p-3 font-semibold text-slate-500 text-left opacity-80">${a.ket}</td>
-                <td class="p-3 font-black text-slate-900 bg-slate-100">${a.qty}</td>
+            <tr class="hover:bg-slate-50 transition bd-row">
+                <td class="p-3 border-b border-slate-200 border-r"><input type="checkbox" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po}" data-ket="${a.ket}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+                <td class="p-3 border-b border-slate-200 font-bold opacity-50 border-r">${i+1}</td>
+                <td class="p-3 border-b border-slate-200 font-black text-emerald-700 bg-emerald-50 border-r">${a.area}</td>
+                <td class="p-3 border-b border-slate-200 font-black text-orange-600 bg-orange-50/50 border-r col-po">${a.po}</td>
+                <td class="p-3 border-b border-slate-200 font-semibold text-slate-500 text-left opacity-80 border-r">${a.ket}</td>
+                <td class="p-3 border-b border-slate-200 font-black text-slate-900 bg-slate-100 border-r">${a.qty}</td>
             </tr>`;
     }).join('');
 
