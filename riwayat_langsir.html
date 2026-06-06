@@ -173,6 +173,12 @@
 
     <div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
+    function highlightRow(checkbox) {
+            const tr = checkbox.closest('tr');
+            if (checkbox.checked) { tr.classList.add('selected-row'); tr.classList.remove('hover:bg-slate-100'); } 
+            else { tr.classList.remove('selected-row'); tr.classList.add('hover:bg-slate-100'); }
+        }
+
     <script src="global.js"></script>
     <script src="riwayat_langsir_logic.js"></script>
 </body>
