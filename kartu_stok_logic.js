@@ -8,8 +8,8 @@ let masterData = { kamus: [] };
 // Variabel Paginasi Kencang & Filter Excel Pro
 let currentPage = 1;
 const rowsPerPage = 8;
-let activeFilters = {}; // Menyimpan filter aktif per kolom e.g. { 'col-area': ['B1', 'C2'] }
-let currentFilterCol = ''; // Kolom yg sedang dibuka filternya
+let activeFilters = {}; 
+let currentFilterCol = ''; 
 
 function safeJSONParse(data, fallback = null) {
     if (!data || data === 'undefined' || data === 'null') return fallback;
@@ -22,7 +22,6 @@ const currentUser = safeJSONParse(localStorage.getItem('user_session'), { userna
 document.addEventListener('DOMContentLoaded', async () => {
     initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
     
-    // Listener khusus untuk close Filter Menu jika klik di luar kotak
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
@@ -78,7 +77,7 @@ function translateBarcode(barcode) {
 
 async function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
     const btn = document.getElementById('btn-sync-db');
-    if(btn) { btn.innerHTML = '<div class="bg-slate-100 text-teal-600 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-white text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-50 transition">Sinkron DB</div>'; btn.disabled = true; }
+    if(btn) { btn.innerHTML = '<div class="bg-slate-100 text-teal-600 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-white text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide">Sinkron DB</div>'; btn.disabled = true; }
 
     try {
         const { data: fisikQr, error: errQr } = await db.from('stok_qr').select('*');
@@ -124,7 +123,7 @@ async function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
 
 async function muatDataStok() {
     const tbody = document.getElementById('tbody-ks');
-    tbody.innerHTML = `<tr><td colspan="17" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menghubungkan ke Gudang Supabase...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menghubungkan ke Gudang Supabase...</p></td></tr>`;
     lucide.createIcons();
 
     try {
@@ -234,19 +233,20 @@ async function muatDataStok() {
     } catch(e) { tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-red-500 font-bold">Gagal mengolah data: ${e.message}</td></tr>`; }
 }
 
+// REVISI 4: Tab Order & Style
 function setModeKS(m) {
     modeKS = m;
-    const activeClass = 'px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-[#1e293b] text-white';
+    const activeClass = 'px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-800 text-white';
     const inactiveClass = 'px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-800';
     
-    ['qr', 'area', 'global', 'lembaran'].forEach(tab => {
+    ['qr', 'global', 'area', 'lembaran'].forEach(tab => {
         const el = document.getElementById('tab-' + tab);
         if(el) el.className = (m === tab) ? activeClass : inactiveClass;
     });
     
     document.getElementById('btn-ganti-po-main').classList.toggle('hidden', m === 'global' || m === 'lembaran');
     
-    activeFilters = {}; // Reset Filter ketika pindah tab
+    activeFilters = {}; 
     renderTabel();
 }
 
@@ -270,7 +270,7 @@ function sortTable(colIndex, headerEl) {
     applyPagination();
 }
 
-// HEADER FILTER (EXCEL-LIKE)
+// REVISI 1: HEADER FILTER (EXCEL-LIKE)
 const thSort = (idx, label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-open'].includes(colClass);
@@ -298,11 +298,10 @@ function openColumnFilter(event, colClass, colName) {
 
     let uniqueValues = new Set();
     
-    // Logika Pintar: Ambil nilai yang tersedia HANYA dari row yang lolos filter kolom LAINNYA
     document.querySelectorAll('#tbody-ks tr.row-ks').forEach(row => {
         let showBasedOnOthers = true;
         for (let otherCol in activeFilters) {
-            if (otherCol !== colClass) { // Jangan periksa kolom yang sedang dibuka
+            if (otherCol !== colClass) { 
                 const allowed = activeFilters[otherCol];
                 const c = row.querySelector('.' + otherCol);
                 let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
@@ -366,7 +365,7 @@ function updateSelectAllState() {
 document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) updateSelectAllState(); });
 
 function searchFilterList(val) {
-    const query = val.toLowerCase().split(' ').filter(x => x); // Pemecahan spasi ganda
+    const query = val.toLowerCase().split(' ').filter(x => x); 
     document.querySelectorAll('.filter-val-item').forEach(label => {
         const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
         let matches = query.every(term => text.includes(term));
@@ -406,7 +405,7 @@ function saringTabelExcel() {
                 if (!allowedValues.includes(text)) { show = false; break; }
             }
         }
-        // BUG FIX PAGINASI: Beri class 'filtered-out' saja, jangan set display none disini.
+        // BUG FIX PAGINASI: Beri class 'filtered-out' saja, jangan display none disini. applyPagination yg ngatur.
         if (show) { 
             row.classList.remove('filtered-out'); 
         } else { 
@@ -416,7 +415,7 @@ function saringTabelExcel() {
         }
     });
     currentPage = 1; 
-    applyPagination(); // Biarkan applyPagination yang mengatur display: none-nya!
+    applyPagination(); 
 }
 
 function updateFilterIcons() {
@@ -433,6 +432,7 @@ function updateFilterIcons() {
     }
 }
 
+// REVISI 7 & 9: Warna Teks Hitam & Dark Mode Friendly untuk PO dan Area
 function renderTabel() {
     const thead = document.getElementById('thead-ks');
     const tbody = document.getElementById('tbody-ks');
@@ -462,22 +462,23 @@ function renderTabel() {
 
         tbody.innerHTML = dataKSQR.map((r) => {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
-            const poBtnHTML = `<button onclick="bukaModalLihatPO('${encodeURIComponent(r.po_aktual_gabungan)}')" class="bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold px-3 py-1.5 rounded shadow-sm active:scale-95 transition flex items-center gap-1.5 mx-auto text-[10px] uppercase border border-orange-200"><i data-lucide="eye" class="w-3.5 h-3.5"></i> Lihat PO</button>`;
+            // REVISI 5: PO Aktual Diganti menjadi tombol lihat modal
+            const poBtnHTML = `<button onclick="bukaModalLihatPO('${encodeURIComponent(r.po_aktual_gabungan)}')" class="bg-cyan-100 hover:bg-cyan-200 text-cyan-700 font-bold px-3 py-1.5 rounded shadow-sm active:scale-95 transition flex items-center gap-1.5 mx-auto text-[10px] uppercase border border-cyan-200"><i data-lucide="eye" class="w-3.5 h-3.5"></i> Lihat PO</button>`;
 
             return `
                 <tr class="hover:bg-slate-100 transition row-ks bg-white border-b border-slate-200">
                     <td class="p-3 col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual_spesifik}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
-                    <td class="p-3 font-black text-emerald-700 bg-emerald-50/50 col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
+                    <td class="p-3 font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-transparent col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
                     <td class="p-3 font-mono font-bold tracking-wide text-slate-900 col-qr text-left border-r border-slate-200" data-search="${r.qrcode}">${r.qrcode}</td>
                     <td class="p-3 font-semibold text-slate-500 col-tgl border-r border-slate-200" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
                     <td class="p-3 font-semibold text-slate-500 col-mesin border-r border-slate-200" data-search="${r.mesin}">${r.mesin}</td>
                     <td class="p-3 font-semibold text-slate-500 col-shift border-r border-slate-200" data-search="${r.shift}">${r.shift}</td>
                     <td class="p-3 font-bold text-blue-600 col-jenis border-r border-slate-200" data-search="${r.jenis}">${r.jenis}</td>
-                    <td class="p-3 font-bold text-slate-800 text-left col-nama border-r border-slate-200" data-search="${r.nama}">${r.nama}</td>
-                    <td class="p-3 font-bold text-slate-600 col-pjg border-r border-slate-200" data-search="${r.pjg}">${r.pjg}</td>
-                    <td class="p-3 font-bold text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
-                    <td class="p-3 font-bold text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
-                    <td class="p-3 font-bold text-slate-600 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
+                    <td class="p-3 font-black text-black dark:text-gray-100 text-left col-nama border-r border-slate-200" data-search="${r.nama}">${r.nama}</td>
+                    <td class="p-3 font-black text-black dark:text-gray-100 col-pjg border-r border-slate-200" data-search="${r.pjg}">${r.pjg}</td>
+                    <td class="p-3 font-black text-black dark:text-gray-100 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
+                    <td class="p-3 font-black text-black dark:text-gray-100 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
+                    <td class="p-3 font-black text-black dark:text-gray-100 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
                     <td class="p-3 font-semibold text-slate-400 col-po-bawaan border-r border-slate-200" data-search="${r.po_bawaan}">${r.po_bawaan}</td>
                     <td class="p-2 col-po border-r border-slate-200" data-search="${r.po_aktual_gabungan}">${poBtnHTML}</td>
                     <td class="p-3 font-semibold text-slate-500 col-ket" data-search="${r.ket}">${r.ket}</td>
@@ -508,14 +509,14 @@ function renderTabel() {
             return `
                 <tr class="hover:bg-slate-100 transition row-ks bg-white border-b border-slate-200">
                     <td class="p-3 col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
-                    <td class="p-3 font-black text-emerald-700 bg-emerald-50/50 col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
+                    <td class="p-3 font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-transparent col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
                     <td class="p-3 font-bold text-blue-600 col-jenis border-r border-slate-200" data-search="${r.jenis}">${r.jenis}</td>
-                    <td class="p-3 font-bold text-slate-800 text-left col-nama border-r border-slate-200" data-search="${r.nama}">${r.nama}</td>
-                    <td class="p-3 font-bold text-slate-600 col-pjg border-r border-slate-200" data-search="${r.pjg}">${r.pjg}</td>
-                    <td class="p-3 font-bold text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
-                    <td class="p-3 font-bold text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
-                    <td class="p-3 font-bold text-slate-600 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
-                    <td class="p-3 font-black text-orange-600 bg-orange-50/40 col-po border-r border-slate-200" data-search="${r.po}">${r.po}</td>
+                    <td class="p-3 font-black text-black dark:text-gray-100 text-left col-nama border-r border-slate-200" data-search="${r.nama}">${r.nama}</td>
+                    <td class="p-3 font-black text-black dark:text-gray-100 col-pjg border-r border-slate-200" data-search="${r.pjg}">${r.pjg}</td>
+                    <td class="p-3 font-black text-black dark:text-gray-100 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
+                    <td class="p-3 font-black text-black dark:text-gray-100 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
+                    <td class="p-3 font-black text-black dark:text-gray-100 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
+                    <td class="p-3 font-black text-cyan-600 dark:text-cyan-400 bg-cyan-50/40 dark:bg-transparent col-po border-r border-slate-200" data-search="${r.po}">${r.po}</td>
                     <td class="p-3 font-semibold text-slate-500 col-ket border-r border-slate-200" data-search="${r.ket}">${r.ket}</td>
                     <td class="p-3 font-black text-slate-900 bg-slate-50 col-qty text-base" data-search="${r.qty}">${r.qty}</td>
                 </tr>`;
@@ -545,12 +546,12 @@ function renderTabel() {
                 <td class="p-3 col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
                 <td class="p-2 col-open border-r border-slate-200"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-slate-100 text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white rounded transition flex mx-auto items-center justify-center"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="p-3 font-bold text-blue-600 border-l border-slate-200 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                <td class="p-3 font-bold text-slate-800 text-left col-nama border-r border-slate-200" data-search="${r.nama}">${r.nama}</td>
-                <td class="p-3 font-bold text-slate-600 col-pjg border-r border-slate-200" data-search="${r.pjg}">${r.pjg}</td>
-                <td class="p-3 font-bold text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
-                <td class="p-3 font-bold text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
-                <td class="p-3 font-bold text-slate-600 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
-                <td class="p-3 font-black text-orange-600 bg-orange-50/40 col-po border-r border-slate-200" data-search="${r.po}">${r.po}</td>
+                <td class="p-3 font-black text-black dark:text-gray-100 text-left col-nama border-r border-slate-200" data-search="${r.nama}">${r.nama}</td>
+                <td class="p-3 font-black text-black dark:text-gray-100 col-pjg border-r border-slate-200" data-search="${r.pjg}">${r.pjg}</td>
+                <td class="p-3 font-black text-black dark:text-gray-100 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
+                <td class="p-3 font-black text-black dark:text-gray-100 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
+                <td class="p-3 font-black text-black dark:text-gray-100 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
+                <td class="p-3 font-black text-cyan-600 dark:text-cyan-400 bg-cyan-50/40 dark:bg-transparent col-po border-r border-slate-200" data-search="${r.po}">${r.po}</td>
                 <td class="p-3 font-semibold text-slate-500 col-ket border-r border-slate-200" data-search="${r.ket}">${r.ket}</td>
                 <td class="p-3 font-black text-slate-900 bg-slate-50 col-qty text-base" data-search="${r.qty}">${r.qty}</td>
             </tr>
@@ -575,12 +576,12 @@ function renderTabel() {
         tbody.innerHTML = stokLembaranRaw.map((r) => `
             <tr class="hover:bg-slate-100 transition row-ks bg-white border-b border-slate-200">
                 <td class="p-3 col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
-                <td class="p-3 font-black text-emerald-700 bg-emerald-50/50 col-area border-r border-slate-200" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
-                <td class="p-3 font-bold text-slate-800 text-left col-nama border-r border-slate-200" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
-                <td class="p-3 font-bold text-slate-600 col-pjg border-r border-slate-200" data-search="${r.pjg || '-'}">${r.pjg || '-'}</td>
-                <td class="p-3 font-bold text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
-                <td class="p-3 font-bold text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
-                <td class="p-3 font-bold text-slate-600 col-shading border-r border-slate-200" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
+                <td class="p-3 font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-transparent col-area border-r border-slate-200" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
+                <td class="p-3 font-black text-black dark:text-gray-100 text-left col-nama border-r border-slate-200" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
+                <td class="p-3 font-black text-black dark:text-gray-100 col-pjg border-r border-slate-200" data-search="${r.pjg || '-'}">${r.pjg || '-'}</td>
+                <td class="p-3 font-black text-black dark:text-gray-100 col-grade border-r border-slate-200" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
+                <td class="p-3 font-black text-black dark:text-gray-100 col-dus border-r border-slate-200" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
+                <td class="p-3 font-black text-black dark:text-gray-100 col-shading border-r border-slate-200" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
                 <td class="p-3 font-semibold text-slate-500 col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
             </tr>
         `).join('');
@@ -591,6 +592,9 @@ function renderTabel() {
     saringTabelExcel(); 
 }
 
+// ========================================================
+// HIGHLIGHT BARIS TERPILIH (Revisi 4)
+// ========================================================
 function highlightRow(checkbox) {
     const tr = checkbox.closest('tr');
     if (checkbox.checked) { tr.classList.add('selected-row'); tr.classList.remove('hover:bg-slate-100'); } 
@@ -607,6 +611,9 @@ function toggleCentangUtama(checked) {
     });
 }
 
+// ========================================================
+// FUNGSI PAGINASI KENCANG
+// ========================================================
 function applyPagination() {
     const allRows = Array.from(document.querySelectorAll('#tbody-ks tr.row-ks'));
     
@@ -635,7 +642,6 @@ function applyPagination() {
         if(qtyCell) { sumQty += parseInt(qtyCell.getAttribute('data-search') || qtyCell.innerText) || 0; } 
         else { sumQty += 1; }
 
-        // Atur display khusus baris yang lolos filter
         if(index >= startIndex && index < endIndex) { row.style.display = ''; } 
         else { row.style.display = 'none'; }
     });
@@ -679,11 +685,12 @@ function bukaBreakdown(gKey) {
         const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
         return `
             <tr class="hover:bg-slate-50 transition bd-row text-xs border-b border-slate-200">
-                <td class="p-3 border-r border-slate-200"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po}" data-ket="${a.ket}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-                <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200">${a.area}</td>
-                <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-r border-slate-200 col-po">${a.po}</td>
-                <td class="p-3 font-semibold text-slate-500 text-left opacity-80 border-r border-slate-200 whitespace-normal min-w-[200px]">${a.ket}</td>
-                <td class="p-3 font-black text-slate-900 bg-slate-100 border-r border-slate-200">${a.qty}</td>
+                <td class="p-3 border-r border-slate-200"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po}" data-ket="${a.ket}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
+                <td class="p-3 border-b border-slate-200 font-bold opacity-50 border-r">${i+1}</td>
+                <td class="p-3 border-b border-slate-200 font-black text-emerald-700 bg-emerald-50 border-r">${a.area}</td>
+                <td class="p-3 border-b border-slate-200 font-black text-cyan-600 bg-cyan-50/50 border-r col-po">${a.po}</td>
+                <td class="p-3 border-b border-slate-200 font-semibold text-slate-500 text-left opacity-80 border-r">${a.ket}</td>
+                <td class="p-3 border-b border-slate-200 font-black text-slate-900 bg-slate-100 border-r">${a.qty}</td>
             </tr>`;
     }).join('');
 
@@ -702,6 +709,7 @@ function toggleCentangBreakdown(checked) {
     document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; highlightBdRow(cb); }); 
 }
 
+// LIHAT PO AKTUAL MODAL
 function bukaModalLihatPO(encodedPOs) {
     const poStr = decodeURIComponent(encodedPOs);
     const poArr = poStr.split(',').map(p => p.trim()).filter(p => p);
@@ -709,13 +717,17 @@ function bukaModalLihatPO(encodedPOs) {
     if (poArr.length === 0 || (poArr.length === 1 && poArr[0] === 'NON-PO / KOSONG')) {
         ul.innerHTML = '<li class="text-slate-400 italic font-medium p-3 bg-slate-100 rounded text-center border border-slate-200">Tidak ada PO Aktual tersimpan.</li>';
     } else {
-        ul.innerHTML = poArr.map(p => `<li class="p-3 bg-white border-l-4 border-l-orange-500 shadow-sm text-orange-700 rounded flex items-center gap-3"><i data-lucide="tag" class="w-4 h-4 text-orange-400"></i> ${p}</li>`).join('');
+        ul.innerHTML = poArr.map(p => `<li class="p-3 bg-white border-l-4 border-l-cyan-500 shadow-sm text-cyan-700 rounded flex items-center gap-3"><i data-lucide="tag" class="w-4 h-4 text-cyan-400"></i> ${p}</li>`).join('');
     }
     lucide.createIcons();
     document.getElementById('modal-lihat-po').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
 }
 
+
+// ========================================================
+// EDIT KETERANGAN
+// ========================================================
 function siapkanEditKet(context) {
     let checkboxes = context === 'main' ? document.querySelectorAll('.cb-main:checked') : document.querySelectorAll('.cb-bd:checked');
     if(checkboxes.length === 0) return alert('Silakan centang item / area yang ingin diedit keterangannya terlebih dahulu.');
@@ -774,6 +786,9 @@ async function eksekusiEditKet() {
     }
 }
 
+// ========================================================
+// GANTI PO
+// ========================================================
 function siapkanGantiPO(context) {
     let checkboxes = [];
     if(context === 'main') {
@@ -846,6 +861,60 @@ async function eksekusiGantiPO() {
         await muatDataStok();
     } catch (error) { alert("GAGAL UPDATE: " + error.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
+}
+
+function toggleSidebarFilter() { document.getElementById('sidebar-filter').classList.toggle('translate-x-full'); document.getElementById('overlay-klik-luar').classList.toggle('hidden'); }
+function tutupSemuaPopups() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); tutupModalPO(); tutupModalKet(); tutupModalBreakdown(); document.getElementById('modal-lihat-po').classList.add('hidden'); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
+
+// ========================================================
+// FILTER SIDEBAR KLASIK (Fallback/Manual Option)
+// ========================================================
+function resetFilterWithoutRender() {
+    const ids = ['f-area','f-qr','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket'];
+    ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; });
+}
+function resetFilter() { resetFilterWithoutRender(); activeFilters = {}; updateFilterIcons(); saringTabel(); toggleSidebarFilter(); }
+
+function saringTabel() {
+    const getVal = id => { let el = document.getElementById(id); return el ? el.value.trim().toLowerCase() : ''; };
+    const f = { 
+        'col-area': getVal('f-area'), 
+        'col-qr': getVal('f-qr'), 
+        'col-jenis': getVal('f-jenis'), 
+        'col-nama': getVal('f-nama'), 
+        'col-pjg': getVal('f-pjg'), 
+        'col-grade': getVal('f-grade'), 
+        'col-dus': getVal('f-dus'), 
+        'col-shading': getVal('f-shading'), 
+        'col-po': getVal('f-po'), 
+        'col-ket': getVal('f-ket') 
+    };
+
+    document.querySelectorAll('.row-ks').forEach(row => {
+        let show = true;
+        for(let cls in f) {
+            if(f[cls] !== '') {
+                const cell = row.querySelector('.' + cls);
+                if(cell) {
+                    let text = cell.getAttribute('data-search') ? cell.getAttribute('data-search').toLowerCase() : cell.innerText.trim().toLowerCase();
+                    let searchTerms = f[cls].split(' ').filter(x => x); // Pecah spasi ganda
+                    let matchesAll = searchTerms.every(term => text.includes(term));
+                    if(!matchesAll) { show = false; break; }
+                } else {
+                    show = false; break;
+                }
+            }
+        }
+        if (show) { 
+            row.classList.remove('filtered-out'); 
+        } else { 
+            row.classList.add('filtered-out'); 
+            let cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = false; highlightRow(cb); } 
+        }
+    });
+    currentPage = 1;
+    applyPagination();
 }
 
 function salinData() {
