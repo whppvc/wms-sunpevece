@@ -2,6 +2,9 @@ let masterData = { kamus: [], area: [] };
 let deleteStack = [], globalRowId = 0;
 let sortState = {}; 
 
+let currentPage = 1;
+const rowsPerPage = 10; // Jumlah baris per halaman
+
 document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(async () => {
         try {
@@ -83,8 +86,12 @@ function saringTabelLangsir() {
                 if(cell && !cell.innerText.toLowerCase().includes(f[key])) { show = false; break; }
             }
         }
-        row.style.display = show ? '' : 'none';
+        // JANGAN gunakan style.display = none, gunakan class 'filtered-out' untuk paginasi
+        if (show) { row.classList.remove('filtered-out'); } 
+        else { row.classList.add('filtered-out'); }
     });
+    currentPage = 1;
+    applyPagination();
 }
 
 function translateBarcode(barcode) {
@@ -182,7 +189,13 @@ function addRow(area, code, isDuplicate = false) {
 
 function deleteRow(btn) { const tr = btn.closest('tr'); deleteStack.push({ parent: tr.parentNode, html: tr.outerHTML, nextSibling: tr.nextSibling }); tr.remove(); updateRowNumbers(); }
 function undoDelete() { if(deleteStack.length === 0) return alert("Belum ada data yang dihapus."); const last = deleteStack.pop(); const temp = document.createElement('tbody'); temp.innerHTML = last.html; if (last.nextSibling) last.parent.insertBefore(temp.firstChild, last.nextSibling); else last.parent.appendChild(temp.firstChild); lucide.createIcons(); updateRowNumbers(); }
-function updateRowNumbers() { const rows = document.querySelectorAll('.row-item'); let count = rows.length; rows.forEach(tr => { tr.querySelector('.no-cell').innerText = count--; }); }
+function updateRowNumbers() { 
+    const rows = document.querySelectorAll('.row-item'); 
+    let count = 1; // Logika DIBALIK, mulai dari 1
+    rows.forEach(tr => { 
+        tr.querySelector('.no-cell').innerText = count++; // Menggunakan Increment ++
+    }); 
+}
 
 // REVISI: Fungsi Mengedit Keterangan Massal
 function editKeteranganMassal() {
@@ -457,6 +470,48 @@ function tutupModalSTBJ() {
     if(document.getElementById('sidebar-filter').classList.contains('translate-x-full')) {
         document.getElementById('overlay-klik-luar').classList.add('hidden'); 
     }
+}
+
+function toggleInputData() {
+    const body = document.getElementById('body-input-data');
+    const icon = document.getElementById('icon-toggle-input');
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        icon.setAttribute('data-lucide', 'chevron-up');
+    } else {
+        body.style.display = 'none';
+        icon.setAttribute('data-lucide', 'chevron-down');
+    }
+    lucide.createIcons();
+}
+
+function applyPagination() {
+    const allRows = Array.from(document.querySelectorAll('#tbody-langsir tr.row-item'));
+    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
+    
+    const totalFiltered = visibleRows.length; 
+    const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
+    
+    if(currentPage > totalPages) currentPage = totalPages; 
+    if(currentPage < 1) currentPage = 1;
+
+    const startIndex = (currentPage - 1) * rowsPerPage; 
+    const endIndex = startIndex + rowsPerPage;
+
+    visibleRows.forEach((row, index) => {
+        if(index >= startIndex && index < endIndex) { row.style.display = ''; } 
+        else { row.style.display = 'none'; }
+    });
+
+    if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
+    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
+    if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
+}
+
+function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } }
+function nextPage() { 
+    const totalVisible = document.querySelectorAll('#tbody-langsir tr.row-item:not(.filtered-out)').length;
+    if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
 }
 
 function saringTabelModalSTBJ() {
