@@ -67,19 +67,26 @@ async function ambilSemuaData() {
             db.from('stok_qr').select('*').order('created_at', {ascending: false}).limit(1000),
             db.from('hold_langsir').select('*').order('created_at', {ascending: false})
         ]);
-        if(resRiwayat.data) logLangsirRaw = resRiwayat.data;
-        if(resHold.data) holdLangsirRaw = resHold.data;
+        
+        logLangsirRaw = resRiwayat.data || [];
+        holdLangsirRaw = resHold.data || [];
 
-        window.itemMap = {}; window.dusMap = {}; window.mesinMap = {}; window.shiftMap = {}; window.poMap = {};
-        if(kamusData) {
-            kamusData.forEach(m => {
+        // Bikin Indexing Memori yang Aman dari Null/Kosong
+        window.itemMap = {}; window.dusMap = {}; window.mesinMap = {}; window.poMap = {};
+        if(Array.isArray(kamusData)) {
+            for(let i = 0; i < kamusData.length; i++) {
+                let m = kamusData[i];
                 if(m.kode_nama_item) window.itemMap[m.kode_nama_item] = m.nama_item;
                 if(m.kode_dus) window.dusMap[m.kode_dus] = m.dus;
                 if(m.kode_mesin) window.mesinMap[m.kode_mesin] = m.mesin;
                 if(m.kode_po) window.poMap[m.kode_po] = m.po;
-            });
+            }
         }
-    } catch(e) { if(tbody) tbody.innerHTML = `<tr><td colspan="19" class="p-10 text-red-500 font-bold">Error: ${e.message}</td></tr>`; }
+
+        renderTabelRiwayat();
+    } catch(e) { 
+        if(tbody) tbody.innerHTML = `<tr><td colspan="19" class="p-10 text-red-500 font-bold">Error: ${e.message}</td></tr>`; 
+    }
 }
 
 function translateBarcode(barcode) {
