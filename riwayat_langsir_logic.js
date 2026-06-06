@@ -9,7 +9,7 @@ const rowsPerPage = 8;
 let activeFilters = {}; 
 let currentFilterCol = ''; 
 
-const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'admin'};
+const currentUser = safeJSONParse(localStorage.getItem('user_session'), {username: 'Admin', role: 'admin'});
 
 document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'riwayat_langsir', title: 'RIWAYAT LANGSIR', url: 'riwayat_langsir.html' });
@@ -29,8 +29,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if(ma) {
             areaData = ma.map(m => m.nama_area);
             const selArea = document.getElementById('select-new-area');
-            selArea.innerHTML = '<option value="">-- PILIH AREA --</option>';
-            areaData.forEach(a => selArea.innerHTML += `<option value="${a}">${a}</option>`);
+            if(selArea) {
+                selArea.innerHTML = '<option value="">-- PILIH AREA --</option>';
+                areaData.forEach(a => selArea.innerHTML += `<option value="${a}">${a}</option>`);
+            }
         }
         await ambilSemuaData();
         gantiModeRiwayat('qr');
@@ -58,7 +60,8 @@ function sortTable(colIndex, headerEl) {
 }
 
 async function ambilSemuaData() {
-    document.getElementById('tbody-riwayat').innerHTML = `<tr><td colspan="19" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menarik Data...</p></td></tr>`;
+    const tbody = document.getElementById('tbody-riwayat');
+    if(tbody) tbody.innerHTML = `<tr><td colspan="19" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menarik Data...</p></td></tr>`;
     try {
         const [resRiwayat, resHold] = await Promise.all([
             db.from('stok_qr').select('*').order('created_at', {ascending: false}).limit(1000),
@@ -67,20 +70,16 @@ async function ambilSemuaData() {
         if(resRiwayat.data) logLangsirRaw = resRiwayat.data;
         if(resHold.data) holdLangsirRaw = resHold.data;
 
-        // BIKIN INDEXING MEMORI (Agar translate barcode secepat kilat)
         window.itemMap = {}; window.dusMap = {}; window.mesinMap = {}; window.shiftMap = {}; window.poMap = {};
         if(kamusData) {
             kamusData.forEach(m => {
                 if(m.kode_nama_item) window.itemMap[m.kode_nama_item] = m.nama_item;
                 if(m.kode_dus) window.dusMap[m.kode_dus] = m.dus;
                 if(m.kode_mesin) window.mesinMap[m.kode_mesin] = m.mesin;
-                if(m.kode_shift) window.searchShift = m.shift; // sesuaikan jika ada map khusus
                 if(m.kode_po) window.poMap[m.kode_po] = m.po;
             });
         }
-
-        renderTabelRiwayat();
-    } catch(e) { document.getElementById('tbody-riwayat').innerHTML = `<tr><td colspan="19" class="p-10 text-red-500 font-bold">Error: ${e.message}</td></tr>`; }
+    } catch(e) { if(tbody) tbody.innerHTML = `<tr><td colspan="19" class="p-10 text-red-500 font-bold">Error: ${e.message}</td></tr>`; }
 }
 
 function translateBarcode(barcode) {
@@ -91,7 +90,6 @@ function translateBarcode(barcode) {
     if (h === 'P') data.jenis = 'Plafon'; else if (h === 'L') data.jenis = 'List'; else if (h === 'W') data.jenis = 'WPC'; else data.jenis = h;
 
     let rawItem = parts[0]; 
-    // Pakai Map Indexing (Instant)
     data.nama = window.itemMap && window.itemMap[rawItem] ? window.itemMap[rawItem] : rawItem; 
     data.shading = parts[1] || '-';
 
@@ -113,7 +111,7 @@ function translateBarcode(barcode) {
         let sisaString = p3.substring(5); let match = sisaString.match(/(C.*?)(S.*?)(P.*)/);
         if(match) {
             data.mesin = window.mesinMap && window.mesinMap[match[1]] ? window.mesinMap[match[1]] : match[1];
-            data.shift = match[2]; // atau sesuaikan jika ada mapping khusus shift
+            data.shift = match[2]; 
             data.po = window.poMap && window.poMap[match[3]] ? window.poMap[match[3]] : match[3];
         }
     }
@@ -155,11 +153,10 @@ async function sinkronisasiUlangStokAktual() {
             if(errIns) throw errIns;
         }
     } catch(e) {
-        alert("⚠️ GAGAL SINKRONISASI STOK AKTUAL KE SUPABASE!\nPastikan RLS pada tabel 'stok_aktual' sudah dimatikan.");
+        console.error("Gagal sinkronisasi stok_aktual.");
     }
 }
 
-// FILTER EXCEL PRO FUNCTIONS
 function openColumnFilter(event, colClass, colName) {
     event.stopPropagation(); currentFilterCol = colClass;
     document.getElementById('filter-col-name').innerText = `FILTER: ${colName}`;
@@ -194,11 +191,13 @@ function openColumnFilter(event, colClass, colName) {
     document.getElementById('filter-values-list').innerHTML = listHtml; updateSelectAllState();
     document.getElementById('filter-search-input').value = '';
     const rect = event.currentTarget.getBoundingClientRect(); const menu = document.getElementById('excel-filter-menu');
-    menu.classList.remove('hidden');
-    let top = rect.bottom + window.scrollY + 5; let left = rect.left + window.scrollX;
-    if (left + 256 > window.innerWidth) { left = window.innerWidth - 266; }
-    menu.style.top = top + 'px'; menu.style.left = left + 'px';
-    document.getElementById('filter-search-input').focus();
+    if(menu) {
+        menu.classList.remove('hidden');
+        let top = rect.bottom + window.scrollY + 5; let left = rect.left + window.scrollX;
+        if (left + 256 > window.innerWidth) { left = window.innerWidth - 266; }
+        menu.style.top = top + 'px'; menu.style.left = left + 'px';
+    }
+    const sInput = document.getElementById('filter-search-input'); if(sInput) sInput.focus();
 }
 
 function toggleAllFilterValues(checked) {
@@ -212,7 +211,7 @@ function updateSelectAllState() {
     else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
     else { selectAll.checked = false; selectAll.indeterminate = true; }
 }
-document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) updateSelectAllState(); });
+
 function searchFilterList(val) {
     const query = val.toLowerCase().split(' ').filter(x => x);
     document.querySelectorAll('.filter-val-item').forEach(label => {
@@ -220,7 +219,7 @@ function searchFilterList(val) {
         label.style.display = query.every(term => text.includes(term)) ? '' : 'none';
     });
 }
-function closeFilterMenu() { document.getElementById('excel-filter-menu').classList.add('hidden'); }
+function closeFilterMenu() { const menu = document.getElementById('excel-filter-menu'); if(menu) menu.classList.add('hidden'); }
 function clearFilterForCurrentCol() { delete activeFilters[currentFilterCol]; closeFilterMenu(); saringTabelExcel(); updateFilterIcons(); }
 function applyFilterForCurrentCol() {
     const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked'); const totalBoxes = document.querySelectorAll('.filter-val-cb');
@@ -258,10 +257,12 @@ function gantiModeRiwayat(m) {
         if(el) el.className = (m === tab) ? activeClass : inactiveClass;
     });
     
-    document.getElementById('btn-ganti-area').classList.toggle('hidden', m !== 'qr');
-    document.getElementById('btn-cancel-langsir').classList.toggle('hidden', m !== 'qr');
+    const btnGA = document.getElementById('btn-ganti-area'); if(btnGA) btnGA.classList.toggle('hidden', m !== 'qr');
+    const btnCL = document.getElementById('btn-cancel-langsir'); if(btnCL) btnCL.classList.toggle('hidden', m !== 'qr');
+    
     const userRole = (currentUser.role || '').toLowerCase();
-    document.getElementById('btn-hapus-hold').classList.toggle('hidden', !(m === 'hold' && ['creator', 'admin', 'pic area'].includes(userRole)));
+    const btnHH = document.getElementById('btn-hapus-hold');
+    if(btnHH) btnHH.classList.toggle('hidden', !(m === 'hold' && ['creator', 'admin', 'pic area'].includes(userRole)));
 
     activeFilters = {}; updateFilterIcons();
     renderTabelRiwayat();
@@ -269,20 +270,61 @@ function gantiModeRiwayat(m) {
 
 function toggleSemuaCentang(checked) { 
     document.querySelectorAll('.cb-row').forEach(cb => {
-        const row = cb.closest('tr'); if (row.style.display !== 'none' && !row.classList.contains('filtered-out')) { cb.checked = checked; highlightRow(cb); }
+        const row = cb.closest('tr'); if (row && row.style.display !== 'none' && !row.classList.contains('filtered-out')) { cb.checked = checked; highlightRow(cb); }
     });
 }
 
-function highlightRow(checkbox) {
-    const tr = checkbox.closest('tr');
-    if (checkbox.checked) { tr.classList.add('selected-row'); tr.classList.remove('hover:bg-slate-100'); } 
-    else { tr.classList.remove('selected-row'); tr.classList.add('hover:bg-slate-100'); }
+// ARSITEKTUR AMAN HITUNGAN PAGINASI
+function applyPagination() {
+    const allRows = Array.from(document.querySelectorAll('#tbody-riwayat tr.r-row'));
+    allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
+    
+    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
+    const totalFiltered = visibleRows.length; const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
+    
+    if(currentPage > totalPages) currentPage = totalPages; 
+    if(currentPage < 1) currentPage = 1;
+
+    const startIndex = (currentPage - 1) * rowsPerPage; const endIndex = startIndex + rowsPerPage;
+    let sumQty = 0;
+
+    visibleRows.forEach((row, index) => {
+        // PERBAIKAN BUG FATAL: Penguncian logika pembacaan variabel sumQty
+        const qtyCell = row.querySelector('.col-qty');
+        if (qtyCell && modeRiwayat === 'agregasi') { 
+            sumQty += parseInt(qtyCell.getAttribute('data-search') || qtyCell.innerText) || 0; 
+        } else { 
+            sumQty += 1; 
+        }
+
+        if(index >= startIndex && index < endIndex) { row.style.display = ''; } 
+        else { row.style.display = 'none'; }
+    });
+
+    const emptyRow = document.getElementById('empty-row-langsir');
+    if(emptyRow) emptyRow.style.display = totalFiltered === 0 ? '' : 'none';
+
+    if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
+    if(document.getElementById('lbl-total-qty')) document.getElementById('lbl-total-qty').innerText = sumQty;
+    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
+    if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
     updateSelectedCount();
+}
+
+function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } }
+function nextPage() { 
+    const totalVisible = document.querySelectorAll('#tbody-riwayat tr.r-row:not(.filtered-out)').length;
+    if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
+}
+function updateSelectedCount() {
+    const count = document.querySelectorAll('.cb-row:checked').length;
+    if(document.getElementById('lbl-pilih-baris')) document.getElementById('lbl-pilih-baris').innerText = count;
 }
 
 function renderTabelRiwayat() {
     try {
         const thead = document.getElementById('thead-riwayat'); const tbody = document.getElementById('tbody-riwayat');
+        if(!thead || !tbody) return;
         sortState = {}; 
 
         if(modeRiwayat === 'qr' || modeRiwayat === 'hold') {
@@ -309,10 +351,10 @@ function renderTabelRiwayat() {
                     ${thSort(isHold?16:14, 'User / PIC', 'col-pic border-l border-slate-500')}
                 </tr>`;
             
-            if(dataset.length === 0) { tbody.innerHTML = `<tr id="empty-row-langsir"><td colspan="18" class="p-6 font-bold text-slate-400">Tidak ada data.</td></tr>`; return; }
+            if(!dataset || dataset.length === 0) { tbody.innerHTML = `<tr id="empty-row-langsir"><td colspan="18" class="p-6 font-bold text-slate-400">Tidak ada data.</td></tr>`; applyPagination(); return; }
             
             let h = '';
-            dataset.forEach((r) => {
+            dataset.forEach((r, i) => {
                 const trans = translateBarcode(r.qrcode); const dt = new Date(r.created_at);
                 const tgl = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
 
@@ -338,7 +380,6 @@ function renderTabelRiwayat() {
                     </tr>`;
             });
             tbody.innerHTML = h;
-            tbody.innerHTML += `<tr id="empty-row-langsir" style="display:none;"><td colspan="18" class="p-6 font-bold text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
         } 
         else if(modeRiwayat === 'agregasi') {
             thead.innerHTML = `
@@ -365,12 +406,12 @@ function renderTabelRiwayat() {
             });
 
             let arr = Object.values(groups);
-            if(arr.length === 0) { tbody.innerHTML = `<tr id="empty-row-langsir"><td colspan="12" class="p-6 font-bold text-slate-400">Kosong.</td></tr>`; return; }
+            if(arr.length === 0) { tbody.innerHTML = `<tr id="empty-row-langsir"><td colspan="12" class="p-6 font-bold text-slate-400">Kosong.</td></tr>`; applyPagination(); return; }
 
             let h = '';
             arr.forEach((r) => {
                 h += `
-                    <tr class="hover:bg-slate-50 transition r-row text-xs bg-white border-b border-slate-200">
+                    <tr class="hover:bg-slate-100 transition r-row text-xs bg-white border-b border-slate-200">
                         <td class="p-3 col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="agg" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
                         <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200 col-area" data-search="${r.area}">${r.area}</td>
                         <td class="p-3 font-bold text-blue-600 border-r border-slate-200 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
@@ -385,58 +426,22 @@ function renderTabelRiwayat() {
                     </tr>`;
             });
             tbody.innerHTML = h;
-            tbody.innerHTML += `<tr id="empty-row-langsir" style="display:none;"><td colspan="12" class="p-6 font-bold text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
         }
         lucide.createIcons(); saringTabelExcel();
     } catch(err) { console.error("Gagal Render Tabel:", err); }
 }
 
-function applyPagination() {
-    const allRows = Array.from(document.querySelectorAll('#tbody-riwayat tr.r-row'));
-    allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
-    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
-    
-    const totalFiltered = visibleRows.length; const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
-    if(currentPage > totalPages) currentPage = totalPages; if(currentPage < 1) currentPage = 1;
-
-    const startIndex = (currentPage - 1) * rowsPerPage; const endIndex = startIndex + rowsPerPage;
-    let sumQty = 0;
-
-    visibleRows.forEach((row, index) => {
-        const qtyCell = row.querySelector('.col-qty');
-        if(qtyCell) { sumQty += parseInt(qtyCell.getAttribute('data-search') || qtyCell.innerText) || 0; } 
-        else { sumQty += 1; }
-
-        if(index >= startIndex && index < endIndex) { row.style.display = ''; } 
-        else { row.style.display = 'none'; }
-    });
-
-    const emptyRow = document.getElementById('empty-row-langsir');
-    if(emptyRow) emptyRow.style.display = totalFiltered === 0 ? '' : 'none';
-
-    if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
-    if(document.getElementById('lbl-total-qty')) document.getElementById('lbl-total-qty').innerText = sumQty;
-    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
-    if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
-    updateSelectedCount();
+function safeJSONParse(data, fallback = null) {
+    if (!data || data === 'undefined' || data === 'null') return fallback;
+    if (typeof data !== 'string') return data; 
+    try { return JSON.parse(data); } catch (e) { return fallback; }
 }
 
-function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } }
-function nextPage() { 
-    const totalVisible = document.querySelectorAll('#tbody-riwayat tr.r-row:not(.filtered-out)').length;
-    if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
-}
-function updateSelectedCount() {
-    const count = document.querySelectorAll('.cb-row:checked').length;
-    if(document.getElementById('lbl-pilih-baris')) document.getElementById('lbl-pilih-baris').innerText = count;
-}
-
-// REST LOGIC FUNCTIONS (STAY INTENTIONAL)
 async function cancelLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked'); if(checkedBoxes.length === 0) return alert("Pilih minimal 1 baris!");
     if(!confirm(`Batal Langsir untuk ${checkedBoxes.length} kardus ini?`)) return;
     const btn = document.getElementById('btn-cancel-langsir'); const ori = btn.innerHTML;
-    btn.innerHTML = 'Proses...'; btn.disabled = true;
+    if(btn) { btn.innerHTML = 'Proses...'; btn.disabled = true; }
 
     let arrFisik = []; let mapAktual = {}; let mapGlobal = {}; let payloadHold = [];
     checkedBoxes.forEach(cb => {
@@ -461,7 +466,7 @@ async function cancelLangsir() {
         const { error: rpcErr } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData }); if(rpcErr) throw rpcErr;
         await db.from('hold_langsir').insert(payloadHold);
         await sinkronisasiUlangStokAktual(); await ambilSemuaData();
-    } catch (e) { alert("Gagal: " + e.message); } finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
+    } catch (e) { alert("Gagal: " + e.message); } finally { if(btn) { btn.innerHTML = ori; btn.disabled = false; } lucide.createIcons(); }
 }
 
 async function hapusBarisHold() {
@@ -487,8 +492,8 @@ function tutupModalArea() { document.getElementById('modal-ganti-area').classLis
 
 async function eksekusiGantiArea() {
     const newArea = document.getElementById('select-new-area').value; if(!newArea) return alert("Pilih Area Tujuan!");
-    const btn = document.getElementById('btn-eks-area'); const original = btn.innerHTML;
-    btn.innerHTML = 'Menyimpan...'; btn.disabled = true;
+    const btn = document.getElementById('btn-eks-area'); let original = btn ? btn.innerHTML : 'Simpan';
+    if(btn) { btn.innerHTML = 'Menyimpan...'; btn.disabled = true; }
 
     const checkedBoxes = document.querySelectorAll('.cb-row:checked'); const qrsToUpdate = Array.from(checkedBoxes).map(cb => cb.value);
     let updates = [];
@@ -502,7 +507,7 @@ async function eksekusiGantiArea() {
     try {
         const { error } = await db.from('stok_qr').upsert(updates, { onConflict: 'qrcode' }); if(error) throw error;
         tutupModalArea(); await sinkronisasiUlangStokAktual(); await ambilSemuaData();
-    } catch (error) { alert("Gagal: " + error.message); } finally { btn.innerHTML = original; btn.disabled = false; lucide.createIcons(); }
+    } catch (error) { alert("Gagal: " + error.message); } finally { if(btn) { btn.innerHTML = original; btn.disabled = false; } lucide.createIcons(); }
 }
 
 function salinDataTabel() {
@@ -521,12 +526,13 @@ function salinDataTabel() {
 }
 
 async function bukaModalSTBJ() {
-    document.getElementById('modal-stbj-langsir').classList.remove('hidden'); document.getElementById('overlay-klik-luar').classList.remove('hidden');
+    const mStbj = document.getElementById('modal-stbj-langsir'); if(mStbj) mStbj.classList.remove('hidden');
+    const overlay = document.getElementById('overlay-klik-luar'); if(overlay) overlay.classList.remove('hidden');
     const tbody = document.getElementById('tbody-stbj-modal');
-    tbody.innerHTML = '<tr><td colspan="8" class="p-8 font-bold text-slate-500">Memuat...</td></tr>';
+    if(tbody) tbody.innerHTML = '<tr><td colspan="8" class="p-8 font-bold text-slate-500">Memuat...</td></tr>';
     try {
         const { data } = await db.from('hasil_stbj').select('*').order('created_at', {ascending: false});
-        if(!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="p-6 font-bold text-slate-400">Kosong.</td></tr>'; return; }
+        if(!data || data.length === 0) { if(tbody) tbody.innerHTML = '<tr><td colspan="8" class="p-6 font-bold text-slate-400">Kosong.</td></tr>'; return; }
         let h = '';
         data.forEach((r, i) => {
             const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
@@ -536,10 +542,10 @@ async function bukaModalSTBJ() {
                 <td class="p-3 text-left font-bold text-blue-600">${td.nama}</td><td class="p-3">${td.pjg}</td><td class="p-3 font-black text-cyan-600">${td.po}</td><td class="p-3">${r.posisi || 'STBJ'}</td>
             </tr>`;
         });
-        tbody.innerHTML = h;
-    } catch (e) { tbody.innerHTML = '<tr><td>Gagal</td></tr>'; }
+        if(tbody) tbody.innerHTML = h;
+    } catch (e) { if(tbody) tbody.innerHTML = '<tr><td>Gagal</td></tr>'; }
 }
-function tutupModalSTBJ() { document.getElementById('modal-stbj-langsir').classList.add('hidden'); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
+function tutupModalSTBJ() { const m = document.getElementById('modal-stbj-langsir'); if(m) m.classList.add('hidden'); const ov = document.getElementById('overlay-klik-luar'); if(ov) ov.classList.add('hidden'); }
 function saringTabelModalSTBJ() {
     const q = document.getElementById('f-stbj-modal').value.toLowerCase();
     document.querySelectorAll('#tbody-stbj-modal tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none'; });
