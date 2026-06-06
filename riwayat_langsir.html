@@ -8,28 +8,30 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        .table-container { scrollbar-width: thin; position: relative; }
+       .table-container { scrollbar-width: thin; position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* STANDAR HEADER OPTIMAL */
+        /* THEMA METRO FLAT UI: Garis tegas & presisi */
         .hdr-std { 
             background-color: #1e293b !important; 
             color: #ffffff !important; 
             text-align: center !important; 
-            border: 1px solid #334155; 
-            padding: 0.75rem; 
-            text-transform: uppercase; 
-            font-family: inherit; 
-            font-size: 12px; 
-            font-weight: 800; 
-            white-space: nowrap; 
-            position: sticky;
-            top: 0;
-            z-index: 20;
-            background-clip: padding-box; 
+            padding: 0.85rem 0.5rem !important; 
+            font-size: 11px !important; 
+            font-weight: 700 !important; 
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
+            white-space: nowrap !important; 
+            position: sticky !important; 
+            top: 0 !important; 
+            z-index: 20 !important; 
+            border: 1px solid #94a3b8 !important;
         }
-        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
-        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
+        #main-table td { border: 1px solid #cbd5e1 !important; }
+        #main-table { border-collapse: collapse; width: 100%; }
+
+        /* Highlight Row Terpilih */
+        tr.selected-row td { background-color: #dbeafe !important; }
     </style>
 </head>
 <body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-20">
@@ -41,22 +43,44 @@
             <button onclick="gantiModeRiwayat('hold')" id="tab-r-hold" class="px-6 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="pause-circle" class="w-4 h-4"></i> TABEL HOLD</button>
         </div>
 
-        <div class="bg-white p-3 rounded-b-xl rounded-tr-xl shadow-sm border border-slate-200 mb-3">
-            <div class="flex gap-2 overflow-x-auto pb-2 px-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none" style="-webkit-overflow-scrolling: touch;">
-                
-                <button onclick="bukaModalGantiArea()" id="btn-ganti-area" class="p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-orange-600 hover:bg-orange-700 text-white border-b-2 border-orange-800 active:scale-95 transition"><i data-lucide="map-pin" class="w-4 h-4"></i> Ganti Area</button>
-                <button onclick="bukaModalSTBJ()" class="p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-purple-600 hover:bg-purple-700 text-white border-b-2 border-purple-800 active:scale-95 transition"><i data-lucide="table" class="w-4 h-4"></i> Data STBJ</button>
-                
-                <div class="w-px h-6 bg-slate-300 mx-1 self-center"></div> 
-                
-                <button onclick="cancelLangsir()" id="btn-cancel-langsir" class="p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-rose-600 hover:bg-rose-700 text-white border-b-2 border-rose-800 active:scale-95 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Cancel Langsir</button>
-                <button onclick="hapusBarisHold()" id="btn-hapus-hold" class="hidden p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-red-600 hover:bg-red-700 text-white border-b-2 border-red-800 active:scale-95 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Permanen</button>
+        <div class="bg-white p-3 border border-slate-200 mb-4 flex items-center justify-between gap-2 overflow-hidden shadow-sm rounded">
+                <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar whitespace-nowrap scroll-smooth select-none w-full" style="-webkit-overflow-scrolling: touch;">
+                    
+                    <button onclick="bukaModalGantiArea()" id="btn-ganti-area" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-orange-700">
+                        <div class="bg-orange-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="map-pin" class="w-4 h-4"></i></div>
+                        <div class="bg-orange-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-orange-500 transition">Ganti Area</div>
+                    </button>
 
-                <div class="w-px h-6 bg-slate-300 mx-1 self-center"></div> 
-                
-                <button onclick="toggleSidebarFilter()" class="p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-slate-800 text-white border-b-2 border-slate-950 active:scale-95 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
-                <button onclick="salinDataTabel()" class="p-2.5 px-4 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm uppercase bg-blue-600 hover:bg-blue-700 text-white border-b-2 border-blue-800 active:scale-95 transition"><i data-lucide="copy" class="w-4 h-4"></i> Salin</button>
-                
+                    <button onclick="bukaModalSTBJ()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-purple-700">
+                        <div class="bg-purple-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="table" class="w-4 h-4"></i></div>
+                        <div class="bg-purple-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-purple-500 transition">Data STBJ</div>
+                    </button>
+                    
+                    <div class="w-px h-8 bg-slate-300 mx-1 shrink-0"></div> 
+                    
+                    <button onclick="cancelLangsir()" id="btn-cancel-langsir" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-rose-700">
+                        <div class="bg-rose-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
+                        <div class="bg-rose-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-rose-500 transition">Cancel Langsir</div>
+                    </button>
+
+                    <button onclick="hapusBarisHold()" id="btn-hapus-hold" class="hidden group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-red-700">
+                        <div class="bg-red-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="trash-2" class="w-4 h-4"></i></div>
+                        <div class="bg-red-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-red-500 transition">Hapus Permanen</div>
+                    </button>
+
+                    <div class="w-px h-8 bg-slate-300 mx-1 shrink-0"></div> 
+                    
+                    <button onclick="toggleSidebarFilter()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-slate-300">
+                        <div class="bg-slate-100 text-slate-800 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="filter" class="w-4 h-4"></i></div>
+                        <div class="bg-white text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-50 transition">Filter</div>
+                    </button>
+
+                    <button onclick="salinDataTabel()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-slate-300">
+                        <div class="bg-black text-white flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="copy" class="w-4 h-4"></i></div>
+                        <div class="bg-white text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-50 transition">Salin</div>
+                    </button>
+                    
+                </div>
             </div>
             <div class="text-[9px] text-slate-400 text-center font-black uppercase tracking-wider mt-1 pointer-events-none flex items-center justify-center gap-1 animate-pulse">
                 <i data-lucide="arrow-left-right" class="w-3 h-3"></i> Geser menu tombol ke kanan-kiri
