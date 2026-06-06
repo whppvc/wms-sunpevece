@@ -22,7 +22,7 @@ const currentUser = safeJSONParse(localStorage.getItem('user_session'), { userna
 document.addEventListener('DOMContentLoaded', async () => {
     initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
     
-    // Listener khusus untuk close Filter Menu jika klik di luar
+    // Listener khusus untuk close Filter Menu jika klik di luar kotak
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
@@ -78,7 +78,7 @@ function translateBarcode(barcode) {
 
 async function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
     const btn = document.getElementById('btn-sync-db');
-    if(btn) { btn.innerHTML = '<div class="bg-slate-100 text-teal-600 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-white text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide">Sinkron DB</div>'; btn.disabled = true; }
+    if(btn) { btn.innerHTML = '<div class="bg-slate-100 text-teal-600 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-white text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-50 transition">Sinkron DB</div>'; btn.disabled = true; }
 
     try {
         const { data: fisikQr, error: errQr } = await db.from('stok_qr').select('*');
@@ -236,7 +236,7 @@ async function muatDataStok() {
 
 function setModeKS(m) {
     modeKS = m;
-    const activeClass = 'px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-800 text-white';
+    const activeClass = 'px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-[#1e293b] text-white';
     const inactiveClass = 'px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-800';
     
     ['qr', 'area', 'global', 'lembaran'].forEach(tab => {
@@ -246,7 +246,7 @@ function setModeKS(m) {
     
     document.getElementById('btn-ganti-po-main').classList.toggle('hidden', m === 'global' || m === 'lembaran');
     
-    activeFilters = {}; 
+    activeFilters = {}; // Reset Filter ketika pindah tab
     renderTabel();
 }
 
@@ -270,14 +270,14 @@ function sortTable(colIndex, headerEl) {
     applyPagination();
 }
 
-// REVISI: Header Table Cerdas dengan Filter Icon layaknya Excel
+// HEADER FILTER (EXCEL-LIKE)
 const thSort = (idx, label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-open'].includes(colClass);
     
     const filterBtn = noFilter ? '' : `
         <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-600 rounded ml-1 transition" title="Filter ${label}">
-            <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all"></i>
+            <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
         </button>`;
 
     return `<th class="hdr-std ${cls} hover:bg-slate-700 transition select-none">
@@ -289,7 +289,7 @@ const thSort = (idx, label, cls = "") => {
 };
 
 // ========================================================
-// FILTER EXCEL PRO
+// FILTER EXCEL PRO (SMART FILTERING)
 // ========================================================
 function openColumnFilter(event, colClass, colName) {
     event.stopPropagation();
@@ -297,11 +297,24 @@ function openColumnFilter(event, colClass, colName) {
     document.getElementById('filter-col-name').innerText = `FILTER: ${colName}`;
 
     let uniqueValues = new Set();
+    
+    // Logika Pintar: Ambil nilai yang tersedia HANYA dari row yang lolos filter kolom LAINNYA
     document.querySelectorAll('#tbody-ks tr.row-ks').forEach(row => {
-        let cell = row.querySelector('.' + colClass);
-        if (cell) {
-            let val = cell.getAttribute('data-search') || cell.innerText.trim();
-            if(val !== '') uniqueValues.add(val);
+        let showBasedOnOthers = true;
+        for (let otherCol in activeFilters) {
+            if (otherCol !== colClass) { // Jangan periksa kolom yang sedang dibuka
+                const allowed = activeFilters[otherCol];
+                const c = row.querySelector('.' + otherCol);
+                let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
+                if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
+            }
+        }
+        if (showBasedOnOthers) {
+            let cell = row.querySelector('.' + colClass);
+            if (cell) {
+                let val = cell.getAttribute('data-search') || cell.innerText.trim();
+                if(val !== '') uniqueValues.add(val);
+            }
         }
     });
 
@@ -337,6 +350,7 @@ function openColumnFilter(event, colClass, colName) {
 
 function toggleAllFilterValues(checked) {
     document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
+    updateSelectAllState();
 }
 
 function updateSelectAllState() {
@@ -392,22 +406,29 @@ function saringTabelExcel() {
                 if (!allowedValues.includes(text)) { show = false; break; }
             }
         }
-        if (show) { row.classList.remove('filtered-out'); } 
-        else { row.classList.add('filtered-out'); row.querySelector('.cb-main').checked = false; highlightRow(row.querySelector('.cb-main')); }
+        // BUG FIX PAGINASI: Beri class 'filtered-out' saja, jangan set display none disini.
+        if (show) { 
+            row.classList.remove('filtered-out'); 
+        } else { 
+            row.classList.add('filtered-out'); 
+            let cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = false; highlightRow(cb); } 
+        }
     });
-    currentPage = 1; applyPagination();
+    currentPage = 1; 
+    applyPagination(); // Biarkan applyPagination yang mengatur display: none-nya!
 }
 
 function updateFilterIcons() {
     document.querySelectorAll('.filter-icon').forEach(icon => {
         icon.classList.remove('text-amber-400', 'opacity-100');
-        icon.classList.add('opacity-40');
+        icon.classList.add('opacity-40', 'text-white');
     });
     for (let colClass in activeFilters) {
         const th = document.querySelector(`th.${colClass}`);
         if (th) {
             const icon = th.querySelector('.filter-icon');
-            if (icon) { icon.classList.remove('opacity-40'); icon.classList.add('text-amber-400', 'opacity-100'); }
+            if (icon) { icon.classList.remove('opacity-40', 'text-white'); icon.classList.add('text-amber-400', 'opacity-100'); }
         }
     }
 }
@@ -506,7 +527,7 @@ function renderTabel() {
             <tr>
                 <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4"></th>
                 <th class="hdr-std w-12 col-open">Detail</th>
-                ${thSort(2, 'Jenis Item', 'col-jenis')}
+                ${thSort(2, 'Jenis Item', 'border-l border-slate-500 col-jenis')}
                 ${thSort(3, 'Nama Item', 'col-nama')}
                 ${thSort(4, 'Panjang', 'col-pjg')}
                 ${thSort(5, 'Grade', 'col-grade')}
@@ -523,7 +544,7 @@ function renderTabel() {
             <tr class="hover:bg-slate-100 transition row-ks bg-white border-b border-slate-200">
                 <td class="p-3 col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
                 <td class="p-2 col-open border-r border-slate-200"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-slate-100 text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white rounded transition flex mx-auto items-center justify-center"><i data-lucide="box" class="w-4 h-4"></i></button></td>
-                <td class="p-3 font-bold text-blue-600 col-jenis border-r border-slate-200" data-search="${r.jenis}">${r.jenis}</td>
+                <td class="p-3 font-bold text-blue-600 border-l border-slate-200 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                 <td class="p-3 font-bold text-slate-800 text-left col-nama border-r border-slate-200" data-search="${r.nama}">${r.nama}</td>
                 <td class="p-3 font-bold text-slate-600 col-pjg border-r border-slate-200" data-search="${r.pjg}">${r.pjg}</td>
                 <td class="p-3 font-bold text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
@@ -570,7 +591,6 @@ function renderTabel() {
     saringTabelExcel(); 
 }
 
-// REVISI: HIGHLIGHT BARIS TERPILIH
 function highlightRow(checkbox) {
     const tr = checkbox.closest('tr');
     if (checkbox.checked) { tr.classList.add('selected-row'); tr.classList.remove('hover:bg-slate-100'); } 
@@ -587,11 +607,16 @@ function toggleCentangUtama(checked) {
     });
 }
 
-// ========================================================
-// FUNGSI PAGINASI KENCANG
-// ========================================================
 function applyPagination() {
     const allRows = Array.from(document.querySelectorAll('#tbody-ks tr.row-ks'));
+    
+    // BUG FIX PAGINASI: Pastikan row yang filtered-out benar-benar disembunyikan displaynya!
+    allRows.forEach(row => {
+        if(row.classList.contains('filtered-out')) {
+            row.style.display = 'none';
+        }
+    });
+
     const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
     
     const totalRows = allRows.length;
@@ -610,6 +635,7 @@ function applyPagination() {
         if(qtyCell) { sumQty += parseInt(qtyCell.getAttribute('data-search') || qtyCell.innerText) || 0; } 
         else { sumQty += 1; }
 
+        // Atur display khusus baris yang lolos filter
         if(index >= startIndex && index < endIndex) { row.style.display = ''; } 
         else { row.style.display = 'none'; }
     });
@@ -640,7 +666,7 @@ function updateSelectedCount() {
 
 
 // ========================================================
-// 6. ACTION HANDLERS & MODALS
+// ACTION HANDLERS & MODALS
 // ========================================================
 function bukaBreakdown(gKey) {
     const item = dataKSGlobal.find(g => g.gKey === gKey); if(!item) return;
@@ -653,8 +679,7 @@ function bukaBreakdown(gKey) {
         const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
         return `
             <tr class="hover:bg-slate-50 transition bd-row text-xs border-b border-slate-200">
-                <td class="p-3 border-r border-slate-200"><input type="checkbox" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po}" data-ket="${a.ket}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-                <td class="p-3 font-bold opacity-50 border-r border-slate-200">${i+1}</td>
+                <td class="p-3 border-r border-slate-200"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po}" data-ket="${a.ket}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                 <td class="p-3 font-black text-emerald-700 bg-emerald-50 border-r border-slate-200">${a.area}</td>
                 <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-r border-slate-200 col-po">${a.po}</td>
                 <td class="p-3 font-semibold text-slate-500 text-left opacity-80 border-r border-slate-200 whitespace-normal min-w-[200px]">${a.ket}</td>
@@ -667,11 +692,30 @@ function bukaBreakdown(gKey) {
 }
 
 function tutupModalBreakdown() { document.getElementById('modal-breakdown').classList.add('hidden'); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
-function toggleCentangBreakdown(checked) { document.querySelectorAll('.cb-bd').forEach(cb => cb.checked = checked); }
 
-// ========================================================
-// EDIT KETERANGAN
-// ========================================================
+function highlightBdRow(cb) {
+    const tr = cb.closest('tr');
+    if(cb.checked) { tr.classList.add('selected-row'); tr.classList.remove('hover:bg-slate-50'); } 
+    else { tr.classList.remove('selected-row'); tr.classList.add('hover:bg-slate-50'); }
+}
+function toggleCentangBreakdown(checked) { 
+    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; highlightBdRow(cb); }); 
+}
+
+function bukaModalLihatPO(encodedPOs) {
+    const poStr = decodeURIComponent(encodedPOs);
+    const poArr = poStr.split(',').map(p => p.trim()).filter(p => p);
+    const ul = document.getElementById('list-po-aktual');
+    if (poArr.length === 0 || (poArr.length === 1 && poArr[0] === 'NON-PO / KOSONG')) {
+        ul.innerHTML = '<li class="text-slate-400 italic font-medium p-3 bg-slate-100 rounded text-center border border-slate-200">Tidak ada PO Aktual tersimpan.</li>';
+    } else {
+        ul.innerHTML = poArr.map(p => `<li class="p-3 bg-white border-l-4 border-l-orange-500 shadow-sm text-orange-700 rounded flex items-center gap-3"><i data-lucide="tag" class="w-4 h-4 text-orange-400"></i> ${p}</li>`).join('');
+    }
+    lucide.createIcons();
+    document.getElementById('modal-lihat-po').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+}
+
 function siapkanEditKet(context) {
     let checkboxes = context === 'main' ? document.querySelectorAll('.cb-main:checked') : document.querySelectorAll('.cb-bd:checked');
     if(checkboxes.length === 0) return alert('Silakan centang item / area yang ingin diedit keterangannya terlebih dahulu.');
@@ -730,9 +774,6 @@ async function eksekusiEditKet() {
     }
 }
 
-// ========================================================
-// GANTI PO
-// ========================================================
 function siapkanGantiPO(context) {
     let checkboxes = [];
     if(context === 'main') {
