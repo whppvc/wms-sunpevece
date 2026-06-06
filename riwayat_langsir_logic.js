@@ -519,6 +519,12 @@ function tutupModalSTBJ() {
     }
 }
 
+function highlightRow(checkbox) {
+            const tr = checkbox.closest('tr');
+            if (checkbox.checked) { tr.classList.add('selected-row'); tr.classList.remove('hover:bg-slate-100'); } 
+            else { tr.classList.remove('selected-row'); tr.classList.add('hover:bg-slate-100'); }
+        }
+
 function saringTabelModalSTBJ() {
     const q = document.getElementById('f-stbj-modal').value.toLowerCase();
     document.querySelectorAll('.row-modal-stbj').forEach(row => {
