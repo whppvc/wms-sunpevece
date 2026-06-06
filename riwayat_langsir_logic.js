@@ -58,6 +58,22 @@ function sortTable(colIndex, headerEl) {
     if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
     applyPagination();
 }
+const thSort = (idx, label, cls = "") => {
+    const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
+    const noFilter = ['col-cb', 'col-btn', 'col-no'].includes(colClass);
+    
+    const filterBtn = noFilter ? '' : `
+        <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-600 rounded ml-1 transition" title="Filter ${label}">
+            <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
+        </button>`;
+
+    return `<th class="hdr-std ${cls} hover:bg-slate-700 transition select-none">
+        <div class="flex items-center justify-center">
+            <span class="cursor-pointer flex items-center gap-1.5" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
+            ${filterBtn}
+        </div>
+    </th>`;
+};
 
 async function ambilSemuaData() {
     const tbody = document.getElementById('tbody-riwayat');
