@@ -65,7 +65,7 @@ function translateBarcode(barcode) {
 
 async function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
     const btn = document.getElementById('btn-sync-db');
-    if(btn) { btn.innerHTML = '<div class="bg-slate-700 text-white flex items-center justify-center px-3 py-2"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-slate-600 text-white font-bold text-[11px] px-4 py-2 flex items-center uppercase tracking-wide">Sinkron DB</div>'; btn.disabled = true; }
+    if(btn) { btn.innerHTML = '<div class="bg-slate-100 text-teal-600 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-white text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-50 transition">Sinkron DB</div>'; btn.disabled = true; }
 
     try {
         const { data: fisikQr, error: errQr } = await db.from('stok_qr').select('*');
@@ -105,13 +105,13 @@ async function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
     } catch(e) {
         alert("⚠️ GAGAL SINKRONISASI STOK AKTUAL KE SUPABASE!\nPastikan RLS pada tabel 'stok_aktual' sudah dimatikan.");
     } finally {
-        if(btn) { btn.innerHTML = '<div class="bg-slate-700 text-white flex items-center justify-center px-3 py-2"><i data-lucide="database-backup" class="w-4 h-4"></i></div><div class="bg-slate-600 text-white font-bold text-[11px] px-4 py-2 flex items-center uppercase tracking-wide">Sinkron DB</div>'; btn.disabled = false; lucide.createIcons(); }
+        if(btn) { btn.innerHTML = '<div class="bg-slate-100 text-teal-600 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="database-backup" class="w-4 h-4"></i></div><div class="bg-white text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-50 transition">Sinkron DB</div>'; btn.disabled = false; lucide.createIcons(); }
     }
 }
 
 async function muatDataStok() {
     const tbody = document.getElementById('tbody-ks');
-    tbody.innerHTML = `<tr><td colspan="17" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menghubungkan ke Gudang Supabase...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500">Menghubungkan ke Gudang Supabase...</p></td></tr>`;
     lucide.createIcons();
 
     try {
@@ -218,12 +218,12 @@ async function muatDataStok() {
         dataKSGlobal = Object.values(globalMap);
 
         renderTabel();
-    } catch(e) { tbody.innerHTML = `<tr><td colspan="17" class="p-10 text-red-500 font-bold">Gagal mengolah data: ${e.message}</td></tr>`; }
+    } catch(e) { tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-red-500 font-bold">Gagal mengolah data: ${e.message}</td></tr>`; }
 }
 
 function setModeKS(m) {
     modeKS = m;
-    const activeClass = 'px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-[#1e293b] text-white';
+    const activeClass = 'px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-800 text-white';
     const inactiveClass = 'px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-800';
     
     ['qr', 'area', 'global', 'lembaran'].forEach(tab => {
@@ -245,7 +245,6 @@ function sortTable(colIndex, headerEl) {
     let isAsc = sortState[colIndex] !== 'asc'; sortState[colIndex] = isAsc ? 'asc' : 'desc';
     
     rows.sort((a, b) => {
-        // REVISI: Mengambil data aslinya (data-search) jika ada, agar sorting akurat walaupun ada tombol HTML
         let valA = a.cells[colIndex].getAttribute('data-search') || a.cells[colIndex].innerText.trim(); 
         let valB = b.cells[colIndex].getAttribute('data-search') || b.cells[colIndex].innerText.trim();
         let numA = parseFloat(valA); let numB = parseFloat(valB);
@@ -260,13 +259,14 @@ function sortTable(colIndex, headerEl) {
     applyPagination();
 }
 
-const thSort = (idx, label, cls = "") => `<th class="hdr-std ${cls} cursor-pointer hover:bg-slate-900 transition select-none" onclick="sortTable(${idx}, this)"><div class="flex items-center justify-center gap-1.5">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></div></th>`;
+const thSort = (idx, label, cls = "") => `<th class="hdr-std ${cls} cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(${idx}, this)"><div class="flex items-center justify-center gap-1.5">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></div></th>`;
 
 function renderTabel() {
     const thead = document.getElementById('thead-ks');
     const tbody = document.getElementById('tbody-ks');
     sortState = {}; 
 
+    // REVISI 8: Menghapus index No sepenuhnya
     if(modeKS === 'qr') {
         thead.innerHTML = `
             <tr>
@@ -289,15 +289,13 @@ function renderTabel() {
         
         if(dataKSQR.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="15" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
-        tbody.innerHTML = dataKSQR.map((r, i) => {
+        tbody.innerHTML = dataKSQR.map((r) => {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
-            // REVISI 5: PO Aktual Diganti menjadi tombol lihat modal
             const poBtnHTML = `<button onclick="bukaModalLihatPO('${encodeURIComponent(r.po_aktual_gabungan)}')" class="bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold px-3 py-1.5 rounded shadow-sm active:scale-95 transition flex items-center gap-1.5 mx-auto text-[10px] uppercase"><i data-lucide="eye" class="w-3.5 h-3.5"></i> Lihat PO</button>`;
 
-            // REVISI 6: Penambahan atribut "data-search" di setiap TD agar filter 100% akurat
             return `
                 <tr class="hover:bg-slate-100 transition row-ks">
-                    <td class="p-3 col-cb"><input type="checkbox" onchange="updateSelectedCount()" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual_spesifik}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
+                    <td class="p-3 col-cb"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual_spesifik}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
                     <td class="p-3 font-bold text-emerald-700 bg-emerald-50/50 col-area" data-search="${r.area}">${r.area}</td>
                     <td class="p-3 font-mono font-bold tracking-wide text-slate-900 col-qr text-left" data-search="${r.qrcode}">${r.qrcode}</td>
                     <td class="p-3 font-semibold text-slate-500 col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
@@ -334,11 +332,11 @@ function renderTabel() {
         
         if(dataKSArea.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="11" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
-        tbody.innerHTML = dataKSArea.map((r, i) => {
+        tbody.innerHTML = dataKSArea.map((r) => {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             return `
                 <tr class="hover:bg-slate-100 transition row-ks">
-                    <td class="p-3 col-cb"><input type="checkbox" onchange="updateSelectedCount()" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
+                    <td class="p-3 col-cb"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
                     <td class="p-3 font-black text-emerald-700 bg-emerald-50/50 col-area" data-search="${r.area}">${r.area}</td>
                     <td class="p-3 font-bold text-blue-600 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                     <td class="p-3 font-bold text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
@@ -358,7 +356,7 @@ function renderTabel() {
             <tr>
                 <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300"></th>
                 <th class="hdr-std w-12 col-open">Detail</th>
-                ${thSort(2, 'Jenis Item', 'border-l border-slate-500 col-jenis')}
+                ${thSort(2, 'Jenis Item', 'col-jenis')}
                 ${thSort(3, 'Nama Item', 'col-nama')}
                 ${thSort(4, 'Panjang', 'col-pjg')}
                 ${thSort(5, 'Grade', 'col-grade')}
@@ -371,9 +369,9 @@ function renderTabel() {
 
         if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="11" class="p-6 font-bold text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
-        tbody.innerHTML = dataKSGlobal.map((r, i) => `
+        tbody.innerHTML = dataKSGlobal.map((r) => `
             <tr class="hover:bg-slate-100 transition row-ks">
-                <td class="p-3 col-cb"><input type="checkbox" onchange="updateSelectedCount()" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
+                <td class="p-3 col-cb"><input type="checkbox" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
                 <td class="p-2 col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-slate-100 text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white rounded transition flex mx-auto items-center justify-center"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="p-3 font-bold text-blue-600 border-l border-slate-200 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                 <td class="p-3 font-bold text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
@@ -403,9 +401,9 @@ function renderTabel() {
         
         if(stokLembaranRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="8" class="p-6 font-bold text-slate-400">Tidak ada data stok lembaran.</td></tr>`; return; }
 
-        tbody.innerHTML = stokLembaranRaw.map((r, i) => `
+        tbody.innerHTML = stokLembaranRaw.map((r) => `
             <tr class="hover:bg-slate-100 transition row-ks">
-                <td class="p-3 col-cb"><input type="checkbox" value="${r.id}" onchange="updateSelectedCount()" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
+                <td class="p-3 col-cb"><input type="checkbox" value="${r.id}" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
                 <td class="p-3 font-black text-emerald-700 bg-emerald-50/50 col-area" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
                 <td class="p-3 font-bold text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
                 <td class="p-3 font-bold text-slate-600 col-pjg" data-search="${r.pjg || '-'}">${r.pjg || '-'}</td>
@@ -421,6 +419,33 @@ function renderTabel() {
     lucide.createIcons(); 
     currentPage = 1;
     applyPagination(); 
+}
+
+// ========================================================
+// REVISI: HIGHLIGHT BARIS TERPILIH
+// ========================================================
+function highlightRow(checkbox) {
+    const tr = checkbox.closest('tr');
+    if (checkbox.checked) {
+        tr.classList.add('bg-blue-100');
+        tr.classList.remove('hover:bg-slate-100');
+    } else {
+        tr.classList.remove('bg-blue-100');
+        tr.classList.add('hover:bg-slate-100');
+    }
+    updateSelectedCount();
+}
+
+function toggleCentangUtama(checked) { 
+    document.querySelectorAll('.cb-main').forEach(cb => {
+        const row = cb.closest('tr');
+        if (row.style.display !== 'none' && !row.classList.contains('filtered-out')) {
+            cb.checked = checked;
+            if(checked) { row.classList.add('bg-blue-100'); row.classList.remove('hover:bg-slate-100'); } 
+            else { row.classList.remove('bg-blue-100'); row.classList.add('hover:bg-slate-100'); }
+        }
+    });
+    updateSelectedCount();
 }
 
 // ========================================================
@@ -440,26 +465,26 @@ function applyPagination() {
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
 
+    let sumQty = 0;
+
     visibleRows.forEach((row, index) => {
-        if(index >= startIndex && index < endIndex) {
-            row.style.display = ''; 
-        } else {
-            row.style.display = 'none'; 
-        }
+        // Hitung Total QTY Filter Aktif
+        const qtyCell = row.querySelector('.col-qty');
+        if(qtyCell) { sumQty += parseInt(qtyCell.getAttribute('data-search') || qtyCell.innerText) || 0; } 
+        else { sumQty += 1; }
+
+        if(index >= startIndex && index < endIndex) { row.style.display = ''; } 
+        else { row.style.display = 'none'; }
     });
 
     const emptyRow = document.getElementById('empty-row-ks');
     if(emptyRow) emptyRow.style.display = totalFiltered === 0 ? '' : 'none';
 
-    const lblTotal = document.getElementById('lbl-total-baris');
-    const lblTampil = document.getElementById('lbl-tampil-baris');
-    const lblHal = document.getElementById('lbl-halaman');
-    const lblTotalHal = document.getElementById('lbl-total-halaman');
-
-    if(lblTotal) lblTotal.innerText = totalRows;
-    if(lblTampil) lblTampil.innerText = totalFiltered;
-    if(lblHal) lblHal.innerText = currentPage;
-    if(lblTotalHal) lblTotalHal.innerText = totalPages;
+    if(document.getElementById('lbl-total-baris')) document.getElementById('lbl-total-baris').innerText = totalRows;
+    if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
+    if(document.getElementById('lbl-total-qty')) document.getElementById('lbl-total-qty').innerText = sumQty;
+    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
+    if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
     
     updateSelectedCount();
 }
@@ -468,16 +493,6 @@ function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } 
 function nextPage() { 
     const totalVisible = document.querySelectorAll('#tbody-ks tr.row-ks:not(.filtered-out)').length;
     if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
-}
-
-function toggleCentangUtama(checked) { 
-    document.querySelectorAll('.cb-main').forEach(cb => {
-        const row = cb.closest('tr');
-        if (row.style.display !== 'none' && !row.classList.contains('filtered-out')) {
-            cb.checked = checked;
-        }
-    });
-    updateSelectedCount();
 }
 
 function updateSelectedCount() {
@@ -500,8 +515,8 @@ function bukaBreakdown(gKey) {
     tbody.innerHTML = item.areas.map((a, i) => {
         const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
         return `
-            <tr class="hover:bg-slate-50 transition bd-row">
-                <td class="p-3 border-b border-slate-200 border-r"><input type="checkbox" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po}" data-ket="${a.ket}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+            <tr class="hover:bg-slate-50 transition bd-row text-xs">
+                <td class="p-3 border-b border-slate-200 border-r"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po}" data-ket="${a.ket}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
                 <td class="p-3 border-b border-slate-200 font-bold opacity-50 border-r">${i+1}</td>
                 <td class="p-3 border-b border-slate-200 font-black text-emerald-700 bg-emerald-50 border-r">${a.area}</td>
                 <td class="p-3 border-b border-slate-200 font-black text-orange-600 bg-orange-50/50 border-r col-po">${a.po}</td>
@@ -512,15 +527,21 @@ function bukaBreakdown(gKey) {
 
     document.getElementById('modal-breakdown').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
-    lucide.createIcons();
+    // Hilangkan lucide.createIcons() disini karena iconnya tidak ada di dalam loop, ini yg bikin lambat!
 }
 
 function tutupModalBreakdown() { document.getElementById('modal-breakdown').classList.add('hidden'); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
-function toggleCentangBreakdown(checked) { document.querySelectorAll('.cb-bd').forEach(cb => cb.checked = checked); }
 
-// ========================================================
+function highlightBdRow(cb) {
+    const tr = cb.closest('tr');
+    if(cb.checked) { tr.classList.add('bg-blue-100'); tr.classList.remove('hover:bg-slate-50'); } 
+    else { tr.classList.remove('bg-blue-100'); tr.classList.add('hover:bg-slate-50'); }
+}
+function toggleCentangBreakdown(checked) { 
+    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; highlightBdRow(cb); }); 
+}
+
 // LIHAT PO AKTUAL MODAL
-// ========================================================
 function bukaModalLihatPO(encodedPOs) {
     const poStr = decodeURIComponent(encodedPOs);
     const poArr = poStr.split(',').map(p => p.trim()).filter(p => p);
@@ -675,9 +696,9 @@ async function eksekusiGantiPO() {
 }
 
 function toggleSidebarFilter() { document.getElementById('sidebar-filter').classList.toggle('translate-x-full'); document.getElementById('overlay-klik-luar').classList.toggle('hidden'); }
-function tutupSemuaPopups() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); document.getElementById('dropdown-kolom').classList.add('hidden'); tutupModalPO(); tutupModalKet(); tutupModalBreakdown(); document.getElementById('modal-lihat-po').classList.add('hidden'); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
+function tutupSemuaPopups() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); tutupModalPO(); tutupModalKet(); tutupModalBreakdown(); document.getElementById('modal-lihat-po').classList.add('hidden'); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
 
-// REVISI 6: Perbaikan Logika Filter 100% Akurat dengan Data-Search
+// REVISI: Perbaikan Logika Filter (Akurasi Spasi Ganda)
 function resetFilterWithoutRender() {
     const ids = ['f-area','f-qr','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket'];
     ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; });
@@ -706,7 +727,9 @@ function saringTabel() {
                 const cell = row.querySelector('.' + cls);
                 if(cell) {
                     let text = cell.getAttribute('data-search') ? cell.getAttribute('data-search').toLowerCase() : cell.innerText.trim().toLowerCase();
-                    if(!text.includes(f[cls])) { show = false; break; }
+                    let searchTerms = f[cls].split(' ').filter(x => x); // Pecah spasi ganda
+                    let matchesAll = searchTerms.every(term => text.includes(term));
+                    if(!matchesAll) { show = false; break; }
                 } else {
                     show = false; break;
                 }
@@ -751,7 +774,11 @@ function downloadXLS() {
         const rowData = [];
         Array.from(tr.children).forEach(td => {
             if(td.classList.contains('col-cb') || td.classList.contains('col-open')) return;
-            if(window.getComputedStyle(td).display !== 'none') { rowData.push(`"${td.innerText.trim()}"`); }
+            // Jika kolom Punya data-search, ambil data dari sana (karena isinya mungkin HTML tombol)
+            if(window.getComputedStyle(td).display !== 'none') { 
+                let rawText = td.getAttribute('data-search') ? td.getAttribute('data-search') : td.innerText.trim();
+                rowData.push(`"${rawText}"`); 
+            }
         });
         csvContent += rowData.join(",") + "\n";
     });
