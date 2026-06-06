@@ -5,6 +5,7 @@ let selectedForAction = []; let sourcePOContext = ''; let currentBreakdownData =
 let sortState = {};
 let masterData = { kamus: [] };
 
+// Variabel Paginasi Kencang (8 Baris)
 let currentPage = 1;
 const rowsPerPage = 8;
 
@@ -16,68 +17,8 @@ function safeJSONParse(data, fallback = null) {
 
 const currentUser = safeJSONParse(localStorage.getItem('user_session'), { username: 'Admin', role: 'admin' });
 
-// ========================================================
-// 1. STYLING MANAGEMENT 
-// ========================================================
-const defaultSettings = { 
-    thBg: '#2c3e50', thColor: '#ffffff', thSize: 11, thAlign: 'center', 
-    tdColor: '#334155', tdSize: 12, tdAlign: 'center',
-    customCols: {} 
-};
-
-let currentSettings = null;
-
-function terapkanSettingAwal() {
-    currentSettings = safeJSONParse(localStorage.getItem('wms_table_settings'), defaultSettings);
-    if (!currentSettings || !currentSettings.thBg) currentSettings = JSON.parse(JSON.stringify(defaultSettings));
-    if (!currentSettings.customCols) currentSettings.customCols = {};
-    applyCSS(currentSettings);
-}
-
-function applyCSS(s) {
-    const styleEl = document.getElementById('dynamic-table-settings');
-    if (!styleEl) return;
-    const justify = s.thAlign === 'left' ? 'flex-start' : (s.thAlign === 'right' ? 'flex-end' : 'center');
-    
-    let customCSS = `:root { --th-bg: ${s.thBg}; --th-color: ${s.thColor}; --th-size: ${s.thSize}px; } \n`;
-    customCSS += `#main-table th.hdr-std > div { justify-content: ${justify} !important; text-align: ${s.thAlign} !important; } \n`;
-    if (s.tdColor !== defaultSettings.tdColor) customCSS += `#main-table td { color: ${s.tdColor} !important; } \n`;
-    if (s.tdSize !== defaultSettings.tdSize) customCSS += `#main-table td { font-size: ${s.tdSize}px !important; } \n`;
-    if (s.tdAlign !== defaultSettings.tdAlign) customCSS += `#main-table td { text-align: ${s.tdAlign} !important; } \n`;
-    for (let colClass in s.customCols) {
-        let cs = s.customCols[colClass];
-        customCSS += `#main-table td.${colClass} { color: ${cs.color} !important; font-size: ${cs.size}px !important; text-align: ${cs.align} !important; }`;
-    }
-    styleEl.innerHTML = customCSS;
-}
-
-function bukaModalSetting() {
-    document.getElementById('set-th-bg').value = currentSettings.thBg;
-    document.getElementById('set-th-color').value = currentSettings.thColor;
-    document.getElementById('set-th-size').value = currentSettings.thSize;
-    document.getElementById('set-th-align').value = currentSettings.thAlign;
-    document.getElementById('set-td-color').value = currentSettings.tdColor;
-    document.getElementById('set-td-size').value = currentSettings.tdSize;
-    document.getElementById('set-td-align').value = currentSettings.tdAlign;
-    document.getElementById('modal-setting').classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
-}
-
-function livePreviewSetting() {
-    currentSettings.thBg = document.getElementById('set-th-bg').value; currentSettings.thColor = document.getElementById('set-th-color').value; currentSettings.thSize = parseInt(document.getElementById('set-th-size').value) || 11; currentSettings.thAlign = document.getElementById('set-th-align').value;
-    currentSettings.tdColor = document.getElementById('set-td-color').value; currentSettings.tdSize = parseInt(document.getElementById('set-td-size').value) || 12; currentSettings.tdAlign = document.getElementById('set-td-align').value;
-    applyCSS(currentSettings);
-}
-
-['set-th-bg', 'set-th-color', 'set-th-size', 'set-th-align', 'set-td-color', 'set-td-size', 'set-td-align'].forEach(id => { const el = document.getElementById(id); if(el) el.addEventListener('input', livePreviewSetting); });
-
-function simpanSettingTabel() { livePreviewSetting(); localStorage.setItem('wms_table_settings', JSON.stringify(currentSettings)); tutupSemuaPopups(); }
-
-function resetSettingDefault() { localStorage.removeItem('wms_table_settings'); currentSettings = JSON.parse(JSON.stringify(defaultSettings)); applyCSS(currentSettings); tutupSemuaPopups(); }
-
 document.addEventListener('DOMContentLoaded', async () => {
     initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
-    terapkanSettingAwal(); 
     await loadMasterData();
     setTimeout(muatDataStok, 200);
 });
@@ -124,7 +65,7 @@ function translateBarcode(barcode) {
 
 async function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
     const btn = document.getElementById('btn-sync-db');
-    if(btn) { btn.innerHTML = '<div class="bg-teal-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-teal-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wider">Sinkron DB</div>'; btn.disabled = true; }
+    if(btn) { btn.innerHTML = '<div class="bg-slate-700 text-white flex items-center justify-center px-3 py-2"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-slate-600 text-white font-bold text-[11px] px-4 py-2 flex items-center uppercase tracking-wide">Sinkron DB</div>'; btn.disabled = true; }
 
     try {
         const { data: fisikQr, error: errQr } = await db.from('stok_qr').select('*');
@@ -164,7 +105,7 @@ async function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
     } catch(e) {
         alert("⚠️ GAGAL SINKRONISASI STOK AKTUAL KE SUPABASE!\nPastikan RLS pada tabel 'stok_aktual' sudah dimatikan.");
     } finally {
-        if(btn) { btn.innerHTML = '<div class="bg-teal-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="database-backup" class="w-4 h-4"></i></div><div class="bg-teal-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wider">Sinkron DB</div>'; btn.disabled = false; lucide.createIcons(); }
+        if(btn) { btn.innerHTML = '<div class="bg-slate-700 text-white flex items-center justify-center px-3 py-2"><i data-lucide="database-backup" class="w-4 h-4"></i></div><div class="bg-slate-600 text-white font-bold text-[11px] px-4 py-2 flex items-center uppercase tracking-wide">Sinkron DB</div>'; btn.disabled = false; lucide.createIcons(); }
     }
 }
 
@@ -280,10 +221,9 @@ async function muatDataStok() {
     } catch(e) { tbody.innerHTML = `<tr><td colspan="17" class="p-10 text-red-500 font-bold">Gagal mengolah data: ${e.message}</td></tr>`; }
 }
 
-// REVISI TABS: Styling Blocky Metro Design saat diganti mode
 function setModeKS(m) {
     modeKS = m;
-    const activeClass = 'px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-[#2c3e50] text-white';
+    const activeClass = 'px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-[#1e293b] text-white';
     const inactiveClass = 'px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-800';
     
     ['qr', 'area', 'global', 'lembaran'].forEach(tab => {
@@ -295,6 +235,7 @@ function setModeKS(m) {
     document.getElementById('f-qr-container').classList.toggle('hidden', m !== 'qr');
     document.getElementById('f-area-container').classList.toggle('hidden', m === 'global' || m === 'lembaran');
     
+    resetFilterWithoutRender();
     renderTabel();
 }
 
@@ -304,7 +245,9 @@ function sortTable(colIndex, headerEl) {
     let isAsc = sortState[colIndex] !== 'asc'; sortState[colIndex] = isAsc ? 'asc' : 'desc';
     
     rows.sort((a, b) => {
-        let valA = a.cells[colIndex].innerText.trim(); let valB = b.cells[colIndex].innerText.trim();
+        // REVISI: Mengambil data aslinya (data-search) jika ada, agar sorting akurat walaupun ada tombol HTML
+        let valA = a.cells[colIndex].getAttribute('data-search') || a.cells[colIndex].innerText.trim(); 
+        let valB = b.cells[colIndex].getAttribute('data-search') || b.cells[colIndex].innerText.trim();
         let numA = parseFloat(valA); let numB = parseFloat(valB);
         if(!isNaN(numA) && !isNaN(numB)) { return isAsc ? numA - numB : numB - numA; } 
         else { return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA); }
@@ -317,7 +260,7 @@ function sortTable(colIndex, headerEl) {
     applyPagination();
 }
 
-const thSort = (idx, label, cls = "") => `<th class="hdr-std ${cls} cursor-pointer hover:bg-black/10 transition select-none" onclick="sortTable(${idx}, this)"><div class="flex items-center gap-1.5">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></div></th>`;
+const thSort = (idx, label, cls = "") => `<th class="hdr-std ${cls} cursor-pointer hover:bg-slate-900 transition select-none" onclick="sortTable(${idx}, this)"><div class="flex items-center justify-center gap-1.5">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></div></th>`;
 
 function renderTabel() {
     const thead = document.getElementById('thead-ks');
@@ -348,23 +291,27 @@ function renderTabel() {
 
         tbody.innerHTML = dataKSQR.map((r, i) => {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
+            // REVISI 5: PO Aktual Diganti menjadi tombol lihat modal
+            const poBtnHTML = `<button onclick="bukaModalLihatPO('${encodeURIComponent(r.po_aktual_gabungan)}')" class="bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold px-3 py-1.5 rounded shadow-sm active:scale-95 transition flex items-center gap-1.5 mx-auto text-[10px] uppercase"><i data-lucide="eye" class="w-3.5 h-3.5"></i> Lihat PO</button>`;
+
+            // REVISI 6: Penambahan atribut "data-search" di setiap TD agar filter 100% akurat
             return `
                 <tr class="hover:bg-slate-100 transition row-ks">
                     <td class="p-3 col-cb"><input type="checkbox" onchange="updateSelectedCount()" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual_spesifik}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
-                    <td class="p-3 font-bold text-emerald-700 bg-emerald-50/50 col-area">${r.area}</td>
-                    <td class="p-3 font-mono font-bold tracking-wide text-slate-900 col-qr text-left">${r.qrcode}</td>
-                    <td class="p-3 font-semibold text-slate-500 col-tgl">${r.tglProduksi}</td>
-                    <td class="p-3 font-semibold text-slate-500 col-mesin">${r.mesin}</td>
-                    <td class="p-3 font-semibold text-slate-500 col-shift">${r.shift}</td>
-                    <td class="p-3 font-bold text-blue-600 col-jenis">${r.jenis}</td>
-                    <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama}</td>
-                    <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg}</td>
-                    <td class="p-3 font-bold text-slate-700 col-grade">${r.grade}</td>
-                    <td class="p-3 font-bold text-slate-700 col-dus">${r.dus}</td>
-                    <td class="p-3 font-bold text-slate-600 col-shading">${r.shading}</td>
-                    <td class="p-3 font-semibold text-slate-400 col-po-bawaan">${r.po_bawaan}</td>
-                    <td class="p-3 font-black text-orange-600 bg-orange-50/40 whitespace-normal leading-relaxed min-w-[200px] col-po">${r.po_aktual_gabungan}</td>
-                    <td class="p-3 font-semibold text-slate-500 col-ket">${r.ket}</td>
+                    <td class="p-3 font-bold text-emerald-700 bg-emerald-50/50 col-area" data-search="${r.area}">${r.area}</td>
+                    <td class="p-3 font-mono font-bold tracking-wide text-slate-900 col-qr text-left" data-search="${r.qrcode}">${r.qrcode}</td>
+                    <td class="p-3 font-semibold text-slate-500 col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
+                    <td class="p-3 font-semibold text-slate-500 col-mesin" data-search="${r.mesin}">${r.mesin}</td>
+                    <td class="p-3 font-semibold text-slate-500 col-shift" data-search="${r.shift}">${r.shift}</td>
+                    <td class="p-3 font-bold text-blue-600 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
+                    <td class="p-3 font-bold text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
+                    <td class="p-3 font-bold text-slate-600 col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                    <td class="p-3 font-bold text-slate-700 col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="p-3 font-bold text-slate-700 col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="p-3 font-bold text-slate-600 col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="p-3 font-semibold text-slate-400 col-po-bawaan" data-search="${r.po_bawaan}">${r.po_bawaan}</td>
+                    <td class="p-2 col-po" data-search="${r.po_aktual_gabungan}">${poBtnHTML}</td>
+                    <td class="p-3 font-semibold text-slate-500 col-ket" data-search="${r.ket}">${r.ket}</td>
                 </tr>`;
         }).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="15" class="p-6 font-bold text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -392,16 +339,16 @@ function renderTabel() {
             return `
                 <tr class="hover:bg-slate-100 transition row-ks">
                     <td class="p-3 col-cb"><input type="checkbox" onchange="updateSelectedCount()" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
-                    <td class="p-3 font-black text-emerald-700 bg-emerald-50/50 col-area">${r.area}</td>
-                    <td class="p-3 font-bold text-blue-600 col-jenis">${r.jenis}</td>
-                    <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama}</td>
-                    <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg}</td>
-                    <td class="p-3 font-bold text-slate-700 col-grade">${r.grade}</td>
-                    <td class="p-3 font-bold text-slate-700 col-dus">${r.dus}</td>
-                    <td class="p-3 font-bold text-slate-600 col-shading">${r.shading}</td>
-                    <td class="p-3 font-black text-orange-600 bg-orange-50/40 col-po">${r.po}</td>
-                    <td class="p-3 font-semibold text-slate-500 col-ket">${r.ket}</td>
-                    <td class="p-3 font-black text-slate-900 bg-slate-50 col-qty text-base">${r.qty}</td>
+                    <td class="p-3 font-black text-emerald-700 bg-emerald-50/50 col-area" data-search="${r.area}">${r.area}</td>
+                    <td class="p-3 font-bold text-blue-600 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
+                    <td class="p-3 font-bold text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
+                    <td class="p-3 font-bold text-slate-600 col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                    <td class="p-3 font-bold text-slate-700 col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="p-3 font-bold text-slate-700 col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="p-3 font-bold text-slate-600 col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="p-3 font-black text-orange-600 bg-orange-50/40 col-po" data-search="${r.po}">${r.po}</td>
+                    <td class="p-3 font-semibold text-slate-500 col-ket" data-search="${r.ket}">${r.ket}</td>
+                    <td class="p-3 font-black text-slate-900 bg-slate-50 col-qty text-base" data-search="${r.qty}">${r.qty}</td>
                 </tr>`;
         }).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="11" class="p-6 font-bold text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -411,7 +358,7 @@ function renderTabel() {
             <tr>
                 <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300"></th>
                 <th class="hdr-std w-12 col-open">Detail</th>
-                ${thSort(2, 'Jenis Item', 'col-jenis')}
+                ${thSort(2, 'Jenis Item', 'border-l border-slate-500 col-jenis')}
                 ${thSort(3, 'Nama Item', 'col-nama')}
                 ${thSort(4, 'Panjang', 'col-pjg')}
                 ${thSort(5, 'Grade', 'col-grade')}
@@ -428,15 +375,15 @@ function renderTabel() {
             <tr class="hover:bg-slate-100 transition row-ks">
                 <td class="p-3 col-cb"><input type="checkbox" onchange="updateSelectedCount()" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
                 <td class="p-2 col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-slate-100 text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white rounded transition flex mx-auto items-center justify-center"><i data-lucide="box" class="w-4 h-4"></i></button></td>
-                <td class="p-3 font-bold text-blue-600 col-jenis">${r.jenis}</td>
-                <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama}</td>
-                <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg}</td>
-                <td class="p-3 font-bold text-slate-700 col-grade">${r.grade}</td>
-                <td class="p-3 font-bold text-slate-700 col-dus">${r.dus}</td>
-                <td class="p-3 font-bold text-slate-600 col-shading">${r.shading}</td>
-                <td class="p-3 font-black text-orange-600 bg-orange-50/40 col-po">${r.po}</td>
-                <td class="p-3 font-semibold text-slate-500 col-ket">${r.ket}</td>
-                <td class="p-3 font-black text-slate-900 bg-slate-50 col-qty text-base">${r.qty}</td>
+                <td class="p-3 font-bold text-blue-600 border-l border-slate-200 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
+                <td class="p-3 font-bold text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
+                <td class="p-3 font-bold text-slate-600 col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                <td class="p-3 font-bold text-slate-700 col-grade" data-search="${r.grade}">${r.grade}</td>
+                <td class="p-3 font-bold text-slate-700 col-dus" data-search="${r.dus}">${r.dus}</td>
+                <td class="p-3 font-bold text-slate-600 col-shading" data-search="${r.shading}">${r.shading}</td>
+                <td class="p-3 font-black text-orange-600 bg-orange-50/40 col-po" data-search="${r.po}">${r.po}</td>
+                <td class="p-3 font-semibold text-slate-500 col-ket" data-search="${r.ket}">${r.ket}</td>
+                <td class="p-3 font-black text-slate-900 bg-slate-50 col-qty text-base" data-search="${r.qty}">${r.qty}</td>
             </tr>
         `).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="11" class="p-6 font-bold text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -459,13 +406,13 @@ function renderTabel() {
         tbody.innerHTML = stokLembaranRaw.map((r, i) => `
             <tr class="hover:bg-slate-100 transition row-ks">
                 <td class="p-3 col-cb"><input type="checkbox" value="${r.id}" onchange="updateSelectedCount()" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
-                <td class="p-3 font-black text-emerald-700 bg-emerald-50/50 col-area">${r.kode_master || '-'}</td>
-                <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.nama_item || '-'}</td>
-                <td class="p-3 font-bold text-slate-600 col-pjg">${r.pjg || '-'}</td>
-                <td class="p-3 font-bold text-slate-700 col-grade">${r.grade || '-'}</td>
-                <td class="p-3 font-bold text-slate-700 col-dus">${r.dus || '-'}</td>
-                <td class="p-3 font-bold text-slate-600 col-shading">${r.shading || '-'}</td>
-                <td class="p-3 font-semibold text-slate-500 col-ket">${r.keterangan || '-'}</td>
+                <td class="p-3 font-black text-emerald-700 bg-emerald-50/50 col-area" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
+                <td class="p-3 font-bold text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
+                <td class="p-3 font-bold text-slate-600 col-pjg" data-search="${r.pjg || '-'}">${r.pjg || '-'}</td>
+                <td class="p-3 font-bold text-slate-700 col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
+                <td class="p-3 font-bold text-slate-700 col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
+                <td class="p-3 font-bold text-slate-600 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
+                <td class="p-3 font-semibold text-slate-500 col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
             </tr>
         `).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="8" class="p-6 font-bold text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -572,6 +519,24 @@ function tutupModalBreakdown() { document.getElementById('modal-breakdown').clas
 function toggleCentangBreakdown(checked) { document.querySelectorAll('.cb-bd').forEach(cb => cb.checked = checked); }
 
 // ========================================================
+// LIHAT PO AKTUAL MODAL
+// ========================================================
+function bukaModalLihatPO(encodedPOs) {
+    const poStr = decodeURIComponent(encodedPOs);
+    const poArr = poStr.split(',').map(p => p.trim()).filter(p => p);
+    const ul = document.getElementById('list-po-aktual');
+    if (poArr.length === 0 || (poArr.length === 1 && poArr[0] === 'NON-PO / KOSONG')) {
+        ul.innerHTML = '<li class="text-slate-400 italic font-medium p-3 bg-slate-100 rounded text-center border border-slate-200">Tidak ada PO Aktual tersimpan.</li>';
+    } else {
+        ul.innerHTML = poArr.map(p => `<li class="p-3 bg-white border-l-4 border-l-orange-500 shadow-sm text-orange-700 rounded flex items-center gap-3"><i data-lucide="tag" class="w-4 h-4 text-orange-400"></i> ${p}</li>`).join('');
+    }
+    lucide.createIcons();
+    document.getElementById('modal-lihat-po').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+}
+
+
+// ========================================================
 // EDIT KETERANGAN
 // ========================================================
 function siapkanEditKet(context) {
@@ -596,7 +561,7 @@ function siapkanEditKet(context) {
 
 function tutupModalKet() { 
     document.getElementById('modal-ket').classList.add('hidden'); 
-    if(document.getElementById('modal-breakdown').classList.contains('hidden') && document.getElementById('modal-setting').classList.contains('hidden')) {
+    if(document.getElementById('modal-breakdown').classList.contains('hidden')) {
         document.getElementById('overlay-klik-luar').classList.add('hidden'); 
     }
 }
@@ -666,7 +631,7 @@ function siapkanGantiPO(context) {
 
 function tutupModalPO() { 
     document.getElementById('modal-po').classList.add('hidden'); 
-    if(document.getElementById('modal-breakdown').classList.contains('hidden') && document.getElementById('modal-setting').classList.contains('hidden')) {
+    if(document.getElementById('modal-breakdown').classList.contains('hidden')) {
         document.getElementById('overlay-klik-luar').classList.add('hidden'); 
     }
 }
@@ -710,18 +675,41 @@ async function eksekusiGantiPO() {
 }
 
 function toggleSidebarFilter() { document.getElementById('sidebar-filter').classList.toggle('translate-x-full'); document.getElementById('overlay-klik-luar').classList.toggle('hidden'); }
-function tutupSemuaPopups() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); document.getElementById('dropdown-kolom').classList.add('hidden'); tutupModalPO(); tutupModalKet(); tutupModalBreakdown(); document.getElementById('modal-setting').classList.add('hidden'); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
+function tutupSemuaPopups() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); document.getElementById('dropdown-kolom').classList.add('hidden'); tutupModalPO(); tutupModalKet(); tutupModalBreakdown(); document.getElementById('modal-lihat-po').classList.add('hidden'); document.getElementById('overlay-klik-luar').classList.add('hidden'); }
 
-function resetFilter() { const ids = ['f-area','f-qr','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket']; ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; }); saringTabel(); toggleSidebarFilter(); }
+// REVISI 6: Perbaikan Logika Filter 100% Akurat dengan Data-Search
+function resetFilterWithoutRender() {
+    const ids = ['f-area','f-qr','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket'];
+    ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; });
+}
+function resetFilter() { resetFilterWithoutRender(); saringTabel(); toggleSidebarFilter(); }
 
 function saringTabel() {
-    const f = { area: document.getElementById('f-area').value.toLowerCase(), qr: document.getElementById('f-qr') ? document.getElementById('f-qr').value.toLowerCase() : '', jenis: document.getElementById('f-jenis').value.toLowerCase(), nama: document.getElementById('f-nama').value.toLowerCase(), pjg: document.getElementById('f-pjg').value.toLowerCase(), grade: document.getElementById('f-grade').value.toLowerCase(), dus: document.getElementById('f-dus').value.toLowerCase(), shading: document.getElementById('f-shading').value.toLowerCase(), po: document.getElementById('f-po').value.toLowerCase(), ket: document.getElementById('f-ket').value.toLowerCase() };
+    const getVal = id => { let el = document.getElementById(id); return el ? el.value.trim().toLowerCase() : ''; };
+    const f = { 
+        'col-area': getVal('f-area'), 
+        'col-qr': getVal('f-qr'), 
+        'col-jenis': getVal('f-jenis'), 
+        'col-nama': getVal('f-nama'), 
+        'col-pjg': getVal('f-pjg'), 
+        'col-grade': getVal('f-grade'), 
+        'col-dus': getVal('f-dus'), 
+        'col-shading': getVal('f-shading'), 
+        'col-po': getVal('f-po'), 
+        'col-ket': getVal('f-ket') 
+    };
+
     document.querySelectorAll('.row-ks').forEach(row => {
         let show = true;
-        for(let key in f) {
-            if(f[key]) {
-                const cell = row.querySelector('.col-' + key);
-                if(cell && !cell.innerText.toLowerCase().includes(f[key])) { show = false; break; }
+        for(let cls in f) {
+            if(f[cls] !== '') {
+                const cell = row.querySelector('.' + cls);
+                if(cell) {
+                    let text = cell.getAttribute('data-search') ? cell.getAttribute('data-search').toLowerCase() : cell.innerText.trim().toLowerCase();
+                    if(!text.includes(f[cls])) { show = false; break; }
+                } else {
+                    show = false; break;
+                }
             }
         }
         if (show) row.classList.remove('filtered-out');
