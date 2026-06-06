@@ -37,9 +37,9 @@
     <div class="w-full px-2 sm:px-4 relative pt-4">
         
         <div class="flex mb-4 overflow-x-auto hide-scrollbar border-b-2 border-slate-800" id="tab-container">
-            <button onclick="setModeKS('qr')" id="tab-qr" class="px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-800 text-white"><i data-lucide="qr-code" class="w-4 h-4"></i> KS QR (DETAIL)</button>
-            <button onclick="setModeKS('global')" id="tab-global" class="px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-800"><i data-lucide="globe-2" class="w-4 h-4"></i> KS GLOBAL</button>
             <button onclick="setModeKS('area')" id="tab-area" class="px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-800"><i data-lucide="map" class="w-4 h-4"></i> KS AREA</button>
+            <button onclick="setModeKS('global')" id="tab-global" class="px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-800"><i data-lucide="globe-2" class="w-4 h-4"></i> KS GLOBAL</button>
+            <button onclick="setModeKS('qr')" id="tab-qr" class="px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-800 text-white"><i data-lucide="qr-code" class="w-4 h-4"></i> KS QR (DETAIL)</button>
             <button onclick="setModeKS('lembaran')" id="tab-lembaran" class="px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-800"><i data-lucide="file" class="w-4 h-4"></i> KS LEMBARAN</button>
         </div>
 
@@ -63,9 +63,9 @@
                     <div class="bg-emerald-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-emerald-500 transition">Excel</div>
                 </button>
 
-                <button onclick="salinData()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-slate-300">
-                    <div class="bg-black text-white flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="copy" class="w-4 h-4"></i></div>
-                    <div class="bg-white text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-50 transition">Salin</div>
+                <button onclick="salinData()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-slate-800">
+                    <div class="bg-black text-white flex items-center justify-center px-3 py-2.5 border-r border-slate-700"><i data-lucide="copy" class="w-4 h-4"></i></div>
+                    <div class="bg-slate-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-700 transition">Salin</div>
                 </button>
 
                 <button id="btn-sync-db" onclick="sinkronisasiUlangStokAktual(true)" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-slate-300">
@@ -88,16 +88,16 @@
                 </table>
             </div>
             
-            <div class="p-3.5 border-t border-slate-700 bg-[#1e293b] flex flex-col md:flex-row justify-between items-center gap-4 w-full z-20 rounded-b-md shadow-inner">
-                <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
-                    <span class="bg-blue-100 border border-blue-200 px-3 py-1.5 rounded text-blue-800 text-xs font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-black">0</span></span>
-                    <span class="bg-amber-100 border border-amber-200 px-3 py-1.5 rounded text-amber-800 text-xs font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-amber-900 font-black">0</span></span>
-                    <span class="bg-emerald-100 border border-emerald-300 px-3 py-1.5 rounded text-emerald-800 text-xs font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-black">0</span></span>
+            <div class="p-2 border-t border-slate-300 bg-slate-100 flex flex-col md:flex-row justify-between items-center gap-2 w-full z-20 rounded-b-md shadow-inner">
+                <div class="flex items-center gap-2 flex-wrap justify-center">
+                    <span class="bg-blue-100 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-black">0</span></span>
+                    <span class="bg-amber-100 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-amber-900 font-black">0</span></span>
+                    <span class="bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded text-emerald-800 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-black">0</span></span>
                 </div>
-                <div class="flex items-center gap-3 bg-slate-800 border border-slate-600 p-1.5 rounded shadow-sm">
-                    <button onclick="prevPage()" class="p-1.5 px-3 bg-slate-700 text-white rounded hover:bg-slate-600 active:scale-95 transition"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
-                    <span class="px-3 font-black text-sm text-slate-300 tracking-wide uppercase">Hal <span id="lbl-halaman" class="text-white">1</span> / <span id="lbl-total-halaman" class="text-white">1</span></span>
-                    <button onclick="nextPage()" class="p-1.5 px-3 bg-slate-700 text-white rounded hover:bg-slate-600 active:scale-95 transition"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+                <div class="flex items-center gap-2 bg-white border border-slate-300 p-1 rounded shadow-sm">
+                    <button onclick="prevPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                    <span class="px-2 font-black text-xs text-slate-600 tracking-wide uppercase">Hal <span id="lbl-halaman" class="text-blue-600">1</span> / <span id="lbl-total-halaman">1</span></span>
+                    <button onclick="nextPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                 </div>
             </div>
         </div>
@@ -125,13 +125,15 @@
         <div class="bg-white shadow-2xl w-full max-w-sm border border-slate-300 rounded overflow-hidden">
             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-100">
                 <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="tags" class="w-4 h-4 text-orange-600"></i> DETAIL PO AKTUAL</h3>
-                <button onclick="document.getElementById('modal-lihat-po').classList.add('hidden')" class="text-slate-400 hover:text-red-500 transition bg-white p-1 rounded shadow-sm"><i data-lucide="x" class="w-4 h-4"></i></button>
+                <!-- BUG FIX: Pakai tutupSemuaPopups agar background buram hilang -->
+                <button onclick="tutupSemuaPopups()" class="text-slate-400 hover:text-red-500 transition bg-white p-1 rounded shadow-sm"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <div class="p-5 max-h-[60vh] overflow-y-auto bg-slate-50">
                 <ul id="list-po-aktual" class="space-y-2 text-sm font-bold text-slate-700"></ul>
             </div>
             <div class="p-3 bg-white border-t border-slate-200">
-                <button onclick="document.getElementById('modal-lihat-po').classList.add('hidden')" class="w-full py-2.5 bg-slate-800 text-white font-black text-xs uppercase hover:bg-slate-900 transition rounded active:scale-95 shadow-sm">TUTUP PENGINTIP</button>
+                <!-- BUG FIX: Pakai tutupSemuaPopups -->
+                <button onclick="tutupSemuaPopups()" class="w-full py-2.5 bg-slate-800 text-white font-black text-xs uppercase hover:bg-slate-900 transition rounded active:scale-95 shadow-sm">TUTUP PENGINTIP</button>
             </div>
         </div>
     </div>
