@@ -13,11 +13,11 @@
         
         /* THEMA METRO FLAT UI: Sudut tajam, warna pekat, border tegas */
         .hdr-std { 
-            background-color: var(--th-bg, #2c3e50) !important; 
-            color: var(--th-color, #ffffff) !important; 
+            background-color: #1e293b !important; /* Warna Slate-800 Keren */
+            color: #ffffff !important; 
             text-align: center !important; 
             padding: 0.85rem 1rem !important; 
-            font-size: var(--th-size, 11px) !important; 
+            font-size: 11px !important; 
             font-weight: 700 !important; 
             text-transform: uppercase !important;
             letter-spacing: 0.05em !important;
@@ -30,84 +30,77 @@
         #main-table td { border-bottom: 1px solid #e2e8f0 !important; border-right: 1px solid #e2e8f0 !important; }
         #main-table { border: 1px solid #e2e8f0; border-collapse: collapse; }
     </style>
-    <style id="dynamic-table-settings"></style>
-    <style id="dynamic-col-styles"></style>
 </head>
 <body class="font-sans bg-[#ecf0f1] overflow-x-hidden text-slate-800 pb-20">
     <div class="w-full px-2 sm:px-4 relative pt-4">
         
-        <div class="flex mb-4 overflow-x-auto hide-scrollbar border-b-2 border-[#2c3e50]" id="tab-container">
-            <button onclick="setModeKS('qr')" id="tab-qr" class="px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-[#2c3e50] text-white"><i data-lucide="qr-code" class="w-4 h-4"></i> KS QR (DETAIL)</button>
+        <!-- METRO TABS -->
+        <div class="flex mb-4 overflow-x-auto hide-scrollbar border-b-2 border-slate-800" id="tab-container">
+            <button onclick="setModeKS('qr')" id="tab-qr" class="px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-800 text-white"><i data-lucide="qr-code" class="w-4 h-4"></i> KS QR (DETAIL)</button>
             <button onclick="setModeKS('area')" id="tab-area" class="px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-800"><i data-lucide="map" class="w-4 h-4"></i> KS AREA</button>
             <button onclick="setModeKS('global')" id="tab-global" class="px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-800"><i data-lucide="globe-2" class="w-4 h-4"></i> KS GLOBAL</button>
             <button onclick="setModeKS('lembaran')" id="tab-lembaran" class="px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-800"><i data-lucide="file" class="w-4 h-4"></i> KS LEMBARAN</button>
         </div>
 
+        <!-- TOOLBAR: METRO FLAT DESIGN (Two-Tone Solid Blocks) -->
         <div class="bg-white p-3 border border-slate-200 mb-4 flex items-center justify-between gap-2 overflow-hidden shadow-sm">
             <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar whitespace-nowrap scroll-smooth select-none w-full" style="-webkit-overflow-scrolling: touch;">
                 
-                <button id="btn-ganti-po-main" onclick="siapkanGantiPO('main')" class="flex items-stretch shrink-0 cursor-pointer transition hover:opacity-90 active:scale-95">
-                    <div class="bg-blue-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="edit-3" class="w-4 h-4"></i></div>
-                    <div class="bg-blue-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wider">Ganti PO Aktual</div>
+                <!-- AKSI UTAMA -->
+                <button id="btn-ganti-po-main" onclick="siapkanGantiPO('main')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition">
+                    <div class="bg-blue-700 text-white flex items-center justify-center px-3 py-2"><i data-lucide="tags" class="w-4 h-4"></i></div>
+                    <div class="bg-blue-600 text-white font-bold text-[11px] px-4 py-2 flex items-center uppercase tracking-wide group-hover:bg-blue-500 transition">Ganti PO Aktual</div>
                 </button>
 
-                <button id="btn-edit-ket" onclick="siapkanEditKet('main')" class="flex items-stretch shrink-0 cursor-pointer transition hover:opacity-90 active:scale-95">
-                    <div class="bg-amber-600 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="edit-2" class="w-4 h-4"></i></div>
-                    <div class="bg-amber-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wider">Edit Keterangan</div>
-                </button>
-
-                <button onclick="alert('Fitur Konversi menyusul.')" class="flex items-stretch shrink-0 cursor-pointer transition hover:opacity-90 active:scale-95 opacity-60">
-                    <div class="bg-purple-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="refresh-cw" class="w-4 h-4"></i></div>
-                    <div class="bg-purple-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wider">Konversi</div>
+                <button id="btn-edit-ket" onclick="siapkanEditKet('main')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition">
+                    <div class="bg-amber-600 text-white flex items-center justify-center px-3 py-2"><i data-lucide="edit-2" class="w-4 h-4"></i></div>
+                    <div class="bg-amber-500 text-white font-bold text-[11px] px-4 py-2 flex items-center uppercase tracking-wide group-hover:bg-amber-400 transition">Edit Keterangan</div>
                 </button>
 
                 <div class="w-px h-8 bg-slate-300 mx-1 shrink-0"></div>
 
-                <button id="btn-sync-db" onclick="sinkronisasiUlangStokAktual(true)" class="flex items-stretch shrink-0 cursor-pointer transition hover:opacity-90 active:scale-95">
-                    <div class="bg-teal-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="database-backup" class="w-4 h-4"></i></div>
-                    <div class="bg-teal-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wider">Sinkron DB</div>
+                <!-- AKSI SEKUNDER (Netral Slate) -->
+                <button id="btn-sync-db" onclick="sinkronisasiUlangStokAktual(true)" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition">
+                    <div class="bg-slate-700 text-white flex items-center justify-center px-3 py-2"><i data-lucide="database-backup" class="w-4 h-4"></i></div>
+                    <div class="bg-slate-600 text-white font-bold text-[11px] px-4 py-2 flex items-center uppercase tracking-wide group-hover:bg-slate-500 transition">Sinkron DB</div>
                 </button>
 
-                <button onclick="downloadXLS()" class="flex items-stretch shrink-0 cursor-pointer transition hover:opacity-90 active:scale-95">
-                    <div class="bg-emerald-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i></div>
-                    <div class="bg-emerald-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wider">Excel</div>
+                <button onclick="downloadXLS()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition">
+                    <div class="bg-slate-700 text-white flex items-center justify-center px-3 py-2"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i></div>
+                    <div class="bg-slate-600 text-white font-bold text-[11px] px-4 py-2 flex items-center uppercase tracking-wide group-hover:bg-slate-500 transition">Excel</div>
                 </button>
 
-                <button onclick="toggleSidebarFilter()" class="flex items-stretch shrink-0 cursor-pointer transition hover:opacity-90 active:scale-95">
-                    <div class="bg-slate-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="filter" class="w-4 h-4"></i></div>
-                    <div class="bg-slate-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wider">Filter</div>
+                <button onclick="toggleSidebarFilter()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition">
+                    <div class="bg-slate-700 text-white flex items-center justify-center px-3 py-2"><i data-lucide="filter" class="w-4 h-4"></i></div>
+                    <div class="bg-slate-600 text-white font-bold text-[11px] px-4 py-2 flex items-center uppercase tracking-wide group-hover:bg-slate-500 transition">Filter</div>
                 </button>
                 
                 <div class="relative shrink-0 flex items-stretch">
-                    <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="flex items-stretch shrink-0 cursor-pointer transition hover:opacity-90 active:scale-95 h-full">
-                        <div class="bg-gray-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="eye-off" class="w-4 h-4"></i></div>
-                        <div class="bg-gray-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wider">Kolom</div>
+                    <button onclick="document.getElementById('dropdown-kolom').classList.toggle('hidden')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition h-full">
+                        <div class="bg-slate-700 text-white flex items-center justify-center px-3 py-2"><i data-lucide="eye-off" class="w-4 h-4"></i></div>
+                        <div class="bg-slate-600 text-white font-bold text-[11px] px-4 py-2 flex items-center uppercase tracking-wide group-hover:bg-slate-500 transition">Kolom</div>
                     </button>
                     <div id="dropdown-kolom" class="hidden absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 shadow-xl p-3 z-40">
                         <div class="flex justify-between items-center border-b border-slate-200 pb-2 mb-2">
                             <span class="text-xs font-black text-slate-500 uppercase">Sembunyikan</span>
-                            <button onclick="resetKolom()" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 font-bold hover:bg-blue-200">RESET</button>
+                            <button onclick="resetKolom()" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 font-bold hover:bg-blue-200 rounded">RESET</button>
                         </div>
                         <div class="flex flex-col gap-2 max-h-64 overflow-y-auto" id="list-kolom-toggles"></div>
                     </div>
                 </div>
 
-                <button onclick="salinData()" class="flex items-stretch shrink-0 cursor-pointer transition hover:opacity-90 active:scale-95">
-                    <div class="bg-cyan-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="copy" class="w-4 h-4"></i></div>
-                    <div class="bg-cyan-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wider">Salin</div>
+                <button onclick="salinData()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition">
+                    <div class="bg-slate-700 text-white flex items-center justify-center px-3 py-2"><i data-lucide="copy" class="w-4 h-4"></i></div>
+                    <div class="bg-slate-600 text-white font-bold text-[11px] px-4 py-2 flex items-center uppercase tracking-wide group-hover:bg-slate-500 transition">Salin</div>
                 </button>
-
             </div>
-
-            <button onclick="bukaModalSetting()" class="ml-1 flex items-stretch shrink-0 cursor-pointer transition hover:opacity-90 active:scale-95 bg-slate-200 hover:bg-slate-300" title="Pengaturan Tampilan Tabel">
-                <div class="text-slate-600 flex items-center justify-center px-3 py-2.5"><i data-lucide="settings" class="w-5 h-5"></i></div>
-            </button>
         </div>
 
         <div class="text-[9px] text-slate-400 text-center font-black uppercase tracking-widest -mt-2 mb-3 pointer-events-none flex items-center justify-center gap-1">
-            <i data-lucide="arrow-left-right" class="w-3 h-3"></i> Geser menu aksi ke kanan-kiri
+            <i data-lucide="arrow-left-right" class="w-3 h-3"></i> Geser menu tombol ke kanan-kiri
         </div>
 
+        <!-- TABEL AREA & PAGINASI FLAT -->
         <div class="bg-white border border-slate-200 relative mb-4 flex flex-col shadow-sm">
             <div class="table-container overflow-x-auto w-full min-h-[50vh] flex-1 hide-scrollbar">
                 <table class="w-full text-sm whitespace-nowrap" id="main-table">
@@ -116,56 +109,104 @@
                 </table>
             </div>
             
-            <div class="p-3 border-t border-slate-200 bg-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-bold text-slate-600 w-full z-20">
-                <div class="flex items-center gap-3 flex-wrap justify-center">
-                    <span class="bg-slate-300 px-3 py-1.5 text-slate-800">Total: <span id="lbl-total-baris" class="font-black">0</span></span>
-                    <span class="bg-blue-200 px-3 py-1.5 text-blue-900">Tampil: <span id="lbl-tampil-baris" class="font-black">0</span></span>
-                    <span class="bg-emerald-200 px-3 py-1.5 text-emerald-900">Dipilih: <span id="lbl-pilih-baris" class="font-black">0</span></span>
+            <div class="p-3 border-t border-slate-200 bg-[#f8fafc] flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-bold text-slate-600 w-full z-20">
+                <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
+                    <span class="bg-slate-200 px-3 py-1.5 rounded text-slate-700 shadow-sm border border-slate-300">Total: <span id="lbl-total-baris" class="text-black font-black">0</span></span>
+                    <span class="bg-emerald-100 px-3 py-1.5 rounded text-emerald-700 shadow-sm border border-emerald-300">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-black">0</span></span>
                 </div>
-                <div class="flex items-center gap-1">
-                    <button onclick="prevPage()" class="p-2.5 px-4 bg-white border border-slate-300 text-slate-700 hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                    <span class="px-4 font-black uppercase text-xs tracking-widest text-slate-600">Hal <span id="lbl-halaman" class="text-blue-600">1</span> / <span id="lbl-total-halaman">1</span></span>
-                    <button onclick="nextPage()" class="p-2.5 px-4 bg-white border border-slate-300 text-slate-700 hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                <div class="flex items-center gap-2">
+                    <button onclick="prevPage()" class="p-2 px-3 bg-white border border-slate-300 text-slate-700 rounded shadow-sm hover:bg-slate-100 active:scale-95 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                    <span class="px-3 font-black uppercase text-[11px] tracking-widest text-slate-600">Hal <span id="lbl-halaman" class="text-blue-600 text-sm">1</span> / <span id="lbl-total-halaman">1</span></span>
+                    <button onclick="nextPage()" class="p-2 px-3 bg-white border border-slate-300 text-slate-700 rounded shadow-sm hover:bg-slate-100 active:scale-95 transition"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- SEMUA MODAL POPUP -->
+    
+    <!-- MODAL FILTER (Dipercantik) -->
     <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-300 transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
         <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-100">
             <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Tabel</h3>
-            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-300 p-1.5 transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-300 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
         <div class="p-5 flex flex-col gap-4 overflow-y-auto bg-slate-50 flex-1">
-            <div class="grid grid-cols-2 gap-3">
-                <div id="f-area-container"><label class="block text-[10px] font-black uppercase text-slate-600 mb-1">Area</label><input type="text" id="f-area" oninput="saringTabel()" class="w-full p-2.5 text-xs border border-slate-300 focus:border-blue-500 outline-none"></div>
-                <div id="f-qr-container"><label class="block text-[10px] font-black uppercase text-slate-600 mb-1">QRCode</label><input type="text" id="f-qr" oninput="saringTabel()" class="w-full p-2.5 text-xs border border-slate-300 focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-600 mb-1">Jenis Item</label><input type="text" id="f-jenis" oninput="saringTabel()" class="w-full p-2.5 text-xs border border-slate-300 focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-600 mb-1">Nama Item</label><input type="text" id="f-nama" oninput="saringTabel()" class="w-full p-2.5 text-xs border border-slate-300 focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-600 mb-1">Panjang</label><input type="text" id="f-pjg" oninput="saringTabel()" class="w-full p-2.5 text-xs border border-slate-300 focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-600 mb-1">Grade</label><input type="text" id="f-grade" oninput="saringTabel()" class="w-full p-2.5 text-xs border border-slate-300 focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-600 mb-1">Dus</label><input type="text" id="f-dus" oninput="saringTabel()" class="w-full p-2.5 text-xs border border-slate-300 focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-600 mb-1">Shading</label><input type="text" id="f-shading" oninput="saringTabel()" class="w-full p-2.5 text-xs border border-slate-300 focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-600 mb-1">PO</label><input type="text" id="f-po" oninput="saringTabel()" class="w-full p-2.5 text-xs border border-slate-300 focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-600 mb-1">Keterangan</label><input type="text" id="f-ket" oninput="saringTabel()" class="w-full p-2.5 text-xs border border-slate-300 focus:border-blue-500 outline-none"></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div id="f-area-container">
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label>
+                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-area" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition" placeholder="Cari..."></div>
+                </div>
+                <div id="f-qr-container">
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label>
+                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-qr" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition" placeholder="Cari..."></div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label>
+                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-jenis" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition" placeholder="Cari..."></div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
+                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-nama" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition" placeholder="Cari..."></div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
+                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-pjg" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition" placeholder="Cari..."></div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
+                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-grade" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition" placeholder="Cari..."></div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label>
+                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-dus" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition" placeholder="Cari..."></div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label>
+                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-shading" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition" placeholder="Cari..."></div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PO Aktual</label>
+                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-po" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition" placeholder="Cari..."></div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label>
+                    <div class="relative"><i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i><input type="text" id="f-ket" oninput="saringTabel()" class="w-full pl-8 p-2 text-xs border border-slate-300 bg-white rounded focus:border-blue-500 outline-none transition" placeholder="Cari..."></div>
+                </div>
             </div>
-            <button onclick="resetFilter()" class="mt-4 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black text-xs uppercase transition shadow-sm border-b-4 border-black">RESET FILTER</button>
+            <button onclick="resetFilter()" class="mt-4 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black text-xs uppercase transition shadow-sm rounded border-b-4 border-black active:scale-95">RESET FILTER</button>
+        </div>
+    </div>
+
+    <!-- MODAL LIHAT PO AKTUAL (Baru) -->
+    <div id="modal-lihat-po" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[100] px-4 backdrop-blur-sm">
+        <div class="bg-white shadow-2xl w-full max-w-sm border border-slate-300 rounded overflow-hidden">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-100">
+                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="tags" class="w-4 h-4 text-orange-600"></i> DETAIL PO AKTUAL</h3>
+                <button onclick="document.getElementById('modal-lihat-po').classList.add('hidden')" class="text-slate-400 hover:text-red-500 transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="p-5 max-h-[60vh] overflow-y-auto bg-slate-50">
+                <ul id="list-po-aktual" class="space-y-2 text-sm font-bold text-slate-700"></ul>
+            </div>
+            <div class="p-3 bg-white border-t border-slate-200">
+                <button onclick="document.getElementById('modal-lihat-po').classList.add('hidden')" class="w-full py-2 bg-slate-800 text-white font-black text-xs uppercase hover:bg-slate-900 transition rounded active:scale-95">TUTUP</button>
+            </div>
         </div>
     </div>
 
     <div id="modal-breakdown" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] px-4 backdrop-blur-sm">
-        <div class="bg-white shadow-2xl w-full max-w-4xl border border-slate-300 flex flex-col max-h-[85vh]">
+        <div class="bg-white shadow-2xl w-full max-w-4xl border border-slate-300 flex flex-col max-h-[85vh] rounded">
             <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-100">
                 <h3 class="font-black text-slate-800 flex flex-col gap-1 uppercase tracking-wide">
                     <span class="flex items-center gap-2"><i data-lucide="package-open" class="w-5 h-5 text-blue-600"></i> DETAIL AREA ITEM</span>
                     <span id="bd-title-item" class="text-xs text-blue-700 font-bold ml-7">NAMA ITEM - 4M - BAGUS</span>
                 </h3>
-                <button onclick="tutupModalBreakdown()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-300 p-2 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="tutupModalBreakdown()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-300 p-2 transition rounded"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <div class="p-3 bg-white border-b border-slate-200 flex gap-2">
-                <button onclick="salinDataBreakdown()" class="px-4 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition uppercase"><i data-lucide="copy" class="w-4 h-4"></i> SALIN DETAIL</button>
-                <button onclick="siapkanGantiPO('breakdown')" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition uppercase"><i data-lucide="edit-3" class="w-4 h-4"></i> GANTI PO AKTUAL</button>
-                <button onclick="siapkanEditKet('breakdown')" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition uppercase"><i data-lucide="edit-2" class="w-4 h-4"></i> EDIT KETERANGAN</button>
+                <button onclick="salinDataBreakdown()" class="px-4 py-2.5 bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition uppercase rounded"><i data-lucide="copy" class="w-4 h-4"></i> SALIN DETAIL</button>
+                <button onclick="siapkanGantiPO('breakdown')" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition uppercase rounded"><i data-lucide="tags" class="w-4 h-4"></i> GANTI PO AKTUAL</button>
+                <button onclick="siapkanEditKet('breakdown')" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition uppercase rounded"><i data-lucide="edit-2" class="w-4 h-4"></i> EDIT KETERANGAN</button>
             </div>
             <div class="overflow-y-auto flex-1 hide-scrollbar bg-slate-50 p-4">
                 <table class="w-full border-collapse text-sm whitespace-nowrap bg-white border border-slate-200" id="table-breakdown">
@@ -186,98 +227,39 @@
     </div>
 
     <div id="modal-ket" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
-        <div class="bg-white p-6 shadow-2xl w-full max-w-sm border border-slate-300">
+        <div class="bg-white p-6 shadow-2xl w-full max-w-sm border border-slate-300 rounded">
             <h3 class="text-lg font-black mb-6 flex items-center gap-2 text-slate-800"><i data-lucide="edit-2" class="text-amber-500"></i> Edit Keterangan Item</h3>
             <div class="space-y-4 mb-6">
                 <div>
                     <label class="block text-xs font-black uppercase tracking-wide mb-2 text-slate-600">Keterangan Baru</label>
-                    <textarea id="input-new-ket" rows="3" class="w-full p-3 border border-slate-300 outline-none focus:border-amber-500 font-bold text-slate-800 bg-slate-50 resize-none" placeholder="Ketik keterangan di sini..."></textarea>
+                    <textarea id="input-new-ket" rows="3" class="w-full p-3 border border-slate-300 outline-none focus:border-amber-500 font-bold text-slate-800 bg-slate-50 resize-none rounded" placeholder="Ketik keterangan di sini..."></textarea>
                 </div>
             </div>
             <div class="flex gap-2">
-                <button type="button" onclick="tutupModalKet()" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-black hover:bg-slate-300 transition cursor-pointer text-xs uppercase">BATAL</button>
-                <button type="button" onclick="eksekusiEditKet()" id="btn-simpan-ket" class="w-1/2 py-3 bg-amber-500 hover:bg-amber-600 text-white font-black shadow-md transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
+                <button type="button" onclick="tutupModalKet()" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-black hover:bg-slate-300 transition cursor-pointer text-xs uppercase rounded">BATAL</button>
+                <button type="button" onclick="eksekusiEditKet()" id="btn-simpan-ket" class="w-1/2 py-3 bg-amber-500 hover:bg-amber-600 text-white font-black shadow-md transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase rounded"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
             </div>
         </div>
     </div>
 
     <div id="modal-po" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
-        <div class="bg-white p-6 shadow-2xl w-full max-w-sm border border-slate-300">
-            <h3 class="text-lg font-black mb-6 flex items-center gap-2 text-slate-800"><i data-lucide="edit-3" class="text-blue-600"></i> Ganti PO Aktual</h3>
+        <div class="bg-white p-6 shadow-2xl w-full max-w-sm border border-slate-300 rounded">
+            <h3 class="text-lg font-black mb-6 flex items-center gap-2 text-slate-800"><i data-lucide="tags" class="text-blue-600"></i> Ganti PO Aktual</h3>
             <div class="space-y-4 mb-6">
                 <div>
                     <label class="block text-xs font-black uppercase tracking-wide mb-2 text-slate-600">Pilih PO Aktual</label>
-                    <select id="input-new-po" class="w-full p-3 border border-slate-300 outline-none focus:border-blue-600 font-bold text-slate-800 uppercase bg-slate-50 cursor-pointer">
+                    <select id="input-new-po" class="w-full p-3 border border-slate-300 outline-none focus:border-blue-600 font-bold text-slate-800 uppercase bg-slate-50 cursor-pointer rounded">
                         <option value="">-- MEMUAT PO... --</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-xs font-black uppercase tracking-wide mb-2 text-slate-600">Jumlah Dus</label>
-                    <input type="number" id="input-qty-ganti" class="w-full p-3 border border-slate-300 outline-none focus:border-blue-600 font-bold text-slate-800 bg-slate-50" placeholder="Contoh: 5" min="1">
+                    <input type="number" id="input-qty-ganti" class="w-full p-3 border border-slate-300 outline-none focus:border-blue-600 font-bold text-slate-800 bg-slate-50 rounded" placeholder="Contoh: 5" min="1">
                 </div>
             </div>
             <div class="flex gap-2">
-                <button type="button" onclick="tutupModalPO()" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-black hover:bg-slate-300 transition cursor-pointer text-xs uppercase">BATAL</button>
-                <button type="button" onclick="eksekusiGantiPO()" id="btn-simpan-po" class="w-1/2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black shadow-md transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="modal-setting" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[90] px-4 backdrop-blur-sm">
-        <div class="bg-white shadow-2xl w-full max-w-md border border-slate-300 flex flex-col">
-            <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-100">
-                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm">
-                    <i data-lucide="settings" class="w-5 h-5 text-slate-600"></i> PENGATURAN TAMPILAN
-                </h3>
-                <button onclick="tutupSemuaPopups()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-300 p-1.5 transition"><i data-lucide="x" class="w-4 h-4"></i></button>
-            </div>
-            <div class="p-5 flex flex-col gap-5 overflow-y-auto max-h-[70vh] bg-slate-50">
-                <div class="border border-slate-200 p-4 bg-white shadow-sm">
-                    <h4 class="font-black text-xs text-blue-600 mb-3 uppercase flex items-center gap-1"><i data-lucide="heading" class="w-3.5 h-3.5"></i> Styling Header Tabel</h4>
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-bold text-slate-600">Warna Background</label>
-                            <input type="color" id="set-th-bg" class="w-10 h-8 cursor-pointer border border-slate-300">
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-bold text-slate-600">Warna Teks (HEX)</label>
-                            <input type="color" id="set-th-color" class="w-10 h-8 cursor-pointer border border-slate-300">
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-bold text-slate-600">Ukuran Font (px)</label>
-                            <input type="number" id="set-th-size" class="w-20 p-1.5 text-center text-xs font-bold border border-slate-300" min="8" max="24">
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-bold text-slate-600">Perataan Teks (Align)</label>
-                            <select id="set-th-align" class="w-24 p-1.5 text-xs font-bold border border-slate-300 outline-none cursor-pointer">
-                                <option value="left">Kiri</option><option value="center">Tengah</option><option value="right">Kanan</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="border border-slate-200 p-4 bg-white shadow-sm">
-                    <h4 class="font-black text-xs text-emerald-600 mb-3 uppercase flex items-center gap-1"><i data-lucide="table-2" class="w-3.5 h-3.5"></i> Styling Isi Tabel (Umum)</h4>
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-bold text-slate-600">Warna Teks</label>
-                            <input type="color" id="set-td-color" class="w-10 h-8 cursor-pointer border border-slate-300">
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-bold text-slate-600">Ukuran Font (px)</label>
-                            <input type="number" id="set-td-size" class="w-20 p-1.5 text-center text-xs font-bold border border-slate-300" min="8" max="24">
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-bold text-slate-600">Perataan Teks (Align)</label>
-                            <select id="set-td-align" class="w-24 p-1.5 text-xs font-bold border border-slate-300 outline-none cursor-pointer">
-                                <option value="left">Kiri</option><option value="center">Tengah</option><option value="right">Kanan</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="p-4 border-t border-slate-200 flex justify-between bg-slate-100 items-center">
-                <button onclick="resetSettingDefault()" class="text-[10px] font-black text-red-500 hover:text-red-700 underline uppercase">Reset Semua</button>
-                <button onclick="simpanSettingTabel()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-black shadow-sm text-xs transition flex items-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> TERAPKAN</button>
+                <button type="button" onclick="tutupModalPO()" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-black hover:bg-slate-300 transition cursor-pointer text-xs uppercase rounded">BATAL</button>
+                <button type="button" onclick="eksekusiGantiPO()" id="btn-simpan-po" class="w-1/2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black shadow-md transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase rounded"><i data-lucide="save" class="w-4 h-4"></i> SIMPAN</button>
             </div>
         </div>
     </div>
