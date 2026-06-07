@@ -93,10 +93,14 @@
                     </table>
                 </div>
                 <div class="flex justify-between items-center p-3 bg-slate-50 border-t border-slate-200">
-                    <span class="text-xs font-bold text-slate-500" id="utama-page-info">Hal 1 dari 1</span>
                     <div class="flex gap-2">
-                        <button onclick="gantiPageUtama(-1)" class="px-3 py-1 bg-white border border-slate-300 rounded text-xs font-black hover:bg-slate-100 shadow-sm">PREV</button>
-                        <button onclick="gantiPageUtama(1)" class="px-3 py-1 bg-white border border-slate-300 rounded text-xs font-black hover:bg-slate-100 shadow-sm">NEXT</button>
+                        <span class="text-[11px] font-bold text-blue-700 bg-blue-100 border border-blue-300 px-2 py-1 rounded shadow-sm" id="utama-filter-info">Tampil Filter: 0</span>
+                        <span class="text-[11px] font-bold text-amber-700 bg-amber-100 border border-amber-300 px-2 py-1 rounded shadow-sm" id="utama-qty-info">Total Qty PO: 0</span>
+                    </div>
+                    <div class="flex gap-1 items-center bg-white border border-slate-300 rounded shadow-sm p-0.5">
+                        <button onclick="gantiPageUtama(-1)" class="px-2 py-1 hover:bg-slate-100 rounded text-slate-600"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                        <span class="text-xs font-black text-slate-700 px-3 border-x border-slate-200" id="utama-page-info">HAL 1 / 1</span>
+                        <button onclick="gantiPageUtama(1)" class="px-2 py-1 hover:bg-slate-100 rounded text-slate-600"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                     </div>
                 </div>
             </div>
@@ -167,10 +171,14 @@
                     </table>
                 </div>
                 <div class="flex justify-between items-center p-3 bg-slate-50 border-t border-slate-200">
-                    <span class="text-xs font-bold text-slate-500" id="picking-page-info">Hal 1 dari 1</span>
                     <div class="flex gap-2">
-                        <button onclick="changePagePicking(-1)" class="px-3 py-1 bg-white border border-slate-300 rounded text-xs font-black hover:bg-slate-100">PREV</button>
-                        <button onclick="changePagePicking(1)" class="px-3 py-1 bg-white border border-slate-300 rounded text-xs font-black hover:bg-slate-100">NEXT</button>
+                        <span class="text-[11px] font-bold text-blue-700 bg-blue-100 border border-blue-300 px-2 py-1 rounded shadow-sm" id="picking-filter-info">Tampil Filter: 0</span>
+                        <span class="text-[11px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-1 rounded shadow-sm" id="picking-qty-info">Total Picked Qty: 0</span>
+                    </div>
+                    <div class="flex gap-1 items-center bg-white border border-slate-300 rounded shadow-sm p-0.5">
+                        <button onclick="changePagePicking(-1)" class="px-2 py-1 hover:bg-slate-100 rounded text-slate-600"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                        <span class="text-xs font-black text-slate-700 px-3 border-x border-slate-200" id="picking-page-info">HAL 1 / 1</span>
+                        <button onclick="changePagePicking(1)" class="px-2 py-1 hover:bg-slate-100 rounded text-slate-600"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                     </div>
                 </div>
             </div>
@@ -213,8 +221,7 @@
                 <button onclick="bukaModalInputProduksi()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-md text-xs uppercase flex items-center gap-2 transition active:scale-95">
                     <i data-lucide="plus-circle" class="w-4 h-4"></i> Input dari Produksi
                 </button>
-                <button onclick="resetFilterPopupInternal()" class="p-2 bg-slate-100 border border-slate-300 font-black text-xs rounded-lg hover:bg-slate-200 text-slate-700 transition uppercase">Reset Filter Excel</button>
-            </div>
+                </div>
 
             <div class="overflow-y-auto flex-1 p-0 hide-scrollbar relative table-container">
                 <table class="w-full text-center border-collapse text-sm whitespace-nowrap" id="table-popup-stok">
@@ -259,11 +266,16 @@
                 </table>
             </div>
             <div class="flex justify-between items-center p-3 bg-slate-50 border-t border-slate-200">
-                <span class="text-xs font-bold text-slate-500" id="popup-page-info">Hal 1 dari 1</span>
                 <div class="flex gap-2">
-                    <button onclick="changePagePopup(-1)" class="px-3 py-1 bg-white border border-slate-300 rounded text-xs font-black hover:bg-slate-100">PREV</button>
-                    <button onclick="changePagePopup(1)" class="px-3 py-1 bg-white border border-slate-300 rounded text-xs font-black hover:bg-slate-100">NEXT</button>
+                    <span class="text-[11px] font-bold text-blue-700 bg-blue-100 border border-blue-300 px-2 py-1 rounded shadow-sm" id="popup-filter-info">Tampil Filter: 0</span>
+                    <span class="text-[11px] font-bold text-amber-700 bg-amber-100 border border-amber-300 px-2 py-1 rounded shadow-sm" id="popup-qty-info">Total Qty (Dus): 0</span>
                 </div>
+                <div class="flex gap-1 items-center bg-white border border-slate-300 rounded shadow-sm p-0.5">
+                    <button onclick="changePagePopup(-1)" class="px-2 py-1 hover:bg-slate-100 rounded text-slate-600"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                    <span class="text-xs font-black text-slate-700 px-3 border-x border-slate-200" id="popup-page-info">HAL 1 / 1</span>
+                    <button onclick="changePagePopup(1)" class="px-2 py-1 hover:bg-slate-100 rounded text-slate-600"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                </div>
+            </div>
             </div>
         </div>
     </div>
@@ -295,9 +307,15 @@
                 <button onclick="document.getElementById('modal-input-produksi').classList.add('hidden')" class="text-slate-400 hover:text-red-500"><i data-lucide="x"></i></button>
             </div>
             <div class="space-y-3 mb-5">
-                <div><label class="text-[11px] font-black uppercase text-slate-500">No. Dus</label><input type="text" id="inp-prod-dus" class="w-full p-2 border-2 border-slate-200 rounded-lg outline-none font-bold text-sm uppercase"></div>
+                <div>
+                    <label class="text-[11px] font-black uppercase text-slate-500">Dus</label>
+                    <select id="inp-prod-dus" class="w-full p-2 border-2 border-slate-200 rounded-lg outline-none font-bold text-sm uppercase cursor-pointer bg-slate-50">
+                        <option value="-">-- MEMUAT DUS --</option>
+                    </select>
+                </div>
                 <div><label class="text-[11px] font-black uppercase text-slate-500">Shading</label><input type="text" id="inp-prod-shading" class="w-full p-2 border-2 border-slate-200 rounded-lg outline-none font-bold text-sm uppercase"></div>
-                <div><label class="text-[11px] font-black uppercase text-slate-500">QTY (Stok Diterima)</label><input type="number" id="inp-prod-qty" class="w-full p-2 border-2 border-slate-200 rounded-lg outline-none font-black text-center text-lg bg-slate-50"></div>
+                <div><label class="text-[11px] font-black uppercase text-slate-500">Qty Diambil</label><input type="number" id="inp-prod-qty" class="w-full p-2 border-2 border-slate-200 rounded-lg outline-none font-black text-center text-lg bg-slate-50"></div>
+                <div><label class="text-[11px] font-black uppercase text-slate-500">Keterangan</label><input type="text" id="inp-prod-ket" class="w-full p-2 border-2 border-slate-200 rounded-lg outline-none font-bold text-sm"></div>
             </div>
             <button type="button" onclick="simpanInputProduksi()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md text-xs uppercase flex justify-center items-center gap-1"><i data-lucide="check"></i> Submit Ke List</button>
         </div>
