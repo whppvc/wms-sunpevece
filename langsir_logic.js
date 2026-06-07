@@ -195,8 +195,9 @@ function addRow(area, code, isDuplicate = false) {
         <td class="p-3 font-black text-center text-orange-600 bg-orange-50/50 border-r border-slate-200 col-po">${td.po}</td>
         <td class="p-3 font-bold text-slate-500 ket-cell col-ket text-left italic text-[11px]">Tunggu Cek</td>`;
     
-    document.getElementById('tbody-langsir').prepend(tr); lucide.createIcons(); updateRowNumbers();
-    applyPagination(); 
+    document.getElementById('tbody-langsir').prepend(tr); 
+    lucide.createIcons(); 
+    // updateRowNumbers() dan applyPagination() sengaja dihapus dari sini agar tidak looping berat
 }
 
 function deleteRow(btn) { 
