@@ -525,8 +525,16 @@ async function eksekusiGantiArea() {
     for(let qr of qrsToUpdate) {
         let dbRow = logLangsirRaw.find(r => r.qrcode === qr);
         if(dbRow) {
-            let newObj = { ...dbRow }; let parts = newObj.id_sku.split('_'); parts[0] = newArea; 
-            newObj.id_sku = parts.join('_'); newObj.area = newArea; updates.push(newObj);
+            let newObj = { ...dbRow }; 
+            let parts = newObj.id_sku.split('_'); 
+            parts[0] = newArea; 
+            newObj.id_sku = parts.join('_'); 
+            newObj.area = newArea; 
+            
+            // PERBAIKAN: Ganti/Timpa nama PIC dengan user yang sedang login melakukan ganti area
+            newObj.pic_input = currentUser.username || 'Unknown';
+            
+            updates.push(newObj);
         }
     }
     try {
