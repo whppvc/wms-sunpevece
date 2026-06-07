@@ -5,21 +5,36 @@ let sortState = {};
 let currentPage = 1;
 const rowsPerPage = 10; // Jumlah baris per halaman
 
-document.addEventListener('DOMContentLoaded', async () => {
-    setTimeout(async () => {
-        try {
-            const { data: mDataArea } = await db.from('master_area').select('nama_area').order('id', { ascending: true });
-            if(mDataArea) {
-                masterData.area = [...new Set(mDataArea.map(r => r.nama_area).filter(x => x && x.trim() !== ''))]; 
-                const selArea = document.getElementById('select-area');
-                if(selArea) { selArea.innerHTML = '<option value="">-- Pilih Area --</option>'; masterData.area.forEach(a => selArea.innerHTML += `<option value="${a}">${a}</option>`); }
-            }
-
-            const { data: mData2 } = await db.from('master_2').select('*');
-            if(mData2) masterData.kamus = mData2; 
-
-        } catch (e) { console.error("Gagal muat dropdown:", e); }
-    }, 200); 
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        const formScan = document.getElementById('form-scan');
+        if(formScan) {
+            formScan.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const rawInput = document.getElementById('input-qrcode').value.trim();
+                const area = document.getElementById('select-area').value;
+                if(!area || !rawInput) return alert("Pilih Area Simpan dan isi QR Code!");
+                
+                const existingQRs = Array.from(document.querySelectorAll('.qr-val')).map(td => td.innerText);
+                
+                // PERBAIKAN: Regex diperkuat untuk membaca Spasi, Enter, Tab, dan Titik Koma
+                const codes = rawInput.split(/[\s;]+/).map(q => q.trim()).filter(q => q);
+                
+                // Looping hanya untuk mencetak baris ke memori (DOM)
+                codes.forEach(code => { 
+                    const isLocalDuplicate = existingQRs.includes(code);
+                    addRow(area, code, isLocalDuplicate); 
+                    existingQRs.push(code); 
+                });
+                
+                // PERBAIKAN: Eksekusi penomoran dan paginasi SEKALI SAJA setelah semua baris selesai di-paste
+                updateRowNumbers();
+                applyPagination();
+                
+                document.getElementById('input-qrcode').value = '';
+            });
+        }
+    }, 500);
 });
 
 function sortTable(colIndex, headerEl) {
