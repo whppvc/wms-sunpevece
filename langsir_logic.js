@@ -148,10 +148,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 500);
 });
 
-function toggleSemuaCentang(checked) {
-    document.querySelectorAll('.cb-row').forEach(cb => cb.checked = checked);
-}
-
 function addRow(area, code, isDuplicate = false) {
     globalRowId++; const tr = document.createElement('tr'); 
     const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'hover:bg-slate-50';
@@ -185,16 +181,27 @@ function addRow(area, code, isDuplicate = false) {
         <td class="p-3 font-bold text-slate-500 ket-cell col-ket text-left italic text-[11px]">Tunggu Cek</td>`;
     
     document.getElementById('tbody-langsir').prepend(tr); lucide.createIcons(); updateRowNumbers();
+    applyPagination(); 
 }
 
-function deleteRow(btn) { const tr = btn.closest('tr'); deleteStack.push({ parent: tr.parentNode, html: tr.outerHTML, nextSibling: tr.nextSibling }); tr.remove(); updateRowNumbers(); }
-function undoDelete() { if(deleteStack.length === 0) return alert("Belum ada data yang dihapus."); const last = deleteStack.pop(); const temp = document.createElement('tbody'); temp.innerHTML = last.html; if (last.nextSibling) last.parent.insertBefore(temp.firstChild, last.nextSibling); else last.parent.appendChild(temp.firstChild); lucide.createIcons(); updateRowNumbers(); }
-function updateRowNumbers() { 
-    const rows = document.querySelectorAll('.row-item'); 
-    let count = 1; // Logika DIBALIK, mulai dari 1
-    rows.forEach(tr => { 
-        tr.querySelector('.no-cell').innerText = count++; // Menggunakan Increment ++
-    }); 
+function deleteRow(btn) { 
+    const tr = btn.closest('tr'); 
+    deleteStack.push({ parent: tr.parentNode, html: tr.outerHTML, nextSibling: tr.nextSibling }); 
+    tr.remove(); 
+    updateRowNumbers(); 
+    applyPagination(); 
+}
+
+function undoDelete() { 
+    if(deleteStack.length === 0) return alert("Belum ada data yang dihapus."); 
+    const last = deleteStack.pop(); 
+    const temp = document.createElement('tbody'); 
+    temp.innerHTML = last.html; 
+    if (last.nextSibling) last.parent.insertBefore(temp.firstChild, last.nextSibling); 
+    else last.parent.appendChild(temp.firstChild); 
+    lucide.createIcons(); 
+    updateRowNumbers(); 
+    applyPagination(); 
 }
 
 // REVISI: Fungsi Mengedit Keterangan Massal
