@@ -173,7 +173,7 @@ function addRow(area, code, isDuplicate = false) {
         : '<span class="text-slate-400 font-bold kode-val" data-status="unverified">-</span>';
 
     tr.innerHTML = `
-        <td class="p-3 col-cb"><input type="checkbox" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
+        <td class="p-3 col-cb"><input type="checkbox" onchange="highlightRow(this)" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
         <td class="p-3 text-center col-btn"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 cursor-pointer p-1.5 rounded bg-white shadow-sm border border-slate-200"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
         <td class="p-3 font-bold no-cell text-center text-slate-500 col-no"></td>
         <td class="p-3 font-bold text-center border-r border-slate-200 col-stbj">${stbjHtml}</td>
@@ -555,6 +555,24 @@ function toggleInputData() {
         icon.setAttribute('data-lucide', 'chevron-down');
     }
     lucide.createIcons();
+}
+function toggleSemuaCentang(checked) {
+    document.querySelectorAll('.cb-row').forEach(cb => {
+        const row = cb.closest('tr');
+        // Hanya centang baris yang tampil (tidak tersembunyi oleh filter/paginasi)
+        if (row && row.style.display !== 'none' && !row.classList.contains('filtered-out')) {
+            cb.checked = checked;
+            highlightRow(cb);
+        }
+    });
+}
+
+function highlightRow(cb) {
+    const tr = cb.closest('tr');
+    if (tr) {
+        if (cb.checked) tr.classList.add('selected-row');
+        else tr.classList.remove('selected-row');
+    }
 }
 
 function saringTabelModalSTBJ() {
