@@ -550,6 +550,19 @@ function salinDataTabel() {
     navigator.clipboard.writeText(copyString).then(() => alert("Tersalin!"));
 }
 
+function highlightRow(cb) {
+    const tr = cb.closest('tr');
+    if (tr) {
+        if (cb.checked) tr.classList.add('selected-row');
+        else tr.classList.remove('selected-row');
+    }
+    
+    // Perbarui counter "Dipilih: X" di footer (karena ini menu riwayat)
+    if (typeof updateSelectedCount === 'function') {
+        updateSelectedCount();
+    }
+}
+
 async function bukaModalSTBJ() {
     const mStbj = document.getElementById('modal-stbj-langsir'); if(mStbj) mStbj.classList.remove('hidden');
     const overlay = document.getElementById('overlay-klik-luar'); if(overlay) overlay.classList.remove('hidden');
