@@ -31,6 +31,34 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error("Gagal muat dropdown area:", e); 
         }
     }, 200); 
+
+    // PERBAIKAN 2: FUNGSI SCAN DIGABUNG DI SINI AGAR TIDAK LOOPING BERAT
+    setTimeout(() => {
+        const formScan = document.getElementById('form-scan');
+        if(formScan) {
+            formScan.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const rawInput = document.getElementById('input-qrcode').value.trim();
+                const area = document.getElementById('select-area').value;
+                if(!area || !rawInput) return alert("Pilih Area Simpan dan isi QR Code!");
+                
+                const existingQRs = Array.from(document.querySelectorAll('.qr-val')).map(td => td.innerText);
+                const codes = rawInput.split(/[\s;]+/).map(q => q.trim()).filter(q => q);
+                
+                codes.forEach(code => { 
+                    const isLocalDuplicate = existingQRs.includes(code);
+                    addRow(area, code, isLocalDuplicate); 
+                    existingQRs.push(code); 
+                });
+                
+                // MENGATASI NOMOR 1 & 2: Panggil ini di luar loop agar langsung muncul nomornya & langsung terbagi 10 baris
+                updateRowNumbers();
+                applyPagination();
+                
+                document.getElementById('input-qrcode').value = '';
+            });
+        }
+    }, 500);
 });
 
 function sortTable(colIndex, headerEl) {
@@ -97,7 +125,6 @@ function saringTabelLangsir() {
                 if(cell && !cell.innerText.toLowerCase().includes(f[key])) { show = false; break; }
             }
         }
-        // JANGAN gunakan style.display = none, gunakan class 'filtered-out' untuk paginasi
         if (show) { row.classList.remove('filtered-out'); } 
         else { row.classList.add('filtered-out'); }
     });
@@ -134,31 +161,6 @@ function translateBarcode(barcode) {
     return data;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        const formScan = document.getElementById('form-scan');
-        if(formScan) {
-            formScan.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const rawInput = document.getElementById('input-qrcode').value.trim();
-                const area = document.getElementById('select-area').value;
-                if(!area || !rawInput) return alert("Pilih Area Simpan dan isi QR Code!");
-                
-                const existingQRs = Array.from(document.querySelectorAll('.qr-val')).map(td => td.innerText);
-                const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
-                
-                codes.forEach(code => { 
-                    const isLocalDuplicate = existingQRs.includes(code);
-                    addRow(area, code, isLocalDuplicate); 
-                    existingQRs.push(code); 
-                });
-                
-                document.getElementById('input-qrcode').value = '';
-            });
-        }
-    }, 500);
-});
-
 function addRow(area, code, isDuplicate = false) {
     globalRowId++; const tr = document.createElement('tr'); 
     const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'hover:bg-slate-50';
@@ -193,7 +195,6 @@ function addRow(area, code, isDuplicate = false) {
     
     document.getElementById('tbody-langsir').prepend(tr); 
     lucide.createIcons(); 
-    // updateRowNumbers() dan applyPagination() sengaja dihapus dari sini agar tidak looping berat
 }
 
 function deleteRow(btn) { 
@@ -216,7 +217,57 @@ function undoDelete() {
     applyPagination(); 
 }
 
-// REVISI: Fungsi Mengedit Keterangan Massal
+// PERBAIKAN 1: MEMUNCULKAN PENOMORAN DARI ANGKA 1 (Urut)
+function updateRowNumbers() { 
+    const rows = document.querySelectorAll('#tbody-langsir tr.row-item'); 
+    let count = 1; 
+    rows.forEach(tr => { 
+        const noCell = tr.querySelector('.no-cell');
+        if(noCell) noCell.innerText = count++; 
+    }); 
+}
+
+// PERBAIKAN 3: MENGUBAH KOTAK TAMPIL FILTER MENJADI TOTAL QTY DUS 
+function applyPagination() {
+    const allRows = Array.from(document.querySelectorAll('#tbody-langsir tr.row-item'));
+    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
+    
+    const totalFiltered = visibleRows.length; 
+    const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
+    
+    if(currentPage > totalPages) currentPage = totalPages; 
+    if(currentPage < 1) currentPage = 1;
+
+    const startIndex = (currentPage - 1) * rowsPerPage; 
+    const endIndex = startIndex + rowsPerPage;
+
+    visibleRows.forEach((row, index) => {
+        if(index >= startIndex && index < endIndex) { 
+            row.style.display = ''; 
+        } else { 
+            row.style.display = 'none'; 
+        }
+    });
+
+    const kotakFilter = document.getElementById('lbl-tampil-baris');
+    if(kotakFilter) {
+        const parentSpan = kotakFilter.parentElement;
+        if(parentSpan) {
+            parentSpan.className = "bg-amber-100 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm";
+            parentSpan.innerHTML = `Total Qty (Dus): <span id="lbl-tampil-baris" class="text-amber-900 font-black">${totalFiltered}</span>`;
+        }
+    }
+    
+    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
+    if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
+}
+
+function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } }
+function nextPage() { 
+    const totalVisible = document.querySelectorAll('#tbody-langsir tr.row-item:not(.filtered-out)').length;
+    if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
+}
+
 function editKeteranganMassal() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
     if (checkedBoxes.length === 0) return alert("Pilih / centang baris yang keterangannya ingin diedit!");
@@ -230,11 +281,10 @@ function editKeteranganMassal() {
         if (ketCell) {
             ketCell.innerText = newKet.trim() || '-';
             ketCell.classList.remove('italic', 'text-red-500', 'text-slate-500'); 
-            ketCell.classList.add('text-blue-700'); // Mengubah warna text untuk nandain kalau ini manual edit
+            ketCell.classList.add('text-blue-700'); 
         }
     });
     
-    // Uncheck semua setelah selesai agar tidak salah eksekusi hold
     document.querySelector('input[onchange="toggleSemuaCentang(this.checked)"]').checked = false;
     toggleSemuaCentang(false);
     alert("Keterangan berhasil diperbarui secara lokal!");
@@ -278,7 +328,6 @@ async function VerifikasiDanCek() {
                 troliCell.innerText = stbjMap[qr].troli || '-';
                 troliCell.className = "p-3 font-bold text-slate-700 troli-cell col-troli text-center";
                 
-                // Jangan timpa jika user sudah pernah mengedit manual dan teksnya biru
                 if(!ketCell.classList.contains('text-blue-700')) {
                     ketCell.innerText = stbjMap[qr].keterangan || '-';
                     ketCell.className = "p-3 font-bold text-slate-700 ket-cell col-ket text-left";
@@ -367,6 +416,8 @@ async function saveToSupabase() {
     
     alert(`BERHASIL!\n${arrFisik.length} kardus masuk.\nTabel Stok Aktual & Stok Global sukses terupdate bersamaan.`);
     document.getElementById('tbody-langsir').innerHTML = ''; btn.innerHTML = original; btn.disabled = false;
+    updateRowNumbers();
+    applyPagination();
 }
 
 async function holdLangsir() {
@@ -400,7 +451,9 @@ async function holdLangsir() {
         if(error) throw error;
         
         checkedBoxes.forEach(cb => { cb.closest('tr').remove(); });
-        updateRowNumbers(); document.querySelector('input[onchange="toggleSemuaCentang(this.checked)"]').checked = false;
+        updateRowNumbers(); 
+        applyPagination();
+        document.querySelector('input[onchange="toggleSemuaCentang(this.checked)"]').checked = false;
         
         alert(`SUKSES!\n${payloadUpload.length} Data berhasil diasingkan ke "Hold Langsir".`);
     } catch(e) { alert("Gagal melakukan Hold: " + e.message); } 
@@ -502,35 +555,6 @@ function toggleInputData() {
         icon.setAttribute('data-lucide', 'chevron-down');
     }
     lucide.createIcons();
-}
-
-function applyPagination() {
-    const allRows = Array.from(document.querySelectorAll('#tbody-langsir tr.row-item'));
-    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
-    
-    const totalFiltered = visibleRows.length; 
-    const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
-    
-    if(currentPage > totalPages) currentPage = totalPages; 
-    if(currentPage < 1) currentPage = 1;
-
-    const startIndex = (currentPage - 1) * rowsPerPage; 
-    const endIndex = startIndex + rowsPerPage;
-
-    visibleRows.forEach((row, index) => {
-        if(index >= startIndex && index < endIndex) { row.style.display = ''; } 
-        else { row.style.display = 'none'; }
-    });
-
-    if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
-    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
-    if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
-}
-
-function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } }
-function nextPage() { 
-    const totalVisible = document.querySelectorAll('#tbody-langsir tr.row-item:not(.filtered-out)').length;
-    if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
 }
 
 function saringTabelModalSTBJ() {
