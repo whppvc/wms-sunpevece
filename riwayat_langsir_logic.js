@@ -273,9 +273,9 @@ function updateFilterIcons() {
 function gantiModeRiwayat(m) {
     modeRiwayat = m;
     
-    // REVISI DESAIN TAB 
-    const activeClass = 'px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 text-blue-700 border-b-2 border-blue-700 bg-white';
-    const inactiveClass = 'px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 text-slate-500 border-b-2 border-transparent hover:text-slate-800 bg-white';
+    // REVISI DESAIN TAB: Background muda (bg-blue-50) dan border bawah tebal (border-b-4)
+    const activeClass = 'px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 text-blue-700 bg-blue-50 border-b-4 border-blue-700';
+    const inactiveClass = 'px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 text-slate-500 border-b-4 border-transparent hover:text-slate-800 hover:bg-slate-50 bg-white';
     
     ['qr', 'agregasi', 'hold'].forEach(tab => {
         const el = document.getElementById('tab-r-' + tab);
