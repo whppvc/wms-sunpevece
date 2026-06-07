@@ -373,7 +373,7 @@ function renderTabelRiwayat() {
                     ${thSort(isHold?13:12, 'Shading', 'col-shading border-r border-slate-500')}
                     ${thSort(isHold?14:13, 'PO Aktual', 'col-po')}
                     ${isHold ? thSort(15, 'Keterangan', 'col-ket') : '<th class="hdr-std hidden col-ket">-</th>'}
-                    ${thSort(isHold?16:14, 'User / PIC', 'col-pic border-l border-slate-500')}
+                    ${thSort(isHold?16:14, 'PIC', 'col-pic border-l border-slate-500')}
                 </tr>`;
             
             if(!dataset || dataset.length === 0) { tbody.innerHTML = `<tr id="empty-row-langsir"><td colspan="18" class="p-6 font-bold text-slate-400">Tidak ada data.</td></tr>`; applyPagination(); return; }
@@ -418,7 +418,7 @@ function renderTabelRiwayat() {
                     ${thSort(6, 'Dus', 'col-dus')}
                     ${thSort(7, 'Shading', 'col-shading border-r border-slate-500')}
                     ${thSort(8, 'PO Aktual', 'col-po')}
-                    ${thSort(9, 'PIC Input', 'col-pic')}
+                    ${thSort(9, 'PIC', 'col-pic')}
                     ${thSort(10, 'QTY TOTAL (DUS)', 'col-qty border-l border-slate-500 border-r')}
                 </tr>`;
 
