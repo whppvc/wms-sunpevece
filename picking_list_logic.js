@@ -126,8 +126,12 @@ function renderTabelUtamaEstimasi() {
         let tglStr = formatTglIndo(r.tanggal_estimasi); 
         const stringRow = JSON.stringify(r).replace(/"/g, '&quot;');
         
+        // 1. TAMBAHAN BARU: Cek apakah qty yang diambil sudah memenuhi atau melebihi Jumlah PO
+        let isLengkap = (totalPicked >= r.jumlah_po && r.jumlah_po > 0);
+        
+        // 2. REVISI TR: Jika isLengkap true, warnai hijau (bg-emerald-100), jika tidak biarkan default (hover:bg-slate-50)
         return `
-            <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-sm text-center r-row-utama">
+            <tr class="border-b border-slate-200 transition text-sm text-center r-row-utama ${isLengkap ? 'bg-emerald-100 hover:bg-emerald-200' : 'hover:bg-slate-50'}">
                 <td class="p-3 font-bold text-slate-400 col-no">${i+1}</td>
                 <td class="p-2 border-r border-slate-200 flex justify-center col-btn">
                     <button onclick="bukaPopupStokGudang('${stringRow}')" class="p-1 bg-blue-100 hover:bg-blue-600 text-blue-700 hover:text-white rounded-lg shadow-sm transition mx-auto">
@@ -195,7 +199,12 @@ function renderTabelPopupStokInternal() {
     tbody.innerHTML = dbStokAktualRaw.map((r, i) => {
         const keyMemory = `${activeEstimasiRow.id}_${r.id}`; 
         const alokasi = alokasiMemoryState[keyMemory]?.qty || 0;
-        let textInfo = alokasi > 0 ? `<div class="p-1 px-2 bg-indigo-50 border border-indigo-200 text-indigo-700 font-black rounded text-[10px] mx-auto">QTY: ${alokasi}</div>` : '-';
+        let textInfo = alokasi > 0 ? 
+            `<div class="flex flex-col gap-0.5 text-[10px] text-left mx-auto max-w-max bg-indigo-50 p-1.5 rounded border border-indigo-200">
+                <span class="font-bold text-slate-500">Tgl: <span class="text-indigo-800 font-black">${formatTglIndo(activeEstimasiRow.tanggal_estimasi)}</span></span>
+                <span class="font-bold text-slate-500">PO: <span class="text-indigo-800 font-black">${activeEstimasiRow.po_estimasi}</span></span>
+                <span class="font-bold text-slate-500">Picked Qty: <span class="text-indigo-800 font-black">${alokasi}</span></span>
+            </div>` : '-';
         const stringRow = JSON.stringify(r).replace(/"/g, '&quot;');
         
         return `
@@ -250,10 +259,13 @@ function renderTabelPickingList() {
             <td class="p-3 font-bold text-slate-700 border-r border-slate-200 col-shading" data-search="${d.stok.shading || '-'}">${d.stok.shading || '-'}</td>
             <td class="p-3 font-black text-emerald-600 bg-emerald-50 border-x border-slate-200 col-qty">${d.qty}</td>
             <td class="p-3 font-black text-amber-600 col-area" data-search="${d.stok.area || '-'}">${d.stok.area || '-'}</td>
-            <td class="p-2 border-l border-slate-200"><input type="text" class="p-1.5 border border-slate-300 rounded text-xs w-full text-center outline-none focus:border-blue-500" placeholder="Nama PIC"></td>
+            
+            <td class="p-3 font-bold text-slate-600 border-l border-slate-200">SISTEM WMS</td>
+            
             <td class="p-3 border-l border-slate-200 max-w-[120px] whitespace-normal leading-tight">${d.stok.keterangan || '-'}</td>
-            <td class="p-2 border-l border-slate-200 bg-rose-50">
-                <button onclick="hapusDariPickingList('${d.keyMemory}')" class="p-1.5 bg-rose-100 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg shadow-sm transition active:scale-95"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            
+            <td class="p-2 border-l border-slate-200">
+                <button onclick="hapusDariPickingList('${d.keyMemory}')" class="p-1.5 bg-white border border-rose-400 hover:bg-rose-50 text-rose-500 rounded shadow-sm transition active:scale-95"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </td>
         </tr>`;
     }).join('');
@@ -325,6 +337,19 @@ function eksekusiDOMTabel(ctx) {
         });
         document.getElementById('pop-lbl-qty-picked').innerText = hitungAkurat;
     }
+    // Update Info Paginasi Baru (Filter Count & Total Qty)
+    let totalQty = 0;
+    visibleRows.forEach(r => {
+        if(ctx === 'utama') totalQty += parseInt(r.children[7].innerText) || 0; // Kolom ke-8 adalah Jumlah PO
+        else if(ctx === 'popup') totalQty += parseInt(r.querySelector('.col-qty')?.innerText) || 0;
+        else if(ctx === 'picking') totalQty += parseInt(r.querySelector('.col-qty')?.innerText) || 0;
+    });
+
+    const filterLbl = document.getElementById(`${ctx}-filter-info`);
+    if(filterLbl) filterLbl.innerText = `Tampil Filter: ${visibleRows.length}`;
+    
+    const qtyLbl = document.getElementById(`${ctx}-qty-info`);
+    if(qtyLbl) qtyLbl.innerText = ctx === 'utama' ? `Total Qty PO: ${totalQty}` : (ctx === 'popup' ? `Total Qty (Dus): ${totalQty}` : `Total Picked Qty: ${totalQty}`);
 }
 
 // ==========================================
@@ -533,20 +558,36 @@ function hapusDariPickingList(keyMemory) {
     } 
 }
 
+async function muatDropdownDus() {
+    const elDus = document.getElementById('inp-prod-dus');
+    try {
+        const { data, error } = await db.from('master_2').select('dus');
+        if (error) throw error;
+        // Filter unik dan buang null/kosong
+        let dusUnik = [...new Set(data.map(d => d.dus).filter(d => d && d.trim() !== ''))].sort();
+        elDus.innerHTML = `<option value="-">-- PILIH DUS --</option>` + dusUnik.map(d => `<option value="${d}">${d}</option>`).join('');
+    } catch (e) {
+        elDus.innerHTML = `<option value="-">GAGAL LOAD DUS</option>`;
+    }
+}
+
 function bukaModalInputProduksi() {
-    ['inp-prod-dus', 'inp-prod-shading', 'inp-prod-qty'].forEach(id => document.getElementById(id).value = '');
+    ['inp-prod-dus', 'inp-prod-shading', 'inp-prod-qty', 'inp-prod-ket'].forEach(id => document.getElementById(id).value = '');
+    if (document.getElementById('inp-prod-dus').options.length <= 1) muatDropdownDus();
     document.getElementById('modal-input-produksi').classList.remove('hidden');
 }
 
 function simpanInputProduksi() {
-    const dus = document.getElementById('inp-prod-dus').value.trim() || '-';
+    const dus = document.getElementById('inp-prod-dus').value;
     const shading = document.getElementById('inp-prod-shading').value.trim() || '-';
     const qty = parseInt(document.getElementById('inp-prod-qty').value);
+    const ket = document.getElementById('inp-prod-ket').value.trim() || '-';
     
-    if(isNaN(qty) || qty <= 0) return alert("QTY tidak valid!");
+    if(dus === '-') return alert("Pilih Dus terlebih dahulu!");
+    if(isNaN(qty) || qty <= 0) return alert("QTY Diambil tidak valid!");
     
     const mockId = 'PROD_' + new Date().getTime();
-    const newStok = { id: mockId, dus: dus, shading: shading, po_aktual: 'PRODUKSI', qty: qty, area: 'PRODUKSI', keterangan: 'Dari Input Manual' };
+    const newStok = { id: mockId, dus: dus, shading: shading, po_aktual: 'PRODUKSI', qty: qty, area: 'PRODUKSI', keterangan: ket };
     
     dbStokAktualRaw.unshift(newStok); 
     document.getElementById('modal-input-produksi').classList.add('hidden');
