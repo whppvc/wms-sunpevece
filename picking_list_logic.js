@@ -4,7 +4,14 @@ let dbStokAktualRaw = [];
 let alokasiMemoryState = {}; 
 let activeEstimasiRow = null; 
 let activeStokRow = null; 
+
+// State Management untuk Paginasi & Sortir
 let sortState = {};
+let sortStatePicking = {};
+let currentPagePopup = 1; const rowsPerPagePopup = 5;
+let currentPagePicking = 1; const rowsPerPagePicking = 10;
+let dbPickingListAggregated = [];
+let filteredPickingList = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
     initModernLayout({ id: 'picking_list', title: 'PICKING LIST', url: 'picking_list.html' });
@@ -17,6 +24,7 @@ function switchTab(tab) {
     document.getElementById('view-picking').classList.toggle('hidden', tab !== 'picking');
     document.getElementById('tab-pilih').className = tab === 'pilih' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     document.getElementById('tab-picking').className = tab === 'picking' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    if(tab === 'picking') initRenderPickingList();
 }
 
 async function muatAwalDataEstimasi() {
@@ -80,9 +88,8 @@ function renderTabelUtamaEstimasi() {
         lucide.createIcons(); return;
     }
 
-    // REVISI B.2: Semua text di dalam cell diatur center aligment-nya
     tbody.innerHTML = filteredData.map((r, i) => {
-        let totalPicked = 0; for (let key in alokasiMemoryState) { if(key.startsWith(r.id + '_')) { totalPicked += alokasiMemoryState[key]; } }
+        let totalPicked = 0; for (let key in alokasiMemoryState) { if(key.startsWith(r.id + '_')) { totalPicked += alokasiMemoryState[key].qty; } }
         const stringRow = JSON.stringify(r).replace(/"/g, '&quot;');
         return `
             <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-sm text-center">
@@ -105,109 +112,232 @@ function renderTabelUtamaEstimasi() {
     lucide.createIcons();
 }
 
-// ========================================================
-// REVISI B.1: POPUP DENGAN SISTEM FILTER KETAT DARI DATABASE
-// ========================================================
+// ================= POPUP STOK GUDANG =================
 async function bukaPopupStokGudang(encodedRowStr) {
     activeEstimasiRow = JSON.parse(encodedRowStr);
-    
-    ['fp-shading', 'fp-poaktual', 'fp-area', 'fp-ket'].forEach(id => document.getElementById(id).value = '');
+    ['fp-dus', 'fp-shading', 'fp-poaktual', 'fp-area', 'fp-ket'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('pop-title-spec').innerText = `${activeEstimasiRow.nama_item} | ${activeEstimasiRow.panjang} | ${activeEstimasiRow.grade}`;
     document.getElementById('pop-lbl-qty-po').innerText = activeEstimasiRow.jumlah_po;
 
     const tbody = document.getElementById('tbody-popup-stok');
-    tbody.innerHTML = `<tr><td colspan="8" class="p-10"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto text-blue-500"></i></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="p-10"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto text-blue-500"></i></td></tr>`;
     lucide.createIcons();
     document.getElementById('modal-gudang-stok').classList.remove('hidden');
 
     try {
-        // REVISI B.1: Query database ditarik sudah dalam kondisi terfilter secara cerdas
         const { data, error } = await db.from('stok_aktual')
-            .select('shading, po_aktual, qty, area, keterangan, id') // Hanya mengambil field yang dibutuhkan tabel
+            .select('dus, shading, po_aktual, qty, area, keterangan, id')
             .eq('nama_item', activeEstimasiRow.nama_item)
             .eq('pjg', activeEstimasiRow.panjang)
             .eq('grade', activeEstimasiRow.grade)
             .gt('qty', 0);
 
         if(error) throw error; dbStokAktualRaw = data || [];
-        renderTabelPopupStokInternal();
-    } catch (e) { tbody.innerHTML = `<tr><td colspan="8" class="p-5 text-red-500 font-bold">Gagal memuat: ${e.message}</td></tr>`; }
+        saringTabelPopupInternal();
+    } catch (e) { tbody.innerHTML = `<tr><td colspan="9" class="p-5 text-red-500 font-bold">Gagal memuat: ${e.message}</td></tr>`; }
 }
 
 function tutupModalStok() { document.getElementById('modal-gudang-stok').classList.add('hidden'); renderTabelUtamaEstimasi(); }
 
-function renderTabelPopupStokInternal() {
-    const tbody = document.getElementById('tbody-popup-stok'); sortState = {};
-    const fShading = document.getElementById('fp-shading').value.toLowerCase();
-    const fPoAktual = document.getElementById('fp-poaktual').value.toLowerCase();
-    const fArea = document.getElementById('fp-area').value.toLowerCase();
-    const fKet = document.getElementById('fp-ket').value.toLowerCase();
+function saringTabelPopupInternal() { currentPagePopup = 1; renderTabelPopupStokInternal(); }
+function resetFilterPopupInternal() { ['fp-dus', 'fp-shading', 'fp-poaktual', 'fp-area', 'fp-ket'].forEach(id => document.getElementById(id).value = ''); saringTabelPopupInternal(); }
+function changePagePopup(dir) { currentPagePopup += dir; renderTabelPopupStokInternal(); }
 
-    const filteredStok = dbStokAktualRaw.filter(r => {
-        return (!fShading || (r.shading || '').toLowerCase().includes(fShading)) &&
+function renderTabelPopupStokInternal() {
+    const tbody = document.getElementById('tbody-popup-stok');
+    
+    const fDus = (document.getElementById('fp-dus').value || '').toLowerCase();
+    const fShading = (document.getElementById('fp-shading').value || '').toLowerCase();
+    const fPoAktual = (document.getElementById('fp-poaktual').value || '').toLowerCase();
+    const fArea = (document.getElementById('fp-area').value || '').toLowerCase();
+    const fKet = (document.getElementById('fp-ket').value || '').toLowerCase();
+
+    let filteredStok = dbStokAktualRaw.filter(r => {
+        return (!fDus || (r.dus || '').toLowerCase().includes(fDus)) &&
+               (!fShading || (r.shading || '').toLowerCase().includes(fShading)) &&
                (!fPoAktual || (r.po_aktual || '').toLowerCase().includes(fPoAktual)) &&
                (!fArea || (r.area || '').toLowerCase().includes(fArea)) &&
                (!fKet || (r.keterangan || '').toLowerCase().includes(fKet));
     });
 
+    if(sortState.kolom) {
+        let isAsc = sortState.isAsc;
+        filteredStok.sort((a, b) => {
+            let valA = a[sortState.kolom] || ''; let valB = b[sortState.kolom] || '';
+            let numA = parseFloat(valA); let numB = parseFloat(valB);
+            if(!isNaN(numA) && !isNaN(numB)) return isAsc ? numA - numB : numB - numA;
+            return isAsc ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
+        });
+    }
+
     let grandTotalPicked = 0;
-    if(filteredStok.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-slate-400 font-bold">Stok fisik kosong.</td></tr>'; document.getElementById('pop-lbl-qty-picked').innerText = 0; return; }
+    filteredStok.forEach(r => { const keyMemory = `${activeEstimasiRow.id}_${r.id}`; grandTotalPicked += alokasiMemoryState[keyMemory]?.qty || 0; });
+    document.getElementById('pop-lbl-qty-picked').innerText = grandTotalPicked;
 
-    tbody.innerHTML = filteredStok.map((r, i) => {
-        const keyMemory = `${activeEstimasiRow.id}_${r.id}`; const currentAllocatedQty = alokasiMemoryState[keyMemory] || 0;
-        grandTotalPicked += currentAllocatedQty;
+    const totalPages = Math.ceil(filteredStok.length / rowsPerPagePopup) || 1;
+    if(currentPagePopup > totalPages) currentPagePopup = totalPages;
+    if(currentPagePopup < 1) currentPagePopup = 1;
+    document.getElementById('popup-page-info').innerText = `Hal ${currentPagePopup} dari ${totalPages}`;
+    
+    const startIdx = (currentPagePopup - 1) * rowsPerPagePopup;
+    const paginatedData = filteredStok.slice(startIdx, startIdx + rowsPerPagePopup);
 
-        let textInfoAlokasi = '-';
-        if(currentAllocatedQty > 0) {
-            textInfoAlokasi = `<div class="p-1 px-2 bg-indigo-50 border border-indigo-200 text-indigo-700 font-black rounded text-[10px] whitespace-normal leading-tight max-w-[180px] mx-auto">
-                ${formatTglIndo(activeEstimasiRow.tanggal_estimasi)}<br>${activeEstimasiRow.po_estimasi}<br>QTY: ${currentAllocatedQty} DUS
-            </div>`;
-        }
+    if(paginatedData.length === 0) { tbody.innerHTML = '<tr><td colspan="9" class="p-8 text-slate-400 font-bold">Stok fisik kosong.</td></tr>'; return; }
 
+    tbody.innerHTML = paginatedData.map((r, i) => {
+        const keyMemory = `${activeEstimasiRow.id}_${r.id}`; 
+        const currentAllocatedQty = alokasiMemoryState[keyMemory]?.qty || 0;
+        let textInfoAlokasi = currentAllocatedQty > 0 ? `<div class="p-1 px-2 bg-indigo-50 border border-indigo-200 text-indigo-700 font-black rounded text-[10px] mx-auto">QTY: ${currentAllocatedQty}</div>` : '-';
         const stringStokRow = JSON.stringify(r).replace(/"/g, '&quot;');
+        
         return `
             <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-xs text-row-popup">
-                <td class="p-2"><button onclick="bukaModalMintaQty('${stringStokRow}')" class="px-3 py-1.5 ${currentAllocatedQty > 0 ? 'bg-amber-500 hover:bg-amber-600' : 'bg-blue-600 hover:bg-blue-700'} text-white font-black rounded-lg shadow-sm transition active:scale-95 text-[10px] uppercase">${currentAllocatedQty > 0 ? 'Ubah' : 'Pilih'}</button></td>
-                <td class="p-3 font-bold text-slate-400 no-popup-cell">${i+1}</td>
+                <td class="p-2"><button onclick="bukaModalMintaQty('${stringStokRow}')" class="px-3 py-1.5 ${currentAllocatedQty > 0 ? 'bg-amber-500 hover:bg-amber-600' : 'bg-blue-600 hover:bg-blue-700'} text-white font-black rounded-lg text-[10px] uppercase shadow-sm transition active:scale-95">${currentAllocatedQty > 0 ? 'Ubah' : 'Pilih'}</button></td>
+                <td class="p-3 font-bold text-slate-400">${startIdx + i + 1}</td>
                 <td class="p-2 border-r border-slate-200">${textInfoAlokasi}</td>
-                <td class="p-3 font-bold text-slate-700">${r.shading || '-'}</td>
-                <td class="p-3 font-black text-slate-800">${r.po_aktual || '-'}</td>
-                <td class="p-3 font-black text-emerald-700 bg-emerald-50/50">${r.qty}</td>
-                <td class="p-3 font-black text-amber-600 bg-amber-50/30 border-l border-slate-200">${r.area || '-'}</td>
-                <td class="p-3 text-center font-medium text-slate-500 border-l border-slate-200 whitespace-normal max-w-[150px] leading-tight">${r.keterangan || '-'}</td>
+                <td class="p-3 font-black text-slate-700 border-r border-slate-200">${r.dus || '-'}</td>
+                <td class="p-3 font-bold text-slate-700 border-r border-slate-200">${r.shading || '-'}</td>
+                <td class="p-3 font-black text-slate-800 border-r border-slate-200">${r.po_aktual || '-'}</td>
+                <td class="p-3 font-black text-emerald-700 bg-emerald-50/50 border-r border-slate-200">${r.qty}</td>
+                <td class="p-3 font-black text-amber-600 bg-amber-50/30 border-r border-slate-200">${r.area || '-'}</td>
+                <td class="p-3 text-center font-medium text-slate-500 max-w-[150px] whitespace-normal leading-tight">${r.keterangan || '-'}</td>
             </tr>`;
     }).join('');
-    document.getElementById('pop-lbl-qty-picked').innerText = grandTotalPicked;
+    lucide.createIcons();
 }
 
-function saringTabelPopupInternal() { renderTabelPopupStokInternal(); }
-function resetFilterPopupInternal() { ['fp-shading', 'fp-poaktual', 'fp-area', 'fp-ket'].forEach(id => document.getElementById(id).value = ''); renderTabelPopupStokInternal(); }
+function sortPopupTable(kolom, el) {
+    let isAsc = (sortState.kolom === kolom) ? !sortState.isAsc : true;
+    sortState = { kolom: kolom, isAsc: isAsc };
+    document.querySelectorAll('#table-popup-stok .sort-icon').forEach(icon => icon.setAttribute('data-lucide', 'arrow-up-down'));
+    if(el) el.querySelector('.sort-icon').setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a');
+    renderTabelPopupStokInternal();
+}
 
 function bukaModalMintaQty(encodedStokRowStr) {
     activeStokRow = JSON.parse(encodedStokRowStr); document.getElementById('lbl-max-qty').innerText = activeStokRow.qty;
-    const keyMemory = `${activeEstimasiRow.id}_${activeStokRow.id}`; document.getElementById('input-qty-ambil').value = alokasiMemoryState[keyMemory] || '';
+    const keyMemory = `${activeEstimasiRow.id}_${activeStokRow.id}`; document.getElementById('input-qty-ambil').value = alokasiMemoryState[keyMemory]?.qty || '';
     document.getElementById('modal-input-qty').classList.remove('hidden'); document.getElementById('input-qty-ambil').focus();
 }
 
 function simpanKuotaAmbilLokal() {
     const inputVal = parseInt(document.getElementById('input-qty-ambil').value); const maxQty = parseInt(activeStokRow.qty);
     const keyMemory = `${activeEstimasiRow.id}_${activeStokRow.id}`;
-    if(isNaN(inputVal) || inputVal <= 0) { delete alokasiMemoryState[keyMemory]; document.getElementById('modal-input-qty').classList.add('hidden'); renderTabelPopupStokInternal(); return; }
-    if(inputVal > maxQty) return alert(`GAGAL! Stok fisik di rak Area ini hanya tersedia ${maxQty} Dus.`);
-
-    alokasiMemoryState[keyMemory] = inputVal; document.getElementById('modal-input-qty').classList.add('hidden'); renderTabelPopupStokInternal();
+    if(isNaN(inputVal) || inputVal <= 0) { delete alokasiMemoryState[keyMemory]; } 
+    else if(inputVal > maxQty) { return alert(`GAGAL! Stok fisik di rak Area ini hanya tersedia ${maxQty} Dus.`); } 
+    else { alokasiMemoryState[keyMemory] = { qty: inputVal, estimasi: activeEstimasiRow, stok: activeStokRow }; }
+    document.getElementById('modal-input-qty').classList.add('hidden'); renderTabelPopupStokInternal();
 }
 
-function sortPopupTable(colIndex, headerEl) {
-    const tbody = document.getElementById('tbody-popup-stok'); const rows = Array.from(tbody.querySelectorAll('tr.text-row-popup'));
-    let isAsc = sortState[colIndex] !== 'asc'; sortState[colIndex] = isAsc ? 'asc' : 'desc';
-    rows.sort((a, b) => {
-        let valA = a.cells[colIndex].innerText.trim(); let valB = b.cells[colIndex].innerText.trim();
-        let numA = parseFloat(valA); let numB = parseFloat(valB);
-        if(!isNaN(numA) && !isNaN(numB)) return isAsc ? numA - numB : numB - numA;
-        return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+// ================= INPUT PRODUKSI MANUAL =================
+function bukaModalInputProduksi() {
+    ['inp-prod-dus', 'inp-prod-shading', 'inp-prod-qty'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('modal-input-produksi').classList.remove('hidden');
+}
+
+function simpanInputProduksi() {
+    const dus = document.getElementById('inp-prod-dus').value.trim() || '-';
+    const shading = document.getElementById('inp-prod-shading').value.trim() || '-';
+    const qty = parseInt(document.getElementById('inp-prod-qty').value);
+    
+    if(isNaN(qty) || qty <= 0) return alert("QTY tidak valid!");
+    
+    const mockId = 'PROD_' + new Date().getTime();
+    const newStok = { id: mockId, dus: dus, shading: shading, po_aktual: 'PRODUKSI', qty: qty, area: 'PRODUKSI', keterangan: 'Dari Input Manual' };
+    dbStokAktualRaw.unshift(newStok); 
+    document.getElementById('modal-input-produksi').classList.add('hidden');
+    renderTabelPopupStokInternal();
+}
+
+// ================= TAB PICKING LIST =================
+function initRenderPickingList() {
+    dbPickingListAggregated = [];
+    for(let key in alokasiMemoryState) { dbPickingListAggregated.push({ keyMemory: key, ...alokasiMemoryState[key] }); }
+    saringTabelPicking();
+}
+
+function saringTabelPicking() {
+    const fPo = (document.getElementById('fp-pick-po').value || '').toLowerCase();
+    const fItem = (document.getElementById('fp-pick-item').value || '').toLowerCase();
+    const fDus = (document.getElementById('fp-pick-dus').value || '').toLowerCase();
+    const fShading = (document.getElementById('fp-pick-shading').value || '').toLowerCase();
+    const fArea = (document.getElementById('fp-pick-area').value || '').toLowerCase();
+
+    filteredPickingList = dbPickingListAggregated.filter(d => {
+        return (!fPo || (d.estimasi.po_estimasi || '').toLowerCase().includes(fPo)) &&
+               (!fItem || (d.estimasi.nama_item || '').toLowerCase().includes(fItem)) &&
+               (!fDus || (d.stok.dus || '').toLowerCase().includes(fDus)) &&
+               (!fShading || (d.stok.shading || '').toLowerCase().includes(fShading)) &&
+               (!fArea || (d.stok.area || '').toLowerCase().includes(fArea));
     });
-    rows.forEach(row => tbody.appendChild(row));
-    document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-50'); });
-    const icon = headerEl.querySelector('.sort-icon'); if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-50'); lucide.createIcons(); }
+    
+    if(sortStatePicking.kolom) {
+        let isAsc = sortStatePicking.isAsc;
+        filteredPickingList.sort((a, b) => {
+            let valA = ambilNestedValue(a, sortStatePicking.kolom); let valB = ambilNestedValue(b, sortStatePicking.kolom);
+            let numA = parseFloat(valA); let numB = parseFloat(valB);
+            if(!isNaN(numA) && !isNaN(numB)) return isAsc ? numA - numB : numB - numA;
+            return isAsc ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
+        });
+    }
+
+    currentPagePicking = 1; renderTabelPickingListPagination();
+}
+
+function ambilNestedValue(obj, key) {
+    if(['tgl_estimasi', 'po_estimasi', 'nama_item'].includes(key)) return obj.estimasi[key] || '';
+    if(['dus', 'shading', 'area'].includes(key)) return obj.stok[key] || '';
+    return '';
+}
+
+function sortPickingTable(kolom, el) {
+    let isAsc = (sortStatePicking.kolom === kolom) ? !sortStatePicking.isAsc : true;
+    sortStatePicking = { kolom: kolom, isAsc: isAsc };
+    document.querySelectorAll('.sort-icon-pick').forEach(icon => icon.setAttribute('data-lucide', 'arrow-up-down'));
+    if(el) el.querySelector('.sort-icon-pick').setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a');
+    saringTabelPicking();
+}
+
+function changePagePicking(dir) { currentPagePicking += dir; renderTabelPickingListPagination(); }
+
+function renderTabelPickingListPagination() {
+    const tbody = document.getElementById('tbody-picking-list');
+    if(filteredPickingList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="14" class="p-10 text-slate-400 font-bold">Belum ada item yang di-picking atau cocok dengan filter.</td></tr>'; return;
+    }
+    
+    const totalPages = Math.ceil(filteredPickingList.length / rowsPerPagePicking) || 1;
+    if(currentPagePicking > totalPages) currentPagePicking = totalPages;
+    if(currentPagePicking < 1) currentPagePicking = 1;
+    document.getElementById('picking-page-info').innerText = `Hal ${currentPagePicking} dari ${totalPages}`;
+    
+    const startIdx = (currentPagePicking - 1) * rowsPerPagePicking;
+    const paginatedData = filteredPickingList.slice(startIdx, startIdx + rowsPerPagePicking);
+
+    tbody.innerHTML = paginatedData.map((d, i) => `
+        <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-xs">
+            <td class="p-3 font-bold text-slate-400">${startIdx + i + 1}</td>
+            <td class="p-3 font-semibold text-slate-600 border-r border-slate-200">${formatTglIndo(d.estimasi.tanggal_estimasi)}</td>
+            <td class="p-3 font-black text-slate-800 border-r border-slate-200">${d.estimasi.po_estimasi}</td>
+            <td class="p-3 font-black text-slate-700 bg-slate-50">${d.estimasi.jumlah_po}</td>
+            <td class="p-3 font-black text-blue-700">${d.estimasi.nama_item}</td>
+            <td class="p-3 font-bold text-slate-600">${d.estimasi.panjang}</td>
+            <td class="p-3 font-bold text-slate-800 border-r border-slate-200">${d.estimasi.grade}</td>
+            <td class="p-3 font-black text-slate-700">${d.stok.dus || '-'}</td>
+            <td class="p-3 font-bold text-slate-700 border-r border-slate-200">${d.stok.shading || '-'}</td>
+            <td class="p-3 font-black text-emerald-600 bg-emerald-50 border-x border-slate-200">${d.qty}</td>
+            <td class="p-3 font-black text-amber-600">${d.stok.area || '-'}</td>
+            <td class="p-2 border-l border-slate-200"><input type="text" class="p-1.5 border border-slate-300 rounded text-xs w-full text-center outline-none focus:border-blue-500" placeholder="Nama PIC"></td>
+            <td class="p-3 border-l border-slate-200 max-w-[120px] whitespace-normal leading-tight">${d.stok.keterangan || '-'}</td>
+            <td class="p-2 border-l border-slate-200 bg-rose-50">
+                <button onclick="hapusDariPickingList('${d.keyMemory}')" class="p-1.5 bg-rose-100 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg shadow-sm transition active:scale-95"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </td>
+        </tr>`).join('');
+    lucide.createIcons();
+}
+
+function hapusDariPickingList(keyMemory) { 
+    if(confirm("Hapus item ini dari Picking List?")) { 
+        delete alokasiMemoryState[keyMemory]; initRenderPickingList(); renderTabelUtamaEstimasi(); 
+    } 
 }
