@@ -326,7 +326,7 @@ function eksekusiDOMTabel(ctx) {
     });
     
     const pageLabel = document.getElementById(lblPage);
-    if(pageLabel) pageLabel.innerText = `Hal ${currPage} dari ${totalPages}`;
+    if(pageLabel) pageLabel.innerText = `Hal ${currPage} / ${totalPages}`;
 
     // Khusus Tabel Popup: Hitung ulang kalkulasi "Jumlah Diambil" di atas header modal
     if(ctx === 'popup') {
