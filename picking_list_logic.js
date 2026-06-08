@@ -21,10 +21,14 @@ let sortStateUtama = {};
 let sortStatePopup = {};
 let sortStatePicking = {};
 
+// Fungsi Helper Kunci Sinkronisasi (Menghindari Bug Refresh/Hilang)
+function generateSyncKey(est, stk) {
+    return `${est.po_estimasi}_${est.nama_item}_${est.panjang}_${est.grade}_${stk.dus}_${stk.shading}_${stk.area}`.replace(/\s+/g, '_');
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     initModernLayout({ id: 'picking_list', title: 'PICKING LIST', url: 'picking_list.html' });
     
-    // Listener untuk menutup pop-up Excel Filter jika klik di luar
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
@@ -124,10 +128,17 @@ function renderTabelUtamaEstimasi() {
 
     tbody.innerHTML = filteredData.map((r, i) => {
         let totalPicked = 0; 
-        for (let key in alokasiMemoryState) { if(key.startsWith(r.id + '_')) { totalPicked += alokasiMemoryState[key].qty; } }
+        
+        // Cek matching item berdasarkan atribut universal (Sync Bug Fix)
+        for (let key in alokasiMemoryState) { 
+            const mem = alokasiMemoryState[key];
+            if(mem.estimasi.po_estimasi === r.po_estimasi && mem.estimasi.nama_item === r.nama_item && mem.estimasi.panjang === r.panjang && mem.estimasi.grade === r.grade) {
+                totalPicked += mem.qty; 
+            }
+        }
+        
         let tglStr = formatTglIndo(r.tanggal_estimasi); 
         const stringRow = JSON.stringify(r).replace(/"/g, '&quot;');
-        
         let isLengkap = (totalPicked >= r.jumlah_po && r.jumlah_po > 0);
         
         return `
@@ -197,7 +208,7 @@ function renderTabelPopupStokInternal() {
     }
     
     tbody.innerHTML = dbStokAktualRaw.map((r, i) => {
-        const keyMemory = `${activeEstimasiRow.id}_${r.id}`; 
+        const keyMemory = generateSyncKey(activeEstimasiRow, r); 
         const alokasi = alokasiMemoryState[keyMemory]?.qty || 0;
         
         let textInfo = alokasi > 0 ? 
@@ -242,7 +253,7 @@ function initRenderPickingList() {
 function renderTabelPickingList() {
     const tbody = document.getElementById('tbody-picking-list');
     if (dbPickingListAggregated.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="13" class="p-10 text-slate-400 font-bold">Belum ada item yang di-picking.</td></tr>'; 
+        tbody.innerHTML = '<tr><td colspan="14" class="p-10 text-slate-400 font-bold">Belum ada item yang di-picking.</td></tr>'; 
         return;
     }
 
@@ -250,10 +261,12 @@ function renderTabelPickingList() {
         let tglEstStr = formatTglIndo(d.estimasi.tanggal_estimasi);
         return `
         <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-xs r-row-pick">
+            <td class="p-2 border-r border-slate-200 w-12">
+                <input type="checkbox" class="pick-row-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-0 cursor-pointer mx-auto block" value="${d.keyMemory}">
+            </td>
             <td class="p-2 border-r border-slate-200 bg-rose-50/50">
                 <button onclick="hapusDariPickingList('${d.keyMemory}')" class="p-1.5 bg-white border border-rose-400 hover:bg-rose-50 text-rose-500 rounded shadow-sm transition active:scale-95 mx-auto block"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </td>
-            
             <td class="p-3 font-semibold text-slate-600 border-r border-slate-200 col-tgl_est" data-search="${tglEstStr}">${tglEstStr}</td>
             <td class="p-3 font-black text-slate-800 border-r border-slate-200 col-po_est" data-search="${d.estimasi.po_estimasi}">${d.estimasi.po_estimasi}</td>
             <td class="p-3 font-black text-slate-700 bg-slate-50 border-r border-slate-200 col-jml_po">${d.estimasi.jumlah_po}</td>
@@ -264,7 +277,6 @@ function renderTabelPickingList() {
             <td class="p-3 font-bold text-slate-700 border-r border-slate-200 col-shading" data-search="${d.stok.shading || '-'}">${d.stok.shading || '-'}</td>
             <td class="p-3 font-black text-emerald-600 bg-emerald-50 border-r border-slate-200 col-qty">${d.qty}</td>
             <td class="p-3 font-black text-amber-600 border-r border-slate-200 col-area" data-search="${d.stok.area || '-'}">${d.stok.area || '-'}</td>
-            
             <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-pic" data-search="${d.pic || '-'}">${d.pic || '-'}</td>
             <td class="p-3 max-w-[120px] whitespace-normal leading-tight">${d.stok.keterangan || '-'}</td>
         </tr>`;
@@ -285,7 +297,6 @@ function eksekusiDOMTabel(ctx) {
     let currPage = ctx === 'utama' ? currentPageUtama : (ctx === 'popup' ? currentPagePopup : currentPagePicking);
     let lblPage = ctx === 'utama' ? 'utama-page-info' : (ctx === 'popup' ? 'popup-page-info' : 'picking-page-info');
 
-    // 1. Eksekusi Filter Excel pada Baris
     document.querySelectorAll(`#${tbodyId} ${rowClass}`).forEach(row => {
         let show = true;
         for (let colClass in filterExcel[ctx]) {
@@ -299,7 +310,6 @@ function eksekusiDOMTabel(ctx) {
         if (show) row.classList.remove('filtered-out'); else row.classList.add('filtered-out');
     });
 
-    // 2. Eksekusi Paginasi
     const allRows = Array.from(document.querySelectorAll(`#${tbodyId} ${rowClass}`));
     allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
     
@@ -319,7 +329,6 @@ function eksekusiDOMTabel(ctx) {
     visibleRows.forEach((row, index) => {
         if(index >= startIdx && index < endIdx) { 
             row.style.display = ''; 
-            // Cegah error karena tabel Picking List sudah tidak punya kolom No
             let noCell = row.querySelector('.col-no');
             if (noCell) noCell.innerText = index + 1;
         } 
@@ -332,16 +341,15 @@ function eksekusiDOMTabel(ctx) {
     if(ctx === 'popup') {
         let hitungAkurat = 0;
         dbStokAktualRaw.forEach(r => { 
-            const km = `${activeEstimasiRow.id}_${r.id}`; 
+            const km = generateSyncKey(activeEstimasiRow, r); 
             hitungAkurat += alokasiMemoryState[km]?.qty || 0; 
         });
         document.getElementById('pop-lbl-qty-picked').innerText = hitungAkurat;
     }
 
-    // Update Info Paginasi Baru (Filter Count & Total Qty)
     let totalQty = 0;
     visibleRows.forEach(r => {
-        if(ctx === 'utama') totalQty += parseInt(r.children[7].innerText) || 0; // Index 7 is Jml PO
+        if(ctx === 'utama') totalQty += parseInt(r.children[7].innerText) || 0; 
         else if(ctx === 'popup') totalQty += parseInt(r.querySelector('.col-qty')?.innerText) || 0;
         else if(ctx === 'picking') totalQty += parseInt(r.querySelector('.col-qty')?.innerText) || 0;
     });
@@ -515,7 +523,7 @@ function genericSort(ctx, tbodyId, rowCls, icCls, stateObj, kolom, el) {
 }
 
 // ==========================================
-// DB LOAD, DB INSERT, DB DELETE
+// DB LOAD, DB INSERT, DB DELETE & SINKRONISASI
 // ==========================================
 async function muatDataPickingListDB() {
     try {
@@ -524,13 +532,17 @@ async function muatDataPickingListDB() {
         
         if (data && data.length > 0) {
             data.forEach(row => {
-                const fakeKey = `DB_${row.po_estimasi}_${row.nama_item}_${row.dus}_${row.id}`;
-                alokasiMemoryState[fakeKey] = {
+                const est = { tanggal_estimasi: row.tgl_estimasi, po_estimasi: row.po_estimasi, jumlah_po: row.jumlah_po, nama_item: row.nama_item, panjang: row.panjang, grade: row.grade };
+                const stk = { dus: row.dus, shading: row.shading, area: row.area, keterangan: row.keterangan };
+                const key = generateSyncKey(est, stk);
+                
+                alokasiMemoryState[key] = {
                     qty: row.picked_qty,
                     pic: row.pic,
                     db_id: row.id, 
-                    estimasi: { tanggal_estimasi: row.tgl_estimasi, po_estimasi: row.po_estimasi, jumlah_po: row.jumlah_po, nama_item: row.nama_item, panjang: row.panjang, grade: row.grade },
-                    stok: { dus: row.dus, shading: row.shading, area: row.area, keterangan: row.keterangan }
+                    estimasi: est,
+                    stok: stk,
+                    keyMemory: key
                 };
             });
         }
@@ -543,7 +555,7 @@ function bukaModalMintaQty(encodedStokRowStr) {
     activeStokRow = JSON.parse(encodedStokRowStr); 
     document.getElementById('lbl-max-qty').innerText = activeStokRow.qty;
     
-    const keyMemory = `${activeEstimasiRow.id}_${activeStokRow.id}`; 
+    const keyMemory = generateSyncKey(activeEstimasiRow, activeStokRow); 
     document.getElementById('input-qty-ambil').value = alokasiMemoryState[keyMemory]?.qty || '';
     
     document.getElementById('modal-input-qty').classList.remove('hidden'); 
@@ -553,14 +565,14 @@ function bukaModalMintaQty(encodedStokRowStr) {
 async function simpanKuotaAmbilLokal() {
     const inputVal = parseInt(document.getElementById('input-qty-ambil').value); 
     const maxQty = parseInt(activeStokRow.qty);
-    const keyMemory = `${activeEstimasiRow.id}_${activeStokRow.id}`;
+    const keyMemory = generateSyncKey(activeEstimasiRow, activeStokRow);
     
     if(isNaN(inputVal) || inputVal <= 0) return;
     if(inputVal > maxQty) return alert(`GAGAL! Stok fisik hanya tersedia ${maxQty} Dus.`); 
     
     let namaUserAktif = localStorage.getItem('namaUser') || localStorage.getItem('nama_user') || 'INDRA'; 
 
-    alokasiMemoryState[keyMemory] = { qty: inputVal, pic: namaUserAktif, estimasi: activeEstimasiRow, stok: activeStokRow }; 
+    alokasiMemoryState[keyMemory] = { qty: inputVal, pic: namaUserAktif, estimasi: activeEstimasiRow, stok: activeStokRow, keyMemory: keyMemory }; 
     
     try {
         const { data, error } = await db.from('picking_list').insert([{
@@ -643,4 +655,14 @@ function simpanInputProduksi() {
     dbStokAktualRaw.unshift(newStok); 
     document.getElementById('modal-input-produksi').classList.add('hidden');
     renderTabelPopupStokInternal();
+}
+
+// Handler Centang Semua di Tab Picking List
+function toggleAllPickingRows(checked) {
+    document.querySelectorAll('#tbody-picking-list .r-row-pick').forEach(row => {
+        if (!row.classList.contains('filtered-out') && row.style.display !== 'none') {
+            const cb = row.querySelector('.pick-row-cb');
+            if (cb) cb.checked = checked;
+        }
+    });
 }
