@@ -34,6 +34,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // Load DB Picking List Dulu, Baru Estimasi
+    await muatDataPickingListDB();
     await muatAwalDataEstimasi();
 });
 
@@ -126,10 +128,8 @@ function renderTabelUtamaEstimasi() {
         let tglStr = formatTglIndo(r.tanggal_estimasi); 
         const stringRow = JSON.stringify(r).replace(/"/g, '&quot;');
         
-        // 1. TAMBAHAN BARU: Cek apakah qty yang diambil sudah memenuhi atau melebihi Jumlah PO
         let isLengkap = (totalPicked >= r.jumlah_po && r.jumlah_po > 0);
         
-        // 2. REVISI TR: Jika isLengkap true, warnai hijau (bg-emerald-100), jika tidak biarkan default (hover:bg-slate-50)
         return `
             <tr class="border-b border-slate-200 transition text-sm text-center r-row-utama ${isLengkap ? 'bg-emerald-100 hover:bg-emerald-200' : 'hover:bg-slate-50'}">
                 <td class="p-3 font-bold text-slate-400 col-no">${i+1}</td>
@@ -199,12 +199,14 @@ function renderTabelPopupStokInternal() {
     tbody.innerHTML = dbStokAktualRaw.map((r, i) => {
         const keyMemory = `${activeEstimasiRow.id}_${r.id}`; 
         const alokasi = alokasiMemoryState[keyMemory]?.qty || 0;
+        
         let textInfo = alokasi > 0 ? 
             `<div class="flex flex-col gap-0.5 text-[10px] text-left mx-auto max-w-max bg-indigo-50 p-1.5 rounded border border-indigo-200">
                 <span class="font-bold text-slate-500">Tgl: <span class="text-indigo-800 font-black">${formatTglIndo(activeEstimasiRow.tanggal_estimasi)}</span></span>
                 <span class="font-bold text-slate-500">PO: <span class="text-indigo-800 font-black">${activeEstimasiRow.po_estimasi}</span></span>
                 <span class="font-bold text-slate-500">Picked Qty: <span class="text-indigo-800 font-black">${alokasi}</span></span>
             </div>` : '-';
+            
         const stringRow = JSON.stringify(r).replace(/"/g, '&quot;');
         
         return `
@@ -260,12 +262,11 @@ function renderTabelPickingList() {
             <td class="p-3 font-black text-emerald-600 bg-emerald-50 border-x border-slate-200 col-qty">${d.qty}</td>
             <td class="p-3 font-black text-amber-600 col-area" data-search="${d.stok.area || '-'}">${d.stok.area || '-'}</td>
             
-            <td class="p-3 font-bold text-slate-600 border-l border-slate-200">SISTEM WMS</td>
-            
+            <td class="p-3 font-bold text-slate-600 border-l border-slate-200">${d.pic || '-'}</td>
             <td class="p-3 border-l border-slate-200 max-w-[120px] whitespace-normal leading-tight">${d.stok.keterangan || '-'}</td>
             
             <td class="p-2 border-l border-slate-200">
-                <button onclick="hapusDariPickingList('${d.keyMemory}')" class="p-1.5 bg-white border border-rose-400 hover:bg-rose-50 text-rose-500 rounded shadow-sm transition active:scale-95"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                <button onclick="hapusDariPickingList('${d.keyMemory}')" class="p-1.5 bg-white border border-rose-400 hover:bg-rose-50 text-rose-500 rounded shadow-sm transition active:scale-95 mx-auto block"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </td>
         </tr>`;
     }).join('');
@@ -309,7 +310,6 @@ function eksekusiDOMTabel(ctx) {
     if(currPage > totalPages) currPage = totalPages; 
     if(currPage < 1) currPage = 1;
     
-    // Simpan current page ke variabel global
     if(ctx === 'utama') currentPageUtama = currPage; 
     else if(ctx === 'popup') currentPagePopup = currPage; 
     else currentPagePicking = currPage;
@@ -326,9 +326,8 @@ function eksekusiDOMTabel(ctx) {
     });
     
     const pageLabel = document.getElementById(lblPage);
-    if(pageLabel) pageLabel.innerText = `Hal ${currPage} / ${totalPages}`;
+    if(pageLabel) pageLabel.innerText = `HAL ${currPage} / ${totalPages}`;
 
-    // Khusus Tabel Popup: Hitung ulang kalkulasi "Jumlah Diambil" di atas header modal
     if(ctx === 'popup') {
         let hitungAkurat = 0;
         dbStokAktualRaw.forEach(r => { 
@@ -337,10 +336,11 @@ function eksekusiDOMTabel(ctx) {
         });
         document.getElementById('pop-lbl-qty-picked').innerText = hitungAkurat;
     }
+
     // Update Info Paginasi Baru (Filter Count & Total Qty)
     let totalQty = 0;
     visibleRows.forEach(r => {
-        if(ctx === 'utama') totalQty += parseInt(r.children[7].innerText) || 0; // Kolom ke-8 adalah Jumlah PO
+        if(ctx === 'utama') totalQty += parseInt(r.children[7].innerText) || 0; // Index 7 is Jml PO
         else if(ctx === 'popup') totalQty += parseInt(r.querySelector('.col-qty')?.innerText) || 0;
         else if(ctx === 'picking') totalQty += parseInt(r.querySelector('.col-qty')?.innerText) || 0;
     });
@@ -447,12 +447,6 @@ function clearFilterForCurrentCol() {
     eksekusiDOMTabel(activeCtx); 
 }
 
-function resetFilterPopupInternal() {
-    filterExcel.popup = {};
-    updateFilterIcons('popup');
-    eksekusiDOMTabel('popup');
-}
-
 function updateFilterIcons(ctx) {
     let suffix = ctx === 'utama' ? 'u' : (ctx === 'popup' ? 'p' : 'pick');
     document.querySelectorAll(`.filter-ic-${suffix}`).forEach(icon => { 
@@ -520,8 +514,30 @@ function genericSort(ctx, tbodyId, rowCls, icCls, stateObj, kolom, el) {
 }
 
 // ==========================================
-// LOGIKA INPUT QTY & INPUT PRODUKSI (MODAL)
+// DB LOAD, DB INSERT, DB DELETE
 // ==========================================
+async function muatDataPickingListDB() {
+    try {
+        const { data, error } = await db.from('picking_list').select('*');
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+            data.forEach(row => {
+                const fakeKey = `DB_${row.po_estimasi}_${row.nama_item}_${row.dus}_${row.id}`;
+                alokasiMemoryState[fakeKey] = {
+                    qty: row.picked_qty,
+                    pic: row.pic,
+                    db_id: row.id, 
+                    estimasi: { tanggal_estimasi: row.tgl_estimasi, po_estimasi: row.po_estimasi, jumlah_po: row.jumlah_po, nama_item: row.nama_item, panjang: row.panjang, grade: row.grade },
+                    stok: { dus: row.dus, shading: row.shading, area: row.area, keterangan: row.keterangan }
+                };
+            });
+        }
+    } catch (e) {
+        console.error("Gagal memuat DB Picking List:", e);
+    }
+}
+
 function bukaModalMintaQty(encodedStokRowStr) {
     activeStokRow = JSON.parse(encodedStokRowStr); 
     document.getElementById('lbl-max-qty').innerText = activeStokRow.qty;
@@ -533,37 +549,71 @@ function bukaModalMintaQty(encodedStokRowStr) {
     document.getElementById('input-qty-ambil').focus();
 }
 
-function simpanKuotaAmbilLokal() {
+async function simpanKuotaAmbilLokal() {
     const inputVal = parseInt(document.getElementById('input-qty-ambil').value); 
     const maxQty = parseInt(activeStokRow.qty);
     const keyMemory = `${activeEstimasiRow.id}_${activeStokRow.id}`;
     
-    if(isNaN(inputVal) || inputVal <= 0) { 
-        delete alokasiMemoryState[keyMemory]; 
-    } else if(inputVal > maxQty) { 
-        return alert(`GAGAL! Stok fisik di rak Area ini hanya tersedia ${maxQty} Dus.`); 
-    } else { 
-        alokasiMemoryState[keyMemory] = { qty: inputVal, estimasi: activeEstimasiRow, stok: activeStokRow }; 
-    }
+    if(isNaN(inputVal) || inputVal <= 0) return;
+    if(inputVal > maxQty) return alert(`GAGAL! Stok fisik hanya tersedia ${maxQty} Dus.`); 
+    
+    let namaUserAktif = localStorage.getItem('namaUser') || localStorage.getItem('nama_user') || 'INDRA'; 
+
+    alokasiMemoryState[keyMemory] = { qty: inputVal, pic: namaUserAktif, estimasi: activeEstimasiRow, stok: activeStokRow }; 
+    
+    try {
+        const { data, error } = await db.from('picking_list').insert([{
+            tgl_estimasi: activeEstimasiRow.tanggal_estimasi,
+            po_estimasi: activeEstimasiRow.po_estimasi,
+            jumlah_po: activeEstimasiRow.jumlah_po,
+            nama_item: activeEstimasiRow.nama_item,
+            panjang: activeEstimasiRow.panjang,
+            grade: activeEstimasiRow.grade,
+            dus: activeStokRow.dus,
+            shading: activeStokRow.shading,
+            picked_qty: inputVal,
+            area: activeStokRow.area,
+            keterangan: activeStokRow.keterangan,
+            pic: namaUserAktif
+        }]).select('id');
+        
+        if (data && data.length > 0) {
+            alokasiMemoryState[keyMemory].db_id = data[0].id;
+        }
+    } catch(e) { console.error("Gagal Insert DB", e); }
     
     document.getElementById('modal-input-qty').classList.add('hidden'); 
     renderTabelPopupStokInternal();
 }
 
-function hapusDariPickingList(keyMemory) { 
+async function hapusDariPickingList(keyMemory) { 
     if(confirm("Hapus item ini dari Picking List?")) { 
+        const item = alokasiMemoryState[keyMemory];
+        try {
+            if (item.db_id) {
+                await db.from('picking_list').delete().eq('id', item.db_id);
+            } else {
+                await db.from('picking_list').delete()
+                    .eq('po_estimasi', item.estimasi.po_estimasi)
+                    .eq('nama_item', item.estimasi.nama_item)
+                    .eq('dus', item.stok.dus);
+            }
+        } catch(e) { console.error("Gagal Hapus DB", e); }
+
         delete alokasiMemoryState[keyMemory]; 
         initRenderPickingList(); 
         renderTabelUtamaEstimasi(); 
     } 
 }
 
+// ==========================================
+// LOGIKA INPUT PRODUKSI (MODAL)
+// ==========================================
 async function muatDropdownDus() {
     const elDus = document.getElementById('inp-prod-dus');
     try {
         const { data, error } = await db.from('master_2').select('dus');
         if (error) throw error;
-        // Filter unik dan buang null/kosong
         let dusUnik = [...new Set(data.map(d => d.dus).filter(d => d && d.trim() !== ''))].sort();
         elDus.innerHTML = `<option value="-">-- PILIH DUS --</option>` + dusUnik.map(d => `<option value="${d}">${d}</option>`).join('');
     } catch (e) {
