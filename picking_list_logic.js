@@ -242,7 +242,7 @@ function initRenderPickingList() {
 function renderTabelPickingList() {
     const tbody = document.getElementById('tbody-picking-list');
     if (dbPickingListAggregated.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="14" class="p-10 text-slate-400 font-bold">Belum ada item yang di-picking.</td></tr>'; 
+        tbody.innerHTML = '<tr><td colspan="13" class="p-10 text-slate-400 font-bold">Belum ada item yang di-picking.</td></tr>'; 
         return;
     }
 
@@ -250,24 +250,23 @@ function renderTabelPickingList() {
         let tglEstStr = formatTglIndo(d.estimasi.tanggal_estimasi);
         return `
         <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-xs r-row-pick">
-            <td class="p-3 font-bold text-slate-400 col-no">${i + 1}</td>
-            <td class="p-3 font-semibold text-slate-600 border-r border-slate-200 col-tgl_est" data-search="${tglEstStr}">${tglEstStr}</td>
-            <td class="p-3 font-black text-slate-800 border-r border-slate-200 col-po_est" data-search="${d.estimasi.po_estimasi}">${d.estimasi.po_estimasi}</td>
-            <td class="p-3 font-black text-slate-700 bg-slate-50 col-jml_po">${d.estimasi.jumlah_po}</td>
-            <td class="p-3 font-black text-blue-700 col-nama_item" data-search="${d.estimasi.nama_item}">${d.estimasi.nama_item}</td>
-            <td class="p-3 font-bold text-slate-600 col-pjg">${d.estimasi.panjang}</td>
-            <td class="p-3 font-bold text-slate-800 border-r border-slate-200 col-grade" data-search="${d.estimasi.grade}">${d.estimasi.grade}</td>
-            <td class="p-3 font-black text-slate-700 col-dus" data-search="${d.stok.dus || '-'}">${d.stok.dus || '-'}</td>
-            <td class="p-3 font-bold text-slate-700 border-r border-slate-200 col-shading" data-search="${d.stok.shading || '-'}">${d.stok.shading || '-'}</td>
-            <td class="p-3 font-black text-emerald-600 bg-emerald-50 border-x border-slate-200 col-qty">${d.qty}</td>
-            <td class="p-3 font-black text-amber-600 col-area" data-search="${d.stok.area || '-'}">${d.stok.area || '-'}</td>
-            
-            <td class="p-3 font-bold text-slate-600 border-l border-slate-200">${d.pic || '-'}</td>
-            <td class="p-3 border-l border-slate-200 max-w-[120px] whitespace-normal leading-tight">${d.stok.keterangan || '-'}</td>
-            
-            <td class="p-2 border-l border-slate-200">
+            <td class="p-2 border-r border-slate-200 bg-rose-50/50">
                 <button onclick="hapusDariPickingList('${d.keyMemory}')" class="p-1.5 bg-white border border-rose-400 hover:bg-rose-50 text-rose-500 rounded shadow-sm transition active:scale-95 mx-auto block"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </td>
+            
+            <td class="p-3 font-semibold text-slate-600 border-r border-slate-200 col-tgl_est" data-search="${tglEstStr}">${tglEstStr}</td>
+            <td class="p-3 font-black text-slate-800 border-r border-slate-200 col-po_est" data-search="${d.estimasi.po_estimasi}">${d.estimasi.po_estimasi}</td>
+            <td class="p-3 font-black text-slate-700 bg-slate-50 border-r border-slate-200 col-jml_po">${d.estimasi.jumlah_po}</td>
+            <td class="p-3 font-black text-blue-700 border-r border-slate-200 col-nama_item" data-search="${d.estimasi.nama_item}">${d.estimasi.nama_item}</td>
+            <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-pjg">${d.estimasi.panjang}</td>
+            <td class="p-3 font-bold text-slate-800 border-r border-slate-200 col-grade" data-search="${d.estimasi.grade}">${d.estimasi.grade}</td>
+            <td class="p-3 font-black text-slate-700 border-r border-slate-200 col-dus" data-search="${d.stok.dus || '-'}">${d.stok.dus || '-'}</td>
+            <td class="p-3 font-bold text-slate-700 border-r border-slate-200 col-shading" data-search="${d.stok.shading || '-'}">${d.stok.shading || '-'}</td>
+            <td class="p-3 font-black text-emerald-600 bg-emerald-50 border-r border-slate-200 col-qty">${d.qty}</td>
+            <td class="p-3 font-black text-amber-600 border-r border-slate-200 col-area" data-search="${d.stok.area || '-'}">${d.stok.area || '-'}</td>
+            
+            <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-pic" data-search="${d.pic || '-'}">${d.pic || '-'}</td>
+            <td class="p-3 max-w-[120px] whitespace-normal leading-tight">${d.stok.keterangan || '-'}</td>
         </tr>`;
     }).join('');
     
@@ -320,7 +319,9 @@ function eksekusiDOMTabel(ctx) {
     visibleRows.forEach((row, index) => {
         if(index >= startIdx && index < endIdx) { 
             row.style.display = ''; 
-            row.querySelector('.col-no').innerText = index + 1; // Auto Update No
+            // Cegah error karena tabel Picking List sudah tidak punya kolom No
+            let noCell = row.querySelector('.col-no');
+            if (noCell) noCell.innerText = index + 1;
         } 
         else { row.style.display = 'none'; }
     });
@@ -481,7 +482,7 @@ function genericSort(ctx, tbodyId, rowCls, icCls, stateObj, kolom, el) {
     let colMap = { 
         'tgl_estimasi': 'col-tgl_est', 'po_estimasi': 'col-po_est', 'nama_item': 'col-nama_item', 
         'panjang': 'col-pjg', 'grade': 'col-grade', 'dus': 'col-dus', 'shading': 'col-shading', 
-        'po_aktual': 'col-po_aktual', 'area': 'col-area', 'qty': 'col-qty' 
+        'po_aktual': 'col-po_aktual', 'area': 'col-area', 'qty': 'col-qty', 'pic': 'col-pic' 
     };
     let targetCls = colMap[kolom] || ('col-' + kolom);
 
