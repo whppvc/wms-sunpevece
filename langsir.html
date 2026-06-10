@@ -13,11 +13,11 @@
         .selected-row { border-color: #2563eb !important; background-color: #dbeafe !important; }
     </style>
 </head>
-<body class="font-sans bg-slate-50 text-slate-800 h-[100dvh] w-screen overflow-hidden flex flex-col">
+<body class="font-sans bg-slate-50 text-slate-800 h-[100dvh] w-screen overflow-hidden flex flex-col relative">
 
-    <div class="flex-1 min-h-0 flex flex-col w-full px-2 pt-3 pb-[80px] relative">
+    <div class="px-2 pt-3 pb-2 shrink-0 bg-white border-b border-slate-300 shadow-sm z-10 flex flex-col gap-3">
         
-        <div class="flex gap-2 mb-3 shrink-0">
+        <div class="flex gap-2">
             <button onclick="bukaModalSTBJ()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-black py-2.5 rounded shadow-sm flex justify-center items-center gap-2 text-xs uppercase border-b-2 border-purple-800 active:scale-95 transition">
                 <i data-lucide="layout-list" class="w-4 h-4"></i> Data STBJ
             </button>
@@ -40,22 +40,20 @@
             </div>
         </div>
 
-        <div class="mb-2 flex items-center gap-2 px-1 shrink-0">
-            <input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer" id="cb-all">
-            <label for="cb-all" class="text-xs font-bold text-slate-500 uppercase">Pilih Semua Data</label>
-        </div>
-        
-        <div class="flex-1 min-h-0 bg-white border border-slate-300 rounded-lg p-2 shadow-inner flex flex-col mb-2">
-            <div id="tbody-langsir" class="flex-1 overflow-y-auto hide-scrollbar flex flex-col gap-3 px-1 pb-2">
-                </div>
-        </div>
-
-        <div class="py-2 flex justify-start w-full shrink-0">
-            <div class="bg-cyan-50 border-2 border-cyan-200 px-4 py-2 rounded text-cyan-800 text-xs font-black shadow-sm uppercase tracking-wider">
-                Total Qty (Dus): <span id="lbl-tampil-baris" class="text-slate-900 text-sm ml-1">0</span>
+        <div class="flex justify-between items-center px-1">
+            <div class="flex items-center gap-2">
+                <input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer" id="cb-all">
+                <label for="cb-all" class="text-xs font-bold text-slate-500 uppercase tracking-wide">Pilih Semua Data</label>
+            </div>
+            <div class="bg-cyan-50 border border-cyan-300 px-3 py-1.5 rounded text-cyan-800 text-[11px] font-black shadow-sm uppercase tracking-wider">
+                Total Qty: <span id="lbl-tampil-baris" class="text-slate-900 text-sm ml-1">0</span> Dus
             </div>
         </div>
+    </div>
 
+    <div class="flex-1 overflow-y-auto hide-scrollbar bg-slate-100 px-2 pt-3 pb-24" id="scroll-container">
+        <div id="tbody-langsir" class="flex flex-col gap-3 w-full">
+            </div>
     </div>
 
     <div class="absolute bottom-0 left-0 w-full bg-white border-t border-slate-200 p-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-40 flex items-center gap-3">
@@ -157,7 +155,6 @@
         document.addEventListener('DOMContentLoaded', () => { initModernLayout({ id: 'langsir', title: 'LANGSIR', url: 'langsir.html' }); });
         
         function toggleMenuUtama() { document.getElementById('dropdown-menu').classList.toggle('hidden'); }
-        // PERBAIKAN 4: Menghilangkan fungsi focus() agar keyboard HP tidak otomatis pop up
         function bukaModalAdd() { document.getElementById('modal-add-scan').classList.remove('hidden'); }
         function tutupModalAdd() { document.getElementById('modal-add-scan').classList.add('hidden'); }
         
