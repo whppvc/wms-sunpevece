@@ -13,11 +13,11 @@
         .selected-row { border-color: #2563eb !important; background-color: #dbeafe !important; }
     </style>
 </head>
-<body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-28">
+<body class="font-sans bg-slate-50 text-slate-800 h-[100dvh] w-screen overflow-hidden flex flex-col">
 
-    <div class="w-full px-2 pt-3 relative">
+    <div class="flex-1 flex flex-col w-full px-2 pt-3 pb-[76px] overflow-hidden relative">
         
-        <div class="flex gap-2 mb-3">
+        <div class="flex gap-2 mb-3 shrink-0">
             <button onclick="bukaModalSTBJ()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-black py-2.5 rounded shadow-sm flex justify-center items-center gap-2 text-xs uppercase border-b-2 border-purple-800 active:scale-95 transition">
                 <i data-lucide="layout-list" class="w-4 h-4"></i> Data STBJ
             </button>
@@ -34,35 +34,36 @@
                     <button onclick="toggleSidebarFilter(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2 border-b border-slate-100"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data</button>
                     <button onclick="salinDataTabel(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2 border-b border-slate-100"><i data-lucide="copy" class="w-4 h-4"></i> Salin Data</button>
                     <button onclick="undoDelete(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 flex items-center gap-2 border-b border-slate-100"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo Hapus</button>
-                    <button onclick="holdLangsir(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Bermasalah</button>
+                    <button onclick="holdLangsir(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2 border-b border-slate-100"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Bermasalah</button>
+                    <button onclick="bukaModalHold(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2"><i data-lucide="archive" class="w-4 h-4"></i> Tabel Hold</button>
                 </div>
             </div>
         </div>
 
-        <div class="mb-2 flex items-center gap-2 px-1">
+        <div class="mb-2 flex items-center gap-2 px-1 shrink-0">
             <input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer" id="cb-all">
             <label for="cb-all" class="text-xs font-bold text-slate-500 uppercase">Pilih Semua Data</label>
         </div>
         
-        <div class="bg-white border border-slate-300 rounded-lg p-2 shadow-inner">
-            <div id="tbody-langsir" class="flex flex-col gap-3 w-full max-h-[55vh] overflow-y-auto hide-scrollbar pb-2 px-1">
+        <div class="bg-white border border-slate-300 rounded-lg p-2 shadow-inner flex-1 overflow-hidden flex flex-col mb-2">
+            <div id="tbody-langsir" class="flex-1 overflow-y-auto hide-scrollbar flex flex-col gap-3 px-1 pb-2">
                 </div>
         </div>
 
-        <div class="py-3 flex justify-start w-full">
-            <div class="bg-[#faedbe] border-2 border-[#e4cc7b] px-4 py-2 rounded text-[#8b6d13] text-xs font-black shadow-sm uppercase tracking-wider">
-                Total Qty (Dus): <span id="lbl-tampil-baris" class="text-black text-sm ml-1">0</span>
+        <div class="py-2 flex justify-start w-full shrink-0">
+            <div class="bg-cyan-50 border-2 border-cyan-200 px-4 py-2 rounded text-cyan-800 text-xs font-black shadow-sm uppercase tracking-wider">
+                Total Qty (Dus): <span id="lbl-tampil-baris" class="text-slate-900 text-sm ml-1">0</span>
             </div>
         </div>
 
     </div>
 
-    <div class="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 p-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-40 flex items-center gap-3">
+    <div class="absolute bottom-0 left-0 w-full bg-white border-t border-slate-200 p-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-40 flex items-center gap-3">
         <button onclick="bukaModalAdd()" class="w-14 h-14 bg-slate-900 hover:bg-slate-800 text-white rounded-full flex justify-center items-center shadow-lg active:scale-95 shrink-0 transition border-b-4 border-black">
             <i data-lucide="plus" class="w-8 h-8"></i>
         </button>
         <button id="btn-save" onclick="saveToSupabase()" class="flex-1 h-14 bg-[#058c5e] hover:bg-[#04724d] text-white font-black rounded-lg shadow-lg flex items-center justify-center gap-2 text-sm tracking-widest cursor-pointer transition active:scale-95 uppercase border-b-4 border-[#035237]">
-            <i data-lucide="save" class="w-5 h-5"></i> SIMPAN KE GUDANG
+            <i data-lucide="save" class="w-5 h-5"></i> SIMPAN
         </button>
     </div>
 
@@ -72,7 +73,6 @@
                 <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="scan-line" class="w-5 h-5 text-blue-600"></i> INPUT DATA LANGSIR</h3>
                 <button type="button" onclick="tutupModalAdd()" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded-full transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-            
             <form id="form-scan" class="flex flex-col gap-4">
                 <div>
                     <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Pilih Area Simpan</label>
@@ -98,15 +98,25 @@
                 <button onclick="tutupModalSTBJ()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <div class="p-3 bg-white border-b border-slate-100 flex flex-col gap-2">
-                <label class="block text-[10px] font-black uppercase tracking-wide text-slate-500">Filter Data STBJ</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-4 h-4 text-slate-400"></i></div>
                     <input type="text" id="f-stbj-modal" oninput="saringTabelModalSTBJ()" class="w-full pl-9 p-2.5 text-sm border-2 border-slate-200 rounded-lg focus:border-purple-500 outline-none font-bold placeholder-slate-300" placeholder="Ketik Troli, QR, Item, dll...">
                 </div>
             </div>
             <div class="overflow-y-auto flex-1 hide-scrollbar p-3 bg-slate-100">
-                <div id="tbody-stbj-modal" class="flex flex-col gap-3">
-                    </div>
+                <div id="tbody-stbj-modal" class="flex flex-col gap-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-hold-langsir" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] px-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="archive" class="w-4 h-4 text-orange-600"></i> TABEL HOLD</h3>
+                <button onclick="tutupModalHold()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="overflow-y-auto flex-1 hide-scrollbar p-3 bg-slate-100">
+                <div id="tbody-hold-modal" class="flex flex-col gap-3"></div>
             </div>
         </div>
     </div>
@@ -116,7 +126,7 @@
             <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data Langsir</h3>
             <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
-        <div class="p-3 flex flex-col gap-3 overflow-y-auto">
+        <div class="p-3 flex flex-col gap-3 overflow-y-auto hide-scrollbar">
             <div class="grid grid-cols-2 gap-2">
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status STBJ</label><input type="text" id="f-stbj" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status Kode</label><input type="text" id="f-kode" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
@@ -151,10 +161,9 @@
         function tutupModalAdd() { document.getElementById('modal-add-scan').classList.add('hidden'); }
         
         function toggleSidebarFilter() { document.getElementById('sidebar-filter').classList.toggle('translate-x-full'); document.getElementById('overlay-klik-luar').classList.toggle('hidden'); }
-        function tutupSemuaPopup() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); document.getElementById('overlay-klik-luar').classList.add('hidden'); tutupModalSTBJ(); document.getElementById('dropdown-menu').classList.add('hidden'); }
+        function tutupSemuaPopup() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); document.getElementById('overlay-klik-luar').classList.add('hidden'); tutupModalSTBJ(); tutupModalHold(); document.getElementById('dropdown-menu').classList.add('hidden'); }
         function resetFilter() { const ids = ['f-stbj','f-kode','f-troli','f-area','f-qr','f-tgl','f-mesin','f-shift','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket']; ids.forEach(id => document.getElementById(id).value = ''); saringTabelLangsir(); toggleSidebarFilter(); }
         
-        // Menutup Dropdown Menu jika user klik sembarang tempat di luar menu
         document.addEventListener('click', (e) => {
             const menu = document.getElementById('dropdown-menu');
             const btn = document.getElementById('btn-menu-utama');
