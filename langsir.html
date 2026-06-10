@@ -15,7 +15,7 @@
 </head>
 <body class="font-sans bg-slate-50 text-slate-800 h-[100dvh] w-screen overflow-hidden flex flex-col">
 
-    <div class="flex-1 flex flex-col w-full px-2 pt-3 pb-[80px] overflow-hidden relative">
+    <div class="flex-1 min-h-0 flex flex-col w-full px-2 pt-3 pb-[80px] relative">
         
         <div class="flex gap-2 mb-3 shrink-0">
             <button onclick="bukaModalSTBJ()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-black py-2.5 rounded shadow-sm flex justify-center items-center gap-2 text-xs uppercase border-b-2 border-purple-800 active:scale-95 transition">
@@ -45,7 +45,7 @@
             <label for="cb-all" class="text-xs font-bold text-slate-500 uppercase">Pilih Semua Data</label>
         </div>
         
-        <div class="flex-1 min-h-0 bg-white border border-slate-300 rounded-lg p-2 shadow-inner flex flex-col mb-2 overflow-hidden">
+        <div class="flex-1 min-h-0 bg-white border border-slate-300 rounded-lg p-2 shadow-inner flex flex-col mb-2">
             <div id="tbody-langsir" class="flex-1 overflow-y-auto hide-scrollbar flex flex-col gap-3 px-1 pb-2">
                 </div>
         </div>
@@ -157,7 +157,8 @@
         document.addEventListener('DOMContentLoaded', () => { initModernLayout({ id: 'langsir', title: 'LANGSIR', url: 'langsir.html' }); });
         
         function toggleMenuUtama() { document.getElementById('dropdown-menu').classList.toggle('hidden'); }
-        function bukaModalAdd() { document.getElementById('modal-add-scan').classList.remove('hidden'); setTimeout(() => { document.getElementById('input-qrcode').focus(); }, 100); }
+        // PERBAIKAN 4: Menghilangkan fungsi focus() agar keyboard HP tidak otomatis pop up
+        function bukaModalAdd() { document.getElementById('modal-add-scan').classList.remove('hidden'); }
         function tutupModalAdd() { document.getElementById('modal-add-scan').classList.add('hidden'); }
         
         function toggleSidebarFilter() { document.getElementById('sidebar-filter').classList.toggle('translate-x-full'); document.getElementById('overlay-klik-luar').classList.toggle('hidden'); }
