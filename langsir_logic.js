@@ -1,9 +1,8 @@
 let masterData = { kamus: [], area: [] }; 
 let deleteStack = [], globalRowId = 0;
-let currentPage = 1;
-const rowsPerPage = 10; 
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Fetch Area & Kamus Master
     setTimeout(async () => {
         try {
             const { data: mDataArea } = await db.from('master_area').select('nama_area').order('id', { ascending: true });
@@ -18,10 +17,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const { data: mData2 } = await db.from('master_2').select('*');
             if(mData2) masterData.kamus = mData2; 
             
-            if (typeof applyPagination === "function") applyPagination();
+            updateTotalBaris();
         } catch (e) { console.error("Gagal muat dropdown area:", e); }
     }, 200); 
 
+    // 2. Event Listener Form Add Item
     setTimeout(() => {
         const formScan = document.getElementById('form-scan');
         if(formScan) {
@@ -41,28 +41,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
                 
                 updateRowNumbers();
-                applyPagination();
+                updateTotalBaris();
                 
                 document.getElementById('input-qrcode').value = '';
-                tutupModalAdd(); // Tutup pop up setelah add
+                tutupModalAdd();
             });
         }
     }, 500);
 });
 
-// FUNGSI UTAMA PENGHASIL CARD VIEW
+// FUNGSI PENGHASIL CARD VIEW
 function addRow(area, code, isDuplicate = false) {
     globalRowId++; 
     const div = document.createElement('div'); 
-    // Sesuai mockup warna kekuningan pale
     const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'bg-[#faedbe] hover:bg-[#f3e5b3]';
     div.className = `row-item ${rowClass} border-[3px] border-slate-800 p-4 relative flex flex-col shadow-sm transition`; 
     
     const td = translateBarcode(code); 
-    const stbjHtml = '<span class="text-white font-black bg-[#ff7315] border-b-2 border-[#cc5b0f] px-3 py-1.5 text-[11px] stbj-val" data-status="unverified">BLM STBJ</span>';
+    
+    // REVISI: Status Awal Menunggu Verifikasi
+    const stbjHtml = '<span class="text-slate-500 font-black bg-slate-200 border-b-2 border-slate-300 px-3 py-1.5 text-[11px] stbj-val" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
     const kodeHtml = isDuplicate 
         ? '<span class="text-white font-black bg-red-600 border-b-2 border-red-800 px-3 py-1.5 text-[11px] kode-val shadow-sm" data-status="invalid">DUPLIKAT LOKAL</span>'
-        : '<span class="text-[#0e744a] font-black bg-[#a0ecd1] border-b-2 border-[#76c2a7] px-3 py-1.5 text-[11px] kode-val" data-status="unverified">ACCEPT</span>';
+        : '<span class="text-slate-500 font-black bg-slate-200 border-b-2 border-slate-300 px-3 py-1.5 text-[11px] kode-val" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
 
     div.innerHTML = `
         <div class="flex justify-between items-start mb-1">
@@ -89,7 +90,7 @@ function addRow(area, code, isDuplicate = false) {
             <div>Keterangan: <span class="col-ket ket-cell">-</span> <span class="col-troli troli-cell hidden">-</span></div>
         </div>
         
-        <div class="flex gap-2 mt-4 pl-8">
+        <div class="flex flex-col sm:flex-row gap-2 mt-4 pl-8">
             ${stbjHtml}
             ${kodeHtml}
         </div>
@@ -130,8 +131,7 @@ function saringTabelLangsir() {
         if (show) { row.classList.remove('filtered-out'); } 
         else { row.classList.add('filtered-out'); }
     });
-    currentPage = 1;
-    applyPagination();
+    updateTotalBaris();
 }
 
 function translateBarcode(barcode) {
@@ -168,7 +168,7 @@ function deleteRow(btn) {
     deleteStack.push({ parent: div.parentNode, html: div.outerHTML, nextSibling: div.nextSibling }); 
     div.remove(); 
     updateRowNumbers(); 
-    applyPagination(); 
+    updateTotalBaris(); 
 }
 
 function undoDelete() { 
@@ -181,7 +181,7 @@ function undoDelete() {
     else last.parent.appendChild(element); 
     lucide.createIcons(); 
     updateRowNumbers(); 
-    applyPagination(); 
+    updateTotalBaris(); 
 }
 
 function updateRowNumbers() { 
@@ -193,36 +193,23 @@ function updateRowNumbers() {
     }); 
 }
 
-function applyPagination() {
+// REVISI: Menggantikan fungsi paginasi, hanya menghitung total tampil
+function updateTotalBaris() {
     const allRows = Array.from(document.querySelectorAll('#tbody-langsir .row-item'));
-    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
-    
-    const totalFiltered = visibleRows.length; 
-    const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
-    
-    if(currentPage > totalPages) currentPage = totalPages; 
-    if(currentPage < 1) currentPage = 1;
+    let totalFiltered = 0;
 
-    const startIndex = (currentPage - 1) * rowsPerPage; 
-    const endIndex = startIndex + rowsPerPage;
-
-    visibleRows.forEach((row, index) => {
-        if(index >= startIndex && index < endIndex) { 
-            row.style.display = 'flex'; // Card menggunakan flex
+    allRows.forEach(row => {
+        if(!row.classList.contains('filtered-out')) { 
+            row.style.display = 'flex'; 
+            totalFiltered++;
         } else { 
             row.style.display = 'none'; 
         }
     });
 
-    if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
-    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
-    if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
-}
-
-function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } }
-function nextPage() { 
-    const totalVisible = document.querySelectorAll('#tbody-langsir .row-item:not(.filtered-out)').length;
-    if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
+    if(document.getElementById('lbl-tampil-baris')) {
+        document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
+    }
 }
 
 function toggleSemuaCentang(checked) {
@@ -245,9 +232,9 @@ function highlightRow(cb) {
 
 function editKeteranganMassal() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
-    if (checkedBoxes.length === 0) return alert("Pilih / centang baris yang keterangannya ingin diedit!");
+    if (checkedBoxes.length === 0) return alert("Pilih / centang data yang keterangannya ingin diedit!");
 
-    const newKet = prompt(`Masukkan keterangan baru untuk ${checkedBoxes.length} baris terpilih:\n(Catatan: Akan menimpa Keterangan hasil Verifikasi)`);
+    const newKet = prompt(`Masukkan keterangan baru untuk ${checkedBoxes.length} data terpilih:\n(Catatan: Akan menimpa Keterangan hasil Verifikasi)`);
     if (newKet === null) return; 
 
     checkedBoxes.forEach(cb => {
@@ -336,8 +323,8 @@ async function VerifikasiDanCek() {
             }
         });
 
-        if(hasError) { alert("PERINGATAN!\nTerdapat data bermasalah (BLM STBJ / DUPLIKAT).\nSilakan pilih baris tersebut untuk dipindahkan ke HOLD LANGSIR, atau hapus barisnya."); } 
-        else { alert("MANTAP!\nSemua baris Valid (SDH STBJ & ACCEPT). Troli dan Keterangan berhasil ditarik. Siap disimpan ke Gudang."); }
+        if(hasError) { alert("PERINGATAN!\nTerdapat data bermasalah (BLM STBJ / DUPLIKAT).\nSilakan pilih data tersebut untuk dipindahkan ke HOLD LANGSIR, atau hapus."); } 
+        else { alert("MANTAP!\nSemua data Valid (SDH STBJ & ACCEPT). Troli dan Keterangan berhasil ditarik. Siap disimpan ke Gudang."); }
     } catch (e) { alert("Koneksi Error: " + e.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
@@ -350,7 +337,7 @@ async function saveToSupabase() {
     const adaBelumStbj = document.querySelectorAll('span[data-status="invalid-stbj"]').length > 0;
 
     if(adaYgBelumDicek || adaDuplikat || adaBelumStbj) {
-        return alert("GAGAL MENYIMPAN!\nTerdapat baris bermasalah. Tahan/Hapus baris tersebut.");
+        return alert("GAGAL MENYIMPAN!\nTerdapat data bermasalah atau belum di-Verifikasi. Cek kembali.");
     }
     
     const rows = document.querySelectorAll('.row-item'); if(rows.length === 0) return;
@@ -388,16 +375,17 @@ async function saveToSupabase() {
 
     if (error) { alert("GAGAL SERVER: " + error.message); btn.innerHTML = original; btn.disabled = false; return; }
     
-    alert(`BERHASIL!\n${arrFisik.length} kardus masuk.\nTabel Stok Aktual & Stok Global sukses terupdate bersamaan.`);
+    alert(`BERHASIL!\n${arrFisik.length} kardus masuk.\nData berhasil terupdate.`);
     document.getElementById('tbody-langsir').innerHTML = ''; btn.innerHTML = original; btn.disabled = false;
     updateRowNumbers();
-    applyPagination();
+    updateTotalBaris();
 }
 
 async function holdLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
-    if(checkedBoxes.length === 0) return alert("Anda harus mencentang kotak di baris yang bermasalah terlebih dahulu.");
+    if(checkedBoxes.length === 0) return alert("Anda harus mencentang data yang bermasalah terlebih dahulu.");
 
+    // Update button text in the dropdown
     const btn = document.getElementById('btn-menu-utama'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i>'; btn.disabled = true;
 
@@ -426,7 +414,7 @@ async function holdLangsir() {
         
         checkedBoxes.forEach(cb => { cb.closest('.row-item').remove(); });
         updateRowNumbers(); 
-        applyPagination();
+        updateTotalBaris();
         document.querySelector('#cb-all').checked = false;
         
         alert(`SUKSES!\n${payloadUpload.length} Data berhasil diasingkan ke "Hold Langsir".`);
@@ -436,7 +424,7 @@ async function holdLangsir() {
 
 function salinDataTabel() {
     const cek = document.querySelectorAll('.cb-row:checked');
-    if(cek.length === 0) return alert("Pilih baris yang ingin disalin dengan mencentang kotak di data card!");
+    if(cek.length === 0) return alert("Pilih data yang ingin disalin dengan mencentang kotak di kiri data!");
 
     let copyString = "Area\tQRCode\tTgl Produksi\tMesin\tShift\tNama Item\tPjg\tGrade\tDus\tShading\tPO\tKeterangan\n";
     
@@ -463,11 +451,12 @@ function salinDataTabel() {
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
 }
 
+// REVISI: Buka Modal STBJ (Putih, Card View)
 async function bukaModalSTBJ() {
     document.getElementById('modal-stbj-langsir').classList.remove('hidden');
     
     const tbody = document.getElementById('tbody-stbj-modal');
-    tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat...</td></tr>';
+    tbody.innerHTML = '<div class="p-8 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat Data...</div>';
     lucide.createIcons();
 
     try {
@@ -475,7 +464,7 @@ async function bukaModalSTBJ() {
         if(error) throw error;
         
         if(!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="p-6 font-bold text-slate-400">Tabel STBJ Kosong.</td></tr>';
+            tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Data STBJ Kosong.</div>';
             return;
         }
 
@@ -485,29 +474,36 @@ async function bukaModalSTBJ() {
             const td = translateBarcode(r.qrcode);
             
             let statusGudang = r.posisi || 'STBJ';
-            let colGudang = statusGudang === 'IN GUDANG' ? '<span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded text-[10px]">IN GUDANG</span>' 
-                : statusGudang === 'KELUAR' ? '<span class="bg-red-100 text-red-800 font-bold px-2 py-1 rounded text-[10px]">KELUAR</span>' 
-                : '<span class="bg-blue-100 text-blue-800 font-bold px-2 py-1 rounded text-[10px]">STBJ</span>';
+            let colGudang = statusGudang === 'IN GUDANG' ? '<span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded text-[10px] border border-emerald-200">IN GUDANG</span>' 
+                : statusGudang === 'KELUAR' ? '<span class="bg-red-100 text-red-800 font-bold px-2 py-1 rounded text-[10px] border border-red-200">KELUAR</span>' 
+                : '<span class="bg-blue-100 text-blue-800 font-bold px-2 py-1 rounded text-[10px] border border-blue-200">STBJ</span>';
             
             h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 text-xs">
-                    <td class="p-3 font-bold text-slate-400">${i+1}</td>
-                    <td class="p-3 text-slate-600 font-semibold">${tgl}</td>
-                    <td class="p-3 font-bold text-slate-700">${r.troli || '-'}</td>
-                    <td class="p-3 font-mono font-bold text-slate-900">${r.qrcode}</td>
-                    <td class="p-3 font-bold text-blue-700 text-left">${td.namaItem}</td>
-                    <td class="p-3 font-bold text-slate-600">${td.panjang}</td>
-                    <td class="p-3 font-black text-orange-600">${td.po}</td>
-                    <td class="p-3">${colGudang}</td>
-                </tr>`;
+                <div class="row-modal-stbj bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                    <div class="flex justify-between items-center mb-1 border-b border-slate-100 pb-2">
+                        <span class="font-black text-slate-400 text-xs">#${i+1} - ${tgl}</span>
+                        ${colGudang}
+                    </div>
+                    <div class="font-mono font-black text-slate-900 text-xs break-all">${r.qrcode}</div>
+                    <div class="text-xs font-bold text-slate-600 grid grid-cols-2 gap-1 mt-1">
+                        <div>Troli: <span class="text-blue-600">${r.troli || '-'}</span></div>
+                        <div>PO: <span class="text-orange-600">${td.po}</span></div>
+                        <div class="col-span-2">Item: <span class="text-slate-800">${td.namaItem} (${td.panjang})</span></div>
+                    </div>
+                </div>`;
         });
         tbody.innerHTML = h;
-    } catch (e) { tbody.innerHTML = `<tr><td colspan="8" class="p-6 font-bold text-red-500">Gagal: ${e.message}</td></tr>`; }
+    } catch (e) { tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal: ${e.message}</div>`; }
+}
+
+function tutupModalSTBJ() { 
+    const modal = document.getElementById('modal-stbj-langsir');
+    if(modal) modal.classList.add('hidden'); 
 }
 
 function saringTabelModalSTBJ() {
     const q = document.getElementById('f-stbj-modal').value.toLowerCase();
-    document.querySelectorAll('#tbody-stbj-modal tr').forEach(row => {
+    document.querySelectorAll('.row-modal-stbj').forEach(row => {
         row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
     });
 }
