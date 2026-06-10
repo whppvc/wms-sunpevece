@@ -1,13 +1,11 @@
 let masterData = { kamus: [], area: [] }; 
 let deleteStack = [], globalRowId = 0;
-let sortState = {}; 
 let currentPage = 1;
-const rowsPerPage = 10; // Jumlah baris per halaman
+const rowsPerPage = 10; 
 
 document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(async () => {
         try {
-            // 1. Menarik Data Area dari Supabase
             const { data: mDataArea } = await db.from('master_area').select('nama_area').order('id', { ascending: true });
             if(mDataArea) {
                 masterData.area = [...new Set(mDataArea.map(r => r.nama_area).filter(x => x && x.trim() !== ''))]; 
@@ -17,22 +15,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     masterData.area.forEach(a => selArea.innerHTML += `<option value="${a}">${a}</option>`); 
                 }
             }
-
-            // 2. Menarik Data Kamus Barcode
             const { data: mData2 } = await db.from('master_2').select('*');
             if(mData2) masterData.kamus = mData2; 
             
-            // 3. Menjalankan paginasi kosong di awal agar tampilan rapi
-            if (typeof applyPagination === "function") {
-                applyPagination();
-            }
-
-        } catch (e) { 
-            console.error("Gagal muat dropdown area:", e); 
-        }
+            if (typeof applyPagination === "function") applyPagination();
+        } catch (e) { console.error("Gagal muat dropdown area:", e); }
     }, 200); 
 
-    // PERBAIKAN 2: FUNGSI SCAN DIGABUNG DI SINI AGAR TIDAK LOOPING BERAT
     setTimeout(() => {
         const formScan = document.getElementById('form-scan');
         if(formScan) {
@@ -51,50 +40,63 @@ document.addEventListener('DOMContentLoaded', async () => {
                     existingQRs.push(code); 
                 });
                 
-                // MENGATASI NOMOR 1 & 2: Panggil ini di luar loop agar langsung muncul nomornya & langsung terbagi 10 baris
                 updateRowNumbers();
                 applyPagination();
                 
                 document.getElementById('input-qrcode').value = '';
+                tutupModalAdd(); // Tutup pop up setelah add
             });
         }
     }, 500);
 });
 
-function sortTable(colIndex, headerEl) {
-    const tbody = document.getElementById('tbody-langsir');
-    const rows = Array.from(tbody.querySelectorAll('tr.row-item'));
+// FUNGSI UTAMA PENGHASIL CARD VIEW
+function addRow(area, code, isDuplicate = false) {
+    globalRowId++; 
+    const div = document.createElement('div'); 
+    // Sesuai mockup warna kekuningan pale
+    const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'bg-[#faedbe] hover:bg-[#f3e5b3]';
+    div.className = `row-item ${rowClass} border-[3px] border-slate-800 p-4 relative flex flex-col shadow-sm transition`; 
     
-    let isAsc = sortState[colIndex] !== 'asc';
-    sortState[colIndex] = isAsc ? 'asc' : 'desc';
-    
-    rows.sort((a, b) => {
-        let valA = a.cells[colIndex].innerText.trim();
-        let valB = b.cells[colIndex].innerText.trim();
+    const td = translateBarcode(code); 
+    const stbjHtml = '<span class="text-white font-black bg-[#ff7315] border-b-2 border-[#cc5b0f] px-3 py-1.5 text-[11px] stbj-val" data-status="unverified">BLM STBJ</span>';
+    const kodeHtml = isDuplicate 
+        ? '<span class="text-white font-black bg-red-600 border-b-2 border-red-800 px-3 py-1.5 text-[11px] kode-val shadow-sm" data-status="invalid">DUPLIKAT LOKAL</span>'
+        : '<span class="text-[#0e744a] font-black bg-[#a0ecd1] border-b-2 border-[#76c2a7] px-3 py-1.5 text-[11px] kode-val" data-status="unverified">ACCEPT</span>';
+
+    div.innerHTML = `
+        <div class="flex justify-between items-start mb-1">
+            <div class="flex items-center gap-3">
+                <input type="checkbox" onchange="highlightRow(this)" class="cb-row cursor-pointer w-5 h-5 accent-blue-600 rounded">
+                <span class="font-black text-lg text-slate-800 no-cell"></span>
+                <span class="font-black text-lg area-cell col-area text-slate-800">${area}</span>
+            </div>
+            <button onclick="deleteRow(this)" class="bg-slate-700 text-white p-2 rounded-md hover:bg-rose-600 transition active:scale-95 border-b-2 border-slate-900"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
         
-        let numA = parseFloat(valA);
-        let numB = parseFloat(valB);
+        <div class="font-mono font-black text-slate-900 text-[13px] mb-2 qr-val col-qr leading-tight break-all pl-8">${code}</div>
         
-        if(!isNaN(numA) && !isNaN(numB)) {
-            return isAsc ? numA - numB : numB - numA;
-        } else {
-            return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        }
-    });
+        <div class="text-xs font-bold text-slate-800 leading-relaxed grid grid-cols-1 gap-0.5 pl-8">
+            <div>Tgl Produksi: <span class="col-tgl">${td.tglProduksi}</span></div>
+            <div>Mesin: <span class="col-mesin">${td.mesin}</span></div>
+            <div>Shift: <span class="col-shift">${td.shift}</span></div>
+            <div>Nama: <span class="col-nama">${td.namaItem}</span> <span class="col-jenis hidden">${td.jenisItem}</span></div>
+            <div>Pjg: <span class="col-pjg">${td.panjang}</span></div>
+            <div>Grade: <span class="col-grade">${td.grade}</span></div>
+            <div>Dus: <span class="col-dus">${td.dus}</span></div>
+            <div>Shading: <span class="col-shading">${td.shading}</span></div>
+            <div>Po Awal: <span class="col-po">${td.po}</span></div>
+            <div>Keterangan: <span class="col-ket ket-cell">-</span> <span class="col-troli troli-cell hidden">-</span></div>
+        </div>
+        
+        <div class="flex gap-2 mt-4 pl-8">
+            ${stbjHtml}
+            ${kodeHtml}
+        </div>
+    `;
     
-    rows.forEach(row => tbody.appendChild(row));
-    
-    document.querySelectorAll('.sort-icon').forEach(icon => {
-        icon.setAttribute('data-lucide', 'arrow-up-down'); 
-        icon.classList.add('opacity-50');
-    });
-    
-    const icon = headerEl.querySelector('.sort-icon');
-    if(icon) {
-        icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a');
-        icon.classList.remove('opacity-50');
-        lucide.createIcons();
-    }
+    document.getElementById('tbody-langsir').prepend(div); 
+    lucide.createIcons(); 
 }
 
 function saringTabelLangsir() {
@@ -161,46 +163,10 @@ function translateBarcode(barcode) {
     return data;
 }
 
-function addRow(area, code, isDuplicate = false) {
-    globalRowId++; const tr = document.createElement('tr'); 
-    const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'hover:bg-slate-50';
-    tr.className = `border-b border-slate-200 transition row-item ${rowClass}`; 
-    
-    const td = translateBarcode(code); 
-    const stbjHtml = '<span class="text-slate-400 font-bold stbj-val" data-status="unverified">-</span>';
-    const kodeHtml = isDuplicate 
-        ? '<span class="text-white font-bold bg-red-600 px-2 py-1 text-[10px] rounded kode-val shadow-sm" data-status="invalid">DUPLIKAT LOKAL</span>'
-        : '<span class="text-slate-400 font-bold kode-val" data-status="unverified">-</span>';
-
-    tr.innerHTML = `
-        <td class="p-3 col-cb"><input type="checkbox" onchange="highlightRow(this)" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-        <td class="p-3 text-center col-btn"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 cursor-pointer p-1.5 rounded bg-white shadow-sm border border-slate-200"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
-        <td class="p-3 font-bold no-cell text-center text-slate-500 col-no"></td>
-        <td class="p-3 font-bold text-center border-r border-slate-200 col-stbj">${stbjHtml}</td>
-        <td class="p-3 font-bold text-center border-r border-slate-200 col-kode">${kodeHtml}</td>
-        <td class="p-3 troli-cell font-bold text-slate-400 italic text-center col-troli text-[11px]">Tunggu Cek</td>
-        <td class="p-3 area-cell font-black text-emerald-600 border-r border-slate-200 col-area">${area}</td>
-        <td class="p-3 font-mono font-bold text-slate-900 qr-val border-r border-slate-200 bg-slate-50/50 tracking-wider col-qr">${code}</td>
-        <td class="p-3 col-tgl text-slate-600 font-semibold">${td.tglProduksi}</td>
-        <td class="p-3 col-mesin text-slate-600 font-semibold">${td.mesin}</td>
-        <td class="p-3 col-shift text-slate-600 font-semibold border-r border-slate-200">${td.shift}</td>
-        <td class="p-3 font-black text-blue-700 col-jenis">${td.jenisItem}</td>
-        <td class="p-3 font-bold text-slate-800 col-nama text-left">${td.namaItem}</td>
-        <td class="p-3 font-bold text-slate-600 col-pjg">${td.panjang}</td>
-        <td class="p-3 font-bold text-slate-800 col-grade">${td.grade}</td>
-        <td class="p-3 font-bold text-slate-800 col-dus">${td.dus}</td>
-        <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${td.shading}</td>
-        <td class="p-3 font-black text-center text-orange-600 bg-orange-50/50 border-r border-slate-200 col-po">${td.po}</td>
-        <td class="p-3 font-bold text-slate-500 ket-cell col-ket text-left italic text-[11px]">Tunggu Cek</td>`;
-    
-    document.getElementById('tbody-langsir').prepend(tr); 
-    lucide.createIcons(); 
-}
-
 function deleteRow(btn) { 
-    const tr = btn.closest('tr'); 
-    deleteStack.push({ parent: tr.parentNode, html: tr.outerHTML, nextSibling: tr.nextSibling }); 
-    tr.remove(); 
+    const div = btn.closest('.row-item'); 
+    deleteStack.push({ parent: div.parentNode, html: div.outerHTML, nextSibling: div.nextSibling }); 
+    div.remove(); 
     updateRowNumbers(); 
     applyPagination(); 
 }
@@ -208,28 +174,27 @@ function deleteRow(btn) {
 function undoDelete() { 
     if(deleteStack.length === 0) return alert("Belum ada data yang dihapus."); 
     const last = deleteStack.pop(); 
-    const temp = document.createElement('tbody'); 
+    const temp = document.createElement('div'); 
     temp.innerHTML = last.html; 
-    if (last.nextSibling) last.parent.insertBefore(temp.firstChild, last.nextSibling); 
-    else last.parent.appendChild(temp.firstChild); 
+    const element = temp.firstElementChild;
+    if (last.nextSibling) last.parent.insertBefore(element, last.nextSibling); 
+    else last.parent.appendChild(element); 
     lucide.createIcons(); 
     updateRowNumbers(); 
     applyPagination(); 
 }
 
-// PERBAIKAN 1: MEMUNCULKAN PENOMORAN DARI ANGKA 1 (Urut)
 function updateRowNumbers() { 
-    const rows = document.querySelectorAll('#tbody-langsir tr.row-item'); 
+    const rows = document.querySelectorAll('#tbody-langsir .row-item'); 
     let count = 1; 
-    rows.forEach(tr => { 
-        const noCell = tr.querySelector('.no-cell');
+    rows.forEach(div => { 
+        const noCell = div.querySelector('.no-cell');
         if(noCell) noCell.innerText = count++; 
     }); 
 }
 
-// PERBAIKAN 3: MENGUBAH KOTAK TAMPIL FILTER MENJADI TOTAL QTY DUS 
 function applyPagination() {
-    const allRows = Array.from(document.querySelectorAll('#tbody-langsir tr.row-item'));
+    const allRows = Array.from(document.querySelectorAll('#tbody-langsir .row-item'));
     const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
     
     const totalFiltered = visibleRows.length; 
@@ -243,29 +208,39 @@ function applyPagination() {
 
     visibleRows.forEach((row, index) => {
         if(index >= startIndex && index < endIndex) { 
-            row.style.display = ''; 
+            row.style.display = 'flex'; // Card menggunakan flex
         } else { 
             row.style.display = 'none'; 
         }
     });
 
-    const kotakFilter = document.getElementById('lbl-tampil-baris');
-    if(kotakFilter) {
-        const parentSpan = kotakFilter.parentElement;
-        if(parentSpan) {
-            parentSpan.className = "bg-amber-100 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm";
-            parentSpan.innerHTML = `Total Qty (Dus): <span id="lbl-tampil-baris" class="text-amber-900 font-black">${totalFiltered}</span>`;
-        }
-    }
-    
+    if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
     if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
     if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
 }
 
 function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } }
 function nextPage() { 
-    const totalVisible = document.querySelectorAll('#tbody-langsir tr.row-item:not(.filtered-out)').length;
+    const totalVisible = document.querySelectorAll('#tbody-langsir .row-item:not(.filtered-out)').length;
     if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
+}
+
+function toggleSemuaCentang(checked) {
+    document.querySelectorAll('.cb-row').forEach(cb => {
+        const row = cb.closest('.row-item');
+        if (row && row.style.display !== 'none' && !row.classList.contains('filtered-out')) {
+            cb.checked = checked;
+            highlightRow(cb);
+        }
+    });
+}
+
+function highlightRow(cb) {
+    const div = cb.closest('.row-item');
+    if (div) {
+        if (cb.checked) div.classList.add('selected-row');
+        else div.classList.remove('selected-row');
+    }
 }
 
 function editKeteranganMassal() {
@@ -276,8 +251,8 @@ function editKeteranganMassal() {
     if (newKet === null) return; 
 
     checkedBoxes.forEach(cb => {
-        const tr = cb.closest('tr');
-        const ketCell = tr.querySelector('.ket-cell');
+        const div = cb.closest('.row-item');
+        const ketCell = div.querySelector('.ket-cell');
         if (ketCell) {
             ketCell.innerText = newKet.trim() || '-';
             ketCell.classList.remove('italic', 'text-red-500', 'text-slate-500'); 
@@ -285,7 +260,7 @@ function editKeteranganMassal() {
         }
     });
     
-    document.querySelector('input[onchange="toggleSemuaCentang(this.checked)"]').checked = false;
+    document.querySelector('#cb-all').checked = false;
     toggleSemuaCentang(false);
     alert("Keterangan berhasil diperbarui secara lokal!");
 }
@@ -295,7 +270,7 @@ async function VerifikasiDanCek() {
     if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
     
     const btn = document.getElementById('btn-Verifikasi'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENGAMBIL DATA...'; btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> PROSES...'; btn.disabled = true;
     
     const qrs = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     
@@ -320,45 +295,44 @@ async function VerifikasiDanCek() {
             const troliCell = r.querySelector('.troli-cell');
             const ketCell = r.querySelector('.ket-cell');
             
+            // VERIFIKASI STBJ
             if(stbjMap[qr]) {
-                stbjSpan.className = 'text-white font-bold bg-blue-600 px-3 py-1.5 rounded shadow-sm text-[10px] stbj-val';
+                stbjSpan.className = 'text-white font-black bg-blue-600 border-b-2 border-blue-800 px-3 py-1.5 text-[11px] stbj-val shadow-sm';
                 stbjSpan.setAttribute('data-status', 'valid');
                 stbjSpan.innerText = 'SDH STBJ';
                 
                 troliCell.innerText = stbjMap[qr].troli || '-';
-                troliCell.className = "p-3 font-bold text-slate-700 troli-cell col-troli text-center";
+                troliCell.classList.remove('hidden');
                 
                 if(!ketCell.classList.contains('text-blue-700')) {
                     ketCell.innerText = stbjMap[qr].keterangan || '-';
-                    ketCell.className = "p-3 font-bold text-slate-700 ket-cell col-ket text-left";
                 }
             } else {
-                stbjSpan.className = 'text-white font-bold bg-orange-500 px-3 py-1.5 rounded shadow-sm text-[10px] stbj-val';
+                stbjSpan.className = 'text-white font-black bg-[#ff7315] border-b-2 border-[#cc5b0f] px-3 py-1.5 text-[11px] stbj-val shadow-sm';
                 stbjSpan.setAttribute('data-status', 'invalid-stbj');
                 stbjSpan.innerText = 'BLM STBJ';
-                
                 troliCell.innerText = '-';
-                troliCell.className = "p-3 font-bold text-red-500 troli-cell col-troli text-center";
                 ketCell.innerText = '-';
-                ketCell.className = "p-3 font-bold text-red-500 ket-cell col-ket text-left";
-                
                 hasError = true;
             }
 
+            // VERIFIKASI KODE DUPLIKAT GUDANG
             if(kodeSpan.innerText.includes('LOKAL')) {
                 hasError = true;
             } 
             else if(stokList.includes(qr)) {
-                kodeSpan.className = 'text-white font-black bg-red-600 px-3 py-1.5 rounded shadow-sm text-[10px] tracking-wide kode-val';
+                kodeSpan.className = 'text-white font-black bg-red-600 border-b-2 border-red-800 px-3 py-1.5 text-[11px] kode-val shadow-sm';
                 kodeSpan.setAttribute('data-status', 'invalid');
                 kodeSpan.innerText = 'DUPLIKAT';
-                r.classList.add('bg-red-50');
+                r.classList.replace('bg-[#faedbe]', 'bg-red-50');
+                r.classList.replace('hover:bg-[#f3e5b3]', 'hover:bg-red-100');
                 hasError = true;
             } else {
-                kodeSpan.className = 'text-emerald-700 font-black bg-emerald-100 border border-emerald-300 px-3 py-1 rounded shadow-sm text-[10px] kode-val';
+                kodeSpan.className = 'text-[#0e744a] font-black bg-[#a0ecd1] border-b-2 border-[#76c2a7] px-3 py-1.5 text-[11px] kode-val shadow-sm';
                 kodeSpan.setAttribute('data-status', 'valid');
                 kodeSpan.innerText = 'ACCEPT';
-                r.classList.remove('bg-red-50');
+                r.classList.replace('bg-red-50', 'bg-[#faedbe]');
+                r.classList.replace('hover:bg-red-100', 'hover:bg-[#f3e5b3]');
             }
         });
 
@@ -381,7 +355,7 @@ async function saveToSupabase() {
     
     const rows = document.querySelectorAll('.row-item'); if(rows.length === 0) return;
 
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-6 h-6"></i> MENYIMPAN...'; btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MENYIMPAN...'; btn.disabled = true;
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
     
     let arrFisik = []; let mapAktual = {}; let mapGlobal = {}; 
@@ -422,22 +396,22 @@ async function saveToSupabase() {
 
 async function holdLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
-    if(checkedBoxes.length === 0) return alert("Anda harus mencentang kotak di baris yang bermasalah terlebih dahulu untuk memindahkannya ke antrean Hold.");
+    if(checkedBoxes.length === 0) return alert("Anda harus mencentang kotak di baris yang bermasalah terlebih dahulu.");
 
-    const btn = document.getElementById('btn-hold'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> HOLDING...'; btn.disabled = true;
+    const btn = document.getElementById('btn-menu-utama'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i>'; btn.disabled = true;
 
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
     let payloadUpload = [];
 
     checkedBoxes.forEach(cb => {
-        const tr = cb.closest('tr');
-        const qr = tr.querySelector('.qr-val').innerText;
-        const troli = tr.querySelector('.troli-cell').innerText;
-        const area = tr.querySelector('.area-cell').innerText;
-        const ketStbj = tr.querySelector('.stbj-val').innerText;
-        const ketKode = tr.querySelector('.kode-val').innerText;
-        const noteKet = tr.querySelector('.ket-cell').innerText;
+        const div = cb.closest('.row-item');
+        const qr = div.querySelector('.qr-val').innerText;
+        const troli = div.querySelector('.troli-cell').innerText;
+        const area = div.querySelector('.area-cell').innerText;
+        const ketStbj = div.querySelector('.stbj-val').innerText;
+        const ketKode = div.querySelector('.kode-val').innerText;
+        const noteKet = div.querySelector('.ket-cell').innerText;
         
         payloadUpload.push({
             qrcode: qr, troli: troli, area: area,
@@ -450,10 +424,10 @@ async function holdLangsir() {
         const { error } = await db.from('hold_langsir').insert(payloadUpload);
         if(error) throw error;
         
-        checkedBoxes.forEach(cb => { cb.closest('tr').remove(); });
+        checkedBoxes.forEach(cb => { cb.closest('.row-item').remove(); });
         updateRowNumbers(); 
         applyPagination();
-        document.querySelector('input[onchange="toggleSemuaCentang(this.checked)"]').checked = false;
+        document.querySelector('#cb-all').checked = false;
         
         alert(`SUKSES!\n${payloadUpload.length} Data berhasil diasingkan ke "Hold Langsir".`);
     } catch(e) { alert("Gagal melakukan Hold: " + e.message); } 
@@ -462,23 +436,26 @@ async function holdLangsir() {
 
 function salinDataTabel() {
     const cek = document.querySelectorAll('.cb-row:checked');
-    if(cek.length === 0) return alert("Pilih baris yang ingin disalin dengan mencentang kotak di kiri tabel!");
+    if(cek.length === 0) return alert("Pilih baris yang ingin disalin dengan mencentang kotak di data card!");
 
-    let copyString = "";
-    const headers = Array.from(document.querySelectorAll('#thead-langsir th'))
-        .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-btn'))
-        .map(th => th.innerText.trim().replace(/\n/g, ' '));
-    copyString += headers.join('\t') + '\n';
-
+    let copyString = "Area\tQRCode\tTgl Produksi\tMesin\tShift\tNama Item\tPjg\tGrade\tDus\tShading\tPO\tKeterangan\n";
+    
     cek.forEach(cb => {
-        const tr = cb.closest('tr'); const rowData = [];
-        Array.from(tr.children).forEach(td => {
-            if(td.classList.contains('col-cb') || td.classList.contains('col-btn')) return;
-            if(window.getComputedStyle(td).display !== 'none') {
-                rowData.push(td.innerText.trim().replace(/\n/g, ' '));
-            }
-        });
-        copyString += rowData.join('\t') + '\n';
+        const div = cb.closest('.row-item');
+        const area = div.querySelector('.col-area').innerText;
+        const qr = div.querySelector('.col-qr').innerText;
+        const tgl = div.querySelector('.col-tgl').innerText;
+        const mesin = div.querySelector('.col-mesin').innerText;
+        const shift = div.querySelector('.col-shift').innerText;
+        const nama = div.querySelector('.col-nama').innerText;
+        const pjg = div.querySelector('.col-pjg').innerText;
+        const grade = div.querySelector('.col-grade').innerText;
+        const dus = div.querySelector('.col-dus').innerText;
+        const shading = div.querySelector('.col-shading').innerText;
+        const po = div.querySelector('.col-po').innerText;
+        const ket = div.querySelector('.col-ket').innerText;
+        
+        copyString += `${area}\t${qr}\t${tgl}\t${mesin}\t${shift}\t${nama}\t${pjg}\t${grade}\t${dus}\t${shading}\t${po}\t${ket}\n`;
     });
 
     navigator.clipboard.writeText(copyString).then(() => {
@@ -488,10 +465,9 @@ function salinDataTabel() {
 
 async function bukaModalSTBJ() {
     document.getElementById('modal-stbj-langsir').classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
     
     const tbody = document.getElementById('tbody-stbj-modal');
-    tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat Data STBJ...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat...</td></tr>';
     lucide.createIcons();
 
     try {
@@ -509,75 +485,29 @@ async function bukaModalSTBJ() {
             const td = translateBarcode(r.qrcode);
             
             let statusGudang = r.posisi || 'STBJ';
-            let colGudang = '';
-            
-            if(statusGudang === 'IN GUDANG') {
-                colGudang = '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">IN GUDANG</span>';
-            } else if (statusGudang === 'KELUAR') {
-                colGudang = '<span class="bg-red-100 text-red-800 border border-red-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">KELUAR</span>';
-            } else {
-                colGudang = '<span class="bg-blue-100 text-blue-800 border border-blue-300 font-bold px-2 py-1 rounded text-[10px] shadow-sm">STBJ</span>';
-            }
+            let colGudang = statusGudang === 'IN GUDANG' ? '<span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded text-[10px]">IN GUDANG</span>' 
+                : statusGudang === 'KELUAR' ? '<span class="bg-red-100 text-red-800 font-bold px-2 py-1 rounded text-[10px]">KELUAR</span>' 
+                : '<span class="bg-blue-100 text-blue-800 font-bold px-2 py-1 rounded text-[10px]">STBJ</span>';
             
             h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 transition row-modal-stbj">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 text-xs">
                     <td class="p-3 font-bold text-slate-400">${i+1}</td>
                     <td class="p-3 text-slate-600 font-semibold">${tgl}</td>
                     <td class="p-3 font-bold text-slate-700">${r.troli || '-'}</td>
-                    <td class="p-3 font-mono font-bold text-slate-900 border-r border-slate-200 tracking-wider">${r.qrcode}</td>
+                    <td class="p-3 font-mono font-bold text-slate-900">${r.qrcode}</td>
                     <td class="p-3 font-bold text-blue-700 text-left">${td.namaItem}</td>
                     <td class="p-3 font-bold text-slate-600">${td.panjang}</td>
-                    <td class="p-3 font-black text-orange-600 bg-orange-50/50 border-r border-slate-200">${td.po}</td>
+                    <td class="p-3 font-black text-orange-600">${td.po}</td>
                     <td class="p-3">${colGudang}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
-    } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="8" class="p-6 font-bold text-red-500">Gagal: ${e.message}</td></tr>`;
-    }
-}
-
-function tutupModalSTBJ() { 
-    document.getElementById('modal-stbj-langsir').classList.add('hidden'); 
-    if(document.getElementById('sidebar-filter').classList.contains('translate-x-full')) {
-        document.getElementById('overlay-klik-luar').classList.add('hidden'); 
-    }
-}
-
-function toggleInputData() {
-    const body = document.getElementById('body-input-data');
-    const icon = document.getElementById('icon-toggle-input');
-    if (body.style.display === 'none') {
-        body.style.display = 'block';
-        icon.setAttribute('data-lucide', 'chevron-up');
-    } else {
-        body.style.display = 'none';
-        icon.setAttribute('data-lucide', 'chevron-down');
-    }
-    lucide.createIcons();
-}
-function toggleSemuaCentang(checked) {
-    document.querySelectorAll('.cb-row').forEach(cb => {
-        const row = cb.closest('tr');
-        // Hanya centang baris yang tampil (tidak tersembunyi oleh filter/paginasi)
-        if (row && row.style.display !== 'none' && !row.classList.contains('filtered-out')) {
-            cb.checked = checked;
-            highlightRow(cb);
-        }
-    });
-}
-
-function highlightRow(cb) {
-    const tr = cb.closest('tr');
-    if (tr) {
-        if (cb.checked) tr.classList.add('selected-row');
-        else tr.classList.remove('selected-row');
-    }
+    } catch (e) { tbody.innerHTML = `<tr><td colspan="8" class="p-6 font-bold text-red-500">Gagal: ${e.message}</td></tr>`; }
 }
 
 function saringTabelModalSTBJ() {
     const q = document.getElementById('f-stbj-modal').value.toLowerCase();
-    document.querySelectorAll('.row-modal-stbj').forEach(row => {
+    document.querySelectorAll('#tbody-stbj-modal tr').forEach(row => {
         row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
     });
 }
