@@ -1,5 +1,4 @@
 let masterData = { kamus: [], area: [] }; 
-// PERBAIKAN E: Menggunakan array stack untuk menyimpan DOM elemen utuh (mendukung Undo tanpa batas)
 let deleteStack = []; 
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -18,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if(mData2) masterData.kamus = mData2; 
             
             updateTotalBaris();
-        } catch (e) { console.error("Gagal muat:", e); }
+        } catch (e) { console.error("Gagal muat dropdown area:", e); }
     }, 200); 
 
     setTimeout(() => {
@@ -49,27 +48,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 500);
 });
 
-// PERBAIKAN A, B, C, G: Format detail lengkap, nomor + titik, status sejajar, dan font dibesarkan
+// REVISI 2: FORMAT TEXT CARD VIEW LEBIH BESAR, JELAS, DAN RAPI
 function addRow(area, code, isDuplicate = false) {
     const div = document.createElement('div'); 
     const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'bg-[#faedbe] hover:bg-[#f3e5b3]';
-    div.className = `row-item ${rowClass} border-[3px] border-slate-800 p-3.5 relative flex flex-col shadow-sm transition`; 
+    div.className = `row-item ${rowClass} border-[3px] border-slate-800 p-3 relative flex flex-col shadow-sm transition`; 
     
     const td = translateBarcode(code); 
     
-    // Status sejajar awal: Menunggu Verifikasi
-    const stbjHtml = '<span class="text-slate-500 font-black bg-slate-200 border-b-2 border-slate-300 px-3 py-1 text-[11px] stbj-val shadow-sm rounded-sm" data-status="unverified">MENUNGGU VERIFIKASI..</span>';
+    const stbjHtml = '<span class="text-slate-500 font-black bg-slate-200 border border-slate-300 px-3 py-1 text-[11px] stbj-val shadow-sm rounded-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
     const kodeHtml = isDuplicate 
-        ? '<span class="text-white font-black bg-red-600 border-b-2 border-red-800 px-3 py-1 text-[11px] kode-val shadow-sm rounded-sm" data-status="invalid">DUPLIKAT SCAN</span>'
-        : '<span class="text-slate-500 font-black bg-slate-200 border-b-2 border-slate-300 px-3 py-1 text-[11px] kode-val shadow-sm rounded-sm" data-status="unverified">MENUNGGU VERIFIKASI..</span>';
+        ? '<span class="text-white font-black bg-red-600 border border-red-800 px-3 py-1 text-[11px] kode-val shadow-sm rounded-sm" data-status="invalid">DUPLIKAT LOKAL</span>'
+        : '<span class="text-slate-500 font-black bg-slate-200 border border-slate-300 px-3 py-1 text-[11px] kode-val shadow-sm rounded-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
 
     div.innerHTML = `
         <div class="flex justify-between items-start mb-1.5">
             <div class="flex items-start gap-2.5 w-full">
                 <input type="checkbox" onchange="highlightRow(this)" class="cb-row cursor-pointer w-5 h-5 accent-blue-600 rounded mt-0.5 shrink-0">
                 <div class="flex-1 flex justify-between items-start">
-                    <div class="font-mono font-black text-slate-900 text-[14px] break-all leading-tight">
-                        <span class="no-cell"></span>. <span class="qr-val col-qr">${code}</span>
+                    <div class="font-black text-[22px] text-emerald-700 leading-none area-cell col-area flex items-end">
+                        <span class="text-slate-800 text-[18px] mr-1 no-cell"></span> <span class="ml-1">${area}</span>
                     </div>
                     <button onclick="deleteRow(this)" class="bg-slate-700 text-white p-1.5 rounded-md hover:bg-rose-600 transition active:scale-95 border-b-2 border-slate-900 ml-2 shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                 </div>
@@ -77,7 +75,7 @@ function addRow(area, code, isDuplicate = false) {
         </div>
         
         <div class="flex flex-col gap-0.5 pl-7">
-            <div class="font-black text-[22px] text-emerald-700 area-cell col-area leading-none mb-1">${area}</div>
+            <div class="font-mono font-black text-slate-900 text-[14px] break-all leading-tight qr-val col-qr mb-1">${code}</div>
             
             <div class="text-[13px] font-bold text-slate-600 tracking-tight">
                 <span class="col-tgl">${td.tglProduksi}</span> - <span class="col-mesin">${td.mesin}</span> - <span class="col-shift">${td.shift}</span>
@@ -89,11 +87,13 @@ function addRow(area, code, isDuplicate = false) {
             </div>
             
             <div class="text-[14px] font-bold text-blue-600 col-shading">${td.shading}</div>
-            <div class="text-[13px] font-bold text-slate-700 col-po">${td.po}</div>
-            <div class="text-[13px] font-bold text-slate-600 mt-1">Keterangan: <span class="col-ket ket-cell text-slate-800">-</span><span class="col-troli troli-cell hidden">-</span></div>
+            <div class="text-[14px] font-bold text-orange-600 col-po">${td.po}</div>
+            
+            <div class="text-[13px] font-bold text-slate-600 mt-1">Keterangan: <span class="col-ket ket-cell text-slate-700">-</span></div>
+            <div class="text-[13px] font-bold text-slate-600 mb-1">Troli: <span class="col-troli troli-cell text-slate-700">-</span></div>
         </div>
         
-        <div class="flex flex-row flex-wrap items-center gap-2 mt-3 pl-7">
+        <div class="flex flex-row flex-wrap items-center gap-2 mt-2 pl-7">
             ${stbjHtml}
             ${kodeHtml}
         </div>
@@ -166,12 +166,11 @@ function translateBarcode(barcode) {
     return data;
 }
 
-// PERBAIKAN E: Mendukung banyak UNDO sekaligus (Infinite)
 function deleteRow(btn) { 
     const div = btn.closest('.row-item'); 
-    deleteStack.push(div); // Menyimpan DOM elemen aslinya agar event checkbox dll tetap hidup
-    div.style.display = 'none'; // Sembunyikan sementara
-    div.classList.add('filtered-out'); // Keluarkan dari hitungan total
+    deleteStack.push(div); 
+    div.style.display = 'none'; 
+    div.classList.add('filtered-out'); 
     updateRowNumbers(); 
     updateTotalBaris(); 
 }
@@ -179,19 +178,21 @@ function deleteRow(btn) {
 function undoDelete() { 
     if(deleteStack.length === 0) return alert("Belum ada data yang dihapus."); 
     const div = deleteStack.pop(); 
-    div.style.display = 'flex'; // Tampilkan kembali
-    div.classList.remove('filtered-out'); // Masukkan kembali ke hitungan
-    document.getElementById('tbody-langsir').prepend(div); // Kembalikan ke paling atas
+    div.style.display = 'flex'; 
+    div.classList.remove('filtered-out'); 
+    document.getElementById('tbody-langsir').prepend(div); 
     updateRowNumbers(); 
     updateTotalBaris(); 
 }
 
+// REVISI 4: PENGURUTAN NOMOR TERBALIK AGAR BARANG SCAN PERTAMA ADALAH NOMOR 1
 function updateRowNumbers() { 
     const rows = document.querySelectorAll('#tbody-langsir .row-item:not([style*="display: none"])'); 
-    let count = 1; 
+    let count = rows.length; 
     rows.forEach(div => { 
         const noCell = div.querySelector('.no-cell');
-        if(noCell) noCell.innerText = count++; 
+        // Tambahkan Titik setelah angka
+        if(noCell) noCell.innerText = (count--) + '.'; 
     }); 
 }
 
@@ -200,7 +201,7 @@ function updateTotalBaris() {
     let totalFiltered = 0;
 
     allRows.forEach(row => {
-        if(row.style.display === 'none' && !row.classList.contains('filtered-out')) return; // Jika di-hide via deleteRow
+        if(row.style.display === 'none' && !row.classList.contains('filtered-out')) return; 
         if(!row.classList.contains('filtered-out')) { 
             row.style.display = 'flex'; 
             totalFiltered++;
@@ -285,18 +286,17 @@ async function VerifikasiDanCek() {
             const ketCell = r.querySelector('.ket-cell');
             
             if(stbjMap[qr]) {
-                stbjSpan.className = 'text-white font-black bg-blue-600 border-b-2 border-blue-800 px-3 py-1 text-[11px] stbj-val shadow-sm rounded-sm';
+                stbjSpan.className = 'text-white font-black bg-blue-600 border border-blue-800 px-3 py-1 text-[11px] stbj-val shadow-sm rounded-sm';
                 stbjSpan.setAttribute('data-status', 'valid');
                 stbjSpan.innerText = 'SDH STBJ';
                 
                 troliCell.innerText = stbjMap[qr].troli || '-';
-                troliCell.classList.remove('hidden');
                 
-                if(!ketCell.classList.contains('text-blue-700')) {
+                if(!ketCell.classList.contains('text-slate-800')) {
                     ketCell.innerText = stbjMap[qr].keterangan || '-';
                 }
             } else {
-                stbjSpan.className = 'text-white font-black bg-[#ff7315] border-b-2 border-[#cc5b0f] px-3 py-1 text-[11px] stbj-val shadow-sm rounded-sm';
+                stbjSpan.className = 'text-white font-black bg-[#ff7315] border border-[#cc5b0f] px-3 py-1 text-[11px] stbj-val shadow-sm rounded-sm';
                 stbjSpan.setAttribute('data-status', 'invalid-stbj');
                 stbjSpan.innerText = 'BLM STBJ';
                 troliCell.innerText = '-';
@@ -308,14 +308,14 @@ async function VerifikasiDanCek() {
                 hasError = true;
             } 
             else if(stokList.includes(qr)) {
-                kodeSpan.className = 'text-white font-black bg-red-600 border-b-2 border-red-800 px-3 py-1 text-[11px] kode-val shadow-sm rounded-sm';
+                kodeSpan.className = 'text-white font-black bg-red-600 border border-red-800 px-3 py-1 text-[11px] kode-val shadow-sm rounded-sm';
                 kodeSpan.setAttribute('data-status', 'invalid');
                 kodeSpan.innerText = 'DUPLIKAT';
                 r.classList.replace('bg-[#faedbe]', 'bg-red-50');
                 r.classList.replace('hover:bg-[#f3e5b3]', 'hover:bg-red-100');
                 hasError = true;
             } else {
-                kodeSpan.className = 'text-[#0e744a] font-black bg-[#a0ecd1] border-b-2 border-[#76c2a7] px-3 py-1 text-[11px] kode-val shadow-sm rounded-sm';
+                kodeSpan.className = 'text-[#0e744a] font-black bg-[#a0ecd1] border border-[#76c2a7] px-3 py-1 text-[11px] kode-val shadow-sm rounded-sm';
                 kodeSpan.setAttribute('data-status', 'valid');
                 kodeSpan.innerText = 'ACCEPT';
                 r.classList.replace('bg-red-50', 'bg-[#faedbe]');
@@ -500,7 +500,6 @@ function saringTabelModalSTBJ() {
     });
 }
 
-// PERBAIKAN H: Buka Modal Tabel Hold
 async function bukaModalHold() {
     document.getElementById('modal-hold-langsir').classList.remove('hidden');
     const tbody = document.getElementById('tbody-hold-modal');
