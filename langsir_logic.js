@@ -48,54 +48,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 500);
 });
 
-// REVISI 2: FORMAT TEXT CARD VIEW LEBIH BESAR, JELAS, DAN RAPI
+// PERBAIKAN 2 & 3: DESAIN KIRI KANAN DAN TEKS "DUPLIKAT SCAN"
 function addRow(area, code, isDuplicate = false) {
     const div = document.createElement('div'); 
     const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'bg-[#faedbe] hover:bg-[#f3e5b3]';
-    div.className = `row-item ${rowClass} border-[3px] border-slate-800 p-3 relative flex flex-col shadow-sm transition`; 
+    div.className = `row-item ${rowClass} border-[3px] border-slate-800 p-2 relative shadow-sm transition w-full`; 
     
     const td = translateBarcode(code); 
     
-    const stbjHtml = '<span class="text-slate-500 font-black bg-slate-200 border border-slate-300 px-3 py-1 text-[11px] stbj-val shadow-sm rounded-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
+    const stbjHtml = '<span class="text-slate-500 font-black bg-slate-200 border-b-2 border-slate-300 px-3 py-1.5 text-[11px] stbj-val rounded-sm shadow-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
     const kodeHtml = isDuplicate 
-        ? '<span class="text-white font-black bg-red-600 border border-red-800 px-3 py-1 text-[11px] kode-val shadow-sm rounded-sm" data-status="invalid">DUPLIKAT LOKAL</span>'
-        : '<span class="text-slate-500 font-black bg-slate-200 border border-slate-300 px-3 py-1 text-[11px] kode-val shadow-sm rounded-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
+        ? '<span class="text-white font-black bg-red-600 border-b-2 border-red-800 px-3 py-1.5 text-[11px] kode-val rounded-sm shadow-sm" data-status="invalid">DUPLIKAT SCAN</span>'
+        : '<span class="text-slate-500 font-black bg-slate-200 border-b-2 border-slate-300 px-3 py-1.5 text-[11px] kode-val rounded-sm shadow-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
 
     div.innerHTML = `
-        <div class="flex justify-between items-start mb-1.5">
-            <div class="flex items-start gap-2.5 w-full">
-                <input type="checkbox" onchange="highlightRow(this)" class="cb-row cursor-pointer w-5 h-5 accent-blue-600 rounded mt-0.5 shrink-0">
-                <div class="flex-1 flex justify-between items-start">
-                    <div class="font-black text-[22px] text-emerald-700 leading-none area-cell col-area flex items-end">
-                        <span class="text-slate-800 text-[18px] mr-1 no-cell"></span> <span class="ml-1">${area}</span>
-                    </div>
-                    <button onclick="deleteRow(this)" class="bg-slate-700 text-white p-1.5 rounded-md hover:bg-rose-600 transition active:scale-95 border-b-2 border-slate-900 ml-2 shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        <div class="flex w-full">
+            
+            <div class="flex flex-col items-center justify-start pr-3 mr-3 border-r border-slate-400 w-10 shrink-0 mt-0.5">
+                <div class="font-black text-slate-800 text-[14px] mb-3"><span class="no-cell"></span></div>
+                <input type="checkbox" onchange="highlightRow(this)" class="cb-row cursor-pointer w-5 h-5 accent-blue-600 rounded bg-white border-slate-400">
+            </div>
+            
+            <div class="flex-1 flex flex-col gap-1 w-full min-w-0">
+                <div class="flex justify-between items-start">
+                    <div class="font-black text-[28px] text-emerald-700 leading-none area-cell col-area">${area}</div>
+                    <button onclick="deleteRow(this)" class="bg-slate-700 text-white p-2 rounded hover:bg-rose-600 transition active:scale-95 border-b-2 border-slate-900 shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
+                
+                <div class="font-mono font-bold text-slate-900 text-[13px] break-all leading-tight qr-val col-qr mt-1">${code}</div>
+                
+                <div class="text-[13px] font-bold text-slate-600 tracking-tight mt-1">
+                    <span class="col-tgl">${td.tglProduksi}</span> - <span class="col-mesin">${td.mesin}</span> - <span class="col-shift">${td.shift}</span>
+                </div>
+                
+                <div class="text-[14px] font-black text-slate-900 leading-snug">
+                    <span class="col-nama">${td.namaItem}</span> - <span class="col-pjg">${td.panjang}</span> - <span class="col-grade">${td.grade}</span> - <span class="col-dus">${td.dus}</span>
+                    <span class="col-jenis hidden">${td.jenisItem}</span>
+                </div>
+                
+                <div class="text-[14px] font-bold text-blue-600 col-shading">${td.shading}</div>
+                <div class="text-[14px] font-bold text-orange-600 col-po uppercase">${td.po}</div>
+                
+                <div class="text-[13px] font-bold text-slate-600 mt-1">Keterangan: <span class="col-ket ket-cell text-slate-800">-</span></div>
+                <div class="text-[13px] font-bold text-slate-600">Troli: <span class="col-troli troli-cell text-slate-800">-</span></div>
+                
+                <div class="flex flex-row flex-wrap items-center gap-2 mt-2">
+                    ${stbjHtml}
+                    ${kodeHtml}
                 </div>
             </div>
-        </div>
-        
-        <div class="flex flex-col gap-0.5 pl-7">
-            <div class="font-mono font-black text-slate-900 text-[14px] break-all leading-tight qr-val col-qr mb-1">${code}</div>
             
-            <div class="text-[13px] font-bold text-slate-600 tracking-tight">
-                <span class="col-tgl">${td.tglProduksi}</span> - <span class="col-mesin">${td.mesin}</span> - <span class="col-shift">${td.shift}</span>
-            </div>
-            
-            <div class="text-[14.5px] font-black text-slate-900 leading-snug">
-                <span class="col-nama">${td.namaItem}</span> - <span class="col-pjg">${td.panjang}</span> - <span class="col-grade">${td.grade}</span> - <span class="col-dus">${td.dus}</span>
-                <span class="col-jenis hidden">${td.jenisItem}</span>
-            </div>
-            
-            <div class="text-[14px] font-bold text-blue-600 col-shading">${td.shading}</div>
-            <div class="text-[14px] font-bold text-orange-600 col-po">${td.po}</div>
-            
-            <div class="text-[13px] font-bold text-slate-600 mt-1">Keterangan: <span class="col-ket ket-cell text-slate-700">-</span></div>
-            <div class="text-[13px] font-bold text-slate-600 mb-1">Troli: <span class="col-troli troli-cell text-slate-700">-</span></div>
-        </div>
-        
-        <div class="flex flex-row flex-wrap items-center gap-2 mt-2 pl-7">
-            ${stbjHtml}
-            ${kodeHtml}
         </div>
     `;
     
@@ -185,14 +187,13 @@ function undoDelete() {
     updateTotalBaris(); 
 }
 
-// REVISI 4: PENGURUTAN NOMOR TERBALIK AGAR BARANG SCAN PERTAMA ADALAH NOMOR 1
+// PERBAIKAN 5: PENOMORAN URUT DARI 1 DI PALING ATAS
 function updateRowNumbers() { 
     const rows = document.querySelectorAll('#tbody-langsir .row-item:not([style*="display: none"])'); 
-    let count = rows.length; 
+    let count = 1; // Mulai dari 1 untuk baris paling atas (terbaru)
     rows.forEach(div => { 
         const noCell = div.querySelector('.no-cell');
-        // Tambahkan Titik setelah angka
-        if(noCell) noCell.innerText = (count--) + '.'; 
+        if(noCell) noCell.innerText = (count++) + '.'; 
     }); 
 }
 
@@ -286,7 +287,7 @@ async function VerifikasiDanCek() {
             const ketCell = r.querySelector('.ket-cell');
             
             if(stbjMap[qr]) {
-                stbjSpan.className = 'text-white font-black bg-blue-600 border border-blue-800 px-3 py-1 text-[11px] stbj-val shadow-sm rounded-sm';
+                stbjSpan.className = 'text-white font-black bg-blue-600 border-b-2 border-blue-800 px-3 py-1.5 text-[11px] stbj-val rounded-sm shadow-sm';
                 stbjSpan.setAttribute('data-status', 'valid');
                 stbjSpan.innerText = 'SDH STBJ';
                 
@@ -296,7 +297,7 @@ async function VerifikasiDanCek() {
                     ketCell.innerText = stbjMap[qr].keterangan || '-';
                 }
             } else {
-                stbjSpan.className = 'text-white font-black bg-[#ff7315] border border-[#cc5b0f] px-3 py-1 text-[11px] stbj-val shadow-sm rounded-sm';
+                stbjSpan.className = 'text-white font-black bg-[#ff7315] border-b-2 border-[#cc5b0f] px-3 py-1.5 text-[11px] stbj-val rounded-sm shadow-sm';
                 stbjSpan.setAttribute('data-status', 'invalid-stbj');
                 stbjSpan.innerText = 'BLM STBJ';
                 troliCell.innerText = '-';
@@ -308,14 +309,14 @@ async function VerifikasiDanCek() {
                 hasError = true;
             } 
             else if(stokList.includes(qr)) {
-                kodeSpan.className = 'text-white font-black bg-red-600 border border-red-800 px-3 py-1 text-[11px] kode-val shadow-sm rounded-sm';
+                kodeSpan.className = 'text-white font-black bg-red-600 border-b-2 border-red-800 px-3 py-1.5 text-[11px] kode-val rounded-sm shadow-sm';
                 kodeSpan.setAttribute('data-status', 'invalid');
-                kodeSpan.innerText = 'DUPLIKAT';
+                kodeSpan.innerText = 'DUPLIKAT SCAN';
                 r.classList.replace('bg-[#faedbe]', 'bg-red-50');
                 r.classList.replace('hover:bg-[#f3e5b3]', 'hover:bg-red-100');
                 hasError = true;
             } else {
-                kodeSpan.className = 'text-[#0e744a] font-black bg-[#a0ecd1] border border-[#76c2a7] px-3 py-1 text-[11px] kode-val shadow-sm rounded-sm';
+                kodeSpan.className = 'text-[#0e744a] font-black bg-[#a0ecd1] border-b-2 border-[#76c2a7] px-3 py-1.5 text-[11px] kode-val rounded-sm shadow-sm';
                 kodeSpan.setAttribute('data-status', 'valid');
                 kodeSpan.innerText = 'ACCEPT';
                 r.classList.replace('bg-red-50', 'bg-[#faedbe]');
