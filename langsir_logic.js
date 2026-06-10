@@ -48,15 +48,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 500);
 });
 
-// PERBAIKAN 2 & 3: DESAIN KIRI KANAN DAN TEKS "DUPLIKAT SCAN"
+// REVISI 1 & 3: "DUPLIKAT SCAN" DAN FONT NOMOR DIBESARKAN (text-2xl)
 function addRow(area, code, isDuplicate = false) {
     const div = document.createElement('div'); 
-    const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'bg-[#faedbe] hover:bg-[#f3e5b3]';
-    div.className = `row-item ${rowClass} border-[3px] border-slate-800 p-2 relative shadow-sm transition w-full`; 
+    const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'bg-white hover:bg-slate-50'; // Diganti putih sesuai request
+    div.className = `row-item ${rowClass} border-[3px] border-slate-800 p-2 relative shadow-sm transition w-full rounded-md`; 
     
     const td = translateBarcode(code); 
     
     const stbjHtml = '<span class="text-slate-500 font-black bg-slate-200 border-b-2 border-slate-300 px-3 py-1.5 text-[11px] stbj-val rounded-sm shadow-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
+    
+    // REVISI 1: Duplikat Lokal (waktu input) disebut DUPLIKAT SCAN
     const kodeHtml = isDuplicate 
         ? '<span class="text-white font-black bg-red-600 border-b-2 border-red-800 px-3 py-1.5 text-[11px] kode-val rounded-sm shadow-sm" data-status="invalid">DUPLIKAT SCAN</span>'
         : '<span class="text-slate-500 font-black bg-slate-200 border-b-2 border-slate-300 px-3 py-1.5 text-[11px] kode-val rounded-sm shadow-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
@@ -64,8 +66,8 @@ function addRow(area, code, isDuplicate = false) {
     div.innerHTML = `
         <div class="flex w-full">
             
-            <div class="flex flex-col items-center justify-start pr-3 mr-3 border-r border-slate-400 w-10 shrink-0 mt-0.5">
-                <div class="font-black text-slate-800 text-[14px] mb-3"><span class="no-cell"></span></div>
+            <div class="flex flex-col items-center justify-start pr-3 mr-3 border-r border-slate-400 w-12 shrink-0 pt-1">
+                <div class="font-black text-slate-800 text-2xl mb-3 leading-none"><span class="no-cell"></span></div>
                 <input type="checkbox" onchange="highlightRow(this)" class="cb-row cursor-pointer w-5 h-5 accent-blue-600 rounded bg-white border-slate-400">
             </div>
             
@@ -75,7 +77,7 @@ function addRow(area, code, isDuplicate = false) {
                     <button onclick="deleteRow(this)" class="bg-slate-700 text-white p-2 rounded hover:bg-rose-600 transition active:scale-95 border-b-2 border-slate-900 shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                 </div>
                 
-                <div class="font-mono font-bold text-slate-900 text-[13px] break-all leading-tight qr-val col-qr mt-1">${code}</div>
+                <div class="font-mono font-black text-slate-900 text-[14px] break-all leading-tight qr-val col-qr mt-1">${code}</div>
                 
                 <div class="text-[13px] font-bold text-slate-600 tracking-tight mt-1">
                     <span class="col-tgl">${td.tglProduksi}</span> - <span class="col-mesin">${td.mesin}</span> - <span class="col-shift">${td.shift}</span>
@@ -187,14 +189,15 @@ function undoDelete() {
     updateTotalBaris(); 
 }
 
-// PERBAIKAN 5: PENOMORAN URUT DARI 1 DI PALING ATAS
+// REVISI 4: PENGURUTAN NOMOR (Kode awal/pertama yang masuk = No 1)
 function updateRowNumbers() { 
-    const rows = document.querySelectorAll('#tbody-langsir .row-item:not([style*="display: none"])'); 
-    let count = 1; // Mulai dari 1 untuk baris paling atas (terbaru)
-    rows.forEach(div => { 
-        const noCell = div.querySelector('.no-cell');
-        if(noCell) noCell.innerText = (count++) + '.'; 
-    }); 
+    const rows = Array.from(document.querySelectorAll('#tbody-langsir .row-item:not([style*="display: none"])')); 
+    // Membalik loop dari bawah ke atas DOM (karena kita pakai prepend saat nambah data)
+    let count = 1; 
+    for (let i = rows.length - 1; i >= 0; i--) {
+        const noCell = rows[i].querySelector('.no-cell');
+        if(noCell) noCell.innerText = count++; 
+    }
 }
 
 function updateTotalBaris() {
@@ -305,22 +308,23 @@ async function VerifikasiDanCek() {
                 hasError = true;
             }
 
-            if(kodeSpan.innerText.includes('LOKAL')) {
+            // REVISI 1: Cek apakah Local (Duplikat Scan) atau DB (Duplikat Item)
+            if(kodeSpan.innerText.includes('DUPLIKAT SCAN')) {
                 hasError = true;
             } 
             else if(stokList.includes(qr)) {
                 kodeSpan.className = 'text-white font-black bg-red-600 border-b-2 border-red-800 px-3 py-1.5 text-[11px] kode-val rounded-sm shadow-sm';
                 kodeSpan.setAttribute('data-status', 'invalid');
-                kodeSpan.innerText = 'DUPLIKAT SCAN';
-                r.classList.replace('bg-[#faedbe]', 'bg-red-50');
-                r.classList.replace('hover:bg-[#f3e5b3]', 'hover:bg-red-100');
+                kodeSpan.innerText = 'DUPLIKAT ITEM'; // Jika dari database, tulis ITEM
+                r.classList.add('bg-red-50');
+                r.classList.remove('bg-white');
                 hasError = true;
             } else {
                 kodeSpan.className = 'text-[#0e744a] font-black bg-[#a0ecd1] border-b-2 border-[#76c2a7] px-3 py-1.5 text-[11px] kode-val rounded-sm shadow-sm';
                 kodeSpan.setAttribute('data-status', 'valid');
                 kodeSpan.innerText = 'ACCEPT';
-                r.classList.replace('bg-red-50', 'bg-[#faedbe]');
-                r.classList.replace('hover:bg-red-100', 'hover:bg-[#f3e5b3]');
+                r.classList.remove('bg-red-50');
+                r.classList.add('bg-white');
             }
         });
 
