@@ -68,36 +68,48 @@
                 <button onclick="switchTab('csv')" id="btn-tab-csv" class="px-6 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> IMPORT CSV</button>
             </div>
 
-            <!-- AREA INPUT & FORM SCAN -->
-            <div class="p-2 sm:p-3 bg-white flex flex-col gap-2 border-b border-slate-200">
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-2 sm:gap-4 items-end">
-                    
-                    <div class="md:col-span-3">
-                        <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Pilih Troli</label>
-                        <select id="select-troli" class="w-full p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-blue-600 text-slate-800 cursor-pointer bg-slate-50 text-sm shadow-inner">
-                            <option value="">-- Memuat Troli... --</option>
-                        </select>
-                    </div>
-
-                    <div id="view-scan" class="md:col-span-9">
-                        <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Scan Fisik Kardus</label>
-                        <form id="form-scan" class="flex gap-2">
-                            <div class="relative flex-1">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
-                                <input type="text" id="input-qrcode" class="w-full pl-11 p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-black text-slate-800 text-sm sm:text-base bg-slate-50 placeholder-slate-400 transition shadow-inner" placeholder="Arahkan scanner..." autocomplete="off">
-                            </div>
-                            <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-blue-900 text-xs sm:text-sm uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> <span class="hidden sm:inline">ADD</span></button>
-                        </form>
-                    </div>
-
-                    <div id="view-csv" class="md:col-span-9 hidden">
-                        <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Upload File CSV</label>
-                        <div class="flex gap-2">
-                            <input type="file" id="input-csv" accept=".csv" class="flex-1 p-1.5 border-2 border-slate-200 rounded-lg outline-none text-sm font-bold text-slate-700 bg-slate-50 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-black file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition cursor-pointer shadow-inner">
-                            <button onclick="prosesCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-6 py-2 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-emerald-800 text-xs sm:text-sm uppercase"><i data-lucide="upload-cloud" class="w-4 h-4"></i> <span class="hidden sm:inline">PROSES</span></button>
+            <!-- COLLAPSIBLE BOX: INPUT DATA STBJ -->
+            <div class="bg-white border-b border-slate-200 flex flex-col">
+                <button onclick="toggleInputSTBJ()" class="w-full bg-slate-50 p-3 flex justify-between items-center border-b border-slate-200 hover:bg-slate-100 transition active:bg-slate-200">
+                    <span class="font-black text-[11px] uppercase tracking-wide text-slate-700 flex items-center gap-2">
+                        <i data-lucide="package-plus" class="w-4 h-4"></i> INPUT DATA STBJ
+                    </span>
+                    <i data-lucide="chevron-up" id="icon-toggle-input" class="w-4 h-4 text-slate-500 transition-transform duration-300"></i>
+                </button>
+                
+                <div id="body-input-stbj" class="p-3 sm:p-4 transition-all duration-300 origin-top">
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 items-end">
+                        
+                        <!-- TROLI -->
+                        <div class="md:col-span-3">
+                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Pilih Troli</label>
+                            <select id="select-troli" class="w-full h-11 px-3 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-blue-600 text-slate-800 cursor-pointer bg-slate-50 text-sm shadow-inner">
+                                <option value="">-- Memuat Troli... --</option>
+                            </select>
                         </div>
-                    </div>
 
+                        <!-- SCAN -->
+                        <div id="view-scan" class="md:col-span-9">
+                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Scan Fisik Kardus</label>
+                            <form id="form-scan" class="flex gap-2">
+                                <div class="relative flex-1">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
+                                    <input type="text" id="input-qrcode" class="w-full h-11 pl-11 pr-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-black text-slate-800 text-sm sm:text-base bg-slate-50 placeholder-slate-400 transition shadow-inner" placeholder="Arahkan scanner..." autocomplete="off">
+                                </div>
+                                <button type="submit" class="h-11 bg-blue-700 hover:bg-blue-800 text-white px-4 sm:px-6 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-blue-900 text-xs sm:text-sm uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> <span class="hidden sm:inline">ADD</span></button>
+                            </form>
+                        </div>
+
+                        <!-- CSV -->
+                        <div id="view-csv" class="md:col-span-9 hidden">
+                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Upload File CSV</label>
+                            <div class="flex gap-2">
+                                <input type="file" id="input-csv" accept=".csv" class="flex-1 h-11 px-3 py-2 border-2 border-slate-200 rounded-lg outline-none text-sm font-bold text-slate-700 bg-slate-50 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-black file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition cursor-pointer shadow-inner">
+                                <button onclick="prosesCSV()" class="h-11 bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-6 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-emerald-800 text-xs sm:text-sm uppercase"><i data-lucide="upload-cloud" class="w-4 h-4"></i> <span class="hidden sm:inline">PROSES</span></button>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
             </div>
 
@@ -218,6 +230,18 @@
             await loadInitialSTBJData();
         });
 
+        function toggleInputSTBJ() {
+            const body = document.getElementById('body-input-stbj');
+            const icon = document.getElementById('icon-toggle-input');
+            if (body.classList.contains('hidden')) {
+                body.classList.remove('hidden');
+                icon.classList.remove('rotate-180');
+            } else {
+                body.classList.add('hidden');
+                icon.classList.add('rotate-180');
+            }
+        }
+
         function sortTable(colIndex, headerEl) {
             const tbody = document.getElementById('tbody-stbj');
             const rows = Array.from(tbody.querySelectorAll('tr.row-stbj'));
@@ -271,7 +295,7 @@
                 if(mData1) {
                     const trolis = [...new Set(mData1.map(r => r.nama_troli).filter(x => x))];
                     const sel = document.getElementById('select-troli');
-                    sel.innerHTML = '<option value="">-- Pilih Troli --</option>';
+                    sel.innerHTML = '<option value="">-- Memuat Troli... --</option>';
                     trolis.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
                 }
                 const { data: mData2 } = await db.from('master_2').select('*');
