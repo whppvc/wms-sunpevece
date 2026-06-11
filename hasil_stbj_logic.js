@@ -1,13 +1,13 @@
 let modeSekarang = 'qrcode'; 
-let tabelSekarang = 'stok_global'; // REVISI: Default table is now stok_global
+let tabelSekarang = 'stok_global'; 
 let rawDataRaw = [];
 let kamusData = [];
 let jasperData = [];
 let sortState = {}; 
 
-// Variabel Paginasi Kencang & Filter Excel Pro
+// REVISI: Variabel Paginasi Kencang diubah menjadi let agar bisa diubah
 let currentPage = 1;
-const rowsPerPage = 8;
+let rowsPerPage = 8; 
 let activeFilters = {}; 
 let currentFilterCol = ''; 
 
@@ -63,7 +63,6 @@ async function muatDataDariSupabase() {
 function setMode(m) {
     modeSekarang = m;
     
-    // REVISI 6: Menggunakan class Tab Active/Inactive yang sama dengan Scan STBJ
     const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
 
@@ -303,7 +302,6 @@ function renderHeaderDanTabel() {
         
         let h = '';
         rawDataRaw.forEach((r, i) => {
-            // REVISI 8: Format Waktu Scan menjadi dd/mm/yyyy (tanpa jam) dan hindari 1970 jika null
             let tgl = '-';
             if (r.created_at) {
                 const dt = new Date(r.created_at);
@@ -456,6 +454,17 @@ function toggleSemuaCentang(checked) {
             cb.checked = checked; highlightRow(cb);
         }
     });
+}
+
+// REVISI: Fungsi Mengubah Jumlah Baris per Halaman
+function changeRowsPerPage(val) {
+    if (val === 'ALL') {
+        rowsPerPage = 999999; 
+    } else {
+        rowsPerPage = parseInt(val);
+    }
+    currentPage = 1; 
+    applyPagination();
 }
 
 // PAGINASI KENCANG
