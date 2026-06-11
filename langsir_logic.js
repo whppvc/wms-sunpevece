@@ -1,4 +1,5 @@
 // File: langsir_logic.js
+
 let masterData = { kamus: [], area: [] }; 
 let deleteStack = []; 
 
@@ -22,17 +23,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 200); 
 });
 
+// Menambahkan Card Item ke Inner Kotak 
 function addRow(area, code, isDuplicate = false) {
     const div = document.createElement('div'); 
     const rowClass = isDuplicate ? 'bg-red-50 hover:bg-red-100' : 'bg-white hover:bg-slate-50';
-    div.className = `row-item ${rowClass} border border-slate-300 p-2 relative shadow-sm transition w-full flex shrink-0 rounded-md`; 
+    // Menghilangkan border bawah karena di bungkus kotak
+    div.className = `row-item ${rowClass} border-b border-slate-300 p-2.5 relative transition w-full flex shrink-0`; 
     
     const td = typeof translateBarcode === 'function' ? translateBarcode(code) : {tglProduksi:'-', mesin:'-', shift:'-', jenisItem:'-', namaItem:'Unknown', panjang:'-', grade:'-', dus:'-', shading:'-', po:'-'}; 
     
-    const stbjHtml = '<span class="text-slate-500 font-bold bg-slate-200 border border-slate-300 px-3 py-1 text-[10px] stbj-val rounded-sm shadow-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
+    const stbjHtml = '<span class="text-slate-500 font-bold bg-slate-200 border border-slate-300 px-3 py-1 text-[10px] stbj-val rounded-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
     const kodeHtml = isDuplicate 
         ? '<span class="text-white font-bold bg-red-600 border border-red-800 px-3 py-1 text-[10px] kode-val rounded-sm shadow-sm" data-status="invalid">DUPLIKAT SCAN</span>'
-        : '<span class="text-slate-500 font-bold bg-slate-200 border border-slate-300 px-3 py-1 text-[10px] kode-val rounded-sm shadow-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
+        : '<span class="text-slate-500 font-bold bg-slate-200 border border-slate-300 px-3 py-1 text-[10px] kode-val rounded-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
 
     div.innerHTML = `
         <div class="flex flex-col items-center justify-start pr-2 mr-2 border-r border-slate-300 w-10 shrink-0 pt-1">
@@ -40,7 +43,7 @@ function addRow(area, code, isDuplicate = false) {
             <input type="checkbox" onchange="highlightRow(this)" class="cb-row cursor-pointer w-4 h-4 accent-blue-600 rounded bg-white border-slate-400">
         </div>
         
-        <div class="flex-1 flex flex-col gap-0.5 w-full min-w-0">
+        <div class="flex-1 flex flex-col gap-0 w-full min-w-0">
             <div class="flex justify-between items-start mb-0.5">
                 <div class="font-black text-[22px] text-emerald-700 leading-none area-cell col-area">${area}</div>
                 <button onclick="deleteRow(this)" class="bg-slate-700 text-white p-1.5 rounded hover:bg-rose-600 transition active:scale-95 shrink-0"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
@@ -52,7 +55,7 @@ function addRow(area, code, isDuplicate = false) {
                 <span class="col-tgl">${td.tglProduksi}</span> - <span class="col-mesin">${td.mesin}</span> - <span class="col-shift">${td.shift}</span>
             </div>
             
-            <div class="text-[13px] font-black text-slate-900 leading-snug">
+            <div class="text-[13px] font-black text-slate-900 leading-snug my-0.5">
                 <span class="col-nama">${td.namaItem}</span> - <span class="col-pjg">${td.panjang}</span> - <span class="col-grade">${td.grade}</span> - <span class="col-dus">${td.dus}</span>
                 <span class="col-jenis hidden">${td.jenisItem}</span>
             </div>
@@ -211,13 +214,13 @@ async function VerifikasiDanCek() {
             const ketCell = r.querySelector('.ket-cell');
             
             if(stbjMap[qr]) {
-                stbjSpan.className = 'text-white font-bold bg-blue-600 border border-blue-800 px-3 py-1 text-[10px] stbj-val rounded shadow-sm';
+                stbjSpan.className = 'text-white font-bold bg-blue-600 border border-blue-800 px-3 py-1 text-[10px] stbj-val rounded-sm shadow-sm';
                 stbjSpan.setAttribute('data-status', 'valid');
                 stbjSpan.innerText = 'SDH STBJ';
                 troliCell.innerText = stbjMap[qr].troli || '-';
                 if(!ketCell.classList.contains('text-slate-800')) ketCell.innerText = stbjMap[qr].keterangan || '-';
             } else {
-                stbjSpan.className = 'text-white font-bold bg-[#ff7315] border border-[#cc5b0f] px-3 py-1 text-[10px] stbj-val rounded shadow-sm';
+                stbjSpan.className = 'text-white font-bold bg-[#ff7315] border border-[#cc5b0f] px-3 py-1 text-[10px] stbj-val rounded-sm shadow-sm';
                 stbjSpan.setAttribute('data-status', 'invalid-stbj');
                 stbjSpan.innerText = 'BLM STBJ';
                 troliCell.innerText = '-'; ketCell.innerText = '-'; hasError = true;
@@ -227,14 +230,14 @@ async function VerifikasiDanCek() {
                 hasError = true;
             } 
             else if(stokList.includes(qr)) {
-                kodeSpan.className = 'text-white font-bold bg-red-600 border border-red-800 px-3 py-1 text-[10px] kode-val rounded shadow-sm';
+                kodeSpan.className = 'text-white font-bold bg-red-600 border border-red-800 px-3 py-1 text-[10px] kode-val rounded-sm shadow-sm';
                 kodeSpan.setAttribute('data-status', 'invalid');
                 kodeSpan.innerText = 'DUPLIKAT ITEM';
                 r.classList.add('bg-red-50');
                 r.classList.remove('bg-white');
                 hasError = true;
             } else {
-                kodeSpan.className = 'text-[#0e744a] font-bold bg-[#a0ecd1] border border-[#76c2a7] px-3 py-1 text-[10px] kode-val rounded shadow-sm';
+                kodeSpan.className = 'text-[#0e744a] font-bold bg-[#a0ecd1] border border-[#76c2a7] px-3 py-1 text-[10px] kode-val rounded-sm shadow-sm';
                 kodeSpan.setAttribute('data-status', 'valid');
                 kodeSpan.innerText = 'ACCEPT';
                 r.classList.remove('bg-red-50');
