@@ -5,7 +5,7 @@ let kamusData = [];
 let jasperData = [];
 let sortState = {}; 
 
-// REVISI: Variabel Paginasi Kencang diubah menjadi let agar bisa diubah
+// Variabel Paginasi Kencang & Filter Excel Pro
 let currentPage = 1;
 let rowsPerPage = 8; 
 let activeFilters = {}; 
@@ -458,13 +458,31 @@ function toggleSemuaCentang(checked) {
 
 // REVISI: Fungsi Mengubah Jumlah Baris per Halaman
 function changeRowsPerPage(val) {
+    const customInput = document.getElementById('input-custom-rows');
     if (val === 'ALL') {
         rowsPerPage = 999999; 
+        customInput.classList.add('hidden');
+    } else if (val === 'CUSTOM') {
+        customInput.classList.remove('hidden');
+        customInput.focus();
+        let customVal = parseInt(customInput.value);
+        rowsPerPage = (customVal > 0) ? customVal : rowsPerPage;
     } else {
         rowsPerPage = parseInt(val);
+        customInput.classList.add('hidden');
     }
     currentPage = 1; 
     applyPagination();
+}
+
+// REVISI: Fungsi Menangkap Input Custom Baris
+function setCustomRowsPerPage(val) {
+    let parsed = parseInt(val);
+    if (!isNaN(parsed) && parsed > 0) {
+        rowsPerPage = parsed;
+        currentPage = 1;
+        applyPagination();
+    }
 }
 
 // PAGINASI KENCANG
