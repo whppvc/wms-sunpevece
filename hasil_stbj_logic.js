@@ -5,7 +5,6 @@ let kamusData = [];
 let jasperData = [];
 let sortState = {}; 
 
-// Variabel Paginasi Kencang & Filter Excel Pro
 let currentPage = 1;
 let rowsPerPage = 8; 
 let activeFilters = {}; 
@@ -16,7 +15,6 @@ const currentUser = JSON.parse(localStorage.getItem('user_session')) || {usernam
 document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'hasil_stbj', title: 'HASIL STBJ', url: 'hasil_stbj.html' });
     
-    // Listener khusus untuk close Filter Menu jika klik di luar
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
@@ -42,7 +40,7 @@ async function loadKamusDanJasper() {
 
 async function muatDataDariSupabase() {
     const tbody = document.getElementById('tbody-stbj');
-    tbody.innerHTML = `<tr><td colspan="22" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-medium text-slate-500 text-sm">Menarik Data...</p></td></tr>`;
     lucide.createIcons();
     try {
         const { data, error } = await db.from(tabelSekarang).select('*').order('created_at', {ascending: false});
@@ -57,14 +55,14 @@ async function muatDataDariSupabase() {
 
         rawDataRaw = data || [];
         renderHeaderDanTabel();
-    } catch(err) { tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; }
+    } catch(err) { tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center text-red-500 font-medium">Gagal memuat: ${err.message}</td></tr>`; }
 }
 
 function setMode(m) {
     modeSekarang = m;
     
-    const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-    const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    const activeClass = 'pb-3 tab-active transition whitespace-nowrap flex items-center gap-2 text-sm';
+    const inactiveClass = 'pb-3 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-sm';
 
     ['qrcode', 'item', 'jasper'].forEach(tab => {
         const el = document.getElementById('tab-mode-' + tab);
@@ -85,7 +83,6 @@ function setMode(m) {
 
 function switchTable(val) { tabelSekarang = val; muatDataDariSupabase(); }
 
-// SORTING LOGIC
 function sortTable(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-stbj');
     const rows = Array.from(tbody.querySelectorAll('tr.text-row'));
@@ -106,19 +103,19 @@ function sortTable(colIndex, headerEl) {
     applyPagination();
 }
 
-// HEADER FILTER EXCEL PRO
+// HEADER FILTER EXCEL PRO (Clean Design)
 const thSort = (idx, label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-btn'].includes(colClass);
     
     const filterBtn = noFilter ? '' : `
-        <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-600 rounded ml-1 transition" title="Filter ${label}">
-            <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
+        <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-200 rounded ml-1 transition text-slate-400 hover:text-slate-700" title="Filter ${label}">
+            <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon transition-all"></i>
         </button>`;
 
-    return `<th class="hdr-std ${cls} hover:bg-slate-700 transition select-none">
-        <div class="flex items-center justify-center">
-            <span class="cursor-pointer flex items-center gap-1.5" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
+    return `<th class="hdr-std ${cls} select-none">
+        <div class="flex items-center gap-1.5">
+            <span class="cursor-pointer flex items-center gap-1 hover:text-slate-800 transition" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
             ${filterBtn}
         </div>
     </th>`;
@@ -130,7 +127,7 @@ const thSort = (idx, label, cls = "") => {
 function openColumnFilter(event, colClass, colName) {
     event.stopPropagation();
     currentFilterCol = colClass;
-    document.getElementById('filter-col-name').innerText = `FILTER: ${colName}`;
+    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
 
     let uniqueValues = new Set();
     
@@ -154,14 +151,14 @@ function openColumnFilter(event, colClass, colName) {
     });
 
     let sortedValues = Array.from(uniqueValues).sort();
-    let listHtml = `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-0"> <span class="font-black text-slate-800">(PILIH SEMUA)</span></label>`;
+    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
     
     sortedValues.forEach(val => {
         let isChecked = true;
         if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
-        listHtml += `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded filter-val-item" data-value="${encodeURIComponent(val)}">
-            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-0" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
-            <span class="truncate font-bold text-slate-600">${val}</span>
+        listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}">
+            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
+            <span class="truncate text-slate-600">${val}</span>
         </label>`;
     });
 
@@ -256,14 +253,14 @@ function saringTabelExcel() {
 
 function updateFilterIcons() {
     document.querySelectorAll('.filter-icon').forEach(icon => {
-        icon.classList.remove('text-amber-400', 'opacity-100');
-        icon.classList.add('opacity-40', 'text-white');
+        icon.classList.remove('text-blue-600');
+        icon.classList.add('text-slate-400');
     });
     for (let colClass in activeFilters) {
         const th = document.querySelector(`th.${colClass}`);
         if (th) {
             const icon = th.querySelector('.filter-icon');
-            if (icon) { icon.classList.remove('opacity-40', 'text-white'); icon.classList.add('text-amber-400', 'opacity-100'); }
+            if (icon) { icon.classList.remove('text-slate-400'); icon.classList.add('text-blue-600'); }
         }
     }
 }
@@ -276,29 +273,29 @@ function renderHeaderDanTabel() {
     if(modeSekarang === 'qrcode') {
         thead.innerHTML = `
             <tr>
-                <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4"></th>
-                <th class="hdr-std w-10 col-btn"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-rose-400"></i></th>
-                ${thSort(2, 'Status Item', 'col-status-gudang border-r border-slate-500')}
-                ${tabelSekarang === 'hold_stbj' ? thSort(3, 'Status Hold', 'col-status text-amber-400') : '<th class="hdr-std hidden col-status">Status Hold</th>'}
-                ${thSort(tabelSekarang==='hold_stbj'?4:3, 'Status Data', 'col-status-data text-indigo-300')}
+                <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
+                <th class="hdr-std w-10 col-btn text-center"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-slate-400"></i></th>
+                ${thSort(2, 'Status Item', 'col-status-gudang')}
+                ${tabelSekarang === 'hold_stbj' ? thSort(3, 'Status Hold', 'col-status') : '<th class="hdr-std hidden col-status">Status Hold</th>'}
+                ${thSort(tabelSekarang==='hold_stbj'?4:3, 'Status Data', 'col-status-data')}
                 ${thSort(tabelSekarang==='hold_stbj'?5:4, 'Waktu Scan', 'col-waktu')}
-                ${thSort(tabelSekarang==='hold_stbj'?6:5, 'Troli', 'col-troli text-amber-300')}
-                ${thSort(tabelSekarang==='hold_stbj'?7:6, 'QRCode', 'col-qr border-r border-slate-500')}
+                ${thSort(tabelSekarang==='hold_stbj'?6:5, 'Troli', 'col-troli')}
+                ${thSort(tabelSekarang==='hold_stbj'?7:6, 'QRCode', 'col-qr')}
                 ${thSort(tabelSekarang==='hold_stbj'?8:7, 'Tgl Produksi', 'col-tgl')}
                 ${thSort(tabelSekarang==='hold_stbj'?9:8, 'Mesin', 'col-mesin')}
-                ${thSort(tabelSekarang==='hold_stbj'?10:9, 'Shift', 'col-shift border-r border-slate-500')}
-                ${thSort(tabelSekarang==='hold_stbj'?11:10, 'Jenis Item', 'col-jenis text-blue-300')}
+                ${thSort(tabelSekarang==='hold_stbj'?10:9, 'Shift', 'col-shift')}
+                ${thSort(tabelSekarang==='hold_stbj'?11:10, 'Jenis Item', 'col-jenis')}
                 ${thSort(tabelSekarang==='hold_stbj'?12:11, 'Nama Item', 'col-nama')}
                 ${thSort(tabelSekarang==='hold_stbj'?13:12, 'Pjg', 'col-pjg')}
                 ${thSort(tabelSekarang==='hold_stbj'?14:13, 'Grade', 'col-grade')}
                 ${thSort(tabelSekarang==='hold_stbj'?15:14, 'Dus', 'col-dus')}
-                ${thSort(tabelSekarang==='hold_stbj'?16:15, 'Shading', 'col-shading border-r border-slate-500')}
+                ${thSort(tabelSekarang==='hold_stbj'?16:15, 'Shading', 'col-shading')}
                 ${thSort(tabelSekarang==='hold_stbj'?17:16, 'PO Awal', 'col-po')}
                 ${thSort(tabelSekarang==='hold_stbj'?18:17, 'Keterangan', 'col-ket')}
-                ${thSort(tabelSekarang==='hold_stbj'?19:18, 'PIC Input', 'col-pic border-l border-slate-500')}
+                ${thSort(tabelSekarang==='hold_stbj'?19:18, 'PIC Input', 'col-pic')}
             </tr>`;
         
-        if(rawDataRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="22" class="p-6 font-bold text-slate-400">Tabel Kosong.</td></tr>`; return; }
+        if(rawDataRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="22" class="px-4 py-8 text-center font-medium text-slate-400">Tabel Kosong.</td></tr>`; return; }
         
         let h = '';
         rawDataRaw.forEach((r, i) => {
@@ -313,64 +310,64 @@ function renderHeaderDanTabel() {
                 }
             }
 
-            const htmlStatusGudang = r.is_in_gudang ? 'IN GUDANG' : 'STBJ';
-            const statData = r.status_data === 'Collected' ? 'COLLECTED' : '-';
+            const htmlStatusGudang = r.is_in_gudang ? '<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md text-xs font-semibold">IN GUDANG</span>' : '<span class="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-xs font-semibold">STBJ</span>';
+            const statData = r.status_data === 'Collected' ? '<span class="bg-indigo-100 text-indigo-700 px-2 py-1 rounded-md text-xs font-semibold">COLLECTED</span>' : '-';
 
             h += `
-                <tr class="hover:bg-slate-100 text-row transition text-xs bg-white border-b border-slate-200">
-                    <td class="p-3 text-center col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
-                    <td class="p-2 text-center col-btn border-r border-slate-200">
-                        <button onclick="aksiHapusPerBaris('${r.qrcode}')" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-slate-50 border border-slate-300 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex">
+                <tr class="hover:bg-slate-50 text-row transition border-b border-slate-100">
+                    <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 text-center col-btn">
+                        <button onclick="aksiHapusPerBaris('${r.qrcode}')" class="text-slate-400 hover:text-rose-600 transition p-1 rounded-md hover:bg-rose-50 mx-auto flex">
                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </button>
                     </td>
-                    <td class="p-3 font-black text-center border-r border-slate-200 col-status-gudang text-emerald-600" data-search="${htmlStatusGudang}">${htmlStatusGudang}</td>
-                    ${tabelSekarang === 'hold_stbj' ? `<td class="p-3 font-black text-amber-600 text-center col-status border-r border-slate-200" data-search="${r.status || 'HOLD'}">${r.status || 'HOLD'}</td>` : '<td class="p-3 hidden col-status">-</td>'}
-                    <td class="p-3 font-black text-center col-status-data border-r border-slate-200 text-indigo-600" data-search="${statData}">${statData}</td>
-                    <td class="p-3 text-slate-600 font-semibold text-center col-waktu border-r border-slate-200" data-search="${tgl}">${tgl}</td>
-                    <td class="p-3 font-bold text-slate-700 text-center col-troli border-r border-slate-200" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
-                    <td class="p-3 font-mono font-bold text-slate-900 text-left tracking-wider border-r border-slate-200 col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
-                    <td class="p-3 font-bold text-slate-600 text-center col-tgl border-r border-slate-200" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
-                    <td class="p-3 font-bold text-slate-600 text-center col-mesin border-r border-slate-200" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
-                    <td class="p-3 font-bold text-slate-600 text-center border-r border-slate-200 col-shift" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
-                    <td class="p-3 font-bold text-blue-600 text-center col-jenis border-r border-slate-200" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
-                    <td class="p-3 font-black text-black text-left col-nama border-r border-slate-200" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
-                    <td class="p-3 font-black text-black text-center col-pjg border-r border-slate-200" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
-                    <td class="p-3 font-black text-black text-center col-grade border-r border-slate-200" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
-                    <td class="p-3 font-black text-black text-center col-dus border-r border-slate-200" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
-                    <td class="p-3 font-black text-black text-center border-r border-slate-200 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
-                    <td class="p-3 font-black text-cyan-600 bg-cyan-50/40 text-center col-po border-r border-slate-200" data-search="${r.po_bawaan || '-'}">${r.po_bawaan || '-'}</td>
-                    <td class="p-3 text-slate-600 font-semibold text-center col-ket border-r border-slate-200" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
-                    <td class="p-3 font-bold uppercase text-slate-400 text-center col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
+                    <td class="px-4 py-3 col-status-gudang" data-search="${r.is_in_gudang ? 'IN GUDANG' : 'STBJ'}">${htmlStatusGudang}</td>
+                    ${tabelSekarang === 'hold_stbj' ? `<td class="px-4 py-3 col-status" data-search="${r.status || 'HOLD'}"><span class="bg-amber-100 text-amber-700 px-2 py-1 rounded-md text-xs font-semibold">${r.status || 'HOLD'}</span></td>` : '<td class="px-4 py-3 hidden col-status">-</td>'}
+                    <td class="px-4 py-3 col-status-data" data-search="${r.status_data || '-'}">${statData}</td>
+                    <td class="px-4 py-3 text-sm text-slate-600 col-waktu" data-search="${tgl}">${tgl}</td>
+                    <td class="px-4 py-3 text-sm font-medium text-slate-700 col-troli" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
+                    <td class="px-4 py-3 text-sm font-mono text-slate-600 col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
+                    <td class="px-4 py-3 text-sm text-slate-600 col-tgl" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-slate-600 col-mesin" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-slate-600 col-shift" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-slate-600 col-jenis" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
+                    <td class="px-4 py-3 text-sm font-medium text-slate-800 col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700 col-pjg" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700 col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700 col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700 col-po" data-search="${r.po_bawaan || '-'}">${r.po_bawaan || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-slate-500 col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
+                    <td class="px-4 py-3 text-xs text-slate-400 col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
-        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="22" class="p-6 font-bold text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="22" class="px-4 py-8 text-center font-medium text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
     } 
     else if(modeSekarang === 'item' || modeSekarang === 'jasper') {
         const isJasper = modeSekarang === 'jasper';
         
         thead.innerHTML = `
             <tr>
-                <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4"></th>
+                <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
                 <th class="hdr-std col-status-gudang hidden">Status Item</th>
                 <th class="hdr-std col-status hidden">Status Hold</th>
-                ${thSort(3, 'Status Data', 'col-status-data text-indigo-300')}
+                ${thSort(3, 'Status Data', 'col-status-data')}
                 <th class="hdr-std col-waktu hidden">Waktu Scan</th>
-                ${thSort(5, 'Troli Gabungan', 'col-troli text-amber-300')}
+                ${thSort(5, 'Troli Gabungan', 'col-troli')}
                 <th class="hdr-std col-qr hidden">QRCode</th>
                 ${thSort(7, 'Tgl Produksi', 'col-tgl')}
                 ${thSort(8, 'Mesin', 'col-mesin')}
-                ${thSort(9, 'Shift', 'col-shift border-r border-slate-500')}
-                ${thSort(10, 'Jenis Item', 'col-jenis text-blue-300')}
+                ${thSort(9, 'Shift', 'col-shift')}
+                ${thSort(10, 'Jenis Item', 'col-jenis')}
                 ${thSort(11, isJasper ? 'Nama Barang Jasper' : 'Nama Item', 'col-nama')}
                 ${thSort(12, 'Panjang', 'col-pjg')}
                 ${thSort(13, 'Grade', 'col-grade')}
                 ${thSort(14, 'Dus', 'col-dus')}
-                ${thSort(15, 'Shading', 'col-shading border-r border-slate-500')}
+                ${thSort(15, 'Shading', 'col-shading')}
                 ${thSort(16, 'PO Bawaan', 'col-po')}
-                ${thSort(17, 'QTY (DUS)', 'col-qty border-l border-slate-500 border-r')}
-                ${thSort(18, 'Keterangan', 'col-ket border-r border-slate-500')}
+                ${thSort(17, 'QTY (DUS)', 'col-qty')}
+                ${thSort(18, 'Keterangan', 'col-ket')}
                 <th class="hdr-std col-pic hidden">PIC Input</th>
             </tr>`;
         
@@ -401,40 +398,40 @@ function renderHeaderDanTabel() {
         });
 
         let arr = Object.values(groups);
-        if(arr.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="20" class="p-6 font-bold text-slate-400">Kosong.</td></tr>`; return; }
+        if(arr.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="20" class="px-4 py-8 text-center font-medium text-slate-400">Kosong.</td></tr>`; return; }
 
         let h = '';
         arr.forEach((r) => {
             const gabunganTroli = Array.from(r.trolis).join(', ') || '-';
             const displayKet = (r.ket === 'TANPA_KETERANGAN') ? '-' : r.ket; 
-            const statData = r.sData === 'Collected' ? 'COLLECTED' : '-';
+            const statData = r.sData === 'Collected' ? '<span class="bg-indigo-100 text-indigo-700 px-2 py-1 rounded-md text-xs font-semibold">COLLECTED</span>' : '-';
 
             h += `
-                <tr class="hover:bg-slate-100 text-row text-center transition text-xs bg-white border-b border-slate-200">
-                    <td class="p-3 col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
-                    <td class="p-3 hidden col-status-gudang">-</td>
-                    <td class="p-3 hidden col-status">-</td>
-                    <td class="p-3 font-black col-status-data text-indigo-600 border-r border-slate-200" data-search="${statData}">${statData}</td>
-                    <td class="p-3 hidden col-waktu">-</td>
-                    <td class="p-3 font-bold text-slate-700 col-troli border-r border-slate-200" data-search="${gabunganTroli}">${gabunganTroli}</td>
-                    <td class="p-3 hidden col-qr">-</td>
-                    <td class="p-3 font-bold text-slate-600 col-tgl border-r border-slate-200" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
-                    <td class="p-3 font-bold text-slate-600 col-mesin border-r border-slate-200" data-search="${r.mesin}">${r.mesin}</td>
-                    <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shift" data-search="${r.shift}">${r.shift}</td>
-                    <td class="p-3 font-bold text-blue-600 col-jenis border-r border-slate-200" data-search="${r.jenisItem}">${r.jenisItem}</td>
-                    <td class="p-3 font-black text-black text-left col-nama border-r border-slate-200" data-search="${r.displayNama}">${r.displayNama}</td>
-                    <td class="p-3 font-black text-black col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
-                    <td class="p-3 font-black text-black col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
-                    <td class="p-3 font-black text-black col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
-                    <td class="p-3 font-black text-black border-r border-slate-200 col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="p-3 font-black text-cyan-600 bg-cyan-50/40 border-r border-slate-200 col-po" data-search="${r.po}">${r.po}</td>
-                    <td class="p-3 font-black text-base text-blue-700 bg-blue-50 border-r border-slate-200 col-qty" data-search="${r.qty}">${r.qty}</td>
-                    <td class="p-3 font-bold text-slate-600 text-center col-ket border-r border-slate-200" data-search="${displayKet}">${displayKet}</td>
-                    <td class="p-3 hidden col-pic">-</td>
+                <tr class="hover:bg-slate-50 text-row transition border-b border-slate-100">
+                    <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 hidden col-status-gudang">-</td>
+                    <td class="px-4 py-3 hidden col-status">-</td>
+                    <td class="px-4 py-3 col-status-data" data-search="${r.sData || '-'}">${statData}</td>
+                    <td class="px-4 py-3 hidden col-waktu">-</td>
+                    <td class="px-4 py-3 text-sm text-slate-700 col-troli" data-search="${gabunganTroli}">${gabunganTroli}</td>
+                    <td class="px-4 py-3 hidden col-qr">-</td>
+                    <td class="px-4 py-3 text-sm text-slate-600 col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
+                    <td class="px-4 py-3 text-sm text-slate-600 col-mesin" data-search="${r.mesin}">${r.mesin}</td>
+                    <td class="px-4 py-3 text-sm text-slate-600 col-shift" data-search="${r.shift}">${r.shift}</td>
+                    <td class="px-4 py-3 text-sm text-slate-600 col-jenis" data-search="${r.jenisItem}">${r.jenisItem}</td>
+                    <td class="px-4 py-3 text-sm font-medium text-slate-800 col-nama" data-search="${r.displayNama}">${r.displayNama}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700 col-pjg" data-search="${r.panjang}">${r.panjang}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700 col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700 col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700 col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700 col-po" data-search="${r.po}">${r.po}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-slate-800 col-qty" data-search="${r.qty}">${r.qty}</td>
+                    <td class="px-4 py-3 text-sm text-slate-500 col-ket" data-search="${displayKet}">${displayKet}</td>
+                    <td class="px-4 py-3 hidden col-pic">-</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
-        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="20" class="p-6 font-bold text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="20" class="px-4 py-8 text-center font-medium text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
     }
     lucide.createIcons(); saringTabelExcel();
 }
@@ -442,8 +439,8 @@ function renderHeaderDanTabel() {
 // HIGHLIGHT BARIS TERPILIH
 function highlightRow(checkbox) {
     const tr = checkbox.closest('tr');
-    if (checkbox.checked) { tr.classList.add('selected-row'); tr.classList.remove('hover:bg-slate-100'); } 
-    else { tr.classList.remove('selected-row'); tr.classList.add('hover:bg-slate-100'); }
+    if (checkbox.checked) { tr.classList.add('selected-row'); } 
+    else { tr.classList.remove('selected-row'); }
     updateSelectedCount();
 }
 
@@ -456,7 +453,6 @@ function toggleSemuaCentang(checked) {
     });
 }
 
-// REVISI: Fungsi Mengubah Jumlah Baris per Halaman
 function changeRowsPerPage(val) {
     const customInput = document.getElementById('input-custom-rows');
     if (val === 'ALL') {
@@ -475,7 +471,6 @@ function changeRowsPerPage(val) {
     applyPagination();
 }
 
-// REVISI: Fungsi Menangkap Input Custom Baris
 function setCustomRowsPerPage(val) {
     let parsed = parseInt(val);
     if (!isNaN(parsed) && parsed > 0) {
@@ -550,7 +545,7 @@ function bukaDaftarKatalog() {
 function renderKatalogList() {
     const tbody = document.getElementById('tbody-katalog-list');
     if (!jasperData || jasperData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-slate-400 font-bold">Katalog Jasper Kosong di Database.</td></tr>'; 
+        tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-slate-400 font-medium">Katalog Jasper Kosong di Database.</td></tr>'; 
         return;
     }
 
@@ -558,17 +553,17 @@ function renderKatalogList() {
     jasperData.forEach((d, i) => {
         const jData = encodeURIComponent(JSON.stringify(d));
         html += `
-        <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-center">
-            <td class="p-2 border-r border-slate-200">
-                <button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded shadow-sm transition active:scale-95" title="Edit Baris Ini">
+        <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+            <td class="p-3 text-center">
+                <button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition" title="Edit Baris Ini">
                     <i data-lucide="edit-3" class="w-4 h-4"></i>
                 </button>
             </td>
-            <td class="p-3 font-bold text-slate-400 border-r border-slate-200">${i+1}</td>
-            <td class="p-3 font-black text-black text-left border-r border-slate-200">${d.nama_item}</td>
-            <td class="p-3 font-black text-black border-r border-slate-200">${d.panjang || '-'}</td>
-            <td class="p-3 font-black text-black border-r border-slate-200">${d.grade || '-'}</td>
-            <td class="p-3 font-black text-purple-700 bg-purple-50/50 border-r border-slate-200">${d.nama_jasper}</td>
+            <td class="p-3 text-center text-slate-500">${i+1}</td>
+            <td class="p-3 font-medium text-slate-800">${d.nama_item}</td>
+            <td class="p-3 text-slate-600">${d.panjang || '-'}</td>
+            <td class="p-3 text-slate-600">${d.grade || '-'}</td>
+            <td class="p-3 font-medium text-blue-600">${d.nama_jasper}</td>
         </tr>`;
     });
     tbody.innerHTML = html;
@@ -588,8 +583,8 @@ function bukaModalKatalogForm(isEdit = false, encodedData = null) {
     
     const title = document.getElementById('title-modal-jasper');
     title.innerHTML = isEdit 
-        ? '<i data-lucide="edit" class="w-4 h-4 text-purple-600"></i> EDIT DATA JASPER' 
-        : '<i data-lucide="plus-circle" class="w-4 h-4 text-purple-600"></i> TAMBAH JASPER BARU';
+        ? '<i data-lucide="edit" class="w-5 h-5 text-blue-600"></i> Edit Data Jasper' 
+        : '<i data-lucide="plus-circle" class="w-5 h-5 text-blue-600"></i> Tambah Jasper Baru';
     
     if(isEdit && encodedData) {
         const d = JSON.parse(decodeURIComponent(encodedData));
@@ -620,7 +615,7 @@ async function simpanDataJasper() {
 
     const btn = document.getElementById('btn-save-jasper');
     const oriTxt = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...';
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...';
     btn.disabled = true;
 
     const payload = { nama_item: nama, panjang: pjg, grade: grade, nama_jasper: output };
@@ -639,12 +634,12 @@ async function simpanDataJasper() {
         
         tutupModalJasperForm();
         
-        document.getElementById('tbody-katalog-list').innerHTML = '<tr><td colspan="6" class="p-6 text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat ulang tabel...</td></tr>';
+        document.getElementById('tbody-katalog-list').innerHTML = '<tr><td colspan="6" class="p-6 text-center text-slate-500 font-medium"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat ulang tabel...</td></tr>';
         lucide.createIcons();
         
         await loadKamusDanJasper(); 
         renderKatalogList(); 
-        muatDataDariSupabase(); // Render ulang agar jasper terupdate di tabel belakang
+        muatDataDariSupabase(); 
         
     } catch(e) {
         alert("GAGAL MENYIMPAN: " + e.message);
@@ -715,13 +710,13 @@ async function aksiMassal(tipe) {
     else if (tipe === 'collect') {
         if(!confirm(`Tandai ${checkedValues.length} QrCode sebagai COLLECTED?`)) return;
         const btn = document.getElementById('btn-massal-collect');
-        btn.innerHTML = '<div class="bg-indigo-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-indigo-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-indigo-500 transition">Collect</div>'; btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-indigo-600"></i> Collect'; btn.disabled = true;
         
         const { error } = await db.from(tabelSekarang).update({ status_data: 'Collected' }).in('qrcode', checkedValues);
         if(error) alert("Gagal Update: " + error.message); 
         else { muatDataDariSupabase(); }
         
-        btn.innerHTML = '<div class="bg-indigo-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="check-square" class="w-4 h-4"></i></div><div class="bg-indigo-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-indigo-500 transition">Collect</div>'; btn.disabled = false; lucide.createIcons();
+        btn.innerHTML = '<i data-lucide="check-square" class="w-4 h-4 text-indigo-600"></i> Collect'; btn.disabled = false; lucide.createIcons();
     }
     else if(tipe === 'xlsx') {
         if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
