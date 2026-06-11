@@ -8,54 +8,43 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* KUNCI MUTLAK: Membunuh scroll bawaan browser dan global.js */
+        /* Mencegah bounce scroll bawaan browser HP (iOS/Android) */
         html, body {
             height: 100%;
+            width: 100%;
             margin: 0;
-            overflow: hidden !important; /* Paksa mati outer scroll */
-            display: flex;
-            flex-direction: column;
-            background-color: #f1f5f9;
+            padding: 0;
+            overflow: hidden !important; 
+            touch-action: pan-y;
         }
 
-        /* Pembungkus aplikasi kita yang mengambil sisa layar di bawah navbar WMS */
-        #wms-app-wrapper {
-            flex: 1;
-            min-height: 0;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-
-        /* Desain Inner Scrollbar yang Anda tunjuk di gambar */
-        .custom-scroll::-webkit-scrollbar { width: 8px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 4px; margin: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        /* Desain Scrollbar Kotak Internal (Seperti di Gambar ERP) */
+        .custom-scroll::-webkit-scrollbar { width: 12px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-left: 1px solid #cbd5e1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border: 3px solid #f1f5f9; border-radius: 10px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
         
         .selected-row { border-color: #2563eb !important; background-color: #dbeafe !important; }
     </style>
 </head>
-<body>
+<body class="font-sans bg-slate-100 text-slate-800">
 
-    <div id="wms-app-wrapper">
-        
-        <div class="shrink-0 w-full bg-slate-50 border-b border-slate-300 px-2 py-2 flex flex-col gap-2 shadow-sm z-10">
+    <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px]"> 
+        <div class="shrink-0 bg-white border-b border-slate-300 px-2 py-2 flex flex-col gap-2 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)] z-20">
             <div class="flex gap-2">
-                <button onclick="bukaModalSTBJ()" class="flex-1 flex items-stretch rounded overflow-hidden shadow-sm active:scale-95 transition h-10 border border-purple-700">
-                    <div class="bg-purple-800 text-white flex items-center justify-center px-3"><i data-lucide="layout-list" class="w-4 h-4"></i></div>
-                    <div class="bg-purple-600 text-white font-black text-[11px] uppercase flex items-center justify-center flex-1">Data STBJ</div>
+                <button onclick="bukaModalSTBJ()" class="flex-1 flex items-stretch rounded overflow-hidden shadow-sm active:scale-95 transition h-9 border border-purple-700">
+                    <div class="w-10 bg-purple-800 text-white flex items-center justify-center shrink-0"><i data-lucide="layout-list" class="w-4 h-4"></i></div>
+                    <div class="bg-purple-600 text-white font-black text-[11px] uppercase flex items-center justify-center flex-1 tracking-wider">Data STBJ</div>
                 </button>
-                <button onclick="VerifikasiDanCek()" id="btn-Verifikasi" class="flex-1 flex items-stretch rounded overflow-hidden shadow-sm active:scale-95 transition h-10 border border-blue-700">
-                    <div class="bg-blue-800 text-white flex items-center justify-center px-3"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
-                    <div class="bg-blue-600 text-white font-black text-[11px] uppercase flex items-center justify-center flex-1">Verifikasi</div>
+                <button onclick="VerifikasiDanCek()" id="btn-Verifikasi" class="flex-1 flex items-stretch rounded overflow-hidden shadow-sm active:scale-95 transition h-9 border border-blue-700">
+                    <div class="w-10 bg-blue-800 text-white flex items-center justify-center shrink-0"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
+                    <div class="bg-blue-600 text-white font-black text-[11px] uppercase flex items-center justify-center flex-1 tracking-wider">Verifikasi</div>
                 </button>
-                
                 <div class="relative">
-                    <button id="btn-menu-utama" onclick="toggleMenuUtama()" class="flex items-stretch rounded overflow-hidden shadow-sm active:scale-95 transition h-10 border border-slate-300">
+                    <button id="btn-menu-utama" onclick="toggleMenuUtama()" class="flex items-stretch rounded overflow-hidden shadow-sm active:scale-95 transition h-9 border border-slate-300">
                         <div class="bg-slate-200 text-slate-700 flex items-center justify-center px-3 hover:bg-slate-300"><i data-lucide="menu" class="w-5 h-5"></i></div>
                     </button>
-                    <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-48 bg-white shadow-xl rounded border border-slate-200 z-[45] flex flex-col py-1">
+                    <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-48 bg-white shadow-2xl rounded border border-slate-200 z-[45] flex flex-col py-1">
                         <button onclick="editKeteranganMassal(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2 border-b border-slate-100"><i data-lucide="edit-3" class="w-4 h-4"></i> Edit Keterangan</button>
                         <button onclick="toggleSidebarFilter(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2 border-b border-slate-100"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data</button>
                         <button onclick="salinDataTabel(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2 border-b border-slate-100"><i data-lucide="copy" class="w-4 h-4"></i> Salin Data</button>
@@ -66,27 +55,29 @@
                 </div>
             </div>
 
-            <div class="flex justify-between items-center px-1 mt-1">
+            <div class="flex justify-between items-center px-1">
                 <div class="flex items-center gap-2">
                     <input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-400" id="cb-all">
                     <label for="cb-all" class="text-[11px] font-black text-slate-500 uppercase tracking-wide cursor-pointer">Pilih Semua Data</label>
                 </div>
-                <div class="bg-cyan-50 border border-cyan-300 px-3 py-1.5 rounded text-cyan-800 text-[11px] font-black shadow-sm uppercase tracking-wider">
-                    Total Qty: <span id="lbl-tampil-baris" class="text-slate-900 text-sm ml-1">0</span> Dus
+                <div class="bg-cyan-50 border border-cyan-300 px-3 py-1 rounded text-cyan-800 text-[11px] font-black shadow-sm uppercase tracking-wider">
+                    Total Qty: <span id="lbl-tampil-baris" class="text-slate-900 text-[13px] ml-1">0</span> Dus
                 </div>
             </div>
         </div>
 
-        <div class="flex-1 min-h-0 bg-white border-b border-t border-slate-300 overflow-y-auto custom-scroll p-2 shadow-inner" id="scroll-container">
-            <div id="tbody-langsir" class="flex flex-col gap-2 w-full pb-2">
-                </div>
+        <div class="flex-1 min-h-0 bg-slate-200 p-2 overflow-hidden flex flex-col relative z-0">
+            <div class="flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll" id="scroll-container">
+                <div id="tbody-langsir" class="flex flex-col gap-0 w-full">
+                    </div>
+            </div>
         </div>
 
-        <div class="shrink-0 w-full bg-slate-50 p-2 z-10 flex items-center gap-2 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.05)] border-t border-slate-300">
-            <button onclick="bukaModalAdd()" class="w-12 h-12 bg-[#0f172a] hover:bg-black text-white flex justify-center items-center shadow-md active:scale-95 shrink-0 transition rounded border-b-4 border-slate-900">
-                <i data-lucide="plus" class="w-6 h-6"></i>
+        <div class="shrink-0 w-full bg-slate-50 p-2 flex items-center gap-2 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300 pb-4">
+            <button onclick="bukaModalAdd()" class="w-[50px] h-[50px] bg-[#0f172a] hover:bg-black text-white flex justify-center items-center shadow-md active:scale-95 shrink-0 transition rounded border-b-4 border-slate-900">
+                <i data-lucide="plus" class="w-7 h-7"></i>
             </button>
-            <button id="btn-save" onclick="saveToSupabase()" class="flex-1 h-12 bg-[#058c5e] hover:bg-[#04724d] text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-[#035237]">
+            <button id="btn-save" onclick="saveToSupabase()" class="flex-1 h-[50px] bg-[#058c5e] hover:bg-[#04724d] text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-[#035237]">
                 <i data-lucide="save" class="w-5 h-5"></i> SIMPAN KE GUDANG
             </button>
         </div>
@@ -173,6 +164,10 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => { 
             if(typeof initModernLayout === 'function') initModernLayout({ id: 'langsir', title: 'LANGSIR', url: 'langsir.html' }); 
+            // Memastikan body WMS tidak bisa di scroll
+            document.body.style.overflow = 'hidden';
+            const wmsMain = document.querySelector('main');
+            if(wmsMain) wmsMain.style.overflow = 'hidden';
         });
     </script>
 </body>
