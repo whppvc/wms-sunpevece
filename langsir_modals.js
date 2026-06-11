@@ -1,3 +1,53 @@
+function toggleMenuUtama() { 
+    document.getElementById('dropdown-menu').classList.toggle('hidden'); 
+}
+
+function bukaModalAdd() { 
+    document.getElementById('modal-add-scan').classList.remove('hidden'); 
+}
+
+function tutupModalAdd() { 
+    document.getElementById('modal-add-scan').classList.add('hidden'); 
+}
+
+function toggleSidebarFilter() { 
+    document.getElementById('sidebar-filter').classList.toggle('translate-x-full'); 
+    document.getElementById('overlay-klik-luar').classList.toggle('hidden'); 
+}
+
+function tutupSemuaPopup() { 
+    document.getElementById('sidebar-filter').classList.add('translate-x-full'); 
+    document.getElementById('overlay-klik-luar').classList.add('hidden'); 
+    tutupModalSTBJ(); 
+    tutupModalHold(); 
+    const menu = document.getElementById('dropdown-menu');
+    if(menu) menu.classList.add('hidden'); 
+}
+
+function resetFilter() { 
+    const ids = ['f-stbj','f-kode','f-troli','f-area','f-qr']; 
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.value = '';
+    }); 
+    if(typeof saringTabelLangsir === 'function') saringTabelLangsir(); 
+    toggleSidebarFilter(); 
+}
+
+// Menutup Dropdown Menu jika user klik sembarang tempat di luar menu
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('dropdown-menu');
+    const btn = document.getElementById('btn-menu-utama');
+    if(menu && !menu.classList.contains('hidden') && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+        menu.classList.add('hidden');
+    }
+});
+
+
+// ==========================================
+// FUNGSI MODAL DATA STBJ & HOLD
+// ==========================================
+
 async function bukaModalSTBJ() {
     document.getElementById('modal-stbj-langsir').classList.remove('hidden');
     const tbody = document.getElementById('tbody-stbj-modal');
