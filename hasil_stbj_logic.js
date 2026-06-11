@@ -1,5 +1,5 @@
 let modeSekarang = 'qrcode'; 
-let tabelSekarang = 'hasil_stbj'; 
+let tabelSekarang = 'stok_global'; // REVISI: Default table is now stok_global
 let rawDataRaw = [];
 let kamusData = [];
 let jasperData = [];
@@ -58,46 +58,6 @@ async function muatDataDariSupabase() {
         rawDataRaw = data || [];
         renderHeaderDanTabel();
     } catch(err) { tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; }
-}
-
-function translateBarcode(barcode) {
-    let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-', jasper: '-' };
-    if(!barcode) return td;
-    const parts = barcode.split('/'); if (parts.length < 1) return td;
-    
-    const hurufDepan = barcode.charAt(0).toUpperCase();
-    if (hurufDepan === 'P') td.jenisItem = 'Plafon'; else if (hurufDepan === 'L') td.jenisItem = 'List'; else if (hurufDepan === 'W') td.jenisItem = 'WPC'; else td.jenisItem = hurufDepan;
-
-    let rawItem = parts[0]; let cariItem = kamusData.find(m => m.kode_nama_item === rawItem); 
-    td.namaItem = cariItem && cariItem.nama_item ? cariItem.nama_item : rawItem; td.shading = parts[1] || '-';
-    
-    const p2 = parts[2];
-    if (p2 && p2.length >= 4) {
-        let dP = (p2.length === 5) ? 2 : 1; let rP = p2.substring(0, dP); td.panjang = (dP === 1) ? rP + "M" : rP[0] + "." + rP[1] + "M"; 
-        let rG = p2.substring(dP, dP + 1); td.grade = rG === '1' ? 'BAGUS' : (rG === '2' ? 'A' : rG);
-        let rD = p2.substring(p2.length - 2); let cD = kamusData.find(m => m.kode_dus === rD); td.dus = cD && cD.dus ? cD.dus : rD;
-    }
-    const p3 = parts[3];
-    if (p3 && p3.length >= 5) {
-        const dayOfYear = parseInt(p3.substring(0, 3)); const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
-        if (!isNaN(dayOfYear) && !isNaN(realYear)) {
-            const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
-            td.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
-        }
-        let s = p3.substring(5); let m = s.match(/(C.*?)(S.*?)(P.*)/);
-        if (m) {
-            let cM = kamusData.find(x => x.kode_mesin === m[1]); td.mesin = cM && cM.mesin ? cM.mesin : m[1];
-            let cS = kamusData.find(x => x.kode_shift === m[2]); td.shift = cS && cS.shift ? cS.shift : m[2];
-            let cPO = kamusData.find(x => x.kode_po === m[3]); td.po = cPO && cPO.po ? cPO.po : m[3];
-        }
-    }
-
-    if(jasperData && jasperData.length > 0) {
-        const cJasper = jasperData.find(j => j.nama_item === td.namaItem && j.panjang === td.panjang && j.grade === td.grade);
-        td.jasper = cJasper ? cJasper.nama_jasper : `JAS-${td.namaItem}`;
-    } else { td.jasper = `JAS-${td.namaItem}`; }
-
-    return td;
 }
 
 function setMode(m) {
@@ -341,18 +301,17 @@ function renderHeaderDanTabel() {
         
         let h = '';
         rawDataRaw.forEach((r, i) => {
+            // REVISI: Format Waktu Scan menjadi dd/mm/yyyy (tanpa jam)
             const dt = new Date(r.created_at);
             const dd = String(dt.getDate()).padStart(2, '0');
             const mm = String(dt.getMonth() + 1).padStart(2, '0');
-            const yy = String(dt.getFullYear()).slice(-2);
-            const hh = String(dt.getHours()).padStart(2, '0');
-            const min = String(dt.getMinutes()).padStart(2, '0');
-            const tgl = `${dd}/${mm}/${yy} ${hh}:${min}`;
+            const yyyy = dt.getFullYear();
+            const tgl = `${dd}/${mm}/${yyyy}`;
 
-            const td = translateBarcode(r.qrcode);
             const htmlStatusGudang = r.is_in_gudang ? 'IN GUDANG' : 'STBJ';
             const statData = r.status_data === 'Collected' ? 'COLLECTED' : '-';
 
+            // REVISI: Menggunakan data langsung dari DB (r.nama_item dll)
             h += `
                 <tr class="hover:bg-slate-100 text-row transition text-xs bg-white border-b border-slate-200">
                     <td class="p-3 text-center col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
@@ -367,16 +326,16 @@ function renderHeaderDanTabel() {
                     <td class="p-3 text-slate-600 font-semibold text-center col-waktu border-r border-slate-200" data-search="${tgl}">${tgl}</td>
                     <td class="p-3 font-bold text-slate-700 text-center col-troli border-r border-slate-200" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
                     <td class="p-3 font-mono font-bold text-slate-900 text-left tracking-wider border-r border-slate-200 col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
-                    <td class="p-3 font-bold text-slate-600 text-center col-tgl border-r border-slate-200" data-search="${td.tglProduksi}">${td.tglProduksi}</td>
-                    <td class="p-3 font-bold text-slate-600 text-center col-mesin border-r border-slate-200" data-search="${td.mesin}">${td.mesin}</td>
-                    <td class="p-3 font-bold text-slate-600 text-center border-r border-slate-200 col-shift" data-search="${td.shift}">${td.shift}</td>
-                    <td class="p-3 font-bold text-blue-600 text-center col-jenis border-r border-slate-200" data-search="${td.jenisItem}">${td.jenisItem}</td>
-                    <td class="p-3 font-black text-black text-left col-nama border-r border-slate-200" data-search="${td.namaItem}">${td.namaItem}</td>
-                    <td class="p-3 font-black text-black text-center col-pjg border-r border-slate-200" data-search="${td.panjang}">${td.panjang}</td>
-                    <td class="p-3 font-black text-black text-center col-grade border-r border-slate-200" data-search="${td.grade}">${td.grade}</td>
-                    <td class="p-3 font-black text-black text-center col-dus border-r border-slate-200" data-search="${td.dus}">${td.dus}</td>
-                    <td class="p-3 font-black text-black text-center border-r border-slate-200 col-shading" data-search="${td.shading}">${td.shading}</td>
-                    <td class="p-3 font-black text-cyan-600 bg-cyan-50/40 text-center col-po border-r border-slate-200" data-search="${td.po}">${td.po}</td>
+                    <td class="p-3 font-bold text-slate-600 text-center col-tgl border-r border-slate-200" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
+                    <td class="p-3 font-bold text-slate-600 text-center col-mesin border-r border-slate-200" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
+                    <td class="p-3 font-bold text-slate-600 text-center border-r border-slate-200 col-shift" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
+                    <td class="p-3 font-bold text-blue-600 text-center col-jenis border-r border-slate-200" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
+                    <td class="p-3 font-black text-black text-left col-nama border-r border-slate-200" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
+                    <td class="p-3 font-black text-black text-center col-pjg border-r border-slate-200" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
+                    <td class="p-3 font-black text-black text-center col-grade border-r border-slate-200" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
+                    <td class="p-3 font-black text-black text-center col-dus border-r border-slate-200" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
+                    <td class="p-3 font-black text-black text-center border-r border-slate-200 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
+                    <td class="p-3 font-black text-cyan-600 bg-cyan-50/40 text-center col-po border-r border-slate-200" data-search="${r.po_bawaan || '-'}">${r.po_bawaan || '-'}</td>
                     <td class="p-3 text-slate-600 font-semibold text-center col-ket border-r border-slate-200" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
                     <td class="p-3 font-bold uppercase text-slate-400 text-center col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
                 </tr>`;
@@ -413,15 +372,25 @@ function renderHeaderDanTabel() {
         
         let groups = {};
         rawDataRaw.forEach(r => {
-            let t = translateBarcode(r.qrcode); 
-            let n = isJasper ? t.jasper : t.namaItem;
+            // REVISI: Menggunakan data langsung dari DB, Jasper tetap dicari dari master
+            let n = r.nama_item || '-';
+            if(isJasper) {
+                if(jasperData && jasperData.length > 0) {
+                    const cJasper = jasperData.find(j => j.nama_item === r.nama_item && j.panjang === r.panjang && j.grade === r.grade);
+                    n = cJasper ? cJasper.nama_jasper : `JAS-${r.nama_item}`;
+                } else { n = `JAS-${r.nama_item}`; }
+            }
             
             let ket = r.keterangan || 'TANPA_KETERANGAN';
             let sData = r.status_data || 'BELUM';
-            let key = `${t.jenisItem}_${n}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${t.po}_${t.tglProduksi}_${t.mesin}_${t.shift}_${ket}_${sData}`;
+            let key = `${r.jenis_item}_${n}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.po_bawaan}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}`;
             
             if(!groups[key]) {
-                groups[key] = { ...t, displayNama: n, qty: 0, qrcodes: [], trolis: new Set(), ket: ket, sData: sData };
+                groups[key] = { 
+                    jenisItem: r.jenis_item, displayNama: n, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, po: r.po_bawaan,
+                    tglProduksi: r.tgl_produksi, mesin: r.mesin, shift: r.shift,
+                    qty: 0, qrcodes: [], trolis: new Set(), ket: ket, sData: sData 
+                };
             }
             groups[key].qty++; 
             groups[key].qrcodes.push(r.qrcode);
@@ -689,15 +658,27 @@ async function aksiMassal(tipe) {
         alert(`Tersalin baris! Buka Excel dan Paste (Ctrl+V).`);
     } 
     else if(tipe === 'hold') {
-        if(tabelSekarang === 'hasil_stbj') {
+        if(tabelSekarang === 'stok_global') {
             if(!confirm(`Pindahkan ${checkedValues.length} data HASIL -> tabel HOLD (Duplikat)?`)) return;
-            const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ qrcode: r.qrcode, troli: r.troli, pic_input: r.pic_input, keterangan: r.keterangan, status: 'HOLD' }));
+            // REVISI: Menggunakan skema lengkap untuk hold_stbj
+            const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ 
+                troli: r.troli, qrcode: r.qrcode, tgl_produksi: r.tgl_produksi, shift: r.shift, mesin: r.mesin, 
+                nama_item: r.nama_item, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, 
+                po_bawaan: r.po_bawaan, keterangan: r.keterangan, status: 'HOLD', status_data: r.status_data, 
+                posisi: r.posisi, pic_input: r.pic_input 
+            }));
             const { error: errAdd } = await db.from('hold_stbj').upsert(dataPindah);
-            if(!errAdd) { await db.from('hasil_stbj').delete().in('qrcode', checkedValues); muatDataDariSupabase(); }
+            if(!errAdd) { await db.from('stok_global').delete().in('qrcode', checkedValues); muatDataDariSupabase(); }
         } else {
             if(!confirm(`Unhold ${checkedValues.length} data HOLD -> tabel HASIL (Unique)?`)) return;
-            const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ qrcode: r.qrcode, troli: r.troli, pic_input: r.pic_input, keterangan: r.keterangan }));
-            const { error: errAdd } = await db.from('hasil_stbj').upsert(dataPindah);
+            // REVISI: Menggunakan skema lengkap untuk stok_global
+            const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ 
+                troli: r.troli, qrcode: r.qrcode, tgl_produksi: r.tgl_produksi, shift: r.shift, mesin: r.mesin, 
+                nama_item: r.nama_item, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, 
+                po_bawaan: r.po_bawaan, keterangan: r.keterangan, status: 'SUDAH STBJ', status_data: r.status_data, 
+                posisi: r.posisi, pic_input: r.pic_input 
+            }));
+            const { error: errAdd } = await db.from('stok_global').upsert(dataPindah);
             if(!errAdd) { await db.from('hold_stbj').delete().in('qrcode', checkedValues); muatDataDariSupabase(); }
         }
     }
