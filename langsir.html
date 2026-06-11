@@ -13,9 +13,9 @@
         .selected-row { border-color: #2563eb !important; background-color: #dbeafe !important; }
     </style>
 </head>
-<body class="font-sans bg-slate-50 text-slate-800 h-[100dvh] w-screen overflow-hidden flex flex-col">
+<body class="font-sans bg-slate-50 text-slate-800 h-[100dvh] w-full overflow-hidden flex flex-col">
 
-    <div class="shrink-0 px-2 pt-3 pb-2 flex flex-col gap-3 z-10">
+    <div class="shrink-0 px-2 pt-3 pb-2 flex flex-col gap-3 z-10 bg-slate-50 border-b border-slate-200 shadow-sm">
         
         <div class="flex gap-2">
             <button onclick="bukaModalSTBJ()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-black py-2.5 rounded shadow-sm flex justify-center items-center gap-2 text-xs uppercase border-b-2 border-purple-800 active:scale-95 transition">
@@ -49,17 +49,14 @@
                 Total Qty: <span id="lbl-tampil-baris" class="text-slate-900 text-sm ml-1">0</span> Dus
             </div>
         </div>
-
     </div>
 
-    <div class="flex-1 min-h-0 px-2 pb-2 flex flex-col">
-        <div class="flex-1 min-h-0 bg-white border border-slate-300 rounded-lg p-2 shadow-inner flex flex-col">
-            <div id="tbody-langsir" class="flex-1 overflow-y-auto hide-scrollbar flex flex-col gap-3 px-1 pb-1">
-                </div>
-        </div>
+    <div class="flex-1 min-h-0 overflow-y-auto hide-scrollbar px-2 pt-2 pb-4 bg-slate-100" id="scroll-container">
+        <div id="tbody-langsir" class="flex flex-col gap-3 w-full">
+            </div>
     </div>
 
-    <div class="shrink-0 w-full bg-white border-t border-slate-200 p-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-40 flex items-center gap-3">
+    <div class="shrink-0 w-full bg-white border-t border-slate-300 p-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-40 flex items-center gap-3">
         <button onclick="bukaModalAdd()" class="w-14 h-14 bg-slate-900 hover:bg-slate-800 text-white rounded-full flex justify-center items-center shadow-lg active:scale-95 shrink-0 transition border-b-4 border-black">
             <i data-lucide="plus" class="w-8 h-8"></i>
         </button>
@@ -98,7 +95,7 @@
                 <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="table" class="w-4 h-4 text-purple-600"></i> DATA STBJ GUDANG</h3>
                 <button onclick="tutupModalSTBJ()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-            <div class="p-3 bg-white border-b border-slate-100 flex flex-col gap-2">
+            <div class="p-3 bg-white border-b border-slate-100 flex flex-col gap-2 shrink-0">
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-4 h-4 text-slate-400"></i></div>
                     <input type="text" id="f-stbj-modal" oninput="saringTabelModalSTBJ()" class="w-full pl-9 p-2.5 text-sm border-2 border-slate-200 rounded-lg focus:border-purple-500 outline-none font-bold placeholder-slate-300" placeholder="Ketik Troli, QR, Item, dll...">
@@ -127,7 +124,7 @@
             <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data Langsir</h3>
             <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
-        <div class="p-3 flex flex-col gap-3 overflow-y-auto hide-scrollbar">
+        <div class="p-3 flex flex-col gap-3 overflow-y-auto hide-scrollbar flex-1">
             <div class="grid grid-cols-2 gap-2">
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status STBJ</label><input type="text" id="f-stbj" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status Kode</label><input type="text" id="f-kode" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
@@ -146,7 +143,7 @@
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PO Awal</label><input type="text" id="f-po" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="f-ket" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
             </div>
-            <button onclick="resetFilter()" class="mt-2 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg text-xs uppercase transition border-b-4 border-slate-950">RESET FILTER</button>
+            <button onclick="resetFilter()" class="mt-2 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg text-xs uppercase transition border-b-4 border-slate-950 shrink-0">RESET FILTER</button>
         </div>
     </div>
 
