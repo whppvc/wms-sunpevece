@@ -1,3 +1,6 @@
+// File: langsir_modals.js
+// Berisi fungsi-fungsi UI Modal Pop-up, Dropdown, Saring Data, dan Logika Add Scan
+
 function toggleMenuUtama() { 
     document.getElementById('dropdown-menu').classList.toggle('hidden'); 
 }
@@ -45,6 +48,51 @@ document.addEventListener('click', (e) => {
 
 
 // ==========================================
+// LOGIKA TAMBAH DATA (SUBMIT FORM ADD)
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Memberikan delay sebentar agar elemen form-scan pasti sudah dirender oleh HTML
+    setTimeout(() => {
+        const formScan = document.getElementById('form-scan');
+        if(formScan) {
+            formScan.addEventListener('submit', (e) => {
+                e.preventDefault(); // Sangat Penting: Mencegah halaman nge-refresh saat tombol Add diklik
+                
+                const rawInput = document.getElementById('input-qrcode').value.trim();
+                const area = document.getElementById('select-area').value;
+                
+                if(!area || !rawInput) return alert("Pilih Area Simpan dan isi QR Code terlebih dahulu!");
+                
+                const existingQRs = Array.from(document.querySelectorAll('.qr-val')).map(td => td.innerText);
+                // Memecah scan beruntun jika menggunakan spasi/titik koma
+                const codes = rawInput.split(/[\s;]+/).map(q => q.trim()).filter(q => q);
+                
+                codes.forEach(code => { 
+                    const isLocalDuplicate = existingQRs.includes(code);
+                    // Memanggil fungsi addRow yang ada di langsir_logic.js
+                    if(typeof addRow === 'function') {
+                        addRow(area, code, isLocalDuplicate); 
+                    }
+                    existingQRs.push(code); 
+                });
+                
+                if(typeof updateRowNumbers === 'function') updateRowNumbers();
+                if(typeof updateTotalBaris === 'function') updateTotalBaris();
+                
+                // Kosongkan inputan QR dan tutup pop-up
+                document.getElementById('input-qrcode').value = '';
+                tutupModalAdd(); 
+                
+                // Efek autoscroll otomatis turun ke bawah agar data baru terlihat
+                const scrollContainer = document.getElementById('scroll-container');
+                if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+            });
+        }
+    }, 500);
+});
+
+
+// ==========================================
 // FUNGSI MODAL DATA STBJ & HOLD
 // ==========================================
 
@@ -65,7 +113,9 @@ async function bukaModalSTBJ() {
         let h = '';
         data.forEach((r, i) => {
             const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
-            const td = translateBarcode(r.qrcode);
+            // Memanggil fungsi dari wms_parser.js
+            const td = typeof translateBarcode === 'function' ? translateBarcode(r.qrcode) : { po: '-', namaItem: 'Unknown', panjang: '-' };
+            
             let statusGudang = r.posisi || 'STBJ';
             let colGudang = statusGudang === 'IN GUDANG' ? '<span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded text-[10px] border border-emerald-200">IN GUDANG</span>' 
                 : statusGudang === 'KELUAR' ? '<span class="bg-red-100 text-red-800 font-bold px-2 py-1 rounded text-[10px] border border-red-200">KELUAR</span>' 
