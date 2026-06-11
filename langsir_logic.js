@@ -1,5 +1,4 @@
 // File: langsir_logic.js
-
 let masterData = { kamus: [], area: [] }; 
 let deleteStack = []; 
 
@@ -26,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function addRow(area, code, isDuplicate = false) {
     const div = document.createElement('div'); 
     const rowClass = isDuplicate ? 'bg-red-50 hover:bg-red-100' : 'bg-white hover:bg-slate-50';
-    div.className = `row-item ${rowClass} border border-slate-300 p-2 relative shadow-sm transition w-full flex shrink-0 rounded`; 
+    div.className = `row-item ${rowClass} border border-slate-300 p-2 relative shadow-sm transition w-full flex shrink-0 rounded-md`; 
     
     const td = typeof translateBarcode === 'function' ? translateBarcode(code) : {tglProduksi:'-', mesin:'-', shift:'-', jenisItem:'-', namaItem:'Unknown', panjang:'-', grade:'-', dus:'-', shading:'-', po:'-'}; 
     
@@ -162,7 +161,7 @@ function highlightRow(cb) {
 
 function editKeteranganMassal() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
-    if (checkedBoxes.length === 0) return alert("Pilih data yang keterangannya ingin diedit!");
+    if (checkedBoxes.length === 0) return alert("Pilih / centang data yang keterangannya ingin diedit!");
 
     const newKet = prompt(`Masukkan keterangan baru:\n(Akan menimpa Keterangan Verifikasi)`);
     if (newKet === null) return; 
@@ -341,7 +340,7 @@ async function holdLangsir() {
 
 function salinDataTabel() {
     const cek = document.querySelectorAll('.cb-row:checked');
-    if(cek.length === 0) return alert("Pilih data yang ingin disalin!");
+    if(cek.length === 0) return alert("Pilih data yang ingin disalin dengan mencentang kotak di kiri data!");
 
     let copyString = "Area\tQRCode\tTgl Produksi\tMesin\tShift\tNama Item\tPjg\tGrade\tDus\tShading\tPO\tKeterangan\n";
     
@@ -352,5 +351,5 @@ function salinDataTabel() {
 
     navigator.clipboard.writeText(copyString).then(() => {
         alert("Berhasil menyalin!");
-    }).catch(err => { alert("Gagal menyalin."); });
+    }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
 }
