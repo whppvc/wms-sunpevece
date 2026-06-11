@@ -1,5 +1,4 @@
 // File: langsir_modals.js
-
 function toggleMenuUtama() { document.getElementById('dropdown-menu').classList.toggle('hidden'); }
 function bukaModalAdd() { document.getElementById('modal-add-scan').classList.remove('hidden'); }
 function tutupModalAdd() { document.getElementById('modal-add-scan').classList.add('hidden'); }
