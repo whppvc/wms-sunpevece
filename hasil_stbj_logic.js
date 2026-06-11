@@ -62,8 +62,10 @@ async function muatDataDariSupabase() {
 
 function setMode(m) {
     modeSekarang = m;
-    const activeClass = 'px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-800 text-white';
-    const inactiveClass = 'px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-800';
+    
+    // REVISI 6: Menggunakan class Tab Active/Inactive yang sama dengan Scan STBJ
+    const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
 
     ['qrcode', 'item', 'jasper'].forEach(tab => {
         const el = document.getElementById('tab-mode-' + tab);
@@ -301,17 +303,21 @@ function renderHeaderDanTabel() {
         
         let h = '';
         rawDataRaw.forEach((r, i) => {
-            // REVISI: Format Waktu Scan menjadi dd/mm/yyyy (tanpa jam)
-            const dt = new Date(r.created_at);
-            const dd = String(dt.getDate()).padStart(2, '0');
-            const mm = String(dt.getMonth() + 1).padStart(2, '0');
-            const yyyy = dt.getFullYear();
-            const tgl = `${dd}/${mm}/${yyyy}`;
+            // REVISI 8: Format Waktu Scan menjadi dd/mm/yyyy (tanpa jam) dan hindari 1970 jika null
+            let tgl = '-';
+            if (r.created_at) {
+                const dt = new Date(r.created_at);
+                if (!isNaN(dt.getTime())) {
+                    const dd = String(dt.getDate()).padStart(2, '0');
+                    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+                    const yyyy = dt.getFullYear();
+                    tgl = `${dd}/${mm}/${yyyy}`;
+                }
+            }
 
             const htmlStatusGudang = r.is_in_gudang ? 'IN GUDANG' : 'STBJ';
             const statData = r.status_data === 'Collected' ? 'COLLECTED' : '-';
 
-            // REVISI: Menggunakan data langsung dari DB (r.nama_item dll)
             h += `
                 <tr class="hover:bg-slate-100 text-row transition text-xs bg-white border-b border-slate-200">
                     <td class="p-3 text-center col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300"></td>
@@ -372,7 +378,6 @@ function renderHeaderDanTabel() {
         
         let groups = {};
         rawDataRaw.forEach(r => {
-            // REVISI: Menggunakan data langsung dari DB, Jasper tetap dicari dari master
             let n = r.nama_item || '-';
             if(isJasper) {
                 if(jasperData && jasperData.length > 0) {
@@ -660,7 +665,6 @@ async function aksiMassal(tipe) {
     else if(tipe === 'hold') {
         if(tabelSekarang === 'stok_global') {
             if(!confirm(`Pindahkan ${checkedValues.length} data HASIL -> tabel HOLD (Duplikat)?`)) return;
-            // REVISI: Menggunakan skema lengkap untuk hold_stbj
             const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ 
                 troli: r.troli, qrcode: r.qrcode, tgl_produksi: r.tgl_produksi, shift: r.shift, mesin: r.mesin, 
                 nama_item: r.nama_item, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, 
@@ -671,7 +675,6 @@ async function aksiMassal(tipe) {
             if(!errAdd) { await db.from('stok_global').delete().in('qrcode', checkedValues); muatDataDariSupabase(); }
         } else {
             if(!confirm(`Unhold ${checkedValues.length} data HOLD -> tabel HASIL (Unique)?`)) return;
-            // REVISI: Menggunakan skema lengkap untuk stok_global
             const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ 
                 troli: r.troli, qrcode: r.qrcode, tgl_produksi: r.tgl_produksi, shift: r.shift, mesin: r.mesin, 
                 nama_item: r.nama_item, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, 
