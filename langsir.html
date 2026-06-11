@@ -13,160 +13,92 @@
         .selected-row { border-color: #2563eb !important; background-color: #dbeafe !important; }
     </style>
 </head>
-<body class="font-sans bg-slate-50 text-slate-800 h-[100dvh] w-screen overflow-hidden flex flex-col relative">
+<body class="font-sans bg-slate-100 text-slate-800 h-[100dvh] w-screen overflow-hidden flex flex-col relative">
 
-    <div class="shrink-0 px-2 pt-3 pb-2 flex flex-col gap-3 z-10">
+    <div class="shrink-0 px-2 pt-16 pb-2 flex flex-col gap-2 z-10 bg-white border-b border-slate-300 shadow-sm">
         
         <div class="flex gap-2">
-            <button onclick="bukaModalSTBJ()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-black py-2.5 rounded shadow-sm flex justify-center items-center gap-2 text-xs uppercase border-b-2 border-purple-800 active:scale-95 transition">
-                <i data-lucide="layout-list" class="w-4 h-4"></i> Data STBJ
+            <button onclick="bukaModalSTBJ()" class="flex-1 flex items-stretch rounded overflow-hidden shadow-sm active:scale-95 transition h-10">
+                <div class="bg-purple-700 text-white flex items-center justify-center px-3"><i data-lucide="layout-list" class="w-4 h-4"></i></div>
+                <div class="bg-purple-600 text-white font-black text-xs uppercase flex items-center justify-center flex-1">Data STBJ</div>
             </button>
-            <button onclick="VerifikasiDanCek()" id="btn-Verifikasi" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black py-2.5 rounded shadow-sm flex justify-center items-center gap-2 text-xs uppercase border-b-2 border-blue-800 active:scale-95 transition">
-                <i data-lucide="shield-check" class="w-4 h-4"></i> Verifikasi
+            <button onclick="VerifikasiDanCek()" id="btn-Verifikasi" class="flex-1 flex items-stretch rounded overflow-hidden shadow-sm active:scale-95 transition h-10">
+                <div class="bg-blue-700 text-white flex items-center justify-center px-3"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
+                <div class="bg-blue-600 text-white font-black text-xs uppercase flex items-center justify-center flex-1">Verifikasi</div>
             </button>
-            
             <div class="relative">
-                <button id="btn-menu-utama" onclick="toggleMenuUtama()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-black px-4 py-2.5 rounded shadow-sm flex justify-center items-center border-b-2 border-slate-400 active:scale-95 transition">
-                    <i data-lucide="menu" class="w-5 h-5"></i>
+                <button id="btn-menu-utama" onclick="toggleMenuUtama()" class="flex items-stretch rounded overflow-hidden shadow-sm active:scale-95 transition h-10">
+                    <div class="bg-slate-300 text-slate-800 flex items-center justify-center px-3"><i data-lucide="menu" class="w-4 h-4"></i></div>
                 </button>
                 <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-48 bg-white shadow-xl rounded border border-slate-200 z-[45] flex flex-col py-1">
-                    <button onclick="editKeteranganMassal(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-sky-50 hover:text-sky-700 flex items-center gap-2 border-b border-slate-100"><i data-lucide="edit-3" class="w-4 h-4"></i> Edit Keterangan</button>
-                    <button onclick="toggleSidebarFilter(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2 border-b border-slate-100"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data</button>
-                    <button onclick="salinDataTabel(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2 border-b border-slate-100"><i data-lucide="copy" class="w-4 h-4"></i> Salin Data</button>
-                    <button onclick="undoDelete(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 flex items-center gap-2 border-b border-slate-100"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo Hapus</button>
-                    <button onclick="holdLangsir(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2 border-b border-slate-100"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Bermasalah</button>
-                    <button onclick="bukaModalHold(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2"><i data-lucide="archive" class="w-4 h-4"></i> Tabel Hold</button>
+                    <button onclick="editKeteranganMassal(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2 border-b border-slate-100"><i data-lucide="edit-3" class="w-4 h-4"></i> Edit Ket</button>
+                    <button onclick="toggleSidebarFilter(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2 border-b border-slate-100"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
+                    <button onclick="salinDataTabel(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2 border-b border-slate-100"><i data-lucide="copy" class="w-4 h-4"></i> Salin</button>
+                    <button onclick="undoDelete(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2 border-b border-slate-100"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo</button>
+                    <button onclick="holdLangsir(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2 border-b border-slate-100"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Item</button>
+                    <button onclick="bukaModalHold(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2"><i data-lucide="archive" class="w-4 h-4"></i> Tabel Hold</button>
                 </div>
             </div>
         </div>
 
-        <div class="flex justify-between items-center px-1">
+        <div class="flex justify-between items-center mt-1">
             <div class="flex items-center gap-2">
                 <input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer" id="cb-all">
-                <label for="cb-all" class="text-xs font-bold text-slate-500 uppercase tracking-wide">Pilih Semua Data</label>
+                <label for="cb-all" class="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Pilih Semua Data</label>
             </div>
-            <div class="bg-cyan-50 border border-cyan-300 px-3 py-1.5 rounded text-cyan-800 text-[11px] font-black shadow-sm uppercase tracking-wider">
+            <div class="bg-cyan-50 border border-cyan-300 px-3 py-1 rounded text-cyan-800 text-[11px] font-black shadow-sm uppercase">
                 Total Qty: <span id="lbl-tampil-baris" class="text-slate-900 text-sm ml-1">0</span> Dus
             </div>
         </div>
-
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto hide-scrollbar bg-slate-100 px-2 pt-3 pb-4" id="scroll-container">
-        <div id="tbody-langsir" class="flex flex-col gap-3 w-full">
-            </div>
+    <div class="flex-1 overflow-y-auto hide-scrollbar p-2" id="scroll-container">
+        <div id="tbody-langsir" class="flex flex-col gap-2.5 w-full pb-20"></div>
     </div>
 
-    <div class="shrink-0 w-full bg-white border-t border-slate-200 p-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-40 flex items-center gap-3">
-        <button onclick="bukaModalAdd()" class="w-14 h-14 bg-slate-900 hover:bg-slate-800 text-white rounded-full flex justify-center items-center shadow-lg active:scale-95 shrink-0 transition border-b-4 border-black">
-            <i data-lucideSiap! Perbaikan layout struktural tingkat lanjut telah diterapkan dengan sempurna. Header, tombol menu, dan footer total qty kini **terkunci penuh** dan tidak akan hilang saat di-*scroll*, sehingga hanya area Card View di tengah saja yang bisa bergerak secara internal.
-
-Berikut adalah **2 FILE PENUH** yang sudah merangkum seluruh revisi Anda. Silakan **Hapus semua isi file lama Menu Langsir, dan Paste 100% kode ini untuk copy-paste yang mulus dan aman**:
-
-### 1. File: `langsir.html`
-```html
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WMS - Menu Langsir Mobile</title>
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <script src="[https://unpkg.com/lucide@latest](https://unpkg.com/lucide@latest)"></script>
-    <script src="[https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2](https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2)"></script>
-    <style>
-        .hide-scrollbar::-webkit-scrollbar { display: none; } 
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .selected-row { border-color: #2563eb !important; background-color: #dbeafe !important; }
-    </style>
-</head>
-<body class="font-sans bg-slate-50 text-slate-800 h-[100dvh] w-screen overflow-hidden flex flex-col relative">
-
-    <div class="shrink-0 px-2 pt-3 pb-2 flex flex-col gap-3 z-10">
-        
-        <div class="flex gap-2">
-            <button onclick="bukaModalSTBJ()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-black py-2.5 rounded shadow-sm flex justify-center items-center gap-2 text-xs uppercase border-b-2 border-purple-800 active:scale-95 transition">
-                <i data-lucide="layout-list" class="w-4 h-4"></i> Data STBJ
-            </button>
-            <button onclick="VerifikasiDanCek()" id="btn-Verifikasi" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black py-2.5 rounded shadow-sm flex justify-center items-center gap-2 text-xs uppercase border-b-2 border-blue-800 active:scale-95 transition">
-                <i data-lucide="shield-check" class="w-4 h-4"></i> Verifikasi
-            </button>
-            
-            <div class="relative">
-                <button id="btn-menu-utama" onclick="toggleMenuUtama()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-black px-4 py-2.5 rounded shadow-sm flex justify-center items-center border-b-2 border-slate-400 active:scale-95 transition">
-                    <i data-lucide="menu" class="w-5 h-5"></i>
-                </button>
-                <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-48 bg-white shadow-xl rounded border border-slate-200 z-[45] flex flex-col py-1">
-                    <button onclick="editKeteranganMassal(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-sky-50 hover:text-sky-700 flex items-center gap-2 border-b border-slate-100"><i data-lucide="edit-3" class="w-4 h-4"></i> Edit Keterangan</button>
-                    <button onclick="toggleSidebarFilter(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2 border-b border-slate-100"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data</button>
-                    <button onclick="salinDataTabel(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2 border-b border-slate-100"><i data-lucide="copy" class="w-4 h-4"></i> Salin Data</button>
-                    <button onclick="undoDelete(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 flex items-center gap-2 border-b border-slate-100"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo Hapus</button>
-                    <button onclick="holdLangsir(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2 border-b border-slate-100"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Bermasalah</button>
-                    <button onclick="bukaModalHold(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2"><i data-lucide="archive" class="w-4 h-4"></i> Tabel Hold</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex justify-between items-center px-1">
-            <div class="flex items-center gap-2">
-                <input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer" id="cb-all">
-                <label for="cb-all" class="text-xs font-bold text-slate-500 uppercase tracking-wide">Pilih Semua Data</label>
-            </div>
-            <div class="bg-cyan-50 border border-cyan-300 px-3 py-1.5 rounded text-cyan-800 text-[11px] font-black shadow-sm uppercase tracking-wider">
-                Total Qty: <span id="lbl-tampil-baris" class="text-slate-900 text-sm ml-1">0</span> Dus
-            </div>
-        </div>
-
-    </div>
-
-    <div class="flex-1 min-h-0 overflow-y-auto hide-scrollbar bg-slate-100 px-2 pt-3 pb-4" id="scroll-container">
-        <div id="tbody-langsir" class="flex flex-col gap-3 w-full">
-            </div>
-    </div>
-
-    <div class="shrink-0 w-full bg-white border-t border-slate-200 p-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-40 flex items-center gap-3">
-        <button onclick="bukaModalAdd()" class="w-14 h-14 bg-slate-900 hover:bg-slate-800 text-white rounded-full flex justify-center items-center shadow-lg active:scale-95 shrink-0 transition border-b-4 border-black">
-            <i data-lucide="plus" class="w-8 h-8"></i>
+    <div class="absolute bottom-0 left-0 w-full bg-white border-t border-slate-300 p-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-40 flex items-center gap-3">
+        <button onclick="bukaModalAdd()" class="w-14 h-12 bg-slate-900 hover:bg-slate-800 text-white rounded flex justify-center items-center shadow active:scale-95 shrink-0 transition">
+            <i data-lucide="plus" class="w-6 h-6"></i>
         </button>
-        <button id="btn-save" onclick="saveToSupabase()" class="flex-1 h-14 bg-[#058c5e] hover:bg-[#04724d] text-white font-black rounded-lg shadow-lg flex items-center justify-center gap-2 text-sm tracking-widest cursor-pointer transition active:scale-95 uppercase border-b-4 border-[#035237]">
-            <i data-lucide="save" class="w-5 h-5"></i> SIMPAN
+        <button id="btn-save" onclick="saveToSupabase()" class="flex-1 h-12 bg-[#058c5e] hover:bg-[#04724d] text-white font-black rounded shadow flex items-center justify-center gap-2 text-sm tracking-widest cursor-pointer transition active:scale-95 uppercase">
+            <i data-lucide="save" class="w-4 h-4"></i> SIMPAN KEDALAM GUDANG
         </button>
     </div>
 
     <div id="modal-add-scan" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[60] p-4 backdrop-blur-sm transition-opacity">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 p-5">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 p-5">
             <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
                 <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="scan-line" class="w-5 h-5 text-blue-600"></i> INPUT DATA LANGSIR</h3>
-                <button type="button" onclick="tutupModalAdd()" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded-full transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+                <button type="button" onclick="tutupModalAdd()" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <form id="form-scan" class="flex flex-col gap-4">
                 <div>
                     <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Pilih Area Simpan</label>
-                    <select id="select-area" class="w-full p-3 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-blue-500 text-slate-800 cursor-pointer bg-slate-50 text-sm">
+                    <select id="select-area" class="w-full p-2.5 border border-slate-300 rounded font-bold outline-none focus:border-blue-500 text-slate-800 cursor-pointer bg-slate-50 text-sm">
                         <option value="">-- Memuat Area --</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Scan Fisik Kardus</label>
-                    <input type="text" id="input-qrcode" class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-500 font-mono font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
+                    <input type="text" id="input-qrcode" class="w-full p-2.5 border border-slate-300 rounded outline-none focus:border-blue-500 font-mono font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
                 </div>
-                <button type="submit" class="mt-2 w-full bg-slate-900 hover:bg-slate-800 text-white py-3.5 rounded-lg font-black shadow-md cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-4 border-black">
-                    <i data-lucide="plus-square" class="w-5 h-5"></i> TAMBAHKAN KODE
+                <button type="submit" class="mt-2 w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded font-black shadow transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase">
+                    <i data-lucide="plus-square" class="w-4 h-4"></i> TAMBAHKAN KODE
                 </button>
             </form>
         </div>
     </div>
 
     <div id="modal-stbj-langsir" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] px-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 flex flex-col max-h-[85vh]">
-            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg border border-slate-200 flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-xl">
                 <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="table" class="w-4 h-4 text-purple-600"></i> DATA STBJ GUDANG</h3>
-                <button onclick="tutupModalSTBJ()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+                <button onclick="tutupModalSTBJ()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-            <div class="p-3 bg-white border-b border-slate-100 flex flex-col gap-2">
+            <div class="p-3 bg-white border-b border-slate-100 flex flex-col gap-2 shrink-0">
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-4 h-4 text-slate-400"></i></div>
-                    <input type="text" id="f-stbj-modal" oninput="saringTabelModalSTBJ()" class="w-full pl-9 p-2.5 text-sm border-2 border-slate-200 rounded-lg focus:border-purple-500 outline-none font-bold placeholder-slate-300" placeholder="Ketik Troli, QR, Item, dll...">
+                    <input type="text" id="f-stbj-modal" oninput="saringTabelModalSTBJ()" class="w-full pl-9 p-2.5 text-sm border border-slate-300 rounded focus:border-purple-500 outline-none font-bold placeholder-slate-300" placeholder="Ketik Troli, QR, Item...">
                 </div>
             </div>
             <div class="overflow-y-auto flex-1 hide-scrollbar p-3 bg-slate-100">
@@ -176,10 +108,10 @@ Berikut adalah **2 FILE PENUH** yang sudah merangkum seluruh revisi Anda. Silaka
     </div>
 
     <div id="modal-hold-langsir" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] px-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 flex flex-col max-h-[85vh]">
-            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg border border-slate-200 flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-xl">
                 <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="archive" class="w-4 h-4 text-orange-600"></i> TABEL HOLD</h3>
-                <button onclick="tutupModalHold()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+                <button onclick="tutupModalHold()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <div class="overflow-y-auto flex-1 hide-scrollbar p-3 bg-slate-100">
                 <div id="tbody-hold-modal" class="flex flex-col gap-3"></div>
@@ -190,13 +122,38 @@ Berikut adalah **2 FILE PENUH** yang sudah merangkum seluruh revisi Anda. Silaka
     <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
             <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data Langsir</h3>
-            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
-        <div class="p-3 flex flex-col gap-3 overflow-y-auto hide-scrollbar">
+        <div class="p-3 flex flex-col gap-3 overflow-y-auto hide-scrollbar flex-1">
             <div class="grid grid-cols-2 gap-2">
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status STBJ</label><input type="text" id="f-stbj" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status Kode</label><input type="text" id="f-kode" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label><input type="text" id="f-troli" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label><input type="text" id="f-area" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="f-qr" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block textkok malah ke balik. maksud saya ketika di halaman web, hanya item2 nya saja yg bisa di scroll. menu tombol judul, tombol simpan dan add, biarkans elalu terpampang di layar, jdi ketika saya scroll, menu2 tombol dll, tetap kelihatan. sementara data2 bergeser.
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status STBJ</label><input type="text" id="f-stbj" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status Kode</label><input type="text" id="f-kode" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label><input type="text" id="f-troli" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label><input type="text" id="f-area" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="f-qr" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+            </div>
+            <button onclick="resetFilter()" class="mt-2 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black rounded text-xs uppercase transition shrink-0">RESET FILTER</button>
+        </div>
+    </div>
+
+    <div id="overlay-klik-luar" onclick="tutupSemuaPopup()" class="hidden fixed inset-0 z-[40] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
+
+    <script src="global.js"></script>
+    <script src="langsir_logic.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => { initModernLayout({ id: 'langsir', title: 'LANGSIR', url: 'langsir.html' }); });
+        function toggleMenuUtama() { document.getElementById('dropdown-menu').classList.toggle('hidden'); }
+        function bukaModalAdd() { document.getElementById('modal-add-scan').classList.remove('hidden'); }
+        function tutupModalAdd() { document.getElementById('modal-add-scan').classList.add('hidden'); }
+        function toggleSidebarFilter() { document.getElementById('sidebar-filter').classList.toggle('translate-x-full'); document.getElementById('overlay-klik-luar').classList.toggle('hidden'); }
+        function tutupSemuaPopup() { document.getElementById('sidebar-filter').classList.add('translate-x-full'); document.getElementById('overlay-klik-luar').classList.add('hidden'); tutupModalSTBJ(); tutupModalHold(); document.getElementById('dropdown-menu').classList.add('hidden'); }
+        function resetFilter() { const ids = ['f-stbj','f-kode','f-troli','f-area','f-qr']; ids.forEach(id => document.getElementById(id).value = ''); saringTabelLangsir(); toggleSidebarFilter(); }
+        
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('dropdown-menu');
+            const btn = document.getElementById('btn-menu-utama');
+            if(menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && !btn.contains(e.target)) menu.classList.add('hidden');
+        });
+    </script>
+</body>
+</html>
