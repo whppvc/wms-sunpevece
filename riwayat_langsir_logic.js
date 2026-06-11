@@ -1,75 +1,4 @@
-let modeRiwayat = 'qr'; 
-let logLangsirRaw = []; let holdLangsirRaw = [];
-let kamusData = []; let areaData = []; 
-let sortState = {}; 
-
-// Variabel Paginasi Kencang & Filter Excel Pro
-let currentPage = 1;
-const rowsPerPage = 8;
-let activeFilters = {}; 
-let currentFilterCol = ''; 
-
-const currentUser = safeJSONParse(localStorage.getItem('user_session'), {username: 'Admin', role: 'admin'});
-
-document.addEventListener('DOMContentLoaded', () => {
-    initModernLayout({ id: 'riwayat_langsir', title: 'RIWAYAT LANGSIR', url: 'riwayat_langsir.html' });
-    
-    document.addEventListener('click', function(e) {
-        const menu = document.getElementById('excel-filter-menu');
-        if (menu && !menu.classList.contains('hidden')) {
-            if (!menu.contains(e.target) && !e.target.closest('button[title^="Filter"]')) {
-                closeFilterMenu();
-            }
-        }
-    });
-
-    setTimeout(async () => {
-        const { data: mk } = await db.from('master_2').select('*'); if(mk) kamusData = mk;
-        const { data: ma } = await db.from('master_area').select('nama_area'); 
-        if(ma) {
-            areaData = ma.map(m => m.nama_area);
-            const selArea = document.getElementById('select-new-area');
-            if(selArea) {
-                selArea.innerHTML = '<option value="">-- PILIH AREA --</option>';
-                areaData.forEach(a => selArea.innerHTML += `<option value="${a}">${a}</option>`);
-            }
-        }
-        await ambilSemuaData();
-        gantiModeRiwayat('qr');
-    }, 200);
-});
-
-function sortTable(colIndex, headerEl) {
-    const tbody = document.getElementById('tbody-riwayat');
-    const rows = Array.from(tbody.querySelectorAll('tr.r-row'));
-    let isAsc = sortState[colIndex] !== 'asc'; sortState[colIndex] = isAsc ? 'asc' : 'desc';
-    
-    rows.sort((a, b) => {
-        let valA = a.cells[colIndex].getAttribute('data-search') || a.cells[colIndex].innerText.trim(); 
-        let valB = b.cells[colIndex].getAttribute('data-search') || b.cells[colIndex].innerText.trim();
-        let numA = parseFloat(valA); let numB = parseFloat(valB);
-        if(!isNaN(numA) && !isNaN(numB)) return isAsc ? numA - numB : numB - numA;
-        return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-    });
-    
-    rows.forEach(row => tbody.appendChild(row));
-    document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-30'); });
-    const icon = headerEl.querySelector('.sort-icon');
-    if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
-    applyPagination();
-}
-const thSort = (idx, label, cls = "") => {
-    const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
-    const noFilter = ['col-cb', 'col-btn', 'col-no'].includes(colClass);
-    
-    const filterBtn = noFilter ? '' : `
-        <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-600 rounded ml-1 transition" title="Filter ${label}">
-            <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
-        </button>`;
-
-    return `<th class="hdr-std ${cls} hover:bg-slate-700 transition select-none">
-        <div class="flex items-center justify-center">
-            <span class="cursor-pointer flex items-center gap-1.5" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
+cursor-pointer flex items-center gap-1.5" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
             ${filterBtn}
         </div>
     </th>`;
@@ -87,7 +16,6 @@ async function ambilSemuaData() {
         logLangsirRaw = resRiwayat.data || [];
         holdLangsirRaw = resHold.data || [];
 
-        // Bikin Indexing Memori yang Aman dari Null/Kosong
         window.itemMap = {}; window.dusMap = {}; window.mesinMap = {}; window.poMap = {};
         if(Array.isArray(kamusData)) {
             for(let i = 0; i < kamusData.length; i++) {
@@ -273,7 +201,6 @@ function updateFilterIcons() {
 function gantiModeRiwayat(m) {
     modeRiwayat = m;
     
-    // REVISI DESAIN TAB: Background muda (bg-blue-50) dan border bawah tebal (border-b-4)
     const activeClass = 'px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 text-blue-700 bg-blue-50 border-b-4 border-blue-700';
     const inactiveClass = 'px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 text-slate-500 border-b-4 border-transparent hover:text-slate-800 hover:bg-slate-50 bg-white';
     
@@ -299,7 +226,6 @@ function toggleSemuaCentang(checked) {
     });
 }
 
-// ARSITEKTUR AMAN HITUNGAN PAGINASI
 function applyPagination() {
     const allRows = Array.from(document.querySelectorAll('#tbody-riwayat tr.r-row'));
     allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
@@ -314,7 +240,6 @@ function applyPagination() {
     let sumQty = 0;
 
     visibleRows.forEach((row, index) => {
-        // PERBAIKAN BUG FATAL: Penguncian logika pembacaan variabel sumQty
         const qtyCell = row.querySelector('.col-qty');
         if (qtyCell && modeRiwayat === 'agregasi') { 
             sumQty += parseInt(qtyCell.getAttribute('data-search') || qtyCell.innerText) || 0; 
@@ -531,7 +456,6 @@ async function eksekusiGantiArea() {
             newObj.id_sku = parts.join('_'); 
             newObj.area = newArea; 
             
-            // PERBAIKAN: Ganti/Timpa nama PIC dengan user yang sedang login melakukan ganti area
             newObj.pic_input = currentUser.username || 'Unknown';
             
             updates.push(newObj);
@@ -565,7 +489,6 @@ function highlightRow(cb) {
         else tr.classList.remove('selected-row');
     }
     
-    // Perbarui counter "Dipilih: X" di footer (karena ini menu riwayat)
     if (typeof updateSelectedCount === 'function') {
         updateSelectedCount();
     }
@@ -577,11 +500,13 @@ async function bukaModalSTBJ() {
     const tbody = document.getElementById('tbody-stbj-modal');
     if(tbody) tbody.innerHTML = '<tr><td colspan="8" class="p-8 font-bold text-slate-500">Memuat...</td></tr>';
     try {
-        const { data } = await db.from('hasil_stbj').select('*').order('created_at', {ascending: false});
+        // REVISI: Mengambil data dari stok_global
+        const { data } = await db.from('stok_global').select('*').order('created_at', {ascending: false});
         if(!data || data.length === 0) { if(tbody) tbody.innerHTML = '<tr><td colspan="8" class="p-6 font-bold text-slate-400">Kosong.</td></tr>'; return; }
         let h = '';
         data.forEach((r, i) => {
-            const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+            const dt = r.created_at ? new Date(r.created_at) : new Date();
+            const tgl = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
             const td = translateBarcode(r.qrcode);
             h += `<tr class="border-b border-slate-200 text-row text-center text-xs">
                 <td class="p-3">${i+1}</td><td class="p-3">${tgl}</td><td class="p-3">${r.troli || '-'}</td><td class="p-3 font-mono font-bold">${r.qrcode}</td>
