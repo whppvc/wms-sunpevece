@@ -43,12 +43,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 document.getElementById('input-qrcode').value = '';
                 tutupModalAdd(); 
+                
+                // Autoscroll ke paling bawah saat scan baru ditambahkan agar item terakhir terlihat
+                const scrollContainer = document.getElementById('scroll-container');
+                if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
             });
         }
     }, 500);
 });
 
-// REVISI 4: appendChild agar scan awal = nomor 1
 function addRow(area, code, isDuplicate = false) {
     const div = document.createElement('div'); 
     const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'bg-white hover:bg-slate-50';
@@ -76,7 +79,7 @@ function addRow(area, code, isDuplicate = false) {
                     <button onclick="deleteRow(this)" class="bg-slate-700 text-white p-2 rounded hover:bg-rose-600 transition active:scale-95 border-b-2 border-slate-900 shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                 </div>
                 
-                <div class="font-mono font-black text-slate-900 text-[14px] break-all leading-tight qr-val col-qr mt-1">${code}</div>
+                <div class="font-mono font-bold text-slate-900 text-[13px] break-all leading-tight qr-val col-qr mt-1">${code}</div>
                 
                 <div class="text-[13px] font-bold text-slate-600 tracking-tight mt-1">
                     <span class="col-tgl">${td.tglProduksi}</span> - <span class="col-mesin">${td.mesin}</span> - <span class="col-shift">${td.shift}</span>
@@ -102,7 +105,7 @@ function addRow(area, code, isDuplicate = false) {
         </div>
     `;
     
-    // REVISI 4: Paling awal = No 1. Append child di urutan terbawah DOM, sehingga urut 1, 2, 3
+    // Gunakan appendChild agar data pertama = paling atas = nomor 1
     document.getElementById('tbody-langsir').appendChild(div); 
     lucide.createIcons(); 
 }
@@ -184,11 +187,11 @@ function undoDelete() {
     const div = deleteStack.pop(); 
     div.style.display = 'flex'; 
     div.classList.remove('filtered-out'); 
-    // Tidak di prepend/append agar posisinya kembali normal secara otomatis di DOM
     updateRowNumbers(); 
     updateTotalBaris(); 
 }
 
+// Loop nomer urut 1,2,3 dari baris paling atas karena di-append (tidak prepend lagi)
 function updateRowNumbers() { 
     const rows = document.querySelectorAll('#tbody-langsir .row-item:not([style*="display: none"])'); 
     let count = 1; 
@@ -306,11 +309,11 @@ async function VerifikasiDanCek() {
                 hasError = true;
             }
 
-            // REVISI 1: Teks "DUPLIKAT SCAN" vs "DUPLIKAT ITEM"
             if(kodeSpan.innerText.includes('DUPLIKAT SCAN')) {
                 hasError = true;
             } 
             else if(stokList.includes(qr)) {
+                // REVISI 1: Tulisannya jadi DUPLIKAT ITEM karena asalnya dari DB
                 kodeSpan.className = 'text-white font-black bg-red-600 border-b-2 border-red-800 px-3 py-1.5 text-[11px] kode-val rounded-sm shadow-sm';
                 kodeSpan.setAttribute('data-status', 'invalid');
                 kodeSpan.innerText = 'DUPLIKAT ITEM';
