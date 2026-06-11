@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if(mData2) masterData.kamus = mData2; 
             
             updateTotalBaris();
-        } catch (e) { console.error("Gagal muat dropdown area:", e); }
+        } catch (e) { console.error("Gagal muat dropdown:", e); }
     }, 200); 
 
     setTimeout(() => {
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('input-qrcode').value = '';
                 tutupModalAdd(); 
                 
-                // Autoscroll ke paling bawah saat scan baru ditambahkan agar item terakhir terlihat
+                // Autoscroll ke paling bawah
                 const scrollContainer = document.getElementById('scroll-container');
                 if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
             });
@@ -52,60 +52,55 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 500);
 });
 
+// REVISI DESAIN: Penomoran besar, Garis pemisah kiri, Struktur vertikal ringkas
 function addRow(area, code, isDuplicate = false) {
     const div = document.createElement('div'); 
     const rowClass = isDuplicate ? 'bg-red-100 hover:bg-red-200' : 'bg-white hover:bg-slate-50';
-    div.className = `row-item ${rowClass} border-[3px] border-slate-800 p-2 relative shadow-sm transition w-full rounded-md`; 
+    div.className = `row-item ${rowClass} border border-slate-300 p-2 shadow-sm transition w-full rounded flex`; 
     
     const td = translateBarcode(code); 
     
-    const stbjHtml = '<span class="text-slate-500 font-black bg-slate-200 border-b-2 border-slate-300 px-3 py-1.5 text-[11px] stbj-val rounded-sm shadow-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
-    
+    const stbjHtml = '<span class="text-slate-500 font-bold bg-slate-200 border border-slate-300 px-3 py-1 text-[10px] stbj-val rounded shadow-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
     const kodeHtml = isDuplicate 
-        ? '<span class="text-white font-black bg-red-600 border-b-2 border-red-800 px-3 py-1.5 text-[11px] kode-val rounded-sm shadow-sm" data-status="invalid">DUPLIKAT SCAN</span>'
-        : '<span class="text-slate-500 font-black bg-slate-200 border-b-2 border-slate-300 px-3 py-1.5 text-[11px] kode-val rounded-sm shadow-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
+        ? '<span class="text-white font-bold bg-red-600 border border-red-800 px-3 py-1 text-[10px] kode-val rounded shadow-sm" data-status="invalid">DUPLIKAT SCAN</span>'
+        : '<span class="text-slate-500 font-bold bg-slate-200 border border-slate-300 px-3 py-1 text-[10px] kode-val rounded shadow-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
 
     div.innerHTML = `
-        <div class="flex w-full">
-            
-            <div class="flex flex-col items-center justify-start pr-3 mr-3 border-r border-slate-400 w-12 shrink-0 pt-1">
-                <div class="font-black text-slate-800 text-2xl mb-3 leading-none no-cell"></div>
-                <input type="checkbox" onchange="highlightRow(this)" class="cb-row cursor-pointer w-5 h-5 accent-blue-600 rounded bg-white border-slate-400">
+        <div class="flex flex-col items-center justify-start pr-2 mr-2 border-r border-slate-300 w-10 shrink-0 pt-1">
+            <div class="font-black text-slate-800 text-xl mb-3 leading-none"><span class="no-cell"></span>.</div>
+            <input type="checkbox" onchange="highlightRow(this)" class="cb-row cursor-pointer w-4 h-4 accent-blue-600 rounded bg-white border-slate-400">
+        </div>
+        
+        <div class="flex-1 flex flex-col w-full min-w-0">
+            <div class="flex justify-between items-start mb-1">
+                <div class="font-black text-[24px] text-emerald-600 leading-none area-cell col-area">${area}</div>
+                <button onclick="deleteRow(this)" class="bg-slate-700 text-white p-1.5 rounded hover:bg-rose-600 transition active:scale-95 shrink-0"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
             </div>
             
-            <div class="flex-1 flex flex-col gap-1 w-full min-w-0">
-                <div class="flex justify-between items-start">
-                    <div class="font-black text-[28px] text-emerald-700 leading-none area-cell col-area">${area}</div>
-                    <button onclick="deleteRow(this)" class="bg-slate-700 text-white p-2 rounded hover:bg-rose-600 transition active:scale-95 border-b-2 border-slate-900 shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                </div>
-                
-                <div class="font-mono font-bold text-slate-900 text-[13px] break-all leading-tight qr-val col-qr mt-1">${code}</div>
-                
-                <div class="text-[13px] font-bold text-slate-600 tracking-tight mt-1">
-                    <span class="col-tgl">${td.tglProduksi}</span> - <span class="col-mesin">${td.mesin}</span> - <span class="col-shift">${td.shift}</span>
-                </div>
-                
-                <div class="text-[14px] font-black text-slate-900 leading-snug">
-                    <span class="col-nama">${td.namaItem}</span> - <span class="col-pjg">${td.panjang}</span> - <span class="col-grade">${td.grade}</span> - <span class="col-dus">${td.dus}</span>
-                    <span class="col-jenis hidden">${td.jenisItem}</span>
-                </div>
-                
-                <div class="text-[14px] font-bold text-blue-600 col-shading">${td.shading}</div>
-                <div class="text-[14px] font-bold text-orange-600 col-po uppercase">${td.po}</div>
-                
-                <div class="text-[13px] font-bold text-slate-600 mt-1">Keterangan: <span class="col-ket ket-cell text-slate-800">-</span></div>
-                <div class="text-[13px] font-bold text-slate-600 mb-1">Troli: <span class="col-troli troli-cell text-slate-800">-</span></div>
-                
-                <div class="flex flex-row flex-wrap items-center gap-2 mt-2">
-                    ${stbjHtml}
-                    ${kodeHtml}
-                </div>
+            <div class="font-mono font-black text-slate-900 text-[13px] break-all leading-tight qr-val col-qr">${code}</div>
+            
+            <div class="text-[12px] font-bold text-slate-600 mt-1 tracking-tight">
+                <span class="col-tgl">${td.tglProduksi}</span> - <span class="col-mesin">${td.mesin}</span> - <span class="col-shift">${td.shift}</span>
             </div>
             
+            <div class="text-[13px] font-black text-slate-900 leading-snug">
+                <span class="col-nama">${td.namaItem}</span> - <span class="col-pjg">${td.panjang}</span> - <span class="col-grade">${td.grade}</span> - <span class="col-dus">${td.dus}</span>
+                <span class="col-jenis hidden">${td.jenisItem}</span>
+            </div>
+            
+            <div class="text-[12px] font-bold text-blue-600 col-shading">${td.shading}</div>
+            <div class="text-[12px] font-bold text-orange-600 col-po uppercase">${td.po}</div>
+            
+            <div class="text-[11px] font-bold text-slate-500 mt-1">Keterangan: <span class="col-ket ket-cell text-slate-700">-</span></div>
+            <div class="text-[11px] font-bold text-slate-500">Troli: <span class="col-troli troli-cell text-slate-700">-</span></div>
+            
+            <div class="flex flex-row flex-wrap items-center gap-1.5 mt-2">
+                ${stbjHtml}
+                ${kodeHtml}
+            </div>
         </div>
     `;
     
-    // Gunakan appendChild agar data pertama = paling atas = nomor 1
     document.getElementById('tbody-langsir').appendChild(div); 
     lucide.createIcons(); 
 }
@@ -116,18 +111,7 @@ function saringTabelLangsir() {
         kode: document.getElementById('f-kode').value.toLowerCase(),
         troli: document.getElementById('f-troli').value.toLowerCase(),
         area: document.getElementById('f-area').value.toLowerCase(),
-        qr: document.getElementById('f-qr').value.toLowerCase(),
-        tgl: document.getElementById('f-tgl').value.toLowerCase(),
-        mesin: document.getElementById('f-mesin').value.toLowerCase(),
-        shift: document.getElementById('f-shift').value.toLowerCase(),
-        jenis: document.getElementById('f-jenis').value.toLowerCase(),
-        nama: document.getElementById('f-nama').value.toLowerCase(),
-        pjg: document.getElementById('f-pjg').value.toLowerCase(),
-        grade: document.getElementById('f-grade').value.toLowerCase(),
-        dus: document.getElementById('f-dus').value.toLowerCase(),
-        shading: document.getElementById('f-shading').value.toLowerCase(),
-        po: document.getElementById('f-po').value.toLowerCase(),
-        ket: document.getElementById('f-ket').value.toLowerCase()
+        qr: document.getElementById('f-qr').value.toLowerCase()
     };
 
     document.querySelectorAll('.row-item').forEach(row => {
@@ -138,8 +122,7 @@ function saringTabelLangsir() {
                 if(cell && !cell.innerText.toLowerCase().includes(f[key])) { show = false; break; }
             }
         }
-        if (show) { row.classList.remove('filtered-out'); } 
-        else { row.classList.add('filtered-out'); }
+        if (show) row.classList.remove('filtered-out'); else row.classList.add('filtered-out');
     });
     updateTotalBaris();
 }
@@ -191,73 +174,55 @@ function undoDelete() {
     updateTotalBaris(); 
 }
 
-// Loop nomer urut 1,2,3 dari baris paling atas karena di-append (tidak prepend lagi)
 function updateRowNumbers() { 
     const rows = document.querySelectorAll('#tbody-langsir .row-item:not([style*="display: none"])'); 
     let count = 1; 
     rows.forEach(div => { 
         const noCell = div.querySelector('.no-cell');
-        if(noCell) noCell.innerText = (count++) + '.'; 
+        if(noCell) noCell.innerText = count++; 
     }); 
 }
 
 function updateTotalBaris() {
     const allRows = Array.from(document.querySelectorAll('#tbody-langsir .row-item'));
     let totalFiltered = 0;
-
     allRows.forEach(row => {
         if(row.style.display === 'none' && !row.classList.contains('filtered-out')) return; 
-        if(!row.classList.contains('filtered-out')) { 
-            row.style.display = 'flex'; 
-            totalFiltered++;
-        } else { 
-            row.style.display = 'none'; 
-        }
+        if(!row.classList.contains('filtered-out')) { row.style.display = 'flex'; totalFiltered++; } 
+        else { row.style.display = 'none'; }
     });
-
-    if(document.getElementById('lbl-tampil-baris')) {
-        document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
-    }
+    if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
 }
 
 function toggleSemuaCentang(checked) {
     document.querySelectorAll('.cb-row').forEach(cb => {
         const row = cb.closest('.row-item');
         if (row && row.style.display !== 'none' && !row.classList.contains('filtered-out')) {
-            cb.checked = checked;
-            highlightRow(cb);
+            cb.checked = checked; highlightRow(cb);
         }
     });
 }
 
 function highlightRow(cb) {
     const div = cb.closest('.row-item');
-    if (div) {
-        if (cb.checked) div.classList.add('selected-row');
-        else div.classList.remove('selected-row');
-    }
+    if (div) { if (cb.checked) div.classList.add('selected-row'); else div.classList.remove('selected-row'); }
 }
 
 function editKeteranganMassal() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
-    if (checkedBoxes.length === 0) return alert("Pilih / centang data yang keterangannya ingin diedit!");
-
-    const newKet = prompt(`Masukkan keterangan baru untuk ${checkedBoxes.length} data terpilih:\n(Catatan: Akan menimpa Keterangan hasil Verifikasi)`);
+    if (checkedBoxes.length === 0) return alert("Pilih data yang keterangannya ingin diedit!");
+    const newKet = prompt(`Masukkan keterangan baru:\n(Akan menimpa Keterangan Verifikasi)`);
     if (newKet === null) return; 
-
     checkedBoxes.forEach(cb => {
         const div = cb.closest('.row-item');
         const ketCell = div.querySelector('.ket-cell');
         if (ketCell) {
             ketCell.innerText = newKet.trim() || '-';
-            ketCell.classList.remove('italic', 'text-red-500', 'text-slate-500'); 
+            ketCell.classList.remove('text-red-500', 'text-slate-500'); 
             ketCell.classList.add('text-slate-800'); 
         }
     });
-    
-    document.querySelector('#cb-all').checked = false;
-    toggleSemuaCentang(false);
-    alert("Keterangan berhasil diperbarui secara lokal!");
+    document.querySelector('#cb-all').checked = false; toggleSemuaCentang(false);
 }
 
 async function VerifikasiDanCek() {
@@ -265,7 +230,7 @@ async function VerifikasiDanCek() {
     if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
     
     const btn = document.getElementById('btn-Verifikasi'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> PROSES...'; btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>'; btn.disabled = true;
     
     const qrs = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     
@@ -278,10 +243,8 @@ async function VerifikasiDanCek() {
         if(resStbj.error) throw resStbj.error;
         if(resStok.error) throw resStok.error;
 
-        const stbjMap = {};
-        resStbj.data.forEach(d => { stbjMap[d.qrcode] = d; });
-        const stokList = resStok.data.map(d => d.qrcode);
-        let hasError = false;
+        const stbjMap = {}; resStbj.data.forEach(d => { stbjMap[d.qrcode] = d; });
+        const stokList = resStok.data.map(d => d.qrcode); let hasError = false;
 
         rows.forEach(r => {
             const qr = r.querySelector('.qr-val').innerText;
@@ -291,66 +254,46 @@ async function VerifikasiDanCek() {
             const ketCell = r.querySelector('.ket-cell');
             
             if(stbjMap[qr]) {
-                stbjSpan.className = 'text-white font-black bg-blue-600 border-b-2 border-blue-800 px-3 py-1.5 text-[11px] stbj-val rounded-sm shadow-sm';
-                stbjSpan.setAttribute('data-status', 'valid');
-                stbjSpan.innerText = 'SDH STBJ';
-                
+                stbjSpan.className = 'text-white font-bold bg-blue-600 border border-blue-800 px-3 py-1 text-[10px] stbj-val rounded shadow-sm';
+                stbjSpan.setAttribute('data-status', 'valid'); stbjSpan.innerText = 'SDH STBJ';
                 troliCell.innerText = stbjMap[qr].troli || '-';
-                
-                if(!ketCell.classList.contains('text-slate-800')) {
-                    ketCell.innerText = stbjMap[qr].keterangan || '-';
-                }
+                if(!ketCell.classList.contains('text-slate-800')) ketCell.innerText = stbjMap[qr].keterangan || '-';
             } else {
-                stbjSpan.className = 'text-white font-black bg-[#ff7315] border-b-2 border-[#cc5b0f] px-3 py-1.5 text-[11px] stbj-val rounded-sm shadow-sm';
-                stbjSpan.setAttribute('data-status', 'invalid-stbj');
-                stbjSpan.innerText = 'BLM STBJ';
-                troliCell.innerText = '-';
-                ketCell.innerText = '-';
-                hasError = true;
+                stbjSpan.className = 'text-white font-bold bg-[#ff7315] border border-[#cc5b0f] px-3 py-1 text-[10px] stbj-val rounded shadow-sm';
+                stbjSpan.setAttribute('data-status', 'invalid-stbj'); stbjSpan.innerText = 'BLM STBJ';
+                troliCell.innerText = '-'; ketCell.innerText = '-'; hasError = true;
             }
 
             if(kodeSpan.innerText.includes('DUPLIKAT SCAN')) {
                 hasError = true;
-            } 
-            else if(stokList.includes(qr)) {
-                // REVISI 1: Tulisannya jadi DUPLIKAT ITEM karena asalnya dari DB
-                kodeSpan.className = 'text-white font-black bg-red-600 border-b-2 border-red-800 px-3 py-1.5 text-[11px] kode-val rounded-sm shadow-sm';
-                kodeSpan.setAttribute('data-status', 'invalid');
-                kodeSpan.innerText = 'DUPLIKAT ITEM';
-                r.classList.add('bg-red-50');
-                r.classList.remove('bg-white');
-                hasError = true;
+            } else if(stokList.includes(qr)) {
+                kodeSpan.className = 'text-white font-bold bg-red-600 border border-red-800 px-3 py-1 text-[10px] kode-val rounded shadow-sm';
+                kodeSpan.setAttribute('data-status', 'invalid'); kodeSpan.innerText = 'DUPLIKAT ITEM';
+                r.classList.add('bg-red-50'); r.classList.remove('bg-white'); hasError = true;
             } else {
-                kodeSpan.className = 'text-[#0e744a] font-black bg-[#a0ecd1] border-b-2 border-[#76c2a7] px-3 py-1.5 text-[11px] kode-val rounded-sm shadow-sm';
-                kodeSpan.setAttribute('data-status', 'valid');
-                kodeSpan.innerText = 'ACCEPT';
-                r.classList.remove('bg-red-50');
-                r.classList.add('bg-white');
+                kodeSpan.className = 'text-[#0e744a] font-bold bg-[#a0ecd1] border border-[#76c2a7] px-3 py-1 text-[10px] kode-val rounded shadow-sm';
+                kodeSpan.setAttribute('data-status', 'valid'); kodeSpan.innerText = 'ACCEPT';
+                r.classList.remove('bg-red-50'); r.classList.add('bg-white');
             }
         });
 
-        if(hasError) { alert("PERINGATAN!\nTerdapat data bermasalah (BLM STBJ / DUPLIKAT).\nSilakan pilih data tersebut untuk dipindahkan ke HOLD LANGSIR, atau hapus."); } 
-        else { alert("MANTAP!\nSemua data Valid (SDH STBJ & ACCEPT). Troli dan Keterangan berhasil ditarik. Siap disimpan ke Gudang."); }
-    } catch (e) { alert("Koneksi Error: " + e.message); } 
+        if(hasError) alert("PERINGATAN!\nTerdapat data bermasalah. Pindahkan ke HOLD LANGSIR, atau hapus."); 
+        else alert("MANTAP!\nSemua data Valid. Siap disimpan.");
+    } catch (e) { alert("Error: " + e.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
 async function saveToSupabase() {
     const btn = document.getElementById('btn-save'); const original = btn.innerHTML;
-    
     const adaYgBelumDicek = document.querySelectorAll('span[data-status="unverified"]').length > 0;
     const adaDuplikat = document.querySelectorAll('span[data-status="invalid"]').length > 0;
     const adaBelumStbj = document.querySelectorAll('span[data-status="invalid-stbj"]').length > 0;
 
-    if(adaYgBelumDicek || adaDuplikat || adaBelumStbj) {
-        return alert("GAGAL MENYIMPAN!\nTerdapat data bermasalah atau belum di-Verifikasi. Cek kembali.");
-    }
-    
+    if(adaYgBelumDicek || adaDuplikat || adaBelumStbj) return alert("GAGAL MENYIMPAN!\nData bermasalah atau belum di-Verifikasi.");
     const rows = document.querySelectorAll('.row-item:not([style*="display: none"])'); if(rows.length === 0) return;
 
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MENYIMPAN...'; btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>'; btn.disabled = true;
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
-    
     let arrFisik = []; let mapAktual = {}; let mapGlobal = {}; 
 
     rows.forEach(r => {
@@ -358,11 +301,8 @@ async function saveToSupabase() {
         let jenis = r.querySelector('.col-jenis').innerText; let nama = r.querySelector('.col-nama').innerText;
         let pjg = r.querySelector('.col-pjg').innerText; let grade = r.querySelector('.col-grade').innerText;
         let dus = r.querySelector('.col-dus').innerText; let shading = r.querySelector('.col-shading').innerText; 
-        let po = r.querySelector('.col-po').innerText; 
-        let ket = r.querySelector('.col-ket').innerText;
-        
-        let td = translateBarcode(qr);
-        let poBawaan = td.po; 
+        let po = r.querySelector('.col-po').innerText; let ket = r.querySelector('.col-ket').innerText;
+        let td = translateBarcode(qr); let poBawaan = td.po; 
         
         let id_sku = `${area}_${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}_${po}`;
         arrFisik.push({ qrcode: qr, area: area, id_sku: id_sku, pic: user.username });
@@ -380,19 +320,17 @@ async function saveToSupabase() {
     const { data, error } = await db.rpc('eksekusi_langsir_aman', { payload: payloadData });
 
     if (error) { alert("GAGAL SERVER: " + error.message); btn.innerHTML = original; btn.disabled = false; return; }
-    
-    alert(`BERHASIL!\n${arrFisik.length} kardus masuk.\nData berhasil terupdate.`);
+    alert(`BERHASIL!\n${arrFisik.length} kardus masuk.`);
     document.getElementById('tbody-langsir').innerHTML = ''; btn.innerHTML = original; btn.disabled = false;
-    updateRowNumbers();
-    updateTotalBaris();
+    updateRowNumbers(); updateTotalBaris();
 }
 
 async function holdLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
-    if(checkedBoxes.length === 0) return alert("Anda harus mencentang data yang bermasalah terlebih dahulu.");
+    if(checkedBoxes.length === 0) return alert("Centang data bermasalah terlebih dahulu.");
 
     const btn = document.getElementById('btn-menu-utama'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i>'; btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>'; btn.disabled = true;
 
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
     let payloadUpload = [];
@@ -405,55 +343,28 @@ async function holdLangsir() {
         const ketStbj = div.querySelector('.stbj-val').innerText;
         const ketKode = div.querySelector('.kode-val').innerText;
         const noteKet = div.querySelector('.ket-cell').innerText;
-        
-        payloadUpload.push({
-            qrcode: qr, troli: troli, area: area,
-            keterangan: `STBJ: ${ketStbj} | KODE: ${ketKode} | Ket User: ${noteKet}`,
-            pic_input: user.username
-        });
+        payloadUpload.push({ qrcode: qr, troli: troli, area: area, keterangan: `STBJ: ${ketStbj} | KODE: ${ketKode} | Ket: ${noteKet}`, pic_input: user.username });
     });
 
     try {
         const { error } = await db.from('hold_langsir').insert(payloadUpload);
         if(error) throw error;
-        
         checkedBoxes.forEach(cb => { cb.closest('.row-item').remove(); });
-        updateRowNumbers(); 
-        updateTotalBaris();
-        document.querySelector('#cb-all').checked = false;
-        
-        alert(`SUKSES!\n${payloadUpload.length} Data berhasil diasingkan ke "Hold Langsir".`);
-    } catch(e) { alert("Gagal melakukan Hold: " + e.message); } 
+        updateRowNumbers(); updateTotalBaris(); document.querySelector('#cb-all').checked = false;
+        alert(`SUKSES!\n${payloadUpload.length} Data berhasil di-Hold.`);
+    } catch(e) { alert("Gagal Hold: " + e.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
 function salinDataTabel() {
     const cek = document.querySelectorAll('.cb-row:checked');
-    if(cek.length === 0) return alert("Pilih data yang ingin disalin dengan mencentang kotak di kiri data!");
-
+    if(cek.length === 0) return alert("Pilih data yang ingin disalin!");
     let copyString = "Area\tQRCode\tTgl Produksi\tMesin\tShift\tNama Item\tPjg\tGrade\tDus\tShading\tPO\tKeterangan\n";
-    
     cek.forEach(cb => {
         const div = cb.closest('.row-item');
-        const area = div.querySelector('.col-area').innerText;
-        const qr = div.querySelector('.col-qr').innerText;
-        const tgl = div.querySelector('.col-tgl').innerText;
-        const mesin = div.querySelector('.col-mesin').innerText;
-        const shift = div.querySelector('.col-shift').innerText;
-        const nama = div.querySelector('.col-nama').innerText;
-        const pjg = div.querySelector('.col-pjg').innerText;
-        const grade = div.querySelector('.col-grade').innerText;
-        const dus = div.querySelector('.col-dus').innerText;
-        const shading = div.querySelector('.col-shading').innerText;
-        const po = div.querySelector('.col-po').innerText;
-        const ket = div.querySelector('.col-ket').innerText;
-        
-        copyString += `${area}\t${qr}\t${tgl}\t${mesin}\t${shift}\t${nama}\t${pjg}\t${grade}\t${dus}\t${shading}\t${po}\t${ket}\n`;
+        copyString += `${div.querySelector('.col-area').innerText}\t${div.querySelector('.col-qr').innerText}\t${div.querySelector('.col-tgl').innerText}\t${div.querySelector('.col-mesin').innerText}\t${div.querySelector('.col-shift').innerText}\t${div.querySelector('.col-nama').innerText}\t${div.querySelector('.col-pjg').innerText}\t${div.querySelector('.col-grade').innerText}\t${div.querySelector('.col-dus').innerText}\t${div.querySelector('.col-shading').innerText}\t${div.querySelector('.col-po').innerText}\t${div.querySelector('.col-ket').innerText}\n`;
     });
-
-    navigator.clipboard.writeText(copyString).then(() => {
-        alert(`Berhasil menyalin ${cek.length} baris!\nBuka Excel lalu tekan CTRL+V / Paste.`);
-    }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
+    navigator.clipboard.writeText(copyString).then(() => alert("Berhasil menyalin!")).catch(() => alert("Gagal menyalin."));
 }
 
 async function bukaModalSTBJ() {
@@ -461,81 +372,40 @@ async function bukaModalSTBJ() {
     const tbody = document.getElementById('tbody-stbj-modal');
     tbody.innerHTML = '<div class="p-8 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat Data...</div>';
     lucide.createIcons();
-
     try {
         const { data, error } = await db.from('hasil_stbj').select('*').order('created_at', {ascending: false});
         if(error) throw error;
-        if(!data || data.length === 0) {
-            tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Data STBJ Kosong.</div>';
-            return;
-        }
-
+        if(!data || data.length === 0) { tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Kosong.</div>'; return; }
         let h = '';
         data.forEach((r, i) => {
             const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
             const td = translateBarcode(r.qrcode);
             let statusGudang = r.posisi || 'STBJ';
-            let colGudang = statusGudang === 'IN GUDANG' ? '<span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded text-[10px] border border-emerald-200">IN GUDANG</span>' 
-                : statusGudang === 'KELUAR' ? '<span class="bg-red-100 text-red-800 font-bold px-2 py-1 rounded text-[10px] border border-red-200">KELUAR</span>' 
-                : '<span class="bg-blue-100 text-blue-800 font-bold px-2 py-1 rounded text-[10px] border border-blue-200">STBJ</span>';
-            
-            h += `
-                <div class="row-modal-stbj bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
-                    <div class="flex justify-between items-center mb-1 border-b border-slate-100 pb-2">
-                        <span class="font-black text-slate-400 text-xs">#${i+1} - ${tgl}</span>
-                        ${colGudang}
-                    </div>
-                    <div class="font-mono font-black text-slate-900 text-[13px] break-all">${r.qrcode}</div>
-                    <div class="text-[13px] font-bold text-slate-600 grid grid-cols-2 gap-1 mt-1">
-                        <div>Troli: <span class="text-blue-600">${r.troli || '-'}</span></div>
-                        <div>PO: <span class="text-orange-600">${td.po}</span></div>
-                        <div class="col-span-2">Item: <span class="text-slate-800">${td.namaItem} (${td.panjang})</span></div>
-                    </div>
-                </div>`;
+            let colGudang = statusGudang === 'IN GUDANG' ? '<span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded text-[10px]">IN GUDANG</span>' : statusGudang === 'KELUAR' ? '<span class="bg-red-100 text-red-800 font-bold px-2 py-1 rounded text-[10px]">KELUAR</span>' : '<span class="bg-blue-100 text-blue-800 font-bold px-2 py-1 rounded text-[10px]">STBJ</span>';
+            h += `<div class="row-modal-stbj bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1"><div class="flex justify-between items-center mb-1 border-b border-slate-100 pb-2"><span class="font-black text-slate-400 text-xs">#${i+1} - ${tgl}</span>${colGudang}</div><div class="font-mono font-black text-slate-900 text-[13px] break-all">${r.qrcode}</div><div class="text-[13px] font-bold text-slate-600 grid grid-cols-2 gap-1 mt-1"><div>Troli: <span class="text-blue-600">${r.troli || '-'}</span></div><div>PO: <span class="text-orange-600">${td.po}</span></div><div class="col-span-2">Item: <span class="text-slate-800">${td.namaItem} (${td.panjang})</span></div></div></div>`;
         });
         tbody.innerHTML = h;
-    } catch (e) { tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal: ${e.message}</div>`; }
+    } catch (e) { tbody.innerHTML = `<div class="p-6 text-center text-red-500">Gagal</div>`; }
 }
 
 function tutupModalSTBJ() { document.getElementById('modal-stbj-langsir').classList.add('hidden'); }
-
-function saringTabelModalSTBJ() {
-    const q = document.getElementById('f-stbj-modal').value.toLowerCase();
-    document.querySelectorAll('.row-modal-stbj').forEach(row => {
-        row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
-    });
-}
+function saringTabelModalSTBJ() { const q = document.getElementById('f-stbj-modal').value.toLowerCase(); document.querySelectorAll('.row-modal-stbj').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none'; }); }
 
 async function bukaModalHold() {
     document.getElementById('modal-hold-langsir').classList.remove('hidden');
     const tbody = document.getElementById('tbody-hold-modal');
     tbody.innerHTML = '<div class="p-8 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat Data Hold...</div>';
     lucide.createIcons();
-
     try {
         const { data, error } = await db.from('hold_langsir').select('*').order('created_at', {ascending: false});
         if(error) throw error;
-        if(!data || data.length === 0) {
-            tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Tabel Hold Kosong.</div>';
-            return;
-        }
-
+        if(!data || data.length === 0) { tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Kosong.</div>'; return; }
         let h = '';
         data.forEach((r, i) => {
             const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
-            h += `
-                <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1 text-[13px] font-bold text-slate-600">
-                    <div class="flex justify-between items-center border-b border-slate-100 pb-1.5 mb-1">
-                        <span class="text-slate-400 text-xs">#${i+1} - ${tgl}</span>
-                        <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[11px] uppercase">Area: ${r.area}</span>
-                    </div>
-                    <div class="font-mono text-slate-900 break-all">${r.qrcode}</div>
-                    <div class="mt-1">Troli: <span class="text-blue-600">${r.troli || '-'}</span></div>
-                    <div class="text-rose-600 leading-tight">Ket: ${r.keterangan || '-'}</div>
-                </div>`;
+            h += `<div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1 text-[13px] font-bold text-slate-600"><div class="flex justify-between items-center border-b border-slate-100 pb-1.5 mb-1"><span class="text-slate-400 text-xs">#${i+1} - ${tgl}</span><span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[11px] uppercase">Area: ${r.area}</span></div><div class="font-mono text-slate-900 break-all">${r.qrcode}</div><div class="mt-1">Troli: <span class="text-blue-600">${r.troli || '-'}</span></div><div class="text-rose-600 leading-tight">Ket: ${r.keterangan || '-'}</div></div>`;
         });
         tbody.innerHTML = h;
-    } catch (e) { tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal: ${e.message}</div>`; }
+    } catch (e) { tbody.innerHTML = `<div class="p-6 text-center text-red-500">Gagal</div>`; }
 }
-
 function tutupModalHold() { document.getElementById('modal-hold-langsir').classList.add('hidden'); }
