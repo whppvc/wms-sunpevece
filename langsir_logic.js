@@ -22,17 +22,26 @@ window.toggleSidebarFilter = function() {
     document.getElementById('overlay-klik-luar').classList.toggle('hidden');
 };
 
+// REVISI 1: Memastikan fungsi tutup modal terdaftar di window object
+window.tutupModalSTBJ = function() {
+    document.getElementById('modal-stbj-langsir').classList.add('hidden');
+};
+
+window.tutupModalHold = function() {
+    document.getElementById('modal-hold-langsir').classList.add('hidden');
+};
+
 window.tutupSemuaPopup = function() {
     document.getElementById('sidebar-filter').classList.add('translate-x-full');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
-    tutupModalSTBJ();
-    tutupModalHold();
+    window.tutupModalSTBJ();
+    window.tutupModalHold();
     const menu = document.getElementById('dropdown-menu');
     if(menu) menu.classList.add('hidden');
 };
 
 window.resetFilter = function() {
-    ['f-stbj','f-kode','f-troli','f-area','f-qr'].forEach(id => {
+    ['f-stbj','f-kode','f-troli','f-area','f-qr','f-tgl','f-mesin','f-shift','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.value = '';
     });
@@ -160,7 +169,18 @@ function saringTabelLangsir() {
         kode: document.getElementById('f-kode').value.toLowerCase(),
         troli: document.getElementById('f-troli').value.toLowerCase(),
         area: document.getElementById('f-area').value.toLowerCase(),
-        qr: document.getElementById('f-qr').value.toLowerCase()
+        qr: document.getElementById('f-qr').value.toLowerCase(),
+        tgl: document.getElementById('f-tgl').value.toLowerCase(),
+        mesin: document.getElementById('f-mesin').value.toLowerCase(),
+        shift: document.getElementById('f-shift').value.toLowerCase(),
+        jenis: document.getElementById('f-jenis').value.toLowerCase(),
+        nama: document.getElementById('f-nama').value.toLowerCase(),
+        pjg: document.getElementById('f-pjg').value.toLowerCase(),
+        grade: document.getElementById('f-grade').value.toLowerCase(),
+        dus: document.getElementById('f-dus').value.toLowerCase(),
+        shading: document.getElementById('f-shading').value.toLowerCase(),
+        po: document.getElementById('f-po').value.toLowerCase(),
+        ket: document.getElementById('f-ket').value.toLowerCase()
     };
 
     document.querySelectorAll('.row-item').forEach(row => {
@@ -524,6 +544,7 @@ function salinDataTabel() {
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
 }
 
+// REVISI 2: Logika Pop-up STBJ (Hanya tampilkan yang belum masuk gudang)
 async function bukaModalSTBJ() {
     const mStbj = document.getElementById('modal-stbj-langsir'); if(mStbj) mStbj.classList.remove('hidden');
     const tbody = document.getElementById('tbody-stbj-modal');
@@ -531,15 +552,32 @@ async function bukaModalSTBJ() {
     lucide.createIcons();
 
     try {
-        const { data, error } = await db.from('stok_global').select('*').order('created_at', {ascending: false}).limit(100);
-        if(error) throw error;
-        if(!data || data.length === 0) {
+        // Ambil data dari stok_global
+        const { data: globalData, error: errGlobal } = await db.from('stok_global').select('*').order('created_at', {ascending: false}).limit(200);
+        if(errGlobal) throw errGlobal;
+        
+        if(!globalData || globalData.length === 0) {
             if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Data STBJ Kosong.</div>';
             return;
         }
 
+        // Ambil qrcode yang sudah ada di stok_qr
+        const qrs = globalData.map(d => d.qrcode);
+        const { data: qrData, error: errQr } = await db.from('stok_qr').select('qrcode').in('qrcode', qrs);
+        if(errQr) throw errQr;
+
+        const qrSet = new Set(qrData.map(d => d.qrcode));
+
+        // Filter: Hanya tampilkan yang ADA di stok_global TAPI TIDAK ADA di stok_qr
+        const filteredData = globalData.filter(d => !qrSet.has(d.qrcode));
+
+        if(filteredData.length === 0) {
+            if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Semua data STBJ sudah masuk gudang.</div>';
+            return;
+        }
+
         let h = '';
-        data.forEach((r, i) => {
+        filteredData.forEach((r, i) => {
             let tgl = '-';
             if (r.created_at) {
                 const dt = new Date(r.created_at);
@@ -547,16 +585,11 @@ async function bukaModalSTBJ() {
                 tgl = `${dt.getDate()} ${months[dt.getMonth()]}, ${String(dt.getHours()).padStart(2,'0')}.${String(dt.getMinutes()).padStart(2,'0')}`;
             }
 
-            let statusGudang = r.posisi || 'STBJ';
-            let colGudang = statusGudang === 'IN GUDANG' ? '<span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded text-[10px] border border-emerald-200">IN GUDANG</span>' 
-                : statusGudang === 'KELUAR' ? '<span class="bg-red-100 text-red-800 font-bold px-2 py-1 rounded text-[10px] border border-red-200">KELUAR</span>' 
-                : '<span class="bg-blue-100 text-blue-800 font-bold px-2 py-1 rounded text-[10px] border border-blue-200">STBJ</span>';
-            
             h += `
                 <div class="row-modal-stbj bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1 mb-3">
                     <div class="flex justify-between items-center mb-1 border-b border-slate-100 pb-2">
                         <span class="font-black text-slate-500 text-xs">#${i+1} - ${tgl}</span>
-                        ${colGudang}
+                        <span class="bg-blue-100 text-blue-800 font-bold px-2 py-1 rounded text-[10px] border border-blue-200">STBJ</span>
                     </div>
                     <div class="font-mono font-black text-slate-900 text-[13px] break-all">${r.qrcode}</div>
                     <div class="text-[12px] font-bold text-slate-600 mt-1">Troli: <span class="text-slate-800">${r.troli || '-'}</span></div>
@@ -572,14 +605,28 @@ async function bukaModalSTBJ() {
     } catch (e) { if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal Memuat: ${e.message}</div>`; }
 }
 
-async function bukaModalHold() {
+// REVISI 3: Fungsi Load Data Hold dengan Tab
+async function bukaModalHold(tabelTarget = 'hold_stbj') {
     const mHold = document.getElementById('modal-hold-langsir'); if(mHold) mHold.classList.remove('hidden');
+    
+    // Update Tab UI
+    const tabStbj = document.getElementById('tab-hold-stbj');
+    const tabLangsir = document.getElementById('tab-hold-langsir');
+    
+    if(tabelTarget === 'hold_stbj') {
+        tabStbj.className = 'pb-2 px-4 tab-active transition whitespace-nowrap text-xs uppercase font-bold';
+        tabLangsir.className = 'pb-2 px-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap text-xs uppercase font-bold';
+    } else {
+        tabLangsir.className = 'pb-2 px-4 tab-active transition whitespace-nowrap text-xs uppercase font-bold';
+        tabStbj.className = 'pb-2 px-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap text-xs uppercase font-bold';
+    }
+
     const tbody = document.getElementById('tbody-hold-modal');
     if(tbody) tbody.innerHTML = '<div class="p-8 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat Data Hold...</div>';
     lucide.createIcons();
 
     try {
-        const { data, error } = await db.from('hold_stbj').select('*').order('created_at', {ascending: false}).limit(100);
+        const { data, error } = await db.from(tabelTarget).select('*').order('created_at', {ascending: false}).limit(100);
         if(error) throw error;
         if(!data || data.length === 0) {
             if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Tabel Hold Kosong.</div>';
@@ -595,6 +642,26 @@ async function bukaModalHold() {
                 tgl = `${dt.getDate()} ${months[dt.getMonth()]}, ${String(dt.getHours()).padStart(2,'0')}.${String(dt.getMinutes()).padStart(2,'0')}`;
             }
 
+            // Penyesuaian karena hold_langsir mungkin tidak punya semua kolom seperti hold_stbj
+            let namaItem = r.nama_item || '-';
+            let pjg = r.panjang || '-';
+            let grade = r.grade || '-';
+            let dus = r.dus || '-';
+            let shading = r.shading || '-';
+            let po = r.po_bawaan || '-';
+            let jenis = r.jenis_item || '-';
+            let prod = r.tgl_produksi || '-';
+            let mesin = r.mesin || '-';
+            let shift = r.shift || '-';
+
+            // Jika tabel hold_langsir, coba translate barcode jika data kosong
+            if(tabelTarget === 'hold_langsir' && namaItem === '-') {
+                let td = typeof translateBarcode === 'function' ? translateBarcode(r.qrcode) : {};
+                namaItem = td.namaItem || '-'; pjg = td.panjang || '-'; grade = td.grade || '-';
+                dus = td.dus || '-'; shading = td.shading || '-'; po = td.po || '-';
+                jenis = td.jenisItem || '-'; prod = td.tglProduksi || '-'; mesin = td.mesin || '-'; shift = td.shift || '-';
+            }
+
             h += `
                 <div class="row-modal-hold bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1 mb-3">
                     <div class="flex justify-between items-center mb-1 border-b border-slate-100 pb-2">
@@ -603,11 +670,11 @@ async function bukaModalHold() {
                     </div>
                     <div class="font-mono font-black text-slate-900 text-[13px] break-all">${r.qrcode}</div>
                     <div class="text-[12px] font-bold text-slate-600 mt-1">Troli: <span class="text-slate-800">${r.troli || '-'}</span></div>
-                    <div class="text-[12px] font-bold text-slate-600">Produksi: <span class="text-slate-800">${r.tgl_produksi || '-'} - ${r.mesin || '-'} - ${r.shift || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Produksi: <span class="text-slate-800">${prod} - ${mesin} - ${shift}</span></div>
                     <div class="text-[12px] font-bold text-slate-600 leading-snug">
-                        Item: <span class="text-blue-600">${r.jenis_item || '-'}</span> | <span class="text-slate-800">${r.nama_item || '-'}</span> | <span class="text-slate-800">${r.panjang || '-'}</span> | <span class="text-slate-800">${r.grade || '-'}</span> | <span class="text-slate-800">${r.dus || '-'}</span> | <span class="text-blue-600">${r.shading || '-'}</span>
+                        Item: <span class="text-blue-600">${jenis}</span> | <span class="text-slate-800">${namaItem}</span> | <span class="text-slate-800">${pjg}</span> | <span class="text-slate-800">${grade}</span> | <span class="text-slate-800">${dus}</span> | <span class="text-blue-600">${shading}</span>
                     </div>
-                    <div class="text-[12px] font-bold text-slate-600">PO: <span class="text-orange-600">${r.po_bawaan || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">PO: <span class="text-orange-600">${po}</span></div>
                     <div class="text-[12px] font-bold text-rose-600">Keterangan: <span class="text-rose-800">${r.keterangan || '-'}</span></div>
                 </div>`;
         });
