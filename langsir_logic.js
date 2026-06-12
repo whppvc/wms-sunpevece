@@ -2,6 +2,44 @@ let masterData = { kamus: [], area: [] };
 let deleteStack = []; 
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Inisialisasi Layout
+    if(typeof initModernLayout === 'function') initModernLayout({ id: 'langsir', title: 'LANGSIR', url: 'langsir.html' }); 
+    document.body.style.overflow = 'hidden';
+    const wmsMain = document.querySelector('main');
+    if(wmsMain) wmsMain.style.overflow = 'hidden';
+
+    // REVISI 1: Pindahkan listener form-scan ke sini agar aman
+    const formScan = document.getElementById('form-scan');
+    if(formScan) {
+        formScan.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const rawInput = document.getElementById('input-qrcode').value.trim();
+            const area = document.getElementById('select-area').value;
+            if(!area || !rawInput) return alert("Pilih Area Simpan dan isi QR Code terlebih dahulu!");
+            
+            // Hanya cek duplikat pada baris yang masih aktif (tidak dihapus)
+            const activeRows = Array.from(document.querySelectorAll('.row-item')).filter(r => r.style.display !== 'none');
+            const existingQRs = activeRows.map(r => r.querySelector('.qr-val').innerText);
+            
+            const codes = rawInput.split(/[\s;]+/).map(q => q.trim()).filter(q => q);
+            
+            codes.forEach(code => { 
+                const isLocalDuplicate = existingQRs.includes(code);
+                addRow(area, code, isLocalDuplicate); 
+                if(!isLocalDuplicate) existingQRs.push(code); 
+            });
+            
+            updateRowNumbers();
+            updateTotalBaris();
+            
+            document.getElementById('input-qrcode').value = '';
+            if(typeof tutupModalAdd === 'function') tutupModalAdd(); 
+            
+            const scrollContainer = document.getElementById('scroll-container');
+            if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        });
+    }
+
     setTimeout(async () => {
         try {
             const { data: mDataArea } = await db.from('master_area').select('nama_area').order('id', { ascending: true });
@@ -19,6 +57,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateTotalBaris();
         } catch (e) { console.error("Gagal muat data master:", e); }
     }, 200); 
+});
+
+// REVISI 4: Fungsi Toggle Menu Dropdown
+function toggleMenuUtama(e) {
+    if(e) e.stopPropagation();
+    const menu = document.getElementById('dropdown-menu');
+    if(menu) menu.classList.toggle('hidden');
+}
+
+document.addEventListener('click', function(e) {
+    const menu = document.getElementById('dropdown-menu');
+    const btn = document.getElementById('btn-menu-utama');
+    if (menu && !menu.classList.contains('hidden')) {
+        if (!menu.contains(e.target) && (!btn || !btn.contains(e.target))) {
+            menu.classList.add('hidden');
+        }
+    }
 });
 
 function addRow(area, code, isDuplicate = false) {
@@ -180,7 +235,6 @@ function editKeteranganMassal() {
 }
 
 async function VerifikasiDanCek() {
-    // REVISI: Hanya ambil baris yang terlihat di layar (bukan yang sudah dihapus)
     const rows = document.querySelectorAll('.row-item:not(.filtered-out)');
     if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
     
@@ -257,18 +311,66 @@ async function VerifikasiDanCek() {
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
+// REVISI 2 & 3: Fungsi Sinkronisasi Stok Aktual
+async function sinkronisasiUlangStokAktual() {
+    try {
+        const { data: fisikQr, error: errQr } = await db.from('stok_qr').select('*');
+        if(errQr) throw errQr;
+        
+        let mapAgg = {};
+        (fisikQr || []).forEach(r => {
+            let p = r.id_sku ? r.id_sku.split('_') : [];
+            let t = translateBarcode(r.qrcode);
+            
+            let area = p[0] || r.area || '-';
+            let nama = p[1] || r.nama_item || t.namaItem; 
+            let pjg = p[2] || r.panjang || t.panjang;
+            let grade = p[3] || r.grade || t.grade;
+            let dus = p[4] || r.dus || t.dus;
+            let shading = p[5] || r.shading || t.shading;
+            let po = p[6] || r.po_bawaan || t.po || '-';
+            let ket = p.length >= 8 ? p.slice(7).join('_') : (r.keterangan || '-');
+
+            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
+            if(!mapAgg[key]) {
+                mapAgg[key] = { 
+                    nama_item: nama, 
+                    panjang: pjg, 
+                    grade: grade, 
+                    dus: dus, 
+                    shading: shading, 
+                    area: area, 
+                    po_aktual: po, 
+                    keterangan: ket, 
+                    qty: 0 
+                };
+            }
+            mapAgg[key].qty++;
+        });
+
+        let dataAktualBaru = Object.values(mapAgg);
+        
+        await db.from('stok_aktual').delete().neq('qty', -99999); 
+
+        for(let i = 0; i < dataAktualBaru.length; i += 500) {
+            await db.from('stok_aktual').insert(dataAktualBaru.slice(i, i + 500));
+        }
+    } catch(e) {
+        console.error("Gagal sinkronisasi stok_aktual otomatis:", e.message);
+    }
+}
+
 async function saveToSupabase() {
     const btn = document.getElementById('btn-save'); const original = btn.innerHTML;
     
-    // REVISI: Hanya cek error pada baris yang masih tampil (tidak dihapus)
-    const rows = document.querySelectorAll('.row-item:not(.filtered-out)'); 
-    if(rows.length === 0) return;
+    const activeRows = Array.from(document.querySelectorAll('.row-item')).filter(r => r.style.display !== 'none');
+    if(activeRows.length === 0) return;
 
     let adaYgBelumDicek = false;
     let adaDuplikat = false;
     let adaBelumStbj = false;
 
-    rows.forEach(r => {
+    activeRows.forEach(r => {
         const stbjStatus = r.querySelector('.stbj-val').getAttribute('data-status');
         const kodeStatus = r.querySelector('.kode-val').getAttribute('data-status');
         
@@ -284,39 +386,46 @@ async function saveToSupabase() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i>'; btn.disabled = true;
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
     
-    let arrFisik = []; let mapAktual = {}; let mapGlobal = {}; 
+    let arrFisik = []; 
 
-    rows.forEach(r => {
-        let area = r.querySelector('.area-cell').innerText; let qr = r.querySelector('.qr-val').innerText;
-        let jenis = r.querySelector('.col-jenis').innerText; let nama = r.querySelector('.col-nama').innerText;
-        let pjg = r.querySelector('.col-pjg').innerText; let grade = r.querySelector('.col-grade').innerText;
-        let dus = r.querySelector('.col-dus').innerText; let shading = r.querySelector('.col-shading').innerText; 
-        let po = r.querySelector('.col-po').innerText; let ket = r.querySelector('.col-ket').innerText;
+    activeRows.forEach(r => {
+        let area = r.querySelector('.area-cell').innerText; 
+        let qr = r.querySelector('.qr-val').innerText;
+        let nama = r.querySelector('.col-nama').innerText;
+        let pjg = r.querySelector('.col-pjg').innerText; 
+        let grade = r.querySelector('.col-grade').innerText;
+        let dus = r.querySelector('.col-dus').innerText; 
+        let shading = r.querySelector('.col-shading').innerText; 
+        let po = r.querySelector('.col-po').innerText; 
+        let ket = r.querySelector('.ket-cell').innerText;
         
-        let td = typeof translateBarcode === 'function' ? translateBarcode(qr) : { po: po };
-        let poBawaan = td.po; 
+        let id_sku = `${area}_${nama}_${pjg}_${grade}_${dus}_${shading}_${po}_${ket}`;
         
-        let id_sku = `${area}_${jenis}_${nama}_${pjg}_${grade}_${dus}_${shading}_${po}`;
-        arrFisik.push({ qrcode: qr, area: area, id_sku: id_sku, pic: user.username });
-        
-        let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
-        if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: jenis, nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, area: area, po_aktual: po, ket: ket, qty: 0 };
-        mapAktual[keyAkt].qty += 1;
-
-        let keyGlb = `${nama}_${pjg}_${grade}_${dus}_${shading}_${poBawaan}_${ket}`;
-        if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: jenis, nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, po_bawaan: poBawaan, ket: ket, qty: 0 };
-        mapGlobal[keyGlb].qty += 1;
+        arrFisik.push({ 
+            qrcode: qr, 
+            area: area, 
+            id_sku: id_sku, 
+            keterangan: ket,
+            pic_input: user.username 
+        });
     });
 
-    const payloadData = { qrs: arrFisik, aktuals: Object.values(mapAktual), globals: Object.values(mapGlobal) };
-    const { data, error } = await db.rpc('eksekusi_langsir_aman', { payload: payloadData });
+    try {
+        const { error: errInsert } = await db.from('stok_qr').insert(arrFisik);
+        if (errInsert) throw errInsert;
 
-    if (error) { alert("GAGAL SERVER: " + error.message); btn.innerHTML = original; btn.disabled = false; return; }
-    
-    alert(`BERHASIL!\n${arrFisik.length} kardus masuk.`);
-    document.getElementById('tbody-langsir').innerHTML = ''; btn.innerHTML = original; btn.disabled = false;
-    updateRowNumbers();
-    updateTotalBaris();
+        await sinkronisasiUlangStokAktual();
+
+        alert(`BERHASIL!\n${arrFisik.length} kardus masuk ke Gudang.`);
+        document.getElementById('tbody-langsir').innerHTML = ''; 
+        updateRowNumbers();
+        updateTotalBaris();
+    } catch (error) { 
+        alert("GAGAL SERVER: " + error.message); 
+    } finally {
+        btn.innerHTML = original; 
+        btn.disabled = false; 
+    }
 }
 
 async function holdLangsir() {
@@ -367,7 +476,7 @@ function salinDataTabel() {
     
     cek.forEach(cb => {
         const div = cb.closest('.row-item');
-        copyString += `${div.querySelector('.col-area').innerText}\t${div.querySelector('.col-qr').innerText}\t${div.querySelector('.col-tgl').innerText}\t${div.querySelector('.col-mesin').innerText}\t${div.querySelector('.col-shift').innerText}\t${div.querySelector('.col-nama').innerText}\t${div.querySelector('.col-pjg').innerText}\t${div.querySelector('.col-grade').innerText}\t${div.querySelector('.col-dus').innerText}\t${div.querySelector('.col-shading').innerText}\t${div.querySelector('.col-po').innerText}\t${div.querySelector('.col-ket').innerText}\n`;
+        copyString += `${div.querySelector('.col-area').innerText}\t${div.querySelector('.col-qr').innerText}\t${div.querySelector('.col-tgl').innerText}\t${div.querySelector('.col-mesin').innerText}\t${div.querySelector('.col-shift').innerText}\t${div.querySelector('.col-nama').innerText}\t${div.querySelector('.col-pjg').innerText}\t${div.querySelector('.col-grade').innerText}\t${div.querySelector('.col-dus').innerText}\t${div.querySelector('.col-shading').innerText}\t${div.querySelector('.col-po').innerText}\t${div.querySelector('.ket-cell').innerText}\n`;
     });
 
     navigator.clipboard.writeText(copyString).then(() => {
@@ -375,7 +484,7 @@ function salinDataTabel() {
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
 }
 
-// REVISI: Format Pop-up Data STBJ
+// REVISI 3: Format Pop-up Data STBJ
 async function bukaModalSTBJ() {
     const mStbj = document.getElementById('modal-stbj-langsir'); if(mStbj) mStbj.classList.remove('hidden');
     const tbody = document.getElementById('tbody-stbj-modal');
@@ -424,7 +533,7 @@ async function bukaModalSTBJ() {
     } catch (e) { if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal Memuat: ${e.message}</div>`; }
 }
 
-// REVISI: Format Pop-up Tabel Hold
+// REVISI 4: Format Pop-up Tabel Hold
 async function bukaModalHold() {
     const mHold = document.getElementById('modal-hold-langsir'); if(mHold) mHold.classList.remove('hidden');
     const tbody = document.getElementById('tbody-hold-modal');
