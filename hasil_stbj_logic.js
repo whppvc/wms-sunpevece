@@ -15,6 +15,14 @@ const currentUser = JSON.parse(localStorage.getItem('user_session')) || {usernam
 document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'hasil_stbj', title: 'HASIL STBJ', url: 'hasil_stbj.html' });
     
+    // FIX LAYOUT: Kunci body dan main agar absolute inset-0 bekerja sempurna
+    document.body.style.overflow = 'hidden';
+    const wmsMain = document.querySelector('main');
+    if(wmsMain) {
+        wmsMain.style.overflow = 'hidden';
+        wmsMain.style.padding = '0'; 
+    }
+
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
@@ -292,7 +300,7 @@ function renderHeaderDanTabel() {
                 ${thSort(tabelSekarang==='hold_stbj'?19:18, 'PIC Input', 'col-pic')}
             </tr>`;
         
-        if(rawDataRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="22" class="p-8 text-center font-bold text-slate-400">Tabel Kosong.</td></tr>`; return; }
+        if(rawDataRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="22" class="px-4 py-8 text-center font-bold text-slate-400">Tabel Kosong.</td></tr>`; return; }
         
         let h = '';
         rawDataRaw.forEach((r, i) => {
@@ -310,7 +318,6 @@ function renderHeaderDanTabel() {
             const htmlStatusGudang = r.is_in_gudang ? '<span class="text-emerald-600 font-black">IN GUDANG</span>' : '<span class="text-slate-500 font-bold">STBJ</span>';
             const statData = r.status_data === 'Collected' ? '<span class="text-indigo-600 font-black">COLLECTED</span>' : '-';
 
-            // REVISI: Menggunakan even:bg-slate-50 untuk row stripping dan menghapus border-r
             h += `
                 <tr class="hover:bg-slate-100 even:bg-slate-50 text-row transition text-sm border-b border-slate-200">
                     <td class="p-3 text-center col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -319,28 +326,28 @@ function renderHeaderDanTabel() {
                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </button>
                     </td>
-                    <td class="p-3 col-status-gudang" data-search="${r.is_in_gudang ? 'IN GUDANG' : 'STBJ'}">${htmlStatusGudang}</td>
-                    ${tabelSekarang === 'hold_stbj' ? `<td class="p-3 font-black text-amber-600 col-status" data-search="${r.status || 'HOLD'}">${r.status || 'HOLD'}</td>` : '<td class="p-3 hidden col-status">-</td>'}
-                    <td class="p-3 col-status-data" data-search="${r.status_data || '-'}">${statData}</td>
-                    <td class="p-3 text-slate-600 font-medium col-waktu" data-search="${tgl}">${tgl}</td>
-                    <td class="p-3 font-bold text-slate-700 col-troli" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
-                    <td class="p-3 font-mono font-bold text-slate-800 col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
-                    <td class="p-3 text-slate-600 font-medium col-tgl" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
-                    <td class="p-3 text-slate-600 font-medium col-mesin" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
-                    <td class="p-3 text-slate-600 font-medium col-shift" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
-                    <td class="p-3 font-bold text-blue-600 col-jenis" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
-                    <td class="p-3 font-bold text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
-                    <td class="p-3 font-medium text-slate-700 col-pjg" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
-                    <td class="p-3 font-medium text-slate-700 col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
-                    <td class="p-3 font-medium text-slate-700 col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
-                    <td class="p-3 font-medium text-slate-700 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
-                    <td class="p-3 font-bold text-orange-600 col-po" data-search="${r.po_bawaan || '-'}">${r.po_bawaan || '-'}</td>
-                    <td class="p-3 text-slate-500 font-medium text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
-                    <td class="p-3 text-xs font-bold text-slate-400 col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
+                    <td class="p-3 text-center col-status-gudang" data-search="${r.is_in_gudang ? 'IN GUDANG' : 'STBJ'}">${htmlStatusGudang}</td>
+                    ${tabelSekarang === 'hold_stbj' ? `<td class="p-3 text-center font-black text-amber-600 col-status" data-search="${r.status || 'HOLD'}">${r.status || 'HOLD'}</td>` : '<td class="p-3 hidden col-status">-</td>'}
+                    <td class="p-3 text-center col-status-data" data-search="${r.status_data || '-'}">${statData}</td>
+                    <td class="p-3 text-center text-slate-600 font-medium col-waktu" data-search="${tgl}">${tgl}</td>
+                    <td class="p-3 text-center font-bold text-slate-700 col-troli" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
+                    <td class="p-3 text-left font-mono font-bold text-slate-800 col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
+                    <td class="p-3 text-center text-slate-600 font-medium col-tgl" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
+                    <td class="p-3 text-center text-slate-600 font-medium col-mesin" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
+                    <td class="p-3 text-center text-slate-600 font-medium col-shift" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
+                    <td class="p-3 text-center font-bold text-blue-600 col-jenis" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
+                    <td class="p-3 text-left font-bold text-slate-800 col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
+                    <td class="p-3 text-center font-medium text-slate-700 col-pjg" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
+                    <td class="p-3 text-center font-medium text-slate-700 col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
+                    <td class="p-3 text-center font-medium text-slate-700 col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
+                    <td class="p-3 text-center font-medium text-slate-700 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
+                    <td class="p-3 text-center font-bold text-orange-600 col-po" data-search="${r.po_bawaan || '-'}">${r.po_bawaan || '-'}</td>
+                    <td class="p-3 text-left text-slate-500 font-medium col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
+                    <td class="p-3 text-center text-xs font-bold text-slate-400 col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
-        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="22" class="p-8 text-center font-bold text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="22" class="px-4 py-8 text-center font-bold text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
     } 
     else if(modeSekarang === 'item' || modeSekarang === 'jasper') {
         const isJasper = modeSekarang === 'jasper';
@@ -396,7 +403,7 @@ function renderHeaderDanTabel() {
         });
 
         let arr = Object.values(groups);
-        if(arr.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="20" class="p-8 text-center font-bold text-slate-400">Kosong.</td></tr>`; return; }
+        if(arr.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="20" class="px-4 py-8 text-center font-bold text-slate-400">Kosong.</td></tr>`; return; }
 
         let h = '';
         arr.forEach((r) => {
@@ -406,30 +413,30 @@ function renderHeaderDanTabel() {
 
             h += `
                 <tr class="hover:bg-slate-100 even:bg-slate-50 text-row text-center transition text-sm border-b border-slate-200">
-                    <td class="p-3 col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="p-3 text-center col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="p-3 hidden col-status-gudang">-</td>
                     <td class="p-3 hidden col-status">-</td>
-                    <td class="p-3 col-status-data" data-search="${r.sData || '-'}">${statData}</td>
+                    <td class="p-3 text-center col-status-data" data-search="${r.sData || '-'}">${statData}</td>
                     <td class="p-3 hidden col-waktu">-</td>
-                    <td class="p-3 font-bold text-slate-700 col-troli" data-search="${gabunganTroli}">${gabunganTroli}</td>
+                    <td class="p-3 text-center font-bold text-slate-700 col-troli" data-search="${gabunganTroli}">${gabunganTroli}</td>
                     <td class="p-3 hidden col-qr">-</td>
-                    <td class="p-3 font-medium text-slate-600 col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
-                    <td class="p-3 font-medium text-slate-600 col-mesin" data-search="${r.mesin}">${r.mesin}</td>
-                    <td class="p-3 font-medium text-slate-600 col-shift" data-search="${r.shift}">${r.shift}</td>
-                    <td class="p-3 font-bold text-blue-600 col-jenis" data-search="${r.jenisItem}">${r.jenisItem}</td>
-                    <td class="p-3 font-bold text-slate-800 text-left col-nama" data-search="${r.displayNama}">${r.displayNama}</td>
-                    <td class="p-3 font-medium text-slate-700 col-pjg" data-search="${r.panjang}">${r.panjang}</td>
-                    <td class="p-3 font-medium text-slate-700 col-grade" data-search="${r.grade}">${r.grade}</td>
-                    <td class="p-3 font-medium text-slate-700 col-dus" data-search="${r.dus}">${r.dus}</td>
-                    <td class="p-3 font-medium text-slate-700 col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="p-3 font-bold text-orange-600 col-po" data-search="${r.po}">${r.po}</td>
-                    <td class="p-3 font-black text-emerald-700 col-qty" data-search="${r.qty}">${r.qty}</td>
-                    <td class="p-3 font-medium text-slate-500 text-left col-ket" data-search="${displayKet}">${displayKet}</td>
+                    <td class="p-3 text-center text-slate-600 font-medium col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
+                    <td class="p-3 text-center text-slate-600 font-medium col-mesin" data-search="${r.mesin}">${r.mesin}</td>
+                    <td class="p-3 text-center text-slate-600 font-medium col-shift" data-search="${r.shift}">${r.shift}</td>
+                    <td class="p-3 text-center font-bold text-blue-600 col-jenis" data-search="${r.jenisItem}">${r.jenisItem}</td>
+                    <td class="p-3 text-left font-bold text-slate-800 col-nama" data-search="${r.displayNama}">${r.displayNama}</td>
+                    <td class="p-3 text-center font-medium text-slate-700 col-pjg" data-search="${r.panjang}">${r.panjang}</td>
+                    <td class="p-3 text-center font-medium text-slate-700 col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="p-3 text-center font-medium text-slate-700 col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="p-3 text-center font-medium text-slate-700 col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="p-3 text-center font-bold text-orange-600 col-po" data-search="${r.po}">${r.po}</td>
+                    <td class="p-3 text-center font-black text-emerald-700 col-qty" data-search="${r.qty}">${r.qty}</td>
+                    <td class="p-3 text-left text-slate-500 font-medium col-ket" data-search="${displayKet}">${displayKet}</td>
                     <td class="p-3 hidden col-pic">-</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
-        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="20" class="p-8 text-center font-bold text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="20" class="px-4 py-8 text-center font-bold text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
     }
     lucide.createIcons(); saringTabelExcel();
 }
@@ -632,7 +639,7 @@ async function simpanDataJasper() {
         
         tutupModalJasperForm();
         
-        document.getElementById('tbody-katalog-list').innerHTML = '<tr><td colspan="6" class="p-6 text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat ulang tabel...</td></tr>';
+        document.getElementById('tbody-katalog-list').innerHTML = '<tr><td colspan="6" class="p-6 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat ulang tabel...</td></tr>';
         lucide.createIcons();
         
         await loadKamusDanJasper(); 
@@ -743,3 +750,4 @@ async function aksiMassal(tipe) {
         XLSX.utils.book_append_sheet(wb, ws, "STBJ_Data");
         XLSX.writeFile(wb, `STBJ_${tabelSekarang}_${modeSekarang.toUpperCase()}.xlsx`);
     }
+}
