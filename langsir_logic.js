@@ -1,14 +1,58 @@
 let masterData = { kamus: [], area: [] }; 
 let deleteStack = []; 
 
-document.addEventListener('DOMContentLoaded', async () => {
-    // Inisialisasi Layout
-    if(typeof initModernLayout === 'function') initModernLayout({ id: 'langsir', title: 'LANGSIR', url: 'langsir.html' }); 
-    document.body.style.overflow = 'hidden';
-    const wmsMain = document.querySelector('main');
-    if(wmsMain) wmsMain.style.overflow = 'hidden';
+// REVISI: Fungsi Global untuk Modal & Dropdown
+window.toggleMenuUtama = function(e) {
+    if(e) e.stopPropagation();
+    const menu = document.getElementById('dropdown-menu');
+    if(menu) menu.classList.toggle('hidden');
+};
 
-    // REVISI 1: Pindahkan listener form-scan ke sini agar aman
+window.bukaModalAdd = function() {
+    document.getElementById('modal-add-scan').classList.remove('hidden');
+    setTimeout(() => document.getElementById('input-qrcode').focus(), 100);
+};
+
+window.tutupModalAdd = function() {
+    document.getElementById('modal-add-scan').classList.add('hidden');
+};
+
+window.toggleSidebarFilter = function() {
+    document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
+    document.getElementById('overlay-klik-luar').classList.toggle('hidden');
+};
+
+window.tutupSemuaPopup = function() {
+    document.getElementById('sidebar-filter').classList.add('translate-x-full');
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
+    tutupModalSTBJ();
+    tutupModalHold();
+    const menu = document.getElementById('dropdown-menu');
+    if(menu) menu.classList.add('hidden');
+};
+
+window.resetFilter = function() {
+    ['f-stbj','f-kode','f-troli','f-area','f-qr'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.value = '';
+    });
+    saringTabelLangsir();
+    toggleSidebarFilter();
+};
+
+document.addEventListener('click', function(e) {
+    const menu = document.getElementById('dropdown-menu');
+    const btn = document.getElementById('btn-menu-utama');
+    if (menu && !menu.classList.contains('hidden')) {
+        if (!menu.contains(e.target) && (!btn || !btn.contains(e.target))) {
+            menu.classList.add('hidden');
+        }
+    }
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+    if(typeof initModernLayout === 'function') initModernLayout({ id: 'langsir', title: 'LANGSIR', url: 'langsir.html' }); 
+    
     const formScan = document.getElementById('form-scan');
     if(formScan) {
         formScan.addEventListener('submit', (e) => {
@@ -17,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const area = document.getElementById('select-area').value;
             if(!area || !rawInput) return alert("Pilih Area Simpan dan isi QR Code terlebih dahulu!");
             
-            // Hanya cek duplikat pada baris yang masih aktif (tidak dihapus)
+            // REVISI 1: Hanya cek duplikat pada baris yang masih aktif (tidak dihapus)
             const activeRows = Array.from(document.querySelectorAll('.row-item')).filter(r => r.style.display !== 'none');
             const existingQRs = activeRows.map(r => r.querySelector('.qr-val').innerText);
             
@@ -33,7 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateTotalBaris();
             
             document.getElementById('input-qrcode').value = '';
-            if(typeof tutupModalAdd === 'function') tutupModalAdd(); 
+            tutupModalAdd(); 
             
             const scrollContainer = document.getElementById('scroll-container');
             if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
@@ -42,9 +86,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setTimeout(async () => {
         try {
-            const { data: mDataArea } = await db.from('master_area').select('nama_area').order('id', { ascending: true });
+            const { data: mDataArea } = await db.from('master_area').select('*').order('id', { ascending: true });
             if(mDataArea) {
-                masterData.area = [...new Set(mDataArea.map(r => r.nama_area).filter(x => x && x.trim() !== ''))]; 
+                // REVISI 2: Menangani nama kolom yang mungkin berbeda (nama_area atau area)
+                masterData.area = [...new Set(mDataArea.map(r => (r.nama_area || r.area || '').trim()).filter(Boolean))]; 
                 const selArea = document.getElementById('select-area');
                 if(selArea) { 
                     selArea.innerHTML = '<option value="">-- Pilih Area --</option>'; 
@@ -57,23 +102,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateTotalBaris();
         } catch (e) { console.error("Gagal muat data master:", e); }
     }, 200); 
-});
-
-// REVISI 4: Fungsi Toggle Menu Dropdown
-function toggleMenuUtama(e) {
-    if(e) e.stopPropagation();
-    const menu = document.getElementById('dropdown-menu');
-    if(menu) menu.classList.toggle('hidden');
-}
-
-document.addEventListener('click', function(e) {
-    const menu = document.getElementById('dropdown-menu');
-    const btn = document.getElementById('btn-menu-utama');
-    if (menu && !menu.classList.contains('hidden')) {
-        if (!menu.contains(e.target) && (!btn || !btn.contains(e.target))) {
-            menu.classList.add('hidden');
-        }
-    }
 });
 
 function addRow(area, code, isDuplicate = false) {
@@ -235,7 +263,7 @@ function editKeteranganMassal() {
 }
 
 async function VerifikasiDanCek() {
-    const rows = document.querySelectorAll('.row-item:not(.filtered-out)');
+    const rows = document.querySelectorAll('.row-item:not([style*="display: none"])');
     if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
     
     const btn = document.getElementById('btn-Verifikasi'); const ori = btn.innerHTML;
@@ -311,7 +339,6 @@ async function VerifikasiDanCek() {
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
-// REVISI 2 & 3: Fungsi Sinkronisasi Stok Aktual
 async function sinkronisasiUlangStokAktual() {
     try {
         const { data: fisikQr, error: errQr } = await db.from('stok_qr').select('*');
@@ -320,14 +347,14 @@ async function sinkronisasiUlangStokAktual() {
         let mapAgg = {};
         (fisikQr || []).forEach(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
-            let t = translateBarcode(r.qrcode);
+            let t = typeof translateBarcode === 'function' ? translateBarcode(r.qrcode) : {};
             
             let area = p[0] || r.area || '-';
-            let nama = p[1] || r.nama_item || t.namaItem; 
-            let pjg = p[2] || r.panjang || t.panjang;
-            let grade = p[3] || r.grade || t.grade;
-            let dus = p[4] || r.dus || t.dus;
-            let shading = p[5] || r.shading || t.shading;
+            let nama = p[1] || r.nama_item || t.namaItem || '-'; 
+            let pjg = p[2] || r.panjang || t.panjang || '-';
+            let grade = p[3] || r.grade || t.grade || '-';
+            let dus = p[4] || r.dus || t.dus || '-';
+            let shading = p[5] || r.shading || t.shading || '-';
             let po = p[6] || r.po_bawaan || t.po || '-';
             let ket = p.length >= 8 ? p.slice(7).join('_') : (r.keterangan || '-');
 
@@ -391,6 +418,7 @@ async function saveToSupabase() {
     activeRows.forEach(r => {
         let area = r.querySelector('.area-cell').innerText; 
         let qr = r.querySelector('.qr-val').innerText;
+        let jenis = r.querySelector('.col-jenis').innerText; 
         let nama = r.querySelector('.col-nama').innerText;
         let pjg = r.querySelector('.col-pjg').innerText; 
         let grade = r.querySelector('.col-grade').innerText;
@@ -399,12 +427,28 @@ async function saveToSupabase() {
         let po = r.querySelector('.col-po').innerText; 
         let ket = r.querySelector('.ket-cell').innerText;
         
+        // REVISI 3: Menambahkan semua kolom ke payload stok_qr
+        let tgl_produksi = r.querySelector('.col-tgl').innerText;
+        let mesin = r.querySelector('.col-mesin').innerText;
+        let shift = r.querySelector('.col-shift').innerText;
+        
+        // REVISI 4: Format id_sku sesuai permintaan
         let id_sku = `${area}_${nama}_${pjg}_${grade}_${dus}_${shading}_${po}_${ket}`;
         
         arrFisik.push({ 
             qrcode: qr, 
             area: area, 
             id_sku: id_sku, 
+            tgl_produksi: tgl_produksi,
+            mesin: mesin,
+            shift: shift,
+            jenis_item: jenis,
+            nama_item: nama,
+            panjang: pjg, // REVISI: Kolom pjg diubah menjadi panjang
+            grade: grade,
+            dus: dus,
+            shading: shading,
+            po_bawaan: po,
             keterangan: ket,
             pic_input: user.username 
         });
@@ -484,7 +528,6 @@ function salinDataTabel() {
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
 }
 
-// REVISI 3: Format Pop-up Data STBJ
 async function bukaModalSTBJ() {
     const mStbj = document.getElementById('modal-stbj-langsir'); if(mStbj) mStbj.classList.remove('hidden');
     const tbody = document.getElementById('tbody-stbj-modal');
@@ -533,7 +576,6 @@ async function bukaModalSTBJ() {
     } catch (e) { if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal Memuat: ${e.message}</div>`; }
 }
 
-// REVISI 4: Format Pop-up Tabel Hold
 async function bukaModalHold() {
     const mHold = document.getElementById('modal-hold-langsir'); if(mHold) mHold.classList.remove('hidden');
     const tbody = document.getElementById('tbody-hold-modal');
@@ -575,4 +617,11 @@ async function bukaModalHold() {
         });
         if(tbody) tbody.innerHTML = h;
     } catch (e) { if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal Memuat: ${e.message}</div>`; }
+}
+
+function saringTabelModalSTBJ() {
+    const q = document.getElementById('f-stbj-modal').value.toLowerCase();
+    document.querySelectorAll('.row-modal-stbj').forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+    });
 }
