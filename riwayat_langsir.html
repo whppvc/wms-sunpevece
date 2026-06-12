@@ -9,21 +9,18 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; touch-action: pan-y; background-color: #f8fafc; }
-        
-        /* Scrollbar Minimalis Modern */
         .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
         .table-container { position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Header Tabel Modern (Bersih, tanpa border vertikal) */
+        /* REVISI: Header Tabel Modern (Rata Tengah, Bersih) */
         .hdr-std { 
             background-color: #f8fafc !important; 
             color: #64748b !important; 
-            text-align: left !important; 
+            text-align: center !important; /* RATA TENGAH */
             padding: 0.75rem 1rem !important; 
             font-size: 0.75rem !important; 
             font-weight: 600 !important; 
@@ -36,10 +33,7 @@
             border-bottom: 1px solid #e2e8f0 !important; 
         }
         
-        /* Highlight Row Terpilih Lembut */
         tr.selected-row { background-color: #f0f9ff !important; }
-        
-        /* Tab Modern */
         .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
         .tab-inactive { color: #64748b; font-weight: 500; border-bottom: 2px solid transparent; }
     </style>
@@ -93,7 +87,7 @@
         <!-- MIDDLE SCROLL SECTION -->
         <div class="flex-1 min-h-0 bg-white overflow-hidden flex flex-col relative z-0">
             <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container">
-                <table class="w-full text-left border-collapse whitespace-nowrap" id="main-table">
+                <table class="w-full text-center border-collapse whitespace-nowrap" id="main-table">
                     <thead class="sticky top-0 z-10" id="thead-riwayat"></thead>
                     <tbody id="tbody-riwayat" class="text-slate-700"></tbody>
                 </table>
@@ -113,14 +107,14 @@
             <div class="flex items-center gap-3">
                 <div class="flex items-center gap-2">
                     <span class="text-xs text-slate-500">Baris per halaman:</span>
+                    <!-- REVISI: Default 10 -->
                     <select id="select-rows-per-page" onchange="changeRowsPerPage(this.value)" class="text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md outline-none cursor-pointer px-2 py-1 focus:border-blue-500 transition">
-                        <option value="8">8</option>
-                        <option value="15">15</option>
+                        <option value="10" selected>10</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
                         <option value="100">100</option>
                         <option value="ALL">Semua</option>
-                        <option value="CUSTOM">Isi Sendiri...</option>
+                        <option value="CUSTOM">Custom...</option>
                     </select>
                     <input type="number" id="input-custom-rows" oninput="setCustomRowsPerPage(this.value)" class="hidden w-16 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md outline-none px-2 py-1 text-center focus:border-blue-500 transition" placeholder="Jml">
                 </div>
@@ -186,16 +180,16 @@
                 </div>
             </div>
             <div class="overflow-y-auto flex-1 hide-scrollbar p-0 bg-white">
-                <table class="w-full border-collapse text-sm whitespace-nowrap text-left" id="table-stbj-modal-sub">
+                <table class="w-full border-collapse text-sm whitespace-nowrap text-center" id="table-stbj-modal-sub">
                     <thead class="sticky top-0 z-10">
                         <tr>
-                            <th class="hdr-std w-10 text-center">No</th>
+                            <th class="hdr-std w-10">No</th>
                             <th class="hdr-std">Waktu</th>
                             <th class="hdr-std">Troli</th>
                             <th class="hdr-std">QRCode</th>
-                            <th class="hdr-std">Item</th>
+                            <th class="hdr-std text-left">Item</th>
                             <th class="hdr-std">Pjg</th>
-                            <th class="hdr-std">PO</th>
+                            <th class="hdr-std">PO Bawaan</th>
                             <th class="hdr-std">Status Item</th>
                         </tr>
                     </thead>
