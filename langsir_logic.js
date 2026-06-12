@@ -179,13 +179,13 @@ function editKeteranganMassal() {
     toggleSemuaCentang(false);
 }
 
-// REVISI: Logika Verifikasi Baru (stok_global, hold_stbj, stok_qr)
 async function VerifikasiDanCek() {
-    const rows = document.querySelectorAll('.row-item:not([style*="display: none"])');
+    // REVISI: Hanya ambil baris yang terlihat di layar (bukan yang sudah dihapus)
+    const rows = document.querySelectorAll('.row-item:not(.filtered-out)');
     if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
     
     const btn = document.getElementById('btn-Verifikasi'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>'; btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4 text-white"></i>'; btn.disabled = true;
     
     const qrs = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     
@@ -259,15 +259,27 @@ async function VerifikasiDanCek() {
 
 async function saveToSupabase() {
     const btn = document.getElementById('btn-save'); const original = btn.innerHTML;
-    const adaYgBelumDicek = document.querySelectorAll('span[data-status="unverified"]').length > 0;
-    const adaDuplikat = document.querySelectorAll('span[data-status="invalid"]').length > 0;
-    const adaBelumStbj = document.querySelectorAll('span[data-status="invalid-stbj"]').length > 0;
+    
+    // REVISI: Hanya cek error pada baris yang masih tampil (tidak dihapus)
+    const rows = document.querySelectorAll('.row-item:not(.filtered-out)'); 
+    if(rows.length === 0) return;
+
+    let adaYgBelumDicek = false;
+    let adaDuplikat = false;
+    let adaBelumStbj = false;
+
+    rows.forEach(r => {
+        const stbjStatus = r.querySelector('.stbj-val').getAttribute('data-status');
+        const kodeStatus = r.querySelector('.kode-val').getAttribute('data-status');
+        
+        if(stbjStatus === 'unverified' || kodeStatus === 'unverified') adaYgBelumDicek = true;
+        if(stbjStatus === 'invalid-stbj') adaBelumStbj = true;
+        if(kodeStatus === 'invalid') adaDuplikat = true;
+    });
 
     if(adaYgBelumDicek || adaDuplikat || adaBelumStbj) {
-        return alert("GAGAL MENYIMPAN!\nTerdapat data bermasalah atau belum di-Verifikasi.");
+        return alert("GAGAL MENYIMPAN!\nTerdapat data bermasalah atau belum di-Verifikasi pada baris yang aktif.");
     }
-    
-    const rows = document.querySelectorAll('.row-item:not([style*="display: none"])'); if(rows.length === 0) return;
 
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i>'; btn.disabled = true;
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
@@ -363,7 +375,7 @@ function salinDataTabel() {
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
 }
 
-// REVISI: Modifikasi fungsi bukaModalSTBJ agar mengecek stok_global
+// REVISI: Format Pop-up Data STBJ
 async function bukaModalSTBJ() {
     const mStbj = document.getElementById('modal-stbj-langsir'); if(mStbj) mStbj.classList.remove('hidden');
     const tbody = document.getElementById('tbody-stbj-modal');
@@ -380,24 +392,76 @@ async function bukaModalSTBJ() {
 
         let h = '';
         data.forEach((r, i) => {
-            const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+            let tgl = '-';
+            if (r.created_at) {
+                const dt = new Date(r.created_at);
+                const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+                tgl = `${dt.getDate()} ${months[dt.getMonth()]}, ${String(dt.getHours()).padStart(2,'0')}.${String(dt.getMinutes()).padStart(2,'0')}`;
+            }
+
             let statusGudang = r.posisi || 'STBJ';
             let colGudang = statusGudang === 'IN GUDANG' ? '<span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded text-[10px] border border-emerald-200">IN GUDANG</span>' 
                 : statusGudang === 'KELUAR' ? '<span class="bg-red-100 text-red-800 font-bold px-2 py-1 rounded text-[10px] border border-red-200">KELUAR</span>' 
                 : '<span class="bg-blue-100 text-blue-800 font-bold px-2 py-1 rounded text-[10px] border border-blue-200">STBJ</span>';
             
             h += `
-                <div class="row-modal-stbj bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                <div class="row-modal-stbj bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1 mb-3">
                     <div class="flex justify-between items-center mb-1 border-b border-slate-100 pb-2">
-                        <span class="font-black text-slate-400 text-xs">#${i+1} - ${tgl}</span>
+                        <span class="font-black text-slate-500 text-xs">#${i+1} - ${tgl}</span>
                         ${colGudang}
                     </div>
                     <div class="font-mono font-black text-slate-900 text-[13px] break-all">${r.qrcode}</div>
-                    <div class="text-[13px] font-bold text-slate-600 grid grid-cols-2 gap-1 mt-1">
-                        <div>Troli: <span class="text-blue-600">${r.troli || '-'}</span></div>
-                        <div>PO: <span class="text-orange-600">${r.po_bawaan || '-'}</span></div>
-                        <div class="col-span-2">Item: <span class="text-slate-800">${r.nama_item || '-'} (${r.panjang || '-'})</span></div>
+                    <div class="text-[12px] font-bold text-slate-600 mt-1">Troli: <span class="text-slate-800">${r.troli || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Produksi: <span class="text-slate-800">${r.tgl_produksi || '-'} - ${r.mesin || '-'} - ${r.shift || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600 leading-snug">
+                        Item: <span class="text-blue-600">${r.jenis_item || '-'}</span> | <span class="text-slate-800">${r.nama_item || '-'}</span> | <span class="text-slate-800">${r.panjang || '-'}</span> | <span class="text-slate-800">${r.grade || '-'}</span> | <span class="text-slate-800">${r.dus || '-'}</span> | <span class="text-blue-600">${r.shading || '-'}</span>
                     </div>
+                    <div class="text-[12px] font-bold text-slate-600">PO: <span class="text-orange-600">${r.po_bawaan || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Keterangan: <span class="text-slate-800">${r.keterangan || '-'}</span></div>
+                </div>`;
+        });
+        if(tbody) tbody.innerHTML = h;
+    } catch (e) { if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal Memuat: ${e.message}</div>`; }
+}
+
+// REVISI: Format Pop-up Tabel Hold
+async function bukaModalHold() {
+    const mHold = document.getElementById('modal-hold-langsir'); if(mHold) mHold.classList.remove('hidden');
+    const tbody = document.getElementById('tbody-hold-modal');
+    if(tbody) tbody.innerHTML = '<div class="p-8 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat Data Hold...</div>';
+    lucide.createIcons();
+
+    try {
+        const { data, error } = await db.from('hold_stbj').select('*').order('created_at', {ascending: false}).limit(100);
+        if(error) throw error;
+        if(!data || data.length === 0) {
+            if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Tabel Hold Kosong.</div>';
+            return;
+        }
+
+        let h = '';
+        data.forEach((r, i) => {
+            let tgl = '-';
+            if (r.created_at) {
+                const dt = new Date(r.created_at);
+                const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+                tgl = `${dt.getDate()} ${months[dt.getMonth()]}, ${String(dt.getHours()).padStart(2,'0')}.${String(dt.getMinutes()).padStart(2,'0')}`;
+            }
+
+            h += `
+                <div class="row-modal-hold bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1 mb-3">
+                    <div class="flex justify-between items-center mb-1 border-b border-slate-100 pb-2">
+                        <span class="font-black text-slate-500 text-xs">#${i+1} - ${tgl}</span>
+                        <span class="bg-amber-100 text-amber-800 font-bold px-2 py-1 rounded text-[10px] border border-amber-200">HOLD</span>
+                    </div>
+                    <div class="font-mono font-black text-slate-900 text-[13px] break-all">${r.qrcode}</div>
+                    <div class="text-[12px] font-bold text-slate-600 mt-1">Troli: <span class="text-slate-800">${r.troli || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Produksi: <span class="text-slate-800">${r.tgl_produksi || '-'} - ${r.mesin || '-'} - ${r.shift || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600 leading-snug">
+                        Item: <span class="text-blue-600">${r.jenis_item || '-'}</span> | <span class="text-slate-800">${r.nama_item || '-'}</span> | <span class="text-slate-800">${r.panjang || '-'}</span> | <span class="text-slate-800">${r.grade || '-'}</span> | <span class="text-slate-800">${r.dus || '-'}</span> | <span class="text-blue-600">${r.shading || '-'}</span>
+                    </div>
+                    <div class="text-[12px] font-bold text-slate-600">PO: <span class="text-orange-600">${r.po_bawaan || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-rose-600">Keterangan: <span class="text-rose-800">${r.keterangan || '-'}</span></div>
                 </div>`;
         });
         if(tbody) tbody.innerHTML = h;
