@@ -1,5 +1,3 @@
-// File: langsir_logic.js
-
 let masterData = { kamus: [], area: [] }; 
 let deleteStack = []; 
 
@@ -23,11 +21,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 200); 
 });
 
-// Menambahkan Card Item ke Inner Kotak 
 function addRow(area, code, isDuplicate = false) {
     const div = document.createElement('div'); 
     const rowClass = isDuplicate ? 'bg-red-50 hover:bg-red-100' : 'bg-white hover:bg-slate-50';
-    // Menghilangkan border bawah karena di bungkus kotak
     div.className = `row-item ${rowClass} border-b border-slate-300 p-2.5 relative transition w-full flex shrink-0`; 
     
     const td = typeof translateBarcode === 'function' ? translateBarcode(code) : {tglProduksi:'-', mesin:'-', shift:'-', jenisItem:'-', namaItem:'Unknown', panjang:'-', grade:'-', dus:'-', shading:'-', po:'-'}; 
@@ -183,6 +179,7 @@ function editKeteranganMassal() {
     toggleSemuaCentang(false);
 }
 
+// REVISI: Logika Verifikasi Baru (stok_global, hold_stbj, stok_qr)
 async function VerifikasiDanCek() {
     const rows = document.querySelectorAll('.row-item:not([style*="display: none"])');
     if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
@@ -193,16 +190,18 @@ async function VerifikasiDanCek() {
     const qrs = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     
     try {
-        const [resStbj, resStok] = await Promise.all([
-            db.from('hasil_stbj').select('qrcode, troli, keterangan').in('qrcode', qrs),
+        const [resGlobal, resHold, resStok] = await Promise.all([
+            db.from('stok_global').select('qrcode, troli, keterangan').in('qrcode', qrs),
+            db.from('hold_stbj').select('qrcode, troli, keterangan').in('qrcode', qrs),
             db.from('stok_qr').select('qrcode').in('qrcode', qrs)
         ]);
 
-        if(resStbj.error) throw resStbj.error;
+        if(resGlobal.error) throw resGlobal.error;
+        if(resHold.error) throw resHold.error;
         if(resStok.error) throw resStok.error;
 
-        const stbjMap = {};
-        resStbj.data.forEach(d => { stbjMap[d.qrcode] = d; });
+        const globalMap = {}; resGlobal.data.forEach(d => globalMap[d.qrcode] = d);
+        const holdMap = {}; resHold.data.forEach(d => holdMap[d.qrcode] = d);
         const stokList = resStok.data.map(d => d.qrcode);
         let hasError = false;
 
@@ -213,16 +212,23 @@ async function VerifikasiDanCek() {
             const troliCell = r.querySelector('.troli-cell');
             const ketCell = r.querySelector('.ket-cell');
             
-            if(stbjMap[qr]) {
-                stbjSpan.className = 'text-white font-bold bg-blue-600 border border-blue-800 px-3 py-1 text-[10px] stbj-val rounded-sm shadow-sm';
+            if(globalMap[qr]) {
+                stbjSpan.className = 'text-slate-900 font-bold bg-teal-100 border border-teal-300 px-3 py-1 text-[10px] stbj-val rounded-sm shadow-sm';
                 stbjSpan.setAttribute('data-status', 'valid');
-                stbjSpan.innerText = 'SDH STBJ';
-                troliCell.innerText = stbjMap[qr].troli || '-';
-                if(!ketCell.classList.contains('text-slate-800')) ketCell.innerText = stbjMap[qr].keterangan || '-';
-            } else {
-                stbjSpan.className = 'text-white font-bold bg-[#ff7315] border border-[#cc5b0f] px-3 py-1 text-[10px] stbj-val rounded-sm shadow-sm';
+                stbjSpan.innerText = 'SUDAH STBJ';
+                troliCell.innerText = globalMap[qr].troli || '-';
+                if(!ketCell.classList.contains('text-slate-800')) ketCell.innerText = globalMap[qr].keterangan || '-';
+            } else if (holdMap[qr]) {
+                stbjSpan.className = 'text-white font-bold bg-amber-500 border border-amber-600 px-3 py-1 text-[10px] stbj-val rounded-sm shadow-sm';
                 stbjSpan.setAttribute('data-status', 'invalid-stbj');
-                stbjSpan.innerText = 'BLM STBJ';
+                stbjSpan.innerText = 'HOLD';
+                troliCell.innerText = holdMap[qr].troli || '-';
+                if(!ketCell.classList.contains('text-slate-800')) ketCell.innerText = holdMap[qr].keterangan || '-';
+                hasError = true;
+            } else {
+                stbjSpan.className = 'text-white font-bold bg-orange-500 border border-orange-600 px-3 py-1 text-[10px] stbj-val rounded-sm shadow-sm';
+                stbjSpan.setAttribute('data-status', 'invalid-stbj');
+                stbjSpan.innerText = 'BELUM STBJ';
                 troliCell.innerText = '-'; ketCell.innerText = '-'; hasError = true;
             }
 
@@ -232,7 +238,7 @@ async function VerifikasiDanCek() {
             else if(stokList.includes(qr)) {
                 kodeSpan.className = 'text-white font-bold bg-red-600 border border-red-800 px-3 py-1 text-[10px] kode-val rounded-sm shadow-sm';
                 kodeSpan.setAttribute('data-status', 'invalid');
-                kodeSpan.innerText = 'DUPLIKAT ITEM';
+                kodeSpan.innerText = 'DUPLIKAT DATA';
                 r.classList.add('bg-red-50');
                 r.classList.remove('bg-white');
                 hasError = true;
@@ -355,4 +361,45 @@ function salinDataTabel() {
     navigator.clipboard.writeText(copyString).then(() => {
         alert("Berhasil menyalin!");
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
+}
+
+// REVISI: Modifikasi fungsi bukaModalSTBJ agar mengecek stok_global
+async function bukaModalSTBJ() {
+    const mStbj = document.getElementById('modal-stbj-langsir'); if(mStbj) mStbj.classList.remove('hidden');
+    const tbody = document.getElementById('tbody-stbj-modal');
+    if(tbody) tbody.innerHTML = '<div class="p-8 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat Data STBJ...</div>';
+    lucide.createIcons();
+
+    try {
+        const { data, error } = await db.from('stok_global').select('*').order('created_at', {ascending: false}).limit(100);
+        if(error) throw error;
+        if(!data || data.length === 0) {
+            if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Data STBJ Kosong.</div>';
+            return;
+        }
+
+        let h = '';
+        data.forEach((r, i) => {
+            const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+            let statusGudang = r.posisi || 'STBJ';
+            let colGudang = statusGudang === 'IN GUDANG' ? '<span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded text-[10px] border border-emerald-200">IN GUDANG</span>' 
+                : statusGudang === 'KELUAR' ? '<span class="bg-red-100 text-red-800 font-bold px-2 py-1 rounded text-[10px] border border-red-200">KELUAR</span>' 
+                : '<span class="bg-blue-100 text-blue-800 font-bold px-2 py-1 rounded text-[10px] border border-blue-200">STBJ</span>';
+            
+            h += `
+                <div class="row-modal-stbj bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                    <div class="flex justify-between items-center mb-1 border-b border-slate-100 pb-2">
+                        <span class="font-black text-slate-400 text-xs">#${i+1} - ${tgl}</span>
+                        ${colGudang}
+                    </div>
+                    <div class="font-mono font-black text-slate-900 text-[13px] break-all">${r.qrcode}</div>
+                    <div class="text-[13px] font-bold text-slate-600 grid grid-cols-2 gap-1 mt-1">
+                        <div>Troli: <span class="text-blue-600">${r.troli || '-'}</span></div>
+                        <div>PO: <span class="text-orange-600">${r.po_bawaan || '-'}</span></div>
+                        <div class="col-span-2">Item: <span class="text-slate-800">${r.nama_item || '-'} (${r.panjang || '-'})</span></div>
+                    </div>
+                </div>`;
+        });
+        if(tbody) tbody.innerHTML = h;
+    } catch (e) { if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal Memuat: ${e.message}</div>`; }
 }
