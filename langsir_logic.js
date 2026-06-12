@@ -22,7 +22,6 @@ window.toggleSidebarFilter = function() {
     document.getElementById('overlay-klik-luar').classList.toggle('hidden');
 };
 
-// REVISI 1: Memastikan fungsi tutup modal terdaftar di window object
 window.tutupModalSTBJ = function() {
     document.getElementById('modal-stbj-langsir').classList.add('hidden');
 };
@@ -70,7 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const area = document.getElementById('select-area').value;
             if(!area || !rawInput) return alert("Pilih Area Simpan dan isi QR Code terlebih dahulu!");
             
-            const activeRows = Array.from(document.querySelectorAll('.row-item')).filter(r => r.style.display !== 'none');
+            const activeRows = Array.from(document.querySelectorAll('.row-item:not(.deleted-row)'));
             const existingQRs = activeRows.map(r => r.querySelector('.qr-val').innerText);
             
             const codes = rawInput.split(/[\s;]+/).map(q => q.trim()).filter(q => q);
@@ -163,27 +162,19 @@ function addRow(area, code, isDuplicate = false) {
     lucide.createIcons(); 
 }
 
+// REVISI 1: Perbaikan Bug Filter (Menggunakan class deleted-row)
 function saringTabelLangsir() {
     const f = {
         stbj: document.getElementById('f-stbj').value.toLowerCase(),
         kode: document.getElementById('f-kode').value.toLowerCase(),
         troli: document.getElementById('f-troli').value.toLowerCase(),
         area: document.getElementById('f-area').value.toLowerCase(),
-        qr: document.getElementById('f-qr').value.toLowerCase(),
-        tgl: document.getElementById('f-tgl').value.toLowerCase(),
-        mesin: document.getElementById('f-mesin').value.toLowerCase(),
-        shift: document.getElementById('f-shift').value.toLowerCase(),
-        jenis: document.getElementById('f-jenis').value.toLowerCase(),
-        nama: document.getElementById('f-nama').value.toLowerCase(),
-        pjg: document.getElementById('f-pjg').value.toLowerCase(),
-        grade: document.getElementById('f-grade').value.toLowerCase(),
-        dus: document.getElementById('f-dus').value.toLowerCase(),
-        shading: document.getElementById('f-shading').value.toLowerCase(),
-        po: document.getElementById('f-po').value.toLowerCase(),
-        ket: document.getElementById('f-ket').value.toLowerCase()
+        qr: document.getElementById('f-qr').value.toLowerCase()
     };
 
     document.querySelectorAll('.row-item').forEach(row => {
+        if(row.classList.contains('deleted-row')) return; // Abaikan yang sudah dihapus
+        
         let show = true;
         for(let key in f) {
             if(f[key]) {
@@ -191,7 +182,14 @@ function saringTabelLangsir() {
                 if(cell && !cell.innerText.toLowerCase().includes(f[key])) { show = false; break; }
             }
         }
-        if (show) row.classList.remove('filtered-out'); else row.classList.add('filtered-out');
+        
+        if (show) {
+            row.classList.remove('filtered-out');
+            row.style.display = 'flex';
+        } else {
+            row.classList.add('filtered-out');
+            row.style.display = 'none';
+        }
     });
     updateTotalBaris();
 }
@@ -199,8 +197,8 @@ function saringTabelLangsir() {
 function deleteRow(btn) { 
     const div = btn.closest('.row-item'); 
     deleteStack.push(div); 
+    div.classList.add('deleted-row'); // Tandai sebagai dihapus
     div.style.display = 'none'; 
-    div.classList.add('filtered-out'); 
     updateRowNumbers(); 
     updateTotalBaris(); 
 }
@@ -208,14 +206,13 @@ function deleteRow(btn) {
 function undoDelete() { 
     if(deleteStack.length === 0) return alert("Belum ada data yang dihapus."); 
     const div = deleteStack.pop(); 
-    div.style.display = 'flex'; 
-    div.classList.remove('filtered-out'); 
+    div.classList.remove('deleted-row'); // Hapus tanda
+    saringTabelLangsir(); // Evaluasi ulang filter
     updateRowNumbers(); 
-    updateTotalBaris(); 
 }
 
 function updateRowNumbers() { 
-    const rows = document.querySelectorAll('#tbody-langsir .row-item:not([style*="display: none"])'); 
+    const rows = document.querySelectorAll('#tbody-langsir .row-item:not(.deleted-row):not(.filtered-out)'); 
     let count = 1; 
     rows.forEach(div => { 
         const noCell = div.querySelector('.no-cell');
@@ -224,27 +221,15 @@ function updateRowNumbers() {
 }
 
 function updateTotalBaris() {
-    const allRows = Array.from(document.querySelectorAll('#tbody-langsir .row-item'));
-    let totalFiltered = 0;
-
-    allRows.forEach(row => {
-        if(row.style.display === 'none' && !row.classList.contains('filtered-out')) return; 
-        if(!row.classList.contains('filtered-out')) { 
-            row.style.display = 'flex'; 
-            totalFiltered++;
-        } else { 
-            row.style.display = 'none'; 
-        }
-    });
-
+    const visibleRows = document.querySelectorAll('#tbody-langsir .row-item:not(.deleted-row):not(.filtered-out)').length;
     const lbl = document.getElementById('lbl-tampil-baris');
-    if(lbl) lbl.innerText = totalFiltered;
+    if(lbl) lbl.innerText = visibleRows;
 }
 
 function toggleSemuaCentang(checked) {
     document.querySelectorAll('.cb-row').forEach(cb => {
         const row = cb.closest('.row-item');
-        if (row && row.style.display !== 'none' && !row.classList.contains('filtered-out')) {
+        if (row && !row.classList.contains('deleted-row') && !row.classList.contains('filtered-out')) {
             cb.checked = checked;
             highlightRow(cb);
         }
@@ -281,7 +266,7 @@ function editKeteranganMassal() {
 }
 
 async function VerifikasiDanCek() {
-    const rows = document.querySelectorAll('.row-item:not([style*="display: none"])');
+    const rows = document.querySelectorAll('.row-item:not(.deleted-row):not(.filtered-out)');
     if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
     
     const btn = document.getElementById('btn-Verifikasi'); const ori = btn.innerHTML;
@@ -408,7 +393,7 @@ async function sinkronisasiUlangStokAktual() {
 async function saveToSupabase() {
     const btn = document.getElementById('btn-save'); const original = btn.innerHTML;
     
-    const activeRows = Array.from(document.querySelectorAll('.row-item')).filter(r => r.style.display !== 'none');
+    const activeRows = Array.from(document.querySelectorAll('.row-item:not(.deleted-row)'));
     if(activeRows.length === 0) return;
 
     let adaYgBelumDicek = false;
@@ -432,6 +417,7 @@ async function saveToSupabase() {
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
     
     let arrFisik = []; 
+    let arrHasilLangsir = []; // REVISI 3: Array untuk tabel hasil_langsir
 
     activeRows.forEach(r => {
         let area = r.querySelector('.area-cell').innerText; 
@@ -444,6 +430,7 @@ async function saveToSupabase() {
         let shading = r.querySelector('.col-shading').innerText; 
         let po = r.querySelector('.col-po').innerText; 
         let ket = r.querySelector('.ket-cell').innerText;
+        let troli = r.querySelector('.troli-cell').innerText;
         
         let tgl_produksi = r.querySelector('.col-tgl').innerText;
         let mesin = r.querySelector('.col-mesin').innerText;
@@ -468,15 +455,40 @@ async function saveToSupabase() {
             keterangan: ket,
             pic_input: user.username 
         });
+
+        // REVISI 3: Push ke array hasil_langsir
+        arrHasilLangsir.push({
+            qrcode: qr,
+            area: area,
+            troli: troli,
+            tgl_produksi: tgl_produksi,
+            mesin: mesin,
+            shift: shift,
+            jenis_item: jenis,
+            nama_item: nama,
+            panjang: pjg,
+            grade: grade,
+            dus: dus,
+            shading: shading,
+            po_bawaan: po,
+            keterangan: ket,
+            pic_input: user.username
+        });
     });
 
     try {
+        // 1. Insert ke stok_qr
         const { error: errInsert } = await db.from('stok_qr').insert(arrFisik);
         if (errInsert) throw errInsert;
 
+        // 2. Insert ke hasil_langsir
+        const { error: errLangsir } = await db.from('hasil_langsir').insert(arrHasilLangsir);
+        if (errLangsir) throw errLangsir;
+
+        // 3. Sinkronisasi stok_aktual
         await sinkronisasiUlangStokAktual();
 
-        alert(`BERHASIL!\n${arrFisik.length} kardus masuk ke Gudang.`);
+        alert(`BERHASIL!\n${arrFisik.length} kardus masuk ke Gudang & Riwayat Langsir.`);
         document.getElementById('tbody-langsir').innerHTML = ''; 
         updateRowNumbers();
         updateTotalBaris();
@@ -507,8 +519,23 @@ async function holdLangsir() {
         const ketKode = div.querySelector('.kode-val').innerText;
         const noteKet = div.querySelector('.ket-cell').innerText;
         
+        // Ambil data lengkap untuk hold_langsir
+        const tgl_produksi = div.querySelector('.col-tgl').innerText;
+        const mesin = div.querySelector('.col-mesin').innerText;
+        const shift = div.querySelector('.col-shift').innerText;
+        const jenis = div.querySelector('.col-jenis').innerText;
+        const nama = div.querySelector('.col-nama').innerText;
+        const pjg = div.querySelector('.col-pjg').innerText;
+        const grade = div.querySelector('.col-grade').innerText;
+        const dus = div.querySelector('.col-dus').innerText;
+        const shading = div.querySelector('.col-shading').innerText;
+        const po = div.querySelector('.col-po').innerText;
+
         payloadUpload.push({
             qrcode: qr, troli: troli, area: area,
+            tgl_produksi: tgl_produksi, mesin: mesin, shift: shift,
+            jenis_item: jenis, nama_item: nama, panjang: pjg, grade: grade,
+            dus: dus, shading: shading, po_bawaan: po,
             keterangan: `STBJ: ${ketStbj} | KODE: ${ketKode} | Ket User: ${noteKet}`,
             pic_input: user.username
         });
@@ -518,7 +545,12 @@ async function holdLangsir() {
         const { error } = await db.from('hold_langsir').insert(payloadUpload);
         if(error) throw error;
         
-        checkedBoxes.forEach(cb => { cb.closest('.row-item').remove(); });
+        checkedBoxes.forEach(cb => { 
+            const div = cb.closest('.row-item');
+            deleteStack.push(div); 
+            div.classList.add('deleted-row');
+            div.style.display = 'none'; 
+        });
         updateRowNumbers(); 
         updateTotalBaris();
         document.querySelector('#cb-all').checked = false;
@@ -544,7 +576,6 @@ function salinDataTabel() {
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
 }
 
-// REVISI 2: Logika Pop-up STBJ (Hanya tampilkan yang belum masuk gudang)
 async function bukaModalSTBJ() {
     const mStbj = document.getElementById('modal-stbj-langsir'); if(mStbj) mStbj.classList.remove('hidden');
     const tbody = document.getElementById('tbody-stbj-modal');
@@ -552,7 +583,6 @@ async function bukaModalSTBJ() {
     lucide.createIcons();
 
     try {
-        // Ambil data dari stok_global
         const { data: globalData, error: errGlobal } = await db.from('stok_global').select('*').order('created_at', {ascending: false}).limit(200);
         if(errGlobal) throw errGlobal;
         
@@ -561,14 +591,11 @@ async function bukaModalSTBJ() {
             return;
         }
 
-        // Ambil qrcode yang sudah ada di stok_qr
         const qrs = globalData.map(d => d.qrcode);
         const { data: qrData, error: errQr } = await db.from('stok_qr').select('qrcode').in('qrcode', qrs);
         if(errQr) throw errQr;
 
         const qrSet = new Set(qrData.map(d => d.qrcode));
-
-        // Filter: Hanya tampilkan yang ADA di stok_global TAPI TIDAK ADA di stok_qr
         const filteredData = globalData.filter(d => !qrSet.has(d.qrcode));
 
         if(filteredData.length === 0) {
@@ -605,11 +632,9 @@ async function bukaModalSTBJ() {
     } catch (e) { if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal Memuat: ${e.message}</div>`; }
 }
 
-// REVISI 3: Fungsi Load Data Hold dengan Tab
 async function bukaModalHold(tabelTarget = 'hold_stbj') {
     const mHold = document.getElementById('modal-hold-langsir'); if(mHold) mHold.classList.remove('hidden');
     
-    // Update Tab UI
     const tabStbj = document.getElementById('tab-hold-stbj');
     const tabLangsir = document.getElementById('tab-hold-langsir');
     
@@ -642,7 +667,6 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
                 tgl = `${dt.getDate()} ${months[dt.getMonth()]}, ${String(dt.getHours()).padStart(2,'0')}.${String(dt.getMinutes()).padStart(2,'0')}`;
             }
 
-            // Penyesuaian karena hold_langsir mungkin tidak punya semua kolom seperti hold_stbj
             let namaItem = r.nama_item || '-';
             let pjg = r.panjang || '-';
             let grade = r.grade || '-';
@@ -654,7 +678,6 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
             let mesin = r.mesin || '-';
             let shift = r.shift || '-';
 
-            // Jika tabel hold_langsir, coba translate barcode jika data kosong
             if(tabelTarget === 'hold_langsir' && namaItem === '-') {
                 let td = typeof translateBarcode === 'function' ? translateBarcode(r.qrcode) : {};
                 namaItem = td.namaItem || '-'; pjg = td.panjang || '-'; grade = td.grade || '-';
