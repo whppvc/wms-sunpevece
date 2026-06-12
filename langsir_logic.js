@@ -1,7 +1,7 @@
 let masterData = { kamus: [], area: [] }; 
 let deleteStack = []; 
 
-// REVISI: Fungsi Global untuk Modal & Dropdown
+// Fungsi Global untuk Modal & Dropdown
 window.toggleMenuUtama = function(e) {
     if(e) e.stopPropagation();
     const menu = document.getElementById('dropdown-menu');
@@ -61,7 +61,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const area = document.getElementById('select-area').value;
             if(!area || !rawInput) return alert("Pilih Area Simpan dan isi QR Code terlebih dahulu!");
             
-            // REVISI 1: Hanya cek duplikat pada baris yang masih aktif (tidak dihapus)
             const activeRows = Array.from(document.querySelectorAll('.row-item')).filter(r => r.style.display !== 'none');
             const existingQRs = activeRows.map(r => r.querySelector('.qr-val').innerText);
             
@@ -77,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateTotalBaris();
             
             document.getElementById('input-qrcode').value = '';
-            tutupModalAdd(); 
+            if(typeof tutupModalAdd === 'function') tutupModalAdd(); 
             
             const scrollContainer = document.getElementById('scroll-container');
             if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
@@ -88,7 +87,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const { data: mDataArea } = await db.from('master_area').select('*').order('id', { ascending: true });
             if(mDataArea) {
-                // REVISI 2: Menangani nama kolom yang mungkin berbeda (nama_area atau area)
                 masterData.area = [...new Set(mDataArea.map(r => (r.nama_area || r.area || '').trim()).filter(Boolean))]; 
                 const selArea = document.getElementById('select-area');
                 if(selArea) { 
@@ -427,12 +425,10 @@ async function saveToSupabase() {
         let po = r.querySelector('.col-po').innerText; 
         let ket = r.querySelector('.ket-cell').innerText;
         
-        // REVISI 3: Menambahkan semua kolom ke payload stok_qr
         let tgl_produksi = r.querySelector('.col-tgl').innerText;
         let mesin = r.querySelector('.col-mesin').innerText;
         let shift = r.querySelector('.col-shift').innerText;
         
-        // REVISI 4: Format id_sku sesuai permintaan
         let id_sku = `${area}_${nama}_${pjg}_${grade}_${dus}_${shading}_${po}_${ket}`;
         
         arrFisik.push({ 
@@ -444,7 +440,7 @@ async function saveToSupabase() {
             shift: shift,
             jenis_item: jenis,
             nama_item: nama,
-            panjang: pjg, // REVISI: Kolom pjg diubah menjadi panjang
+            panjang: pjg, 
             grade: grade,
             dus: dus,
             shading: shading,
