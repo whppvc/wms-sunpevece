@@ -461,7 +461,7 @@ function safeJSONParse(data, fallback = null) {
     try { return JSON.parse(data); } catch (e) { return fallback; }
 }
 
-// REVISI 5: Perbaikan Cancel Langsir (Menggunakan r.panjang)
+// REVISI 1 & 5: Perbaikan Cancel Langsir (Menggunakan r.panjang)
 async function cancelLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked'); if(checkedBoxes.length === 0) return alert("Pilih minimal 1 baris!");
     if(!confirm(`Batal Langsir untuk ${checkedBoxes.length} kardus ini?`)) return;
@@ -472,6 +472,7 @@ async function cancelLangsir() {
     checkedBoxes.forEach(cb => {
         const qr = cb.value; const r = logLangsirRaw.find(x => x.qrcode === qr);
         if(r) {
+            // REVISI 1: Menggunakan key 'panjang' bukan 'pjg'
             let keyAkt = `${r.nama_item}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.area}_${r.po_bawaan}_-`;
             if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: r.jenis_item, nama_item: r.nama_item, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, area: r.area, po_aktual: r.po_bawaan, ket: '-', qty: 0 };
             mapAktual[keyAkt].qty++;
@@ -558,6 +559,55 @@ async function eksekusiGantiArea() {
     }
 }
 
+// REVISI 2: Fungsi Sinkronisasi Stok Aktual (Ditambahkan kembali)
+async function sinkronisasiUlangStokAktual() {
+    try {
+        const { data: fisikQr, error: errQr } = await db.from('stok_qr').select('*');
+        if(errQr) throw errQr;
+        
+        let mapAgg = {};
+        (fisikQr || []).forEach(r => {
+            let p = r.id_sku ? r.id_sku.split('_') : [];
+            let t = typeof translateBarcode === 'function' ? translateBarcode(r.qrcode) : {};
+            
+            let area = p[0] || r.area || '-';
+            let nama = p[1] || r.nama_item || t.nama || '-'; 
+            let pjg = p[2] || r.panjang || t.pjg || '-';
+            let grade = p[3] || r.grade || t.grade || '-';
+            let dus = p[4] || r.dus || t.dus || '-';
+            let shading = p[5] || r.shading || t.shading || '-';
+            let po = p[6] || r.po_bawaan || t.po || '-';
+            let ket = p.length >= 8 ? p.slice(7).join('_') : (r.keterangan || '-');
+
+            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
+            if(!mapAgg[key]) {
+                mapAgg[key] = { 
+                    nama_item: nama, 
+                    panjang: pjg, 
+                    grade: grade, 
+                    dus: dus, 
+                    shading: shading, 
+                    area: area, 
+                    po_aktual: po, 
+                    keterangan: ket, 
+                    qty: 0 
+                };
+            }
+            mapAgg[key].qty++;
+        });
+
+        let dataAktualBaru = Object.values(mapAgg);
+        
+        await db.from('stok_aktual').delete().neq('qty', -99999); 
+
+        for(let i = 0; i < dataAktualBaru.length; i += 500) {
+            await db.from('stok_aktual').insert(dataAktualBaru.slice(i, i + 500));
+        }
+    } catch(e) {
+        console.error("Gagal sinkronisasi stok_aktual otomatis:", e.message);
+    }
+}
+
 function salinDataTabel() {
     const cek = document.querySelectorAll('.cb-row:checked');
     if(cek.length === 0) return alert("Pilih data yang ingin disalin dengan mencentang kotak di kiri data!");
@@ -574,66 +624,26 @@ function salinDataTabel() {
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
 }
 
-// REVISI 1: Format Pop-up STBJ (Sama dengan langsir)
 window.bukaModalSTBJ = async function() {
     const mStbj = document.getElementById('modal-stbj-langsir'); if(mStbj) mStbj.classList.remove('hidden');
     const tbody = document.getElementById('tbody-stbj-modal');
-    if(tbody) tbody.innerHTML = '<div class="p-8 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat Data STBJ...</div>';
-    lucide.createIcons();
-
+    if(tbody) tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center font-bold text-slate-500">Memuat...</td></tr>';
     try {
-        const { data: globalData, error: errGlobal } = await db.from('stok_global').select('*').order('created_at', {ascending: false}).limit(200);
-        if(errGlobal) throw errGlobal;
-        
-        if(!globalData || globalData.length === 0) {
-            if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Data STBJ Kosong.</div>';
-            return;
-        }
-
-        const qrs = globalData.map(d => d.qrcode);
-        const { data: qrData, error: errQr } = await db.from('stok_qr').select('qrcode').in('qrcode', qrs);
-        if(errQr) throw errQr;
-
-        const qrSet = new Set(qrData.map(d => d.qrcode));
-        const filteredData = globalData.filter(d => !qrSet.has(d.qrcode));
-
-        if(filteredData.length === 0) {
-            if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Semua data STBJ sudah masuk gudang.</div>';
-            return;
-        }
-
+        const { data } = await db.from('stok_global').select('*').order('created_at', {ascending: false}).limit(100);
+        if(!data || data.length === 0) { if(tbody) tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center font-bold text-slate-400">Kosong.</td></tr>'; return; }
         let h = '';
-        filteredData.forEach((r, i) => {
-            let tgl = '-';
-            if (r.created_at) {
-                const dt = new Date(r.created_at);
-                const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
-                tgl = `${dt.getDate()} ${months[dt.getMonth()]}, ${String(dt.getHours()).padStart(2,'0')}.${String(dt.getMinutes()).padStart(2,'0')}`;
-            }
-
-            h += `
-                <div class="row-modal-stbj bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1 mb-3">
-                    <div class="flex justify-between items-center mb-1 border-b border-slate-100 pb-2">
-                        <span class="font-black text-slate-500 text-xs">#${i+1} - ${tgl}</span>
-                        <span class="bg-blue-100 text-blue-800 font-bold px-2 py-1 rounded text-[10px] border border-blue-200">STBJ</span>
-                    </div>
-                    <div class="font-mono font-black text-slate-900 text-[13px] break-all">${r.qrcode}</div>
-                    <div class="text-[12px] font-bold text-slate-600 mt-1">Troli: <span class="text-slate-800">${r.troli || '-'}</span></div>
-                    <div class="text-[12px] font-bold text-slate-600">Produksi: <span class="text-slate-800">${r.tgl_produksi || '-'} - ${r.mesin || '-'} - ${r.shift || '-'}</span></div>
-                    <div class="text-[12px] font-bold text-slate-600 leading-snug">
-                        Item: <span class="text-blue-600">${r.jenis_item || '-'}</span> | <span class="text-slate-800">${r.nama_item || '-'}</span> | <span class="text-slate-800">${r.panjang || '-'}</span> | <span class="text-slate-800">${r.grade || '-'}</span> | <span class="text-slate-800">${r.dus || '-'}</span> | <span class="text-blue-600">${r.shading || '-'}</span>
-                    </div>
-                    <div class="text-[12px] font-bold text-slate-600">PO: <span class="text-orange-600">${r.po_bawaan || '-'}</span></div>
-                    <div class="text-[12px] font-bold text-slate-600">Keterangan: <span class="text-slate-800">${r.keterangan || '-'}</span></div>
-                </div>`;
+        data.forEach((r, i) => {
+            const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+            h += `<tr class="border-b border-slate-100 text-row text-center text-xs hover:bg-slate-50">
+                <td class="p-3">${i+1}</td><td class="p-3">${tgl}</td><td class="p-3">${r.troli || '-'}</td><td class="p-3 font-mono font-bold">${r.qrcode}</td>
+                <td class="p-3 text-left font-bold text-blue-600">${r.nama_item}</td><td class="p-3">${r.panjang}</td><td class="p-3 font-black text-cyan-600">${r.po_bawaan}</td><td class="p-3">${r.posisi || 'STBJ'}</td>
+            </tr>`;
         });
         if(tbody) tbody.innerHTML = h;
-    } catch (e) { if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal Memuat: ${e.message}</div>`; }
-};
+    } catch (e) { if(tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center text-red-500">Gagal</td></tr>'; }
+}
 
 window.saringTabelModalSTBJ = function() {
     const q = document.getElementById('f-stbj-modal').value.toLowerCase();
-    document.querySelectorAll('.row-modal-stbj').forEach(row => {
-        row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
-    });
-};
+    document.querySelectorAll('#tbody-stbj-modal tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none'; });
+}
