@@ -79,6 +79,9 @@
                         <i data-lucide="copy" class="w-4 h-4 text-slate-600"></i> Salin
                     </button>
                     
+                    <button onclick="toggleSidebarFilter()" class="ml-auto flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium transition shadow-sm">
+                        <i data-lucide="filter" class="w-4 h-4"></i> Filter
+                    </button>
                 </div>
             </div>
         </div>
@@ -164,7 +167,7 @@
         </div>
     </div>
 
-    <!-- MODAL STBJ GUDANG -->
+    <!-- MODAL STBJ GUDANG (REVISI: Menggunakan DIV Container) -->
     <div id="modal-stbj-langsir" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/40 z-[70] px-4 backdrop-blur-sm">
         <div class="bg-white shadow-2xl w-full max-w-6xl border border-slate-200 flex flex-col max-h-[85vh] rounded-xl overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
@@ -177,16 +180,62 @@
                     <input type="text" id="f-stbj-modal" oninput="saringTabelModalSTBJ()" class="w-full pl-9 p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-purple-500 transition bg-white" placeholder="Cari QRCode, Troli, Item, PO, dll...">
                 </div>
             </div>
-            <div class="overflow-y-auto flex-1 hide-scrollbar p-0 bg-slate-100">
-                <div id="tbody-stbj-modal" class="flex flex-col gap-0 p-3"></div>
+            <div class="overflow-y-auto flex-1 hide-scrollbar p-3 bg-slate-100">
+                <div id="tbody-stbj-modal" class="flex flex-col gap-0"></div>
             </div>
         </div>
     </div>
 
-    <!-- OVERLAY -->
-    <div id="overlay-klik-luar" onclick="tutupSemuaPopup()" class="hidden fixed inset-0 z-[50] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
+    <!-- MODAL TABEL HOLD (REVISI: Menggunakan DIV Container) -->
+    <div id="modal-hold-langsir" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/40 z-[70] px-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg border border-slate-200 flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
+                <h3 class="font-semibold text-slate-800 flex items-center gap-2 text-base"><i data-lucide="archive" class="w-5 h-5 text-amber-600"></i> Tabel Hold</h3>
+                <button onclick="tutupModalHold()" class="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 transition rounded-md"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar px-2 pt-2">
+                <button onclick="bukaModalHold('hold_stbj')" id="tab-hold-stbj" class="pb-2 px-4 tab-active transition whitespace-nowrap text-xs uppercase font-bold">Hold STBJ</button>
+                <button onclick="bukaModalHold('hold_langsir')" id="tab-hold-langsir" class="pb-2 px-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap text-xs uppercase font-bold">Hold Langsir</button>
+            </div>
+            <div class="overflow-y-auto flex-1 custom-scroll p-3 bg-slate-100">
+                <div id="tbody-hold-modal" class="flex flex-col gap-0"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR FILTER LENGKAP -->
+    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
+            <h3 class="font-semibold text-slate-800 flex items-center gap-2 text-base"><i data-lucide="filter" class="w-5 h-5 text-blue-600"></i> Filter Data</h3>
+            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-md transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-4 flex flex-col gap-3 overflow-y-auto custom-scroll flex-1 bg-slate-50/50">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="col-span-2"><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="f-qr" oninput="saringTabelLangsir()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+                <div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Troli</label><input type="text" id="f-troli" oninput="saringTabelLangsir()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+                <div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Area</label><input type="text" id="f-area" oninput="saringTabelLangsir()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+                <div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="text" id="f-tgl" oninput="saringTabelLangsir()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+                <div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Mesin</label><input type="text" id="f-mesin" oninput="saringTabelLangsir()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+                <div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Shift</label><input type="text" id="f-shift" oninput="saringTabelLangsir()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+                <div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Jenis Item</label><input type="text" id="f-jenis" oninput="saringTabelLangsir()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+                <div class="col-span-2"><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Nama Item</label><input type="text" id="f-nama" oninput="saringTabelLangsir()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+                <div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Panjang</label><input type="text" id="f-pjg" oninput="saringTabelLangsir()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+                <div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Grade</label><input type="text" id="f-grade" oninput="saringTabelLangsir()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+                <div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Dus</label><input type="text" id="f-dus" oninput="saringTabelLangsir()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+                <div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Shading</label><input type="text" id="f-shading" oninput="saringTabelLangsir()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+                <div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">PO Bawaan</label><input type="text" id="f-po" oninput="saringTabelLangsir()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+                <div class="col-span-2"><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="f-ket" oninput="saringTabelLangsir()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+            </div>
+        </div>
+        <div class="p-4 border-t border-slate-100 bg-white">
+            <button onclick="resetFilter()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-md text-sm transition">Reset Filter</button>
+        </div>
+    </div>
+
+    <div id="overlay-klik-luar" onclick="tutupSemuaPopup()" class="hidden fixed inset-0 z-[40] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="global.js"></script>
     <script src="riwayat_langsir_logic.js"></script>
+    <script src="riwayat_langsir_modals.js"></script>
 </body>
 </html>
