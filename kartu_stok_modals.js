@@ -188,14 +188,23 @@ window.toggleCentangBreakdown = function(checked) {
     document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; window.highlightBdRow(cb); }); 
 };
 
+// REVISI: Modal Lihat PO
 window.bukaModalLihatPO = function(encodedPOs) {
     const poStr = decodeURIComponent(encodedPOs);
-    const poArr = poStr.split(',').map(p => p.trim()).filter(p => p);
+    const poArr = poStr.split('|').map(p => p.trim()).filter(p => p);
     const ul = document.getElementById('list-po-aktual');
-    if (poArr.length === 0 || (poArr.length === 1 && poArr[0] === 'NON-PO / KOSONG')) {
+    if (poArr.length === 0 || poArr[0] === 'KOSONG') {
         ul.innerHTML = '<li class="text-slate-400 italic font-medium p-3 bg-slate-50 rounded-md text-center border border-slate-200">Tidak ada PO Aktual tersimpan.</li>';
     } else {
-        ul.innerHTML = poArr.map(p => `<li class="p-3 bg-white border border-slate-200 shadow-sm text-slate-700 font-semibold rounded-md flex items-center gap-3"><i data-lucide="tag" class="w-4 h-4 text-orange-500"></i> ${p}</li>`).join('');
+        ul.innerHTML = poArr.map(p => {
+            let parts = p.split('(');
+            let namaPo = parts[0].trim();
+            let qtyPo = parts[1] ? parts[1].replace(')', '').trim() : '';
+            return `<li class="p-3 bg-white border border-slate-200 shadow-sm text-slate-700 font-semibold rounded-md flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 text-orange-500"></i> <span>${namaPo}</span></div> 
+                        <span class="bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-xs font-black">${qtyPo}</span>
+                    </li>`;
+        }).join('');
     }
     lucide.createIcons();
     document.getElementById('modal-lihat-po').classList.remove('hidden');
@@ -229,7 +238,6 @@ window.tutupModalKet = function() {
     }
 };
 
-// REVISI: Eksekusi Edit Keterangan via JSON RPC
 window.eksekusiEditKet = async function() {
     const newKet = document.getElementById('input-new-ket').value.trim();
     if(!newKet) return alert("Keterangan tidak boleh kosong!");
@@ -250,11 +258,9 @@ window.eksekusiEditKet = async function() {
                 });
             });
             
-            // Panggil RPC untuk update stok_qr, stok_global, hasil_langsir
             const { error } = await db.rpc('edit_keterangan_ks', { payload: payloadItems });
             if(error) throw error;
             
-            // Sinkronisasi stok_aktual
             await window.sinkronisasiUlangStokAktual();
         }
         
@@ -304,7 +310,6 @@ window.tutupModalPO = function() {
     }
 };
 
-// REVISI: Eksekusi Ganti PO via JSON RPC
 window.eksekusiGantiPO = async function() {
     const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
     if(!newPO) return alert("Silakan Pilih PO Baru dari daftar dropdown!");
@@ -328,7 +333,6 @@ window.eksekusiGantiPO = async function() {
             let jumlahBerubah = qrsUntukDiupdate.length; 
             qtySisaUntukDiupdate -= jumlahBerubah;
 
-            // Format id_sku: area_nama_panjang_grade_dus_shading_po_keterangan
             let newIdSku = `${row.area}_${row.nama}_${row.pjg}_${row.grade}_${row.dus}_${row.shading}_${newPO}_${row.ket}`;
             
             qrsUntukDiupdate.forEach(qr => {
@@ -336,14 +340,12 @@ window.eksekusiGantiPO = async function() {
             });
         }
         
-        // Panggil RPC untuk update stok_qr
         const { error } = await db.rpc('ganti_po_aktual_ks', { payload: payloadItems });
         if(error) throw error;
         
         window.tutupModalPO(); 
         if(window.sourcePOContext === 'breakdown') window.tutupModalBreakdown();
         
-        // Sinkronisasi stok_aktual
         await window.sinkronisasiUlangStokAktual();
         await window.muatDataStok();
     } catch (error) { 
