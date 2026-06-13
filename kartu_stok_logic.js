@@ -10,7 +10,7 @@ window.sourcePOContext = '';
 window.currentBreakdownData = [];
 window.sortState = {};
 window.masterData = { kamus: [] };
-window.poDistributionMap = {}; // REVISI: Variabel global untuk menyimpan distribusi PO
+window.poDistributionMap = {}; 
 
 window.currentPage = 1;
 window.rowsPerPage = 10; 
@@ -163,10 +163,8 @@ window.muatDataStok = async function() {
         window.stokAktualRaw = resAktual.data || [];
         window.stokLembaranRaw = resLembaran.data || [];
 
-        // REVISI: Membangun Peta Distribusi PO (Shadow PO) dari stok_aktual
         let aktualMap = {};
         window.stokAktualRaw.forEach(a => {
-            // Base spec tanpa Area dan Keterangan agar global per item
             let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}`;
             if(!aktualMap[key]) aktualMap[key] = {};
             if(!aktualMap[key][a.po_aktual]) aktualMap[key][a.po_aktual] = 0;
@@ -237,8 +235,8 @@ window.muatDataStok = async function() {
 
 window.setModeKS = function(m) {
     window.modeKS = m;
-    const activeClass = 'pb-3 tab-active transition whitespace-nowrap flex items-center gap-2 text-sm';
-    const inactiveClass = 'pb-3 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-sm';
+    const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     
     ['qr', 'global', 'area', 'lembaran'].forEach(tab => {
         const el = document.getElementById('tab-' + tab);
@@ -318,7 +316,6 @@ window.renderTabel = function() {
         tbody.innerHTML = window.dataKSQR.map((r) => {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
             
-            // REVISI: Logika Shadow PO untuk KS QR
             let baseSpec = `${r.nama}_${r.pjg}_${r.grade}_${r.dus}_${r.shading}`;
             let poDist = window.poDistributionMap[baseSpec];
             let poArr = [];
@@ -330,8 +327,9 @@ window.renderTabel = function() {
             let poString = poArr.length > 0 ? poArr.join(' | ') : 'KOSONG';
             let btnPO = `<button onclick="window.bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-orange-100 text-orange-700 border border-orange-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-orange-200 transition flex items-center justify-center gap-1 mx-auto w-full max-w-[100px]"><i data-lucide="eye" class="w-3 h-3"></i> Lihat PO</button>`;
 
+            // REVISI 4: Baris selang-seling
             return `
-                <tr class="hover:bg-slate-50 even:bg-slate-50/50 transition row-ks text-sm border-b border-slate-100">
+                <tr class="bg-white even:bg-slate-50 hover:bg-slate-100 transition row-ks text-sm border-b border-slate-200">
                     <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-emerald-700 col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-mono font-medium text-slate-800 col-qr text-left" data-search="${r.qrcode}">${r.qrcode}</td>
@@ -372,7 +370,7 @@ window.renderTabel = function() {
         tbody.innerHTML = window.dataKSArea.map((r) => {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             return `
-                <tr class="hover:bg-slate-50 even:bg-slate-50/50 transition row-ks text-sm border-b border-slate-100">
+                <tr class="bg-white even:bg-slate-50 hover:bg-slate-100 transition row-ks text-sm border-b border-slate-200">
                     <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-emerald-700 col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-medium text-blue-600 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
@@ -407,7 +405,7 @@ window.renderTabel = function() {
         if(window.dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = window.dataKSGlobal.map((r) => `
-            <tr class="hover:bg-slate-50 even:bg-slate-50/50 transition row-ks text-sm border-b border-slate-100">
+            <tr class="bg-white even:bg-slate-50 hover:bg-slate-100 transition row-ks text-sm border-b border-slate-200">
                 <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 text-center col-open"><button onclick="window.bukaBreakdown('${r.gKey}')" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition flex mx-auto items-center justify-center"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="px-4 py-3 font-medium text-blue-600 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
@@ -439,7 +437,7 @@ window.renderTabel = function() {
         if(window.stokLembaranRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="8" class="p-8 text-center font-medium text-slate-400">Tidak ada data stok lembaran.</td></tr>`; return; }
 
         tbody.innerHTML = window.stokLembaranRaw.map((r) => `
-            <tr class="hover:bg-slate-50 even:bg-slate-50/50 transition row-ks text-sm border-b border-slate-100">
+            <tr class="bg-white even:bg-slate-50 hover:bg-slate-100 transition row-ks text-sm border-b border-slate-200">
                 <td class="px-4 py-3 text-center col-cb"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-emerald-700 col-area" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
@@ -552,4 +550,32 @@ window.updateSelectedCount = function() {
     const count = document.querySelectorAll('.cb-main:checked').length;
     const lbl = document.getElementById('lbl-pilih-baris');
     if(lbl) lbl.innerText = count;
+};
+
+// REVISI 3: Fungsi Download XLSX menggunakan SheetJS
+window.downloadXLS = function() {
+    if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
+    
+    let ws_data = [];
+    const headers = Array.from(document.querySelectorAll('#thead-ks th'))
+        .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open'))
+        .map(th => th.innerText.trim().replace(/\n/g, ' '));
+    ws_data.push(headers);
+
+    document.querySelectorAll('.row-ks:not(.filtered-out)').forEach(tr => {
+        const rowData = [];
+        Array.from(tr.children).forEach(td => {
+            if(td.classList.contains('col-cb') || td.classList.contains('col-open')) return;
+            if(window.getComputedStyle(td).display !== 'none') { 
+                let rawText = td.getAttribute('data-search') ? td.getAttribute('data-search') : td.innerText.trim();
+                rowData.push(rawText); 
+            }
+        });
+        ws_data.push(rowData);
+    });
+
+    let ws = XLSX.utils.aoa_to_sheet(ws_data);
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Kartu_Stok");
+    XLSX.writeFile(wb, `KartuStok_${window.modeKS.toUpperCase()}.xlsx`);
 };
