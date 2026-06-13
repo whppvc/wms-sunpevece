@@ -17,10 +17,9 @@
         .table-container { position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* HEADER TABEL MODERN (Bersih, tanpa border vertikal) */
         .hdr-std { 
-            background-color: #1e293b !important; 
-            color: #ffffff !important; 
+            background-color: #f8fafc !important; 
+            color: #64748b !important; 
             text-align: center !important; 
             padding: 0.75rem 1rem !important; 
             font-size: 0.75rem !important; 
@@ -35,8 +34,6 @@
         }
         
         tr.selected-row { background-color: #f0f9ff !important; }
-        
-        /* REVISI 1: Desain Tab disamakan dengan Hasil STBJ */
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
     </style>
@@ -45,10 +42,8 @@
 
     <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
-        <!-- HEADER SECTION -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
             
-            <!-- REVISI 1: Tabs Navigasi -->
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
                 <button onclick="setModeKS('area')" id="tab-area" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="map" class="w-4 h-4"></i> KS Area</button>
                 <button onclick="setModeKS('global')" id="tab-global" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="globe-2" class="w-4 h-4"></i> KS Global</button>
@@ -56,7 +51,6 @@
                 <button onclick="setModeKS('lembaran')" id="tab-lembaran" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="file" class="w-4 h-4"></i> KS Lembaran</button>
             </div>
 
-            <!-- Toolbar (Tombol Two-Tone Tetap Dipertahankan) -->
             <div class="p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50/50 border-t border-slate-100">
                 <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar whitespace-nowrap w-full">
                     
@@ -91,7 +85,6 @@
             </div>
         </div>
 
-        <!-- MIDDLE SCROLL SECTION -->
         <div class="flex-1 min-h-0 bg-white overflow-hidden flex flex-col relative z-0">
             <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container" id="wrapper-table-ks">
                 <table class="w-full text-center border-collapse whitespace-nowrap" id="main-table">
@@ -101,12 +94,13 @@
             </div>
         </div>
 
-        <!-- REVISI 2: FOOTER PAGINATION (Desain disamakan dengan Hasil STBJ) -->
         <div class="shrink-0 w-full bg-slate-50 p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
-            <div class="flex items-center gap-2 flex-wrap justify-center">
-                <span class="bg-blue-100 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-black">0</span></span>
-                <span class="bg-amber-100 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-amber-900 font-black">0</span></span>
-                <span class="bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded text-emerald-800 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-black">0</span></span>
+            <div class="flex items-center gap-4 text-sm text-slate-500">
+                <span>Total: <strong class="text-slate-800" id="lbl-tampil-baris">0</strong> baris</span>
+                <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                <span>Qty: <strong class="text-slate-800" id="lbl-total-qty">0</strong> dus</span>
+                <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                <span>Dipilih: <strong class="text-blue-600" id="lbl-pilih-baris">0</strong></span>
             </div>
             
             <div class="flex items-center gap-3">
@@ -152,11 +146,11 @@
         </div>
     </div>
 
-    <!-- MODAL LIHAT PO -->
+    <!-- MODAL LIHAT PO (REVISI DESAIN) -->
     <div id="modal-lihat-po" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/40 z-[100] px-4 backdrop-blur-sm">
         <div class="bg-white shadow-2xl w-full max-w-sm border border-slate-200 rounded-xl overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
-                <h3 class="font-semibold text-slate-800 flex items-center gap-2 text-base"><i data-lucide="tags" class="w-5 h-5 text-orange-600"></i> Detail PO Aktual</h3>
+                <h3 class="font-semibold text-slate-800 flex items-center gap-2 text-base"><i data-lucide="tags" class="w-5 h-5 text-orange-600"></i> Alokasi PO Aktual</h3>
                 <button onclick="tutupSemuaPopups()" class="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-md transition"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             <div class="p-5 max-h-[60vh] overflow-y-auto bg-slate-50/50 custom-scroll">
