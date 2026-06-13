@@ -19,8 +19,8 @@
         
         /* HEADER TABEL MODERN (Bersih, tanpa border vertikal) */
         .hdr-std { 
-            background-color: #f8fafc !important; 
-            color: #64748b !important; 
+            background-color: #1e293b !important; 
+            color: #ffffff !important; 
             text-align: center !important; 
             padding: 0.75rem 1rem !important; 
             font-size: 0.75rem !important; 
@@ -35,8 +35,10 @@
         }
         
         tr.selected-row { background-color: #f0f9ff !important; }
-        .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
-        .tab-inactive { color: #64748b; font-weight: 500; border-bottom: 2px solid transparent; }
+        
+        /* REVISI 1: Desain Tab disamakan dengan Hasil STBJ */
+        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
+        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
     </style>
 </head>
 <body class="font-sans text-slate-800">
@@ -46,12 +48,12 @@
         <!-- HEADER SECTION -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
             
-            <!-- Tabs (Desain disamakan dengan Hasil STBJ) -->
-            <div class="flex px-6 pt-2 gap-6 overflow-x-auto hide-scrollbar">
-                <button onclick="setModeKS('area')" id="tab-area" class="pb-3 tab-active transition whitespace-nowrap flex items-center gap-2 text-sm"><i data-lucide="map" class="w-4 h-4"></i> KS Area</button>
-                <button onclick="setModeKS('global')" id="tab-global" class="pb-3 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-sm"><i data-lucide="globe-2" class="w-4 h-4"></i> KS Global</button>
-                <button onclick="setModeKS('qr')" id="tab-qr" class="pb-3 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-sm"><i data-lucide="qr-code" class="w-4 h-4"></i> KS QR (Detail)</button>
-                <button onclick="setModeKS('lembaran')" id="tab-lembaran" class="pb-3 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-sm"><i data-lucide="file" class="w-4 h-4"></i> KS Lembaran</button>
+            <!-- REVISI 1: Tabs Navigasi -->
+            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
+                <button onclick="setModeKS('area')" id="tab-area" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="map" class="w-4 h-4"></i> KS Area</button>
+                <button onclick="setModeKS('global')" id="tab-global" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="globe-2" class="w-4 h-4"></i> KS Global</button>
+                <button onclick="setModeKS('qr')" id="tab-qr" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="qr-code" class="w-4 h-4"></i> KS QR (Detail)</button>
+                <button onclick="setModeKS('lembaran')" id="tab-lembaran" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="file" class="w-4 h-4"></i> KS Lembaran</button>
             </div>
 
             <!-- Toolbar (Tombol Two-Tone Tetap Dipertahankan) -->
@@ -99,34 +101,32 @@
             </div>
         </div>
 
-        <!-- FOOTER PAGINATION (Desain disamakan dengan Hasil STBJ) -->
-        <div class="shrink-0 w-full bg-white p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 border-t border-slate-200">
-            <div class="flex items-center gap-4 text-sm text-slate-500">
-                <span>Total: <strong class="text-slate-800" id="lbl-tampil-baris">0</strong> baris</span>
-                <span class="w-1 h-1 rounded-full bg-slate-300"></span>
-                <span>Qty: <strong class="text-slate-800" id="lbl-total-qty">0</strong> dus</span>
-                <span class="w-1 h-1 rounded-full bg-slate-300"></span>
-                <span>Dipilih: <strong class="text-blue-600" id="lbl-pilih-baris">0</strong></span>
+        <!-- REVISI 2: FOOTER PAGINATION (Desain disamakan dengan Hasil STBJ) -->
+        <div class="shrink-0 w-full bg-slate-50 p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
+            <div class="flex items-center gap-2 flex-wrap justify-center">
+                <span class="bg-blue-100 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-black">0</span></span>
+                <span class="bg-amber-100 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-amber-900 font-black">0</span></span>
+                <span class="bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded text-emerald-800 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-black">0</span></span>
             </div>
             
             <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2">
-                    <span class="text-xs text-slate-500">Baris per halaman:</span>
-                    <select id="select-rows-per-page" onchange="changeRowsPerPage(this.value)" class="text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md outline-none cursor-pointer px-2 py-1 focus:border-blue-500 transition">
+                <div class="flex items-center gap-1 bg-white border border-slate-300 p-1 rounded shadow-sm">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase px-1">Baris:</span>
+                    <select id="select-rows-per-page" onchange="changeRowsPerPage(this.value)" class="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 rounded outline-none cursor-pointer px-1 py-0.5 transition">
                         <option value="10" selected>10</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
                         <option value="100">100</option>
                         <option value="ALL">Semua</option>
-                        <option value="CUSTOM">Custom...</option>
+                        <option value="CUSTOM">Isi Sendiri...</option>
                     </select>
-                    <input type="number" id="input-custom-rows" oninput="setCustomRowsPerPage(this.value)" class="hidden w-16 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md outline-none px-2 py-1 text-center focus:border-blue-500 transition" placeholder="Jml">
+                    <input type="number" id="input-custom-rows" oninput="setCustomRowsPerPage(this.value)" class="hidden w-16 text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 rounded outline-none px-1 py-0.5 text-center transition" placeholder="Jml...">
                 </div>
                 
-                <div class="flex items-center gap-1">
-                    <button onclick="prevPage()" class="p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-md transition disabled:opacity-50"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                    <span class="text-sm font-medium text-slate-700 px-2">Hal <span id="lbl-halaman">1</span> dari <span id="lbl-total-halaman">1</span></span>
-                    <button onclick="nextPage()" class="p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-md transition disabled:opacity-50"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                <div class="flex items-center gap-2 bg-white border border-slate-300 p-1 rounded shadow-sm">
+                    <button onclick="prevPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                    <span class="px-2 font-black text-xs text-slate-600 tracking-wide uppercase">Hal <span id="lbl-halaman" class="text-blue-600">1</span> / <span id="lbl-total-halaman">1</span></span>
+                    <button onclick="nextPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                 </div>
             </div>
         </div>
@@ -135,20 +135,20 @@
 
     <!-- MODAL FILTER EXCEL -->
     <div id="excel-filter-menu" class="hidden absolute bg-white shadow-xl border border-slate-200 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm">
-        <div class="p-3 border-b border-slate-100 flex justify-between items-center">
-            <span class="font-semibold text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
-            <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-slate-700 transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+        <div class="p-3 border-b border-slate-100 flex justify-between items-center rounded-t-lg">
+            <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
+            <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-rose-500 bg-white p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
         </div>
-        <div class="p-2 border-b border-slate-100">
+        <div class="p-2 border-b border-slate-200 bg-white">
             <div class="relative">
                 <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2"></i>
-                <input type="text" id="filter-search-input" oninput="searchFilterList(this.value)" class="w-full pl-8 p-1.5 text-sm border border-slate-200 rounded-md focus:border-blue-500 outline-none transition" placeholder="Cari...">
+                <input type="text" id="filter-search-input" oninput="searchFilterList(this.value)" class="w-full pl-8 p-1.5 text-xs font-bold border border-slate-300 bg-slate-50 rounded focus:border-blue-500 focus:bg-white outline-none transition" placeholder="Cari Spesifik...">
             </div>
         </div>
-        <div class="p-2 max-h-48 overflow-y-auto flex flex-col gap-1 text-sm custom-scroll" id="filter-values-list"></div>
-        <div class="p-2 border-t border-slate-100 flex justify-between gap-2 bg-slate-50 rounded-b-lg">
-            <button onclick="clearFilterForCurrentCol()" class="w-1/2 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition">Reset</button>
-            <button onclick="applyFilterForCurrentCol()" class="w-1/2 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition">Terapkan</button>
+        <div class="p-2 max-h-48 overflow-y-auto flex flex-col gap-1 text-xs bg-white" id="filter-values-list"></div>
+        <div class="p-2 border-t border-slate-200 bg-slate-50 flex justify-between gap-2 rounded-b-lg">
+            <button onclick="clearFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100 transition shadow-sm">Reset</button>
+            <button onclick="applyFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-700 transition shadow-sm">Terapkan</button>
         </div>
     </div>
 
