@@ -46,7 +46,7 @@
         <!-- HEADER SECTION -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
             
-            <!-- Tabs -->
+            <!-- Tabs (Desain disamakan dengan Hasil STBJ) -->
             <div class="flex px-6 pt-2 gap-6 overflow-x-auto hide-scrollbar">
                 <button onclick="setModeKS('area')" id="tab-area" class="pb-3 tab-active transition whitespace-nowrap flex items-center gap-2 text-sm"><i data-lucide="map" class="w-4 h-4"></i> KS Area</button>
                 <button onclick="setModeKS('global')" id="tab-global" class="pb-3 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-sm"><i data-lucide="globe-2" class="w-4 h-4"></i> KS Global</button>
@@ -99,7 +99,7 @@
             </div>
         </div>
 
-        <!-- FOOTER PAGINATION -->
+        <!-- FOOTER PAGINATION (Desain disamakan dengan Hasil STBJ) -->
         <div class="shrink-0 w-full bg-white p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 border-t border-slate-200">
             <div class="flex items-center gap-4 text-sm text-slate-500">
                 <span>Total: <strong class="text-slate-800" id="lbl-tampil-baris">0</strong> baris</span>
@@ -118,7 +118,7 @@
                         <option value="50">50</option>
                         <option value="100">100</option>
                         <option value="ALL">Semua</option>
-                        <option value="CUSTOM">Isi Sendiri...</option>
+                        <option value="CUSTOM">Custom...</option>
                     </select>
                     <input type="number" id="input-custom-rows" oninput="setCustomRowsPerPage(this.value)" class="hidden w-16 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md outline-none px-2 py-1 text-center focus:border-blue-500 transition" placeholder="Jml">
                 </div>
