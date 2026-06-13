@@ -1,4 +1,4 @@
-window.modeKS = 'area'; // REVISI 3: Default view is KS Area
+window.modeKS = 'area'; 
 window.stokQRRaw = []; 
 window.stokAktualRaw = []; 
 window.stokLembaranRaw = [];
@@ -112,7 +112,7 @@ window.sinkronisasiUlangStokAktual = async function(tampilkanAlert = false) {
                 mapAgg[key] = { 
                     jenis_item: r.jenis_item || t.jenisItem,
                     nama_item: nama, 
-                    pjg: pjg, 
+                    panjang: pjg, 
                     grade: grade, 
                     dus: dus, 
                     shading: shading, 
@@ -149,7 +149,6 @@ window.muatDataStok = async function() {
     lucide.createIcons();
 
     try {
-        // REVISI 6: KS QR baca stok_qr, KS Area/Global baca stok_aktual
         const [resStok, resAktual, resLembaran] = await Promise.all([
             db.from('stok_qr').select('*'),
             db.from('stok_aktual').select('*'),
@@ -163,7 +162,6 @@ window.muatDataStok = async function() {
         window.stokAktualRaw = resAktual.data || [];
         window.stokLembaranRaw = resLembaran.data || [];
 
-        // Pemetaan QR Code ke data Aktual (agar fitur Edit Ket & Ganti PO tetap jalan)
         let qrMap = {};
         window.stokQRRaw.forEach(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
@@ -182,7 +180,6 @@ window.muatDataStok = async function() {
             qrMap[key].push(r.qrcode);
         });
 
-        // Data KS QR
         window.dataKSQR = window.stokQRRaw.map(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
             let t = window.translateBarcode(r.qrcode);
@@ -197,22 +194,23 @@ window.muatDataStok = async function() {
             };
         });
 
-        // Data KS Area (Dari stok_aktual)
+        // REVISI 3: Mapping 'panjang' ke 'pjg' dan 'jenis_item' ke 'jenis'
         window.dataKSArea = window.stokAktualRaw.map(a => {
-            let key = `${a.nama_item}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.po_aktual}_${a.keterangan}`;
+            let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.po_aktual}_${a.keterangan}`;
             return {
                 ...a,
+                pjg: a.panjang, 
+                jenis: a.jenis_item, 
                 qrcodes: qrMap[key] || [],
-                id_sku_base: `${a.area}_${a.nama_item}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.keterangan}`
+                id_sku_base: `${a.area}_${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.keterangan}`
             };
         });
 
-        // Data KS Global (Agregasi dari stok_aktual)
         let globalMap = {};
         window.dataKSArea.forEach(a => {
-            let gKey = `${a.jenis_item}_${a.nama_item}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.keterangan}`;
+            let gKey = `${a.jenis}_${a.nama_item}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.keterangan}`;
             if(!globalMap[gKey]) {
-                globalMap[gKey] = { gKey: gKey, jenis: a.jenis_item, nama: a.nama_item, pjg: a.pjg, grade: a.grade, dus: a.dus, shading: a.shading, po: a.po_aktual, ket: a.keterangan, qty: 0, areas: [] };
+                globalMap[gKey] = { gKey: gKey, jenis: a.jenis, nama: a.nama_item, pjg: a.pjg, grade: a.grade, dus: a.dus, shading: a.shading, po: a.po_aktual, ket: a.keterangan, qty: 0, areas: [] };
             }
             globalMap[gKey].qty += a.qty;
             globalMap[gKey].areas.push(a);
@@ -350,9 +348,9 @@ window.renderTabel = function() {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             return `
                 <tr class="hover:bg-slate-50 even:bg-slate-50/50 transition row-ks text-sm border-b border-slate-100">
-                    <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis_item}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-emerald-700 col-area" data-search="${r.area}">${r.area}</td>
-                    <td class="px-4 py-3 font-medium text-blue-600 col-jenis" data-search="${r.jenis_item}">${r.jenis_item}</td>
+                    <td class="px-4 py-3 font-medium text-blue-600 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                     <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 col-pjg" data-search="${r.pjg}">${r.pjg}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 col-grade" data-search="${r.grade}">${r.grade}</td>
