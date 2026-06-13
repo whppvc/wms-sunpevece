@@ -194,13 +194,14 @@ window.muatDataStok = async function() {
             };
         });
 
-        // REVISI 3: Mapping 'panjang' ke 'pjg' dan 'jenis_item' ke 'jenis'
+        // REVISI 3: Mapping 'panjang' ke 'pjg' dan 'jenis_item' ke 'jenis' dengan fallback
         window.dataKSArea = window.stokAktualRaw.map(a => {
             let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.po_aktual}_${a.keterangan}`;
             return {
                 ...a,
-                pjg: a.panjang, 
-                jenis: a.jenis_item, 
+                pjg: a.panjang || '-', 
+                jenis: a.jenis_item || '-', 
+                nama: a.nama_item || '-',
                 qrcodes: qrMap[key] || [],
                 id_sku_base: `${a.area}_${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.keterangan}`
             };
@@ -208,9 +209,9 @@ window.muatDataStok = async function() {
 
         let globalMap = {};
         window.dataKSArea.forEach(a => {
-            let gKey = `${a.jenis}_${a.nama_item}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.keterangan}`;
+            let gKey = `${a.jenis}_${a.nama}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.keterangan}`;
             if(!globalMap[gKey]) {
-                globalMap[gKey] = { gKey: gKey, jenis: a.jenis, nama: a.nama_item, pjg: a.pjg, grade: a.grade, dus: a.dus, shading: a.shading, po: a.po_aktual, ket: a.keterangan, qty: 0, areas: [] };
+                globalMap[gKey] = { gKey: gKey, jenis: a.jenis, nama: a.nama, pjg: a.pjg, grade: a.grade, dus: a.dus, shading: a.shading, po: a.po_aktual, ket: a.keterangan, qty: 0, areas: [] };
             }
             globalMap[gKey].qty += a.qty;
             globalMap[gKey].areas.push(a);
@@ -225,8 +226,8 @@ window.muatDataStok = async function() {
 
 window.setModeKS = function(m) {
     window.modeKS = m;
-    const activeClass = 'pb-3 tab-active transition whitespace-nowrap flex items-center gap-2 text-sm';
-    const inactiveClass = 'pb-3 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-sm';
+    const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     
     ['qr', 'global', 'area', 'lembaran'].forEach(tab => {
         const el = document.getElementById('tab-' + tab);
@@ -348,10 +349,10 @@ window.renderTabel = function() {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             return `
                 <tr class="hover:bg-slate-50 even:bg-slate-50/50 transition row-ks text-sm border-b border-slate-100">
-                    <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-emerald-700 col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-medium text-blue-600 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
+                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 col-pjg" data-search="${r.pjg}">${r.pjg}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 col-grade" data-search="${r.grade}">${r.grade}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 col-dus" data-search="${r.dus}">${r.dus}</td>
