@@ -461,45 +461,70 @@ function safeJSONParse(data, fallback = null) {
     try { return JSON.parse(data); } catch (e) { return fallback; }
 }
 
-// REVISI 1 & 5: Perbaikan Cancel Langsir (Menggunakan r.panjang)
+// REVISI 5: Perbaikan Cancel Langsir (Menggunakan r.panjang bukan r.pjg)
 async function cancelLangsir() {
-    const checkedBoxes = document.querySelectorAll('.cb-row:checked'); if(checkedBoxes.length === 0) return alert("Pilih minimal 1 baris!");
-    if(!confirm(`Batal Langsir untuk ${checkedBoxes.length} kardus ini?`)) return;
-    const btn = document.getElementById('btn-cancel-langsir'); const ori = btn.innerHTML;
+    const checkedBoxes = document.querySelectorAll('.cb-row:checked'); 
+    if(checkedBoxes.length === 0) return alert("Pilih minimal 1 baris!");
+    if(!confirm(`Batal Langsir untuk ${checkedBoxes.length} kardus ini?\nData akan dihapus dari gudang dan dipindah ke tabel Hold Langsir.`)) return;
+    
+    const btn = document.getElementById('btn-cancel-langsir'); 
+    const ori = btn.innerHTML;
     if(btn) { btn.innerHTML = 'Proses...'; btn.disabled = true; }
 
-    let arrFisik = []; let mapAktual = {}; let mapGlobal = {}; let payloadHold = [];
+    let arrFisik = []; 
+    let payloadHold = [];
+    
     checkedBoxes.forEach(cb => {
-        const qr = cb.value; const r = logLangsirRaw.find(x => x.qrcode === qr);
+        const qr = cb.value; 
+        const r = logLangsirRaw.find(x => x.qrcode === qr);
         if(r) {
-            // REVISI 1: Menggunakan key 'panjang' bukan 'pjg'
-            let keyAkt = `${r.nama_item}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.area}_${r.po_bawaan}_-`;
-            if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: r.jenis_item, nama_item: r.nama_item, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, area: r.area, po_aktual: r.po_bawaan, ket: '-', qty: 0 };
-            mapAktual[keyAkt].qty++;
-
-            let keyGlb = `${r.nama_item}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.po_bawaan}_-`;
-            if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: r.jenis_item, nama_item: r.nama_item, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, po_bawaan: r.po_bawaan, ket: '-', qty: 0 };
-            mapGlobal[keyGlb].qty++;
-
             arrFisik.push(qr);
             payloadHold.push({ 
-                qrcode: qr, troli: r.troli || '-', area: r.area || '-', 
-                tgl_produksi: r.tgl_produksi, mesin: r.mesin, shift: r.shift,
-                jenis_item: r.jenis_item, nama_item: r.nama_item, panjang: r.panjang, grade: r.grade,
-                dus: r.dus, shading: r.shading, po_bawaan: r.po_bawaan,
-                keterangan: 'Cancel Langsir', pic_input: currentUser.username 
+                qrcode: qr, 
+                troli: r.troli || '-', 
+                area: r.area || '-', 
+                tgl_produksi: r.tgl_produksi, 
+                mesin: r.mesin, 
+                shift: r.shift,
+                jenis_item: r.jenis_item, 
+                nama_item: r.nama_item, 
+                panjang: r.panjang, 
+                grade: r.grade,
+                dus: r.dus, 
+                shading: r.shading, 
+                po_bawaan: r.po_bawaan,
+                keterangan: 'Cancel Langsir', 
+                pic_input: currentUser.username 
             });
         }
     });
 
     try {
-        const payloadData = { qrs: arrFisik, aktuals: Object.values(mapAktual), globals: Object.values(mapGlobal) };
-        const { error: rpcErr } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData }); if(rpcErr) throw rpcErr;
+        // 1. Hapus dari stok_qr
+        const { error: errStok } = await db.from('stok_qr').delete().in('qrcode', arrFisik);
+        if(errStok) throw errStok;
+
+        // 2. Hapus dari hasil_langsir
+        const { error: errHasil } = await db.from('hasil_langsir').delete().in('qrcode', arrFisik);
+        if(errHasil) throw errHasil;
+
+        // 3. Masukkan ke hold_langsir
+        const { error: errHold } = await db.from('hold_langsir').insert(payloadHold);
+        if(errHold) throw errHold;
+
+        // 4. Sinkronisasi ulang stok_aktual
+        await sinkronisasiUlangStokAktual(); 
         
-        await db.from('hasil_langsir').delete().in('qrcode', arrFisik);
-        await db.from('hold_langsir').insert(payloadHold);
-        await sinkronisasiUlangStokAktual(); await ambilSemuaData();
-    } catch (e) { alert("Gagal: " + e.message); } finally { if(btn) { btn.innerHTML = ori; btn.disabled = false; } lucide.createIcons(); }
+        // 5. Refresh Data
+        await ambilSemuaData();
+        
+        alert(`SUKSES!\n${arrFisik.length} item berhasil di-cancel dan dipindah ke Hold Langsir.`);
+    } catch (e) { 
+        alert("Gagal Cancel Langsir: " + e.message); 
+    } finally { 
+        if(btn) { btn.innerHTML = ori; btn.disabled = false; } 
+        lucide.createIcons(); 
+    }
 }
 
 async function hapusBarisHold() {
@@ -559,7 +584,7 @@ async function eksekusiGantiArea() {
     }
 }
 
-// REVISI 2: Fungsi Sinkronisasi Stok Aktual (Ditambahkan kembali)
+// REVISI 2: Fungsi Sinkronisasi Stok Aktual
 async function sinkronisasiUlangStokAktual() {
     try {
         const { data: fisikQr, error: errQr } = await db.from('stok_qr').select('*');
