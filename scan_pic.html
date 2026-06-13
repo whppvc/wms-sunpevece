@@ -8,204 +8,229 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        .table-container { scrollbar-width: thin; position: relative; }
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; touch-action: pan-y; background-color: #f8fafc; }
+        .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .table-container { position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 11px; font-weight: 900; white-space: nowrap; position: sticky; top: 0; z-index: 20; background-clip: padding-box;}
+        
+        /* Header Tabel Modern */
+        .hdr-std { 
+            background-color: #f8fafc !important; 
+            color: #64748b !important; 
+            text-align: center !important; 
+            padding: 0.75rem 1rem !important; 
+            font-size: 0.75rem !important; 
+            font-weight: 600 !important; 
+            text-transform: uppercase !important; 
+            letter-spacing: 0.05em !important; 
+            white-space: nowrap !important; 
+            position: sticky !important; 
+            top: 0 !important; 
+            z-index: 20 !important; 
+            border-bottom: 1px solid #e2e8f0 !important; 
+        }
     </style>
 </head>
-<body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-28">
+<body class="font-sans text-slate-800">
 
-    <div class="w-full px-2 sm:px-4 pt-4 relative">
+    <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
-        <div class="flex border-b border-slate-200 mb-3 bg-white rounded-xl shadow-sm overflow-x-auto hide-scrollbar" id="tab-container">
-            <button onclick="setModeKonversi('out')" id="tab-out" class="px-6 py-3.5 border-b-4 border-rose-600 text-rose-600 bg-rose-50 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> KONVERSI OUT</button>
-            <button onclick="setModeKonversi('in')" id="tab-in" class="px-6 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs uppercase hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2"><i data-lucide="log-in" class="w-4 h-4"></i> KONVERSI IN</button>
-            <button onclick="setModeKonversi('pindah')" id="tab-pindah" class="px-6 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs uppercase hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2"><i data-lucide="arrow-left-right" class="w-4 h-4"></i> PINDAH AREA</button>
-            <button class="px-6 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs uppercase hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 opacity-50 cursor-not-allowed"><i data-lucide="alert-triangle" class="w-4 h-4"></i> CASE KHUSUS</button>
-        </div>
+        <!-- HEADER SECTION -->
+        <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)]">
+            
+            <!-- Tabs Navigasi -->
+            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar" id="tab-container">
+                <button onclick="setModeKonversi('out')" id="tab-out" class="px-6 py-3.5 border-b-4 border-rose-600 text-rose-600 bg-rose-50 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> KONVERSI OUT</button>
+                <button onclick="setModeKonversi('in')" id="tab-in" class="px-6 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs uppercase hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2"><i data-lucide="log-in" class="w-4 h-4"></i> KONVERSI IN</button>
+                <button onclick="setModeKonversi('pindah')" id="tab-pindah" class="px-6 py-3.5 border-b-4 border-transparent text-slate-500 font-bold text-xs uppercase hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2"><i data-lucide="arrow-left-right" class="w-4 h-4"></i> PINDAH AREA</button>
+            </div>
 
-        <div id="panel-out" class="bg-white rounded-xl shadow-sm border border-slate-200 mb-3 overflow-hidden border-l-4 border-l-rose-600">
-            <button onclick="toggleAktifitas('out')" class="w-full bg-rose-50 p-3 flex justify-between items-center border-b border-slate-200 hover:bg-rose-100 transition active:bg-rose-200">
-                <span class="font-black text-[11px] uppercase tracking-wide text-rose-700 flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> INPUT AKTIFITAS OUT</span>
-                <i data-lucide="chevron-up" id="icon-toggle-out" class="w-4 h-4 text-slate-500 transition-transform duration-300"></i>
-            </button>
-            <div id="body-aktifitas-out" class="p-3 sm:p-4 transition-all duration-300 origin-top">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Pilih Aktifitas</label>
-                        <select id="select-aktifitas" class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-rose-500 text-slate-800 cursor-pointer bg-slate-50 text-xs">
-                            <option value="">-- Pilih Jenis Aktifitas --</option>
-                            <option value="Ganti nama item">Ganti nama item</option>
-                            <option value="Potong panjang">Potong panjang</option>
-                            <option value="Ganti grade">Ganti grade</option>
-                            <option value="Ganti dus">Ganti dus</option>
-                            <option value="Ganti shading">Ganti shading</option>
-                            <option value="Ganti label/qrcode">Ganti label/qrcode</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Keterangan / Alasan</label>
-                        <input type="text" id="input-keterangan-out" class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-rose-500 text-slate-800 bg-slate-50 text-xs" placeholder="Ketik keterangan (Wajib)...">
+            <!-- PANEL OUT -->
+            <div id="panel-out" class="bg-white border-b border-slate-200 flex flex-col border-l-4 border-l-rose-600">
+                <button onclick="toggleAktifitas('out')" class="w-full bg-rose-50/50 p-3 flex justify-between items-center border-b border-slate-100 hover:bg-rose-50 transition">
+                    <span class="font-black text-[11px] uppercase tracking-wide text-rose-700 flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> INPUT AKTIFITAS OUT</span>
+                    <i data-lucide="chevron-up" id="icon-toggle-out" class="w-4 h-4 text-slate-500 transition-transform duration-300"></i>
+                </button>
+                <div id="body-aktifitas-out" class="p-3 sm:p-4 transition-all duration-300 origin-top">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Pilih Aktifitas</label>
+                            <select id="select-aktifitas" class="w-full h-11 px-3 border border-slate-300 rounded-md font-semibold outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-slate-800 cursor-pointer bg-slate-50 text-sm transition">
+                                <option value="">-- Pilih Jenis Aktifitas --</option>
+                                <option value="Ganti nama item">Ganti nama item</option>
+                                <option value="Potong panjang">Potong panjang</option>
+                                <option value="Ganti grade">Ganti grade</option>
+                                <option value="Ganti dus">Ganti dus</option>
+                                <option value="Ganti shading">Ganti shading</option>
+                                <option value="Ganti label/qrcode">Ganti label/qrcode</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Keterangan / Alasan</label>
+                            <input type="text" id="input-keterangan-out" class="w-full h-11 px-3 border border-slate-300 rounded-md font-semibold outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-slate-800 bg-slate-50 text-sm transition" placeholder="Ketik keterangan (Wajib)...">
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div id="panel-in" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 mb-3 overflow-hidden border-l-4 border-l-emerald-600">
-            <button onclick="toggleAktifitas('in')" class="w-full bg-emerald-50 p-3 flex justify-between items-center border-b border-slate-200 hover:bg-emerald-100 transition active:bg-emerald-200">
-                <span class="font-black text-[11px] uppercase tracking-wide text-emerald-700 flex items-center gap-2"><i data-lucide="log-in" class="w-4 h-4"></i> INPUT AKTIFITAS IN</span>
-                <i data-lucide="chevron-up" id="icon-toggle-in" class="w-4 h-4 text-slate-500 transition-transform duration-300"></i>
-            </button>
-            <div id="body-aktifitas-in" class="p-3 sm:p-4 transition-all duration-300 origin-top">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 border-b border-slate-100 pb-3">
-                    <div>
-                        <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">KODE KONVERSI</label>
-                        <div class="flex gap-2">
-                            <input type="text" id="in-kode-konversi" readonly class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold bg-slate-100 text-slate-600 text-xs" placeholder="-- Pilih dari riwayat out --">
-                            <input type="hidden" id="in-aktifitas-ref">
-                            <button type="button" onclick="bukaModalRiwayatKonversi()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-black shadow-sm text-xs transition active:scale-95 whitespace-nowrap">PILIH KODE</button>
+            <!-- PANEL IN -->
+            <div id="panel-in" class="hidden bg-white border-b border-slate-200 flex flex-col border-l-4 border-l-emerald-600">
+                <button onclick="toggleAktifitas('in')" class="w-full bg-emerald-50/50 p-3 flex justify-between items-center border-b border-slate-100 hover:bg-emerald-50 transition">
+                    <span class="font-black text-[11px] uppercase tracking-wide text-emerald-700 flex items-center gap-2"><i data-lucide="log-in" class="w-4 h-4"></i> INPUT AKTIFITAS IN</span>
+                    <i data-lucide="chevron-up" id="icon-toggle-in" class="w-4 h-4 text-slate-500 transition-transform duration-300"></i>
+                </button>
+                <div id="body-aktifitas-in" class="p-3 sm:p-4 transition-all duration-300 origin-top">
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end mb-3 border-b border-slate-100 pb-3">
+                        <div class="md:col-span-8">
+                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">KODE KONVERSI</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="in-kode-konversi" readonly class="w-full h-11 px-3 border border-slate-200 rounded-md font-bold bg-slate-100 text-slate-500 text-sm" placeholder="-- Pilih dari riwayat out --">
+                                <input type="hidden" id="in-aktifitas-ref">
+                                <button type="button" onclick="bukaModalRiwayatKonversi()" class="h-11 bg-emerald-600 hover:bg-emerald-700 text-white px-4 rounded-md font-bold shadow-sm text-xs transition active:scale-95 whitespace-nowrap">PILIH KODE</button>
+                            </div>
+                        </div>
+                        <div class="md:col-span-4">
+                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">AREA TUJUAN</label>
+                            <select id="in-area" class="w-full h-11 px-3 border border-slate-300 rounded-md font-semibold outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-slate-800 cursor-pointer bg-slate-50 text-sm transition">
+                                <option value="">-- Memuat Area... --</option>
+                            </select>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">PILIH AREA TUJUAN GUDANG</label>
-                        <select id="in-area" class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-emerald-500 text-slate-800 cursor-pointer bg-slate-50 text-xs">
-                            <option value="">-- Memuat Area... --</option>
-                        </select>
+                        <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">KETERANGAN / ALASAN (OPSIONAL)</label>
+                        <input type="text" id="input-keterangan-in" class="w-full h-11 px-3 border border-slate-300 rounded-md font-semibold outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-slate-800 bg-slate-50 text-sm transition" placeholder="Ketik keterangan IN...">
                     </div>
                 </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">KETERANGAN / ALASAN (OPSIONAL)</label>
-                    <input type="text" id="input-keterangan-in" class="w-full p-2 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-emerald-500 text-slate-800 bg-slate-50 text-xs" placeholder="Ketik keterangan IN...">
+            </div>
+
+            <!-- PANEL PINDAH -->
+            <div id="panel-pindah" class="hidden bg-white border-b border-slate-200 flex flex-col border-l-4 border-l-indigo-600 p-3 sm:p-4">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end mb-2">
+                    <div class="md:col-span-3">
+                        <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">AREA SIMPAN BARU</label>
+                        <select id="pindah-area-target" class="w-full h-11 px-3 border border-slate-300 rounded-md font-semibold outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-800 cursor-pointer bg-slate-50 text-sm transition">
+                            <option value="">-- Pilih Area --</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-9">
+                        <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">SCAN FISIK KARDUS</label>
+                        <form id="form-scan-pindah" class="flex gap-2">
+                            <div class="relative flex-1">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
+                                <input type="text" id="input-qrcode-pindah" class="w-full h-11 pl-10 pr-3 border border-slate-300 rounded-md outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
+                            </div>
+                            <button type="submit" class="h-11 bg-indigo-600 hover:bg-indigo-700 text-white px-6 rounded-md font-bold shadow-sm transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase"><i data-lucide="plus" class="w-4 h-4"></i> ADD</button>
+                        </form>
+                    </div>
                 </div>
+            </div>
+
+            <!-- BOX SCAN UMUM (Untuk OUT & IN) -->
+            <div id="box-scan-umum" class="bg-white p-3 sm:p-4 border-b border-slate-200">
+                <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">SCAN FISIK KARDUS</label>
+                <form id="form-scan-umum" class="flex gap-2">
+                    <div class="relative flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
+                        <input type="text" id="input-qrcode-umum" class="w-full h-11 pl-10 pr-3 border border-slate-300 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
+                    </div>
+                    <button type="submit" class="h-11 bg-slate-800 hover:bg-slate-900 text-white px-6 rounded-md font-bold shadow-sm transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase"><i data-lucide="plus" class="w-4 h-4"></i> ADD</button>
+                </form>
+            </div>
+
+            <!-- TOOLBAR BAWAH -->
+            <div class="flex gap-2 overflow-x-auto p-2 bg-slate-50 hide-scrollbar whitespace-nowrap scroll-smooth select-none">
+                <button onclick="verifikasiGudang()" id="btn-verifikasi-umum" class="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-sm font-medium transition shadow-sm active:scale-95">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i> Verifikasi Gudang
+                </button>
+                <div class="w-px h-6 bg-slate-300 mx-1 shrink-0"></div> 
+                <button onclick="toggleFilter()" class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-md text-sm font-medium transition shadow-sm active:scale-95">
+                    <i data-lucide="filter" class="w-4 h-4 text-blue-600"></i> Filter
+                </button>
+                <button onclick="bukaModalRiwayatPindah()" id="btn-riwayat-pindah" class="hidden flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-md text-sm font-medium transition shadow-sm active:scale-95">
+                    <i data-lucide="history" class="w-4 h-4 text-indigo-600"></i> Riwayat Pindah
+                </button>
             </div>
         </div>
 
-        <div id="panel-pindah" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 mb-3 p-3 sm:p-4 border-l-4 border-l-indigo-600">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 mb-4">
-                <div class="md:col-span-3">
-                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">PILIH AREA SIMPAN</label>
-                    <select id="pindah-area-target" class="w-full p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-indigo-500 text-slate-800 cursor-pointer bg-slate-50 text-sm">
-                        <option value="">-- Pilih Area --</option>
-                    </select>
-                </div>
-                <div class="md:col-span-9">
-                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">SCAN FISIK KARDUS</label>
-                    <form id="form-scan-pindah" class="flex gap-2">
-                        <div class="relative flex-1">
-                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
-                            <input type="text" id="input-qrcode-pindah" class="w-full !pl-12 p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-indigo-500 font-black text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
-                        </div>
-                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-black shadow-sm transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-indigo-800 text-xs sm:text-sm uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> ADD</button>
-                    </form>
-                </div>
-            </div>
-
-            <div class="flex gap-2 overflow-x-auto pt-1 pb-4 px-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none" style="-webkit-overflow-scrolling: touch;">
-                <button onclick="toggleFilter()" class="p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-blue-600 text-white border-b-2 border-blue-800 active:scale-95 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
-                <button onclick="verifikasiGudang()" class="p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-rose-600 hover:bg-rose-700 text-white border-b-2 border-rose-800 active:scale-95 transition"><i data-lucide="shield-check" class="w-4 h-4"></i> Verifikasi Gudang</button>
-                <button onclick="bukaModalRiwayatPindah()" class="p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-indigo-600 hover:bg-indigo-700 text-white border-b-2 border-indigo-800 active:scale-95 transition"><i data-lucide="history" class="w-4 h-4"></i> Lihat Tabel Pindah</button>
-            </div>
-            <div class="text-[9px] text-slate-400 text-center font-black uppercase tracking-wider -mt-2.5 mb-2 pointer-events-none flex items-center justify-center gap-1 animate-pulse">
-                <i data-lucide="arrow-left-right" class="w-3 h-3"></i> Geser menu tombol ke kanan-kiri
-            </div>
-        </div>
-
-        <div id="box-scan-umum" class="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-slate-200 mb-3">
-            <h3 class="font-black text-[11px] uppercase tracking-wide text-slate-700 mb-3 flex items-center gap-2 border-b border-slate-100 pb-2">
-                <i data-lucide="package-search" class="w-4 h-4 text-slate-600"></i> INPUT ITEM (SCAN FISIK)
-            </h3>
-            <form id="form-scan-umum" class="flex gap-2 mb-4">
-                <div class="relative flex-1">
-                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
-                    <input type="text" id="input-qrcode-umum" class="w-full !pl-12 p-2 sm:p-2.5 border-2 border-slate-200 rounded-lg outline-none font-black text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition focus:border-blue-600" placeholder="Arahkan scanner..." autocomplete="off">
-                </div>
-                <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-black shadow-sm transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-slate-950 text-xs uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> ADD</button>
-            </form>
-
-            <div class="flex gap-2 overflow-x-auto pt-1 pb-4 px-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none">
-                <button onclick="toggleFilter()" class="p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-blue-600 text-white border-b-2 border-blue-800 active:scale-95 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter</button>
-                <button onclick="verifikasiGudang()" id="btn-verifikasi-umum" class="p-2.5 px-4 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm uppercase bg-rose-600 hover:bg-rose-700 text-white border-b-2 border-rose-800 active:scale-95 transition"><i data-lucide="shield-check" class="w-4 h-4"></i> Verifikasi Gudang</button>
-            </div>
-            <div class="text-[9px] text-slate-400 text-center font-black uppercase tracking-wider -mt-2.5 mb-2 pointer-events-none flex items-center justify-center gap-1 animate-pulse">
-                <i data-lucide="arrow-left-right" class="w-3 h-3"></i> Geser menu tombol ke kanan-kiri
-            </div>
-        </div>
-
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
-            <div class="table-container overflow-x-auto w-full max-h-[50vh]">
-                <table class="w-full text-center border-collapse text-sm whitespace-nowrap">
-                    <thead class="sticky top-0 z-10 shadow-sm bg-slate-800">
+        <!-- MIDDLE SCROLL SECTION -->
+        <div class="flex-1 min-h-0 bg-white overflow-hidden flex flex-col relative z-0">
+            <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container">
+                <table class="w-full text-center border-collapse whitespace-nowrap">
+                    <thead class="sticky top-0 z-10">
                         <tr>
-                            <th class="hdr-std w-10"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-rose-400"></i></th>
+                            <th class="hdr-std w-10"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-slate-400"></i></th>
                             <th class="hdr-std w-12">No</th>
-                            <th class="hdr-std border-r border-slate-500">Status</th>
-                            <th class="hdr-std text-amber-300">Area</th>
-                            <th class="hdr-std border-r border-slate-500">Text QRCode</th>
+                            <th class="hdr-std">Status</th>
+                            <th class="hdr-std">Area</th>
+                            <th class="hdr-std">QRCode</th>
                             <th class="hdr-std">Tgl Produksi</th>
                             <th class="hdr-std">Mesin</th>
                             <th class="hdr-std">Shift</th>
-                            <th class="hdr-std text-blue-300">Jenis Item</th>
+                            <th class="hdr-std">Jenis Item</th>
                             <th class="hdr-std text-left pl-4">Nama Item</th>
                             <th class="hdr-std">Pjg</th>
                             <th class="hdr-std">Grade</th>
                             <th class="hdr-std">Dus</th>
-                            <th class="hdr-std border-r border-slate-500">Shading</th>
-                            <th class="hdr-std text-slate-400">PO Bawaan</th>
-                            <th class="hdr-std text-orange-400 border-l border-slate-500 bg-slate-900">PO Aktual (Stok)</th>
+                            <th class="hdr-std">Shading</th>
+                            <th class="hdr-std">PO Bawaan</th>
+                            <th class="hdr-std text-orange-600">PO Aktual (Stok)</th>
                         </tr>
                     </thead>
-                    <tbody id="tbody-pic" class="text-center text-slate-700">
-                        <tr><td colspan="16" class="p-10 text-slate-400 font-bold"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan.</td></tr>
+                    <tbody id="tbody-pic" class="text-slate-700">
+                        <tr><td colspan="16" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan.</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
-    </div>
 
-    <div class="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 p-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
-        <div class="w-full px-2 sm:px-4 flex justify-center md:justify-end">
-            <button onclick="bukaModalSimpan()" id="btn-save-awal" class="w-full md:w-auto px-8 py-2.5 sm:py-3 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-wide cursor-pointer transition active:scale-95 uppercase border-b-2 border-rose-800">
-                <i data-lucide="save" class="w-5 h-5"></i> <span id="text-save-awal">SIMPAN & EKSEKUSI</span>
+        <!-- FOOTER SECTION -->
+        <div class="shrink-0 w-full bg-slate-50 p-3 flex items-center justify-end z-20 border-t border-slate-200">
+            <button onclick="bukaModalSimpan()" id="btn-save-awal" class="w-full md:w-auto px-8 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-md shadow-sm flex items-center justify-center gap-2 text-sm transition active:scale-95 uppercase">
+                <i data-lucide="save" class="w-4 h-4"></i> <span id="text-save-awal">SIMPAN & EKSEKUSI</span>
             </button>
         </div>
+
     </div>
 
-    <div id="modal-po-target" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
-        <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
-            <h3 class="text-xl font-black mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="package-minus" class="text-rose-600"></i> Tujuan PO Konversi Out</h3>
-            <p class="text-[11px] font-semibold text-slate-500 mb-5 border-b border-slate-100 pb-3 leading-relaxed">Pilih PO Aktual target untuk mengeksekusi aktifitas konversi pemotongan stok ini.</p>
-            <div class="space-y-4 mb-6">
-                <div>
-                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Pilih PO Tujuan</label>
-                    <select id="out-po-target" class="w-full p-2.5 border-2 border-slate-200 rounded-lg outline-none focus:border-rose-500 font-bold text-slate-800 uppercase cursor-pointer bg-slate-50 text-sm"></select>
-                </div>
+    <!-- MODAL PO TARGET (OUT) -->
+    <div id="modal-po-target" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/40 z-[80] px-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md border border-slate-200">
+            <h3 class="text-base font-semibold mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="package-minus" class="text-rose-600 w-5 h-5"></i> Tujuan PO Konversi Out</h3>
+            <p class="text-xs text-slate-500 mb-5 border-b border-slate-100 pb-3">Pilih PO Aktual target untuk mengeksekusi aktifitas konversi pemotongan stok ini.</p>
+            <div class="mb-6">
+                <label class="block text-xs font-semibold text-slate-600 mb-2">Pilih PO Tujuan</label>
+                <select id="out-po-target" class="w-full p-2.5 border border-slate-300 rounded-md outline-none focus:border-rose-500 font-medium text-slate-800 uppercase cursor-pointer bg-white text-sm transition"></select>
             </div>
-            <div class="flex gap-2">
-                <button type="button" onclick="tutupSemuaModal()" class="w-1/3 py-2.5 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition cursor-pointer text-xs uppercase">BATAL</button>
-                <button type="button" onclick="eksekusiSimpanFinalOut()" id="btn-eksekusi-final" class="w-2/3 py-2.5 bg-rose-600 font-black rounded-xl shadow-sm text-white hover:bg-rose-700 transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase border-b-2 border-rose-800"><i data-lucide="check-circle" class="w-4 h-4"></i> LANJUTKAN SIMPAN</button>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="tutupSemuaModal()" class="px-4 py-2 bg-white border border-slate-300 text-slate-600 font-medium rounded-md hover:bg-slate-50 transition text-sm">Batal</button>
+                <button type="button" onclick="eksekusiSimpanFinalOut()" id="btn-eksekusi-final" class="px-4 py-2 bg-rose-600 text-white font-medium rounded-md shadow-sm hover:bg-rose-700 transition flex items-center gap-2 text-sm"><i data-lucide="check-circle" class="w-4 h-4"></i> Lanjutkan Simpan</button>
             </div>
         </div>
     </div>
 
-    <div id="modal-riwayat-konversi" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-6xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
-             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                 <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="history" class="w-4 h-4 text-emerald-600"></i> Pilih Referensi Konversi OUT</h3>
-                 <button onclick="tutupSemuaModal()" class="text-slate-400 hover:text-red-500 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+    <!-- MODAL RIWAYAT KONVERSI OUT (UNTUK IN) -->
+    <div id="modal-riwayat-konversi" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/40 z-[80] px-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
+                 <h3 class="font-semibold text-slate-800 flex items-center gap-2 text-base"><i data-lucide="history" class="w-5 h-5 text-emerald-600"></i> Pilih Referensi Konversi OUT</h3>
+                 <button onclick="tutupSemuaModal()" class="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-md transition"><i data-lucide="x" class="w-5 h-5"></i></button>
              </div>
-             <div class="overflow-y-auto flex-1 p-0 hide-scrollbar">
+             <div class="overflow-y-auto flex-1 p-0 hide-scrollbar bg-slate-50">
                  <table class="w-full text-center border-collapse text-sm whitespace-nowrap">
-                     <thead class="sticky top-0 bg-slate-800 shadow-sm z-10">
+                     <thead class="sticky top-0 bg-white shadow-sm z-10 border-b border-slate-200">
                          <tr>
-                             <th class="hdr-std w-16">PILIH</th>
-                             <th class="hdr-std">CEK DETAIL</th>
-                             <th class="hdr-std border-r border-slate-600">KODE KONVERSI</th>
-                             <th class="hdr-std">WAKTU</th>
-                             <th class="hdr-std border-r border-slate-600">AKTIFITAS ASAL</th>
-                             <th class="hdr-std text-left pl-4">DETAIL ITEM</th>
-                             <th class="hdr-std text-left pl-4 border-r border-slate-600">KETERANGAN</th>
-                             <th class="hdr-std text-emerald-300">TOTAL QTY</th>
-                             <th class="hdr-std">PIC</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">PILIH</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">DETAIL</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">KODE KONVERSI</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">WAKTU</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">AKTIFITAS ASAL</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase text-left">DETAIL ITEM</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase text-left">KETERANGAN</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">TOTAL QTY</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">PIC</th>
                          </tr>
                      </thead>
                      <tbody id="tbody-modal-konversi" class="text-slate-700"></tbody>
@@ -214,40 +239,42 @@
         </div>
     </div>
 
-    <div id="modal-detail-items" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/80 z-[100] px-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
-            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm">
-                    <i data-lucide="list" class="w-4 h-4 text-blue-600"></i> DETAIL ITEM: <span id="lbl-detail-kode" class="text-blue-700"></span>
+    <!-- MODAL DETAIL ITEMS -->
+    <div id="modal-detail-items" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[100] px-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
+                <h3 class="font-semibold text-slate-800 flex items-center gap-2 text-base">
+                    <i data-lucide="list" class="w-5 h-5 text-blue-600"></i> Detail Item: <span id="lbl-detail-kode" class="text-blue-600 font-bold"></span>
                 </h3>
-                <button onclick="document.getElementById('modal-detail-items').classList.add('hidden')" class="text-slate-400 hover:text-red-500 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="document.getElementById('modal-detail-items').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-md transition"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <div class="overflow-y-auto p-4 text-sm" id="detail-items-content"></div>
+            <div class="overflow-y-auto p-0 text-sm custom-scroll bg-slate-50" id="detail-items-content"></div>
         </div>
     </div>
 
-    <div id="modal-riwayat-pindah" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-7xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
-             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                 <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="history" class="w-4 h-4 text-indigo-600"></i> Riwayat Pindah Area</h3>
-                 <button onclick="document.getElementById('modal-riwayat-pindah').classList.add('hidden')" class="text-slate-400 hover:text-red-500 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+    <!-- MODAL RIWAYAT PINDAH -->
+    <div id="modal-riwayat-pindah" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/40 z-[80] px-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-7xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
+                 <h3 class="font-semibold text-slate-800 flex items-center gap-2 text-base"><i data-lucide="history" class="w-5 h-5 text-indigo-600"></i> Riwayat Pindah Area</h3>
+                 <button onclick="document.getElementById('modal-riwayat-pindah').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-md transition"><i data-lucide="x" class="w-5 h-5"></i></button>
              </div>
-             <div class="overflow-y-auto flex-1 p-0 hide-scrollbar">
+             <div class="overflow-y-auto flex-1 p-0 hide-scrollbar bg-slate-50">
                  <table class="w-full text-center border-collapse text-sm whitespace-nowrap">
-                     <thead class="sticky top-0 bg-slate-800 shadow-sm z-10">
+                     <thead class="sticky top-0 bg-white shadow-sm z-10 border-b border-slate-200">
                          <tr>
-                             <th class="hdr-std w-12">NO</th>
-                             <th class="hdr-std">WAKTU</th>
-                             <th class="hdr-std text-indigo-300 border-r border-slate-600">AREA AWAL ➜ AKHIR</th>
-                             <th class="hdr-std border-r border-slate-600">QRCODE</th>
-                             <th class="hdr-std text-left pl-4">NAMA ITEM</th>
-                             <th class="hdr-std">PJG</th>
-                             <th class="hdr-std">GRADE</th>
-                             <th class="hdr-std">DUS</th>
-                             <th class="hdr-std border-r border-slate-600">SHADING</th>
-                             <th class="hdr-std text-orange-400">PO</th>
-                             <th class="hdr-std text-left pl-4 border-r border-slate-600">KETERANGAN</th>
-                             <th class="hdr-std">PIC</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">NO</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">WAKTU</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">AREA AWAL ➔ AKHIR</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">QRCODE</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase text-left">NAMA ITEM</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">PJG</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">GRADE</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">DUS</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">SHADING</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">PO</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase text-left">KETERANGAN</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">PIC</th>
                          </tr>
                      </thead>
                      <tbody id="tbody-riwayat-pindah" class="text-slate-700"></tbody>
@@ -256,21 +283,23 @@
         </div>
     </div>
 
-    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
-        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Barcode</h3>
-            <button onclick="toggleFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition active:scale-95"><i data-lucide="x" class="w-4 h-4"></i></button>
+    <!-- SIDEBAR FILTER -->
+    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[90] flex flex-col">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
+            <h3 class="font-semibold text-slate-800 flex items-center gap-2 text-base"><i data-lucide="filter" class="w-5 h-5 text-blue-600"></i> Filter Barcode</h3>
+            <button onclick="toggleFilter()" class="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-md transition"><i data-lucide="x" class="w-5 h-5"></i></button>
         </div>
-        <div class="p-4 flex flex-col gap-4 overflow-y-auto">
-            <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label><input type="text" id="f-status" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-            <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><input type="text" id="f-nama" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-            <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Kode QR</label><input type="text" id="f-qr" oninput="saringTabel()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-            
-            <button onclick="resetFilter()" class="mt-4 py-3 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-xs uppercase transition border border-slate-300 shadow-sm active:scale-95">RESET FILTER</button>
+        <div class="p-4 flex flex-col gap-4 overflow-y-auto bg-slate-50/50 flex-1">
+            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Status</label><input type="text" id="f-status" oninput="saringTabel()" class="w-full p-2 text-sm border border-slate-200 rounded-md focus:border-blue-500 outline-none transition"></div>
+            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Nama Item</label><input type="text" id="f-nama" oninput="saringTabel()" class="w-full p-2 text-sm border border-slate-200 rounded-md focus:border-blue-500 outline-none transition"></div>
+            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Kode QR</label><input type="text" id="f-qr" oninput="saringTabel()" class="w-full p-2 text-sm border border-slate-200 rounded-md focus:border-blue-500 outline-none transition"></div>
+        </div>
+        <div class="p-4 border-t border-slate-100 bg-white">
+            <button onclick="resetFilter()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-md text-sm transition">Reset Filter</button>
         </div>
     </div>
     
-    <div id="overlay-klik-luar" onclick="toggleFilter()" class="hidden fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
+    <div id="overlay-klik-luar" onclick="toggleFilter()" class="hidden fixed inset-0 z-[80] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="global.js"></script>
     <script src="scan_pic_logic.js"></script>
