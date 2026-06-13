@@ -4,11 +4,27 @@ let kamusData = []; let areaData = [];
 let sortState = {}; 
 
 let currentPage = 1;
-let rowsPerPage = 10; // REVISI: Default 10
+let rowsPerPage = 10; // REVISI 4: Default 10 baris
 let activeFilters = {}; 
 let currentFilterCol = ''; 
 
 const currentUser = safeJSONParse(localStorage.getItem('user_session'), {username: 'Admin', role: 'admin'});
+
+// REVISI 6: Daftarkan semua fungsi tutup modal ke window agar bisa dipanggil dari HTML
+window.tutupModalArea = function() { document.getElementById('modal-ganti-area').classList.add('hidden'); };
+window.tutupModalSTBJ = function() { document.getElementById('modal-stbj-langsir').classList.add('hidden'); };
+window.tutupModalHold = function() { document.getElementById('modal-hold-langsir').classList.add('hidden'); };
+window.toggleSidebarFilter = function() {
+    document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
+    document.getElementById('overlay-klik-luar').classList.toggle('hidden');
+};
+window.tutupSemuaPopup = function() {
+    document.getElementById('sidebar-filter').classList.add('translate-x-full');
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
+    window.tutupModalArea();
+    window.tutupModalSTBJ();
+    window.tutupModalHold();
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'riwayat_langsir', title: 'RIWAYAT LANGSIR', url: 'riwayat_langsir.html' });
@@ -86,7 +102,6 @@ async function ambilSemuaData() {
     const tbody = document.getElementById('tbody-riwayat');
     if(tbody) tbody.innerHTML = `<tr><td colspan="19" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-medium text-slate-500 text-sm">Menarik Data...</p></td></tr>`;
     try {
-        // REVISI: Menarik data dari hasil_langsir
         const [resRiwayat, resHold] = await Promise.all([
             db.from('hasil_langsir').select('*').order('created_at', {ascending: false}).limit(1000),
             db.from('hold_langsir').select('*').order('created_at', {ascending: false})
@@ -375,7 +390,6 @@ function renderTabelRiwayat() {
                 const dt = new Date(r.created_at);
                 const tgl = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
 
-                // REVISI: Row stripping even:bg-slate-50
                 h += `
                     <tr class="hover:bg-slate-100 even:bg-slate-50 transition r-row text-sm border-b border-slate-100">
                         <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -454,6 +468,7 @@ function safeJSONParse(data, fallback = null) {
     try { return JSON.parse(data); } catch (e) { return fallback; }
 }
 
+// REVISI 5: Perbaikan Cancel Langsir (Menggunakan r.panjang)
 async function cancelLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked'); if(checkedBoxes.length === 0) return alert("Pilih minimal 1 baris!");
     if(!confirm(`Batal Langsir untuk ${checkedBoxes.length} kardus ini?`)) return;
@@ -465,11 +480,11 @@ async function cancelLangsir() {
         const qr = cb.value; const r = logLangsirRaw.find(x => x.qrcode === qr);
         if(r) {
             let keyAkt = `${r.nama_item}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.area}_${r.po_bawaan}_-`;
-            if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: r.jenis_item, nama_item: r.nama_item, pjg: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, area: r.area, po_aktual: r.po_bawaan, ket: '-', qty: 0 };
+            if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: r.jenis_item, nama_item: r.nama_item, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, area: r.area, po_aktual: r.po_bawaan, ket: '-', qty: 0 };
             mapAktual[keyAkt].qty++;
 
             let keyGlb = `${r.nama_item}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.po_bawaan}_-`;
-            if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: r.jenis_item, nama_item: r.nama_item, pjg: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, po_bawaan: r.po_bawaan, ket: '-', qty: 0 };
+            if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: r.jenis_item, nama_item: r.nama_item, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, po_bawaan: r.po_bawaan, ket: '-', qty: 0 };
             mapGlobal[keyGlb].qty++;
 
             arrFisik.push(qr);
@@ -487,9 +502,7 @@ async function cancelLangsir() {
         const payloadData = { qrs: arrFisik, aktuals: Object.values(mapAktual), globals: Object.values(mapGlobal) };
         const { error: rpcErr } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData }); if(rpcErr) throw rpcErr;
         
-        // Hapus juga dari hasil_langsir
         await db.from('hasil_langsir').delete().in('qrcode', arrFisik);
-        
         await db.from('hold_langsir').insert(payloadHold);
         await sinkronisasiUlangStokAktual(); await ambilSemuaData();
     } catch (e) { alert("Gagal: " + e.message); } finally { if(btn) { btn.innerHTML = ori; btn.disabled = false; } lucide.createIcons(); }
@@ -510,45 +523,46 @@ function bukaModalGantiArea() {
     document.getElementById('teks-info-area').innerText = `Anda akan memindahkan ${cek.length} kardus ke lokasi baru.`;
     document.getElementById('select-new-area').value = ''; document.getElementById('modal-ganti-area').classList.remove('hidden');
 }
-function tutupModalArea() { document.getElementById('modal-ganti-area').classList.add('hidden'); }
 
+// REVISI 2: Eksekusi Ganti Area menggunakan JSON RPC
 async function eksekusiGantiArea() {
     const newArea = document.getElementById('select-new-area').value; if(!newArea) return alert("Pilih Area Tujuan!");
     const btn = document.getElementById('btn-eks-area'); let original = btn ? btn.innerHTML : 'Simpan';
     if(btn) { btn.innerHTML = 'Menyimpan...'; btn.disabled = true; }
 
-    const checkedBoxes = document.querySelectorAll('.cb-row:checked'); const qrsToUpdate = Array.from(checkedBoxes).map(cb => cb.value);
-    let updatesStokQr = [];
-    let updatesHasilLangsir = [];
+    const checkedBoxes = document.querySelectorAll('.cb-row:checked'); 
+    const qrsToUpdate = Array.from(checkedBoxes).map(cb => cb.value);
+    
+    let payloadItems = [];
     
     for(let qr of qrsToUpdate) {
         let dbRow = logLangsirRaw.find(r => r.qrcode === qr);
         if(dbRow) {
-            let newObj = { ...dbRow }; 
+            let id_sku_baru = `${newArea}_${dbRow.nama_item}_${dbRow.panjang}_${dbRow.grade}_${dbRow.dus}_${dbRow.shading}_${dbRow.po_bawaan}_${dbRow.keterangan}`;
             
-            // Re-generate id_sku
-            let id_sku = `${newArea}_${newObj.nama_item}_${newObj.panjang}_${newObj.grade}_${newObj.dus}_${newObj.shading}_${newObj.po_bawaan}_${newObj.keterangan}`;
-            
-            updatesStokQr.push({
+            payloadItems.push({
                 qrcode: qr,
-                area: newArea,
-                id_sku: id_sku,
-                pic_input: currentUser.username || 'Unknown'
-            });
-            
-            updatesHasilLangsir.push({
-                qrcode: qr,
-                area: newArea,
-                pic_input: currentUser.username || 'Unknown'
+                area_baru: newArea,
+                id_sku_baru: id_sku_baru,
+                pic: currentUser.username || 'Unknown'
             });
         }
     }
+    
     try {
-        const { error: err1 } = await db.from('stok_qr').upsert(updatesStokQr, { onConflict: 'qrcode' }); if(err1) throw err1;
-        const { error: err2 } = await db.from('hasil_langsir').upsert(updatesHasilLangsir, { onConflict: 'qrcode' }); if(err2) throw err2;
+        // Memanggil fungsi RPC di Supabase
+        const { error } = await db.rpc('ganti_area_langsir', { payload: payloadItems }); 
+        if(error) throw error;
         
-        tutupModalArea(); await sinkronisasiUlangStokAktual(); await ambilSemuaData();
-    } catch (error) { alert("Gagal: " + error.message); } finally { if(btn) { btn.innerHTML = original; btn.disabled = false; } lucide.createIcons(); }
+        window.tutupModalArea(); 
+        await sinkronisasiUlangStokAktual(); 
+        await ambilSemuaData();
+    } catch (error) { 
+        alert("Gagal: " + error.message + "\n\nPastikan Anda sudah membuat Function 'ganti_area_langsir' di SQL Editor Supabase."); 
+    } finally { 
+        if(btn) { btn.innerHTML = original; btn.disabled = false; } 
+        lucide.createIcons(); 
+    }
 }
 
 function salinDataTabel() {
@@ -567,26 +581,94 @@ function salinDataTabel() {
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
 }
 
+// REVISI 1: Format Pop-up STBJ (Sama dengan langsir)
 async function bukaModalSTBJ() {
     const mStbj = document.getElementById('modal-stbj-langsir'); if(mStbj) mStbj.classList.remove('hidden');
     const tbody = document.getElementById('tbody-stbj-modal');
-    if(tbody) tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center font-bold text-slate-500">Memuat...</td></tr>';
+    if(tbody) tbody.innerHTML = '<div class="p-8 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat Data STBJ...</div>';
+    lucide.createIcons();
+
     try {
-        const { data } = await db.from('stok_global').select('*').order('created_at', {ascending: false}).limit(100);
-        if(!data || data.length === 0) { if(tbody) tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center font-bold text-slate-400">Kosong.</td></tr>'; return; }
+        const { data: globalData, error: errGlobal } = await db.from('stok_global').select('*').order('created_at', {ascending: false}).limit(200);
+        if(errGlobal) throw errGlobal;
+        
+        if(!globalData || globalData.length === 0) {
+            if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Data STBJ Kosong.</div>';
+            return;
+        }
+
+        const qrs = globalData.map(d => d.qrcode);
+        const { data: qrData, error: errQr } = await db.from('stok_qr').select('qrcode').in('qrcode', qrs);
+        if(errQr) throw errQr;
+
+        const qrSet = new Set(qrData.map(d => d.qrcode));
+        const filteredData = globalData.filter(d => !qrSet.has(d.qrcode));
+
+        if(filteredData.length === 0) {
+            if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Semua data STBJ sudah masuk gudang.</div>';
+            return;
+        }
+
         let h = '';
-        data.forEach((r, i) => {
-            const tgl = new Date(r.created_at).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
-            h += `<tr class="border-b border-slate-100 text-row text-center text-xs hover:bg-slate-50">
-                <td class="p-3">${i+1}</td><td class="p-3">${tgl}</td><td class="p-3">${r.troli || '-'}</td><td class="p-3 font-mono font-bold">${r.qrcode}</td>
-                <td class="p-3 text-left font-bold text-blue-600">${r.nama_item}</td><td class="p-3">${r.panjang}</td><td class="p-3 font-black text-cyan-600">${r.po_bawaan}</td><td class="p-3">${r.posisi || 'STBJ'}</td>
-            </tr>`;
+        filteredData.forEach((r, i) => {
+            let tgl = '-';
+            if (r.created_at) {
+                const dt = new Date(r.created_at);
+                const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+                tgl = `${dt.getDate()} ${months[dt.getMonth()]}, ${String(dt.getHours()).padStart(2,'0')}.${String(dt.getMinutes()).padStart(2,'0')}`;
+            }
+
+            h += `
+                <div class="row-modal-stbj bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1 mb-3">
+                    <div class="flex justify-between items-center mb-1 border-b border-slate-100 pb-2">
+                        <span class="font-black text-slate-500 text-xs">#${i+1} - ${tgl}</span>
+                        <span class="bg-blue-100 text-blue-800 font-bold px-2 py-1 rounded text-[10px] border border-blue-200">STBJ</span>
+                    </div>
+                    <div class="font-mono font-black text-slate-900 text-[13px] break-all">${r.qrcode}</div>
+                    <div class="text-[12px] font-bold text-slate-600 mt-1">Troli: <span class="text-slate-800">${r.troli || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Produksi: <span class="text-slate-800">${r.tgl_produksi || '-'} - ${r.mesin || '-'} - ${r.shift || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600 leading-snug">
+                        Item: <span class="text-blue-600">${r.jenis_item || '-'}</span> | <span class="text-slate-800">${r.nama_item || '-'}</span> | <span class="text-slate-800">${r.panjang || '-'}</span> | <span class="text-slate-800">${r.grade || '-'}</span> | <span class="text-slate-800">${r.dus || '-'}</span> | <span class="text-blue-600">${r.shading || '-'}</span>
+                    </div>
+                    <div class="text-[12px] font-bold text-slate-600">PO: <span class="text-orange-600">${r.po_bawaan || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Keterangan: <span class="text-slate-800">${r.keterangan || '-'}</span></div>
+                </div>`;
         });
         if(tbody) tbody.innerHTML = h;
-    } catch (e) { if(tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center text-red-500">Gagal</td></tr>'; }
+    } catch (e) { if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal Memuat: ${e.message}</div>`; }
 }
 
-function saringTabelModalSTBJ() {
-    const q = document.getElementById('f-stbj-modal').value.toLowerCase();
-    document.querySelectorAll('#tbody-stbj-modal tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none'; });
-}
+// REVISI 3: Filter Sidebar
+window.saringTabelLangsir = function() {
+    const f = {
+        status: document.getElementById('f-stbj')?.value.toLowerCase() || '',
+        kode: document.getElementById('f-kode')?.value.toLowerCase() || '',
+        troli: document.getElementById('f-troli')?.value.toLowerCase() || '',
+        area: document.getElementById('f-area')?.value.toLowerCase() || '',
+        qr: document.getElementById('f-qr')?.value.toLowerCase() || '',
+        tgl: document.getElementById('f-tgl')?.value.toLowerCase() || '',
+        mesin: document.getElementById('f-mesin')?.value.toLowerCase() || '',
+        shift: document.getElementById('f-shift')?.value.toLowerCase() || '',
+        jenis: document.getElementById('f-jenis')?.value.toLowerCase() || '',
+        nama: document.getElementById('f-nama')?.value.toLowerCase() || '',
+        pjg: document.getElementById('f-pjg')?.value.toLowerCase() || '',
+        grade: document.getElementById('f-grade')?.value.toLowerCase() || '',
+        dus: document.getElementById('f-dus')?.value.toLowerCase() || '',
+        shading: document.getElementById('f-shading')?.value.toLowerCase() || '',
+        po: document.getElementById('f-po')?.value.toLowerCase() || '',
+        ket: document.getElementById('f-ket')?.value.toLowerCase() || ''
+    };
+
+    document.querySelectorAll('.r-row').forEach(row => {
+        let show = true;
+        for(let key in f) {
+            if(f[key]) {
+                const cell = row.querySelector('.col-' + key);
+                if(cell && !cell.innerText.toLowerCase().includes(f[key])) { show = false; break; }
+            }
+        }
+        if (show) row.classList.remove('filtered-out'); else row.classList.add('filtered-out');
+    });
+    currentPage = 1;
+    applyPagination();
+};
