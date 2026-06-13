@@ -4,26 +4,19 @@ let kamusData = []; let areaData = [];
 let sortState = {}; 
 
 let currentPage = 1;
-let rowsPerPage = 10; // REVISI 4: Default 10 baris
+let rowsPerPage = 10; 
 let activeFilters = {}; 
 let currentFilterCol = ''; 
 
 const currentUser = safeJSONParse(localStorage.getItem('user_session'), {username: 'Admin', role: 'admin'});
 
-// REVISI 6: Daftarkan semua fungsi tutup modal ke window agar bisa dipanggil dari HTML
+// Mendaftarkan fungsi ke window agar bisa dipanggil dari HTML
 window.tutupModalArea = function() { document.getElementById('modal-ganti-area').classList.add('hidden'); };
 window.tutupModalSTBJ = function() { document.getElementById('modal-stbj-langsir').classList.add('hidden'); };
-window.tutupModalHold = function() { document.getElementById('modal-hold-langsir').classList.add('hidden'); };
-window.toggleSidebarFilter = function() {
-    document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
-    document.getElementById('overlay-klik-luar').classList.toggle('hidden');
-};
 window.tutupSemuaPopup = function() {
-    document.getElementById('sidebar-filter').classList.add('translate-x-full');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
     window.tutupModalArea();
     window.tutupModalSTBJ();
-    window.tutupModalHold();
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -582,7 +575,7 @@ function salinDataTabel() {
 }
 
 // REVISI 1: Format Pop-up STBJ (Sama dengan langsir)
-async function bukaModalSTBJ() {
+window.bukaModalSTBJ = async function() {
     const mStbj = document.getElementById('modal-stbj-langsir'); if(mStbj) mStbj.classList.remove('hidden');
     const tbody = document.getElementById('tbody-stbj-modal');
     if(tbody) tbody.innerHTML = '<div class="p-8 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat Data STBJ...</div>';
@@ -636,39 +629,11 @@ async function bukaModalSTBJ() {
         });
         if(tbody) tbody.innerHTML = h;
     } catch (e) { if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal Memuat: ${e.message}</div>`; }
-}
+};
 
-// REVISI 3: Filter Sidebar
-window.saringTabelLangsir = function() {
-    const f = {
-        status: document.getElementById('f-stbj')?.value.toLowerCase() || '',
-        kode: document.getElementById('f-kode')?.value.toLowerCase() || '',
-        troli: document.getElementById('f-troli')?.value.toLowerCase() || '',
-        area: document.getElementById('f-area')?.value.toLowerCase() || '',
-        qr: document.getElementById('f-qr')?.value.toLowerCase() || '',
-        tgl: document.getElementById('f-tgl')?.value.toLowerCase() || '',
-        mesin: document.getElementById('f-mesin')?.value.toLowerCase() || '',
-        shift: document.getElementById('f-shift')?.value.toLowerCase() || '',
-        jenis: document.getElementById('f-jenis')?.value.toLowerCase() || '',
-        nama: document.getElementById('f-nama')?.value.toLowerCase() || '',
-        pjg: document.getElementById('f-pjg')?.value.toLowerCase() || '',
-        grade: document.getElementById('f-grade')?.value.toLowerCase() || '',
-        dus: document.getElementById('f-dus')?.value.toLowerCase() || '',
-        shading: document.getElementById('f-shading')?.value.toLowerCase() || '',
-        po: document.getElementById('f-po')?.value.toLowerCase() || '',
-        ket: document.getElementById('f-ket')?.value.toLowerCase() || ''
-    };
-
-    document.querySelectorAll('.r-row').forEach(row => {
-        let show = true;
-        for(let key in f) {
-            if(f[key]) {
-                const cell = row.querySelector('.col-' + key);
-                if(cell && !cell.innerText.toLowerCase().includes(f[key])) { show = false; break; }
-            }
-        }
-        if (show) row.classList.remove('filtered-out'); else row.classList.add('filtered-out');
+window.saringTabelModalSTBJ = function() {
+    const q = document.getElementById('f-stbj-modal').value.toLowerCase();
+    document.querySelectorAll('.row-modal-stbj').forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
     });
-    currentPage = 1;
-    applyPagination();
 };
