@@ -5,15 +5,35 @@ let riwayatKonversiList = [];
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 let masterData = { kamus: [] };
 
+// REVISI 3: Variabel untuk Filter & Paginasi
+window.currentPage = 1;
+window.rowsPerPage = 10;
+window.activeFilters = {};
+window.currentFilterCol = '';
+window.sortState = {};
+
 window.tutupSemuaModal = function() {
     document.getElementById('modal-po-target').classList.add('hidden');
     document.getElementById('modal-riwayat-konversi').classList.add('hidden');
+    document.getElementById('modal-lihat-po').classList.add('hidden');
 };
 
 document.addEventListener('DOMContentLoaded', async () => { 
     initModernLayout({ id: 'scan_pic', title: 'SCAN PIC AREA', url: 'scan_pic.html' }); 
+    
+    // REVISI 3: Listener untuk close Filter Menu
+    document.addEventListener('click', function(e) {
+        const menu = document.getElementById('excel-filter-menu');
+        if (menu && !menu.classList.contains('hidden')) {
+            if (!menu.contains(e.target) && !e.target.closest('button[title^="Filter"]')) {
+                window.closeFilterMenu();
+            }
+        }
+    });
+
     await loadInitialData();
     await loadAreas(); 
+    window.renderHeaderTabel(); // REVISI 3: Inisialisasi Header
 });
 
 async function loadInitialData() {
@@ -97,7 +117,6 @@ window.setModeKonversi = function(mode) {
     const panelOut = document.getElementById('panel-out');
     const panelIn = document.getElementById('panel-in');
     const panelPindah = document.getElementById('panel-pindah');
-    const boxScanUmum = document.getElementById('box-scan-umum');
     
     const btnVerifUmum = document.getElementById('btn-verifikasi-umum');
     const btnSave = document.getElementById('btn-save-awal');
@@ -108,7 +127,7 @@ window.setModeKonversi = function(mode) {
 
     if(mode === 'out') {
         tabOut.className = 'px-6 py-3.5 border-b-4 border-rose-600 text-rose-600 bg-rose-50 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2';
-        panelOut.classList.remove('hidden'); panelIn.classList.add('hidden'); panelPindah.classList.add('hidden'); boxScanUmum.classList.remove('hidden');
+        panelOut.classList.remove('hidden'); panelIn.classList.add('hidden'); panelPindah.classList.add('hidden');
         btnRiwayatPindah.classList.add('hidden');
         
         btnVerifUmum.className = 'flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-sm font-medium transition shadow-sm active:scale-95';
@@ -116,7 +135,7 @@ window.setModeKonversi = function(mode) {
         textSave.innerText = "SIMPAN & EKSEKUSI";
     } else if(mode === 'in') {
         tabIn.className = 'px-6 py-3.5 border-b-4 border-emerald-600 text-emerald-600 bg-emerald-50 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2';
-        panelIn.classList.remove('hidden'); panelOut.classList.add('hidden'); panelPindah.classList.add('hidden'); boxScanUmum.classList.remove('hidden');
+        panelIn.classList.remove('hidden'); panelOut.classList.add('hidden'); panelPindah.classList.add('hidden');
         btnRiwayatPindah.classList.add('hidden');
         
         btnVerifUmum.className = 'flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-sm font-medium transition shadow-sm active:scale-95';
@@ -124,14 +143,16 @@ window.setModeKonversi = function(mode) {
         textSave.innerText = "SIMPAN KE KARTU STOK";
     } else if(mode === 'pindah') {
         tabPindah.className = 'px-6 py-3.5 border-b-4 border-indigo-600 text-indigo-600 bg-indigo-50 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2';
-        panelPindah.classList.remove('hidden'); panelOut.classList.add('hidden'); panelIn.classList.add('hidden'); boxScanUmum.classList.add('hidden');
+        panelPindah.classList.remove('hidden'); panelOut.classList.add('hidden'); panelIn.classList.add('hidden');
         btnRiwayatPindah.classList.remove('hidden');
         
         btnSave.className = 'w-full md:w-auto px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-md shadow-sm flex items-center justify-center gap-2 text-sm transition active:scale-95 uppercase';
         textSave.innerText = "SIMPAN PINDAH AREA";
     }
 
-    dataPic = []; renderTablePic(dataPic);
+    dataPic = []; 
+    window.activeFilters = {}; // Reset filter saat ganti tab
+    window.renderTablePic();
 };
 
 window.toggleAktifitas = function(target) {
@@ -169,24 +190,24 @@ window.bukaModalRiwayatKonversi = async function() {
             }
 
             h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 text-xs transition">
-                    <td class="p-2"><button onclick="pilihKodeKonversi('${d.kode_konversi}', '${d.aktifitas}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-md shadow-sm transition active:scale-95">PILIH</button></td>
+                <tr class="border-b hover:bg-slate-50 text-xs transition">
+                    <td class="p-2"><button onclick="pilihKodeKonversi('${d.kode_konversi}', '${d.aktifitas}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg shadow-sm transition active:scale-95">PILIH</button></td>
                     <td class="p-2">
-                        <button onclick="lihatDetailKonversi('${d.kode_konversi}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition active:scale-95 mx-auto flex" title="Lihat Detail Item">
+                        <button onclick="lihatDetailKonversi('${d.kode_konversi}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition active:scale-95 mx-auto flex" title="Lihat Detail Item">
                             <i data-lucide="list" class="w-4 h-4"></i>
                         </button>
                     </td>
                     <td class="p-2 font-mono font-bold tracking-wider text-slate-800 border-r border-slate-200">${d.kode_konversi}</td>
-                    <td class="p-2 font-medium text-slate-600">${waktu}</td>
-                    <td class="p-2 font-bold text-rose-600 border-r border-slate-200">${d.aktifitas}</td>
-                    <td class="p-3 font-medium text-slate-700 text-left whitespace-normal max-w-[400px] leading-relaxed">${detailItem}</td>
+                    <td class="p-2 font-semibold text-slate-500">${waktu}</td>
+                    <td class="p-2 font-black text-rose-600 border-r border-slate-200">${d.aktifitas}</td>
+                    <td class="p-3 font-bold text-slate-700 text-left whitespace-normal max-w-[400px] leading-relaxed">${detailItem}</td>
                     <td class="p-3 font-medium text-slate-600 text-left whitespace-normal max-w-[200px] leading-tight border-r border-slate-200">${ket}</td>
                     <td class="p-2 font-black text-emerald-600 bg-emerald-50">${d.qty_total}</td>
                     <td class="p-2 uppercase opacity-70 font-bold text-slate-500">${d.pic}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
-    } catch(e) { tbody.innerHTML = `<tr><td colspan="9" class="p-5 text-red-500 text-center">${e.message}</td></tr>`; }
+    } catch(e) { tbody.innerHTML = `<tr><td colspan="9" class="p-5 text-red-500">${e.message}</td></tr>`; }
     finally { lucide.createIcons(); }
 };
 
@@ -198,19 +219,19 @@ window.lihatDetailKonversi = function(kode) {
     let items = detailObj.items || [];
     
     let t = `<table class="w-full text-left border-collapse text-xs whitespace-nowrap">
-                <thead class="bg-slate-100 text-slate-600 text-center border-b border-slate-200">
-                    <tr><th class="p-2 font-bold uppercase">No</th><th class="p-2 font-bold uppercase">QRCode</th><th class="p-2 font-bold uppercase">Nama Item</th><th class="p-2 font-bold uppercase">Pjg</th><th class="p-2 font-bold uppercase">Grade</th><th class="p-2 font-bold uppercase">Dus</th><th class="p-2 font-bold uppercase">Shading</th></tr>
+                <thead class="bg-slate-800 text-white text-center">
+                    <tr><th class="p-2">No</th><th class="p-2">QRCode</th><th class="p-2">Nama Item</th><th class="p-2">Pjg</th><th class="p-2">Grade</th><th class="p-2">Dus</th><th class="p-2">Shading</th></tr>
                 </thead>
                 <tbody>`;
     items.forEach((item, idx) => {
-        t += `<tr class="border-b border-slate-100 text-center hover:bg-white bg-slate-50/50">
-                <td class="p-2 text-slate-500">${idx+1}</td>
-                <td class="p-2 font-mono font-medium text-slate-800">${item.qrcode}</td>
-                <td class="p-2 text-left font-semibold text-blue-600">${item.namaItem || item.nama_item}</td>
-                <td class="p-2 font-medium text-slate-700">${item.panjang || item.pjg}</td>
-                <td class="p-2 font-medium text-slate-700">${item.grade}</td>
-                <td class="p-2 font-medium text-slate-700">${item.dus}</td>
-                <td class="p-2 font-medium text-slate-700">${item.shading}</td>
+        t += `<tr class="border-b text-center hover:bg-slate-50">
+                <td class="p-2">${idx+1}</td>
+                <td class="p-2 font-mono font-bold">${item.qrcode}</td>
+                <td class="p-2 text-left font-bold text-blue-700">${item.namaItem || item.nama_item}</td>
+                <td class="p-2 font-bold">${item.panjang || item.pjg}</td>
+                <td class="p-2 font-bold">${item.grade}</td>
+                <td class="p-2 font-bold">${item.dus}</td>
+                <td class="p-2 font-bold">${item.shading}</td>
               </tr>`;
     });
     t += `</tbody></table>`;
@@ -244,37 +265,37 @@ window.bukaModalRiwayatPindah = async function() {
             const waktu = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
             
             h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 text-xs transition text-center">
-                    <td class="p-2 font-medium text-slate-500">${i+1}</td>
-                    <td class="p-2 font-medium text-slate-600">${waktu}</td>
-                    <td class="p-2 font-bold text-indigo-600 bg-indigo-50 border-r border-slate-200">${d.area_awal} ➔ ${d.area_akhir}</td>
-                    <td class="p-2 font-mono font-medium tracking-wider text-slate-800 border-r border-slate-200">${d.qrcode}</td>
-                    <td class="p-2 font-semibold text-blue-600 text-left">${d.nama_item}</td>
-                    <td class="p-2 font-medium text-slate-700">${d.panjang}</td>
-                    <td class="p-2 font-medium text-slate-700">${d.grade}</td>
-                    <td class="p-2 font-medium text-slate-700">${d.dus}</td>
-                    <td class="p-2 font-medium text-slate-700 border-r border-slate-200">${d.shading}</td>
-                    <td class="p-2 font-semibold text-orange-600">${d.po}</td>
-                    <td class="p-2 font-medium text-slate-500 text-left border-r border-slate-200">${d.keterangan || '-'}</td>
+                <tr class="border-b hover:bg-slate-50 text-xs transition text-center">
+                    <td class="p-2 font-bold text-slate-500">${i+1}</td>
+                    <td class="p-2 font-semibold text-slate-500">${waktu}</td>
+                    <td class="p-2 font-black text-indigo-700 bg-indigo-50 border-r border-slate-200">${d.area_awal} ➔ ${d.area_akhir}</td>
+                    <td class="p-2 font-mono font-bold tracking-wider text-slate-800 border-r border-slate-200">${d.qrcode}</td>
+                    <td class="p-2 font-bold text-blue-700 text-left">${d.nama_item}</td>
+                    <td class="p-2 font-bold text-slate-600">${d.panjang}</td>
+                    <td class="p-2 font-bold text-slate-800">${d.grade}</td>
+                    <td class="p-2 font-bold text-slate-800">${d.dus}</td>
+                    <td class="p-2 font-bold text-slate-600 border-r border-slate-200">${d.shading}</td>
+                    <td class="p-2 font-black text-orange-600">${d.po}</td>
+                    <td class="p-2 font-medium text-slate-600 text-left border-r border-slate-200">${d.keterangan || '-'}</td>
                     <td class="p-2 uppercase opacity-70 font-bold text-slate-500">${d.pic}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
-    } catch(e) { tbody.innerHTML = `<tr><td colspan="12" class="p-5 text-red-500 text-center">${e.message}</td></tr>`; }
+    } catch(e) { tbody.innerHTML = `<tr><td colspan="12" class="p-5 text-red-500">${e.message}</td></tr>`; }
     finally { lucide.createIcons(); }
 };
 
 // ==========================================
-// SCANNING HANDLER
+// SCANNING HANDLER (REVISI 1: Disatukan)
 // ==========================================
-document.getElementById('form-scan-umum').addEventListener('submit', (e) => { e.preventDefault(); handleScan(document.getElementById('input-qrcode-umum')); });
+document.getElementById('form-scan-out').addEventListener('submit', (e) => { e.preventDefault(); handleScan(document.getElementById('input-qrcode-out')); });
+document.getElementById('form-scan-in').addEventListener('submit', (e) => { e.preventDefault(); handleScan(document.getElementById('input-qrcode-in')); });
 document.getElementById('form-scan-pindah').addEventListener('submit', (e) => { e.preventDefault(); handleScan(document.getElementById('input-qrcode-pindah')); });
 
 function handleScan(inputEl) {
     const rawInput = inputEl.value.trim();
     if(!rawInput) return;
 
-    window.resetFilterWithoutRender();
     const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
     
     codes.forEach(code => {
@@ -288,79 +309,281 @@ function handleScan(inputEl) {
         });
     });
 
-    renderTablePic(dataPic);
+    window.renderTablePic();
     inputEl.value = ''; inputEl.focus();
 }
 
 window.hapusBaris = function(qrCode) {
     dataPic = dataPic.filter(d => d.qrcode !== qrCode);
-    window.saringTabel();
+    window.renderTablePic();
 };
 
-function renderTablePic(dataToRender) {
+// ==========================================
+// REVISI 3: HEADER FILTER EXCEL PRO & SORT
+// ==========================================
+window.renderHeaderTabel = function() {
+    const thead = document.getElementById('thead-pic');
+    window.sortState = {};
+    
+    thead.innerHTML = `
+        <tr>
+            <th class="hdr-std w-10"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-slate-400"></i></th>
+            <th class="hdr-std w-12 col-no">No</th>
+            ${window.thSort(2, 'Status', 'col-status border-r border-slate-500')}
+            ${window.thSort(3, 'Area', 'col-area text-amber-300')}
+            ${window.thSort(4, 'Text QRCode', 'col-qr border-r border-slate-500')}
+            ${window.thSort(5, 'Tgl Produksi', 'col-tgl')}
+            ${window.thSort(6, 'Mesin', 'col-mesin')}
+            ${window.thSort(7, 'Shift', 'col-shift')}
+            ${window.thSort(8, 'Jenis Item', 'col-jenis text-blue-300')}
+            ${window.thSort(9, 'Nama Item', 'col-nama text-left pl-4')}
+            ${window.thSort(10, 'Pjg', 'col-pjg')}
+            ${window.thSort(11, 'Grade', 'col-grade')}
+            ${window.thSort(12, 'Dus', 'col-dus')}
+            ${window.thSort(13, 'Shading', 'col-shading border-r border-slate-500')}
+            ${window.thSort(14, 'PO Bawaan', 'col-po text-slate-400')}
+            ${window.thSort(15, 'PO Aktual (Stok)', 'col-poaktual text-orange-400 border-l border-slate-500 bg-slate-900')}
+        </tr>
+    `;
+    lucide.createIcons();
+};
+
+window.thSort = function(idx, label, cls = "") {
+    const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
+    const noFilter = ['col-no'].includes(colClass);
+    
+    const filterBtn = noFilter ? '' : `
+        <button onclick="window.openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-600 rounded ml-1 transition text-slate-400 hover:text-white" title="Filter ${label}">
+            <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon transition-all"></i>
+        </button>`;
+
+    return `<th class="hdr-std ${cls} select-none">
+        <div class="flex items-center justify-center gap-1.5">
+            <span class="cursor-pointer flex items-center gap-1 hover:text-blue-300 transition" onclick="window.sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
+            ${filterBtn}
+        </div>
+    </th>`;
+};
+
+window.sortTable = function(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-pic');
-    if(dataToRender.length === 0) {
+    const rows = Array.from(tbody.querySelectorAll('tr.row-pic'));
+    let isAsc = window.sortState[colIndex] !== 'asc'; window.sortState[colIndex] = isAsc ? 'asc' : 'desc';
+    
+    rows.sort((a, b) => {
+        let valA = a.cells[colIndex].getAttribute('data-search') || a.cells[colIndex].innerText.trim(); 
+        let valB = b.cells[colIndex].getAttribute('data-search') || b.cells[colIndex].innerText.trim();
+        let numA = parseFloat(valA); let numB = parseFloat(valB);
+        if(!isNaN(numA) && !isNaN(numB)) { return isAsc ? numA - numB : numB - numA; } 
+        else { return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA); }
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+    document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-30'); });
+    const icon = headerEl.querySelector('.sort-icon');
+    if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
+    window.applyPagination();
+};
+
+window.openColumnFilter = function(event, colClass, colName) {
+    event.stopPropagation(); window.currentFilterCol = colClass;
+    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
+    let uniqueValues = new Set();
+    
+    document.querySelectorAll('#tbody-pic tr.row-pic').forEach(row => {
+        let showBasedOnOthers = true;
+        for (let otherCol in window.activeFilters) {
+            if (otherCol !== colClass) { 
+                const allowed = window.activeFilters[otherCol]; const c = row.querySelector('.' + otherCol);
+                let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
+                if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
+            }
+        }
+        if (showBasedOnOthers) {
+            let cell = row.querySelector('.' + colClass);
+            if (cell) { let val = cell.getAttribute('data-search') || cell.innerText.trim(); if(val !== '') uniqueValues.add(val); }
+        }
+    });
+
+    let sortedValues = Array.from(uniqueValues).sort();
+    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
+    
+    sortedValues.forEach(val => {
+        let isChecked = !window.activeFilters[colClass] || window.activeFilters[colClass].includes(val);
+        listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}">
+            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
+            <span class="truncate text-slate-600">${val}</span>
+        </label>`;
+    });
+
+    document.getElementById('filter-values-list').innerHTML = listHtml; window.updateSelectAllState();
+    document.getElementById('filter-search-input').value = '';
+    const rect = event.currentTarget.getBoundingClientRect(); const menu = document.getElementById('excel-filter-menu');
+    if(menu) {
+        menu.classList.remove('hidden');
+        let top = rect.bottom + window.scrollY + 5; let left = rect.left + window.scrollX;
+        if (left + 256 > window.innerWidth) { left = window.innerWidth - 266; }
+        menu.style.top = top + 'px'; menu.style.left = left + 'px';
+    }
+    const sInput = document.getElementById('filter-search-input'); if(sInput) sInput.focus();
+};
+
+window.toggleAllFilterValues = function(checked) {
+    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
+    window.updateSelectAllState();
+};
+window.updateSelectAllState = function() {
+    const allCbs = document.querySelectorAll('.filter-val-cb'); const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
+    const selectAll = document.getElementById('filter-select-all'); if(!selectAll) return;
+    if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
+    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
+    else { selectAll.checked = false; selectAll.indeterminate = true; }
+};
+
+window.searchFilterList = function(val) {
+    const query = val.toLowerCase().split(' ').filter(x => x);
+    document.querySelectorAll('.filter-val-item').forEach(label => {
+        const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
+        label.style.display = query.every(term => text.includes(term)) ? '' : 'none';
+    });
+};
+window.closeFilterMenu = function() { const menu = document.getElementById('excel-filter-menu'); if(menu) menu.classList.add('hidden'); };
+window.clearFilterForCurrentCol = function() { delete window.activeFilters[window.currentFilterCol]; window.closeFilterMenu(); window.saringTabelExcel(); window.updateFilterIcons(); };
+window.applyFilterForCurrentCol = function() {
+    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked'); const totalBoxes = document.querySelectorAll('.filter-val-cb');
+    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') { delete window.activeFilters[window.currentFilterCol]; } 
+    else { window.activeFilters[window.currentFilterCol] = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value)); }
+    window.closeFilterMenu(); window.saringTabelExcel(); window.updateFilterIcons();
+};
+window.saringTabelExcel = function() {
+    document.querySelectorAll('.row-pic').forEach(row => {
+        let show = true;
+        for (let colClass in window.activeFilters) {
+            const allowed = window.activeFilters[colClass]; const cell = row.querySelector('.' + colClass);
+            if (cell) { if (!allowed.includes(cell.getAttribute('data-search') || cell.innerText.trim())) { show = false; break; } }
+        }
+        if (show) { row.classList.remove('filtered-out'); } 
+        else { row.classList.add('filtered-out'); }
+    });
+    window.currentPage = 1; window.applyPagination();
+};
+window.updateFilterIcons = function() {
+    document.querySelectorAll('.filter-icon').forEach(icon => { icon.classList.remove('text-blue-600'); icon.classList.add('text-slate-400'); });
+    for (let colClass in window.activeFilters) {
+        const th = document.querySelector(`th.${colClass}`);
+        if (th) { const icon = th.querySelector('.filter-icon'); if (icon) { icon.classList.remove('text-slate-400'); icon.classList.add('text-blue-600'); } }
+    }
+};
+
+window.changeRowsPerPage = function(val) {
+    const customInput = document.getElementById('input-custom-rows');
+    if (val === 'ALL') {
+        window.rowsPerPage = 999999; 
+        customInput.classList.add('hidden');
+    } else if (val === 'CUSTOM') {
+        customInput.classList.remove('hidden');
+        customInput.focus();
+        let customVal = parseInt(customInput.value);
+        window.rowsPerPage = (customVal > 0) ? customVal : window.rowsPerPage;
+    } else {
+        window.rowsPerPage = parseInt(val);
+        customInput.classList.add('hidden');
+    }
+    window.currentPage = 1; 
+    window.applyPagination();
+};
+
+window.setCustomRowsPerPage = function(val) {
+    let parsed = parseInt(val);
+    if (!isNaN(parsed) && parsed > 0) {
+        window.rowsPerPage = parsed;
+        window.currentPage = 1;
+        window.applyPagination();
+    }
+};
+
+window.applyPagination = function() {
+    const allRows = Array.from(document.querySelectorAll('#tbody-pic tr.row-pic'));
+    allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
+    
+    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
+    const totalFiltered = visibleRows.length; const totalPages = Math.ceil(totalFiltered / window.rowsPerPage) || 1;
+    
+    if(window.currentPage > totalPages) window.currentPage = totalPages; 
+    if(window.currentPage < 1) window.currentPage = 1;
+
+    const startIndex = (window.currentPage - 1) * window.rowsPerPage; const endIndex = startIndex + window.rowsPerPage;
+
+    visibleRows.forEach((row, index) => {
+        if(index >= startIndex && index < endIndex) { 
+            row.style.display = ''; 
+            let noCell = row.querySelector('.col-no');
+            if(noCell) noCell.innerText = index + 1;
+        } 
+        else { row.style.display = 'none'; }
+    });
+
+    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = window.currentPage;
+    if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
+};
+
+window.prevPage = function() { if(window.currentPage > 1) { window.currentPage--; window.applyPagination(); } };
+window.nextPage = function() { 
+    const totalVisible = document.querySelectorAll('#tbody-pic tr.row-pic:not(.filtered-out)').length;
+    if(window.currentPage < Math.ceil(totalVisible / window.rowsPerPage)) { window.currentPage++; window.applyPagination(); } 
+};
+
+// ==========================================
+// RENDER TABEL
+// ==========================================
+window.renderTablePic = function() {
+    const tbody = document.getElementById('tbody-pic');
+    if(dataPic.length === 0) {
         tbody.innerHTML = '<tr><td colspan="16" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan.</td></tr>';
         lucide.createIcons(); return;
     }
     
     let html = '';
-    dataToRender.forEach((d, index) => {
-        let badge = "bg-slate-100 text-slate-600 border-slate-200";
-        if(d.status === 'VALID') badge = "bg-emerald-100 text-emerald-700 border-emerald-200";
-        else if(d.status === 'KOSONG' || d.status === 'DUPLIKAT LOKAL') badge = "bg-red-100 text-red-700 border-red-200";
+    dataPic.forEach((d, index) => {
+        let badge = "bg-slate-200 text-slate-700";
+        if(d.status === 'VALID') badge = "bg-emerald-600 text-white border-emerald-700";
+        else if(d.status === 'KOSONG' || d.status === 'DUPLIKAT LOKAL') badge = "bg-red-600 text-white border-red-700";
+
+        // REVISI 2: Tombol Lihat PO
+        let btnPO = d.poAktualUI;
+        if (d.status === 'VALID' && d.poAktualUI !== '-' && d.poAktualUI !== 'KOSONG') {
+            btnPO = `<button onclick="window.bukaModalLihatPO('${encodeURIComponent(d.poAktualUI)}')" class="bg-orange-100 text-orange-700 border border-orange-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-orange-200 transition flex items-center justify-center gap-1 mx-auto w-full max-w-[100px]"><i data-lucide="eye" class="w-3 h-3"></i> Lihat PO</button>`;
+        }
 
         html += `
-            <tr class="border-b border-slate-200 even:bg-slate-50 hover:bg-slate-100 transition text-xs text-center">
+            <tr class="border-b border-slate-200 even:bg-slate-50 hover:bg-slate-100 transition text-xs text-center row-pic">
                 <td class="p-2 text-center">
-                    <button onclick="hapusBaris('${d.qrcode}')" class="text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white border border-slate-200 p-1.5 rounded-md transition shadow-sm mx-auto flex">
+                    <button onclick="window.hapusBaris('${d.qrcode}')" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                     </button>
                 </td>
-                <td class="p-2 font-medium text-slate-500">${index + 1}</td>
-                <td class="p-2 font-semibold text-[10px] border-r border-slate-200"><span class="px-2 py-1 rounded-md border ${badge}">${d.status}</span></td>
-                <td class="p-2 font-semibold text-amber-600">${d.area}</td>
-                <td class="p-2 font-mono font-medium text-slate-800 text-left tracking-wider border-r border-slate-200">${d.qrcode}</td>
+                <td class="p-2 font-bold col-no">${index + 1}</td>
+                <td class="p-2 font-black text-[10px] border-r border-slate-200 col-status" data-search="${d.status}"><span class="px-2 py-1 rounded shadow-sm border ${badge}">${d.status}</span></td>
+                <td class="p-2 font-black text-amber-600 col-area" data-search="${d.area}">${d.area}</td>
+                <td class="p-2 font-mono font-bold text-left tracking-wider border-r border-slate-200 col-qr" data-search="${d.qrcode}">${d.qrcode}</td>
                 
-                <td class="p-2 font-medium text-slate-600">${d.tglProduksi || '-'}</td>
-                <td class="p-2 font-medium text-slate-600">${d.mesin || '-'}</td>
-                <td class="p-2 font-medium text-slate-600 border-r border-slate-200">${d.shift || '-'}</td>
+                <td class="p-2 font-bold text-slate-600 col-tgl" data-search="${d.tglProduksi || '-'}">${d.tglProduksi || '-'}</td>
+                <td class="p-2 font-bold text-slate-600 col-mesin" data-search="${d.mesin || '-'}">${d.mesin || '-'}</td>
+                <td class="p-2 font-bold text-slate-600 border-r border-slate-200 col-shift" data-search="${d.shift || '-'}">${d.shift || '-'}</td>
                 
-                <td class="p-2 font-semibold text-blue-600">${d.jenisItem || '-'}</td>
-                <td class="p-2 font-semibold text-slate-800 text-left">${d.namaItem || '-'}</td>
-                <td class="p-2 font-medium text-slate-700">${d.panjang || '-'}</td>
-                <td class="p-2 font-medium text-slate-700">${d.grade || '-'}</td>
-                <td class="p-2 font-medium text-slate-700">${d.dus || '-'}</td>
-                <td class="p-2 font-medium text-slate-700 border-r border-slate-200">${d.shading || '-'}</td>
-                <td class="p-2 text-center font-medium text-slate-500">${d.poBawaan || '-'}</td>
-                <td class="p-2 text-center font-semibold text-orange-600 bg-slate-50 border-l border-slate-200 text-[10px] whitespace-normal leading-tight max-w-[150px]">${d.poAktualUI || 'Cek Stok...'}</td>
+                <td class="p-2 font-black text-blue-700 col-jenis" data-search="${d.jenisItem || '-'}">${d.jenisItem || '-'}</td>
+                <td class="p-2 font-bold text-slate-800 text-left col-nama" data-search="${d.namaItem || '-'}">${d.namaItem || '-'}</td>
+                <td class="p-2 font-bold text-slate-600 col-pjg" data-search="${d.panjang || '-'}">${d.panjang || '-'}</td>
+                <td class="p-2 font-bold text-slate-800 col-grade" data-search="${d.grade || '-'}">${d.grade || '-'}</td>
+                <td class="p-2 font-bold text-slate-800 col-dus" data-search="${d.dus || '-'}">${d.dus || '-'}</td>
+                <td class="p-2 font-bold text-slate-600 border-r border-slate-200 col-shading" data-search="${d.shading || '-'}">${d.shading || '-'}</td>
+                <td class="p-2 text-center font-bold text-slate-500 col-po" data-search="${d.poBawaan || '-'}">${d.poBawaan || '-'}</td>
+                <td class="p-2 text-center font-black text-orange-600 bg-slate-100 border-l border-slate-200 text-[10px] whitespace-normal leading-tight max-w-[150px] col-poaktual" data-search="${d.poAktualUI || '-'}">${btnPO}</td>
             </tr>`;
     });
     tbody.innerHTML = html; lucide.createIcons();
-}
-
-window.toggleFilter = function() {
-    const sidebar = document.getElementById('sidebar-filter'); const overlay = document.getElementById('overlay-klik-luar');
-    if (sidebar.classList.contains('translate-x-full')) { sidebar.classList.remove('translate-x-full'); overlay.classList.remove('hidden'); } 
-    else { sidebar.classList.add('translate-x-full'); overlay.classList.add('hidden'); }
+    window.saringTabelExcel(); // Terapkan filter & paginasi
 };
-
-window.saringTabel = function() {
-    const fStatus = document.getElementById('f-status').value.toLowerCase();
-    const fNama = document.getElementById('f-nama').value.toLowerCase();
-    const fQr = document.getElementById('f-qr').value.toLowerCase();
-
-    const filtered = dataPic.filter(r => {
-        const matchStatus = (r.status || '').toLowerCase().includes(fStatus);
-        const matchNama = (r.namaItem || '').toLowerCase().includes(fNama);
-        const matchQr = (r.qrcode || '').toLowerCase().includes(fQr);
-        return matchStatus && matchNama && matchQr;
-    });
-    renderTablePic(filtered);
-};
-
-window.resetFilterWithoutRender = function() { document.getElementById('f-status').value = ''; document.getElementById('f-nama').value = ''; document.getElementById('f-qr').value = ''; };
-window.resetFilter = function() { window.resetFilterWithoutRender(); renderTablePic(dataPic); };
 
 // ==========================================
 // VERIFIKASI GUDANG (PINTAR OUT/IN/PINDAH)
@@ -375,26 +598,52 @@ window.verifikasiGudang = async function() {
     const allQRs = dataPic.map(d => d.qrcode);
 
     try {
-        // REVISI 2: Langsung ambil PO dari id_sku, tidak perlu ilike
         const { data: dbQRs, error } = await db.from('stok_qr').select('qrcode, area, id_sku').in('qrcode', allQRs);
         if(error) throw error;
 
         let foundDb = dbQRs || [];
+        let uniqueSpecs = new Set();
 
         if (currentMode === 'out' || currentMode === 'pindah') {
             dataPic.forEach(d => {
                 let matched = foundDb.find(dbItem => dbItem.qrcode === d.qrcode);
                 if (matched) {
-                    d.status = 'VALID'; 
-                    d.area = matched.area; 
-                    d.poAsliDB = extractPOFromSKU(matched.id_sku);
-                    d.poAktualUI = d.poAsliDB; // Langsung tampilkan PO Aktual
-                    d.baseSpec = `${d.jenisItem}_${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}`;
+                    d.status = 'VALID'; d.area = matched.area; d.poAsliDB = extractPOFromSKU(matched.id_sku);
+                    let baseSpec = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}`;
+                    d.baseSpec = baseSpec; uniqueSpecs.add(baseSpec);
                 } else {
-                    d.status = 'KOSONG'; 
-                    d.poAktualUI = '-';
+                    d.status = 'KOSONG'; d.poAktualUI = '-';
                 }
             });
+
+            // REVISI 2: Ambil distribusi PO Aktual dari stok_aktual
+            let poDistMap = {};
+            for (let spec of uniqueSpecs) {
+                let parts = spec.split('_'); // nama_pjg_grade_dus_shading
+                const { data: actData } = await db.from('stok_aktual').select('po_aktual, qty')
+                    .eq('nama_item', parts[0]).eq('pjg', parts[1]).eq('grade', parts[2])
+                    .eq('dus', parts[3]).eq('shading', parts[4]);
+                
+                if(actData) {
+                    poDistMap[spec] = {};
+                    actData.forEach(a => {
+                        if(!poDistMap[spec][a.po_aktual]) poDistMap[spec][a.po_aktual] = 0;
+                        poDistMap[spec][a.po_aktual] += a.qty;
+                    });
+                }
+            }
+
+            dataPic.forEach(d => { 
+                if (d.status === 'VALID') {
+                    let dist = poDistMap[d.baseSpec];
+                    let arr = [];
+                    if(dist) {
+                        for(let po in dist) arr.push(`${po} (${dist[po]} Dus)`);
+                    }
+                    d.poAktualUI = arr.length > 0 ? arr.join(' | ') : 'KOSONG';
+                } 
+            });
+            
             alert(`Selesai memverifikasi fisik Gudang untuk Mode ${currentMode.toUpperCase()}!`);
 
         } else if (currentMode === 'in') {
@@ -414,7 +663,7 @@ window.verifikasiGudang = async function() {
         }
     } catch(err) { alert("Gagal koneksi ke Supabase: " + err.message); } 
     finally { 
-        window.saringTabel(); 
+        window.renderTablePic(); 
         btns.forEach((btn, idx) => { btn.innerHTML = originalTexts[idx]; btn.disabled = false; });
         lucide.createIcons();
     }
@@ -443,7 +692,12 @@ function bukaModalSimpanOut() {
     let poSet = new Set();
     dataPic.forEach(d => {
         if (d.poAktualUI && d.poAktualUI !== 'KOSONG / NON-PO' && d.poAktualUI !== '-' && d.poAktualUI !== '?') {
-            poSet.add(d.poAktualUI);
+            // Ekstrak nama PO dari string "PO (X Dus) | PO2 (Y Dus)"
+            let parts = d.poAktualUI.split('|');
+            parts.forEach(p => {
+                let poName = p.split('(')[0].trim();
+                if(poName) poSet.add(poName);
+            });
         }
     });
 
@@ -455,6 +709,28 @@ function bukaModalSimpanOut() {
 
     document.getElementById('modal-po-target').classList.remove('hidden');
 }
+
+// REVISI 2: Modal Lihat PO
+window.bukaModalLihatPO = function(encodedPOs) {
+    const poStr = decodeURIComponent(encodedPOs);
+    const poArr = poStr.split('|').map(p => p.trim()).filter(p => p);
+    const ul = document.getElementById('list-po-aktual');
+    if (poArr.length === 0 || poArr[0] === 'KOSONG') {
+        ul.innerHTML = '<li class="text-slate-400 italic font-medium p-3 bg-slate-50 rounded-md text-center border border-slate-200">Tidak ada PO Aktual tersimpan.</li>';
+    } else {
+        ul.innerHTML = poArr.map(p => {
+            let parts = p.split('(');
+            let namaPo = parts[0].trim();
+            let qtyPo = parts[1] ? parts[1].replace(')', '').trim() : '';
+            return `<li class="p-3 bg-white border border-slate-200 shadow-sm text-slate-700 font-semibold rounded-md flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 text-orange-500"></i> <span>${namaPo}</span></div> 
+                        <span class="bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-xs font-black">${qtyPo}</span>
+                    </li>`;
+        }).join('');
+    }
+    lucide.createIcons();
+    document.getElementById('modal-lihat-po').classList.remove('hidden');
+};
 
 // ========================================================
 // FUNGSI SINKRONISASI DATABASE (DIPANGGIL OTOMATIS)
@@ -506,7 +782,7 @@ window.eksekusiSimpanFinalOut = async function() {
     const keterangan = document.getElementById('input-keterangan-out').value.trim();
 
     const btn = document.getElementById('btn-eksekusi-final'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...'; btn.disabled = true;
 
     let prefix = "XX";
     if(rawAktifitas === "Ganti nama item") prefix = "NA";
@@ -516,14 +792,30 @@ window.eksekusiSimpanFinalOut = async function() {
     else if(rawAktifitas === "Ganti shading") prefix = "SH";
     else if(rawAktifitas === "Ganti label/qrcode") prefix = "QR";
 
+    let stockCapacity = {}; let specsToProcess = new Set();
+    dataPic.forEach(row => { if (row.status === 'VALID') specsToProcess.add(row.baseSpec); });
+
+    try {
+        for(let spec of specsToProcess) {
+            let parts = spec.split('_');
+            let [nm, pj, gr, ds, sh] = [parts[0], parts[1], parts[2], parts[3], parts[4]];
+            const { data, error } = await db.from('stok_aktual').select('qty')
+                .eq('nama_item', nm).eq('pjg', pj).eq('grade', gr).eq('dus', ds).eq('shading', sh)
+                .ilike('po_aktual', `%${poTarget}%`); 
+            if (error) throw error;
+            let count = 0; if(data) data.forEach(d => count += (d.qty || 0));
+            stockCapacity[spec] = count;
+        }
+    } catch(e) { alert("Gagal membaca kapasitas stok_aktual: " + e.message); btn.innerHTML = ori; btn.disabled = false; return; }
+
     let qrList = []; let mapAktual = {}; let mapGlobal = {};
     let matchedRows = []; let unmatchedCount = 0;
 
     dataPic.forEach(d => {
         if (d.status === 'VALID') {
-            // REVISI: Pastikan PO Aktual UI sama dengan PO Target yang dipilih
-            if(d.poAktualUI === poTarget) {
-                matchedRows.push(d); qrList.push(d.qrcode); 
+            let baseSpec = d.baseSpec;
+            if(stockCapacity[baseSpec] && stockCapacity[baseSpec] > 0) {
+                matchedRows.push(d); qrList.push(d.qrcode); stockCapacity[baseSpec] -= 1; 
 
                 let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${poTarget}_-`;
                 if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: d.jenisItem, nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, po_aktual: poTarget, ket: '-', qty: 0 };
@@ -536,10 +828,23 @@ window.eksekusiSimpanFinalOut = async function() {
         } else { unmatchedCount++; }
     });
 
-    if (qrList.length === 0) { alert(`❌ TIDAK ADA JATAH.\nTidak ada kardus dengan PO "${poTarget}" yang di-scan.`); btn.innerHTML = ori; btn.disabled = false; return; }
+    if (qrList.length === 0) { alert(`❌ TIDAK ADA JATAH.\nSisa stok aktual untuk PO "${poTarget}" adalah 0.`); btn.innerHTML = ori; btn.disabled = false; return; }
 
     try {
-        // REVISI: Menggunakan key 'panjang' pada payload RPC
+        for (let row of matchedRows) {
+            if (row.poAsliDB !== poTarget) {
+                let parts = row.baseSpec.split('_'); let [nm, pj, gr, ds, sh] = [parts[0], parts[1], parts[2], parts[3], parts[4]];
+                const targetSkuPattern = `%_${nm}_${pj}_${gr}_${ds}_${sh}_${poTarget}`;
+                const { data: qrToSwap, error: swapErr } = await db.from('stok_qr').select('qrcode, id_sku').ilike('id_sku', targetSkuPattern).limit(1);
+                if (swapErr) throw swapErr;
+                if (qrToSwap && qrToSwap.length > 0) {
+                    const oldSku = qrToSwap[0].id_sku; const newSku = oldSku.replace(`_${poTarget}`, `_${row.poAsliDB}`);
+                    const { error: updateErr } = await db.from('stok_qr').update({ id_sku: newSku }).eq('qrcode', qrToSwap[0].qrcode);
+                    if (updateErr) throw updateErr;
+                }
+            }
+        }
+
         const payloadData = { qrs: qrList, aktuals: Object.values(mapAktual), globals: Object.values(mapGlobal) };
         const { error: rpcError } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
         if (rpcError) throw rpcError;
@@ -555,7 +860,7 @@ window.eksekusiSimpanFinalOut = async function() {
             arrStokKonversi.push({
                 kode_konversi: kodeKonversi, aktifitas: aktifitas, qrcode: d.qrcode,
                 tgl_produksi: d.tglProduksi || '-', mesin: d.mesin || '-', shift: d.shift || '-',
-                jenis_item: d.jenisItem || '-', nama_item: d.namaItem || '-', panjang: d.panjang || '-', // REVISI
+                jenis_item: d.jenisItem || '-', nama_item: d.namaItem || '-', pjg: d.panjang || '-',
                 grade: d.grade || '-', dus: d.dus || '-', shading: d.shading || '-',
                 po_bawaan: d.poAsliDB || '-', po_aktual: poTarget, keterangan: keterangan || '-',
                 pic: currentUser.username, area: d.area || '-', status: 'PENDING'
@@ -577,10 +882,10 @@ window.eksekusiSimpanFinalOut = async function() {
         await sinkronisasiUlangStokAktual();
 
         let msg = `✅ EKSEKUSI KONVERSI OUT BERHASIL!\n\nID Audit: ${kodeKonversi}\nPO Target: ${poTarget}\nBerhasil dipotong dari Kartu Stok: ${qrList.length} Dus dan dimasukkan ke Stok Konversi.`;
-        if (unmatchedCount > 0) msg += `\n\n⚠️ ${unmatchedCount} dus tidak diproses karena PO tidak cocok atau status fisik belum VALID.`;
+        if (unmatchedCount > 0) msg += `\n\n⚠️ ${unmatchedCount} dus tidak diproses karena jatah PO kurang atau status fisik belum VALID.`;
         alert(msg);
         
-        window.tutupSemuaModal(); dataPic = []; window.resetFilterWithoutRender(); renderTablePic(dataPic);
+        window.tutupSemuaModal(); dataPic = []; window.renderTablePic();
         document.getElementById('input-keterangan-out').value = '';
         document.getElementById('select-aktifitas').value = '';
 
@@ -613,7 +918,7 @@ window.eksekusiSimpanFinalIn = async function() {
 
     validItems.forEach(d => {
         let poBawaanAsli = d.poBawaan && d.poBawaan !== '-' ? d.poBawaan : '-';
-        let id_sku_baru = `${areaTujuan}_${d.jenisItem}_${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${poBawaanAsli}`;
+        let id_sku_baru = `${areaTujuan}_${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${poBawaanAsli}_${ket}`;
         
         insertsStokQr.push({
             qrcode: d.qrcode,
@@ -631,7 +936,7 @@ window.eksekusiSimpanFinalIn = async function() {
             shift: d.shift || '-',
             jenis_item: d.jenisItem || '-',
             nama_item: d.namaItem || '-',
-            panjang: d.panjang || '-', // REVISI
+            pjg: d.panjang || '-',
             grade: d.grade || '-',
             dus: d.dus || '-',
             shading: d.shading || '-',
@@ -664,7 +969,7 @@ window.eksekusiSimpanFinalIn = async function() {
         await sinkronisasiUlangStokAktual();
 
         alert(`✅ BERHASIL KONVERSI IN!\n${validItems.length} dus masuk ke gudang pada area ${areaTujuan} & Saldo bertambah.`);
-        dataPic = []; renderTablePic(dataPic);
+        dataPic = []; window.renderTablePic();
         document.getElementById('in-kode-konversi').value = '';
         document.getElementById('input-keterangan-in').value = '';
         
@@ -689,7 +994,7 @@ window.eksekusiPindahArea = async function() {
     try {
         for (let item of validItems) {
             let poBawaanAsli = item.poAsliDB && item.poAsliDB !== '-' ? item.poAsliDB : '-';
-            let id_sku_baru = `${areaTarget}_${item.jenisItem}_${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${poBawaanAsli}`;
+            let id_sku_baru = `${areaTarget}_${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${poBawaanAsli}_Pindah Area`;
             
             const { error: errUpdate } = await db.from('stok_qr').update({ area: areaTarget, id_sku: id_sku_baru }).eq('qrcode', item.qrcode);
             if (errUpdate) throw errUpdate;
@@ -700,7 +1005,7 @@ window.eksekusiPindahArea = async function() {
                 mesin: item.mesin || '-',
                 shift: item.shift || '-',
                 nama_item: item.namaItem || '-',
-                panjang: item.panjang || '-', // REVISI
+                panjang: item.panjang || '-',
                 grade: item.grade || '-',
                 dus: item.dus || '-',
                 shading: item.shading || '-',
@@ -720,7 +1025,7 @@ window.eksekusiPindahArea = async function() {
         await sinkronisasiUlangStokAktual();
 
         alert(`✅ SUKSES PINDAH AREA!\n${validItems.length} Item berhasil dipindahkan ke area ${areaTarget}.`);
-        dataPic = []; renderTablePic(dataPic);
+        dataPic = []; window.renderTablePic();
         document.getElementById('pindah-area-target').value = '';
 
     } catch(e) {
