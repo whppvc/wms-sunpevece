@@ -25,7 +25,7 @@ const APP_MENUS = [
     { id: 'estimasi_pengiriman', title: 'Estimasi Pengiriman', icon: 'clipboard-check', url: 'estimasi_pengiriman.html' },
     { id: 'picking_list', title: 'Picking List', icon: 'clipboard-pen', url: 'picking_list.html' },
     { id: 'keluar', title: 'Kirim / Keluar', icon: 'truck', url: 'keluar.html' },
-    { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' }
+    { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' },
     { isDivider: true, title: 'PENGATURAN' },
     { id: 'master_data', title: 'Master Data', icon: 'database', url: 'master_data.html' }
 ];
