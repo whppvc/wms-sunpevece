@@ -1,4 +1,21 @@
 // ==========================================
+// 0. ROUTE GUARD (PENJAGA KEAMANAN HALAMAN)
+// ==========================================
+(function checkSecurity() {
+    const path = window.location.pathname;
+    const isLoginPage = path.endsWith('index.html') || path === '/' || path.endsWith('setting.html');
+    const session = localStorage.getItem('user_session');
+
+    if (!session && !isLoginPage) {
+        // JIKA TIDAK ADA SESI & BUKAN DI HALAMAN LOGIN -> TENDANG KE LOGIN
+        window.location.replace('index.html');
+    } else if (session && isLoginPage) {
+        // JIKA SUDAH LOGIN TAPI MENCOBA BUKA HALAMAN LOGIN -> TENDANG KE MENU UTAMA
+        window.location.replace('menu.html');
+    }
+})();
+
+// ==========================================
 // KREDENSIAL SUPABASE (JANGAN UBAH INI)
 // ==========================================
 const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
@@ -26,7 +43,7 @@ const APP_MENUS = [
     { id: 'picking_list', title: 'Picking List', icon: 'clipboard-pen', url: 'picking_list.html' },
     { id: 'keluar', title: 'Kirim / Keluar', icon: 'truck', url: 'keluar.html' },
     { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' },
-    { isDivider: true, title: 'PENGATURAN' },
+    { isDivider: true, title: 'PENGATURAN DATA' },
     { id: 'master_data', title: 'Master Data', icon: 'database', url: 'master_data.html' }
 ];
 
@@ -78,7 +95,10 @@ style.innerHTML = `
 document.head.appendChild(style);
 
 function initModernLayout(pageMeta) {
-    const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'Admin'}; // Role Default Sementara
+    const sessionString = localStorage.getItem('user_session');
+    if (!sessionString) return; // Fallback jika tidak ada sesi
+    
+    const user = JSON.parse(sessionString);
     
     const currentShape = localStorage.getItem('app_shape') || 'rounded'; 
     const currentBg = localStorage.getItem('app_bg') || 'light';         
@@ -249,7 +269,7 @@ function initModernLayout(pageMeta) {
     document.body.classList.add(`nuance-${currentNuance}`);
     
     lucide.createIcons();
-    setTimeout(cekNotifikasiInbox, 1000); // Cek notifikasi 1 detik setelah load
+    setTimeout(cekNotifikasiInbox, 1000); 
 }
 
 function setTheme(key, value) { localStorage.setItem(key, value); window.location.reload(); }
@@ -296,12 +316,10 @@ async function bukaModalInbox() {
         }
 
         const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown', role: 'Staff'};
-        // Berikan izin "TERIMA" jika jabatannya Admin/CS. Jika nama usernya memuat kata admin, loloskan juga.
         const canApprove = user.role === 'Admin' || user.role === 'CS' || user.username.toLowerCase().includes('admin');
         
         let html = '';
         data.forEach(d => {
-            // Jika punya akses, tampilkan tombol. Jika tidak, tampilkan label "Menunggu"
             let btnAksi = canApprove 
                 ? `<button onclick="terimaRequestPO(${d.id}, '${d.qrcode}', '${d.po_request}')" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm text-[10px] uppercase transition flex items-center gap-1 mx-auto"><i data-lucide="check-circle" class="w-3 h-3"></i> TERIMA</button>`
                 : `<span class="px-3 py-1 bg-amber-100 text-amber-700 font-bold rounded-lg text-[10px] border border-amber-300">MENUNGGU CS</span>`;
@@ -325,37 +343,30 @@ async function bukaModalInbox() {
     }
 }
 
-// FUNGSI INTI: MEMBELAH ID_SKU DAN MENGGANTI PO
 async function terimaRequestPO(idReq, qrcode, poBaru) {
     if(!confirm(`Yakin ingin mengganti PO untuk kardus ${qrcode} menjadi ${poBaru}?`)) return;
 
     try {
-        // 1. Ambil data stok (id_sku) dari gudang
         const { data: stokData, error: errStok } = await db.from('stok_qr').select('id_sku').eq('qrcode', qrcode).single();
         if(errStok || !stokData) throw new Error("Gagal mengambil kartu stok dari gudang (mungkin barang sudah keluar/terhapus).");
 
         let id_sku = stokData.id_sku;
         let parts = id_sku.split('_');
         
-        // Format WMS: Area_Jenis_Nama_Panjang_Grade_Dus_Shading_PO
         if(parts.length >= 8) {
-            parts[7] = poBaru; // Ganti elemen index ke-7 (PO)
+            parts[7] = poBaru; 
         } else {
-            // Jika formatnya meleset, ganti bagian paling belakang sebagai cadangan
             parts[parts.length - 1] = poBaru;
         }
         
-        let sku_baru = parts.join('_'); // Gabungkan kembali
+        let sku_baru = parts.join('_'); 
 
-        // 2. Tembak/Update ke tabel stok_qr
         const { error: errUpdate } = await db.from('stok_qr').update({ id_sku: sku_baru }).eq('qrcode', qrcode);
         if(errUpdate) throw errUpdate;
 
-        // 3. Ubah status Request di Inbox menjadi SELESAI
         const { error: errReq } = await db.from('request_ganti_po').update({ status: 'SELESAI' }).eq('id', idReq);
         if(errReq) throw errReq;
 
-        // Jika berhasil, refresh modal dan hilangkan titik merah (jika kosong)
         bukaModalInbox(); 
         cekNotifikasiInbox(); 
 
