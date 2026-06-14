@@ -329,7 +329,7 @@ window.renderTabel = function() {
 
             // REVISI 1: Baris selang-seling yang lebih jelas (even:bg-slate-100)
             return `
-                <tr class="bg-white even:bg-slate-100 hover:bg-green-50 transition row-ks text-sm border-b border-slate-200">
+                <tr class="bg-white even:bg-slate-120 hover:bg-green-50 transition row-ks text-sm border-b border-slate-200">
                     <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-emerald-700 col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-mono font-medium text-slate-800 col-qr text-left" data-search="${r.qrcode}">${r.qrcode}</td>
@@ -370,7 +370,7 @@ window.renderTabel = function() {
         tbody.innerHTML = window.dataKSArea.map((r) => {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             return `
-                <tr class="bg-white even:bg-slate-100 hover:bg-green-50 transition row-ks text-sm border-b border-slate-200">
+                <tr class="bg-white even:bg-slate-120 hover:bg-green-50 transition row-ks text-sm border-b border-slate-200">
                     <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-emerald-700 col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-medium text-blue-600 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
@@ -405,7 +405,7 @@ window.renderTabel = function() {
         if(window.dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = window.dataKSGlobal.map((r) => `
-            <tr class="bg-white even:bg-slate-100 hover:bg-green-50 transition row-ks text-sm border-b border-slate-200">
+            <tr class="bg-white even:bg-slate-120 hover:bg-green-50 transition row-ks text-sm border-b border-slate-200">
                 <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 text-center col-open"><button onclick="window.bukaBreakdown('${r.gKey}')" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition flex mx-auto items-center justify-center"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="px-4 py-3 font-medium text-blue-600 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
@@ -437,7 +437,7 @@ window.renderTabel = function() {
         if(window.stokLembaranRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="8" class="p-8 text-center font-medium text-slate-400">Tidak ada data stok lembaran.</td></tr>`; return; }
 
         tbody.innerHTML = window.stokLembaranRaw.map((r) => `
-            <tr class="bg-white even:bg-slate-100 hover:bg-green-50 transition row-ks text-sm border-b border-slate-200">
+            <tr class="bg-white even:bg-slate-120 hover:bg-green-50 transition row-ks text-sm border-b border-slate-200">
                 <td class="px-4 py-3 text-center col-cb"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-emerald-700 col-area" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
