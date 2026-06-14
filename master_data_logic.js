@@ -1,13 +1,13 @@
-let currentCategory = '';
+let currentCategory = 'variabel';
 let tableData = [];
 let searchQuery = '';
 
-// REVISI: Konfigurasi Kolom disesuaikan dengan urutan yang diminta
+const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'admin'};
+
 const CONFIG = {
     'variabel': {
         table: 'master_2',
         title: 'VARIABEL & KODE',
-        icon: 'book-open',
         cols: [
             { key: 'mesin', label: 'Mesin Asli' },
             { key: 'kode_mesin', label: 'Kode Mesin' },
@@ -26,7 +26,6 @@ const CONFIG = {
     'jasper': {
         table: 'nama_jasper',
         title: 'NAMA JASPER',
-        icon: 'file-text',
         cols: [
             { key: 'nama_item', label: 'Nama Item (WMS)' },
             { key: 'panjang', label: 'Panjang' },
@@ -37,7 +36,6 @@ const CONFIG = {
     'area': {
         table: 'master_area',
         title: 'MASTER AREA',
-        icon: 'map',
         cols: [
             { key: 'nama_area', label: 'Nama Area Gudang' }
         ]
@@ -46,30 +44,25 @@ const CONFIG = {
 
 document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'master_data', title: 'MASTER DATA', url: 'master_data.html' });
+    // Buka tab pertama secara otomatis saat halaman dimuat
+    bukaTabel('variabel');
 });
-
-function kembaliKeMenu() {
-    document.getElementById('view-dashboard').classList.remove('hidden');
-    document.getElementById('view-table').classList.add('hidden');
-    document.getElementById('footer-action').classList.add('hidden');
-    document.getElementById('btn-back').classList.add('hidden');
-    
-    document.getElementById('title-bar').innerHTML = `<i data-lucide="layout-grid" class="w-4 h-4"></i> MENU MASTER DATA`;
-    lucide.createIcons();
-}
 
 async function bukaTabel(kategori) {
     currentCategory = kategori;
-    const conf = CONFIG[kategori];
     
-    document.getElementById('view-dashboard').classList.add('hidden');
-    document.getElementById('view-table').classList.remove('hidden');
-    document.getElementById('footer-action').classList.remove('hidden');
-    document.getElementById('btn-back').classList.remove('hidden');
+    // Atur Class Tab (Active/Inactive)
+    ['variabel', 'jasper', 'area'].forEach(tab => {
+        const el = document.getElementById('tab-' + tab);
+        if(el) {
+            el.className = (kategori === tab) 
+                ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' 
+                : 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+        }
+    });
+
     document.getElementById('input-search').value = '';
     searchQuery = '';
-    
-    document.getElementById('title-bar').innerHTML = `<i data-lucide="${conf.icon}" class="w-4 h-4"></i> TABEL: ${conf.title}`;
     
     await fetchTableData();
 }
@@ -80,8 +73,10 @@ async function fetchTableData() {
     const thead = document.getElementById('thead-master');
     
     // Render Header (Tanpa kolom Hapus)
-    let thHtml = `<tr><th class="hdr-std w-12">No</th>`;
-    conf.cols.forEach(c => { thHtml += `<th class="hdr-std border-l border-slate-600">${c.label}</th>`; });
+    let thHtml = `<tr><th class="hdr-std w-12 relative">No</th>`;
+    conf.cols.forEach(c => { 
+        thHtml += `<th class="hdr-std border-l border-slate-600 relative">${c.label}</th>`; 
+    });
     thHtml += `</tr>`;
     thead.innerHTML = thHtml;
 
@@ -99,7 +94,6 @@ async function fetchTableData() {
     }
 }
 
-// REVISI: Fitur Pencarian (Filter)
 function searchData(val) {
     searchQuery = val.toLowerCase();
     renderTableBody();
@@ -139,6 +133,9 @@ function renderTableBody() {
     });
 
     tbody.innerHTML = html;
+    
+    // Inisialisasi fitur Resizable Columns setelah tabel di-render
+    initResizableColumns();
 }
 
 function updateCell(index, key, value) {
@@ -150,18 +147,15 @@ function tambahBarisKosong() {
     CONFIG[currentCategory].cols.forEach(c => newRow[c.key] = '');
     tableData.push(newRow);
     
-    // Reset pencarian agar baris baru terlihat
     document.getElementById('input-search').value = '';
     searchQuery = '';
     
     renderTableBody();
     
-    // Auto scroll ke bawah
     const container = document.querySelector('.table-container');
     if(container) container.scrollTop = container.scrollHeight;
 }
 
-// REVISI: Perbaikan Bug Null Value ID
 async function simpanKeSupabase() {
     const conf = CONFIG[currentCategory];
     const btn = document.getElementById('btn-save');
@@ -183,26 +177,21 @@ async function simpanKeSupabase() {
                 if (cleanRow[c.key]) isEmpty = false;
             });
             
-            // Jangan simpan baris yang benar-benar kosong melompong
             if (!isEmpty) {
                 if (row.id) {
-                    // Jika punya ID, masuk ke antrean Update
                     cleanRow.id = row.id;
                     payloadUpdate.push(cleanRow);
                 } else {
-                    // Jika TIDAK punya ID, masuk ke antrean Insert (DB akan generate ID otomatis)
                     payloadInsert.push(cleanRow);
                 }
             }
         });
 
-        // Eksekusi Update (Upsert)
         if (payloadUpdate.length > 0) {
             const { error: errUpd } = await db.from(conf.table).upsert(payloadUpdate);
             if (errUpd) throw new Error("Gagal Update data: " + errUpd.message);
         }
 
-        // Eksekusi Insert
         if (payloadInsert.length > 0) {
             const { error: errIns } = await db.from(conf.table).insert(payloadInsert);
             if (errIns) throw new Error("Gagal Insert data baru: " + errIns.message);
@@ -220,19 +209,16 @@ async function simpanKeSupabase() {
     }
 }
 
-// REVISI: Fitur Download Excel
 function downloadExcelMaster() {
     if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
     
     const conf = CONFIG[currentCategory];
     let ws_data = [];
     
-    // Header
     let headers = ['No'];
     conf.cols.forEach(c => headers.push(c.label));
     ws_data.push(headers);
 
-    // Data (Hanya yang tampil di layar / hasil filter)
     const visibleData = tableData.filter(row => {
         if (!searchQuery) return true;
         return conf.cols.some(c => String(row[c.key] || '').toLowerCase().includes(searchQuery));
@@ -250,4 +236,52 @@ function downloadExcelMaster() {
     let wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, conf.title);
     XLSX.writeFile(wb, `MasterData_${conf.title}_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+// ========================================================
+// FITUR RESIZABLE COLUMNS (DRAG LEBAR KOLOM)
+// ========================================================
+function initResizableColumns() {
+    const cols = document.querySelectorAll('#thead-master th');
+    cols.forEach(col => {
+        // Hapus resizer lama jika ada (mencegah duplikasi saat render ulang)
+        const existing = col.querySelector('.resizer');
+        if(existing) existing.remove();
+
+        // Buat elemen div transparan di sisi kanan TH
+        const resizer = document.createElement('div');
+        resizer.classList.add('resizer');
+        col.appendChild(resizer);
+        
+        createResizableColumn(col, resizer);
+    });
+}
+
+function createResizableColumn(col, resizer) {
+    let x = 0;
+    let w = 0;
+
+    const mouseDownHandler = function(e) {
+        x = e.clientX;
+        const styles = window.getComputedStyle(col);
+        w = parseInt(styles.width, 10);
+
+        document.addEventListener('mousemove', mouseMoveHandler);
+        document.addEventListener('mouseup', mouseUpHandler);
+        resizer.classList.add('resizing');
+    };
+
+    const mouseMoveHandler = function(e) {
+        const dx = e.clientX - x;
+        col.style.width = `${w + dx}px`;
+        col.style.minWidth = `${w + dx}px`;
+    };
+
+    const mouseUpHandler = function() {
+        document.removeEventListener('mousemove', mouseMoveHandler);
+        document.removeEventListener('mouseup', mouseUpHandler);
+        resizer.classList.remove('resizing');
+    };
+
+    resizer.addEventListener('mousedown', mouseDownHandler);
 }
