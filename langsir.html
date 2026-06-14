@@ -7,6 +7,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- PINDAHKAN GLOBAL.JS KE SINI -->
+    <script src="global.js"></script>
+    
     <style>
         html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; touch-action: pan-y; background-color: #f8fafc; }
         .custom-scroll::-webkit-scrollbar { width: 8px; }
@@ -139,7 +143,6 @@
                 <button onclick="tutupModalHold()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             
-            <!-- REVISI: 2 Tab Navigasi Hold -->
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar px-2 pt-2">
                 <button onclick="bukaModalHold('hold_stbj')" id="tab-hold-stbj" class="pb-2 px-4 tab-active transition whitespace-nowrap text-xs uppercase font-bold">Hold STBJ</button>
                 <button onclick="bukaModalHold('hold_langsir')" id="tab-hold-langsir" class="pb-2 px-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap text-xs uppercase font-bold">Hold Langsir</button>
@@ -165,7 +168,6 @@
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label><input type="text" id="f-area" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
                 <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="f-qr" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
                 
-                <!-- REVISI: Tambahan Field Filter -->
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="text" id="f-tgl" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label><input type="text" id="f-mesin" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label><input type="text" id="f-shift" oninput="saringTabelLangsir()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
@@ -184,7 +186,6 @@
 
     <div id="overlay-klik-luar" onclick="tutupSemuaPopup()" class="hidden fixed inset-0 z-[40] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
-    <script src="global.js"></script>
     <script src="wms_parser.js"></script>
     <script src="langsir_logic.js"></script>
 </body>
