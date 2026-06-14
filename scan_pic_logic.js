@@ -5,13 +5,6 @@ let riwayatKonversiList = [];
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 let masterData = { kamus: [] };
 
-// Variabel untuk Filter & Paginasi
-window.currentPage = 1;
-window.rowsPerPage = 10;
-window.activeFilters = {};
-window.currentFilterCol = '';
-window.sortState = {};
-
 window.tutupSemuaModal = function() {
     document.getElementById('modal-po-target').classList.add('hidden');
     document.getElementById('modal-riwayat-konversi').classList.add('hidden');
@@ -20,20 +13,8 @@ window.tutupSemuaModal = function() {
 
 document.addEventListener('DOMContentLoaded', async () => { 
     initModernLayout({ id: 'scan_pic', title: 'SCAN PIC AREA', url: 'scan_pic.html' }); 
-    
-    // Listener untuk close Filter Menu
-    document.addEventListener('click', function(e) {
-        const menu = document.getElementById('excel-filter-menu');
-        if (menu && !menu.classList.contains('hidden')) {
-            if (!menu.contains(e.target) && !e.target.closest('button[title^="Filter"]')) {
-                window.closeFilterMenu();
-            }
-        }
-    });
-
     await loadInitialData();
     await loadAreas(); 
-    window.renderHeaderTabel(); 
 });
 
 async function loadInitialData() {
@@ -59,6 +40,7 @@ async function loadAreas() {
     } catch (e) { console.error("Gagal load area:", e); }
 }
 
+// REVISI: Fungsi ini tetap ada untuk fallback, tapi PO Aktual akan diambil dari stok_aktual
 function extractPOFromSKU(id_sku) {
     if(!id_sku) return '-';
     const parts = id_sku.split('_');
@@ -150,9 +132,7 @@ window.setModeKonversi = function(mode) {
         textSave.innerText = "SIMPAN PINDAH AREA";
     }
 
-    dataPic = []; 
-    window.activeFilters = {}; 
-    window.renderTablePic();
+    dataPic = []; renderTablePic(dataPic);
 };
 
 window.toggleAktifitas = function(target) {
@@ -193,14 +173,14 @@ window.bukaModalRiwayatKonversi = async function() {
                 <tr class="border-b hover:bg-slate-50 text-xs transition">
                     <td class="p-2"><button onclick="pilihKodeKonversi('${d.kode_konversi}', '${d.aktifitas}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-md shadow-sm transition active:scale-95">PILIH</button></td>
                     <td class="p-2">
-                        <button onclick="lihatDetailKonversi('${d.kode_konversi}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition active:scale-95 mx-auto flex" title="Lihat Detail Item">
+                        <button onclick="lihatDetailKonversi('${d.kode_konversi}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition active:scale-95 mx-auto flex" title="Lihat Detail Item">
                             <i data-lucide="list" class="w-4 h-4"></i>
                         </button>
                     </td>
                     <td class="p-2 font-mono font-bold tracking-wider text-slate-800 border-r border-slate-200">${d.kode_konversi}</td>
-                    <td class="p-2 font-semibold text-slate-500">${waktu}</td>
-                    <td class="p-2 font-black text-rose-600 border-r border-slate-200">${d.aktifitas}</td>
-                    <td class="p-3 font-bold text-slate-700 text-left whitespace-normal max-w-[400px] leading-relaxed">${detailItem}</td>
+                    <td class="p-2 font-medium text-slate-600">${waktu}</td>
+                    <td class="p-2 font-bold text-rose-600 border-r border-slate-200">${d.aktifitas}</td>
+                    <td class="p-3 font-medium text-slate-700 text-left whitespace-normal max-w-[400px] leading-relaxed">${detailItem}</td>
                     <td class="p-3 font-medium text-slate-600 text-left whitespace-normal max-w-[200px] leading-tight border-r border-slate-200">${ket}</td>
                     <td class="p-2 font-black text-emerald-600 bg-emerald-50">${d.qty_total}</td>
                     <td class="p-2 uppercase opacity-70 font-bold text-slate-500">${d.pic}</td>
@@ -219,19 +199,19 @@ window.lihatDetailKonversi = function(kode) {
     let items = detailObj.items || [];
     
     let t = `<table class="w-full text-left border-collapse text-xs whitespace-nowrap">
-                <thead class="bg-slate-800 text-white text-center">
-                    <tr><th class="p-2">No</th><th class="p-2">QRCode</th><th class="p-2">Nama Item</th><th class="p-2">Pjg</th><th class="p-2">Grade</th><th class="p-2">Dus</th><th class="p-2">Shading</th></tr>
+                <thead class="bg-slate-100 text-slate-600 text-center border-b border-slate-200">
+                    <tr><th class="p-2 font-bold uppercase">No</th><th class="p-2 font-bold uppercase">QRCode</th><th class="p-2 font-bold uppercase">Nama Item</th><th class="p-2 font-bold uppercase">Pjg</th><th class="p-2 font-bold uppercase">Grade</th><th class="p-2 font-bold uppercase">Dus</th><th class="p-2 font-bold uppercase">Shading</th></tr>
                 </thead>
                 <tbody>`;
     items.forEach((item, idx) => {
-        t += `<tr class="border-b text-center hover:bg-slate-50">
-                <td class="p-2">${idx+1}</td>
-                <td class="p-2 font-mono font-bold">${item.qrcode}</td>
-                <td class="p-2 text-left font-bold text-blue-700">${item.namaItem || item.nama_item}</td>
-                <td class="p-2 font-bold">${item.panjang || item.pjg}</td>
-                <td class="p-2 font-bold">${item.grade}</td>
-                <td class="p-2 font-bold">${item.dus}</td>
-                <td class="p-2 font-bold">${item.shading}</td>
+        t += `<tr class="border-b border-slate-100 text-center hover:bg-white bg-slate-50/50">
+                <td class="p-2 text-slate-500">${idx+1}</td>
+                <td class="p-2 font-mono font-medium text-slate-800">${item.qrcode}</td>
+                <td class="p-2 text-left font-semibold text-blue-600">${item.namaItem || item.nama_item}</td>
+                <td class="p-2 font-medium text-slate-700">${item.panjang || item.pjg}</td>
+                <td class="p-2 font-medium text-slate-700">${item.grade}</td>
+                <td class="p-2 font-medium text-slate-700">${item.dus}</td>
+                <td class="p-2 font-medium text-slate-700">${item.shading}</td>
               </tr>`;
     });
     t += `</tbody></table>`;
@@ -266,17 +246,17 @@ window.bukaModalRiwayatPindah = async function() {
             
             h += `
                 <tr class="border-b hover:bg-slate-50 text-xs transition text-center">
-                    <td class="p-2 font-bold text-slate-500">${i+1}</td>
-                    <td class="p-2 font-semibold text-slate-500">${waktu}</td>
-                    <td class="p-2 font-black text-indigo-700 bg-indigo-50 border-r border-slate-200">${d.area_awal} ➔ ${d.area_akhir}</td>
-                    <td class="p-2 font-mono font-bold tracking-wider text-slate-800 border-r border-slate-200">${d.qrcode}</td>
-                    <td class="p-2 font-bold text-blue-700 text-left">${d.nama_item}</td>
-                    <td class="p-2 font-bold text-slate-600">${d.panjang}</td>
-                    <td class="p-2 font-bold text-slate-800">${d.grade}</td>
-                    <td class="p-2 font-bold text-slate-800">${d.dus}</td>
-                    <td class="p-2 font-bold text-slate-600 border-r border-slate-200">${d.shading}</td>
-                    <td class="p-2 font-black text-orange-600">${d.po}</td>
-                    <td class="p-2 font-medium text-slate-600 text-left border-r border-slate-200">${d.keterangan || '-'}</td>
+                    <td class="p-2 font-medium text-slate-500">${i+1}</td>
+                    <td class="p-2 font-medium text-slate-600">${waktu}</td>
+                    <td class="p-2 font-bold text-indigo-600 bg-indigo-50 border-r border-slate-200">${d.area_awal} ➔ ${d.area_akhir}</td>
+                    <td class="p-2 font-mono font-medium tracking-wider text-slate-800 border-r border-slate-200">${d.qrcode}</td>
+                    <td class="p-2 font-semibold text-blue-600 text-left">${d.nama_item}</td>
+                    <td class="p-2 font-medium text-slate-700">${d.panjang}</td>
+                    <td class="p-2 font-medium text-slate-700">${d.grade}</td>
+                    <td class="p-2 font-medium text-slate-700">${d.dus}</td>
+                    <td class="p-2 font-medium text-slate-700 border-r border-slate-200">${d.shading}</td>
+                    <td class="p-2 font-semibold text-orange-600">${d.po}</td>
+                    <td class="p-2 font-medium text-slate-500 text-left border-r border-slate-200">${d.keterangan || '-'}</td>
                     <td class="p-2 uppercase opacity-70 font-bold text-slate-500">${d.pic}</td>
                 </tr>`;
         });
@@ -291,11 +271,13 @@ window.bukaModalRiwayatPindah = async function() {
 document.getElementById('form-scan-out').addEventListener('submit', (e) => { e.preventDefault(); handleScan(document.getElementById('input-qrcode-out')); });
 document.getElementById('form-scan-in').addEventListener('submit', (e) => { e.preventDefault(); handleScan(document.getElementById('input-qrcode-in')); });
 document.getElementById('form-scan-pindah').addEventListener('submit', (e) => { e.preventDefault(); handleScan(document.getElementById('input-qrcode-pindah')); });
+document.getElementById('form-scan-umum').addEventListener('submit', (e) => { e.preventDefault(); handleScan(document.getElementById('input-qrcode-umum')); });
 
 function handleScan(inputEl) {
     const rawInput = inputEl.value.trim();
     if(!rawInput) return;
 
+    window.resetFilterWithoutRender();
     const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
     
     codes.forEach(code => {
@@ -309,246 +291,29 @@ function handleScan(inputEl) {
         });
     });
 
-    window.renderTablePic();
+    renderTablePic(dataPic);
     inputEl.value = ''; inputEl.focus();
 }
 
 window.hapusBaris = function(qrCode) {
     dataPic = dataPic.filter(d => d.qrcode !== qrCode);
-    window.renderTablePic();
+    window.saringTabel();
 };
 
-// ==========================================
-// HEADER FILTER EXCEL PRO & SORT
-// ==========================================
-window.renderHeaderTabel = function() {
-    const thead = document.getElementById('thead-pic');
-    window.sortState = {};
-    
-    thead.innerHTML = `
-        <tr>
-            <th class="hdr-std w-10"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-slate-400"></i></th>
-            <th class="hdr-std w-12 col-no">No</th>
-            ${window.thSort(2, 'Status', 'col-status border-r border-slate-500')}
-            ${window.thSort(3, 'Area', 'col-area text-amber-300')}
-            ${window.thSort(4, 'Text QRCode', 'col-qr border-r border-slate-500')}
-            ${window.thSort(5, 'Tgl Produksi', 'col-tgl')}
-            ${window.thSort(6, 'Mesin', 'col-mesin')}
-            ${window.thSort(7, 'Shift', 'col-shift')}
-            ${window.thSort(8, 'Jenis Item', 'col-jenis text-blue-300')}
-            ${window.thSort(9, 'Nama Item', 'col-nama text-left pl-4')}
-            ${window.thSort(10, 'Pjg', 'col-pjg')}
-            ${window.thSort(11, 'Grade', 'col-grade')}
-            ${window.thSort(12, 'Dus', 'col-dus')}
-            ${window.thSort(13, 'Shading', 'col-shading border-r border-slate-500')}
-            ${window.thSort(14, 'PO Bawaan', 'col-po text-slate-400')}
-            ${window.thSort(15, 'PO Aktual (Stok)', 'col-poaktual text-orange-400 border-l border-slate-500 bg-slate-900')}
-        </tr>
-    `;
-    lucide.createIcons();
-};
-
-window.thSort = function(idx, label, cls = "") {
-    const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
-    const noFilter = ['col-no'].includes(colClass);
-    
-    const filterBtn = noFilter ? '' : `
-        <button onclick="window.openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-600 rounded ml-1 transition text-slate-400 hover:text-white" title="Filter ${label}">
-            <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon transition-all"></i>
-        </button>`;
-
-    return `<th class="hdr-std ${cls} select-none">
-        <div class="flex items-center justify-center gap-1.5">
-            <span class="cursor-pointer flex items-center gap-1 hover:text-blue-300 transition" onclick="window.sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
-            ${filterBtn}
-        </div>
-    </th>`;
-};
-
-window.sortTable = function(colIndex, headerEl) {
+function renderTablePic(dataToRender) {
     const tbody = document.getElementById('tbody-pic');
-    const rows = Array.from(tbody.querySelectorAll('tr.row-pic'));
-    let isAsc = window.sortState[colIndex] !== 'asc'; window.sortState[colIndex] = isAsc ? 'asc' : 'desc';
-    
-    rows.sort((a, b) => {
-        let valA = a.cells[colIndex].getAttribute('data-search') || a.cells[colIndex].innerText.trim(); 
-        let valB = b.cells[colIndex].getAttribute('data-search') || b.cells[colIndex].innerText.trim();
-        let numA = parseFloat(valA); let numB = parseFloat(valB);
-        if(!isNaN(numA) && !isNaN(numB)) { return isAsc ? numA - numB : numB - numA; } 
-        else { return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA); }
-    });
-    
-    rows.forEach(row => tbody.appendChild(row));
-    document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-30'); });
-    const icon = headerEl.querySelector('.sort-icon');
-    if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
-    window.applyPagination();
-};
-
-window.openColumnFilter = function(event, colClass, colName) {
-    event.stopPropagation(); window.currentFilterCol = colClass;
-    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
-    let uniqueValues = new Set();
-    
-    document.querySelectorAll('#tbody-pic tr.row-pic').forEach(row => {
-        let showBasedOnOthers = true;
-        for (let otherCol in window.activeFilters) {
-            if (otherCol !== colClass) { 
-                const allowed = window.activeFilters[otherCol]; const c = row.querySelector('.' + otherCol);
-                let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
-                if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
-            }
-        }
-        if (showBasedOnOthers) {
-            let cell = row.querySelector('.' + colClass);
-            if (cell) { let val = cell.getAttribute('data-search') || cell.innerText.trim(); if(val !== '') uniqueValues.add(val); }
-        }
-    });
-
-    let sortedValues = Array.from(uniqueValues).sort();
-    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
-    
-    sortedValues.forEach(val => {
-        let isChecked = !window.activeFilters[colClass] || window.activeFilters[colClass].includes(val);
-        listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}">
-            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
-            <span class="truncate text-slate-600">${val}</span>
-        </label>`;
-    });
-
-    document.getElementById('filter-values-list').innerHTML = listHtml; window.updateSelectAllState();
-    document.getElementById('filter-search-input').value = '';
-    const rect = event.currentTarget.getBoundingClientRect(); const menu = document.getElementById('excel-filter-menu');
-    if(menu) {
-        menu.classList.remove('hidden');
-        let top = rect.bottom + window.scrollY + 5; let left = rect.left + window.scrollX;
-        if (left + 256 > window.innerWidth) { left = window.innerWidth - 266; }
-        menu.style.top = top + 'px'; menu.style.left = left + 'px';
-    }
-    const sInput = document.getElementById('filter-search-input'); if(sInput) sInput.focus();
-};
-
-window.toggleAllFilterValues = function(checked) {
-    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
-    window.updateSelectAllState();
-};
-window.updateSelectAllState = function() {
-    const allCbs = document.querySelectorAll('.filter-val-cb'); const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
-    const selectAll = document.getElementById('filter-select-all'); if(!selectAll) return;
-    if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
-    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
-    else { selectAll.checked = false; selectAll.indeterminate = true; }
-};
-
-window.searchFilterList = function(val) {
-    const query = val.toLowerCase().split(' ').filter(x => x);
-    document.querySelectorAll('.filter-val-item').forEach(label => {
-        const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
-        label.style.display = query.every(term => text.includes(term)) ? '' : 'none';
-    });
-};
-window.closeFilterMenu = function() { const menu = document.getElementById('excel-filter-menu'); if(menu) menu.classList.add('hidden'); };
-window.clearFilterForCurrentCol = function() { delete window.activeFilters[window.currentFilterCol]; window.closeFilterMenu(); window.saringTabelExcel(); window.updateFilterIcons(); };
-window.applyFilterForCurrentCol = function() {
-    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked'); const totalBoxes = document.querySelectorAll('.filter-val-cb');
-    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') { delete window.activeFilters[window.currentFilterCol]; } 
-    else { window.activeFilters[window.currentFilterCol] = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value)); }
-    window.closeFilterMenu(); window.saringTabelExcel(); window.updateFilterIcons();
-};
-window.saringTabelExcel = function() {
-    document.querySelectorAll('.row-pic').forEach(row => {
-        let show = true;
-        for (let colClass in window.activeFilters) {
-            const allowed = window.activeFilters[colClass]; const cell = row.querySelector('.' + colClass);
-            if (cell) { if (!allowed.includes(cell.getAttribute('data-search') || cell.innerText.trim())) { show = false; break; } }
-        }
-        if (show) { row.classList.remove('filtered-out'); } 
-        else { row.classList.add('filtered-out'); }
-    });
-    window.currentPage = 1; window.applyPagination();
-};
-window.updateFilterIcons = function() {
-    document.querySelectorAll('.filter-icon').forEach(icon => { icon.classList.remove('text-blue-600'); icon.classList.add('text-slate-400'); });
-    for (let colClass in window.activeFilters) {
-        const th = document.querySelector(`th.${colClass}`);
-        if (th) { const icon = th.querySelector('.filter-icon'); if (icon) { icon.classList.remove('text-slate-400'); icon.classList.add('text-blue-600'); } }
-    }
-};
-
-window.changeRowsPerPage = function(val) {
-    const customInput = document.getElementById('input-custom-rows');
-    if (val === 'ALL') {
-        window.rowsPerPage = 999999; 
-        customInput.classList.add('hidden');
-    } else if (val === 'CUSTOM') {
-        customInput.classList.remove('hidden');
-        customInput.focus();
-        let customVal = parseInt(customInput.value);
-        window.rowsPerPage = (customVal > 0) ? customVal : window.rowsPerPage;
-    } else {
-        window.rowsPerPage = parseInt(val);
-        customInput.classList.add('hidden');
-    }
-    window.currentPage = 1; 
-    window.applyPagination();
-};
-
-window.setCustomRowsPerPage = function(val) {
-    let parsed = parseInt(val);
-    if (!isNaN(parsed) && parsed > 0) {
-        window.rowsPerPage = parsed;
-        window.currentPage = 1;
-        window.applyPagination();
-    }
-};
-
-window.applyPagination = function() {
-    const allRows = Array.from(document.querySelectorAll('#tbody-pic tr.row-pic'));
-    allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
-    
-    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
-    const totalFiltered = visibleRows.length; const totalPages = Math.ceil(totalFiltered / window.rowsPerPage) || 1;
-    
-    if(window.currentPage > totalPages) window.currentPage = totalPages; 
-    if(window.currentPage < 1) window.currentPage = 1;
-
-    const startIndex = (window.currentPage - 1) * window.rowsPerPage; const endIndex = startIndex + window.rowsPerPage;
-
-    visibleRows.forEach((row, index) => {
-        if(index >= startIndex && index < endIndex) { 
-            row.style.display = ''; 
-            let noCell = row.querySelector('.col-no');
-            if(noCell) noCell.innerText = index + 1;
-        } 
-        else { row.style.display = 'none'; }
-    });
-
-    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = window.currentPage;
-    if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
-};
-
-window.prevPage = function() { if(window.currentPage > 1) { window.currentPage--; window.applyPagination(); } };
-window.nextPage = function() { 
-    const totalVisible = document.querySelectorAll('#tbody-pic tr.row-pic:not(.filtered-out)').length;
-    if(window.currentPage < Math.ceil(totalVisible / window.rowsPerPage)) { window.currentPage++; window.applyPagination(); } 
-};
-
-// ==========================================
-// RENDER TABEL
-// ==========================================
-window.renderTablePic = function() {
-    const tbody = document.getElementById('tbody-pic');
-    if(dataPic.length === 0) {
+    if(dataToRender.length === 0) {
         tbody.innerHTML = '<tr><td colspan="16" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan.</td></tr>';
         lucide.createIcons(); return;
     }
     
     let html = '';
-    dataPic.forEach((d, index) => {
-        let badge = "bg-slate-200 text-slate-700";
-        if(d.status === 'VALID') badge = "bg-emerald-600 text-white border-emerald-700";
-        else if(d.status === 'KOSONG' || d.status === 'DUPLIKAT LOKAL') badge = "bg-red-600 text-white border-red-700";
+    dataToRender.forEach((d, index) => {
+        let badge = "bg-slate-100 text-slate-600 border-slate-200";
+        if(d.status === 'VALID') badge = "bg-emerald-100 text-emerald-700 border-emerald-200";
+        else if(d.status === 'KOSONG' || d.status === 'DUPLIKAT LOKAL') badge = "bg-red-100 text-red-700 border-red-200";
 
+        // REVISI 2: Tombol Lihat PO
         let btnPO = d.poAktualUI;
         if (d.status === 'VALID' && d.poAktualUI !== '-' && d.poAktualUI !== 'KOSONG' && d.poAktualUI !== 'Cek Stok...') {
             btnPO = `<button onclick="window.bukaModalLihatPO('${encodeURIComponent(d.poAktualUI)}')" class="bg-orange-100 text-orange-700 border border-orange-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-orange-200 transition flex items-center justify-center gap-1 mx-auto w-full max-w-[100px]"><i data-lucide="eye" class="w-3 h-3"></i> Lihat PO</button>`;
@@ -557,32 +322,54 @@ window.renderTablePic = function() {
         html += `
             <tr class="border-b border-slate-200 even:bg-slate-50 hover:bg-slate-100 transition text-xs text-center row-pic">
                 <td class="p-2 text-center">
-                    <button onclick="window.hapusBaris('${d.qrcode}')" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex">
+                    <button onclick="window.hapusBaris('${d.qrcode}')" class="text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white border border-slate-200 p-1.5 rounded-md transition shadow-sm mx-auto flex">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                     </button>
                 </td>
-                <td class="p-2 font-bold col-no">${index + 1}</td>
-                <td class="p-2 font-black text-[10px] border-r border-slate-200 col-status" data-search="${d.status}"><span class="px-2 py-1 rounded shadow-sm border ${badge}">${d.status}</span></td>
-                <td class="p-2 font-black text-amber-600 col-area" data-search="${d.area}">${d.area}</td>
-                <td class="p-2 font-mono font-bold text-left tracking-wider border-r border-slate-200 col-qr" data-search="${d.qrcode}">${d.qrcode}</td>
+                <td class="p-2 font-medium text-slate-500">${index + 1}</td>
+                <td class="p-2 font-semibold text-[10px] border-r border-slate-200"><span class="px-2 py-1 rounded-md border ${badge}">${d.status}</span></td>
+                <td class="p-2 font-semibold text-amber-600">${d.area}</td>
+                <td class="p-2 font-mono font-medium text-slate-800 text-left tracking-wider border-r border-slate-200">${d.qrcode}</td>
                 
-                <td class="p-2 font-bold text-slate-600 col-tgl" data-search="${d.tglProduksi || '-'}">${d.tglProduksi || '-'}</td>
-                <td class="p-2 font-bold text-slate-600 col-mesin" data-search="${d.mesin || '-'}">${d.mesin || '-'}</td>
-                <td class="p-2 font-bold text-slate-600 border-r border-slate-200 col-shift" data-search="${d.shift || '-'}">${d.shift || '-'}</td>
+                <td class="p-2 font-medium text-slate-600">${d.tglProduksi || '-'}</td>
+                <td class="p-2 font-medium text-slate-600">${d.mesin || '-'}</td>
+                <td class="p-2 font-medium text-slate-600 border-r border-slate-200">${d.shift || '-'}</td>
                 
-                <td class="p-2 font-black text-blue-700 col-jenis" data-search="${d.jenisItem || '-'}">${d.jenisItem || '-'}</td>
-                <td class="p-2 font-bold text-slate-800 text-left col-nama" data-search="${d.namaItem || '-'}">${d.namaItem || '-'}</td>
-                <td class="p-2 font-bold text-slate-600 col-pjg" data-search="${d.panjang || '-'}">${d.panjang || '-'}</td>
-                <td class="p-2 font-bold text-slate-800 col-grade" data-search="${d.grade || '-'}">${d.grade || '-'}</td>
-                <td class="p-2 font-bold text-slate-800 col-dus" data-search="${d.dus || '-'}">${d.dus || '-'}</td>
-                <td class="p-2 font-bold text-slate-600 border-r border-slate-200 col-shading" data-search="${d.shading || '-'}">${d.shading || '-'}</td>
-                <td class="p-2 text-center font-bold text-slate-500 col-po" data-search="${d.poBawaan || '-'}">${d.poBawaan || '-'}</td>
-                <td class="p-2 text-center font-black text-orange-600 bg-slate-100 border-l border-slate-200 text-[10px] whitespace-normal leading-tight max-w-[150px] col-poaktual" data-search="${d.poAktualUI || '-'}">${btnPO}</td>
+                <td class="p-2 font-semibold text-blue-600">${d.jenisItem || '-'}</td>
+                <td class="p-2 font-semibold text-slate-800 text-left">${d.namaItem || '-'}</td>
+                <td class="p-2 font-medium text-slate-700">${d.panjang || '-'}</td>
+                <td class="p-2 font-medium text-slate-700">${d.grade || '-'}</td>
+                <td class="p-2 font-medium text-slate-700">${d.dus || '-'}</td>
+                <td class="p-2 font-medium text-slate-700 border-r border-slate-200">${d.shading || '-'}</td>
+                <td class="p-2 text-center font-medium text-slate-500">${d.poBawaan || '-'}</td>
+                <td class="p-2 text-center font-semibold text-orange-600 bg-slate-50 border-l border-slate-200 text-[10px] whitespace-normal leading-tight max-w-[150px]">${btnPO}</td>
             </tr>`;
     });
     tbody.innerHTML = html; lucide.createIcons();
-    window.saringTabelExcel(); 
+}
+
+window.toggleFilter = function() {
+    const sidebar = document.getElementById('sidebar-filter'); const overlay = document.getElementById('overlay-klik-luar');
+    if (sidebar.classList.contains('translate-x-full')) { sidebar.classList.remove('translate-x-full'); overlay.classList.remove('hidden'); } 
+    else { sidebar.classList.add('translate-x-full'); overlay.classList.add('hidden'); }
 };
+
+window.saringTabel = function() {
+    const fStatus = document.getElementById('f-status').value.toLowerCase();
+    const fNama = document.getElementById('f-nama').value.toLowerCase();
+    const fQr = document.getElementById('f-qr').value.toLowerCase();
+
+    const filtered = dataPic.filter(r => {
+        const matchStatus = (r.status || '').toLowerCase().includes(fStatus);
+        const matchNama = (r.namaItem || '').toLowerCase().includes(fNama);
+        const matchQr = (r.qrcode || '').toLowerCase().includes(fQr);
+        return matchStatus && matchNama && matchQr;
+    });
+    renderTablePic(filtered);
+};
+
+window.resetFilterWithoutRender = function() { document.getElementById('f-status').value = ''; document.getElementById('f-nama').value = ''; document.getElementById('f-qr').value = ''; };
+window.resetFilter = function() { window.resetFilterWithoutRender(); renderTablePic(dataPic); };
 
 // ==========================================
 // VERIFIKASI GUDANG (PINTAR OUT/IN/PINDAH)
@@ -619,11 +406,12 @@ window.verifikasiGudang = async function() {
                 }
             });
 
+            // REVISI 2: Ambil distribusi PO Aktual dari stok_aktual
             let poDistMap = {};
             for (let spec of uniqueSpecs) {
-                let parts = spec.split('_'); 
+                let parts = spec.split('_'); // nama_pjg_grade_dus_shading
                 const { data: actData } = await db.from('stok_aktual').select('po_aktual, qty')
-                    .eq('nama_item', parts[0]).eq('pjg', parts[1]).eq('grade', parts[2])
+                    .eq('nama_item', parts[0]).eq('panjang', parts[1]).eq('grade', parts[2])
                     .eq('dus', parts[3]).eq('shading', parts[4]);
                 
                 if(actData) {
@@ -665,7 +453,7 @@ window.verifikasiGudang = async function() {
         }
     } catch(err) { alert("Gagal koneksi ke Supabase: " + err.message); } 
     finally { 
-        window.renderTablePic(); 
+        window.renderTablePic(dataPic); 
         btns.forEach((btn, idx) => { btn.innerHTML = originalTexts[idx]; btn.disabled = false; });
         lucide.createIcons();
     }
@@ -732,44 +520,6 @@ window.bukaModalLihatPO = function(encodedPOs) {
     document.getElementById('modal-lihat-po').classList.remove('hidden');
 };
 
-async function sinkronisasiUlangStokAktual() {
-    try {
-        const { data: fisikQr, error: errQr } = await db.from('stok_qr').select('*');
-        if(errQr) throw errQr;
-        
-        let mapAgg = {};
-        (fisikQr || []).forEach(r => {
-            let p = r.id_sku ? r.id_sku.split('_') : [];
-            let t = typeof translateBarcode === 'function' ? translateBarcode(r.qrcode) : {};
-            
-            let area = p[0] || r.area || '-';
-            let nama = p[1] || r.nama_item || t.namaItem;
-            let pjg = p[2] || r.panjang || t.panjang;
-            let grade = p[3] || r.grade || t.grade;
-            let dus = p[4] || r.dus || t.dus;
-            let shading = p[5] || r.shading || t.shading;
-            let po = p[6] || r.po_bawaan || t.po || '-';
-            let ket = p.length >= 8 ? p.slice(7).join('_') : (r.keterangan || '-');
-
-            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
-            if(!mapAgg[key]) {
-                mapAgg[key] = { nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, area: area, po_aktual: po, keterangan: ket, qty: 0 };
-            }
-            mapAgg[key].qty++;
-        });
-
-        let dataAktualBaru = Object.values(mapAgg);
-        
-        await db.from('stok_aktual').delete().neq('qty', -99999); 
-
-        for(let i = 0; i < dataAktualBaru.length; i += 500) {
-            await db.from('stok_aktual').insert(dataAktualBaru.slice(i, i + 500));
-        }
-    } catch(e) {
-        console.error("Gagal sinkronisasi stok_aktual otomatis:", e.message);
-    }
-}
-
 window.eksekusiSimpanFinalOut = async function() {
     const poTarget = document.getElementById('out-po-target').value;
     if(!poTarget) return alert("Wajib memilih PO Tujuan Konversi!");
@@ -797,8 +547,8 @@ window.eksekusiSimpanFinalOut = async function() {
             let parts = spec.split('_');
             let [nm, pj, gr, ds, sh] = [parts[0], parts[1], parts[2], parts[3], parts[4]];
             const { data, error } = await db.from('stok_aktual').select('qty')
-                .eq('nama_item', nm).eq('pjg', pj).eq('grade', gr).eq('dus', ds).eq('shading', sh)
-                .ilike('po_aktual', `%${poTarget}%`); 
+                .eq('nama_item', nm).eq('panjang', pj).eq('grade', gr).eq('dus', ds).eq('shading', sh)
+                .eq('po_aktual', poTarget); 
             if (error) throw error;
             let count = 0; if(data) data.forEach(d => count += (d.qty || 0));
             stockCapacity[spec] = count;
@@ -828,20 +578,6 @@ window.eksekusiSimpanFinalOut = async function() {
     if (qrList.length === 0) { alert(`❌ TIDAK ADA JATAH.\nSisa stok aktual untuk PO "${poTarget}" adalah 0.`); btn.innerHTML = ori; btn.disabled = false; return; }
 
     try {
-        for (let row of matchedRows) {
-            if (row.poAsliDB !== poTarget) {
-                let parts = row.baseSpec.split('_'); let [nm, pj, gr, ds, sh] = [parts[0], parts[1], parts[2], parts[3], parts[4]];
-                const targetSkuPattern = `%_${nm}_${pj}_${gr}_${ds}_${sh}_${poTarget}`;
-                const { data: qrToSwap, error: swapErr } = await db.from('stok_qr').select('qrcode, id_sku').ilike('id_sku', targetSkuPattern).limit(1);
-                if (swapErr) throw swapErr;
-                if (qrToSwap && qrToSwap.length > 0) {
-                    const oldSku = qrToSwap[0].id_sku; const newSku = oldSku.replace(`_${poTarget}`, `_${row.poAsliDB}`);
-                    const { error: updateErr } = await db.from('stok_qr').update({ id_sku: newSku }).eq('qrcode', qrToSwap[0].qrcode);
-                    if (updateErr) throw updateErr;
-                }
-            }
-        }
-
         const payloadData = { qrs: qrList, aktuals: Object.values(mapAktual), globals: Object.values(mapGlobal) };
         const { error: rpcError } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
         if (rpcError) throw rpcError;
@@ -876,13 +612,11 @@ window.eksekusiSimpanFinalOut = async function() {
         const { error: errInsert } = await db.from('laporan_konversi').insert([payloadLog]);
         if (errInsert) throw errInsert;
 
-        await sinkronisasiUlangStokAktual();
-
         let msg = `✅ EKSEKUSI KONVERSI OUT BERHASIL!\n\nID Audit: ${kodeKonversi}\nPO Target: ${poTarget}\nBerhasil dipotong dari Kartu Stok: ${qrList.length} Dus dan dimasukkan ke Stok Konversi.`;
         if (unmatchedCount > 0) msg += `\n\n⚠️ ${unmatchedCount} dus tidak diproses karena jatah PO kurang atau status fisik belum VALID.`;
         alert(msg);
         
-        window.tutupSemuaModal(); dataPic = []; window.renderTablePic();
+        window.tutupSemuaModal(); dataPic = []; window.resetFilterWithoutRender(); renderTablePic(dataPic);
         document.getElementById('input-keterangan-out').value = '';
         document.getElementById('select-aktifitas').value = '';
 
@@ -912,6 +646,7 @@ window.eksekusiSimpanFinalIn = async function() {
 
     let insertsStokQr = [];
     let arrStokKonversi = [];
+    let mapAktual = {};
 
     validItems.forEach(d => {
         let poBawaanAsli = d.poBawaan && d.poBawaan !== '-' ? d.poBawaan : '-';
@@ -944,6 +679,23 @@ window.eksekusiSimpanFinalIn = async function() {
             area: areaTujuan,
             status: 'PENDING'
         });
+
+        if(!mapAktual[id_sku_baru]) {
+            mapAktual[id_sku_baru] = {
+                id_sku: id_sku_baru,
+                jenis_item: d.jenisItem,
+                nama_item: d.namaItem,
+                panjang: d.panjang,
+                grade: d.grade,
+                dus: d.dus,
+                shading: d.shading,
+                area: areaTujuan,
+                po_aktual: poBawaanAsli,
+                keterangan: ket,
+                qty: 0
+            };
+        }
+        mapAktual[id_sku_baru].qty++;
     });
 
     try {
@@ -963,10 +715,25 @@ window.eksekusiSimpanFinalIn = async function() {
         };
         await db.from('laporan_konversi').insert([payloadLog]);
 
-        await sinkronisasiUlangStokAktual();
+        // Update stok_aktual manually
+        for(let key in mapAktual) {
+            let item = mapAktual[key];
+            const { data: existing } = await db.from('stok_aktual')
+                .select('id, qty')
+                .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
+                .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
+                .eq('po_aktual', item.po_aktual).eq('keterangan', item.keterangan)
+                .single();
+            
+            if(existing) {
+                await db.from('stok_aktual').update({ qty: existing.qty + item.qty }).eq('id', existing.id);
+            } else {
+                await db.from('stok_aktual').insert([item]);
+            }
+        }
 
         alert(`✅ BERHASIL KONVERSI IN!\n${validItems.length} dus masuk ke gudang pada area ${areaTujuan} & Saldo bertambah.`);
-        dataPic = []; window.renderTablePic();
+        dataPic = []; renderTablePic(dataPic);
         document.getElementById('in-kode-konversi').value = '';
         document.getElementById('input-keterangan-in').value = '';
         
@@ -987,12 +754,22 @@ window.eksekusiPindahArea = async function() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMINDAHKAN...'; btn.disabled = true;
 
     let payloadBarangPindah = [];
+    let mapDeduct = {};
+    let mapAdd = {};
     
     try {
         for (let item of validItems) {
             let poBawaanAsli = item.poAsliDB && item.poAsliDB !== '-' ? item.poAsliDB : '-';
             let id_sku_baru = `${areaTarget}_${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${poBawaanAsli}_Pindah Area`;
             
+            let keyOld = `${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.area}_${poBawaanAsli}`;
+            if(!mapDeduct[keyOld]) mapDeduct[keyOld] = { ...item, qty: 0 };
+            mapDeduct[keyOld].qty++;
+
+            let keyNew = `${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${areaTarget}_${poBawaanAsli}`;
+            if(!mapAdd[keyNew]) mapAdd[keyNew] = { ...item, area: areaTarget, qty: 0 };
+            mapAdd[keyNew].qty++;
+
             const { error: errUpdate } = await db.from('stok_qr').update({ area: areaTarget, id_sku: id_sku_baru }).eq('qrcode', item.qrcode);
             if (errUpdate) throw errUpdate;
 
@@ -1019,10 +796,36 @@ window.eksekusiPindahArea = async function() {
             if (errPindah) throw errPindah;
         }
 
-        await sinkronisasiUlangStokAktual();
+        for(let key in mapDeduct) {
+            let item = mapDeduct[key];
+            const { data: existing } = await db.from('stok_aktual').select('id, qty')
+                .eq('nama_item', item.namaItem).eq('panjang', item.panjang).eq('grade', item.grade)
+                .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
+                .eq('po_aktual', item.poAsliDB).limit(1);
+            if(existing && existing.length > 0) {
+                await db.from('stok_aktual').update({ qty: existing[0].qty - item.qty }).eq('id', existing[0].id);
+            }
+        }
+
+        for(let key in mapAdd) {
+            let item = mapAdd[key];
+            const { data: existing } = await db.from('stok_aktual').select('id, qty')
+                .eq('nama_item', item.namaItem).eq('panjang', item.panjang).eq('grade', item.grade)
+                .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
+                .eq('po_aktual', item.poAsliDB).eq('keterangan', 'Pindah Area').limit(1);
+            if(existing && existing.length > 0) {
+                await db.from('stok_aktual').update({ qty: existing[0].qty + item.qty }).eq('id', existing[0].id);
+            } else {
+                await db.from('stok_aktual').insert([{
+                    id_sku: `${item.area}_${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.poAsliDB}_Pindah Area`,
+                    jenis_item: item.jenisItem, nama_item: item.namaItem, panjang: item.panjang, grade: item.grade,
+                    dus: item.dus, shading: item.shading, area: item.area, po_aktual: item.poAsliDB, keterangan: 'Pindah Area', qty: item.qty
+                }]);
+            }
+        }
 
         alert(`✅ SUKSES PINDAH AREA!\n${validItems.length} Item berhasil dipindahkan ke area ${areaTarget}.`);
-        dataPic = []; window.renderTablePic();
+        dataPic = []; renderTablePic(dataPic);
         document.getElementById('pindah-area-target').value = '';
 
     } catch(e) {
