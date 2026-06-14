@@ -87,61 +87,7 @@ window.translateBarcode = function(barcode) {
 };
 
 window.sinkronisasiUlangStokAktual = async function(tampilkanAlert = false) {
-    const btn = document.getElementById('btn-sync-db');
-    if(btn) { btn.innerHTML = '<div class="bg-slate-100 text-teal-600 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-white text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-50 transition">Sinkron DB</div>'; btn.disabled = true; }
-
-    try {
-        const { data: fisikQr, error: errQr } = await db.from('stok_qr').select('*');
-        if(errQr) throw errQr;
-        
-        let mapAgg = {};
-        (fisikQr || []).forEach(r => {
-            let p = r.id_sku ? r.id_sku.split('_') : [];
-            let t = window.translateBarcode(r.qrcode);
-            
-            let area = p[0] || r.area || '-';
-            let nama = p[1] || r.nama_item || t.namaItem;
-            let pjg = p[2] || r.panjang || t.panjang;
-            let grade = p[3] || r.grade || t.grade;
-            let dus = p[4] || r.dus || t.dus;
-            let shading = p[5] || r.shading || t.shading;
-            let po = p[6] || r.po_bawaan || t.po || '-';
-            let ket = p.length >= 8 ? p.slice(7).join('_') : (r.keterangan || '-');
-
-            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
-            if(!mapAgg[key]) {
-                mapAgg[key] = { 
-                    jenis_item: r.jenis_item || t.jenisItem,
-                    nama_item: nama, 
-                    panjang: pjg, 
-                    grade: grade, 
-                    dus: dus, 
-                    shading: shading, 
-                    area: area, 
-                    po_aktual: po, 
-                    keterangan: ket, 
-                    qty: 0 
-                };
-            }
-            mapAgg[key].qty++;
-        });
-
-        let dataAktualBaru = Object.values(mapAgg);
-        await db.from('stok_aktual').delete().neq('qty', -99999); 
-
-        for(let i = 0; i < dataAktualBaru.length; i += 500) {
-            await db.from('stok_aktual').insert(dataAktualBaru.slice(i, i + 500));
-        }
-        
-        if(tampilkanAlert) {
-            alert("✅ Sinkronisasi Selesai!\nTabel stok_aktual di database telah diperbarui 100% mengikuti data fisik stok_qr.");
-            window.muatDataStok();
-        }
-    } catch(e) {
-        alert("⚠️ GAGAL SINKRONISASI STOK AKTUAL KE SUPABASE!\n" + e.message);
-    } finally {
-        if(btn) { btn.innerHTML = '<div class="bg-slate-100 text-teal-600 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="database-backup" class="w-4 h-4"></i></div><div class="bg-white text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-50 transition">Sinkron DB</div>'; btn.disabled = false; lucide.createIcons(); }
-    }
+    alert("Fungsi Sinkronisasi Wipe & Rebuild dinonaktifkan untuk menjaga integritas data PO Aktual hasil editan user.\n\nSistem kini menggunakan metode Incremental Update (+/-) secara otomatis setiap kali ada transaksi.");
 };
 
 window.muatDataStok = async function() {
@@ -205,14 +151,17 @@ window.muatDataStok = async function() {
         });
 
         window.dataKSArea = window.stokAktualRaw.map(a => {
-            let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.po_aktual}_${a.keterangan}`;
+            let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.po_bawaan}_${a.keterangan}`;
             return {
                 ...a,
                 pjg: a.panjang || '-', 
                 jenis: a.jenis_item || '-', 
                 nama: a.nama_item || '-',
                 qrcodes: qrMap[key] || [],
-                id_sku_base: `${a.area}_${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.keterangan}`
+                id_sku_base: a.id_sku,
+                po_bawaan: a.po_bawaan,
+                po_aktual: a.po_aktual,
+                qty: a.qty
             };
         });
 
@@ -327,7 +276,6 @@ window.renderTabel = function() {
             let poString = poArr.length > 0 ? poArr.join(' | ') : 'KOSONG';
             let btnPO = `<button onclick="window.bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-orange-100 text-orange-700 border border-orange-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-orange-200 transition flex items-center justify-center gap-1 mx-auto w-full max-w-[100px]"><i data-lucide="eye" class="w-3 h-3"></i> Lihat PO</button>`;
 
-            // REVISI 1: Baris selang-seling yang lebih jelas (even:bg-slate-100)
             return `
                 <tr class="bg-white even:bg-slate-100 hover:bg-green-200 transition row-ks text-sm border-b border-slate-200">
                     <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -371,7 +319,7 @@ window.renderTabel = function() {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             return `
                 <tr class="bg-white even:bg-slate-100 hover:bg-green-200 transition row-ks text-sm border-b border-slate-200">
-                    <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-qty="${r.qty}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-emerald-700 col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-medium text-blue-600 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                     <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
@@ -552,30 +500,45 @@ window.updateSelectedCount = function() {
     if(lbl) lbl.innerText = count;
 };
 
-// REVISI 4: Export ke XLSX menggunakan SheetJS (Format Asli Excel)
-window.downloadXLS = function() {
-    if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
-    
-    let ws_data = [];
-    const headers = Array.from(document.querySelectorAll('#thead-ks th'))
-        .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open'))
-        .map(th => th.innerText.trim().replace(/\n/g, ' '));
-    ws_data.push(headers);
+window.eksekusiGantiPO = async function() {
+    const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
+    if(!newPO) return alert("Silakan Pilih PO Baru dari daftar dropdown!");
 
-    document.querySelectorAll('.row-ks:not(.filtered-out)').forEach(tr => {
-        const rowData = [];
-        Array.from(tr.children).forEach(td => {
-            if(td.classList.contains('col-cb') || td.classList.contains('col-open')) return;
-            if(window.getComputedStyle(td).display !== 'none') { 
-                let rawText = td.getAttribute('data-search') ? td.getAttribute('data-search') : td.innerText.trim();
-                rowData.push(rawText); 
-            }
-        });
-        ws_data.push(rowData);
-    });
+    const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
+    if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
 
-    let ws = XLSX.utils.aoa_to_sheet(ws_data);
-    let wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Kartu_Stok");
-    XLSX.writeFile(wb, `KartuStok_${window.modeKS.toUpperCase()}.xlsx`);
+    let maxDus = window.selectedForAction.reduce((sum, row) => sum + row.qty, 0);
+    if(qtyDiminta > maxDus) return alert(`Maksimal jatah adalah ${maxDus} dus!`);
+
+    const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
+
+    try {
+        let qtySisaUntukDiupdate = qtyDiminta; 
+        
+        for(let row of window.selectedForAction) {
+            if (qtySisaUntukDiupdate <= 0) break; 
+            
+            let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
+            qtySisaUntukDiupdate -= qtyPotong;
+
+            const { error } = await db.rpc('ganti_po_aktual_ks_v2', { 
+                p_id_sku: row.id_sku,
+                p_po_lama: row.po_aktual,
+                p_po_baru: newPO,
+                p_qty: qtyPotong
+            });
+            if(error) throw error;
+        }
+        
+        window.tutupModalPO(); 
+        if(window.sourcePOContext === 'breakdown') window.tutupModalBreakdown();
+        
+        await window.muatDataStok();
+        alert("Berhasil mengganti PO Aktual!");
+    } catch (error) { 
+        alert("GAGAL UPDATE: " + error.message + "\n\nPastikan Anda sudah membuat Function 'ganti_po_aktual_ks_v2' di SQL Editor Supabase."); 
+    } finally { 
+        btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); 
+    }
 };
