@@ -7,16 +7,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Library SheetJS untuk Export Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; touch-action: pan-y; background-color: #f8fafc; }
         .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .table-container { position: relative; }
+        .table-container { position: relative; will-change: transform; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* REVISI: Penambahan z-index tinggi dan background-clip agar tidak tembus scroll */
         .hdr-std { 
             background-color: #1e293b !important; 
             color: #ffffff !important; 
@@ -34,31 +35,25 @@
             background-clip: padding-box !important; 
         }
         
-        /* Input ala Excel di dalam tabel */
+        /* REVISI: CSS Input disederhanakan agar scroll sangat ringan (60fps) */
         .excel-input {
             width: 100%;
             min-width: 120px;
             padding: 0.5rem;
             background-color: transparent;
-            border: 1px solid transparent;
+            border: none;
             outline: none;
             text-align: center;
             font-weight: 600;
             color: #334155;
-            transition: all 0.2s;
             position: relative;
             z-index: 10;
         }
         .excel-input:focus {
-            background-color: #ffffff;
-            border: 1px solid #3b82f6;
-            box-shadow: inset 0 0 0 1px #3b82f6;
+            background-color: #eff6ff;
+            box-shadow: inset 0 0 0 2px #3b82f6;
             color: #0f172a;
             z-index: 20;
-        }
-        .excel-input:hover:not(:focus) {
-            background-color: #f1f5f9;
-            border: 1px solid #cbd5e1;
         }
     </style>
 </head>
@@ -112,8 +107,19 @@
 
             <!-- VIEW 2: TABEL EXCEL-LIKE -->
             <div id="view-table" class="hidden flex-1 min-h-0 bg-white flex flex-col">
+                
+                <!-- TOOLBAR PENCARIAN & EXCEL -->
+                <div class="p-3 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3 shrink-0">
+                    <div class="relative w-full sm:w-1/3">
+                        <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
+                        <input type="text" id="input-search" oninput="searchData(this.value)" class="w-full pl-9 p-2 border border-slate-300 rounded-md text-sm outline-none focus:border-blue-500 font-semibold" placeholder="Cari data...">
+                    </div>
+                    <button onclick="downloadExcelMaster()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md text-xs uppercase transition flex items-center justify-center gap-2 shadow-sm active:scale-95">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Export Excel
+                    </button>
+                </div>
+
                 <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container">
-                    <!-- REVISI: Menggunakan border-separate border-spacing-0 agar border tidak ikut ke-scroll -->
                     <table class="w-full text-center border-separate border-spacing-0 whitespace-nowrap" id="main-table">
                         <thead class="sticky top-0 z-40 shadow-md bg-slate-800" id="thead-master"></thead>
                         <tbody id="tbody-master" class="text-slate-700"></tbody>
@@ -126,10 +132,10 @@
         <!-- FOOTER ACTION (Hanya muncul di View Table) -->
         <div id="footer-action" class="hidden shrink-0 w-full bg-white p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 border-t border-slate-200 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)]">
             <div class="flex items-center gap-2">
-                <button onclick="tambahBarisKosong()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-md text-xs uppercase transition flex items-center gap-2 border border-slate-300 shadow-sm">
+                <button onclick="tambahBarisKosong()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-md text-xs uppercase transition flex items-center gap-2 border border-slate-300 shadow-sm active:scale-95">
                     <i data-lucide="plus" class="w-4 h-4"></i> Tambah Baris Baru
                 </button>
-                <span class="text-xs font-bold text-slate-400 ml-2">Total: <span id="lbl-total-baris" class="text-slate-700">0</span> Baris</span>
+                <span class="text-xs font-bold text-slate-400 ml-2">Tampil: <span id="lbl-total-baris" class="text-slate-700">0</span> Baris</span>
             </div>
             
             <button onclick="simpanKeSupabase()" id="btn-save" class="w-full md:w-auto px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-md shadow-sm flex items-center justify-center gap-2 text-sm transition active:scale-95 uppercase border-b-4 border-blue-800">
