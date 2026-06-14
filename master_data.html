@@ -18,6 +18,11 @@
         .table-container { position: relative; will-change: transform; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* TAB STYLING */
+        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
+        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
+
+        /* HEADER TABEL */
         .hdr-std { 
             background-color: #1e293b !important; 
             color: #ffffff !important; 
@@ -35,10 +40,10 @@
             background-clip: padding-box !important; 
         }
         
-        /* REVISI: CSS Input disederhanakan agar scroll sangat ringan (60fps) */
+        /* INPUT EXCEL-LIKE (Sangat Ringan) */
         .excel-input {
             width: 100%;
-            min-width: 120px;
+            min-width: 100px;
             padding: 0.5rem;
             background-color: transparent;
             border: none;
@@ -55,58 +60,41 @@
             color: #0f172a;
             z-index: 20;
         }
+
+        /* RESIZABLE COLUMN HANDLE */
+        .resizer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 5px;
+            cursor: col-resize;
+            user-select: none;
+            height: 100%;
+            z-index: 50;
+        }
+        .resizer:hover, .resizing {
+            background-color: rgba(59, 130, 246, 0.5); /* Warna biru transparan saat di-hover/drag */
+        }
     </style>
 </head>
 <body class="font-sans text-slate-800">
 
     <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
-        <!-- HEADER SECTION -->
-        <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
-            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar px-4 pt-2">
-                <button onclick="kembaliKeMenu()" id="btn-back" class="hidden pb-3 mr-4 text-slate-500 hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-sm font-bold"><i data-lucide="arrow-left" class="w-4 h-4"></i> Kembali</button>
-                <div id="title-bar" class="pb-3 text-blue-700 font-black whitespace-nowrap flex items-center gap-2 text-sm uppercase tracking-wide border-b-2 border-blue-700">
-                    <i data-lucide="layout-grid" class="w-4 h-4"></i> MENU MASTER DATA
-                </div>
+        <!-- HEADER SECTION (TABS) -->
+        <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)]">
+            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
+                <button onclick="bukaTabel('variabel')" id="tab-variabel" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="book-open" class="w-4 h-4"></i> Variabel & Kode</button>
+                <button onclick="bukaTabel('jasper')" id="tab-jasper" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="file-text" class="w-4 h-4"></i> Nama Jasper</button>
+                <button onclick="bukaTabel('area')" id="tab-area" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="map" class="w-4 h-4"></i> Master Area</button>
             </div>
         </div>
 
         <!-- MIDDLE SCROLL SECTION -->
         <div class="flex-1 min-h-0 bg-slate-50 overflow-hidden flex flex-col relative z-0">
             
-            <!-- VIEW 1: DASHBOARD KOTAK MENU -->
-            <div id="view-dashboard" class="flex-1 overflow-y-auto custom-scroll p-4 sm:p-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
-                    
-                    <div onclick="bukaTabel('variabel')" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:border-blue-500 hover:shadow-md transition cursor-pointer group flex flex-col items-center text-center">
-                        <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-600 group-hover:text-white transition">
-                            <i data-lucide="book-open" class="w-8 h-8"></i>
-                        </div>
-                        <h3 class="font-black text-slate-800 text-lg mb-1">Variabel & Kode</h3>
-                        <p class="text-xs font-semibold text-slate-500">Master Item, Dus, Mesin, Shift, PO</p>
-                    </div>
-
-                    <div onclick="bukaTabel('jasper')" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:border-purple-500 hover:shadow-md transition cursor-pointer group flex flex-col items-center text-center">
-                        <div class="w-16 h-16 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center mb-4 group-hover:bg-purple-600 group-hover:text-white transition">
-                            <i data-lucide="file-text" class="w-8 h-8"></i>
-                        </div>
-                        <h3 class="font-black text-slate-800 text-lg mb-1">Nama Jasper</h3>
-                        <p class="text-xs font-semibold text-slate-500">Kamus konversi nama output Jasper</p>
-                    </div>
-
-                    <div onclick="bukaTabel('area')" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:border-emerald-500 hover:shadow-md transition cursor-pointer group flex flex-col items-center text-center">
-                        <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mb-4 group-hover:bg-emerald-600 group-hover:text-white transition">
-                            <i data-lucide="map" class="w-8 h-8"></i>
-                        </div>
-                        <h3 class="font-black text-slate-800 text-lg mb-1">Master Area</h3>
-                        <p class="text-xs font-semibold text-slate-500">Daftar lokasi penyimpanan gudang</p>
-                    </div>
-
-                </div>
-            </div>
-
-            <!-- VIEW 2: TABEL EXCEL-LIKE -->
-            <div id="view-table" class="hidden flex-1 min-h-0 bg-white flex flex-col">
+            <!-- VIEW TABLE -->
+            <div id="view-table" class="flex-1 min-h-0 bg-white flex flex-col">
                 
                 <!-- TOOLBAR PENCARIAN & EXCEL -->
                 <div class="p-3 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3 shrink-0">
@@ -129,8 +117,8 @@
 
         </div>
 
-        <!-- FOOTER ACTION (Hanya muncul di View Table) -->
-        <div id="footer-action" class="hidden shrink-0 w-full bg-white p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 border-t border-slate-200 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)]">
+        <!-- FOOTER ACTION -->
+        <div id="footer-action" class="shrink-0 w-full bg-white p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 border-t border-slate-200 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)]">
             <div class="flex items-center gap-2">
                 <button onclick="tambahBarisKosong()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-md text-xs uppercase transition flex items-center gap-2 border border-slate-300 shadow-sm active:scale-95">
                     <i data-lucide="plus" class="w-4 h-4"></i> Tambah Baris Baru
