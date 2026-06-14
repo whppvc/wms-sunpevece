@@ -317,7 +317,7 @@ function renderHeaderDanTabel() {
             const statData = r.status_data === 'Collected' ? '<span class="text-indigo-600 font-black">COLLECTED</span>' : '-';
 
             h += `
-                <tr class="hover:bg-slate-100 even:bg-slate-50 text-row transition text-sm">
+                <tr class="hover:bg-green-200 even:bg-slate-50 text-row transition text-sm">
                     <td class="p-3 text-center col-cb border-b border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="p-2 text-center col-btn border-b border-slate-200">
                         <button onclick="aksiHapusPerBaris('${r.qrcode}')" class="text-slate-400 hover:text-rose-600 transition p-1 rounded-md hover:bg-rose-50 mx-auto flex">
