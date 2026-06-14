@@ -453,24 +453,28 @@ async function saveToSupabase() {
     try {
         // 1. Insert ke stok_qr
         const { error: errInsert } = await db.from('stok_qr').insert(arrFisik);
-        if (errInsert) throw errInsert;
+        if (errInsert) throw new Error("Gagal insert stok_qr: " + errInsert.message);
 
         // 2. Insert ke hasil_langsir
         const { error: errLangsir } = await db.from('hasil_langsir').insert(arrHasilLangsir);
-        if (errLangsir) throw errLangsir;
+        if (errLangsir) throw new Error("Gagal insert hasil_langsir: " + errLangsir.message);
 
         // 3. Incremental Update ke stok_aktual
         for(let key in mapAktual) {
             let item = mapAktual[key];
-            const { data: existing } = await db.from('stok_aktual').select('id, qty')
+            const { data: existing, error: errCek } = await db.from('stok_aktual').select('id, qty')
                 .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
                 .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
                 .eq('po_aktual', item.po_aktual).eq('keterangan', item.keterangan).limit(1);
 
+            if (errCek) throw new Error("Gagal cek stok_aktual: " + errCek.message);
+
             if(existing && existing.length > 0) {
-                await db.from('stok_aktual').update({ qty: existing[0].qty + item.qty }).eq('id', existing[0].id);
+                const { error: errUpd } = await db.from('stok_aktual').update({ qty: existing[0].qty + item.qty }).eq('id', existing[0].id);
+                if (errUpd) throw new Error("Gagal update stok_aktual: " + errUpd.message);
             } else {
-                await db.from('stok_aktual').insert([item]);
+                const { error: errIns } = await db.from('stok_aktual').insert([item]);
+                if (errIns) throw new Error("Gagal insert stok_aktual: " + errIns.message);
             }
         }
 
