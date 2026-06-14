@@ -16,6 +16,7 @@
         .table-container { position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* REVISI: Penambahan z-index tinggi dan background-clip agar tidak tembus scroll */
         .hdr-std { 
             background-color: #1e293b !important; 
             color: #ffffff !important; 
@@ -28,8 +29,9 @@
             white-space: nowrap !important; 
             position: sticky !important; 
             top: 0 !important; 
-            z-index: 20 !important; 
-            border-bottom: 1px solid #e2e8f0 !important; 
+            z-index: 40 !important; 
+            border-bottom: 2px solid #cbd5e1 !important; 
+            background-clip: padding-box !important; 
         }
         
         /* Input ala Excel di dalam tabel */
@@ -44,12 +46,15 @@
             font-weight: 600;
             color: #334155;
             transition: all 0.2s;
+            position: relative;
+            z-index: 10;
         }
         .excel-input:focus {
             background-color: #ffffff;
             border: 1px solid #3b82f6;
             box-shadow: inset 0 0 0 1px #3b82f6;
             color: #0f172a;
+            z-index: 20;
         }
         .excel-input:hover:not(:focus) {
             background-color: #f1f5f9;
@@ -108,8 +113,9 @@
             <!-- VIEW 2: TABEL EXCEL-LIKE -->
             <div id="view-table" class="hidden flex-1 min-h-0 bg-white flex flex-col">
                 <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container">
-                    <table class="w-full text-center border-collapse whitespace-nowrap" id="main-table">
-                        <thead class="sticky top-0 z-10" id="thead-master"></thead>
+                    <!-- REVISI: Menggunakan border-separate border-spacing-0 agar border tidak ikut ke-scroll -->
+                    <table class="w-full text-center border-separate border-spacing-0 whitespace-nowrap" id="main-table">
+                        <thead class="sticky top-0 z-40 shadow-md bg-slate-800" id="thead-master"></thead>
                         <tbody id="tbody-master" class="text-slate-700"></tbody>
                     </table>
                 </div>
