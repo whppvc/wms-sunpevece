@@ -14,10 +14,10 @@
         .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-left: 1px solid #cbd5e1; border-top: 1px solid #cbd5e1; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border: 3px solid #f1f5f9; border-radius: 10px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
-        .table-container { position: relative; }
+        .table-container { position: relative; will-change: transform; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* HEADER TABEL MODERN (Gelap, Teks Putih, Tanpa Border Vertikal) */
+        /* REVISI: Header Tabel Anti-Tembus Scroll */
         .hdr-std { 
             background-color: #1e293b !important; 
             color: #ffffff !important; 
@@ -30,9 +30,9 @@
             white-space: nowrap; 
             position: sticky; 
             top: 0; 
-            z-index: 20; 
+            z-index: 40 !important; 
             border-bottom: 2px solid #cbd5e1 !important;
-            background-clip: padding-box; 
+            background-clip: padding-box !important; 
         }
         
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
@@ -61,7 +61,6 @@
                     </select>
                 </div>
 
-                <!-- TOMBOL TWO-TONE -->
                 <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar whitespace-nowrap scroll-smooth select-none w-full sm:w-auto">
                     <button onclick="bukaDaftarKatalog()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-purple-700">
                         <div class="bg-purple-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="database" class="w-4 h-4"></i></div>
@@ -85,9 +84,10 @@
                         <div class="bg-emerald-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-emerald-500 transition">Excel</div>
                     </button>
                     
-                    <button onclick="aksiMassal('salin')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-slate-800">
-                        <div class="bg-black text-white flex items-center justify-center px-3 py-2.5 border-r border-slate-700"><i data-lucide="copy" class="w-4 h-4"></i></div>
-                        <div class="bg-slate-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-700 transition">Salin</div>
+                    <!-- REVISI: Desain Tombol Salin Abu-abu Gelap -->
+                    <button onclick="aksiMassal('salin')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-slate-600">
+                        <div class="bg-slate-700 text-white flex items-center justify-center px-3 py-2.5 border-r border-slate-600"><i data-lucide="copy" class="w-4 h-4"></i></div>
+                        <div class="bg-slate-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-500 transition">Salin</div>
                     </button>
                 </div>
             </div>
@@ -99,8 +99,9 @@
 
         <div class="flex-1 min-h-0 bg-slate-200 p-2 overflow-hidden flex flex-col relative z-0">
             <div class="flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll table-container">
-                <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-stbj-main">
-                    <thead class="sticky top-0 z-10 shadow-sm" id="thead-stbj"></thead>
+                <!-- REVISI: border-separate border-spacing-0 agar tidak tembus header -->
+                <table class="w-full text-left border-separate border-spacing-0 text-sm whitespace-nowrap" id="table-stbj-main">
+                    <thead class="sticky top-0 z-30 shadow-sm" id="thead-stbj"></thead>
                     <tbody id="tbody-stbj" class="text-slate-700"></tbody>
                 </table>
             </div>
@@ -113,7 +114,6 @@
                 <span class="bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded text-emerald-800 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-black">0</span></span>
             </div>
             <div class="flex items-center gap-2">
-                <!-- Dropdown Setting Baris -->
                 <div class="flex items-center gap-1 bg-white border border-slate-300 p-1 rounded shadow-sm">
                     <span class="text-[10px] font-bold text-slate-500 uppercase px-1">Baris:</span>
                     <select id="select-rows-per-page" onchange="changeRowsPerPage(this.value)" class="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 rounded outline-none cursor-pointer px-1 py-0.5 transition">
@@ -124,7 +124,6 @@
                     </select>
                     <input type="number" id="input-custom-rows" oninput="setCustomRowsPerPage(this.value)" class="hidden w-16 text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 rounded outline-none px-1 py-0.5 text-center transition" placeholder="Jml...">
                 </div>
-                <!-- Paginasi Prev/Next -->
                 <div class="flex items-center gap-2 bg-white border border-slate-300 p-1 rounded shadow-sm">
                     <button onclick="prevPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                     <span class="px-2 font-black text-xs text-slate-600 tracking-wide uppercase">Hal <span id="lbl-halaman" class="text-blue-600">1</span> / <span id="lbl-total-halaman">1</span></span>
@@ -167,8 +166,9 @@
             <div class="p-3 border-b border-slate-100 bg-white relative z-30">
                 <input type="text" id="f-kat-search" oninput="saringKatalogList()" class="w-full p-2.5 text-sm border border-slate-300 rounded outline-none focus:border-blue-500 font-bold shadow-inner" placeholder="Pencarian Cepat (Nama Item / Hasil Jasper)...">
             </div>
-            <div class="overflow-y-auto px-4 pb-4 pt-0 flex-1 hide-scrollbar">
-                <table class="w-full text-left border-collapse text-sm whitespace-nowrap mt-3 border border-slate-200 shadow-sm" id="table-katalog">
+            <div class="overflow-y-auto px-4 pb-4 pt-0 flex-1 hide-scrollbar table-container">
+                <!-- REVISI: border-separate border-spacing-0 agar tidak tembus header -->
+                <table class="w-full text-left border-separate border-spacing-0 text-sm whitespace-nowrap mt-3 border border-slate-200 shadow-sm" id="table-katalog">
                     <thead class="sticky top-0 z-20 shadow-sm">
                         <tr>
                             <th class="hdr-std w-10">EDIT</th>
@@ -179,7 +179,7 @@
                             <th class="hdr-std bg-slate-900 text-blue-300">NAMA JASPER</th>
                         </tr>
                     </thead>
-                    <tbody id="tbody-katalog-list" class="text-center text-slate-700 border-b border-slate-200"></tbody>
+                    <tbody id="tbody-katalog-list" class="text-center text-slate-700"></tbody>
                 </table>
             </div>
         </div>
