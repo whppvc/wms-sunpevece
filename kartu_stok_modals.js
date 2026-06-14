@@ -161,10 +161,9 @@ window.bukaBreakdown = function(gKey) {
     const tbody = document.getElementById('tbody-breakdown');
     tbody.innerHTML = item.areas.map((a, i) => {
         const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
-        // REVISI 4: a.po_aktual dan a.keterangan agar tidak undefined
         return `
             <tr class="bg-white even:bg-slate-100 hover:bg-blue-50 transition bd-row text-sm border-b border-slate-200">
-                <td class="p-3 text-center"><input type="checkbox" onchange="window.highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-ket="${a.keterangan}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500"></td>
+                <td class="p-3 text-center"><input type="checkbox" onchange="window.highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-qty="${a.qty}" data-ket="${a.keterangan}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500"></td>
                 <td class="p-3 font-semibold text-emerald-700">${a.area}</td>
                 <td class="p-3 font-semibold text-orange-600 col-po">${a.po_aktual}</td>
                 <td class="p-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
@@ -221,13 +220,12 @@ window.siapkanGantiPO = function(context) {
 
     window.selectedForAction = []; let totalDus = 0;
     checkboxes.forEach(cb => {
-        const qrs = safeJSONParse(cb.dataset.qrs, []);
         window.selectedForAction.push({ 
-            id_sku_base: cb.dataset.idsku, qrcodes: qrs, jenis: cb.dataset.jenis, nama: cb.dataset.nama,
-            pjg: cb.dataset.pjg, grade: cb.dataset.grade, dus: cb.dataset.dus, shading: cb.dataset.shading,
-            area: cb.dataset.area, po: cb.dataset.po, ket: cb.dataset.ket
+            id_sku: cb.dataset.idsku, 
+            po_aktual: cb.dataset.po,
+            qty: parseInt(cb.dataset.qty)
         });
-        totalDus += qrs.length;
+        totalDus += parseInt(cb.dataset.qty);
     });
 
     window.sourcePOContext = context;
@@ -244,100 +242,4 @@ window.tutupModalPO = function() {
     if(document.getElementById('modal-breakdown').classList.contains('hidden')) {
         document.getElementById('overlay-klik-luar').classList.add('hidden'); 
     }
-};
-
-window.eksekusiGantiPO = async function() {
-    const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
-    if(!newPO) return alert("Silakan Pilih PO Baru dari daftar dropdown!");
-
-    const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
-    if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
-
-    let maxDus = window.selectedForAction.reduce((sum, row) => sum + row.qrcodes.length, 0);
-    if(qtyDiminta > maxDus) return alert(`Maksimal jatah adalah ${maxDus} dus!`);
-
-    const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
-
-    try {
-        let qtySisaUntukDiupdate = qtyDiminta; 
-        let payloadItems = [];
-        
-        for(let row of window.selectedForAction) {
-            if (qtySisaUntukDiupdate <= 0) break; 
-            let qrsUntukDiupdate = row.qrcodes.slice(0, qtySisaUntukDiupdate);
-            let jumlahBerubah = qrsUntukDiupdate.length; 
-            qtySisaUntukDiupdate -= jumlahBerubah;
-
-            let newIdSku = `${row.area}_${row.nama}_${row.pjg}_${row.grade}_${row.dus}_${row.shading}_${newPO}_${row.ket}`;
-            
-            qrsUntukDiupdate.forEach(qr => {
-                payloadItems.push({ qrcode: qr, id_sku_baru: newIdSku });
-            });
-        }
-        
-        const { error } = await db.rpc('ganti_po_aktual_ks', { payload: payloadItems });
-        if(error) throw error;
-        
-        window.tutupModalPO(); 
-        if(window.sourcePOContext === 'breakdown') window.tutupModalBreakdown();
-        
-        await window.sinkronisasiUlangStokAktual();
-        await window.muatDataStok();
-    } catch (error) { 
-        alert("GAGAL UPDATE: " + error.message + "\n\nPastikan Anda sudah membuat Function 'ganti_po_aktual_ks' di SQL Editor Supabase."); 
-    } finally { 
-        btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); 
-    }
-};
-
-window.salinData = function() {
-    const cek = document.querySelectorAll('.cb-main:checked'); if(cek.length === 0) return alert("Pilih baris yang ingin disalin (centang).");
-    let copyString = "";
-    const headers = Array.from(document.querySelectorAll('#thead-ks th')).filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open')).map(th => th.innerText.trim().replace(/\n/g, ' '));
-    copyString += headers.join('\t') + '\n';
-    cek.forEach(cb => {
-        const tr = cb.closest('tr'); const rowData = [];
-        Array.from(tr.children).forEach(td => {
-            if(td.classList.contains('col-cb') || td.classList.contains('col-open')) return;
-            if(window.getComputedStyle(td).display !== 'none') { rowData.push(td.innerText.trim().replace(/\n/g, ' ')); }
-        });
-        copyString += rowData.join('\t') + '\n';
-    });
-    navigator.clipboard.writeText(copyString).then(() => alert(`Tersalin ${cek.length} baris!\nBuka Excel lalu Paste.`));
-};
-
-window.salinDataBreakdown = function() {
-    const cek = document.querySelectorAll('.cb-bd:checked'); if(cek.length === 0) return alert("Centang baris detail Area yang ingin disalin.");
-    let copyString = "Area\tPO Aktual\tKeterangan\tQTY\n";
-    cek.forEach(cb => { const tr = cb.closest('tr'); copyString += `${tr.children[1].innerText}\t${tr.children[2].innerText}\t${tr.children[3].innerText}\t${tr.children[4].innerText}\n`; });
-    navigator.clipboard.writeText(copyString).then(() => alert(`Tersalin!\nBuka Excel lalu Paste.`));
-};
-
-// REVISI 3: Export ke XLSX menggunakan SheetJS
-window.downloadXLS = function() {
-    if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
-    
-    let ws_data = [];
-    const headers = Array.from(document.querySelectorAll('#thead-ks th'))
-        .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open'))
-        .map(th => th.innerText.trim().replace(/\n/g, ' '));
-    ws_data.push(headers);
-
-    document.querySelectorAll('.row-ks:not(.filtered-out)').forEach(tr => {
-        const rowData = [];
-        Array.from(tr.children).forEach(td => {
-            if(td.classList.contains('col-cb') || td.classList.contains('col-open')) return;
-            if(window.getComputedStyle(td).display !== 'none') { 
-                let rawText = td.getAttribute('data-search') ? td.getAttribute('data-search') : td.innerText.trim();
-                rowData.push(rawText); 
-            }
-        });
-        ws_data.push(rowData);
-    });
-
-    let ws = XLSX.utils.aoa_to_sheet(ws_data);
-    let wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Kartu_Stok");
-    XLSX.writeFile(wb, `KartuStok_${window.modeKS.toUpperCase()}.xlsx`);
 };
