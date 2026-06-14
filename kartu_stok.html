@@ -7,8 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- REVISI 4: Library SheetJS untuk Export Excel Asli -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- PINDAHKAN GLOBAL.JS KE SINI -->
+    <script src="global.js"></script>
+    
     <style>
         html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; touch-action: pan-y; background-color: #f8fafc; }
         .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -34,9 +37,7 @@
             border-bottom: 1px solid #e2e8f0 !important; 
         }
         
-        tr.selected-row { background-color: #9CC4FF !important; }
-        
-        /* REVISI 2: Perbaikan Padding Tab agar tidak hancur/dempet */
+        tr.selected-row { background-color: #dbeafe !important; }
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
     </style>
@@ -48,7 +49,6 @@
         <!-- HEADER SECTION -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
             
-            <!-- REVISI 2: Tabs Navigasi dengan padding yang benar -->
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
                 <button onclick="setModeKS('area')" id="tab-area" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="map" class="w-4 h-4"></i> KS Area</button>
                 <button onclick="setModeKS('global')" id="tab-global" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="globe-2" class="w-4 h-4"></i> KS Global</button>
@@ -64,8 +64,6 @@
                         <div class="bg-orange-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="tags" class="w-4 h-4"></i></div>
                         <div class="bg-orange-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-orange-500 transition">Ganti PO Aktual</div>
                     </button>
-
-                    <!-- REVISI 3: Garis pembatas dihapus -->
 
                     <button onclick="downloadXLS()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-emerald-700">
                         <div class="bg-emerald-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i></div>
@@ -219,7 +217,6 @@
 
     <div id="overlay-klik-luar" onclick="tutupSemuaPopups()" class="hidden fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
-    <script src="global.js"></script>
     <script src="kartu_stok_logic.js"></script>
     <script src="kartu_stok_modals.js"></script>
 </body>
