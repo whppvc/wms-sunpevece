@@ -280,7 +280,7 @@ function renderHeaderDanTabel() {
                 <th class="hdr-std w-10 col-btn text-center"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-slate-400"></i></th>
                 ${thSort(2, 'Status Item', 'col-status-gudang')}
                 ${tabelSekarang === 'hold_stbj' ? thSort(3, 'Status Hold', 'col-status') : '<th class="hdr-std hidden col-status">Status Hold</th>'}
-                ${thSort(tabelSekarang==='hold_stbj'?4:3, 'Status Data', 'col-status-data')}
+                ${thSort(tabelSekarang==='hold_stbj'?4:3, 'Collect', 'col-status-data')}
                 ${thSort(tabelSekarang==='hold_stbj'?5:4, 'Waktu Scan', 'col-waktu')}
                 ${thSort(tabelSekarang==='hold_stbj'?6:5, 'Troli', 'col-troli')}
                 ${thSort(tabelSekarang==='hold_stbj'?7:6, 'QRCode', 'col-qr')}
@@ -293,7 +293,7 @@ function renderHeaderDanTabel() {
                 ${thSort(tabelSekarang==='hold_stbj'?14:13, 'Grade', 'col-grade')}
                 ${thSort(tabelSekarang==='hold_stbj'?15:14, 'Dus', 'col-dus')}
                 ${thSort(tabelSekarang==='hold_stbj'?16:15, 'Shading', 'col-shading')}
-                ${thSort(tabelSekarang==='hold_stbj'?17:16, 'PO Awal', 'col-po')}
+                ${thSort(tabelSekarang==='hold_stbj'?17:16, 'Customer Bawaan', 'col-customer')}
                 ${thSort(tabelSekarang==='hold_stbj'?18:17, 'Keterangan', 'col-ket')}
                 ${thSort(tabelSekarang==='hold_stbj'?19:18, 'PIC Input', 'col-pic')}
             </tr>`;
@@ -314,10 +314,14 @@ function renderHeaderDanTabel() {
             }
 
             const htmlStatusGudang = r.is_in_gudang ? '<span class="text-emerald-600 font-black">IN GUDANG</span>' : '<span class="text-slate-500 font-bold">STBJ</span>';
-            const statData = r.status_data === 'Collected' ? '<span class="text-indigo-600 font-black">COLLECTED</span>' : '-';
+            
+            let statData = '-';
+            if (r.status_data && r.status_data !== 'BELUM') {
+                statData = `<span class="text-indigo-600 font-black uppercase">${r.status_data}</span>`;
+            }
 
             h += `
-                <tr class="hover:bg-green-200 even:bg-slate-50 text-row transition text-sm">
+                <tr class="hover:bg-slate-100 even:bg-slate-50 text-row transition text-sm">
                     <td class="p-3 text-center col-cb border-b border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="p-2 text-center col-btn border-b border-slate-200">
                         <button onclick="aksiHapusPerBaris('${r.qrcode}')" class="text-slate-400 hover:text-rose-600 transition p-1 rounded-md hover:bg-rose-50 mx-auto flex">
@@ -339,7 +343,7 @@ function renderHeaderDanTabel() {
                     <td class="p-3 text-center font-medium text-slate-700 col-grade border-b border-slate-200" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
                     <td class="p-3 text-center font-medium text-slate-700 col-dus border-b border-slate-200" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
                     <td class="p-3 text-center font-medium text-slate-700 col-shading border-b border-slate-200" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
-                    <td class="p-3 text-center font-bold text-orange-600 col-po border-b border-slate-200" data-search="${r.po_bawaan || '-'}">${r.po_bawaan || '-'}</td>
+                    <td class="p-3 text-center font-bold text-orange-600 col-customer border-b border-slate-200" data-search="${r.customer_bawaan || '-'}">${r.customer_bawaan || '-'}</td>
                     <td class="p-3 text-left text-slate-500 font-medium col-ket border-b border-slate-200" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
                     <td class="p-3 text-center text-xs font-bold text-slate-400 col-pic border-b border-slate-200" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
                 </tr>`;
@@ -350,7 +354,6 @@ function renderHeaderDanTabel() {
     else if(modeSekarang === 'item' || modeSekarang === 'jasper') {
         const isJasper = modeSekarang === 'jasper';
         
-        // REVISI: Header Status Data diubah jadi Collect
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
@@ -369,7 +372,7 @@ function renderHeaderDanTabel() {
                 ${thSort(13, 'Grade', 'col-grade')}
                 ${thSort(14, 'Dus', 'col-dus')}
                 ${thSort(15, 'Shading', 'col-shading')}
-                ${thSort(16, 'PO Bawaan', 'col-po')}
+                ${thSort(16, 'Customer Bawaan', 'col-customer')}
                 ${thSort(17, 'QTY (DUS)', 'col-qty')}
                 ${thSort(18, 'Keterangan', 'col-ket')}
                 <th class="hdr-std col-pic hidden">PIC Input</th>
@@ -387,11 +390,11 @@ function renderHeaderDanTabel() {
             
             let ket = r.keterangan || 'TANPA_KETERANGAN';
             let sData = r.status_data || 'BELUM';
-            let key = `${r.jenis_item}_${n}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.po_bawaan}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}`;
+            let key = `${r.jenis_item}_${n}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.customer_bawaan}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}`;
             
             if(!groups[key]) {
                 groups[key] = { 
-                    jenisItem: r.jenis_item, displayNama: n, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, po: r.po_bawaan,
+                    jenisItem: r.jenis_item, displayNama: n, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, customer: r.customer_bawaan,
                     tglProduksi: r.tgl_produksi, mesin: r.mesin, shift: r.shift,
                     qty: 0, qrcodes: [], trolis: new Set(), ket: ket, sData: sData 
                 };
@@ -432,7 +435,7 @@ function renderHeaderDanTabel() {
                     <td class="p-3 text-center font-medium text-slate-700 col-grade border-b border-slate-200" data-search="${r.grade}">${r.grade}</td>
                     <td class="p-3 text-center font-medium text-slate-700 col-dus border-b border-slate-200" data-search="${r.dus}">${r.dus}</td>
                     <td class="p-3 text-center font-medium text-slate-700 col-shading border-b border-slate-200" data-search="${r.shading}">${r.shading}</td>
-                    <td class="p-3 text-center font-bold text-orange-600 col-po border-b border-slate-200" data-search="${r.po}">${r.po}</td>
+                    <td class="p-3 text-center font-bold text-orange-600 col-customer border-b border-slate-200" data-search="${r.customer}">${r.customer}</td>
                     <td class="p-3 text-center font-black text-emerald-700 col-qty border-b border-slate-200" data-search="${r.qty}">${r.qty}</td>
                     <td class="p-3 text-left text-slate-500 font-medium col-ket border-b border-slate-200" data-search="${displayKet}">${displayKet}</td>
                     <td class="p-3 hidden col-pic border-b border-slate-200">-</td>
@@ -579,7 +582,6 @@ function renderKatalogList() {
     lucide.createIcons(); 
 }
 
-// REVISI: Saring Katalog Super Cepat (Tanpa innerText)
 function saringKatalogList() {
     const query = document.getElementById('f-kat-search').value.toLowerCase();
     document.querySelectorAll('.row-katalog').forEach(row => {
@@ -700,7 +702,7 @@ async function aksiMassal(tipe) {
             const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ 
                 troli: r.troli, qrcode: r.qrcode, tgl_produksi: r.tgl_produksi, shift: r.shift, mesin: r.mesin, 
                 nama_item: r.nama_item, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, 
-                po_bawaan: r.po_bawaan, keterangan: r.keterangan, status: 'HOLD', status_data: r.status_data, 
+                customer_bawaan: r.customer_bawaan, keterangan: r.keterangan, status: 'HOLD', status_data: r.status_data, 
                 posisi: r.posisi, pic_input: r.pic_input 
             }));
             const { error: errAdd } = await db.from('hold_stbj').upsert(dataPindah);
@@ -710,14 +712,13 @@ async function aksiMassal(tipe) {
             const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ 
                 troli: r.troli, qrcode: r.qrcode, tgl_produksi: r.tgl_produksi, shift: r.shift, mesin: r.mesin, 
                 nama_item: r.nama_item, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, 
-                po_bawaan: r.po_bawaan, keterangan: r.keterangan, status: 'SUDAH STBJ', status_data: r.status_data, 
+                customer_bawaan: r.customer_bawaan, keterangan: r.keterangan, status: 'SUDAH STBJ', status_data: r.status_data, 
                 posisi: r.posisi, pic_input: r.pic_input 
             }));
             const { error: errAdd } = await db.from('stok_global').upsert(dataPindah);
             if(!errAdd) { await db.from('hold_stbj').delete().in('qrcode', checkedValues); muatDataDariSupabase(); }
         }
     }
-    // REVISI: Logika Collect dengan Append Nama User
     else if (tipe === 'collect') {
         if(!confirm(`Tandai ${checkedValues.length} QrCode sebagai COLLECTED oleh ${currentUser.username}?`)) return;
         const btn = document.getElementById('btn-massal-collect');
