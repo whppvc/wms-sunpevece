@@ -17,10 +17,9 @@
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .table-container { position: relative; }
+        .table-container { position: relative; will-change: transform; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* REVISI: Header Solid & Border Collapse untuk Tabel */
         .hdr-std { 
             background-color: #f8fafc !important; 
             color: #64748b !important; 
@@ -33,14 +32,22 @@
             white-space: nowrap !important; 
             position: sticky !important; 
             top: 0 !important; 
-            z-index: 20 !important; 
+            z-index: 40 !important; 
             border-bottom: 1px solid #e2e8f0 !important; 
             background-clip: padding-box !important;
         }
         
-        tr.selected-row { background-color: #f0f9ff !important; }
+        tr.selected-row td { background-color: #f0f9ff !important; }
         .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
         .tab-inactive { color: #64748b; font-weight: 500; border-bottom: 2px solid transparent; }
+
+        .resizer {
+            position: absolute;
+            top: 0; right: 0; width: 5px;
+            cursor: col-resize; user-select: none;
+            height: 100%; z-index: 50;
+        }
+        .resizer:hover, .resizing { background-color: rgba(59, 130, 246, 0.5); }
     </style>
 </head>
 <body class="font-sans text-slate-800">
@@ -85,7 +92,6 @@
                         <i data-lucide="copy" class="w-4 h-4 text-slate-600"></i> Salin
                     </button>
                     
-                    <!-- REVISI: Tombol Filter Dihapus dari sini -->
                 </div>
             </div>
         </div>
@@ -93,9 +99,8 @@
         <!-- MIDDLE SCROLL SECTION -->
         <div class="flex-1 min-h-0 bg-white overflow-hidden flex flex-col relative z-0">
             <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container">
-                <!-- REVISI: Menggunakan border-collapse agar border antar sel menyatu rapi -->
-                <table class="w-full text-center border-collapse whitespace-nowrap" id="main-table">
-                    <thead class="sticky top-0 z-10" id="thead-riwayat"></thead>
+                <table class="w-full text-center border-separate border-spacing-0 whitespace-nowrap" id="main-table">
+                    <thead class="sticky top-0 z-40" id="thead-riwayat"></thead>
                     <tbody id="tbody-riwayat" class="text-slate-700"></tbody>
                 </table>
             </div>
@@ -207,8 +212,6 @@
             </div>
         </div>
     </div>
-
-    <div id="overlay-klik-luar" onclick="tutupSemuaPopup()" class="hidden fixed inset-0 z-[40] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="riwayat_langsir_logic.js"></script>
 </body>
