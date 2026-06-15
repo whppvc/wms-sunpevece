@@ -106,14 +106,14 @@ async function ambilSemuaData() {
         logLangsirRaw = resRiwayat.data || [];
         holdLangsirRaw = resHold.data || [];
 
-        window.itemMap = {}; window.dusMap = {}; window.mesinMap = {}; window.poMap = {};
+        window.itemMap = {}; window.dusMap = {}; window.mesinMap = {}; window.customerMap = {};
         if(Array.isArray(kamusData)) {
             for(let i = 0; i < kamusData.length; i++) {
                 let m = kamusData[i];
                 if(m.kode_nama_item) window.itemMap[m.kode_nama_item] = m.nama_item;
                 if(m.kode_dus) window.dusMap[m.kode_dus] = m.dus;
                 if(m.kode_mesin) window.mesinMap[m.kode_mesin] = m.mesin;
-                if(m.kode_po) window.poMap[m.kode_po] = m.po;
+                if(m.kode_customer) window.customerMap[m.kode_customer] = m.customer;
             }
         }
 
@@ -124,7 +124,7 @@ async function ambilSemuaData() {
 }
 
 function translateBarcode(barcode) {
-    let data = { tglProduksi: '-', mesin: '-', shift: '-', jenis: '-', nama: '-', pjg: '-', grade: '-', dus: '-', shading: '-', po: '-' };
+    let data = { tglProduksi: '-', mesin: '-', shift: '-', jenis: '-', nama: '-', pjg: '-', grade: '-', dus: '-', shading: '-', customer: '-' };
     if(!barcode) return data;
     const parts = barcode.split('/'); if (parts.length < 1) return data;
     const h = barcode.charAt(0).toUpperCase();
@@ -153,7 +153,7 @@ function translateBarcode(barcode) {
         if(match) {
             data.mesin = window.mesinMap && window.mesinMap[match[1]] ? window.mesinMap[match[1]] : match[1];
             data.shift = match[2]; 
-            data.po = window.poMap && window.poMap[match[3]] ? window.poMap[match[3]] : match[3];
+            data.customer = window.customerMap && window.customerMap[match[3]] ? window.customerMap[match[3]] : match[3];
         }
     }
     return data;
@@ -358,49 +358,6 @@ function highlightRow(cb) {
     updateSelectedCount();
 }
 
-function initResizableColumns() {
-    const cols = document.querySelectorAll('#main-table th');
-    cols.forEach(col => {
-        const existing = col.querySelector('.resizer');
-        if(existing) existing.remove();
-
-        const resizer = document.createElement('div');
-        resizer.classList.add('resizer');
-        col.appendChild(resizer);
-        
-        createResizableColumn(col, resizer);
-    });
-}
-
-function createResizableColumn(col, resizer) {
-    let x = 0;
-    let w = 0;
-
-    const mouseDownHandler = function(e) {
-        x = e.clientX;
-        const styles = window.getComputedStyle(col);
-        w = parseInt(styles.width, 10);
-
-        document.addEventListener('mousemove', mouseMoveHandler);
-        document.addEventListener('mouseup', mouseUpHandler);
-        resizer.classList.add('resizing');
-    };
-
-    const mouseMoveHandler = function(e) {
-        const dx = e.clientX - x;
-        col.style.width = `${w + dx}px`;
-        col.style.minWidth = `${w + dx}px`;
-    };
-
-    const mouseUpHandler = function() {
-        document.removeEventListener('mousemove', mouseMoveHandler);
-        document.removeEventListener('mouseup', mouseUpHandler);
-        resizer.classList.remove('resizing');
-    };
-
-    resizer.addEventListener('mousedown', mouseDownHandler);
-}
-
 function renderTabelRiwayat() {
     try {
         const thead = document.getElementById('thead-riwayat'); const tbody = document.getElementById('tbody-riwayat');
@@ -426,7 +383,7 @@ function renderTabelRiwayat() {
                     ${thSort(isHold?11:10, 'Grade', 'col-grade')}
                     ${thSort(isHold?12:11, 'Dus', 'col-dus')}
                     ${thSort(isHold?13:12, 'Shading', 'col-shading')}
-                    ${thSort(isHold?14:13, 'PO Bawaan', 'col-po')}
+                    ${thSort(isHold?14:13, 'Customer Bawaan', 'col-customer')}
                     ${isHold ? thSort(15, 'Keterangan', 'col-ket') : '<th class="hdr-std hidden col-ket">-</th>'}
                     ${thSort(isHold?16:14, 'PIC', 'col-pic')}
                 </tr>`;
@@ -438,7 +395,6 @@ function renderTabelRiwayat() {
                 const dt = new Date(r.created_at);
                 const tgl = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
 
-                // REVISI: Menambahkan border-r dan border-b pada setiap td
                 h += `
                     <tr class="hover:bg-slate-50 transition r-row text-sm">
                         <td class="px-4 py-3 text-center col-cb border-b border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -455,7 +411,7 @@ function renderTabelRiwayat() {
                         <td class="px-4 py-3 font-medium text-slate-700 col-grade border-b border-r border-slate-200" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
                         <td class="px-4 py-3 font-medium text-slate-700 col-dus border-b border-r border-slate-200" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
                         <td class="px-4 py-3 font-medium text-slate-700 col-shading border-b border-r border-slate-200" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-orange-600 col-po border-b border-r border-slate-200" data-search="${r.po_bawaan || '-'}">${r.po_bawaan || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-orange-600 col-customer border-b border-r border-slate-200" data-search="${r.customer_bawaan || '-'}">${r.customer_bawaan || '-'}</td>
                         ${isHold ? `<td class="px-4 py-3 font-medium text-slate-500 text-left col-ket border-b border-r border-slate-200" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>` : `<td class="px-4 py-3 hidden col-ket">-</td>`}
                         <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 col-pic border-b border-r border-slate-200" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
                     </tr>`;
@@ -473,15 +429,15 @@ function renderTabelRiwayat() {
                     ${thSort(5, 'Grade', 'col-grade')}
                     ${thSort(6, 'Dus', 'col-dus')}
                     ${thSort(7, 'Shading', 'col-shading')}
-                    ${thSort(8, 'PO Bawaan', 'col-po')}
+                    ${thSort(8, 'Customer Bawaan', 'col-customer')}
                     ${thSort(9, 'PIC', 'col-pic')}
                     ${thSort(10, 'QTY TOTAL (DUS)', 'col-qty')}
                 </tr>`;
 
             let groups = {};
             logLangsirRaw.forEach(r => {
-                let key = `${r.area}_${r.jenis_item}_${r.nama_item}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.po_bawaan}_${r.pic_input}`;
-                if(!groups[key]) groups[key] = { area: r.area, jenis: r.jenis_item, nama: r.nama_item, pjg: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, po: r.po_bawaan, pic: r.pic_input, qty: 0 };
+                let key = `${r.area}_${r.jenis_item}_${r.nama_item}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.customer_bawaan}_${r.pic_input}`;
+                if(!groups[key]) groups[key] = { area: r.area, jenis: r.jenis_item, nama: r.nama_item, pjg: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, customer: r.customer_bawaan, pic: r.pic_input, qty: 0 };
                 groups[key].qty++;
             });
 
@@ -500,7 +456,7 @@ function renderTabelRiwayat() {
                         <td class="px-4 py-3 font-medium text-slate-700 col-grade border-b border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
                         <td class="px-4 py-3 font-medium text-slate-700 col-dus border-b border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
                         <td class="px-4 py-3 font-medium text-slate-700 col-shading border-b border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
-                        <td class="px-4 py-3 font-medium text-orange-600 col-po border-b border-r border-slate-200" data-search="${r.po}">${r.po}</td>
+                        <td class="px-4 py-3 font-medium text-orange-600 col-customer border-b border-r border-slate-200" data-search="${r.customer}">${r.customer}</td>
                         <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 col-pic border-b border-r border-slate-200" data-search="${r.pic || '-'}">${r.pic || '-'}</td>
                         <td class="px-4 py-3 font-black text-emerald-700 col-qty border-b border-slate-200" data-search="${r.qty}">${r.qty}</td>
                     </tr>`;
@@ -509,7 +465,6 @@ function renderTabelRiwayat() {
         }
         lucide.createIcons(); 
         saringTabelExcel();
-        initResizableColumns();
     } catch(err) { console.error("Gagal Render Tabel:", err); }
 }
 
@@ -546,13 +501,13 @@ async function cancelLangsir() {
                 grade: r.grade,
                 dus: r.dus, 
                 shading: r.shading, 
-                po_bawaan: r.po_bawaan,
+                customer_bawaan: r.customer_bawaan,
                 keterangan: 'Cancel Langsir', 
                 pic_input: currentUser.username 
             });
 
-            let keyAkt = `${r.nama_item}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.area}_${r.po_bawaan}`;
-            if(!mapDeduct[keyAkt]) mapDeduct[keyAkt] = { nama_item: r.nama_item, pjg: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, area: r.area, po_aktual: r.po_bawaan, qty: 0 };
+            let keyAkt = `${r.nama_item}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.area}_${r.customer_bawaan}`;
+            if(!mapDeduct[keyAkt]) mapDeduct[keyAkt] = { nama_item: r.nama_item, pjg: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, area: r.area, customer_aktual: r.customer_bawaan, qty: 0 };
             mapDeduct[keyAkt].qty++;
         }
     });
@@ -573,7 +528,7 @@ async function cancelLangsir() {
             const { data: existing } = await db.from('stok_aktual').select('id, qty')
                 .eq('nama_item', item.nama_item).eq('panjang', item.pjg).eq('grade', item.grade)
                 .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
-                .eq('po_aktual', item.po_aktual).limit(1);
+                .eq('customer_aktual', item.customer_aktual).limit(1);
             
             if(existing && existing.length > 0) {
                 await db.from('stok_aktual').update({ qty: existing[0].qty - item.qty }).eq('id', existing[0].id);
@@ -619,7 +574,7 @@ async function eksekusiGantiArea() {
     for(let qr of qrsToUpdate) {
         let dbRow = logLangsirRaw.find(r => r.qrcode === qr);
         if(dbRow) {
-            let id_sku_baru = `${newArea}_${dbRow.nama_item}_${dbRow.panjang}_${dbRow.grade}_${dbRow.dus}_${dbRow.shading}_${dbRow.po_bawaan}_${dbRow.keterangan}`;
+            let id_sku_baru = `${newArea}_${dbRow.nama_item}_${dbRow.panjang}_${dbRow.grade}_${dbRow.dus}_${dbRow.shading}_${dbRow.customer_bawaan}_${dbRow.keterangan}`;
             
             payloadItems.push({
                 qrcode: qr,
@@ -635,6 +590,7 @@ async function eksekusiGantiArea() {
         if(error) throw error;
         
         tutupModalArea(); 
+        alert("Fungsi Sinkronisasi Wipe & Rebuild dinonaktifkan untuk menjaga integritas data Customer Aktual hasil editan user.\n\nSistem kini menggunakan metode Incremental Update (+/-) secara otomatis setiap kali ada transaksi.");
         await ambilSemuaData();
     } catch (error) { 
         alert("Gagal: " + error.message + "\n\nPastikan Anda sudah membuat Function 'ganti_area_langsir' di SQL Editor Supabase."); 
@@ -650,16 +606,16 @@ function salinDataTabel() {
 
     let copyString = "";
     if (modeRiwayat === 'agregasi') {
-        copyString = "Area\tJenis Item\tNama Item\tPjg\tGrade\tDus\tShading\tPO Bawaan\tPIC\tQTY\n";
+        copyString = "Area\tJenis Item\tNama Item\tPjg\tGrade\tDus\tShading\tCustomer Bawaan\tPIC\tQTY\n";
         cek.forEach(cb => {
             const tr = cb.closest('tr');
-            copyString += `${tr.querySelector('.col-area')?.innerText || '-'}\t${tr.querySelector('.col-jenis')?.innerText || '-'}\t${tr.querySelector('.col-nama')?.innerText || '-'}\t${tr.querySelector('.col-pjg')?.innerText || '-'}\t${tr.querySelector('.col-grade')?.innerText || '-'}\t${tr.querySelector('.col-dus')?.innerText || '-'}\t${tr.querySelector('.col-shading')?.innerText || '-'}\t${tr.querySelector('.col-po')?.innerText || '-'}\t${tr.querySelector('.col-pic')?.innerText || '-'}\t${tr.querySelector('.col-qty')?.innerText || '-'}\n`;
+            copyString += `${tr.querySelector('.col-area')?.innerText || '-'}\t${tr.querySelector('.col-jenis')?.innerText || '-'}\t${tr.querySelector('.col-nama')?.innerText || '-'}\t${tr.querySelector('.col-pjg')?.innerText || '-'}\t${tr.querySelector('.col-grade')?.innerText || '-'}\t${tr.querySelector('.col-dus')?.innerText || '-'}\t${tr.querySelector('.col-shading')?.innerText || '-'}\t${tr.querySelector('.col-customer')?.innerText || '-'}\t${tr.querySelector('.col-pic')?.innerText || '-'}\t${tr.querySelector('.col-qty')?.innerText || '-'}\n`;
         });
     } else {
-        copyString = "Waktu\tTroli\tArea\tQRCode\tTgl Produksi\tMesin\tShift\tNama Item\tPjg\tGrade\tDus\tShading\tPO\tKeterangan\n";
+        copyString = "Waktu\tTroli\tArea\tQRCode\tTgl Produksi\tMesin\tShift\tNama Item\tPjg\tGrade\tDus\tShading\tCustomer\tKeterangan\n";
         cek.forEach(cb => {
             const tr = cb.closest('tr');
-            copyString += `${tr.querySelector('.col-waktu')?.innerText || '-'}\t${tr.querySelector('.col-troli')?.innerText || '-'}\t${tr.querySelector('.col-area')?.innerText || '-'}\t${tr.querySelector('.col-qr')?.innerText || '-'}\t${tr.querySelector('.col-tgl')?.innerText || '-'}\t${tr.querySelector('.col-mesin')?.innerText || '-'}\t${tr.querySelector('.col-shift')?.innerText || '-'}\t${tr.querySelector('.col-nama')?.innerText || '-'}\t${tr.querySelector('.col-pjg')?.innerText || '-'}\t${tr.querySelector('.col-grade')?.innerText || '-'}\t${tr.querySelector('.col-dus')?.innerText || '-'}\t${tr.querySelector('.col-shading')?.innerText || '-'}\t${tr.querySelector('.col-po')?.innerText || '-'}\t${tr.querySelector('.col-ket')?.innerText || '-'}\n`;
+            copyString += `${tr.querySelector('.col-waktu')?.innerText || '-'}\t${tr.querySelector('.col-troli')?.innerText || '-'}\t${tr.querySelector('.col-area')?.innerText || '-'}\t${tr.querySelector('.col-qr')?.innerText || '-'}\t${tr.querySelector('.col-tgl')?.innerText || '-'}\t${tr.querySelector('.col-mesin')?.innerText || '-'}\t${tr.querySelector('.col-shift')?.innerText || '-'}\t${tr.querySelector('.col-nama')?.innerText || '-'}\t${tr.querySelector('.col-pjg')?.innerText || '-'}\t${tr.querySelector('.col-grade')?.innerText || '-'}\t${tr.querySelector('.col-dus')?.innerText || '-'}\t${tr.querySelector('.col-shading')?.innerText || '-'}\t${tr.querySelector('.col-customer')?.innerText || '-'}\t${tr.querySelector('.col-ket')?.innerText || '-'}\n`;
         });
     }
 
@@ -719,7 +675,7 @@ async function bukaModalSTBJ() {
                     <div class="text-[12px] font-bold text-slate-600 leading-snug">
                         Item: <span class="text-blue-600">${r.jenis_item || '-'}</span> | <span class="text-slate-800">${r.nama_item || '-'}</span> | <span class="text-slate-800">${r.panjang || '-'}</span> | <span class="text-slate-800">${r.grade || '-'}</span> | <span class="text-slate-800">${r.dus || '-'}</span> | <span class="text-blue-600">${r.shading || '-'}</span>
                     </div>
-                    <div class="text-[12px] font-bold text-slate-600">PO: <span class="text-orange-600">${r.po_bawaan || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Customer: <span class="text-orange-600">${r.customer_bawaan || '-'}</span></div>
                     <div class="text-[12px] font-bold text-slate-600">Keterangan: <span class="text-slate-800">${r.keterangan || '-'}</span></div>
                 </div>`;
         });
@@ -774,7 +730,7 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
             let grade = r.grade || '-';
             let dus = r.dus || '-';
             let shading = r.shading || '-';
-            let po = r.po_bawaan || '-';
+            let customer = r.customer_bawaan || '-';
             let jenis = r.jenis_item || '-';
             let prod = r.tgl_produksi || '-';
             let mesin = r.mesin || '-';
@@ -782,9 +738,9 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
 
             if(tabelTarget === 'hold_langsir' && namaItem === '-') {
                 let td = typeof translateBarcode === 'function' ? translateBarcode(r.qrcode) : {};
-                namaItem = td.nama || '-'; pjg = td.pjg || '-'; grade = td.grade || '-';
-                dus = td.dus || '-'; shading = td.shading || '-'; po = td.po || '-';
-                jenis = td.jenis || '-'; prod = td.tglProduksi || '-'; mesin = td.mesin || '-'; shift = td.shift || '-';
+                namaItem = td.namaItem || '-'; pjg = td.panjang || '-'; grade = td.grade || '-';
+                dus = td.dus || '-'; shading = td.shading || '-'; customer = td.customer || '-';
+                jenis = td.jenisItem || '-'; prod = td.tglProduksi || '-'; mesin = td.mesin || '-'; shift = td.shift || '-';
             }
 
             h += `
@@ -799,7 +755,7 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
                     <div class="text-[12px] font-bold text-slate-600 leading-snug">
                         Item: <span class="text-blue-600">${jenis}</span> | <span class="text-slate-800">${namaItem}</span> | <span class="text-slate-800">${pjg}</span> | <span class="text-slate-800">${grade}</span> | <span class="text-slate-800">${dus}</span> | <span class="text-blue-600">${shading}</span>
                     </div>
-                    <div class="text-[12px] font-bold text-slate-600">PO: <span class="text-orange-600">${po}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Customer: <span class="text-orange-600">${customer}</span></div>
                     <div class="text-[12px] font-bold text-rose-600">Keterangan: <span class="text-rose-800">${r.keterangan || '-'}</span></div>
                 </div>`;
         });
