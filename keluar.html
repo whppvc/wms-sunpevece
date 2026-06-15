@@ -17,34 +17,11 @@
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .table-container { position: relative; will-change: transform; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* REVISI: Header Solid & Border Collapse untuk Tabel */
-        .hdr-std { 
-            background-color: #1e293b !important; 
-            color: #ffffff !important; 
-            text-align: center !important; 
-            padding: 0.75rem 1rem !important; 
-            font-size: 0.75rem !important; 
-            font-weight: 600 !important; 
-            text-transform: uppercase !important; 
-            letter-spacing: 0.05em !important; 
-            white-space: nowrap !important; 
-            position: sticky !important; 
-            top: 0 !important; 
-            z-index: 40 !important; 
-            border-bottom: 2px solid #cbd5e1 !important; 
-            background-clip: padding-box !important;
-        }
-
-        .resizer {
-            position: absolute;
-            top: 0; right: 0; width: 5px;
-            cursor: col-resize; user-select: none;
-            height: 100%; z-index: 50;
-        }
-        .resizer:hover, .resizing { background-color: rgba(59, 130, 246, 0.5); }
+        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
+        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
+        .selected-row { border-color: #2563eb !important; background-color: #dbeafe !important; }
     </style>
 </head>
 <body class="font-sans text-slate-800">
@@ -54,7 +31,14 @@
         <!-- HEADER SECTION -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)]">
             
-            <div class="p-4 flex flex-col gap-3">
+            <!-- TABS -->
+            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
+                <button onclick="switchTab('kirim')" id="tab-kirim" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="truck" class="w-4 h-4"></i> KIRIM / KELUAR</button>
+                <button onclick="switchTab('bs')" id="tab-bs" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="package-x" class="w-4 h-4"></i> BARANG BS</button>
+            </div>
+
+            <!-- SCAN INPUT -->
+            <div class="p-3 sm:p-4 flex flex-col gap-2 border-b border-slate-100">
                 <label class="block text-[10px] font-black uppercase tracking-wide text-slate-500">Scan Fisik Kardus Keluar</label>
                 <form id="form-scan" class="flex gap-2 items-center">
                     <div class="relative flex-1">
@@ -65,55 +49,39 @@
                 </form>
             </div>
 
-            <div class="flex gap-2 overflow-x-auto p-2 bg-slate-50 hide-scrollbar whitespace-nowrap scroll-smooth select-none border-t border-slate-100">
-                <button onclick="undoDelete()" class="flex items-center gap-2 px-4 py-2 bg-white border border-rose-300 text-rose-600 hover:bg-rose-50 rounded-md text-sm font-medium transition shadow-sm active:scale-95">
+            <!-- TOOLBAR -->
+            <div class="flex justify-between items-center p-2 bg-slate-50 hide-scrollbar whitespace-nowrap scroll-smooth select-none">
+                <button onclick="undoDelete()" class="flex items-center gap-2 px-4 py-2 bg-pink-100 border border-pink-300 text-pink-700 hover:bg-pink-200 rounded-md text-sm font-bold transition shadow-sm active:scale-95">
                     <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo
                 </button>
                 
-                <div class="w-px h-6 bg-slate-300 mx-1 shrink-0"></div> 
-                
-                <button onclick="bukaModalReqPO()" class="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-md text-sm font-medium transition shadow-sm active:scale-95">
-                    <i data-lucide="help-circle" class="w-4 h-4"></i> Req Ganti PO
-                </button>
-                
-                <button onclick="crossCekOutbound()" id="btn-crosscek" class="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-md text-sm font-medium transition shadow-sm active:scale-95">
-                    <i data-lucide="scan-search" class="w-4 h-4"></i> Verifikasi Gudang
-                </button>
+                <div class="flex gap-2 items-center">
+                    <button onclick="toggleSidebarFilter()" class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-md text-sm font-medium transition shadow-sm active:scale-95">
+                        <i data-lucide="filter" class="w-4 h-4 text-blue-600"></i> Filter
+                    </button>
+                    <div class="w-px h-6 bg-slate-300 mx-1 shrink-0"></div> 
+                    <button onclick="bukaModalReqPO()" class="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-md text-sm font-bold transition shadow-sm active:scale-95">
+                        <i data-lucide="help-circle" class="w-4 h-4"></i> Req Ganti PO
+                    </button>
+                    <button onclick="crossCekOutbound()" id="btn-crosscek" class="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-md text-sm font-bold transition shadow-sm active:scale-95">
+                        <i data-lucide="scan-search" class="w-4 h-4"></i> Verifikasi Gudang
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- MIDDLE SCROLL SECTION -->
+        <!-- MIDDLE SCROLL SECTION (CARD VIEW) -->
         <div class="flex-1 min-h-0 bg-slate-200 p-2 overflow-hidden flex flex-col relative z-0">
-            <div class="flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll table-container">
-                <!-- REVISI: Menggunakan border-separate border-spacing-0 -->
-                <table class="w-full text-center border-separate border-spacing-0 whitespace-nowrap" id="table-keluar">
-                    <thead class="sticky top-0 z-40 shadow-md bg-slate-800">
-                        <tr>
-                            <th class="hdr-std w-10 relative"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-slate-400"></i></th>
-                            <th class="hdr-std w-12 relative">No</th>
-                            <th class="hdr-std border-r border-slate-600 relative">Status Fisik</th>
-                            <th class="hdr-std border-r border-slate-600 relative">Lokasi</th>
-                            <th class="hdr-std border-r border-slate-600 relative">Text QRCode</th>
-                            <th class="hdr-std relative">Tgl Produksi</th>
-                            <th class="hdr-std relative">Mesin</th>
-                            <th class="hdr-std border-r border-slate-600 relative">Shift</th>
-                            <th class="hdr-std text-blue-300 relative">Jenis Item</th>
-                            <th class="hdr-std text-left pl-4 relative">Nama Item</th>
-                            <th class="hdr-std relative">Pjg</th>
-                            <th class="hdr-std relative">Grade</th>
-                            <th class="hdr-std relative">Dus</th>
-                            <th class="hdr-std border-r border-slate-600 relative">Shading</th>
-                            <th class="hdr-std relative">PO Bawaan</th>
-                            <th class="hdr-std text-orange-400 border-l border-slate-600 bg-slate-900 relative">PO Aktual (Stok)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody-keluar" class="text-slate-700"></tbody>
-                </table>
+            <div class="flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll" id="scroll-container">
+                <div id="card-container" class="flex flex-col gap-0 w-full">
+                    <div class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan.</div>
+                </div>
             </div>
         </div>
 
         <!-- FOOTER ACTION -->
-        <div class="shrink-0 w-full bg-slate-50 p-3 flex items-center justify-end z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
+        <div class="shrink-0 w-full bg-slate-50 p-3 flex items-center justify-between z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
+            <div class="text-xs font-bold text-slate-500">Total: <span id="lbl-total-baris" class="text-slate-800 text-sm">0</span> Dus</div>
             <button id="btn-proses-keluar" onclick="bukaModalKeluar()" class="w-full md:w-auto px-8 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-md shadow-sm flex items-center justify-center gap-2 text-sm transition active:scale-95 uppercase border-b-4 border-slate-950">
                 <i data-lucide="truck-fast" class="w-5 h-5"></i> PROSES KELUAR BARANG
             </button>
@@ -167,41 +135,24 @@
         </div>
     </div>
 
-    <script src="keluar_logic.js?v=1"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => { 
-            initModernLayout({ id: 'keluar', title: 'BARANG KELUAR', url: 'keluar.html' }); 
-            setTimeout(() => { if(typeof loadInitialOutboundData === 'function') loadInitialOutboundData(); }, 200);
-            
-            // Inisialisasi Resizable Columns
-            setTimeout(() => {
-                const cols = document.querySelectorAll('#table-keluar th');
-                cols.forEach(col => {
-                    const resizer = document.createElement('div');
-                    resizer.classList.add('resizer');
-                    col.appendChild(resizer);
-                    
-                    let x = 0; let w = 0;
-                    resizer.addEventListener('mousedown', function(e) {
-                        x = e.clientX;
-                        w = parseInt(window.getComputedStyle(col).width, 10);
-                        document.addEventListener('mousemove', mouseMoveHandler);
-                        document.addEventListener('mouseup', mouseUpHandler);
-                        resizer.classList.add('resizing');
-                    });
-                    const mouseMoveHandler = function(e) {
-                        const dx = e.clientX - x;
-                        col.style.width = `${w + dx}px`;
-                        col.style.minWidth = `${w + dx}px`;
-                    };
-                    const mouseUpHandler = function() {
-                        document.removeEventListener('mousemove', mouseMoveHandler);
-                        document.removeEventListener('mouseup', mouseUpHandler);
-                        resizer.classList.remove('resizing');
-                    };
-                });
-            }, 500);
-        });
-    </script>
+    <!-- SIDEBAR FILTER -->
+    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
+            <h3 class="font-semibold text-slate-800 flex items-center gap-2 text-base"><i data-lucide="filter" class="w-5 h-5 text-blue-600"></i> Filter Data</h3>
+            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-md transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-4 flex flex-col gap-3 overflow-y-auto custom-scroll flex-1 bg-slate-50/50">
+            <div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Status</label><input type="text" id="f-status" oninput="saringData()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+            <div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="f-qr" oninput="saringData()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+            <div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Nama Item</label><input type="text" id="f-nama" oninput="saringData()" class="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500"></div>
+        </div>
+        <div class="p-4 border-t border-slate-100 bg-white">
+            <button onclick="resetFilter()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-md text-sm transition">Reset Filter</button>
+        </div>
+    </div>
+
+    <div id="overlay-klik-luar" onclick="toggleSidebarFilter()" class="hidden fixed inset-0 z-[70] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
+
+    <script src="keluar_logic.js?v=2"></script>
 </body>
 </html>
