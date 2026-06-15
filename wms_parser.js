@@ -1,6 +1,6 @@
 function translateBarcode(barcode) {
     const parts = barcode.split('/'); 
-    let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-' };
+    let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customer: '-' };
     if (parts.length < 4) return data;
     
     const hurufDepan = barcode.charAt(0).toUpperCase();
@@ -41,12 +41,12 @@ function translateBarcode(barcode) {
             data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : match[1];
             let cariShift = masterData.kamus.find(m => m.kode_shift === match[2]); 
             data.shift = cariShift && cariShift.shift ? cariShift.shift : match[2];
-            let cariPO = masterData.kamus.find(m => m.kode_po === match[3]); 
-            data.po = cariPO && cariPO.po ? cariPO.po : match[3];
+            let cariCustomer = masterData.kamus.find(m => m.kode_customer === match[3]); 
+            data.customer = cariCustomer && cariCustomer.customer ? cariCustomer.customer : match[3];
         } else { 
             data.mesin = "SALAH"; 
             data.shift = "SALAH"; 
-            data.po = "SALAH"; 
+            data.customer = "SALAH"; 
         }
     }
     return data;
