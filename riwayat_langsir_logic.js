@@ -86,7 +86,7 @@ const thSort = (idx, label, cls = "") => {
             <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon transition-all"></i>
         </button>`;
 
-    return `<th class="hdr-std ${cls} select-none relative">
+    return `<th class="hdr-std ${cls} select-none relative border-r border-slate-200">
         <div class="flex items-center justify-center gap-1.5">
             <span class="cursor-pointer flex items-center gap-1 hover:text-slate-800 transition" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
             ${filterBtn}
@@ -412,7 +412,7 @@ function renderTabelRiwayat() {
             
             thead.innerHTML = `
                 <tr>
-                    <th class="hdr-std w-10 col-cb text-center relative"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500"></th>
+                    <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-200"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500"></th>
                     ${thSort(1, 'Waktu Masuk', 'col-waktu')}
                     ${isHold ? thSort(2, 'Troli', 'col-troli') : '<th class="hdr-std hidden col-troli">-</th>'}
                     ${thSort(isHold?3:2, 'Area', 'col-area')}
@@ -438,6 +438,7 @@ function renderTabelRiwayat() {
                 const dt = new Date(r.created_at);
                 const tgl = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
 
+                // REVISI: Menambahkan border-r dan border-b pada setiap td
                 h += `
                     <tr class="hover:bg-slate-50 transition r-row text-sm">
                         <td class="px-4 py-3 text-center col-cb border-b border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -456,7 +457,7 @@ function renderTabelRiwayat() {
                         <td class="px-4 py-3 font-medium text-slate-700 col-shading border-b border-r border-slate-200" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
                         <td class="px-4 py-3 font-medium text-orange-600 col-po border-b border-r border-slate-200" data-search="${r.po_bawaan || '-'}">${r.po_bawaan || '-'}</td>
                         ${isHold ? `<td class="px-4 py-3 font-medium text-slate-500 text-left col-ket border-b border-r border-slate-200" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>` : `<td class="px-4 py-3 hidden col-ket">-</td>`}
-                        <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 col-pic border-b border-slate-200" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
+                        <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 col-pic border-b border-r border-slate-200" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
                     </tr>`;
             });
             tbody.innerHTML = h;
@@ -464,7 +465,7 @@ function renderTabelRiwayat() {
         else if(modeRiwayat === 'agregasi') {
             thead.innerHTML = `
                 <tr>
-                    <th class="hdr-std w-10 col-cb text-center relative"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500"></th>
+                    <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-200"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500"></th>
                     ${thSort(1, 'Area', 'col-area')}
                     ${thSort(2, 'Jenis Item', 'col-jenis')}
                     ${thSort(3, 'Nama Item', 'col-nama')}
