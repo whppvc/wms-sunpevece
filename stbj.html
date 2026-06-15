@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     
-    <!-- PINDAHKAN GLOBAL.JS KE SINI AGAR ROUTE GUARD JALAN SEBELUM RENDER -->
+    <!-- ROUTE GUARD & LAYOUT -->
     <script src="global.js"></script>
     
     <style>
@@ -57,7 +57,8 @@
 </head>
 <body class="font-sans bg-slate-50 text-slate-800">
 
-    <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
+    <!-- REVISI: Menghapus absolute inset-0 pt-[104px] agar tidak menimpa Navbar -->
+    <div class="flex flex-col h-full w-full">
         
         <!-- 1. TOP FREEZE SECTION -->
         <div class="shrink-0 bg-slate-50 flex flex-col z-20 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)] border-b border-slate-300">
