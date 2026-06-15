@@ -46,7 +46,6 @@ function formatTglIntl(tglStr) {
     const p = tglStr.split('-');
     if(p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`; 
     
-    // Handle format timestamp dari DB
     if(tglStr.includes('T')) {
         const d = new Date(tglStr);
         return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -127,7 +126,6 @@ function addEstimasiLokal() {
     
     renderHeaderDanTabel();
     
-    // Reset form
     document.getElementById('in-nama-item').value = ''; 
     document.getElementById('in-panjang').value = ''; 
     document.getElementById('in-grade').value = ''; 
@@ -141,6 +139,18 @@ function hapusBarisStaging(id) {
     renderHeaderDanTabel(); 
 }
 
+async function hapusBarisDB(id) {
+    if(!confirm("Apakah Anda yakin ingin menghapus data PO ini secara permanen?")) return;
+    try {
+        const { error } = await db.from('po_estimasi').delete().eq('id', id);
+        if (error) throw error;
+        alert("Data berhasil dihapus!");
+        muatDataEstimasiDB();
+    } catch (e) {
+        alert("Gagal menghapus data: " + e.message);
+    }
+}
+
 function toggleAllStaging(checked) { 
     document.querySelectorAll('.cb-row').forEach(cb => cb.checked = checked); 
 }
@@ -150,7 +160,11 @@ async function simpanMassalKeDatabase() {
     const btn = document.getElementById('btn-submit-db'); const oriText = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MENYIMPAN...'; btn.disabled = true;
 
+    // REVISI: Mengirimkan tanggal hari ini sebagai default untuk tgl_estimasi_kirim
+    const defaultDate = new Date().toISOString().split('T')[0];
+
     const payload = stagingData.map(d => ({ 
+        tgl_estimasi_kirim: defaultDate,
         kode_po: d.kode_po, 
         customer_po: d.customer_po, 
         nama_item: d.nama_item, 
@@ -410,21 +424,22 @@ function renderHeaderDanTabel() {
         <tr>
             <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="toggleAllStaging(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500"></th>
             <th class="hdr-std w-10 col-btn text-center relative border-r border-slate-600"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-rose-400"></i></th>
-            ${thSort(2, 'Waktu Input', 'col-waktu')}
-            ${thSort(3, 'Kode PO', 'col-kode_po')}
-            ${thSort(4, 'Customer PO', 'col-customer_po')}
-            ${thSort(5, 'Nama Item', 'col-nama text-blue-300')}
-            ${thSort(6, 'Panjang', 'col-pjg')}
-            ${thSort(7, 'Grade', 'col-grade')}
-            ${thSort(8, 'Dus', 'col-dus')}
-            ${thSort(9, 'QTY PO', 'col-qty text-orange-300')}
-            ${thSort(10, 'Note', 'col-note')}
-            ${currentMode === 'tabel' ? thSort(11, 'PIC', 'col-pic') : ''}
+            ${thSort(2, 'No', 'col-no w-12')}
+            ${thSort(3, 'Waktu Input', 'col-waktu')}
+            ${thSort(4, 'Kode PO', 'col-kode_po')}
+            ${thSort(5, 'Customer PO', 'col-customer_po')}
+            ${thSort(6, 'Nama Item', 'col-nama text-blue-300')}
+            ${thSort(7, 'Panjang', 'col-pjg')}
+            ${thSort(8, 'Grade', 'col-grade')}
+            ${thSort(9, 'Dus', 'col-dus')}
+            ${thSort(10, 'QTY PO', 'col-qty text-orange-300')}
+            ${thSort(11, 'Note', 'col-note')}
+            ${currentMode === 'tabel' ? thSort(12, 'PIC', 'col-pic') : ''}
         </tr>`;
     
     if(dataset.length === 0) { 
         let msg = currentMode === 'input' ? 'Belum ada data ditambahkan ke tabel sementara.' : 'Tidak ada data PO di database.';
-        tbody.innerHTML = `<tr><td colspan="12" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> ${msg}</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="13" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> ${msg}</td></tr>`; 
         applyPagination(); return; 
     }
     
@@ -432,14 +447,18 @@ function renderHeaderDanTabel() {
     dataset.forEach((r, i) => {
         let tglStr = currentMode === 'input' ? r.created_at : formatTglIntl(r.created_at);
         
+        // REVISI: Nomor urut. Jika input, yang terbaru (index 0) adalah nomor terbesar.
+        let noUrut = currentMode === 'input' ? (dataset.length - i) : (i + 1);
+        
         let btnHapus = currentMode === 'input' 
             ? `<button onclick="hapusBarisStaging(${r.id})" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`
-            : `<button class="text-slate-300 cursor-not-allowed p-1.5 mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+            : `<button onclick="hapusBarisDB(${r.id})" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
 
         h += `
             <tr class="hover:bg-slate-50 transition r-row text-sm">
                 <td class="px-4 py-3 text-center col-cb border-b border-r border-slate-200"><input type="checkbox" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 text-center col-btn border-b border-r border-slate-200">${btnHapus}</td>
+                <td class="px-4 py-3 font-bold text-slate-500 text-center col-no border-b border-r border-slate-200">${noUrut}</td>
                 <td class="px-4 py-3 text-slate-600 font-medium col-waktu border-b border-r border-slate-200" data-search="${tglStr}">${tglStr}</td>
                 <td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-b border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
                 <td class="px-4 py-3 font-bold text-slate-700 col-customer_po border-b border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
