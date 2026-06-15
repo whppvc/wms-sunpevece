@@ -40,7 +40,7 @@ window.tutupSemuaPopup = function() {
 };
 
 window.resetFilter = function() {
-    ['f-stbj','f-kode','f-troli','f-area','f-qr','f-tgl','f-mesin','f-shift','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket'].forEach(id => {
+    ['f-stbj','f-kode','f-troli','f-area','f-qr','f-tgl','f-mesin','f-shift','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-customer','f-ket'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.value = '';
     });
@@ -103,7 +103,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
             const { data: mData2 } = await db.from('master_2').select('*');
-            if(mData2) masterData.kamus = mData2; 
+            if(mData2) {
+                masterData.kamus = mData2; 
+                window.customerMap = {};
+                mData2.forEach(m => {
+                    if(m.kode_customer) window.customerMap[m.kode_customer] = m.customer;
+                });
+            }
             
             updateTotalBaris();
         } catch (e) { console.error("Gagal muat data master:", e); }
@@ -115,7 +121,7 @@ function addRow(area, code, isDuplicate = false) {
     const rowClass = isDuplicate ? 'bg-red-50 hover:bg-red-100' : 'bg-white hover:bg-slate-50';
     div.className = `row-item ${rowClass} border-b border-slate-300 p-2.5 relative transition w-full flex shrink-0`; 
     
-    const td = typeof translateBarcode === 'function' ? translateBarcode(code) : {tglProduksi:'-', mesin:'-', shift:'-', jenisItem:'-', namaItem:'Unknown', panjang:'-', grade:'-', dus:'-', shading:'-', po:'-'}; 
+    const td = typeof translateBarcode === 'function' ? translateBarcode(code) : {tglProduksi:'-', mesin:'-', shift:'-', jenisItem:'-', namaItem:'Unknown', panjang:'-', grade:'-', dus:'-', shading:'-', customer:'-'}; 
     
     const stbjHtml = '<span class="text-slate-500 font-bold bg-slate-200 border border-slate-300 px-3 py-1 text-[10px] stbj-val rounded-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
     const kodeHtml = isDuplicate 
@@ -146,7 +152,7 @@ function addRow(area, code, isDuplicate = false) {
             </div>
             
             <div class="text-[12px] font-bold text-blue-600 col-shading">${td.shading}</div>
-            <div class="text-[12px] font-bold text-orange-600 col-po uppercase">${td.po}</div>
+            <div class="text-[12px] font-bold text-orange-600 col-customer uppercase">${td.customer}</div>
             
             <div class="text-[11px] font-bold text-slate-500 mt-1">Keterangan: <span class="col-ket ket-cell text-slate-700">-</span></div>
             <div class="text-[11px] font-bold text-slate-500">Troli: <span class="col-troli troli-cell text-slate-700">-</span></div>
@@ -168,7 +174,8 @@ function saringTabelLangsir() {
         kode: document.getElementById('f-kode').value.toLowerCase(),
         troli: document.getElementById('f-troli').value.toLowerCase(),
         area: document.getElementById('f-area').value.toLowerCase(),
-        qr: document.getElementById('f-qr').value.toLowerCase()
+        qr: document.getElementById('f-qr').value.toLowerCase(),
+        customer: document.getElementById('f-customer').value.toLowerCase()
     };
 
     document.querySelectorAll('.row-item').forEach(row => {
@@ -383,7 +390,7 @@ async function saveToSupabase() {
         let grade = r.querySelector('.col-grade').innerText;
         let dus = r.querySelector('.col-dus').innerText; 
         let shading = r.querySelector('.col-shading').innerText; 
-        let po = r.querySelector('.col-po').innerText; 
+        let customer = r.querySelector('.col-customer').innerText; 
         let ket = r.querySelector('.ket-cell').innerText;
         let troli = r.querySelector('.troli-cell').innerText;
         
@@ -391,7 +398,7 @@ async function saveToSupabase() {
         let mesin = r.querySelector('.col-mesin').innerText;
         let shift = r.querySelector('.col-shift').innerText;
         
-        let id_sku = `${area}_${nama}_${pjg}_${grade}_${dus}_${shading}_${po}_${ket}`;
+        let id_sku = `${area}_${nama}_${pjg}_${grade}_${dus}_${shading}_${customer}_${ket}`;
         
         arrFisik.push({ 
             qrcode: qr, 
@@ -406,7 +413,7 @@ async function saveToSupabase() {
             grade: grade,
             dus: dus,
             shading: shading,
-            po_bawaan: po,
+            customer_bawaan: customer,
             keterangan: ket,
             pic_input: user.username 
         });
@@ -424,13 +431,13 @@ async function saveToSupabase() {
             grade: grade,
             dus: dus,
             shading: shading,
-            po_bawaan: po,
+            customer_bawaan: customer,
             keterangan: ket,
             pic_input: user.username
         });
 
-        // Siapkan data untuk stok_aktual (PO Aktual = PO Bawaan)
-        let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
+        // Siapkan data untuk stok_aktual (Customer Aktual = Customer Bawaan)
+        let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${customer}_${ket}`;
         if(!mapAktual[keyAkt]) {
             mapAktual[keyAkt] = {
                 id_sku: id_sku, 
@@ -441,8 +448,8 @@ async function saveToSupabase() {
                 dus: dus, 
                 shading: shading, 
                 area: area, 
-                po_bawaan: po, 
-                po_aktual: po, // <--- KUNCI LOGICAL ALLOCATION
+                customer_bawaan: customer, 
+                customer_aktual: customer, // <--- KUNCI LOGICAL ALLOCATION
                 keterangan: ket, 
                 qty: 0
             };
@@ -465,7 +472,7 @@ async function saveToSupabase() {
             const { data: existing, error: errCek } = await db.from('stok_aktual').select('id, qty')
                 .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
                 .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
-                .eq('po_aktual', item.po_aktual).eq('keterangan', item.keterangan).limit(1);
+                .eq('customer_aktual', item.customer_aktual).eq('keterangan', item.keterangan).limit(1);
 
             if (errCek) throw new Error("Gagal cek stok_aktual: " + errCek.message);
 
@@ -518,13 +525,13 @@ async function holdLangsir() {
         const grade = div.querySelector('.col-grade').innerText;
         const dus = div.querySelector('.col-dus').innerText;
         const shading = div.querySelector('.col-shading').innerText;
-        const po = div.querySelector('.col-po').innerText;
+        const customer = div.querySelector('.col-customer').innerText;
 
         payloadUpload.push({
             qrcode: qr, troli: troli, area: area,
             tgl_produksi: tgl_produksi, mesin: mesin, shift: shift,
             jenis_item: jenis, nama_item: nama, panjang: pjg, grade: grade,
-            dus: dus, shading: shading, po_bawaan: po,
+            dus: dus, shading: shading, customer_bawaan: customer,
             keterangan: `STBJ: ${ketStbj} | KODE: ${ketKode} | Ket User: ${noteKet}`,
             pic_input: user.username
         });
@@ -553,11 +560,11 @@ function salinDataTabel() {
     const cek = document.querySelectorAll('.cb-row:checked');
     if(cek.length === 0) return alert("Pilih data yang ingin disalin dengan mencentang kotak di kiri data!");
 
-    let copyString = "Area\tQRCode\tTgl Produksi\tMesin\tShift\tNama Item\tPjg\tGrade\tDus\tShading\tPO\tKeterangan\n";
+    let copyString = "Area\tQRCode\tTgl Produksi\tMesin\tShift\tNama Item\tPjg\tGrade\tDus\tShading\tCustomer\tKeterangan\n";
     
     cek.forEach(cb => {
         const div = cb.closest('.row-item');
-        copyString += `${div.querySelector('.col-area').innerText}\t${div.querySelector('.col-qr').innerText}\t${div.querySelector('.col-tgl').innerText}\t${div.querySelector('.col-mesin').innerText}\t${div.querySelector('.col-shift').innerText}\t${div.querySelector('.col-nama').innerText}\t${div.querySelector('.col-pjg').innerText}\t${div.querySelector('.col-grade').innerText}\t${div.querySelector('.col-dus').innerText}\t${div.querySelector('.col-shading').innerText}\t${div.querySelector('.col-po').innerText}\t${div.querySelector('.ket-cell').innerText}\n`;
+        copyString += `${div.querySelector('.col-area').innerText}\t${div.querySelector('.col-qr').innerText}\t${div.querySelector('.col-tgl').innerText}\t${div.querySelector('.col-mesin').innerText}\t${div.querySelector('.col-shift').innerText}\t${div.querySelector('.col-nama').innerText}\t${div.querySelector('.col-pjg').innerText}\t${div.querySelector('.col-grade').innerText}\t${div.querySelector('.col-dus').innerText}\t${div.querySelector('.col-shading').innerText}\t${div.querySelector('.col-customer').innerText}\t${div.querySelector('.ket-cell').innerText}\n`;
     });
 
     navigator.clipboard.writeText(copyString).then(() => {
@@ -613,7 +620,7 @@ async function bukaModalSTBJ() {
                     <div class="text-[12px] font-bold text-slate-600 leading-snug">
                         Item: <span class="text-blue-600">${r.jenis_item || '-'}</span> | <span class="text-slate-800">${r.nama_item || '-'}</span> | <span class="text-slate-800">${r.panjang || '-'}</span> | <span class="text-slate-800">${r.grade || '-'}</span> | <span class="text-slate-800">${r.dus || '-'}</span> | <span class="text-blue-600">${r.shading || '-'}</span>
                     </div>
-                    <div class="text-[12px] font-bold text-slate-600">PO: <span class="text-orange-600">${r.po_bawaan || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Customer: <span class="text-orange-600">${r.customer_bawaan || '-'}</span></div>
                     <div class="text-[12px] font-bold text-slate-600">Keterangan: <span class="text-slate-800">${r.keterangan || '-'}</span></div>
                 </div>`;
         });
@@ -668,7 +675,7 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
             let grade = r.grade || '-';
             let dus = r.dus || '-';
             let shading = r.shading || '-';
-            let po = r.po_bawaan || '-';
+            let customer = r.customer_bawaan || '-';
             let jenis = r.jenis_item || '-';
             let prod = r.tgl_produksi || '-';
             let mesin = r.mesin || '-';
@@ -677,7 +684,7 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
             if(tabelTarget === 'hold_langsir' && namaItem === '-') {
                 let td = typeof translateBarcode === 'function' ? translateBarcode(r.qrcode) : {};
                 namaItem = td.namaItem || '-'; pjg = td.panjang || '-'; grade = td.grade || '-';
-                dus = td.dus || '-'; shading = td.shading || '-'; po = td.po || '-';
+                dus = td.dus || '-'; shading = td.shading || '-'; customer = td.customer || '-';
                 jenis = td.jenisItem || '-'; prod = td.tglProduksi || '-'; mesin = td.mesin || '-'; shift = td.shift || '-';
             }
 
@@ -693,7 +700,7 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
                     <div class="text-[12px] font-bold text-slate-600 leading-snug">
                         Item: <span class="text-blue-600">${jenis}</span> | <span class="text-slate-800">${namaItem}</span> | <span class="text-slate-800">${pjg}</span> | <span class="text-slate-800">${grade}</span> | <span class="text-slate-800">${dus}</span> | <span class="text-blue-600">${shading}</span>
                     </div>
-                    <div class="text-[12px] font-bold text-slate-600">PO: <span class="text-orange-600">${po}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Customer: <span class="text-orange-600">${customer}</span></div>
                     <div class="text-[12px] font-bold text-rose-600">Keterangan: <span class="text-rose-800">${r.keterangan || '-'}</span></div>
                 </div>`;
         });
