@@ -192,7 +192,7 @@ window.bukaModalLihatPO = function(encodedPOs) {
     const poArr = poStr.split('|').map(p => p.trim()).filter(p => p);
     const ul = document.getElementById('list-po-aktual');
     if (poArr.length === 0 || poArr[0] === 'KOSONG') {
-        ul.innerHTML = '<li class="text-slate-400 italic font-medium p-3 bg-slate-50 rounded-md text-center border border-slate-200">Tidak ada PO Aktual tersimpan.</li>';
+        ul.innerHTML = '<li class="text-slate-400 italic font-medium p-3 bg-slate-50 rounded-md text-center border border-slate-200">Tidak ada Customer Aktual tersimpan.</li>';
     } else {
         ul.innerHTML = poArr.map(p => {
             let parts = p.split('(');
@@ -216,7 +216,7 @@ window.siapkanGantiPO = function(context) {
         checkboxes = document.querySelectorAll('.cb-main:checked');
     } else { checkboxes = document.querySelectorAll('.cb-bd:checked'); }
 
-    if(checkboxes.length === 0) return alert('Silakan centang item / area yang ingin diganti PO-nya.');
+    if(checkboxes.length === 0) return alert('Silakan centang item / area yang ingin diganti Customer-nya.');
 
     window.selectedForAction = []; let totalDus = 0;
     checkboxes.forEach(cb => {
