@@ -238,6 +238,52 @@ function holdManual() {
     renderTable(); document.querySelector('input[onchange="toggleAll(this.checked)"]').checked = false;
 }
 
+function toggleSidebarFilter() {
+    document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
+    document.getElementById('overlay-klik-luar').classList.toggle('hidden');
+}
+
+function tutupPopups() {
+    document.getElementById('sidebar-filter').classList.add('translate-x-full');
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
+}
+
+function resetFilterSTBJ() {
+    const ids = ['fs-status','fs-troli','fs-qr','fs-tgl','fs-mesin','fs-shift','fs-jenis','fs-nama','fs-pjg','fs-grade','fs-dus','fs-shading','fs-customer','fs-ket'];
+    ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; });
+    saringTabelSTBJ(); toggleSidebarFilter();
+}
+
+function saringTabelSTBJ() {
+    const f = {
+        status: document.getElementById('fs-status')?.value.toLowerCase() || '',
+        troli: document.getElementById('fs-troli')?.value.toLowerCase() || '',
+        qr: document.getElementById('fs-qr')?.value.toLowerCase() || '',
+        tgl: document.getElementById('fs-tgl')?.value.toLowerCase() || '',
+        mesin: document.getElementById('fs-mesin')?.value.toLowerCase() || '',
+        shift: document.getElementById('fs-shift')?.value.toLowerCase() || '',
+        jenis: document.getElementById('fs-jenis')?.value.toLowerCase() || '',
+        nama: document.getElementById('fs-nama')?.value.toLowerCase() || '',
+        pjg: document.getElementById('fs-pjg')?.value.toLowerCase() || '',
+        grade: document.getElementById('fs-grade')?.value.toLowerCase() || '',
+        dus: document.getElementById('fs-dus')?.value.toLowerCase() || '',
+        shading: document.getElementById('fs-shading')?.value.toLowerCase() || '',
+        customer: document.getElementById('fs-customer')?.value.toLowerCase() || '',
+        ket: document.getElementById('fs-ket')?.value.toLowerCase() || ''
+    };
+
+    document.querySelectorAll('.row-stbj').forEach(row => {
+        let show = true;
+        for(let key in f) {
+            if(f[key]) {
+                const cell = row.querySelector('.col-' + key);
+                if(cell && !cell.innerText.toLowerCase().includes(f[key])) { show = false; break; }
+            }
+        }
+        row.style.display = show ? '' : 'none';
+    });
+}
+
 // ========================================================
 // FILTER EXCEL PRO (SMART FILTERING)
 // ========================================================
