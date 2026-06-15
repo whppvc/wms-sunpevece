@@ -47,19 +47,19 @@ window.loadMasterData = async function() {
         if (data) {
             window.masterData.kamus = data; 
             let poSet = new Set(); 
-            data.forEach(d => { if(d.po) poSet.add(d.po.trim()); });
+            data.forEach(d => { if(d.customer) poSet.add(d.customer.trim()); });
             const sel = document.getElementById('input-new-po'); 
-            let html = '<option value="">-- PILIH PO --</option>';
+            let html = '<option value="">-- PILIH CUSTOMER --</option>';
             Array.from(poSet).sort().forEach(po => { html += `<option value="${po}">${po}</option>`; });
             if(sel) sel.innerHTML = html;
         }
     } catch (e) { 
-        if(document.getElementById('input-new-po')) document.getElementById('input-new-po').innerHTML = '<option value="">-- GAGAL MEMUAT PO --</option>'; 
+        if(document.getElementById('input-new-po')) document.getElementById('input-new-po').innerHTML = '<option value="">-- GAGAL MEMUAT CUSTOMER --</option>'; 
     }
 };
 
 window.translateBarcode = function(barcode) {
-    let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-' };
+    let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customer: '-' };
     if(!barcode) return data;
     const parts = barcode.split('/'); if (parts.length < 1) return data;
     const h = barcode.charAt(0).toUpperCase();
@@ -81,13 +81,13 @@ window.translateBarcode = function(barcode) {
             data.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
         }
         let sisaString = p3.substring(5); let match = sisaString.match(/(C.*?)(S.*?)(P.*)/);
-        if(match) { data.mesin = match[1]; data.shift = match[2]; data.po = match[3]; }
+        if(match) { data.mesin = match[1]; data.shift = match[2]; data.customer = match[3]; }
     }
     return data;
 };
 
 window.sinkronisasiUlangStokAktual = async function(tampilkanAlert = false) {
-    alert("Fungsi Sinkronisasi Wipe & Rebuild dinonaktifkan untuk menjaga integritas data PO Aktual hasil editan user.\n\nSistem kini menggunakan metode Incremental Update (+/-) secara otomatis setiap kali ada transaksi.");
+    alert("Fungsi Sinkronisasi Wipe & Rebuild dinonaktifkan untuk menjaga integritas data Customer Aktual hasil editan user.\n\nSistem kini menggunakan metode Incremental Update (+/-) secara otomatis setiap kali ada transaksi.");
 };
 
 window.muatDataStok = async function() {
@@ -113,8 +113,8 @@ window.muatDataStok = async function() {
         window.stokAktualRaw.forEach(a => {
             let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}`;
             if(!aktualMap[key]) aktualMap[key] = {};
-            if(!aktualMap[key][a.po_aktual]) aktualMap[key][a.po_aktual] = 0;
-            aktualMap[key][a.po_aktual] += a.qty;
+            if(!aktualMap[key][a.customer_aktual]) aktualMap[key][a.customer_aktual] = 0;
+            aktualMap[key][a.customer_aktual] += a.qty;
         });
         window.poDistributionMap = aktualMap;
 
@@ -128,7 +128,7 @@ window.muatDataStok = async function() {
             let grade = p[3] || r.grade || t.grade;
             let dus = p[4] || r.dus || t.dus;
             let shading = p[5] || r.shading || t.shading;
-            let po = p[6] || r.po_bawaan || t.po || '-';
+            let po = p[6] || r.customer_bawaan || t.customer || '-';
             let ket = p.length >= 8 ? p.slice(7).join('_') : (r.keterangan || '-');
 
             let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
@@ -145,13 +145,13 @@ window.muatDataStok = async function() {
                 jenis: r.jenis_item || t.jenisItem || '-', nama: p[1] || r.nama_item || t.namaItem || '-',
                 pjg: p[2] || r.panjang || t.panjang || '-', grade: p[3] || r.grade || t.grade || '-', 
                 dus: p[4] || r.dus || t.dus || '-', shading: p[5] || r.shading || t.shading || '-',
-                po_bawaan: r.po_bawaan || t.po || '-', po_aktual: p[6] || r.po_bawaan || t.po || '-', 
+                po_bawaan: r.customer_bawaan || t.customer || '-', po_aktual: p[6] || r.customer_bawaan || t.customer || '-', 
                 ket: p.length >= 8 ? p.slice(7).join('_') : (r.keterangan || '-'), id: r.id 
             };
         });
 
         window.dataKSArea = window.stokAktualRaw.map(a => {
-            let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.po_bawaan}_${a.keterangan}`;
+            let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_bawaan}_${a.keterangan}`;
             return {
                 ...a,
                 pjg: a.panjang || '-', 
@@ -159,8 +159,8 @@ window.muatDataStok = async function() {
                 nama: a.nama_item || '-',
                 qrcodes: qrMap[key] || [],
                 id_sku_base: a.id_sku,
-                po_bawaan: a.po_bawaan,
-                po_aktual: a.po_aktual,
+                po_bawaan: a.customer_bawaan,
+                po_aktual: a.customer_aktual,
                 qty: a.qty
             };
         });
@@ -255,8 +255,8 @@ window.renderTabel = function() {
                 ${window.thSort(9, 'Grade', 'col-grade')}
                 ${window.thSort(10, 'Dus', 'col-dus')}
                 ${window.thSort(11, 'Shading', 'col-shading')}
-                ${window.thSort(12, 'PO Bawaan', 'col-po-bawaan')}
-                ${window.thSort(13, 'PO Aktual', 'col-po')}
+                ${window.thSort(12, 'Customer Bawaan', 'col-po-bawaan')}
+                ${window.thSort(13, 'Customer Aktual', 'col-po')}
                 ${window.thSort(14, 'Keterangan', 'col-ket')}
             </tr>`;
         
@@ -274,10 +274,10 @@ window.renderTabel = function() {
                 }
             }
             let poString = poArr.length > 0 ? poArr.join(' | ') : 'KOSONG';
-            let btnPO = `<button onclick="window.bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-orange-100 text-orange-700 border border-orange-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-orange-200 transition flex items-center justify-center gap-1 mx-auto w-full max-w-[100px]"><i data-lucide="eye" class="w-3 h-3"></i> Lihat PO</button>`;
+            let btnPO = `<button onclick="window.bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-orange-100 text-orange-700 border border-orange-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-orange-200 transition flex items-center justify-center gap-1 mx-auto w-full max-w-[100px]"><i data-lucide="eye" class="w-3 h-3"></i> Lihat Customer</button>`;
 
             return `
-                <tr class="bg-white even:bg-slate-50 hover:bg-green-200 transition row-ks text-sm border-b border-slate-200">
+                <tr class="bg-white even:bg-slate-100 hover:bg-green-200 transition row-ks text-sm border-b border-slate-200">
                     <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-emerald-700 col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-mono font-medium text-slate-800 col-qr text-left" data-search="${r.qrcode}">${r.qrcode}</td>
@@ -308,7 +308,7 @@ window.renderTabel = function() {
                 ${window.thSort(5, 'Grade', 'col-grade')}
                 ${window.thSort(6, 'Dus', 'col-dus')}
                 ${window.thSort(7, 'Shading', 'col-shading')}
-                ${window.thSort(8, 'PO Aktual', 'col-po')}
+                ${window.thSort(8, 'Customer Aktual', 'col-po')}
                 ${window.thSort(9, 'Keterangan', 'col-ket')}
                 ${window.thSort(10, 'Total Qty (Dus)', 'col-qty')}
             </tr>`;
@@ -318,7 +318,7 @@ window.renderTabel = function() {
         tbody.innerHTML = window.dataKSArea.map((r) => {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             return `
-                <tr class="bg-white even:bg-slate-50 hover:bg-green-200 transition row-ks text-sm border-b border-slate-200">
+                <tr class="bg-white even:bg-slate-100 hover:bg-green-200 transition row-ks text-sm border-b border-slate-200">
                     <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-qty="${r.qty}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-emerald-700 col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-medium text-blue-600 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
@@ -345,7 +345,7 @@ window.renderTabel = function() {
                 ${window.thSort(5, 'Grade', 'col-grade')}
                 ${window.thSort(6, 'Dus', 'col-dus')}
                 ${window.thSort(7, 'Shading', 'col-shading')}
-                ${window.thSort(8, 'PO Aktual', 'col-po')}
+                ${window.thSort(8, 'Customer Aktual', 'col-po')}
                 ${window.thSort(9, 'Keterangan', 'col-ket')}
                 ${window.thSort(10, 'TOTAL (DUS)', 'col-qty')}
             </tr>`;
@@ -353,7 +353,7 @@ window.renderTabel = function() {
         if(window.dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = window.dataKSGlobal.map((r) => `
-            <tr class="bg-white even:bg-slate-50 hover:bg-green-200 transition row-ks text-sm border-b border-slate-200">
+            <tr class="bg-white even:bg-slate-100 hover:bg-green-200 transition row-ks text-sm border-b border-slate-200">
                 <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 text-center col-open"><button onclick="window.bukaBreakdown('${r.gKey}')" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition flex mx-auto items-center justify-center"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="px-4 py-3 font-medium text-blue-600 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
@@ -385,7 +385,7 @@ window.renderTabel = function() {
         if(window.stokLembaranRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="8" class="p-8 text-center font-medium text-slate-400">Tidak ada data stok lembaran.</td></tr>`; return; }
 
         tbody.innerHTML = window.stokLembaranRaw.map((r) => `
-            <tr class="bg-white even:bg-slate-50 hover:bg-green-200 transition row-ks text-sm border-b border-slate-200">
+            <tr class="bg-white even:bg-slate-100 hover:bg-green-200 transition row-ks text-sm border-b border-slate-200">
                 <td class="px-4 py-3 text-center col-cb"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-emerald-700 col-area" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
@@ -502,7 +502,7 @@ window.updateSelectedCount = function() {
 
 window.eksekusiGantiPO = async function() {
     const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
-    if(!newPO) return alert("Silakan Pilih PO Baru dari daftar dropdown!");
+    if(!newPO) return alert("Silakan Pilih Customer Baru dari daftar dropdown!");
 
     const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
     if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
@@ -535,7 +535,7 @@ window.eksekusiGantiPO = async function() {
         if(window.sourcePOContext === 'breakdown') window.tutupModalBreakdown();
         
         await window.muatDataStok();
-        alert("Berhasil mengganti PO Aktual!");
+        alert("Berhasil mengganti Customer Aktual!");
     } catch (error) { 
         alert("GAGAL UPDATE: " + error.message + "\n\nPastikan Anda sudah membuat Function 'ganti_po_aktual_ks_v2' di SQL Editor Supabase."); 
     } finally { 
