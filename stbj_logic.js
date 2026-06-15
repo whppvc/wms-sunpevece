@@ -111,7 +111,7 @@ async function loadInitialSTBJData() {
 }
 
 function translateBarcode(barcode) {
-    let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-' };
+    let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customer: '-' };
     const parts = barcode.split('/'); if (parts.length < 4) return td;
     
     const hurufDepan = barcode.charAt(0).toUpperCase();
@@ -136,7 +136,7 @@ function translateBarcode(barcode) {
         if (match) {
             let cariMesin = masterKamus.find(m => m.kode_mesin === match[1]); td.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : match[1];
             let cariShift = masterKamus.find(m => m.kode_shift === match[2]); td.shift = cariShift && cariShift.shift ? cariShift.shift : match[2];
-            let cariPO = masterKamus.find(m => m.kode_po === match[3]); td.po = cariPO && cariPO.po ? cariPO.po : match[3];
+            let cariCustomer = masterKamus.find(m => m.kode_customer === match[3]); td.customer = cariCustomer && cariCustomer.customer ? cariCustomer.customer : match[3];
         }
     }
     return td;
@@ -476,7 +476,7 @@ function renderTable() {
                 <td class="p-3 font-bold col-grade border-r border-slate-200 border-b border-slate-200" data-search="${d.grade}">${d.grade}</td>
                 <td class="p-3 font-bold col-dus border-r border-slate-200 border-b border-slate-200" data-search="${d.dus}">${d.dus}</td>
                 <td class="p-3 font-bold border-r border-slate-200 border-b border-slate-200 col-shading" data-search="${d.shading}">${d.shading}</td>
-                <td class="p-3 font-black ${isRedHighlight ? 'text-red-700' : 'text-orange-600'} col-po border-r border-slate-200 border-b border-slate-200" data-search="${d.po}">${d.po}</td>
+                <td class="p-3 font-black ${isRedHighlight ? 'text-red-700' : 'text-orange-600'} col-customer border-r border-slate-200 border-b border-slate-200" data-search="${d.customer}">${d.customer}</td>
                 <td class="p-2 col-ket text-center border-r border-slate-200 border-b border-slate-200"><input type="text" onchange="updateKet(${d.id}, this.value)" value="${d.keterangan}" class="w-full p-2 text-sm text-center border border-slate-300 rounded outline-none focus:border-blue-500 bg-white/50 ${isRedHighlight ? 'placeholder-red-400' : ''}" placeholder="Keterangan..."></td>
                 <td class="p-3 font-bold uppercase text-xs opacity-70 col-pic border-b border-slate-200" data-search="${d.pic}">${d.pic}</td>
             </tr>
@@ -485,7 +485,7 @@ function renderTable() {
     tbody.innerHTML = html; 
     lucide.createIcons(); 
     saringTabelExcel();
-    initResizableColumns(); // Panggil fungsi resizable setelah render
+    initResizableColumns(); 
 }
 
 function updateKet(id, val) { const item = dataStbj.find(d => d.id === id); if(item) item.keterangan = val; }
@@ -548,7 +548,7 @@ async function saveToDatabaseSTBJ() {
         grade: d.grade,
         dus: d.dus,
         shading: d.shading,
-        po_bawaan: d.po,
+        customer_bawaan: d.customer,
         keterangan: d.keterangan || '-',
         status: finalStatus,
         status_data: 'BELUM',
