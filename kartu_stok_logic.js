@@ -522,10 +522,11 @@ window.eksekusiGantiPO = async function() {
             let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
             qtySisaUntukDiupdate -= qtyPotong;
 
-            const { error } = await db.rpc('ganti_po_aktual_ks_v2', { 
+            // Memanggil RPC Supabase yang sudah diupdate
+            const { error } = await db.rpc('ganti_customer_aktual_ks', { 
                 p_id_sku: row.id_sku,
-                p_po_lama: row.po_aktual,
-                p_po_baru: newPO,
+                p_customer_lama: row.po_aktual,
+                p_customer_baru: newPO,
                 p_qty: qtyPotong
             });
             if(error) throw error;
@@ -537,7 +538,7 @@ window.eksekusiGantiPO = async function() {
         await window.muatDataStok();
         alert("Berhasil mengganti Customer Aktual!");
     } catch (error) { 
-        alert("GAGAL UPDATE: " + error.message + "\n\nPastikan Anda sudah membuat Function 'ganti_po_aktual_ks_v2' di SQL Editor Supabase."); 
+        alert("GAGAL UPDATE: " + error.message + "\n\nPastikan Anda sudah membuat Function 'ganti_customer_aktual_ks' di SQL Editor Supabase."); 
     } finally { 
         btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); 
     }
