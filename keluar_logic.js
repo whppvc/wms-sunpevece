@@ -5,6 +5,44 @@ let deleteStack = [];
 let globalRowId = 0;
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'admin'};
 
+document.addEventListener('DOMContentLoaded', async () => {
+    initModernLayout({ id: 'keluar', title: 'BARANG KELUAR', url: 'keluar.html' }); 
+    await loadInitialOutboundData();
+    
+    const formScan = document.getElementById('form-scan');
+    if(formScan) {
+        formScan.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const inputEl = document.getElementById('input-qrcode');
+            const rawInput = inputEl.value.trim();
+            if(!rawInput) return;
+            inputEl.value = ''; 
+            
+            const existingQRs = dataScan.map(d => d.qrcode);
+            const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
+            
+            codes.forEach(code => {
+                const isLocalDuplicate = existingQRs.includes(code);
+                const td = translateBarcode(code);
+                dataScan.unshift({
+                    id: ++globalRowId,
+                    qrcode: code,
+                    status: isLocalDuplicate ? 'DUPLIKAT LOKAL' : 'BELUM CEK',
+                    area: '?',
+                    poAsliDB: '-',
+                    poAktualUI: 'Cek Stok...',
+                    ketStbj: '-',
+                    ...td
+                });
+            });
+            renderCards();
+            
+            const scrollContainer = document.getElementById('scroll-container');
+            if (scrollContainer) scrollContainer.scrollTop = 0; // Scroll to top since we unshift
+        });
+    }
+});
+
 async function loadInitialOutboundData() {
     const { data: mData2 } = await db.from('master_2').select('*');
     if(mData2) masterData.kamus = mData2; 
@@ -65,41 +103,20 @@ function switchTab(tab) {
     document.getElementById('tab-kirim').className = tab === 'kirim' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     document.getElementById('tab-bs').className = tab === 'bs' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     
+    // Ubah teks tombol proses sesuai tab
+    const btnProses = document.getElementById('btn-proses-keluar');
+    if(tab === 'kirim') {
+        btnProses.innerHTML = '<i data-lucide="truck-fast" class="w-5 h-5"></i> PROSES KELUAR BARANG';
+        btnProses.className = 'w-full md:w-auto px-8 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-md shadow-sm flex items-center justify-center gap-2 text-sm transition active:scale-95 uppercase border-b-4 border-slate-950';
+    } else {
+        btnProses.innerHTML = '<i data-lucide="package-x" class="w-5 h-5"></i> PROSES BARANG BS';
+        btnProses.className = 'w-full md:w-auto px-8 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-md shadow-sm flex items-center justify-center gap-2 text-sm transition active:scale-95 uppercase border-b-4 border-rose-800';
+    }
+    lucide.createIcons();
+    
     dataScan = [];
     renderCards();
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    const formScan = document.getElementById('form-scan');
-    if(formScan) {
-        formScan.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const inputEl = document.getElementById('input-qrcode');
-            const rawInput = inputEl.value.trim();
-            if(!rawInput) return;
-            inputEl.value = ''; 
-            
-            const existingQRs = dataScan.map(d => d.qrcode);
-            const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
-            
-            codes.forEach(code => {
-                const isLocalDuplicate = existingQRs.includes(code);
-                const td = translateBarcode(code);
-                dataScan.unshift({
-                    id: ++globalRowId,
-                    qrcode: code,
-                    status: isLocalDuplicate ? 'DUPLIKAT LOKAL' : 'BELUM CEK',
-                    area: '?',
-                    poAsliDB: '-',
-                    poAktualUI: 'Cek Stok...',
-                    ketStbj: '-',
-                    ...td
-                });
-            });
-            renderCards();
-        });
-    }
-});
 
 function renderCards() {
     const container = document.getElementById('card-container');
@@ -138,7 +155,7 @@ function renderCards() {
                     </div>
                     
                     <div class="text-[13px] font-black text-slate-900 leading-snug my-0.5">
-                        ${d.namaItem} - ${d.panjang} - ${d.grade} - ${d.dus}
+                        <span class="text-blue-600">${d.jenisItem}</span> - ${d.namaItem} - ${d.panjang} - ${d.grade} - ${d.dus}
                     </div>
                     
                     <div class="text-[12px] font-bold text-blue-600">${d.shading}</div>
