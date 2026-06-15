@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>WMS - Barang Keluar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -21,12 +21,12 @@
         
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
-        .selected-row { border-color: #2563eb !important; background-color: #dbeafe !important; }
     </style>
 </head>
-<body class="font-sans text-slate-800">
+<body class="font-sans text-slate-800 bg-slate-50">
 
-    <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
+    <!-- REVISI: Hapus absolute inset-0 pt-[104px] agar tidak menimpa Navbar -->
+    <div class="flex flex-col h-full w-full">
         
         <!-- HEADER SECTION -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)]">
@@ -43,14 +43,14 @@
                 <form id="form-scan" class="flex gap-2 items-center">
                     <div class="relative flex-1">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
-                        <input type="text" id="input-qrcode" class="w-full h-11 pl-10 pr-3 border border-slate-300 rounded-md outline-none focus:border-slate-800 font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner ke kardus..." autocomplete="off">
+                        <input type="text" id="input-qrcode" class="w-full h-11 pl-10 pr-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-black text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition shadow-inner" placeholder="Arahkan scanner ke kardus..." autocomplete="off">
                     </div>
-                    <button type="submit" class="h-11 bg-slate-800 hover:bg-slate-900 text-white px-6 rounded-md font-bold shadow-sm transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase"><i data-lucide="corner-down-left" class="w-4 h-4"></i> <span class="hidden sm:inline">ENTER</span></button>
+                    <button type="submit" class="h-11 bg-blue-700 hover:bg-blue-800 text-white px-6 rounded-lg font-black shadow-sm transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-2 border-blue-900"><i data-lucide="corner-down-left" class="w-4 h-4"></i> <span class="hidden sm:inline">ENTER</span></button>
                 </form>
             </div>
 
             <!-- TOOLBAR -->
-            <div class="flex justify-between items-center p-2 bg-slate-50 hide-scrollbar whitespace-nowrap scroll-smooth select-none">
+            <div class="flex justify-between items-center p-2 bg-slate-50 hide-scrollbar whitespace-nowrap scroll-smooth select-none border-t border-slate-200">
                 <button onclick="undoDelete()" class="flex items-center gap-2 px-4 py-2 bg-pink-100 border border-pink-300 text-pink-700 hover:bg-pink-200 rounded-md text-sm font-bold transition shadow-sm active:scale-95">
                     <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo
                 </button>
@@ -153,6 +153,6 @@
 
     <div id="overlay-klik-luar" onclick="toggleSidebarFilter()" class="hidden fixed inset-0 z-[70] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
-    <script src="keluar_logic.js?v=2"></script>
+    <script src="keluar_logic.js"></script>
 </body>
 </html>
