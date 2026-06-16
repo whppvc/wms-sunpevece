@@ -8,6 +8,10 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- PINDAHKAN GLOBAL.JS KE SINI -->
+    <script src="global.js"></script>
+    
     <style>
         .table-container { scrollbar-width: thin; position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -42,9 +46,6 @@
                 <button onclick="aksiMassal('salin')" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-blue-800"><i data-lucide="copy" class="w-4 h-4"></i> SALIN</button>
                 <button onclick="aksiMassal('xlsx')" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-emerald-800"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> EXCEL</button>
             </div>
-            <div class="text-[9px] text-slate-400 text-center font-black uppercase tracking-wider -mt-1 pointer-events-none flex items-center justify-center gap-1 animate-pulse">
-                <i data-lucide="arrow-left-right" class="w-3 h-3"></i> Geser menu tombol ke kanan-kiri
-            </div>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative mb-4">
@@ -60,7 +61,6 @@
     <!-- MODAL CANCEL KELUAR (RETURN STOK) -->
     <div id="modal-cancel-hold" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[100] px-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200">
-            <!-- REVISI: Perubahan Judul -->
             <h3 class="text-lg font-black mb-4 flex items-center gap-2 text-rose-600"><i data-lucide="rotate-ccw"></i> Cancel Item Keluar</h3>
             <div class="space-y-4 mb-6">
                 <div>
@@ -70,7 +70,6 @@
                     </select>
                 </div>
                 <div>
-                    <!-- REVISI: Perubahan Label -->
                     <label class="block text-xs font-black uppercase tracking-wide mb-2 text-slate-600">Keterangan</label>
                     <input type="text" id="cancel-ket" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-rose-600 font-bold text-slate-800 bg-slate-50 placeholder-slate-400" placeholder="Cth: Batal kirim / Retur gudang...">
                 </div>
@@ -101,8 +100,8 @@
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><input type="text" id="f-grade" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><input type="text" id="f-dus" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="f-shading" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PO Bawaan</label><input type="text" id="f-po" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PO Tujuan</label><input type="text" id="f-tujuan" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Bawaan</label><input type="text" id="f-po" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Keluar</label><input type="text" id="f-tujuan" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="f-ket" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
                 <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PIC Keluar</label><input type="text" id="f-pic" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
             </div>
@@ -112,7 +111,6 @@
 
     <div id="overlay-klik-luar-k" onclick="tutupPopups()" class="hidden fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
-    <script src="global.js"></script>
     <script src="riwayat_keluar_logic.js"></script>
 </body>
 </html>
