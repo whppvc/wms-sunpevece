@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     status: isLocalDuplicate ? 'DUPLIKAT LOKAL' : 'BELUM CEK',
                     area: '?',
                     poAsliDB: '-',
-                    poAktualUI: 'Cek Stok...',
+                    poAktualUI: '?', // Default tanda tanya
                     ketStbj: '-',
                     ...td
                 });
@@ -100,16 +100,16 @@ function translateBarcode(barcode) {
 
 function switchTab(tab) {
     currentTab = tab;
-    document.getElementById('tab-kirim').className = tab === 'kirim' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-    document.getElementById('tab-bs').className = tab === 'bs' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    document.getElementById('tab-kirim').className = tab === 'kirim' ? 'pb-3 tab-active transition whitespace-nowrap flex items-center gap-2 text-sm' : 'pb-3 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-sm';
+    document.getElementById('tab-bs').className = tab === 'bs' ? 'pb-3 tab-active transition whitespace-nowrap flex items-center gap-2 text-sm' : 'pb-3 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-sm';
     
     const btnProses = document.getElementById('btn-proses-keluar');
     if(tab === 'kirim') {
         btnProses.innerHTML = '<i data-lucide="truck-fast" class="w-5 h-5"></i> PROSES KELUAR BARANG';
-        btnProses.className = 'w-full md:w-auto px-8 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-md shadow-sm flex items-center justify-center gap-2 text-sm transition active:scale-95 uppercase border-b-4 border-slate-950';
+        btnProses.className = 'flex-1 h-[50px] bg-slate-800 hover:bg-slate-900 text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-slate-950';
     } else {
         btnProses.innerHTML = '<i data-lucide="package-x" class="w-5 h-5"></i> PROSES BARANG BS';
-        btnProses.className = 'w-full md:w-auto px-8 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-md shadow-sm flex items-center justify-center gap-2 text-sm transition active:scale-95 uppercase border-b-4 border-rose-800';
+        btnProses.className = 'flex-1 h-[50px] bg-rose-600 hover:bg-rose-700 text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-rose-800';
     }
     lucide.createIcons();
     
@@ -126,7 +126,7 @@ function renderCards() {
     }
 
     let html = '';
-    let count = dataScan.length;
+    let count = 1; // REVISI: Nomor 1 di atas
     
     dataScan.forEach(d => {
         let badgeStatus = "bg-slate-200 text-slate-500 border-slate-300";
@@ -138,7 +138,7 @@ function renderCards() {
         html += `
             <div class="row-item ${rowClass} border-b border-slate-300 p-2.5 relative transition w-full flex shrink-0" data-qr="${d.qrcode}" data-status="${d.status}" data-nama="${d.namaItem.toLowerCase()}">
                 <div class="flex flex-col items-center justify-start pr-2 mr-2 border-r border-slate-300 w-10 shrink-0 pt-1">
-                    <div class="font-black text-slate-400 text-sm mb-3 leading-none">${count--}</div>
+                    <div class="font-black text-slate-800 text-xl mb-3 leading-none no-cell">${count++}</div>
                 </div>
                 
                 <div class="flex-1 flex flex-col gap-0 w-full min-w-0">
@@ -158,11 +158,12 @@ function renderCards() {
                     </div>
                     
                     <div class="text-[12px] font-bold text-blue-600">${d.shading}</div>
-                    <div class="text-[12px] font-bold text-slate-500">Customer Bawaan: <span class="text-orange-600 uppercase">${d.customer}</span></div>
+                    
+                    <!-- REVISI: Langsung tampilkan Customer Aktual -->
+                    <div class="text-[12px] font-bold text-orange-600 uppercase">${d.poAktualUI}</div>
                     
                     <div class="flex flex-row flex-wrap items-center gap-1.5 mt-1.5">
                         <span class="font-bold px-3 py-1 text-[10px] rounded-sm border ${badgeStatus}">${d.status}</span>
-                        <span class="font-bold px-3 py-1 text-[10px] rounded-sm border bg-blue-50 text-blue-700 border-blue-200">Customer Aktual: ${d.poAktualUI}</span>
                     </div>
                 </div>
             </div>
@@ -188,37 +189,6 @@ function undoDelete() {
     const item = deleteStack.pop(); 
     dataScan.unshift(item);
     renderCards(); 
-}
-
-function toggleSidebarFilter() {
-    document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
-    document.getElementById('overlay-klik-luar').classList.toggle('hidden');
-}
-
-function resetFilter() {
-    document.getElementById('f-status').value = '';
-    document.getElementById('f-qr').value = '';
-    document.getElementById('f-nama').value = '';
-    saringData();
-    toggleSidebarFilter();
-}
-
-function saringData() {
-    const fStatus = document.getElementById('f-status').value.toLowerCase();
-    const fQr = document.getElementById('f-qr').value.toLowerCase();
-    const fNama = document.getElementById('f-nama').value.toLowerCase();
-
-    document.querySelectorAll('.row-item').forEach(row => {
-        const status = row.getAttribute('data-status').toLowerCase();
-        const qr = row.getAttribute('data-qr').toLowerCase();
-        const nama = row.getAttribute('data-nama');
-        
-        if (status.includes(fStatus) && qr.includes(fQr) && nama.includes(fNama)) {
-            row.style.display = 'flex';
-        } else {
-            row.style.display = 'none';
-        }
-    });
 }
 
 async function crossCekOutbound() {
@@ -381,7 +351,6 @@ async function eksekusiKeluar() {
 
                 let id_sku_lengkap = `${d.area}_${d.jenisItem}_${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${poTarget}`;
                 
-                // REVISI: Menggunakan customer_bawaan dan customer_keluar sesuai SQL
                 payloadRiwayatKeluar.push({
                     qrcode: d.qrcode,
                     id_sku: id_sku_lengkap,
