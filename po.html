@@ -59,6 +59,7 @@
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
                 <button onclick="switchTab('input')" id="tab-input" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="file-plus-2" class="w-4 h-4"></i> INPUT PO</button>
                 <button onclick="switchTab('tabel')" id="tab-tabel" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="table" class="w-4 h-4"></i> TABEL PO</button>
+                <button onclick="switchTab('picking')" id="tab-picking" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="clipboard-list" class="w-4 h-4"></i> PICKING LIST</button>
             </div>
 
             <!-- COLLAPSIBLE INPUT BOX -->
@@ -151,16 +152,27 @@
                 </table>
             </div>
 
+            <!-- TABEL PICKING LIST -->
+            <div id="view-picking" class="hidden flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll table-container">
+                <table class="w-full text-center border-separate border-spacing-0 whitespace-nowrap" id="table-picking">
+                    <thead class="sticky top-0 z-40 shadow-md bg-slate-800" id="thead-picking"></thead>
+                    <tbody id="tbody-picking" class="text-slate-700"></tbody>
+                </table>
+            </div>
+
         </div>
 
         <!-- FOOTER PAGINATION & ACTION -->
         <div class="shrink-0 w-full bg-white p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 border-t border-slate-200 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)]">
             
-            <!-- Info & Paginasi (Tampil di Tab Tabel & Atur Item) -->
+            <!-- Info & Paginasi (Tampil di Tab Tabel, Atur Item, Picking) -->
             <div id="footer-tabel" class="hidden flex-1 flex flex-col md:flex-row justify-between items-center gap-4 w-full">
                 <div class="flex items-center gap-4 text-sm text-slate-500">
                     <button id="btn-hapus-po" onclick="hapusMassalPO()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-md shadow-sm flex items-center gap-2 text-xs transition active:scale-95 uppercase">
                         <i data-lucide="trash-2" class="w-4 h-4"></i> Hapus PO
+                    </button>
+                    <button id="btn-hapus-pick" onclick="hapusMassalPick()" class="hidden px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-md shadow-sm flex items-center gap-2 text-xs transition active:scale-95 uppercase">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Pick
                     </button>
                     <span class="w-1 h-1 rounded-full bg-slate-300" id="dot-hapus"></span>
                     <span>Qty: <strong class="text-orange-600" id="lbl-total-qty">0</strong> dus</span>
