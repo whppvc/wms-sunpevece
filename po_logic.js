@@ -13,8 +13,20 @@ let currentFilterCol = '';
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || { username: 'Admin' };
 
+// REVISI 1: Fungsi formatTglIntl diletakkan di global agar bisa diakses kapan saja
+function formatTglIntl(tglStr) {
+    if(!tglStr) return '-';
+    const p = tglStr.split('-');
+    if(p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`; 
+    
+    if(tglStr.includes('T')) {
+        const d = new Date(tglStr);
+        return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+    return tglStr;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
-    // REVISI: Ubah id dan url sesuai dengan nama file baru
     initModernLayout({ id: 'po', title: 'PO & ESTIMASI', url: 'po.html' });
     
     document.addEventListener('click', function(e) {
@@ -171,8 +183,10 @@ async function simpanMassalKeDatabase() {
     // Default date to bypass not-null constraint
     const defaultDate = new Date().toISOString().split('T')[0];
 
+    // REVISI 2: Generate id_po otomatis (namaitem_panjang_grade)
     const payload = stagingData.map(d => ({ 
         tgl_estimasi_kirim: defaultDate,
+        id_po: `${d.nama_item}_${d.panjang}_${d.grade}`,
         kode_po: d.kode_po, 
         customer_po: d.customer_po, 
         nama_item: d.nama_item, 
@@ -200,7 +214,7 @@ async function simpanMassalKeDatabase() {
 
 async function muatDataEstimasiDB() {
     const tbody = document.getElementById('tbody-po');
-    tbody.innerHTML = `<tr><td colspan="12" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data PO...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data PO...</p></td></tr>`;
     lucide.createIcons();
     
     try {
@@ -209,7 +223,7 @@ async function muatDataEstimasiDB() {
         dbRecordsRaw = data || [];
         renderHeaderDanTabel();
     } catch (e) { 
-        tbody.innerHTML = `<tr><td colspan="12" class="p-5 text-red-500 font-bold">Error load: ${e.message}</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="14" class="p-5 text-red-500 font-bold">Error load: ${e.message}</td></tr>`; 
     }
 }
 
@@ -238,7 +252,7 @@ function sortTable(colIndex, headerEl) {
 
 const thSort = (idx, label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
-    const noFilter = ['col-cb', 'col-btn', 'col-no'].includes(colClass);
+    const noFilter = ['col-cb', 'col-btn', 'col-no', 'col-atur'].includes(colClass);
     
     const filterBtn = noFilter ? '' : `
         <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-600 rounded ml-1 transition" title="Filter ${label}">
@@ -422,6 +436,10 @@ function initResizableColumns() {
     });
 }
 
+function aturItemPO(id) {
+    alert("Fungsi Atur Item untuk ID " + id + " akan segera diimplementasikan.");
+}
+
 function renderHeaderDanTabel() {
     const thead = document.getElementById('thead-po');
     const tbody = document.getElementById('tbody-po');
@@ -429,22 +447,12 @@ function renderHeaderDanTabel() {
 
     let dataset = currentMode === 'input' ? stagingData : dbRecordsRaw;
 
-    let thHtml = `<tr>
-        <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600">PILIH<br><input type="checkbox" onchange="toggleAllStaging(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>`;
+    let thHtml = `<tr>`;
     
     if (currentMode === 'input') {
+        // REVISI 3: Hilangkan kolom PILIH di tab Input
         thHtml += `<th class="hdr-std w-10 col-btn text-center relative border-r border-slate-600"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-rose-400"></i></th>
-        ${thSort(2, 'No', 'col-no w-12')}
-        ${thSort(3, 'Kode PO', 'col-kode_po')}
-        ${thSort(4, 'Customer PO', 'col-customer_po')}
-        ${thSort(5, 'Nama Item', 'col-nama text-blue-300')}
-        ${thSort(6, 'Panjang', 'col-pjg')}
-        ${thSort(7, 'Grade', 'col-grade')}
-        ${thSort(8, 'Dus', 'col-dus')}
-        ${thSort(9, 'QTY PO', 'col-qty text-orange-300')}
-        ${thSort(10, 'Note', 'col-note')}`;
-    } else {
-        thHtml += `${thSort(1, 'No', 'col-no w-12')}
+        ${thSort(1, 'No', 'col-no w-12')}
         ${thSort(2, 'Kode PO', 'col-kode_po')}
         ${thSort(3, 'Customer PO', 'col-customer_po')}
         ${thSort(4, 'Nama Item', 'col-nama text-blue-300')}
@@ -452,46 +460,72 @@ function renderHeaderDanTabel() {
         ${thSort(6, 'Grade', 'col-grade')}
         ${thSort(7, 'Dus', 'col-dus')}
         ${thSort(8, 'QTY PO', 'col-qty text-orange-300')}
-        ${thSort(9, 'QTY TERPENUHI', 'col-qty_terpenuhi text-emerald-300')}
-        ${thSort(10, 'Note', 'col-note')}
-        ${thSort(11, 'PIC', 'col-pic')}`;
+        ${thSort(9, 'Note', 'col-note')}`;
+    } else {
+        // REVISI 4: Tambahkan kolom Atur Item di tab Tabel
+        thHtml += `<th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600">PILIH<br><input type="checkbox" onchange="toggleAllStaging(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>
+        <th class="hdr-std w-12 col-atur text-center relative border-r border-slate-600">Atur Item</th>
+        ${thSort(2, 'No', 'col-no w-12')}
+        ${thSort(3, 'Waktu Input', 'col-waktu')}
+        ${thSort(4, 'Kode PO', 'col-kode_po')}
+        ${thSort(5, 'Customer PO', 'col-customer_po')}
+        ${thSort(6, 'Nama Item', 'col-nama text-blue-300')}
+        ${thSort(7, 'Panjang', 'col-pjg')}
+        ${thSort(8, 'Grade', 'col-grade')}
+        ${thSort(9, 'Dus', 'col-dus')}
+        ${thSort(10, 'QTY PO', 'col-qty text-orange-300')}
+        ${thSort(11, 'QTY TERPENUHI', 'col-qty_terpenuhi text-emerald-300')}
+        ${thSort(12, 'Note', 'col-note')}
+        ${thSort(13, 'PIC', 'col-pic')}`;
     }
     thHtml += `</tr>`;
     thead.innerHTML = thHtml;
     
     if(dataset.length === 0) { 
         let msg = currentMode === 'input' ? 'Belum ada data ditambahkan ke tabel sementara.' : 'Tidak ada data PO di database.';
-        tbody.innerHTML = `<tr><td colspan="12" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> ${msg}</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="14" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> ${msg}</td></tr>`; 
         applyPagination(); return; 
     }
     
     let h = '';
     dataset.forEach((r, i) => {
-        // Format tanggal untuk input (karena belum masuk DB, formatnya masih string lokal)
         let tglStr = currentMode === 'input' ? r.created_at : formatTglIntl(r.created_at);
-        
         let noUrut = currentMode === 'input' ? (dataset.length - i) : (i + 1);
         
-        let btnHapus = currentMode === 'input' 
-            ? `<button onclick="hapusBarisStaging(${r.id})" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`
-            : '';
+        h += `<tr class="hover:bg-slate-50 transition r-row text-sm">`;
+        
+        if (currentMode === 'input') {
+            h += `<td class="px-4 py-3 text-center col-btn border-b border-r border-slate-200"><button onclick="hapusBarisStaging(${r.id})" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>`;
+        } else {
+            h += `<td class="px-4 py-3 text-center col-cb border-b border-r border-slate-200"><input type="checkbox" value="${r.id}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>`;
+            h += `<td class="px-4 py-3 text-center col-atur border-b border-r border-slate-200"><button onclick="aturItemPO('${r.id}')" class="bg-blue-100 text-blue-700 p-1.5 rounded hover:bg-blue-600 hover:text-white transition mx-auto flex"><i data-lucide="settings" class="w-4 h-4"></i></button></td>`;
+        }
+        
+        h += `<td class="px-4 py-3 font-bold text-slate-500 text-center col-no border-b border-r border-slate-200">${noUrut}</td>`;
+        
+        if (currentMode === 'tabel') {
+            h += `<td class="px-4 py-3 text-slate-600 font-medium col-waktu border-b border-r border-slate-200" data-search="${tglStr}">${tglStr}</td>`;
+        }
 
-        h += `
-            <tr class="hover:bg-slate-50 transition r-row text-sm">
-                <td class="px-4 py-3 text-center col-cb border-b border-r border-slate-200"><input type="checkbox" value="${r.id}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                ${currentMode === 'input' ? `<td class="px-4 py-3 text-center col-btn border-b border-r border-slate-200">${btnHapus}</td>` : ''}
-                <td class="px-4 py-3 font-bold text-slate-500 text-center col-no border-b border-r border-slate-200">${noUrut}</td>
-                <td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-b border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
-                <td class="px-4 py-3 font-bold text-slate-700 col-customer_po border-b border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
-                <td class="px-4 py-3 font-bold text-blue-700 text-left col-nama border-b border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-b border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-grade border-b border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-dus border-b border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
-                <td class="px-4 py-3 font-black text-orange-600 bg-orange-50/50 col-qty border-b border-r border-slate-200" data-search="${r.qty_po}">${r.qty_po}</td>
-                ${currentMode === 'tabel' ? `<td class="px-4 py-3 font-black text-emerald-600 bg-emerald-50/50 col-qty_terpenuhi border-b border-r border-slate-200" data-search="${r.qty_terpenuhi || 0}">${r.qty_terpenuhi || 0}</td>` : ''}
-                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket border-b border-r border-slate-200" data-search="${r.note || '-'}">${r.note || '-'}</td>
-                ${currentMode === 'tabel' ? `<td class="px-4 py-3 font-bold uppercase text-xs text-slate-400 col-pic border-b border-slate-200" data-search="${r.pic || '-'}">${r.pic || '-'}</td>` : ''}
-            </tr>`;
+        h += `<td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-b border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
+              <td class="px-4 py-3 font-bold text-slate-700 col-customer_po border-b border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
+              <td class="px-4 py-3 font-bold text-blue-700 text-left col-nama border-b border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
+              <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-b border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
+              <td class="px-4 py-3 font-medium text-slate-700 col-grade border-b border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
+              <td class="px-4 py-3 font-medium text-slate-700 col-dus border-b border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
+              <td class="px-4 py-3 font-black text-orange-600 bg-orange-50/50 col-qty border-b border-r border-slate-200" data-search="${r.qty_po}">${r.qty_po}</td>`;
+              
+        if (currentMode === 'tabel') {
+            h += `<td class="px-4 py-3 font-black text-emerald-600 bg-emerald-50/50 col-qty_terpenuhi border-b border-r border-slate-200" data-search="${r.qty_terpenuhi || 0}">${r.qty_terpenuhi || 0}</td>`;
+        }
+        
+        h += `<td class="px-4 py-3 font-medium text-slate-500 text-left col-ket border-b border-r border-slate-200" data-search="${r.note || '-'}">${r.note || '-'}</td>`;
+        
+        if (currentMode === 'tabel') {
+            h += `<td class="px-4 py-3 font-bold uppercase text-xs text-slate-400 col-pic border-b border-slate-200" data-search="${r.pic || '-'}">${r.pic || '-'}</td>`;
+        }
+        
+        h += `</tr>`;
     });
     tbody.innerHTML = h;
     lucide.createIcons(); 
