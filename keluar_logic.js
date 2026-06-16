@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderCards();
             
             const scrollContainer = document.getElementById('scroll-container');
-            if (scrollContainer) scrollContainer.scrollTop = 0; // Scroll to top since we unshift
+            if (scrollContainer) scrollContainer.scrollTop = 0; 
         });
     }
 });
@@ -56,7 +56,7 @@ function extractPOFromSKU(id_sku) {
 
 function translateBarcode(barcode) {
     const parts = barcode.split('/');
-    let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', poBawaan: '-' };
+    let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customer: '-' };
     if (parts.length < 4) return data;
 
     const hurufDepan = barcode.charAt(0).toUpperCase();
@@ -89,10 +89,10 @@ function translateBarcode(barcode) {
         let sisaString = p3.substring(5); 
         let match = sisaString.match(/(C.*?)(S.*?)(P.*)/);
         if (match) {
-            let rawMesin = match[1]; let rawShift = match[2]; let rawPO = match[3];   
+            let rawMesin = match[1]; let rawShift = match[2]; let rawCustomer = match[3];   
             let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin); data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
             let cariShift = masterData.kamus.find(m => m.kode_shift === rawShift); data.shift = cariShift && cariShift.shift ? cariShift.shift : rawShift;
-            let cariPO = masterData.kamus.find(m => m.kode_po === rawPO); data.poBawaan = cariPO && cariPO.po ? cariPO.po : rawPO;
+            let cariCustomer = masterData.kamus.find(m => m.kode_customer === rawCustomer); data.customer = cariCustomer && cariCustomer.customer ? cariCustomer.customer : rawCustomer;
         }
     }
     return data;
@@ -103,7 +103,6 @@ function switchTab(tab) {
     document.getElementById('tab-kirim').className = tab === 'kirim' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     document.getElementById('tab-bs').className = tab === 'bs' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     
-    // Ubah teks tombol proses sesuai tab
     const btnProses = document.getElementById('btn-proses-keluar');
     if(tab === 'kirim') {
         btnProses.innerHTML = '<i data-lucide="truck-fast" class="w-5 h-5"></i> PROSES KELUAR BARANG';
@@ -159,11 +158,11 @@ function renderCards() {
                     </div>
                     
                     <div class="text-[12px] font-bold text-blue-600">${d.shading}</div>
-                    <div class="text-[12px] font-bold text-slate-500">PO Bawaan: <span class="text-orange-600 uppercase">${d.poBawaan}</span></div>
+                    <div class="text-[12px] font-bold text-slate-500">Customer Bawaan: <span class="text-orange-600 uppercase">${d.customer}</span></div>
                     
                     <div class="flex flex-row flex-wrap items-center gap-1.5 mt-1.5">
                         <span class="font-bold px-3 py-1 text-[10px] rounded-sm border ${badgeStatus}">${d.status}</span>
-                        <span class="font-bold px-3 py-1 text-[10px] rounded-sm border bg-blue-50 text-blue-700 border-blue-200">PO Aktual: ${d.poAktualUI}</span>
+                        <span class="font-bold px-3 py-1 text-[10px] rounded-sm border bg-blue-50 text-blue-700 border-blue-200">Customer Aktual: ${d.poAktualUI}</span>
                     </div>
                 </div>
             </div>
@@ -267,19 +266,19 @@ async function crossCekOutbound() {
             }
         });
 
-        // Ambil distribusi PO Aktual dari stok_aktual
+        // Ambil distribusi Customer Aktual dari stok_aktual
         let poDistMap = {};
         for (let spec of uniqueSpecs) {
             let parts = spec.split('_'); // jenis_nama_pjg_grade_dus_shading
-            const { data: actData } = await db.from('stok_aktual').select('po_aktual, qty')
+            const { data: actData } = await db.from('stok_aktual').select('customer_aktual, qty')
                 .eq('nama_item', parts[1]).eq('panjang', parts[2]).eq('grade', parts[3])
                 .eq('dus', parts[4]).eq('shading', parts[5]);
             
             if(actData) {
                 poDistMap[spec] = {};
                 actData.forEach(a => {
-                    if(!poDistMap[spec][a.po_aktual]) poDistMap[spec][a.po_aktual] = 0;
-                    poDistMap[spec][a.po_aktual] += a.qty;
+                    if(!poDistMap[spec][a.customer_aktual]) poDistMap[spec][a.customer_aktual] = 0;
+                    poDistMap[spec][a.customer_aktual] += a.qty;
                 });
             }
         }
@@ -291,7 +290,7 @@ async function crossCekOutbound() {
                 if(dist) {
                     for(let po in dist) arr.push(`${po} (${dist[po]} Dus)`);
                 }
-                d.poAktualUI = arr.length > 0 ? arr.join(' | ') : 'KOSONG / NON-PO';
+                d.poAktualUI = arr.length > 0 ? arr.join(' | ') : 'KOSONG / NON-CUSTOMER';
             } 
         });
 
@@ -317,17 +316,17 @@ async function bukaModalKeluar() {
             let pos = d.poAktualUI.split('|').map(s => s.trim());
             pos.forEach(p => { 
                 let poName = p.split('(')[0].trim();
-                if(poName && poName !== 'KOSONG / NON-PO' && poName !== '?') poSet.add(poName); 
+                if(poName && poName !== 'KOSONG / NON-CUSTOMER' && poName !== '?') poSet.add(poName); 
             });
         }
     });
 
     if(hasUnverified) return alert("Silakan klik Verifikasi Gudang terlebih dahulu.");
-    if(poSet.size === 0) return alert("Barang yang Anda scan belum memiliki jatah PO di Gudang. Ajukan Request Ganti PO terlebih dahulu.");
+    if(poSet.size === 0) return alert("Barang yang Anda scan belum memiliki jatah Customer di Gudang. Ajukan Request Ganti Customer terlebih dahulu.");
 
     const sel = document.getElementById('out-po-target');
     if(sel) {
-        sel.innerHTML = '<option value="">-- PILIH PO TUJUAN --</option>';
+        sel.innerHTML = '<option value="">-- PILIH CUSTOMER TUJUAN --</option>';
         Array.from(poSet).sort().forEach(po => {
             sel.innerHTML += `<option value="${po}">${po}</option>`;
         });
@@ -341,7 +340,7 @@ async function eksekusiKeluar() {
     const poTarget = document.getElementById('out-po-target') ? document.getElementById('out-po-target').value : '-';
     const keterangan = document.getElementById('out-keterangan') ? document.getElementById('out-keterangan').value.trim() : '';
     
-    if(!poTarget) return alert("Pilih PO Tujuan Pengeluaran!");
+    if(!poTarget) return alert("Pilih Customer Tujuan Pengeluaran!");
 
     const btnEks = document.getElementById('btn-eksekusi'); const oriBuka = btnEks.innerHTML;
     btnEks.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btnEks.disabled = true;
@@ -355,7 +354,7 @@ async function eksekusiKeluar() {
             let parts = spec.split('_'); // jenis_nama_pjg_grade_dus_shading
             const { data, error } = await db.from('stok_aktual').select('qty')
                 .eq('nama_item', parts[1]).eq('panjang', parts[2]).eq('grade', parts[3])
-                .eq('dus', parts[4]).eq('shading', parts[5]).eq('po_aktual', poTarget); 
+                .eq('dus', parts[4]).eq('shading', parts[5]).eq('customer_aktual', poTarget); 
             if (error) throw error;
             let count = 0; if(data) data.forEach(d => count += (d.qty || 0));
             stockCapacity[spec] = count; 
@@ -377,10 +376,12 @@ async function eksekusiKeluar() {
                 stockCapacity[baseSpec] -= 1; 
 
                 let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${poTarget}`;
-                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, po_aktual: poTarget, qty: 0 };
+                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, customer_aktual: poTarget, qty: 0 };
                 mapAktual[keyAkt].qty++;
 
                 let id_sku_lengkap = `${d.area}_${d.jenisItem}_${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${poTarget}`;
+                
+                // REVISI: Menggunakan customer_bawaan dan customer_keluar sesuai SQL
                 payloadRiwayatKeluar.push({
                     qrcode: d.qrcode,
                     id_sku: id_sku_lengkap,
@@ -395,9 +396,9 @@ async function eksekusiKeluar() {
                     grade: d.grade,
                     dus: d.dus,
                     shading: d.shading,
-                    po_bawaan: d.poBawaan,
+                    customer_bawaan: d.customer, 
                     keterangan: keterangan,
-                    po_keluar: poTarget
+                    customer_keluar: poTarget 
                 });
 
             } else { unmatchedCount++; }
@@ -405,7 +406,7 @@ async function eksekusiKeluar() {
     });
 
     if (qrList.length === 0) {
-        alert(`❌ TIDAK ADA JATAH.\nSisa stok aktual untuk "${poTarget}" adalah 0.`);
+        alert(`❌ TIDAK ADA JATAH.\nSisa stok aktual untuk Customer "${poTarget}" adalah 0.`);
         btnEks.innerHTML = oriBuka; btnEks.disabled = false; return;
     }
 
@@ -420,7 +421,7 @@ async function eksekusiKeluar() {
             const { data: existing } = await db.from('stok_aktual').select('id, qty')
                 .eq('nama_item', item.nama_item).eq('panjang', item.pjg).eq('grade', item.grade)
                 .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
-                .eq('po_aktual', item.po_aktual).limit(1);
+                .eq('customer_aktual', item.customer_aktual).limit(1);
             
             if(existing && existing.length > 0) {
                 await db.from('stok_aktual').update({ qty: existing[0].qty - item.qty }).eq('id', existing[0].id);
@@ -457,10 +458,10 @@ function bukaModalReqPO() {
     if(!hasVerified) return alert("Semua baris tampak belum diverifikasi. Verifikasi dulu sebelum request.");
     
     const sel = document.getElementById('req-po-target');
-    sel.innerHTML = '<option value="">-- PILIH PO TUJUAN --</option>';
+    sel.innerHTML = '<option value="">-- PILIH CUSTOMER TUJUAN --</option>';
     
     let poAcuan = new Set();
-    masterData.kamus.forEach(m => { if(m.po) poAcuan.add(m.po); });
+    masterData.kamus.forEach(m => { if(m.customer) poAcuan.add(m.customer); });
     Array.from(poAcuan).sort().forEach(po => {
         sel.innerHTML += `<option value="${po}">${po}</option>`;
     });
@@ -472,7 +473,7 @@ function bukaModalReqPO() {
 async function submitReqPO() {
     const poRequest = document.getElementById('req-po-target').value;
     const ketReq = document.getElementById('req-keterangan').value.trim();
-    if(!poRequest) return alert("Pilih PO Tujuan untuk pengajuan!");
+    if(!poRequest) return alert("Pilih Customer Tujuan untuk pengajuan!");
 
     const btn = document.getElementById('btn-submit-req'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENGAJUKAN...'; btn.disabled = true;
@@ -481,7 +482,7 @@ async function submitReqPO() {
 
     dataScan.forEach(d => {
         if(d.status !== 'BELUM CEK' && d.status !== 'DUPLIKAT LOKAL') {
-            let poAsli = (d.poAsliDB && d.poAsliDB !== '-') ? d.poAsliDB : d.poBawaan; 
+            let poAsli = (d.poAsliDB && d.poAsliDB !== '-') ? d.poAsliDB : d.customer; 
             payloadUpload.push({
                 qrcode: d.qrcode, po_awal: poAsli, po_request: poRequest, keterangan: ketReq, status: 'PENDING', pic_request: currentUser.username
             });
@@ -500,7 +501,7 @@ async function submitReqPO() {
         dataScan = dataScan.filter(d => d.status === 'BELUM CEK' || d.status === 'DUPLIKAT LOKAL');
         renderCards();
 
-        alert(`BERHASIL!\n${payloadUpload.length} QRCode bermasalah diajukan ke CS untuk ganti PO.`);
+        alert(`BERHASIL!\n${payloadUpload.length} QRCode bermasalah diajukan ke CS untuk ganti Customer.`);
         document.getElementById('modal-req-po').classList.add('hidden');
     } catch(e) { alert("Gagal mengajukan: " + e.message); }
     finally { btn.innerHTML = ori; btn.disabled = false; }
