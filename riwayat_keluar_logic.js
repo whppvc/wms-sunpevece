@@ -4,14 +4,14 @@ let holdDataRaw = [];
 let kamusData = [];
 let jasperData = [];
 let sortState = {}; 
-let globalCheckedCancel = []; // Untuk simpan memory checkbox
+let globalCheckedCancel = []; 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
 document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'riwayat_keluar', title: 'RIWAYAT KELUAR', url: 'riwayat_keluar.html' });
     setTimeout(async () => {
         await loadKamusDanJasper();
-        await loadAreasForCancel(); // Tarik master Area untuk Pop up
+        await loadAreasForCancel(); 
         await muatDataDariSupabase();
     }, 200);
 });
@@ -48,7 +48,6 @@ function tutupPopups() {
     document.getElementById('overlay-klik-luar-k').classList.add('hidden');
 }
 
-// REVISI: Fungsi Tarik Master Area dari tabel "master_area"
 async function loadAreasForCancel() {
     try {
         const { data } = await db.from('master_area').select('*');
@@ -69,7 +68,6 @@ async function loadKamusDanJasper() {
     } catch(e) {}
 }
 
-// Fungsi Tarik PO Target dari string id_sku yang panjang
 function extractPOFromSKU(id_sku) {
     if(!id_sku) return '-';
     const parts = id_sku.split('_');
@@ -98,7 +96,7 @@ async function muatDataDariSupabase() {
 }
 
 function translateBarcode(barcode) {
-    let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', po: '-', jasper: '-' };
+    let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customer: '-', jasper: '-' };
     if(!barcode) return td;
     const parts = barcode.split('/'); if (parts.length < 1) return td;
     
@@ -125,7 +123,7 @@ function translateBarcode(barcode) {
         if (m) {
             let cM = kamusData.find(x => x.kode_mesin === m[1]); td.mesin = cM && cM.mesin ? cM.mesin : m[1];
             let cS = kamusData.find(x => x.kode_shift === m[2]); td.shift = cS && cS.shift ? cS.shift : m[2];
-            let cPO = kamusData.find(x => x.kode_po === m[3]); td.po = cPO && cPO.po ? cPO.po : m[3];
+            let cCustomer = kamusData.find(x => x.kode_customer === m[3]); td.customer = cCustomer && cCustomer.customer ? cCustomer.customer : m[3];
         }
     }
 
@@ -182,8 +180,8 @@ function renderHeaderDanTabel() {
                 ${thSort(10, 'Grade', 'col-grade')}
                 ${thSort(11, 'Dus', 'col-dus')}
                 ${thSort(12, 'Shading', 'border-r border-slate-500 col-shading')}
-                ${thSort(13, 'PO Bawaan', 'col-po')}
-                ${thSort(14, 'PO Tujuan', 'text-amber-300 bg-amber-50/10 col-tujuan')}
+                ${thSort(13, 'Customer Bawaan', 'col-customer')}
+                ${thSort(14, 'Customer Keluar', 'text-amber-300 bg-amber-50/10 col-tujuan')}
                 ${thSort(15, 'Keterangan', 'col-ket border-r border-slate-500')}
                 ${thSort(16, 'PIC Keluar', 'col-pic')}
             </tr>`;
@@ -195,7 +193,9 @@ function renderHeaderDanTabel() {
             const dt = new Date(r.created_at);
             const tglKeluar = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
             const td = translateBarcode(r.qrcode);
-            const poTarget = extractPOFromSKU(r.id_sku); 
+            
+            // REVISI: Menggunakan customer_keluar sesuai SQL
+            const customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku); 
 
             h += `
                 <tr class="border-b border-slate-200 hover:bg-slate-50 text-row transition text-sm">
@@ -212,10 +212,10 @@ function renderHeaderDanTabel() {
                     <td class="p-3 font-bold text-slate-800 text-center col-grade">${td.grade}</td>
                     <td class="p-3 font-bold text-slate-800 text-center col-dus">${td.dus}</td>
                     <td class="p-3 font-bold text-slate-600 text-center border-r border-slate-200 col-shading">${td.shading}</td>
-                    <td class="p-3 font-black text-orange-600 bg-orange-50/50 text-center col-po">${td.po}</td>
-                    <td class="p-3 font-black text-amber-600 bg-amber-50/50 text-center col-tujuan">${poTarget}</td>
+                    <td class="p-3 font-black text-orange-600 bg-orange-50/50 text-center col-customer">${td.customer}</td>
+                    <td class="p-3 font-black text-amber-600 bg-amber-50/50 text-center col-tujuan">${customerKeluar}</td>
                     <td class="p-3 text-slate-600 font-semibold text-left border-r border-slate-200 col-ket">${r.keterangan || '-'}</td>
-                    <td class="p-3 font-bold uppercase text-xs text-slate-400 text-center col-pic">${r.pic_keluar || '-'}</td>
+                    <td class="p-3 font-bold uppercase text-xs text-slate-400 text-center col-pic">${r.pic_input || '-'}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
@@ -235,8 +235,8 @@ function renderHeaderDanTabel() {
                 ${thSort(8, 'Grade', 'col-grade')}
                 ${thSort(9, 'Dus', 'col-dus')}
                 ${thSort(10, 'Shading', 'border-r border-slate-500 col-shading')}
-                ${thSort(11, 'PO Bawaan', 'col-po')}
-                ${thSort(12, 'PO Tujuan', 'text-amber-300 bg-amber-50/10 col-tujuan')}
+                ${thSort(11, 'Customer Bawaan', 'col-customer')}
+                ${thSort(12, 'Customer Keluar', 'text-amber-300 bg-amber-50/10 col-tujuan')}
                 ${thSort(13, 'QTY KELUAR (DUS)', 'bg-slate-900 text-emerald-300 border-l border-slate-500 border-r col-qty')}
                 ${thSort(14, 'Keterangan', 'border-r border-slate-500 col-ket')}
             </tr>`;
@@ -247,12 +247,12 @@ function renderHeaderDanTabel() {
             let n = isJasper ? t.jasper : t.namaItem;
             
             let ket = r.keterangan || 'TANPA_KETERANGAN';
-            let poTarget = extractPOFromSKU(r.id_sku);
+            let customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku);
             
-            let key = `${t.jenisItem}_${n}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${t.po}_${poTarget}_${t.tglProduksi}_${t.mesin}_${t.shift}_${ket}`;
+            let key = `${t.jenisItem}_${n}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${t.customer}_${customerKeluar}_${t.tglProduksi}_${t.mesin}_${t.shift}_${ket}`;
             
             if(!groups[key]) {
-                groups[key] = { ...t, displayNama: n, qty: 0, qrcodes: [], tj: poTarget, ket: ket };
+                groups[key] = { ...t, displayNama: n, qty: 0, qrcodes: [], tj: customerKeluar, ket: ket };
             }
             groups[key].qty++; 
             groups[key].qrcodes.push(r.qrcode);
@@ -277,7 +277,7 @@ function renderHeaderDanTabel() {
                     <td class="p-3 font-semibold text-slate-800 col-grade">${r.grade}</td>
                     <td class="p-3 font-bold text-slate-800 col-dus">${r.dus}</td>
                     <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${r.shading}</td>
-                    <td class="p-3 font-black text-orange-600 bg-orange-50/40 col-po">${r.po}</td>
+                    <td class="p-3 font-black text-orange-600 bg-orange-50/40 col-customer">${r.customer}</td>
                     <td class="p-3 font-black text-amber-600 bg-amber-50/40 col-tujuan">${r.tj}</td>
                     <td class="p-3 font-black text-base text-emerald-700 bg-emerald-50 border-l border-r border-slate-200 col-qty">${r.qty}</td>
                     <td class="p-3 font-bold text-slate-600 text-left col-ket border-r border-slate-200">${displayKet}</td>
@@ -310,7 +310,7 @@ function jalankanSaring() {
         grade: document.getElementById('f-grade').value.toLowerCase(),
         dus: document.getElementById('f-dus').value.toLowerCase(),
         shading: document.getElementById('f-shading').value.toLowerCase(),
-        po: document.getElementById('f-po').value.toLowerCase(),
+        customer: document.getElementById('f-po').value.toLowerCase(),
         ket: document.getElementById('f-ket').value.toLowerCase(),
         pic: document.getElementById('f-pic').value.toLowerCase()
     };
@@ -380,8 +380,8 @@ async function aksiMassal(tipe) {
         btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> PROSES...'; btn.disabled = true;
 
         const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({
-            qrcode: r.qrcode, id_sku: r.id_sku, surat_jalan: r.surat_jalan, tujuan: r.tujuan, 
-            keterangan: 'DI-HOLD dari Riwayat', pic_keluar: r.pic_keluar
+            qrcode: r.qrcode, id_sku: r.id_sku, customer_keluar: r.customer_keluar, 
+            keterangan: 'DI-HOLD dari Riwayat', pic_input: r.pic_input
         }));
 
         try {
@@ -425,15 +425,15 @@ async function eksekusiCancelHold() {
 
     dataReturn.forEach(item => {
         let parts = item.id_sku.split('_');
-        let po = '-';
+        let customer = '-';
         if(parts.length >= 8) {
             parts[0] = areaCancel; 
             item.id_sku = parts.join('_');
-            po = parts[7];
+            customer = parts[7];
             
             let [a, jenis, nama, pjg, grade, dus, shading] = parts;
-            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${po}`;
-            if(!aktualUpdates[key]) aktualUpdates[key] = { nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, po_aktual: po, qty: 0 };
+            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${customer}`;
+            if(!aktualUpdates[key]) aktualUpdates[key] = { nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, customer_aktual: customer, qty: 0 };
             aktualUpdates[key].qty++;
         }
 
@@ -451,7 +451,7 @@ async function eksekusiCancelHold() {
 
         for(let key in aktualUpdates) {
             let u = aktualUpdates[key];
-            const {data: curData} = await db.from('stok_aktual').select('id, qty').eq('nama_item', u.nama_item).eq('pjg', u.pjg).eq('grade', u.grade).eq('dus', u.dus).eq('shading', u.shading).eq('po_aktual', u.po_aktual).single();
+            const {data: curData} = await db.from('stok_aktual').select('id, qty').eq('nama_item', u.nama_item).eq('pjg', u.pjg).eq('grade', u.grade).eq('dus', u.dus).eq('shading', u.shading).eq('customer_aktual', u.customer_aktual).single();
             if(curData) {
                 await db.from('stok_aktual').update({qty: curData.qty + u.qty}).eq('id', curData.id);
             } else {
