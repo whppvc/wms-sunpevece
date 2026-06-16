@@ -24,21 +24,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             codes.forEach(code => {
                 const isLocalDuplicate = existingQRs.includes(code);
                 const td = translateBarcode(code);
-                dataScan.unshift({
+                // REVISI: Menggunakan push agar data baru ada di bawah (Nomor 1 di atas)
+                dataScan.push({
                     id: ++globalRowId,
                     qrcode: code,
                     status: isLocalDuplicate ? 'DUPLIKAT LOKAL' : 'BELUM CEK',
                     area: '?',
                     poAsliDB: '-',
-                    poAktualUI: '?', // Default tanda tanya
+                    poAktualUI: '?', 
                     ketStbj: '-',
                     ...td
                 });
             });
             renderCards();
             
+            // REVISI: Scroll ke bawah karena data baru di-push
             const scrollContainer = document.getElementById('scroll-container');
-            if (scrollContainer) scrollContainer.scrollTop = 0; 
+            if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight; 
         });
     }
 });
@@ -106,10 +108,12 @@ function switchTab(tab) {
     const btnProses = document.getElementById('btn-proses-keluar');
     if(tab === 'kirim') {
         btnProses.innerHTML = '<i data-lucide="truck-fast" class="w-5 h-5"></i> PROSES KELUAR BARANG';
-        btnProses.className = 'flex-1 h-[50px] bg-slate-800 hover:bg-slate-900 text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-slate-950';
+        // REVISI: Warna tombol Proses Keluar menjadi Merah Tua
+        btnProses.className = 'flex-1 h-[50px] bg-rose-700 hover:bg-rose-800 text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-rose-900';
     } else {
         btnProses.innerHTML = '<i data-lucide="package-x" class="w-5 h-5"></i> PROSES BARANG BS';
-        btnProses.className = 'flex-1 h-[50px] bg-rose-600 hover:bg-rose-700 text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-rose-800';
+        // REVISI: Warna tombol Proses BS menjadi Abu-abu
+        btnProses.className = 'flex-1 h-[50px] bg-slate-600 hover:bg-slate-700 text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-slate-800';
     }
     lucide.createIcons();
     
@@ -126,7 +130,7 @@ function renderCards() {
     }
 
     let html = '';
-    let count = 1; // REVISI: Nomor 1 di atas
+    let count = 1; // REVISI: Nomor urut dimulai dari 1 di atas
     
     dataScan.forEach(d => {
         let badgeStatus = "bg-slate-200 text-slate-500 border-slate-300";
@@ -138,7 +142,7 @@ function renderCards() {
         html += `
             <div class="row-item ${rowClass} border-b border-slate-300 p-2.5 relative transition w-full flex shrink-0" data-qr="${d.qrcode}" data-status="${d.status}" data-nama="${d.namaItem.toLowerCase()}">
                 <div class="flex flex-col items-center justify-start pr-2 mr-2 border-r border-slate-300 w-10 shrink-0 pt-1">
-                    <div class="font-black text-slate-800 text-xl mb-3 leading-none no-cell">${count++}</div>
+                    <div class="font-black text-slate-400 text-sm mb-3 leading-none">${count++}</div>
                 </div>
                 
                 <div class="flex-1 flex flex-col gap-0 w-full min-w-0">
@@ -159,7 +163,6 @@ function renderCards() {
                     
                     <div class="text-[12px] font-bold text-blue-600">${d.shading}</div>
                     
-                    <!-- REVISI: Langsung tampilkan Customer Aktual -->
                     <div class="text-[12px] font-bold text-orange-600 uppercase">${d.poAktualUI}</div>
                     
                     <div class="flex flex-row flex-wrap items-center gap-1.5 mt-1.5">
@@ -187,7 +190,7 @@ function deleteRow(qr) {
 function undoDelete() { 
     if(deleteStack.length === 0) return alert("Belum ada data yang dihapus."); 
     const item = deleteStack.pop(); 
-    dataScan.unshift(item);
+    dataScan.push(item); // REVISI: Push agar kembali ke bawah
     renderCards(); 
 }
 
@@ -219,7 +222,10 @@ async function crossCekOutbound() {
             let foundDb = dbQRs.find(x => x.qrcode === d.qrcode);
 
             if(foundDb) {
-                let baseSpec = `${d.jenisItem}_${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}`;
+                // Format id_sku: area_nama_pjg_grade_dus_shading_customer_ket
+                let parts = foundDb.id_sku.split('_');
+                let baseSpec = `${parts[1]}_${parts[2]}_${parts[3]}_${parts[4]}_${parts[5]}`;
+                
                 d.baseSpec = baseSpec; 
                 d.area = foundDb.area; 
                 d.poAsliDB = extractPOFromSKU(foundDb.id_sku); 
@@ -239,10 +245,10 @@ async function crossCekOutbound() {
         // Ambil distribusi Customer Aktual dari stok_aktual
         let poDistMap = {};
         for (let spec of uniqueSpecs) {
-            let parts = spec.split('_'); // jenis_nama_pjg_grade_dus_shading
+            let parts = spec.split('_'); // nama_pjg_grade_dus_shading
             const { data: actData } = await db.from('stok_aktual').select('customer_aktual, qty')
-                .eq('nama_item', parts[1]).eq('panjang', parts[2]).eq('grade', parts[3])
-                .eq('dus', parts[4]).eq('shading', parts[5]);
+                .eq('nama_item', parts[0]).eq('panjang', parts[1]).eq('grade', parts[2])
+                .eq('dus', parts[3]).eq('shading', parts[4]);
             
             if(actData) {
                 poDistMap[spec] = {};
@@ -321,10 +327,10 @@ async function eksekusiKeluar() {
     let stockCapacity = {}; 
     try {
         for(let spec of specsToProcess) {
-            let parts = spec.split('_'); // jenis_nama_pjg_grade_dus_shading
+            let parts = spec.split('_'); // nama_pjg_grade_dus_shading
             const { data, error } = await db.from('stok_aktual').select('qty')
-                .eq('nama_item', parts[1]).eq('panjang', parts[2]).eq('grade', parts[3])
-                .eq('dus', parts[4]).eq('shading', parts[5]).eq('customer_aktual', poTarget); 
+                .eq('nama_item', parts[0]).eq('panjang', parts[1]).eq('grade', parts[2])
+                .eq('dus', parts[3]).eq('shading', parts[4]).eq('customer_aktual', poTarget); 
             if (error) throw error;
             let count = 0; if(data) data.forEach(d => count += (d.qty || 0));
             stockCapacity[spec] = count; 
@@ -349,7 +355,7 @@ async function eksekusiKeluar() {
                 if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, customer_aktual: poTarget, qty: 0 };
                 mapAktual[keyAkt].qty++;
 
-                let id_sku_lengkap = `${d.area}_${d.jenisItem}_${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${poTarget}`;
+                let id_sku_lengkap = `${d.area}_${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${poTarget}_${keterangan}`;
                 
                 payloadRiwayatKeluar.push({
                     qrcode: d.qrcode,
@@ -365,7 +371,7 @@ async function eksekusiKeluar() {
                     grade: d.grade,
                     dus: d.dus,
                     shading: d.shading,
-                    customer_bawaan: d.customer, 
+                    customer_bawaan: d.poAsliDB, 
                     keterangan: keterangan,
                     customer_keluar: poTarget 
                 });
@@ -452,8 +458,9 @@ async function submitReqPO() {
     dataScan.forEach(d => {
         if(d.status !== 'BELUM CEK' && d.status !== 'DUPLIKAT LOKAL') {
             let poAsli = (d.poAsliDB && d.poAsliDB !== '-') ? d.poAsliDB : d.customer; 
+            // REVISI: Menggunakan tabel request_ganti_customer
             payloadUpload.push({
-                qrcode: d.qrcode, po_awal: poAsli, po_request: poRequest, keterangan: ketReq, status: 'PENDING', pic_request: currentUser.username
+                qrcode: d.qrcode, customer_awal: poAsli, customer_request: poRequest, keterangan: ketReq, status: 'PENDING', pic_request: currentUser.username
             });
         }
     });
@@ -464,7 +471,7 @@ async function submitReqPO() {
     }
 
     try {
-        const { error } = await db.from('request_ganti_po').insert(payloadUpload);
+        const { error } = await db.from('request_ganti_customer').insert(payloadUpload);
         if(error) throw error;
         
         dataScan = dataScan.filter(d => d.status === 'BELUM CEK' || d.status === 'DUPLIKAT LOKAL');
