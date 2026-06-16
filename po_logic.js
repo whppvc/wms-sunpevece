@@ -1,6 +1,7 @@
 let currentMode = 'input';
 let stagingData = [];
 let dbRecordsRaw = [];
+let dbPoAturRaw = []; // Data dari tabel po_atur
 let masterKamus = [];
 let stagingRowId = 0;
 let sortState = {};
@@ -90,6 +91,7 @@ function switchTab(mode) {
     document.getElementById('view-input').classList.toggle('hidden', mode !== 'input');
     document.getElementById('view-tabel').classList.toggle('hidden', mode !== 'tabel' && mode !== 'input');
     document.getElementById('view-atur-item').classList.toggle('hidden', mode !== 'atur');
+    document.getElementById('view-picking').classList.toggle('hidden', mode !== 'picking');
     
     // Toggle Headers
     document.getElementById('header-tabs').classList.toggle('hidden', mode === 'atur');
@@ -100,11 +102,12 @@ function switchTab(mode) {
     document.getElementById('footer-tabel').classList.toggle('hidden', mode === 'input');
     
     // Toggle Buttons in Footer
-    document.getElementById('btn-hapus-po').classList.toggle('hidden', mode === 'atur');
+    document.getElementById('btn-hapus-po').classList.toggle('hidden', mode !== 'tabel');
+    document.getElementById('btn-hapus-pick').classList.toggle('hidden', mode !== 'picking');
     document.getElementById('dot-hapus').classList.toggle('hidden', mode === 'atur');
     
     if(mode === 'atur') {
-        document.getElementById('lbl-text-kodepo').innerHTML = ``; // Sembunyikan Jml Kode PO di mode atur
+        document.getElementById('lbl-text-kodepo').innerHTML = ``; 
     } else {
         document.getElementById('lbl-text-kodepo').innerHTML = `Jumlah PO: <strong class="text-blue-600" id="lbl-total-kodepo">0</strong>`;
     }
@@ -112,6 +115,7 @@ function switchTab(mode) {
     if(mode !== 'atur') {
         document.getElementById('tab-input').className = mode === 'input' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
         document.getElementById('tab-tabel').className = mode === 'tabel' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+        document.getElementById('tab-picking').className = mode === 'picking' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     }
     
     activeFilters = {};
@@ -119,6 +123,8 @@ function switchTab(mode) {
         muatDataEstimasiDB();
     } else if (mode === 'input') {
         renderHeaderDanTabel();
+    } else if (mode === 'picking') {
+        muatDataPickingDB();
     }
 }
 
@@ -153,6 +159,7 @@ function addEstimasiLokal() {
     
     renderHeaderDanTabel();
     
+    // Reset form
     document.getElementById('in-nama-item').value = ''; 
     document.getElementById('in-panjang').value = ''; 
     document.getElementById('in-grade').value = ''; 
@@ -237,7 +244,7 @@ async function simpanMassalKeDatabase() {
 
 async function muatDataEstimasiDB() {
     const tbody = document.getElementById('tbody-po');
-    tbody.innerHTML = `<tr><td colspan="12" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data PO...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data PO...</p></td></tr>`;
     lucide.createIcons();
     
     try {
@@ -246,7 +253,22 @@ async function muatDataEstimasiDB() {
         dbRecordsRaw = data || [];
         renderHeaderDanTabel();
     } catch (e) { 
-        tbody.innerHTML = `<tr><td colspan="12" class="p-5 text-red-500 font-bold">Error load: ${e.message}</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="14" class="p-5 text-red-500 font-bold">Error load: ${e.message}</td></tr>`; 
+    }
+}
+
+async function muatDataPickingDB() {
+    const tbody = document.getElementById('tbody-picking');
+    tbody.innerHTML = `<tr><td colspan="14" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data Picking...</p></td></tr>`;
+    lucide.createIcons();
+    
+    try {
+        const { data, error } = await db.from('po_atur').select('*').order('created_at', { ascending: false });
+        if (error) throw error; 
+        dbPoAturRaw = data || [];
+        renderTabelPickingList();
+    } catch (e) { 
+        tbody.innerHTML = `<tr><td colspan="14" class="p-5 text-red-500 font-bold">Error load: ${e.message}</td></tr>`; 
     }
 }
 
@@ -269,8 +291,8 @@ async function aturItemPO(id) {
         const { data: stokData, error: errStok } = await db.from('stok_aktual').select('*').eq('id_po', activePO.id_po);
         if(errStok) throw errStok;
 
-        // 2. Tarik picking_list berdasarkan kode_po
-        const { data: pickData, error: errPick } = await db.from('picking_list').select('*').eq('po_estimasi', activePO.kode_po);
+        // 2. Tarik po_atur berdasarkan kode_po
+        const { data: pickData, error: errPick } = await db.from('po_atur').select('*').eq('kode_po', activePO.kode_po);
         if(errPick) throw errPick;
 
         dataAturItem = [];
@@ -281,9 +303,9 @@ async function aturItemPO(id) {
                 dataAturItem.push({
                     isPicked: true,
                     id_picking: p.id,
-                    kode_po: p.po_estimasi,
-                    tgl_estimasi: p.tgl_estimasi,
-                    customer_po: activePO.customer_po,
+                    kode_po: p.kode_po,
+                    tgl_estimasi: p.tgl_estimasi || '-',
+                    customer_po: p.customer_po,
                     area: p.area,
                     jenis_item: p.jenis_item || '-',
                     nama_item: p.nama_item,
@@ -291,9 +313,10 @@ async function aturItemPO(id) {
                     grade: p.grade,
                     dus: p.dus,
                     shading: p.shading,
-                    customer_aktual: activePO.customer_po,
+                    customer_aktual: p.customer_aktual,
                     keterangan: p.keterangan || '-',
-                    qty: p.picked_qty
+                    qty: p.qty_pick,
+                    id_sku: p.id_sku
                 });
             });
         }
@@ -301,12 +324,12 @@ async function aturItemPO(id) {
         // Masukkan data stok aktual yang tersisa
         if(stokData) {
             stokData.forEach(s => {
-                // Hitung berapa yang sudah di-pick dari baris stok ini (berdasarkan dus, shading, area)
+                // Hitung berapa yang sudah di-pick dari baris stok ini (berdasarkan id_sku)
                 let pickedQtyForThisStok = 0;
                 if(pickData) {
                     pickData.forEach(p => {
-                        if(p.dus === s.dus && p.shading === s.shading && p.area === s.area) {
-                            pickedQtyForThisStok += p.picked_qty;
+                        if(p.id_sku === s.id_sku) {
+                            pickedQtyForThisStok += parseInt(p.qty_pick) || 0;
                         }
                     });
                 }
@@ -375,7 +398,7 @@ function renderTabelAturItem() {
     dataAturItem.forEach((r, i) => {
         let btnPick = r.isPicked 
             ? `<span class="text-emerald-600 font-black text-[10px] uppercase"><i data-lucide="check-circle" class="w-4 h-4 mx-auto"></i></span>`
-            : `<button onclick="bukaModalPick(${i})" class="bg-blue-600 text-white font-bold px-3 py-1.5 rounded hover:bg-blue-700 transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95">Pick Item</button>`;
+            : `<button onclick="bukaModalPick(${i})" class="bg-blue-600 text-white font-bold px-3 py-1.5 rounded hover:bg-blue-700 transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap">Pick Item</button>`;
 
         let rowBg = r.isPicked ? 'bg-emerald-50 hover:bg-emerald-100' : 'hover:bg-slate-50 bg-white';
 
@@ -428,6 +451,8 @@ function cekCustomerPick() {
 }
 
 async function eksekusiPickFinal(isGantiCustomer) {
+    let finalIdSku = activePickItem.id_sku;
+
     if(isGantiCustomer) {
         const btn = document.getElementById('btn-ganti-cust'); const ori = btn.innerHTML;
         btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Proses...'; btn.disabled = true;
@@ -440,6 +465,14 @@ async function eksekusiPickFinal(isGantiCustomer) {
                 p_qty: tempQtyPick
             });
             if(error) throw error;
+
+            // Construct new id_sku based on the change
+            let parts = activePickItem.id_sku.split('_');
+            if(parts.length >= 8) {
+                parts[6] = activePO.customer_po; // Assuming index 6 is customer_aktual in id_sku
+                finalIdSku = parts.join('_');
+            }
+
         } catch(e) {
             alert("Gagal mengganti Customer Aktual: " + e.message);
             btn.innerHTML = ori; btn.disabled = false; return;
@@ -449,22 +482,25 @@ async function eksekusiPickFinal(isGantiCustomer) {
     }
 
     try {
-        // 1. Insert ke picking_list
+        // 1. Insert ke po_atur
         const payloadPick = {
-            tgl_estimasi: activePO.tanggal_estimasi || activePO.tgl_estimasi_kirim,
-            po_estimasi: activePO.kode_po,
-            jumlah_po: activePO.qty_po,
+            kode_po: activePO.kode_po,
+            tgl_estimasi: activePO.tgl_estimasi_kirim,
+            customer_po: activePO.customer_po,
+            area: activePickItem.area,
+            jenis_item: activePickItem.jenis_item,
             nama_item: activePickItem.nama_item,
             panjang: activePickItem.panjang,
             grade: activePickItem.grade,
             dus: activePickItem.dus,
             shading: activePickItem.shading,
-            picked_qty: tempQtyPick,
-            area: activePickItem.area,
             keterangan: activePickItem.keterangan,
-            pic: currentUser.username
+            qty_pick: tempQtyPick,
+            customer_aktual: isGantiCustomer ? activePO.customer_po : activePickItem.customer_aktual,
+            id_po: activePO.id_po,
+            id_sku: finalIdSku
         };
-        const { error: errPick } = await db.from('picking_list').insert([payloadPick]);
+        const { error: errPick } = await db.from('po_atur').insert([payloadPick]);
         if(errPick) throw errPick;
 
         // 2. Update qty_terpenuhi di po_estimasi
@@ -481,12 +517,116 @@ async function eksekusiPickFinal(isGantiCustomer) {
     }
 }
 
+function renderTabelPickingList() {
+    const thead = document.getElementById('thead-picking');
+    const tbody = document.getElementById('tbody-picking');
+    sortState = {}; 
+
+    thead.innerHTML = `
+        <tr>
+            <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="toggleAllStaging(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>
+            ${thSort(1, 'Kode PO', 'col-kode_po')}
+            ${thSort(2, 'Tgl Estimasi', 'col-tgl_est')}
+            ${thSort(3, 'Customer PO', 'col-customer_po')}
+            ${thSort(4, 'Area', 'col-area')}
+            ${thSort(5, 'Jenis Item', 'col-jenis')}
+            ${thSort(6, 'Nama Item', 'col-nama text-blue-300')}
+            ${thSort(7, 'Panjang', 'col-pjg')}
+            ${thSort(8, 'Grade', 'col-grade')}
+            ${thSort(9, 'Dus', 'col-dus')}
+            ${thSort(10, 'Shading', 'col-shading')}
+            ${thSort(11, 'Customer Aktual', 'col-customer_aktual')}
+            ${thSort(12, 'Keterangan', 'col-ket')}
+            ${thSort(13, 'QTY PICK', 'col-qty text-emerald-300')}
+        </tr>`;
+    
+    if(dbPoAturRaw.length === 0) { 
+        tbody.innerHTML = `<tr><td colspan="14" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data picking.</td></tr>`; 
+        applyPagination(); return; 
+    }
+    
+    let h = '';
+    dbPoAturRaw.forEach((r, i) => {
+        h += `
+            <tr class="border-b border-slate-200 hover:bg-slate-50 transition r-row text-sm bg-white">
+                <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" data-kodepo="${r.kode_po}" data-qty="${r.qty_pick}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
+                <td class="px-4 py-3 text-slate-600 font-medium col-tgl_est border-r border-slate-200" data-search="${r.tgl_estimasi}">${r.tgl_estimasi || '-'}</td>
+                <td class="px-4 py-3 font-bold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
+                <td class="px-4 py-3 font-bold text-amber-600 col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
+                <td class="px-4 py-3 font-medium text-blue-600 col-jenis border-r border-slate-200" data-search="${r.jenis_item}">${r.jenis_item || '-'}</td>
+                <td class="px-4 py-3 font-bold text-slate-800 text-left col-nama border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
+                <td class="px-4 py-3 font-bold text-slate-700 col-customer_aktual border-r border-slate-200" data-search="${r.customer_aktual}">${r.customer_aktual}</td>
+                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket border-r border-slate-200" data-search="${r.keterangan}">${r.keterangan || '-'}</td>
+                <td class="px-4 py-3 font-black text-emerald-600 col-qty" data-search="${r.qty_pick}">${r.qty_pick}</td>
+            </tr>`;
+    });
+    tbody.innerHTML = h;
+    lucide.createIcons(); 
+    saringTabelExcel();
+    initResizableColumns();
+}
+
+async function hapusMassalPick() {
+    const checkedBoxes = document.querySelectorAll('.cb-row:checked');
+    if (checkedBoxes.length === 0) return alert("Centang minimal 1 baris Pick yang ingin dihapus!");
+    
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${checkedBoxes.length} data Pick ini?\n(Qty Terpenuhi pada PO akan dikurangi otomatis)`)) return;
+
+    const btn = document.getElementById('btn-hapus-pick');
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menghapus...';
+    btn.disabled = true;
+
+    try {
+        // Kelompokkan pengurangan qty berdasarkan kode_po
+        let poDeductions = {};
+        let idsToDelete = [];
+
+        checkedBoxes.forEach(cb => {
+            idsToDelete.push(cb.value);
+            let kodePo = cb.getAttribute('data-kodepo');
+            let qty = parseInt(cb.getAttribute('data-qty')) || 0;
+            
+            if(!poDeductions[kodePo]) poDeductions[kodePo] = 0;
+            poDeductions[kodePo] += qty;
+        });
+
+        // 1. Hapus dari po_atur
+        const { error: errDel } = await db.from('po_atur').delete().in('id', idsToDelete);
+        if (errDel) throw errDel;
+
+        // 2. Kurangi qty_terpenuhi di po_estimasi
+        for(let kode in poDeductions) {
+            const { data: poData } = await db.from('po_estimasi').select('id, qty_terpenuhi').eq('kode_po', kode).limit(1);
+            if(poData && poData.length > 0) {
+                let newQty = Math.max(0, (poData[0].qty_terpenuhi || 0) - poDeductions[kode]);
+                await db.from('po_estimasi').update({ qty_terpenuhi: newQty }).eq('id', poData[0].id);
+            }
+        }
+        
+        alert("Data Pick berhasil dihapus!");
+        muatDataPickingDB(); // Reload picking list
+        muatDataEstimasiDB(); // Reload PO list in background
+    } catch (e) {
+        alert("Gagal menghapus data: " + e.message);
+    } finally {
+        btn.innerHTML = ori;
+        btn.disabled = false;
+        lucide.createIcons();
+    }
+}
+
 // ========================================================
 // SORTING & FILTER EXCEL PRO
 // ========================================================
 function sortTable(colIndex, headerEl) {
-    let tbodyId = currentMode === 'atur' ? 'tbody-atur' : 'tbody-po';
-    let rowClass = currentMode === 'atur' ? 'tr.r-row' : 'tr.r-row';
+    let tbodyId = currentMode === 'atur' ? 'tbody-atur' : (currentMode === 'picking' ? 'tbody-picking' : 'tbody-po');
+    let rowClass = 'tr.r-row';
     
     const tbody = document.getElementById(tbodyId);
     const rows = Array.from(tbody.querySelectorAll(rowClass));
@@ -529,7 +669,7 @@ function openColumnFilter(event, colClass, colName) {
     document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
     let uniqueValues = new Set();
     
-    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row' : '#tbody-po tr.r-row';
+    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row' : (currentMode === 'picking' ? '#tbody-picking tr.r-row' : '#tbody-po tr.r-row');
 
     document.querySelectorAll(tbodyId).forEach(row => {
         let showBasedOnOthers = true;
@@ -597,7 +737,7 @@ function applyFilterForCurrentCol() {
     closeFilterMenu(); saringTabelExcel(); updateFilterIcons();
 }
 function saringTabelExcel() {
-    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row' : '#tbody-po tr.r-row';
+    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row' : (currentMode === 'picking' ? '#tbody-picking tr.r-row' : '#tbody-po tr.r-row');
     document.querySelectorAll(tbodyId).forEach(row => {
         let show = true;
         for (let colClass in activeFilters) {
@@ -627,7 +767,7 @@ function changeRowsPerPage(val) {
 }
 
 function applyPagination() {
-    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row' : '#tbody-po tr.r-row';
+    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row' : (currentMode === 'picking' ? '#tbody-picking tr.r-row' : '#tbody-po tr.r-row');
     const allRows = Array.from(document.querySelectorAll(tbodyId));
     allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
     
@@ -662,13 +802,13 @@ function applyPagination() {
 
 function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } }
 function nextPage() { 
-    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row:not(.filtered-out)' : '#tbody-po tr.r-row:not(.filtered-out)';
+    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row:not(.filtered-out)' : (currentMode === 'picking' ? '#tbody-picking tr.r-row:not(.filtered-out)' : '#tbody-po tr.r-row:not(.filtered-out)');
     const totalVisible = document.querySelectorAll(tbodyId).length;
     if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
 }
 
 function initResizableColumns() {
-    const cols = document.querySelectorAll('#main-table th, #table-atur th');
+    const cols = document.querySelectorAll('#main-table th, #table-atur th, #table-picking th');
     cols.forEach(col => {
         const existing = col.querySelector('.resizer');
         if(existing) existing.remove();
@@ -705,22 +845,11 @@ function renderHeaderDanTabel() {
 
     let dataset = currentMode === 'input' ? stagingData : dbRecordsRaw;
 
-    let thHtml = `<tr>`;
+    let thHtml = `<tr>
+        <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600">PILIH<br><input type="checkbox" onchange="toggleAllStaging(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>`;
     
     if (currentMode === 'input') {
         thHtml += `<th class="hdr-std w-10 col-btn text-center relative border-r border-slate-600"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-rose-400"></i></th>
-        ${thSort(1, 'No', 'col-no w-12')}
-        ${thSort(2, 'Kode PO', 'col-kode_po')}
-        ${thSort(3, 'Customer PO', 'col-customer_po')}
-        ${thSort(4, 'Nama Item', 'col-nama text-blue-300')}
-        ${thSort(5, 'Panjang', 'col-pjg')}
-        ${thSort(6, 'Grade', 'col-grade')}
-        ${thSort(7, 'Dus', 'col-dus')}
-        ${thSort(8, 'QTY PO', 'col-qty text-orange-300')}
-        ${thSort(9, 'Note', 'col-note')}`;
-    } else {
-        thHtml += `<th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600">PILIH<br><input type="checkbox" onchange="toggleAllStaging(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>
-        <th class="hdr-std w-12 col-atur text-center relative border-r border-slate-600">Atur Item</th>
         ${thSort(2, 'No', 'col-no w-12')}
         ${thSort(3, 'Kode PO', 'col-kode_po')}
         ${thSort(4, 'Customer PO', 'col-customer_po')}
@@ -729,9 +858,21 @@ function renderHeaderDanTabel() {
         ${thSort(7, 'Grade', 'col-grade')}
         ${thSort(8, 'Dus', 'col-dus')}
         ${thSort(9, 'QTY PO', 'col-qty text-orange-300')}
-        ${thSort(10, 'QTY TERPENUHI', 'col-qty_terpenuhi text-emerald-300')}
-        ${thSort(11, 'Note', 'col-note')}
-        ${thSort(12, 'PIC', 'col-pic')}`;
+        ${thSort(10, 'Note', 'col-note')}`;
+    } else {
+        thHtml += `<th class="hdr-std w-12 col-atur text-center relative border-r border-slate-600">Atur Item</th>
+        ${thSort(2, 'No', 'col-no w-12')}
+        ${thSort(3, 'Waktu Input', 'col-waktu')}
+        ${thSort(4, 'Kode PO', 'col-kode_po')}
+        ${thSort(5, 'Customer PO', 'col-customer_po')}
+        ${thSort(6, 'Nama Item', 'col-nama text-blue-300')}
+        ${thSort(7, 'Panjang', 'col-pjg')}
+        ${thSort(8, 'Grade', 'col-grade')}
+        ${thSort(9, 'Dus', 'col-dus')}
+        ${thSort(10, 'QTY PO', 'col-qty text-orange-300')}
+        ${thSort(11, 'QTY TERPENUHI', 'col-qty_terpenuhi text-emerald-300')}
+        ${thSort(12, 'Note', 'col-note')}
+        ${thSort(13, 'PIC', 'col-pic')}`;
     }
     thHtml += `</tr>`;
     thead.innerHTML = thHtml;
@@ -744,6 +885,7 @@ function renderHeaderDanTabel() {
     
     let h = '';
     dataset.forEach((r, i) => {
+        let tglStr = currentMode === 'input' ? r.created_at : formatTglIntl(r.created_at);
         let noUrut = currentMode === 'input' ? (dataset.length - i) : (i + 1);
         
         let btnHapus = currentMode === 'input' 
@@ -756,30 +898,35 @@ function renderHeaderDanTabel() {
         h += `<tr class="border-b border-slate-200 transition r-row text-sm ${trClass}">`;
         
         if (currentMode === 'input') {
-            h += `<td class="px-4 py-3 text-center col-btn border-r border-slate-200">${btnHapus}</td>`;
+            h += `<td class="px-4 py-3 text-center col-cb border-b border-r border-slate-200"><input type="checkbox" value="${r.id}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>`;
+            h += `<td class="px-4 py-3 text-center col-btn border-b border-r border-slate-200">${btnHapus}</td>`;
         } else {
-            h += `<td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>`;
-            h += `<td class="px-4 py-3 text-center col-atur border-r border-slate-200"><button onclick="aturItemPO('${r.id}')" class="bg-blue-600 text-white font-bold px-3 py-1.5 rounded hover:bg-blue-700 transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap">Atur Item</button></td>`;
+            h += `<td class="px-4 py-3 text-center col-cb border-b border-r border-slate-200"><input type="checkbox" value="${r.id}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>`;
+            h += `<td class="px-4 py-3 text-center col-atur border-b border-r border-slate-200"><button onclick="aturItemPO('${r.id}')" class="bg-blue-600 text-white font-bold px-3 py-1.5 rounded hover:bg-blue-700 transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap">Atur Item</button></td>`;
         }
         
-        h += `<td class="px-4 py-3 font-bold text-slate-500 text-center col-no border-r border-slate-200">${noUrut}</td>`;
+        h += `<td class="px-4 py-3 font-bold text-slate-500 text-center col-no border-b border-r border-slate-200">${noUrut}</td>`;
         
-        h += `<td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
-              <td class="px-4 py-3 font-bold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
-              <td class="px-4 py-3 font-bold text-blue-700 text-left col-nama border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
-              <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
-              <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
-              <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
-              <td class="px-4 py-3 font-black text-orange-600 bg-orange-50/50 col-qty border-r border-slate-200" data-search="${r.qty_po}">${r.qty_po}</td>`;
+        if (currentMode === 'tabel') {
+            h += `<td class="px-4 py-3 text-slate-600 font-medium col-waktu border-b border-r border-slate-200" data-search="${tglStr}">${tglStr}</td>`;
+        }
+
+        h += `<td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-b border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
+              <td class="px-4 py-3 font-bold text-slate-700 col-customer_po border-b border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
+              <td class="px-4 py-3 font-bold text-blue-700 text-left col-nama border-b border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
+              <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-b border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
+              <td class="px-4 py-3 font-medium text-slate-700 col-grade border-b border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
+              <td class="px-4 py-3 font-medium text-slate-700 col-dus border-b border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
+              <td class="px-4 py-3 font-black text-orange-600 bg-orange-50/50 col-qty border-b border-r border-slate-200" data-search="${r.qty_po}">${r.qty_po}</td>`;
               
         if (currentMode === 'tabel') {
-            h += `<td class="px-4 py-3 font-black text-emerald-600 bg-emerald-50/50 col-qty_terpenuhi border-r border-slate-200" data-search="${r.qty_terpenuhi || 0}">${r.qty_terpenuhi || 0}</td>`;
+            h += `<td class="px-4 py-3 font-black text-emerald-600 bg-emerald-50/50 col-qty_terpenuhi border-b border-r border-slate-200" data-search="${r.qty_terpenuhi || 0}">${r.qty_terpenuhi || 0}</td>`;
         }
         
-        h += `<td class="px-4 py-3 font-medium text-slate-500 text-left col-ket border-r border-slate-200" data-search="${r.note || '-'}">${r.note || '-'}</td>`;
+        h += `<td class="px-4 py-3 font-medium text-slate-500 text-left col-ket border-b border-r border-slate-200" data-search="${r.note || '-'}">${r.note || '-'}</td>`;
         
         if (currentMode === 'tabel') {
-            h += `<td class="px-4 py-3 font-bold uppercase text-xs text-slate-400 col-pic border-slate-200" data-search="${r.pic || '-'}">${r.pic || '-'}</td>`;
+            h += `<td class="px-4 py-3 font-bold uppercase text-xs text-slate-400 col-pic border-b border-slate-200" data-search="${r.pic || '-'}">${r.pic || '-'}</td>`;
         }
         
         h += `</tr>`;
