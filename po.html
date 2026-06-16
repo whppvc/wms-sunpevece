@@ -55,8 +55,7 @@
     <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
         <!-- HEADER SECTION -->
-        <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)]">
-            
+        <div id="header-tabs" class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)]">
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
                 <button onclick="switchTab('input')" id="tab-input" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="file-plus-2" class="w-4 h-4"></i> INPUT PO</button>
                 <button onclick="switchTab('tabel')" id="tab-tabel" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="table" class="w-4 h-4"></i> TABEL PO</button>
@@ -122,29 +121,51 @@
             </div>
         </div>
 
+        <!-- HEADER ATUR ITEM (Hanya muncul saat mode Atur Item) -->
+        <div id="header-atur" class="hidden shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)]">
+            <div class="flex items-center gap-4 p-3 border-b border-slate-200 bg-slate-50">
+                <button onclick="switchTab('tabel')" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-md text-xs font-bold transition shadow-sm flex items-center gap-2 uppercase"><i data-lucide="arrow-left" class="w-4 h-4"></i> Kembali</button>
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Atur Item Untuk PO:</span>
+                    <span class="text-sm font-black text-blue-700 uppercase" id="lbl-po-aktif">-</span>
+                </div>
+            </div>
+        </div>
+
         <!-- MIDDLE SCROLL SECTION -->
         <div class="flex-1 min-h-0 bg-slate-200 p-2 overflow-hidden flex flex-col relative z-0">
-            <div class="flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll table-container">
+            
+            <!-- TABEL PO & INPUT -->
+            <div id="view-tabel" class="flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll table-container">
                 <table class="w-full text-center border-separate border-spacing-0 whitespace-nowrap" id="main-table">
                     <thead class="sticky top-0 z-40 shadow-md bg-slate-800" id="thead-po"></thead>
                     <tbody id="tbody-po" class="text-slate-700"></tbody>
                 </table>
             </div>
+
+            <!-- TABEL ATUR ITEM -->
+            <div id="view-atur-item" class="hidden flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll table-container">
+                <table class="w-full text-center border-separate border-spacing-0 whitespace-nowrap" id="table-atur">
+                    <thead class="sticky top-0 z-40 shadow-md bg-slate-800" id="thead-atur"></thead>
+                    <tbody id="tbody-atur" class="text-slate-700"></tbody>
+                </table>
+            </div>
+
         </div>
 
         <!-- FOOTER PAGINATION & ACTION -->
         <div class="shrink-0 w-full bg-white p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 border-t border-slate-200 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)]">
             
-            <!-- Info & Paginasi (Hanya tampil di Tab Tabel) -->
+            <!-- Info & Paginasi (Tampil di Tab Tabel & Atur Item) -->
             <div id="footer-tabel" class="hidden flex-1 flex flex-col md:flex-row justify-between items-center gap-4 w-full">
                 <div class="flex items-center gap-4 text-sm text-slate-500">
                     <button id="btn-hapus-po" onclick="hapusMassalPO()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-md shadow-sm flex items-center gap-2 text-xs transition active:scale-95 uppercase">
                         <i data-lucide="trash-2" class="w-4 h-4"></i> Hapus PO
                     </button>
+                    <span class="w-1 h-1 rounded-full bg-slate-300" id="dot-hapus"></span>
+                    <span>Qty: <strong class="text-orange-600" id="lbl-total-qty">0</strong> dus</span>
                     <span class="w-1 h-1 rounded-full bg-slate-300"></span>
-                    <span>Qty PO: <strong class="text-orange-600" id="lbl-total-qty">0</strong> dus</span>
-                    <span class="w-1 h-1 rounded-full bg-slate-300"></span>
-                    <span>Jumlah PO: <strong class="text-blue-600" id="lbl-total-kodepo">0</strong></span>
+                    <span id="lbl-text-kodepo">Jumlah PO: <strong class="text-blue-600" id="lbl-total-kodepo">0</strong></span>
                 </div>
                 
                 <div class="flex items-center gap-3">
@@ -196,7 +217,43 @@
         </div>
     </div>
 
-    <!-- REVISI: Panggil po_logic.js -->
+    <!-- MODAL INPUT QTY PICK -->
+    <div id="modal-pick-qty" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200">
+            <h3 class="text-lg font-black mb-2 flex items-center gap-2 text-slate-800"><i data-lucide="shopping-cart" class="text-blue-600"></i> Pick Item</h3>
+            <p class="text-xs font-bold text-slate-500 mb-5">Tentukan jumlah dus yang ingin dialokasikan untuk PO ini.</p>
+            <div class="space-y-4 mb-6">
+                <div>
+                    <div class="flex justify-between text-xs font-black uppercase text-slate-500 mb-2">
+                        <span>Jumlah Dus</span>
+                        <span class="text-blue-600">Maks: <span id="lbl-max-pick">0</span></span>
+                    </div>
+                    <input type="number" id="input-qty-pick" min="1" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-600 font-black text-center text-xl text-slate-800 bg-slate-50" placeholder="0">
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('modal-pick-qty').classList.add('hidden')" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase cursor-pointer hover:bg-slate-300 transition">Batal</button>
+                <button type="button" onclick="cekCustomerPick()" class="w-2/3 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 border-b-4 border-blue-800 flex justify-center items-center gap-2 cursor-pointer"><i data-lucide="check"></i> OKE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL KONFIRMASI GANTI CUSTOMER -->
+    <div id="modal-confirm-customer" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 text-center">
+            <i data-lucide="alert-triangle" class="w-12 h-12 text-orange-500 mx-auto mb-4 animate-bounce"></i>
+            <h3 class="text-lg font-black mb-2 text-slate-800">Perhatian!</h3>
+            <p class="text-xs font-semibold text-slate-500 mb-6 leading-relaxed">
+                Customer Aktual pada stok ini adalah <strong class="text-slate-800" id="lbl-cust-lama"></strong>.<br><br>
+                Apakah Anda ingin mengganti Customer Aktualnya menjadi <strong class="text-orange-600" id="lbl-cust-baru"></strong> sesuai PO ini?
+            </p>
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('modal-confirm-customer').classList.add('hidden')" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition cursor-pointer text-xs uppercase">Batal</button>
+                <button type="button" onclick="eksekusiPickFinal(true)" id="btn-ganti-cust" class="w-1/2 py-3 bg-orange-600 font-black rounded-xl shadow-sm text-white hover:bg-orange-700 transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase border-b-4 border-orange-800"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Ganti</button>
+            </div>
+        </div>
+    </div>
+
     <script src="po_logic.js"></script>
 </body>
 </html>
