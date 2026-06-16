@@ -7,10 +7,8 @@
     const session = localStorage.getItem('user_session');
 
     if (!session && !isLoginPage) {
-        // JIKA TIDAK ADA SESI & BUKAN DI HALAMAN LOGIN -> TENDANG KE LOGIN
         window.location.replace('index.html');
     } else if (session && isLoginPage) {
-        // JIKA SUDAH LOGIN TAPI MENCOBA BUKA HALAMAN LOGIN -> TENDANG KE MENU UTAMA
         window.location.replace('menu.html');
     }
 })();
@@ -43,7 +41,7 @@ const APP_MENUS = [
     { id: 'picking_list', title: 'Picking List', icon: 'clipboard-pen', url: 'picking_list.html' },
     { id: 'keluar', title: 'Kirim / Keluar', icon: 'truck', url: 'keluar.html' },
     { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' },
-    { isDivider: true, title: 'PENGATURAN DATA' },
+    { isDivider: true, title: 'PENGATURAN SISTEM' },
     { id: 'master_data', title: 'Master Data', icon: 'database', url: 'master_data.html' }
 ];
 
@@ -96,7 +94,7 @@ document.head.appendChild(style);
 
 function initModernLayout(pageMeta) {
     const sessionString = localStorage.getItem('user_session');
-    if (!sessionString) return; // Fallback jika tidak ada sesi
+    if (!sessionString) return; 
     
     const user = JSON.parse(sessionString);
     
@@ -157,7 +155,7 @@ function initModernLayout(pageMeta) {
                 </div>
                 
                 <div class="flex items-center gap-4">
-                    <button onclick="bukaModalInbox()" class="relative p-2 rounded-full hover:bg-slate-800 text-slate-300 transition cursor-pointer" title="Request Ganti PO">
+                    <button onclick="bukaModalInbox()" class="relative p-2 rounded-full hover:bg-slate-800 text-slate-300 transition cursor-pointer" title="Request Ganti Customer">
                         <i data-lucide="mail" class="w-5 h-5"></i>
                         <span id="inbox-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0f172a]"></span>
                     </button>
@@ -238,7 +236,7 @@ function initModernLayout(pageMeta) {
         <div id="modal-inbox" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-2 sm:px-4 backdrop-blur-sm">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl border border-slate-200 text-slate-800 h-[80vh] flex flex-col overflow-hidden">
                 <div class="p-4 sm:p-5 flex justify-between items-center border-b border-slate-200 bg-slate-50">
-                    <h3 class="text-lg font-black flex items-center gap-2 text-slate-800"><i data-lucide="mail-open" class="text-blue-600"></i> INBOX REQUEST GANTI PO</h3>
+                    <h3 class="text-lg font-black flex items-center gap-2 text-slate-800"><i data-lucide="mail-open" class="text-blue-600"></i> INBOX REQUEST GANTI CUSTOMER</h3>
                     <button onclick="tutupModal('modal-inbox')" class="text-slate-400 hover:text-red-500 transition"><i data-lucide="x"></i></button>
                 </div>
                 <div class="flex-1 overflow-x-auto overflow-y-auto hide-scrollbar bg-white">
@@ -247,8 +245,8 @@ function initModernLayout(pageMeta) {
                             <tr>
                                 <th class="p-3 font-black text-slate-600">PIC</th>
                                 <th class="p-3 font-black text-slate-600">QR Code</th>
-                                <th class="p-3 font-black text-slate-600">PO Aktual (Lama)</th>
-                                <th class="p-3 font-black text-orange-600 border-x border-slate-200 bg-orange-50">PO Request (Baru)</th>
+                                <th class="p-3 font-black text-slate-600">Customer Aktual (Lama)</th>
+                                <th class="p-3 font-black text-orange-600 border-x border-slate-200 bg-orange-50">Customer Request (Baru)</th>
                                 <th class="p-3 font-black text-slate-600">Keterangan</th>
                                 <th class="p-3 font-black text-slate-600 text-center">Aksi / Status</th>
                             </tr>
@@ -286,11 +284,11 @@ function closeGlobalTab(e, idToRemove, currentId) {
 document.addEventListener('click', (e) => { const dropdown = document.getElementById('profile-dropdown'); if (dropdown && !e.target.closest('.relative')) dropdown.classList.add('hidden'); });
 
 // ==========================================
-// FUNGSI INBOX REQUEST PO
+// FUNGSI INBOX REQUEST CUSTOMER
 // ==========================================
 async function cekNotifikasiInbox() {
     try {
-        const { count, error } = await db.from('request_ganti_po').select('*', { count: 'exact', head: true }).eq('status', 'PENDING');
+        const { count, error } = await db.from('request_ganti_customer').select('*', { count: 'exact', head: true }).eq('status', 'PENDING');
         const badge = document.getElementById('inbox-badge');
         if (badge && count > 0) badge.classList.remove('hidden');
         else if (badge) badge.classList.add('hidden');
@@ -306,7 +304,7 @@ async function bukaModalInbox() {
     lucide.createIcons();
 
     try {
-        const { data, error } = await db.from('request_ganti_po').select('*').eq('status', 'PENDING').order('created_at', { ascending: false });
+        const { data, error } = await db.from('request_ganti_customer').select('*').eq('status', 'PENDING').order('created_at', { ascending: false });
         if(error) throw error;
         
         if(data.length === 0) {
@@ -321,15 +319,15 @@ async function bukaModalInbox() {
         let html = '';
         data.forEach(d => {
             let btnAksi = canApprove 
-                ? `<button onclick="terimaRequestPO(${d.id}, '${d.qrcode}', '${d.po_request}')" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm text-[10px] uppercase transition flex items-center gap-1 mx-auto"><i data-lucide="check-circle" class="w-3 h-3"></i> TERIMA</button>`
+                ? `<button onclick="terimaRequestPO(${d.id}, '${d.qrcode}', '${d.customer_request}')" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm text-[10px] uppercase transition flex items-center gap-1 mx-auto"><i data-lucide="check-circle" class="w-3 h-3"></i> TERIMA</button>`
                 : `<span class="px-3 py-1 bg-amber-100 text-amber-700 font-bold rounded-lg text-[10px] border border-amber-300">MENUNGGU CS</span>`;
 
             html += `
                 <tr class="border-b border-slate-200 hover:bg-slate-50 transition">
                     <td class="p-3 font-black text-slate-800 uppercase">${d.pic_request || '-'}</td>
                     <td class="p-3 font-mono font-bold tracking-wider">${d.qrcode}</td>
-                    <td class="p-3 font-bold text-slate-500">${d.po_awal || '-'}</td>
-                    <td class="p-3 font-black text-orange-600 border-x border-slate-200 bg-orange-50/50">${d.po_request}</td>
+                    <td class="p-3 font-bold text-slate-500">${d.customer_awal || '-'}</td>
+                    <td class="p-3 font-black text-orange-600 border-x border-slate-200 bg-orange-50/50">${d.customer_request}</td>
                     <td class="p-3 italic text-slate-500 truncate max-w-[200px]" title="${d.keterangan || '-'}">${d.keterangan || '-'}</td>
                     <td class="p-3 text-center">${btnAksi}</td>
                 </tr>
@@ -343,8 +341,8 @@ async function bukaModalInbox() {
     }
 }
 
-async function terimaRequestPO(idReq, qrcode, poBaru) {
-    if(!confirm(`Yakin ingin mengganti PO untuk kardus ${qrcode} menjadi ${poBaru}?`)) return;
+async function terimaRequestPO(idReq, qrcode, customerBaru) {
+    if(!confirm(`Yakin ingin mengganti Customer untuk kardus ${qrcode} menjadi ${customerBaru}?`)) return;
 
     try {
         const { data: stokData, error: errStok } = await db.from('stok_qr').select('id_sku').eq('qrcode', qrcode).single();
@@ -353,10 +351,11 @@ async function terimaRequestPO(idReq, qrcode, poBaru) {
         let id_sku = stokData.id_sku;
         let parts = id_sku.split('_');
         
-        if(parts.length >= 8) {
-            parts[7] = poBaru; 
+        // Format WMS: Area_Nama_Panjang_Grade_Dus_Shading_Customer_Keterangan
+        if(parts.length >= 7) {
+            parts[6] = customerBaru; 
         } else {
-            parts[parts.length - 1] = poBaru;
+            parts[parts.length - 1] = customerBaru;
         }
         
         let sku_baru = parts.join('_'); 
@@ -364,7 +363,7 @@ async function terimaRequestPO(idReq, qrcode, poBaru) {
         const { error: errUpdate } = await db.from('stok_qr').update({ id_sku: sku_baru }).eq('qrcode', qrcode);
         if(errUpdate) throw errUpdate;
 
-        const { error: errReq } = await db.from('request_ganti_po').update({ status: 'SELESAI' }).eq('id', idReq);
+        const { error: errReq } = await db.from('request_ganti_customer').update({ status: 'SELESAI' }).eq('id', idReq);
         if(errReq) throw errReq;
 
         bukaModalInbox(); 
