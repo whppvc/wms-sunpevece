@@ -23,11 +23,11 @@
         .tab-inactive { color: #64748b; font-weight: 500; border-bottom: 2px solid transparent; }
     </style>
 </head>
-<body class="font-sans text-slate-800">
+<body class="font-sans text-slate-800 bg-slate-50">
 
-    <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
+    <div class="flex flex-col h-full w-full">
         
-        <!-- HEADER SECTION (RAPAT SEPERTI LANGSIR) -->
+        <!-- HEADER SECTION -->
         <div class="shrink-0 bg-white border-b border-slate-200 px-3 py-3 flex flex-col gap-3 shadow-sm z-20">
             
             <!-- TABS -->
@@ -39,9 +39,9 @@
             <!-- TOOLBAR KIRI & KANAN -->
             <div class="flex gap-2 items-center w-full pb-1">
                 <div class="flex-1 flex gap-2 overflow-x-auto hide-scrollbar">
-                    <button onclick="crossCekOutbound()" id="btn-crosscek" class="shrink-0 flex items-stretch rounded-md overflow-hidden shadow-sm active:scale-95 transition h-9 border border-slate-800">
-                        <div class="w-9 bg-slate-900 text-white flex items-center justify-center shrink-0"><i data-lucide="scan-search" class="w-4 h-4"></i></div>
-                        <div class="flex-1 bg-slate-800 text-white font-black text-[11px] uppercase flex items-center justify-center px-3 tracking-wider">Verifikasi Gudang</div>
+                    <button onclick="crossCekOutbound()" id="btn-crosscek" class="shrink-0 flex items-stretch rounded-md overflow-hidden shadow-sm active:scale-95 transition h-9 border border-black">
+                        <div class="w-9 bg-black text-white flex items-center justify-center shrink-0"><i data-lucide="scan-search" class="w-4 h-4"></i></div>
+                        <div class="flex-1 bg-slate-900 text-white font-black text-[11px] uppercase flex items-center justify-center px-3 tracking-wider">Verifikasi Gudang</div>
                     </button>
 
                     <button onclick="bukaModalReqPO()" class="shrink-0 flex items-stretch rounded-md overflow-hidden shadow-sm active:scale-95 transition h-9 border border-orange-600">
@@ -83,7 +83,7 @@
 
         <!-- FOOTER ACTION -->
         <div class="shrink-0 w-full bg-slate-50 p-2 flex items-center gap-2 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300 pb-4">
-            <button id="btn-proses-keluar" onclick="bukaModalKeluar()" class="flex-1 h-[50px] bg-slate-800 hover:bg-slate-900 text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-slate-950">
+            <button id="btn-proses-keluar" onclick="bukaModalKeluar()" class="flex-1 h-[50px] bg-rose-700 hover:bg-rose-800 text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-rose-900">
                 <i data-lucide="truck-fast" class="w-5 h-5"></i> PROSES KELUAR BARANG
             </button>
         </div>
