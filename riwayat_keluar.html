@@ -9,51 +9,108 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
-    <!-- PINDAHKAN GLOBAL.JS KE SINI -->
+    <!-- ROUTE GUARD & LAYOUT -->
     <script src="global.js"></script>
     
     <style>
-        .table-container { scrollbar-width: thin; position: relative; }
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; touch-action: pan-y; background-color: #f8fafc; }
+        .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .table-container { position: relative; will-change: transform; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
         .hdr-std { 
             background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; 
-            border: 1px solid #334155; padding: 0.75rem; text-transform: uppercase; font-size: 13px; font-weight: 800; 
-            white-space: nowrap; position: sticky; top: 0; z-index: 20; background-clip: padding-box;
+            border-bottom: 2px solid #cbd5e1 !important; padding: 0.75rem; text-transform: uppercase; font-size: 12px; font-weight: 800; 
+            white-space: nowrap; position: sticky; top: 0; z-index: 40 !important; background-clip: padding-box !important;
         }
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
+        tr.selected-row td { background-color: #dbeafe !important; }
+
+        .resizer {
+            position: absolute;
+            top: 0; right: 0; width: 5px;
+            cursor: col-resize; user-select: none;
+            height: 100%; z-index: 50;
+        }
+        .resizer:hover, .resizing { background-color: rgba(59, 130, 246, 0.5); }
     </style>
 </head>
-<body class="font-sans bg-slate-50 overflow-x-hidden text-slate-800 pb-20">
-    <div class="w-full px-2 sm:px-4 pt-4 relative">
+<body class="font-sans bg-slate-50 text-slate-800">
+    <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
         <!-- NAVIGASI TAB MENU -->
-        <div class="flex border-b border-slate-200 mb-4 bg-white px-2 rounded-t-xl shadow-sm overflow-x-auto hide-scrollbar">
-            <button onclick="setMode('qrcode')" id="tab-mode-qrcode" class="px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition"><i data-lucide="qr-code" class="w-4 h-4"></i> MODE QRCODE</button>
-            <button onclick="setMode('item')" id="tab-mode-item" class="px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="boxes" class="w-4 h-4"></i> RANGKUMAN ITEM & QTY</button>
-            <button onclick="setMode('jasper')" id="tab-mode-jasper" class="px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="file-text" class="w-4 h-4"></i> RANGKUMAN JASPER & QTY</button>
-            <button onclick="setMode('hold')" id="tab-mode-hold" class="px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition"><i data-lucide="pause-circle" class="w-4 h-4"></i> TABEL HOLD KELUAR</button>
-        </div>
+        <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)]">
+            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
+                <button onclick="setMode('qrcode')" id="tab-mode-qrcode" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="qr-code" class="w-4 h-4"></i> MODE QRCODE</button>
+                <button onclick="setMode('item')" id="tab-mode-item" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="boxes" class="w-4 h-4"></i> RANGKUMAN ITEM & QTY</button>
+                <button onclick="setMode('jasper')" id="tab-mode-jasper" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="file-text" class="w-4 h-4"></i> RANGKUMAN JASPER & QTY</button>
+                <button onclick="setMode('hold')" id="tab-mode-hold" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="pause-circle" class="w-4 h-4"></i> TABEL HOLD KELUAR</button>
+            </div>
 
-        <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-slate-200 mb-4">
-            <div class="flex gap-2 items-center overflow-x-auto pt-1 pb-2 px-1 hide-scrollbar whitespace-nowrap scroll-smooth select-none" style="-webkit-overflow-scrolling: touch;">
-                
-                <button onclick="aksiMassal('hold')" id="btn-hold" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-amber-700"><i data-lucide="pause-circle" class="w-4 h-4"></i> HOLD ITEM</button>
-                <button onclick="aksiMassal('cancel')" id="btn-cancel" class="hidden px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-rose-800"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> CANCEL KELUAR</button>
+            <div class="p-2 sm:p-3 bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-200">
+                <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar whitespace-nowrap scroll-smooth select-none w-full">
+                    
+                    <button onclick="aksiMassal('hold')" id="btn-hold" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-amber-700">
+                        <div class="bg-amber-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="pause-circle" class="w-4 h-4"></i></div>
+                        <div class="bg-amber-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-amber-500 transition">Hold Item</div>
+                    </button>
+                    
+                    <button onclick="aksiMassal('cancel')" id="btn-cancel" class="hidden group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-rose-700">
+                        <div class="bg-rose-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
+                        <div class="bg-rose-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-rose-500 transition">Cancel Keluar</div>
+                    </button>
 
-                <div class="w-px h-8 bg-slate-300 mx-1"></div>
-                <button onclick="toggleSidebarFilter()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-slate-950"><i data-lucide="filter" class="w-4 h-4"></i> FILTER</button>
-                <button onclick="aksiMassal('salin')" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-blue-800"><i data-lucide="copy" class="w-4 h-4"></i> SALIN</button>
-                <button onclick="aksiMassal('xlsx')" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase border-b-2 border-emerald-800"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> EXCEL</button>
+                    <div class="w-px h-8 bg-slate-300 mx-1 shrink-0"></div>
+                    
+                    <button onclick="aksiMassal('xlsx')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-emerald-700">
+                        <div class="bg-emerald-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i></div>
+                        <div class="bg-emerald-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-emerald-500 transition">Excel</div>
+                    </button>
+
+                    <button onclick="aksiMassal('salin')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-slate-600">
+                        <div class="bg-slate-700 text-white flex items-center justify-center px-3 py-2.5 border-r border-slate-600"><i data-lucide="copy" class="w-4 h-4"></i></div>
+                        <div class="bg-slate-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-500 transition">Salin</div>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative mb-4">
-            <div class="table-container overflow-x-auto w-full max-h-[60vh]">
-                <table class="w-full text-center border-collapse text-sm whitespace-nowrap" id="table-keluar-main">
-                    <thead class="sticky top-0 z-20 shadow-sm bg-slate-800" id="thead-keluar"></thead>
+        <div class="flex-1 min-h-0 bg-slate-200 p-2 overflow-hidden flex flex-col relative z-0">
+            <div class="flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll table-container">
+                <table class="w-full text-center border-separate border-spacing-0 text-sm whitespace-nowrap" id="table-keluar-main">
+                    <thead class="sticky top-0 z-30 shadow-sm bg-slate-800" id="thead-keluar"></thead>
                     <tbody id="tbody-keluar" class="text-center text-slate-700"></tbody>
                 </table>
+            </div>
+        </div>
+        
+        <!-- FOOTER PAGINATION -->
+        <div class="shrink-0 w-full bg-slate-50 p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-2 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
+            <div class="flex items-center gap-2 flex-wrap justify-center">
+                <span class="bg-blue-100 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-black">0</span></span>
+                <span class="bg-amber-100 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-amber-900 font-black">0</span></span>
+                <span class="bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded text-emerald-800 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-black">0</span></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1 bg-white border border-slate-300 p-1 rounded shadow-sm">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase px-1">Baris:</span>
+                    <select id="select-rows-per-page" onchange="changeRowsPerPage(this.value)" class="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 rounded outline-none cursor-pointer px-1 py-0.5 transition">
+                        <option value="10" selected>10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="ALL">Semua</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2 bg-white border border-slate-300 p-1 rounded shadow-sm">
+                    <button onclick="prevPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                    <span class="px-2 font-black text-xs text-slate-600 tracking-wide uppercase">Hal <span id="lbl-halaman" class="text-blue-600">1</span> / <span id="lbl-total-halaman">1</span></span>
+                    <button onclick="nextPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                </div>
             </div>
         </div>
     </div>
@@ -81,35 +138,24 @@
         </div>
     </div>
 
-    <!-- SIDEBAR FILTER -->
-    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
-        <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Keluar</h3>
-            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+    <!-- MODAL FILTER EXCEL -->
+    <div id="excel-filter-menu" class="hidden absolute bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm">
+        <div class="p-3 border-b border-slate-200 bg-slate-100 flex justify-between items-center rounded-t-lg">
+            <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
+            <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-rose-500 bg-white p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
         </div>
-        <div class="p-4 flex flex-col gap-4 overflow-y-auto">
-            <div class="grid grid-cols-2 gap-3">
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Waktu Keluar</label><input type="text" id="f-waktu" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="f-qr" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="text" id="f-tgl" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label><input type="text" id="f-mesin" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label><input type="text" id="f-shift" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><input type="text" id="f-jenis" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama / Jasper</label><input type="text" id="f-nama" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><input type="text" id="f-pjg" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><input type="text" id="f-grade" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><input type="text" id="f-dus" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="f-shading" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Bawaan</label><input type="text" id="f-po" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Keluar</label><input type="text" id="f-tujuan" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="f-ket" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PIC Keluar</label><input type="text" id="f-pic" oninput="jalankanSaring()" class="w-full p-2 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+        <div class="p-2 border-b border-slate-200 bg-white">
+            <div class="relative">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2"></i>
+                <input type="text" id="filter-search-input" oninput="searchFilterList(this.value)" class="w-full pl-8 p-1.5 text-xs font-bold border border-slate-300 bg-slate-50 rounded focus:border-blue-500 focus:bg-white outline-none transition" placeholder="Cari Spesifik...">
             </div>
-            <button onclick="bersihkanFilter()" class="mt-4 py-3 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-xs uppercase transition border border-slate-300">RESET FILTER</button>
+        </div>
+        <div class="p-2 max-h-48 overflow-y-auto flex flex-col gap-1 text-xs bg-white" id="filter-values-list"></div>
+        <div class="p-2 border-t border-slate-200 bg-slate-50 flex justify-between gap-2 rounded-b-lg">
+            <button onclick="clearFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100 transition shadow-sm">Reset</button>
+            <button onclick="applyFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-700 transition shadow-sm">Terapkan</button>
         </div>
     </div>
-
-    <div id="overlay-klik-luar-k" onclick="tutupPopups()" class="hidden fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="riwayat_keluar_logic.js"></script>
 </body>
