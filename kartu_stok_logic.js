@@ -140,7 +140,7 @@ window.muatDataStok = async function() {
             let p = r.id_sku ? r.id_sku.split('_') : [];
             let t = window.translateBarcode(r.qrcode);
             return {
-                qrcode: r.qrcode || '-', id_sku: r.id_sku || '-', area: p[0] || r.area || '-', 
+                qrcode: r.qrcode || '-', id_sku: r.id_sku || '-', id_po: r.id_po || '-', area: p[0] || r.area || '-', 
                 tglProduksi: r.tgl_produksi || t.tglProduksi || '-', mesin: r.mesin || t.mesin || '-', shift: r.shift || t.shift || '-', 
                 jenis: r.jenis_item || t.jenisItem || '-', nama: p[1] || r.nama_item || t.namaItem || '-',
                 pjg: p[2] || r.panjang || t.panjang || '-', grade: p[3] || r.grade || t.grade || '-', 
@@ -159,6 +159,7 @@ window.muatDataStok = async function() {
                 nama: a.nama_item || '-',
                 qrcodes: qrMap[key] || [],
                 id_sku_base: a.id_sku,
+                id_po: a.id_po || '-',
                 po_bawaan: a.customer_bawaan,
                 po_aktual: a.customer_aktual,
                 qty: a.qty
@@ -523,7 +524,7 @@ window.eksekusiGantiPO = async function() {
             qtySisaUntukDiupdate -= qtyPotong;
 
             // Memanggil RPC Supabase yang sudah diupdate
-            const { error } = await db.rpc('ganti_customer_aktual_ks', { 
+            const { error } = await db.rpc('ganti_customer_aktual_ks_v2', { 
                 p_id_sku: row.id_sku,
                 p_customer_lama: row.po_aktual,
                 p_customer_baru: newPO,
@@ -538,7 +539,7 @@ window.eksekusiGantiPO = async function() {
         await window.muatDataStok();
         alert("Berhasil mengganti Customer Aktual!");
     } catch (error) { 
-        alert("GAGAL UPDATE: " + error.message + "\n\nPastikan Anda sudah membuat Function 'ganti_customer_aktual_ks' di SQL Editor Supabase."); 
+        alert("GAGAL UPDATE: " + error.message + "\n\nPastikan Anda sudah membuat Function 'ganti_customer_aktual_ks_v2' di SQL Editor Supabase."); 
     } finally { 
         btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); 
     }
