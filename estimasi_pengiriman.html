@@ -138,6 +138,10 @@
             <!-- Info & Paginasi (Hanya tampil di Tab Tabel) -->
             <div id="footer-tabel" class="hidden flex-1 flex flex-col md:flex-row justify-between items-center gap-4 w-full">
                 <div class="flex items-center gap-4 text-sm text-slate-500">
+                    <button id="btn-hapus-po" onclick="hapusMassalPO()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-md shadow-sm flex items-center gap-2 text-xs transition active:scale-95 uppercase">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i> Hapus PO
+                    </button>
+                    <span class="w-1 h-1 rounded-full bg-slate-300"></span>
                     <span>Qty PO: <strong class="text-orange-600" id="lbl-total-qty">0</strong> dus</span>
                     <span class="w-1 h-1 rounded-full bg-slate-300"></span>
                     <span>Jumlah PO: <strong class="text-blue-600" id="lbl-total-kodepo">0</strong></span>
@@ -164,7 +168,7 @@
 
             <!-- Tombol Simpan (Hanya tampil di Tab Input) -->
             <div id="footer-input" class="w-full flex justify-end">
-                <button id="btn-submit-db" onclick="simpanMassalKeDatabase()" class="w-full md:w-auto px-8 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-md shadow-sm flex items-center justify-center gap-2 text-sm transition active:scale-95 uppercase">
+                <button id="btn-submit-db" onclick="simpanMassalKeDatabase()" class="w-full md:w-auto px-8 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-md shadow-sm flex items-center justify-center gap-2 text-sm transition active:scale-95 uppercase border-b-4 border-emerald-800">
                     <i data-lucide="save" class="w-4 h-4"></i> <span>SIMPAN PO KE DATABASE</span>
                 </button>
             </div>
