@@ -5,48 +5,33 @@ let kamusData = [];
 let jasperData = [];
 let sortState = {}; 
 let globalCheckedCancel = []; 
+
+// State Filter Excel & Paginasi
+let activeFilters = {}; 
+let currentFilterCol = '';
+let currentPage = 1;
+let rowsPerPage = 10; 
+
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
 document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'riwayat_keluar', title: 'RIWAYAT KELUAR', url: 'riwayat_keluar.html' });
+    
+    document.addEventListener('click', function(e) {
+        const menu = document.getElementById('excel-filter-menu');
+        if (menu && !menu.classList.contains('hidden')) {
+            if (!menu.contains(e.target) && !e.target.closest('button[onclick^="openColumnFilter"]')) {
+                closeFilterMenu();
+            }
+        }
+    });
+
     setTimeout(async () => {
         await loadKamusDanJasper();
         await loadAreasForCancel(); 
         await muatDataDariSupabase();
     }, 200);
 });
-
-function sortTable(colIndex, headerEl) {
-    const tbody = document.getElementById('tbody-keluar');
-    const rows = Array.from(tbody.querySelectorAll('tr.text-row'));
-    
-    let isAsc = sortState[colIndex] !== 'asc';
-    sortState[colIndex] = isAsc ? 'asc' : 'desc';
-    
-    rows.sort((a, b) => {
-        let valA = a.cells[colIndex].innerText.trim();
-        let valB = b.cells[colIndex].innerText.trim();
-        let numA = parseFloat(valA); let numB = parseFloat(valB);
-        if(!isNaN(numA) && !isNaN(numB)) { return isAsc ? numA - numB : numB - numA; } 
-        else { return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA); }
-    });
-    
-    rows.forEach(row => tbody.appendChild(row));
-    document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-50'); });
-    const icon = headerEl.querySelector('.sort-icon');
-    if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-50'); lucide.createIcons(); }
-}
-
-function toggleSidebarFilter() {
-    document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
-    document.getElementById('overlay-klik-luar-k').classList.toggle('hidden');
-}
-
-function tutupPopups() {
-    document.getElementById('sidebar-filter').classList.add('translate-x-full');
-    document.getElementById('modal-cancel-hold').classList.add('hidden');
-    document.getElementById('overlay-klik-luar-k').classList.add('hidden');
-}
 
 async function loadAreasForCancel() {
     try {
@@ -137,12 +122,13 @@ function translateBarcode(barcode) {
 
 function setMode(m) {
     modeSekarang = m;
+    
+    const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+
     ['qrcode', 'item', 'jasper', 'hold'].forEach(tab => {
         const el = document.getElementById('tab-mode-' + tab);
-        if(el) {
-            if(m === tab) el.className = 'px-6 py-4 border-b-4 border-blue-800 text-blue-800 font-black text-xs whitespace-nowrap flex items-center gap-2 transition';
-            else el.className = 'px-6 py-4 border-b-4 border-transparent text-slate-500 font-bold text-xs whitespace-nowrap flex items-center gap-2 hover:text-slate-800 transition';
-        }
+        if(el) el.className = (m === tab) ? activeClass : inactiveClass;
     });
 
     const btnHold = document.getElementById('btn-hold');
@@ -152,10 +138,239 @@ function setMode(m) {
     else if(m === 'hold') { btnHold.classList.add('hidden'); btnCancel.classList.remove('hidden'); }
     else { btnHold.classList.add('hidden'); btnCancel.classList.add('hidden'); }
 
+    activeFilters = {}; 
     renderHeaderDanTabel();
 }
 
-const thSort = (idx, label, cls = "") => `<th class="hdr-std ${cls} cursor-pointer hover:bg-slate-700 transition select-none" onclick="sortTable(${idx}, this)"><div class="flex items-center justify-center gap-1">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></div></th>`;
+// ========================================================
+// SORTING & FILTER EXCEL PRO
+// ========================================================
+function sortTable(colIndex, headerEl) {
+    const tbody = document.getElementById('tbody-keluar');
+    const rows = Array.from(tbody.querySelectorAll('tr.text-row'));
+    let isAsc = sortState[colIndex] !== 'asc'; sortState[colIndex] = isAsc ? 'asc' : 'desc';
+    
+    rows.sort((a, b) => {
+        let valA = a.cells[colIndex].getAttribute('data-search') || a.cells[colIndex].innerText.trim(); 
+        let valB = b.cells[colIndex].getAttribute('data-search') || b.cells[colIndex].innerText.trim();
+        let numA = parseFloat(valA); let numB = parseFloat(valB);
+        if(!isNaN(numA) && !isNaN(numB)) return isAsc ? numA - numB : numB - numA;
+        return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+    document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-30'); });
+    const icon = headerEl.querySelector('.sort-icon');
+    if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
+    applyPagination();
+}
+
+const thSort = (idx, label, cls = "") => {
+    const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
+    const noFilter = ['col-cb', 'col-btn', 'col-no'].includes(colClass);
+    
+    const filterBtn = noFilter ? '' : `
+        <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-600 rounded ml-1 transition" title="Filter ${label}">
+            <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
+        </button>`;
+
+    return `<th class="hdr-std ${cls} select-none relative border-r border-slate-600">
+        <div class="flex items-center justify-center gap-1.5">
+            <span class="cursor-pointer flex items-center gap-1 hover:text-blue-300 transition" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
+            ${filterBtn}
+        </div>
+    </th>`;
+};
+
+function openColumnFilter(event, colClass, colName) {
+    event.stopPropagation(); currentFilterCol = colClass;
+    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
+    let uniqueValues = new Set();
+    
+    document.querySelectorAll('#tbody-keluar tr.text-row').forEach(row => {
+        let showBasedOnOthers = true;
+        for (let otherCol in activeFilters) {
+            if (otherCol !== colClass) { 
+                const allowed = activeFilters[otherCol]; const c = row.querySelector('.' + otherCol);
+                let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
+                if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
+            }
+        }
+        if (showBasedOnOthers) {
+            let cell = row.querySelector('.' + colClass);
+            if (cell) { let val = cell.getAttribute('data-search') || cell.innerText.trim(); if(val !== '') uniqueValues.add(val); }
+        }
+    });
+
+    let sortedValues = Array.from(uniqueValues).sort();
+    let listHtml = `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-0"> <span class="font-black text-slate-800">(PILIH SEMUA)</span></label>`;
+    
+    sortedValues.forEach(val => {
+        let isChecked = true;
+        if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
+        listHtml += `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded filter-val-item" data-value="${encodeURIComponent(val)}">
+            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-0" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
+            <span class="truncate font-bold text-slate-600">${val}</span>
+        </label>`;
+    });
+
+    document.getElementById('filter-values-list').innerHTML = listHtml; updateSelectAllState();
+    document.getElementById('filter-search-input').value = '';
+    const rect = event.currentTarget.getBoundingClientRect(); const menu = document.getElementById('excel-filter-menu');
+    if(menu) {
+        menu.classList.remove('hidden');
+        let top = rect.bottom + window.scrollY + 5; let left = rect.left + window.scrollX;
+        if (left + 256 > window.innerWidth) { left = window.innerWidth - 266; }
+        menu.style.top = top + 'px'; menu.style.left = left + 'px';
+    }
+    const sInput = document.getElementById('filter-search-input'); if(sInput) sInput.focus();
+}
+
+function toggleAllFilterValues(checked) {
+    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
+    updateSelectAllState();
+}
+function updateSelectAllState() {
+    const allCbs = document.querySelectorAll('.filter-val-cb'); const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
+    const selectAll = document.getElementById('filter-select-all'); if(!selectAll) return;
+    if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
+    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
+    else { selectAll.checked = false; selectAll.indeterminate = true; }
+}
+
+function searchFilterList(val) {
+    const query = val.toLowerCase().split(' ').filter(x => x);
+    document.querySelectorAll('.filter-val-item').forEach(label => {
+        const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
+        label.style.display = query.every(term => text.includes(term)) ? '' : 'none';
+    });
+}
+function closeFilterMenu() { const menu = document.getElementById('excel-filter-menu'); if(menu) menu.classList.add('hidden'); }
+function clearFilterForCurrentCol() { delete activeFilters[currentFilterCol]; closeFilterMenu(); saringTabelExcel(); updateFilterIcons(); }
+function applyFilterForCurrentCol() {
+    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked'); const totalBoxes = document.querySelectorAll('.filter-val-cb');
+    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') { delete activeFilters[currentFilterCol]; } 
+    else { activeFilters[currentFilterCol] = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value)); }
+    closeFilterMenu(); saringTabelExcel(); updateFilterIcons();
+}
+function saringTabelExcel() {
+    document.querySelectorAll('.text-row').forEach(row => {
+        let show = true;
+        for (let colClass in activeFilters) {
+            const allowed = activeFilters[colClass]; const cell = row.querySelector('.' + colClass);
+            if (cell) { if (!allowed.includes(cell.getAttribute('data-search') || cell.innerText.trim())) { show = false; break; } }
+        }
+        if (show) { row.classList.remove('filtered-out'); } 
+        else { row.classList.add('filtered-out'); let cb = row.querySelector('.row-cb'); if(cb) { cb.checked = false; highlightRow(cb); } }
+    });
+    currentPage = 1; applyPagination();
+}
+function updateFilterIcons() {
+    document.querySelectorAll('.filter-icon').forEach(icon => { icon.classList.remove('text-amber-400', 'opacity-100'); icon.classList.add('opacity-40', 'text-white'); });
+    for (let colClass in activeFilters) {
+        const th = document.querySelector(`th.${colClass}`);
+        if (th) { const icon = th.querySelector('.filter-icon'); if (icon) { icon.classList.remove('opacity-40', 'text-white'); icon.classList.add('text-amber-400', 'opacity-100'); } }
+    }
+}
+
+// ========================================================
+// PAGINASI & RENDER TABEL
+// ========================================================
+function changeRowsPerPage(val) {
+    if (val === 'ALL') { rowsPerPage = 999999; } 
+    else { rowsPerPage = parseInt(val); }
+    currentPage = 1; applyPagination();
+}
+
+function applyPagination() {
+    const allRows = Array.from(document.querySelectorAll('#tbody-keluar tr.text-row'));
+    allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
+    
+    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
+    const totalFiltered = visibleRows.length; const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
+    
+    if(currentPage > totalPages) currentPage = totalPages; 
+    if(currentPage < 1) currentPage = 1;
+
+    const startIndex = (currentPage - 1) * rowsPerPage; const endIndex = startIndex + rowsPerPage;
+    
+    let sumQty = 0;
+
+    visibleRows.forEach((row, index) => {
+        const qtyCell = row.querySelector('.col-qty');
+        if (qtyCell && (modeSekarang === 'item' || modeSekarang === 'jasper')) { 
+            sumQty += parseInt(qtyCell.getAttribute('data-search') || qtyCell.innerText) || 0; 
+        } else { 
+            sumQty += 1; 
+        }
+
+        if(index >= startIndex && index < endIndex) { row.style.display = ''; } 
+        else { row.style.display = 'none'; }
+    });
+
+    if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
+    if(document.getElementById('lbl-total-qty')) document.getElementById('lbl-total-qty').innerText = sumQty;
+    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
+    if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
+    updateSelectedCount();
+}
+
+function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } }
+function nextPage() { 
+    const totalVisible = document.querySelectorAll('#tbody-keluar tr.text-row:not(.filtered-out)').length;
+    if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
+}
+
+function updateSelectedCount() {
+    const count = document.querySelectorAll('.row-cb:checked').length;
+    if(document.getElementById('lbl-pilih-baris')) document.getElementById('lbl-pilih-baris').innerText = count;
+}
+
+function highlightRow(cb) {
+    const tr = cb.closest('tr');
+    if (tr) {
+        if (cb.checked) tr.classList.add('selected-row');
+        else tr.classList.remove('selected-row');
+    }
+    updateSelectedCount();
+}
+
+function toggleSemuaCentang(checked) { 
+    document.querySelectorAll('.row-cb').forEach(cb => {
+        const row = cb.closest('tr'); if (row && row.style.display !== 'none' && !row.classList.contains('filtered-out')) { cb.checked = checked; highlightRow(cb); }
+    });
+}
+
+function initResizableColumns() {
+    const cols = document.querySelectorAll('#table-keluar-main th');
+    cols.forEach(col => {
+        const existing = col.querySelector('.resizer');
+        if(existing) existing.remove();
+
+        const resizer = document.createElement('div');
+        resizer.classList.add('resizer');
+        col.appendChild(resizer);
+        
+        let x = 0; let w = 0;
+        resizer.addEventListener('mousedown', function(e) {
+            x = e.clientX;
+            w = parseInt(window.getComputedStyle(col).width, 10);
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+            resizer.classList.add('resizing');
+        });
+        const mouseMoveHandler = function(e) {
+            const dx = e.clientX - x;
+            col.style.width = `${w + dx}px`;
+            col.style.minWidth = `${w + dx}px`;
+        };
+        const mouseUpHandler = function() {
+            document.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
+            resizer.classList.remove('resizing');
+        };
+    });
+}
 
 function renderHeaderDanTabel() {
     const thead = document.getElementById('thead-keluar');
@@ -167,55 +382,53 @@ function renderHeaderDanTabel() {
     if(modeSekarang === 'qrcode' || modeSekarang === 'hold') {
         thead.innerHTML = `
             <tr>
-                <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded border-slate-300"></th>
-                ${thSort(1, 'No', 'w-12 col-no')}
+                <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500"></th>
+                ${thSort(1, 'No', 'col-no w-12')}
                 ${thSort(2, 'Waktu Keluar', 'col-waktu')}
-                ${thSort(3, 'QRCode', 'border-r border-slate-500 col-qr')}
+                ${thSort(3, 'QRCode', 'col-qr')}
                 ${thSort(4, 'Tgl Produksi', 'col-tgl')}
                 ${thSort(5, 'Mesin', 'col-mesin')}
-                ${thSort(6, 'Shift', 'border-r border-slate-500 col-shift')}
-                ${thSort(7, 'Jenis Item', 'text-blue-300 col-jenis')}
+                ${thSort(6, 'Shift', 'col-shift')}
+                ${thSort(7, 'Jenis Item', 'col-jenis text-blue-300')}
                 ${thSort(8, 'Nama Item', 'col-nama')}
                 ${thSort(9, 'Pjg', 'col-pjg')}
                 ${thSort(10, 'Grade', 'col-grade')}
                 ${thSort(11, 'Dus', 'col-dus')}
-                ${thSort(12, 'Shading', 'border-r border-slate-500 col-shading')}
+                ${thSort(12, 'Shading', 'col-shading')}
                 ${thSort(13, 'Customer Bawaan', 'col-customer')}
-                ${thSort(14, 'Customer Keluar', 'text-amber-300 bg-amber-50/10 col-tujuan')}
-                ${thSort(15, 'Keterangan', 'col-ket border-r border-slate-500')}
+                ${thSort(14, 'Customer Keluar', 'col-tujuan text-amber-300')}
+                ${thSort(15, 'Keterangan', 'col-ket')}
                 ${thSort(16, 'PIC Keluar', 'col-pic')}
             </tr>`;
         
-        if(targetData.length === 0) { tbody.innerHTML = '<tr><td colspan="17" class="p-6 font-bold text-slate-400">Tidak ada data.</td></tr>'; return; }
+        if(targetData.length === 0) { tbody.innerHTML = '<tr><td colspan="17" class="p-10 text-center font-medium text-slate-400">Tidak ada data.</td></tr>'; applyPagination(); return; }
         
         let h = '';
         targetData.forEach((r, i) => {
             const dt = new Date(r.created_at);
             const tglKeluar = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
             const td = translateBarcode(r.qrcode);
-            
-            // REVISI: Menggunakan customer_keluar sesuai SQL
             const customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku); 
 
             h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row transition text-sm">
-                    <td class="p-3 text-center col-cb"><input type="checkbox" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-                    <td class="p-3 font-bold text-slate-500 text-center col-no">${i+1}</td>
-                    <td class="p-3 text-slate-600 font-semibold text-center col-waktu">${tglKeluar}</td>
-                    <td class="p-3 font-mono font-bold text-slate-900 text-left bg-slate-50/50 tracking-wider border-r border-slate-200 col-qr">${r.qrcode}</td>
-                    <td class="p-3 font-bold text-slate-600 text-center col-tgl">${td.tglProduksi}</td>
-                    <td class="p-3 font-bold text-slate-600 text-center col-mesin">${td.mesin}</td>
-                    <td class="p-3 font-bold text-slate-600 text-center border-r border-slate-200 col-shift">${td.shift}</td>
-                    <td class="p-3 font-black text-blue-700 text-center col-jenis">${td.jenisItem}</td>
-                    <td class="p-3 font-bold text-slate-800 text-left col-nama">${td.namaItem}</td>
-                    <td class="p-3 font-bold text-slate-600 text-center col-pjg">${td.panjang}</td>
-                    <td class="p-3 font-bold text-slate-800 text-center col-grade">${td.grade}</td>
-                    <td class="p-3 font-bold text-slate-800 text-center col-dus">${td.dus}</td>
-                    <td class="p-3 font-bold text-slate-600 text-center border-r border-slate-200 col-shading">${td.shading}</td>
-                    <td class="p-3 font-black text-orange-600 bg-orange-50/50 text-center col-customer">${td.customer}</td>
-                    <td class="p-3 font-black text-amber-600 bg-amber-50/50 text-center col-tujuan">${customerKeluar}</td>
-                    <td class="p-3 text-slate-600 font-semibold text-left border-r border-slate-200 col-ket">${r.keterangan || '-'}</td>
-                    <td class="p-3 font-bold uppercase text-xs text-slate-400 text-center col-pic">${r.pic_input || '-'}</td>
+                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row transition text-sm bg-white">
+                    <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 font-bold text-slate-500 text-center col-no border-r border-slate-200">${i+1}</td>
+                    <td class="px-4 py-3 text-slate-600 font-medium text-center col-waktu border-r border-slate-200" data-search="${tglKeluar}">${tglKeluar}</td>
+                    <td class="px-4 py-3 font-mono font-bold text-slate-900 text-left tracking-wider border-r border-slate-200 col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
+                    <td class="px-4 py-3 font-medium text-slate-600 text-center col-tgl border-r border-slate-200" data-search="${td.tglProduksi}">${td.tglProduksi}</td>
+                    <td class="px-4 py-3 font-medium text-slate-600 text-center col-mesin border-r border-slate-200" data-search="${td.mesin}">${td.mesin}</td>
+                    <td class="px-4 py-3 font-medium text-slate-600 text-center border-r border-slate-200 col-shift" data-search="${td.shift}">${td.shift}</td>
+                    <td class="px-4 py-3 font-medium text-blue-600 text-center col-jenis border-r border-slate-200" data-search="${td.jenisItem}">${td.jenisItem}</td>
+                    <td class="px-4 py-3 font-bold text-slate-800 text-left col-nama border-r border-slate-200" data-search="${td.namaItem}">${td.namaItem}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-center col-pjg border-r border-slate-200" data-search="${td.panjang}">${td.panjang}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-center col-grade border-r border-slate-200" data-search="${td.grade}">${td.grade}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-center col-dus border-r border-slate-200" data-search="${td.dus}">${td.dus}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-center border-r border-slate-200 col-shading" data-search="${td.shading}">${td.shading}</td>
+                    <td class="px-4 py-3 font-medium text-orange-600 text-center col-customer border-r border-slate-200" data-search="${td.customer}">${td.customer}</td>
+                    <td class="px-4 py-3 font-black text-amber-600 text-center col-tujuan border-r border-slate-200" data-search="${customerKeluar}">${customerKeluar}</td>
+                    <td class="px-4 py-3 text-slate-600 font-medium text-left border-r border-slate-200 col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
+                    <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 text-center col-pic" data-search="${r.pic_keluar || '-'}">${r.pic_keluar || '-'}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
@@ -224,21 +437,21 @@ function renderHeaderDanTabel() {
         const isJasper = modeSekarang === 'jasper';
         thead.innerHTML = `
             <tr>
-                <th class="hdr-std w-10 col-cb"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded border-slate-300"></th>
-                ${thSort(1, 'No', 'w-12 col-no')}
+                <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500"></th>
+                ${thSort(1, 'No', 'col-no w-12')}
                 ${thSort(2, 'Tgl Produksi', 'col-tgl')}
                 ${thSort(3, 'Mesin', 'col-mesin')}
-                ${thSort(4, 'Shift', 'border-r border-slate-500 col-shift')}
+                ${thSort(4, 'Shift', 'col-shift')}
                 ${thSort(5, 'Jenis Item', 'col-jenis')}
-                ${thSort(6, isJasper ? 'Nama Barang Jasper' : 'Nama Item', 'col-nama')}
+                ${thSort(6, isJasper ? 'Nama Barang Jasper' : 'Nama Item', 'col-nama text-blue-300')}
                 ${thSort(7, 'Pjg', 'col-pjg')}
                 ${thSort(8, 'Grade', 'col-grade')}
                 ${thSort(9, 'Dus', 'col-dus')}
-                ${thSort(10, 'Shading', 'border-r border-slate-500 col-shading')}
+                ${thSort(10, 'Shading', 'col-shading')}
                 ${thSort(11, 'Customer Bawaan', 'col-customer')}
-                ${thSort(12, 'Customer Keluar', 'text-amber-300 bg-amber-50/10 col-tujuan')}
-                ${thSort(13, 'QTY KELUAR (DUS)', 'bg-slate-900 text-emerald-300 border-l border-slate-500 border-r col-qty')}
-                ${thSort(14, 'Keterangan', 'border-r border-slate-500 col-ket')}
+                ${thSort(12, 'Customer Keluar', 'col-tujuan text-amber-300')}
+                ${thSort(13, 'QTY KELUAR (DUS)', 'col-qty text-emerald-300')}
+                ${thSort(14, 'Keterangan', 'col-ket')}
             </tr>`;
         
         let groups = {};
@@ -259,72 +472,35 @@ function renderHeaderDanTabel() {
         });
 
         let arr = Object.values(groups);
-        if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="15" class="p-6 font-bold text-slate-400">Kosong.</td></tr>'; return; }
+        if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="15" class="p-10 text-center font-medium text-slate-400">Kosong.</td></tr>'; applyPagination(); return; }
 
         let h = '';
         arr.forEach((r, i) => {
             const displayKet = (r.ket === 'TANPA_KETERANGAN') ? '-' : r.ket; 
             h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row text-center transition text-sm">
-                    <td class="p-3 col-cb"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded"></td>
-                    <td class="p-3 font-bold text-slate-500 col-no">${i+1}</td>
-                    <td class="p-3 font-bold text-slate-600 col-tgl">${r.tglProduksi}</td>
-                    <td class="p-3 font-bold text-slate-600 col-mesin">${r.mesin}</td>
-                    <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shift">${r.shift}</td>
-                    <td class="p-3 font-black text-blue-700 col-jenis">${r.jenisItem}</td>
-                    <td class="p-3 font-bold text-slate-800 text-left col-nama">${r.displayNama}</td>
-                    <td class="p-3 font-bold text-slate-500 col-pjg">${r.panjang}</td>
-                    <td class="p-3 font-semibold text-slate-800 col-grade">${r.grade}</td>
-                    <td class="p-3 font-bold text-slate-800 col-dus">${r.dus}</td>
-                    <td class="p-3 font-bold text-slate-600 border-r border-slate-200 col-shading">${r.shading}</td>
-                    <td class="p-3 font-black text-orange-600 bg-orange-50/40 col-customer">${r.customer}</td>
-                    <td class="p-3 font-black text-amber-600 bg-amber-50/40 col-tujuan">${r.tj}</td>
-                    <td class="p-3 font-black text-base text-emerald-700 bg-emerald-50 border-l border-r border-slate-200 col-qty">${r.qty}</td>
-                    <td class="p-3 font-bold text-slate-600 text-left col-ket border-r border-slate-200">${displayKet}</td>
+                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row text-center transition text-sm bg-white">
+                    <td class="px-4 py-3 col-cb border-r border-slate-200"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 font-bold text-slate-500 col-no border-r border-slate-200">${i+1}</td>
+                    <td class="px-4 py-3 font-medium text-slate-600 col-tgl border-r border-slate-200" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
+                    <td class="px-4 py-3 font-medium text-slate-600 col-mesin border-r border-slate-200" data-search="${r.mesin}">${r.mesin}</td>
+                    <td class="px-4 py-3 font-medium text-slate-600 border-r border-slate-200 col-shift" data-search="${r.shift}">${r.shift}</td>
+                    <td class="px-4 py-3 font-medium text-blue-600 col-jenis border-r border-slate-200" data-search="${r.jenisItem}">${r.jenisItem}</td>
+                    <td class="px-4 py-3 font-bold text-slate-800 text-left col-nama border-r border-slate-200" data-search="${r.displayNama}">${r.displayNama}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 border-r border-slate-200 col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-3 font-medium text-orange-600 col-customer border-r border-slate-200" data-search="${r.customer}">${r.customer}</td>
+                    <td class="px-4 py-3 font-black text-amber-600 col-tujuan border-r border-slate-200" data-search="${r.tj}">${r.tj}</td>
+                    <td class="px-4 py-3 font-black text-emerald-700 col-qty border-r border-slate-200" data-search="${r.qty}">${r.qty}</td>
+                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${displayKet}">${displayKet}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
     }
-    lucide.createIcons(); jalankanSaring();
-}
-
-function toggleSemuaCentang(checked) { document.querySelectorAll('.row-cb').forEach(cb => cb.checked = checked); }
-
-function bersihkanFilter() { 
-    const ids = ['f-waktu','f-tujuan','f-qr','f-tgl','f-mesin','f-shift','f-jenis','f-nama','f-pjg','f-grade','f-dus','f-shading','f-po','f-ket','f-pic'];
-    ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; }); 
-    jalankanSaring(); toggleSidebarFilter();
-}
-
-function jalankanSaring() {
-    const f = {
-        waktu: document.getElementById('f-waktu').value.toLowerCase(),
-        tujuan: document.getElementById('f-tujuan').value.toLowerCase(),
-        qr: document.getElementById('f-qr').value.toLowerCase(),
-        tgl: document.getElementById('f-tgl').value.toLowerCase(),
-        mesin: document.getElementById('f-mesin').value.toLowerCase(),
-        shift: document.getElementById('f-shift').value.toLowerCase(),
-        jenis: document.getElementById('f-jenis').value.toLowerCase(),
-        nama: document.getElementById('f-nama').value.toLowerCase(),
-        pjg: document.getElementById('f-pjg').value.toLowerCase(),
-        grade: document.getElementById('f-grade').value.toLowerCase(),
-        dus: document.getElementById('f-dus').value.toLowerCase(),
-        shading: document.getElementById('f-shading').value.toLowerCase(),
-        customer: document.getElementById('f-po').value.toLowerCase(),
-        ket: document.getElementById('f-ket').value.toLowerCase(),
-        pic: document.getElementById('f-pic').value.toLowerCase()
-    };
-
-    document.querySelectorAll('.text-row').forEach(row => {
-        let show = true;
-        for(let key in f) {
-            if(f[key]) {
-                const cell = row.querySelector('.col-' + key);
-                if(cell && !cell.innerText.toLowerCase().includes(f[key])) { show = false; break; }
-            }
-        }
-        row.style.display = show ? '' : 'none';
-    });
+    lucide.createIcons(); 
+    saringTabelExcel();
+    initResizableColumns();
 }
 
 async function aksiMassal(tipe) {
@@ -404,11 +580,9 @@ async function aksiMassal(tipe) {
         document.getElementById('cancel-area').value = '';
         
         document.getElementById('modal-cancel-hold').classList.remove('hidden');
-        document.getElementById('overlay-klik-luar-k').classList.remove('hidden');
     }
 }
 
-// EKSEKUSI CANCEL KELUAR VIA POP-UP
 async function eksekusiCancelHold() {
     const areaCancel = document.getElementById('cancel-area').value;
     const ketCancel = document.getElementById('cancel-ket').value.trim();
