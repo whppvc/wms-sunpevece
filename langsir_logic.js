@@ -400,10 +400,14 @@ async function saveToSupabase() {
         
         let id_sku = `${area}_${nama}_${pjg}_${grade}_${dus}_${shading}_${customer}_${ket}`;
         
+        // REVISI: Generate id_po
+        let id_po = `${nama}_${pjg}_${grade}`;
+        
         arrFisik.push({ 
             qrcode: qr, 
             area: area, 
             id_sku: id_sku, 
+            id_po: id_po, // <--- NEW
             tgl_produksi: tgl_produksi,
             mesin: mesin,
             shift: shift,
@@ -441,6 +445,7 @@ async function saveToSupabase() {
         if(!mapAktual[keyAkt]) {
             mapAktual[keyAkt] = {
                 id_sku: id_sku, 
+                id_po: id_po, // <--- NEW
                 jenis_item: jenis, 
                 nama_item: nama, 
                 panjang: pjg, 
