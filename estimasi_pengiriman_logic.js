@@ -41,18 +41,6 @@ function toggleInputPO() {
     }
 }
 
-function formatTglIntl(tglStr) {
-    if(!tglStr) return '-';
-    const p = tglStr.split('-');
-    if(p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`; 
-    
-    if(tglStr.includes('T')) {
-        const d = new Date(tglStr);
-        return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    }
-    return tglStr;
-}
-
 async function ambilReferensiMaster2() {
     try {
         const { data, error } = await db.from('master_2').select('*');
@@ -108,12 +96,8 @@ function addEstimasiLokal() {
     if (!kodePo || !customerPo || !nama || !pjg || !grade || !dus || !qtyPo) return alert("PERHATIAN: Semua kolom wajib diisi kecuali Note!");
     if (pjg && !pjg.toUpperCase().endsWith('M')) pjg = pjg + "M"; else pjg = pjg.toUpperCase();
 
-    const now = new Date();
-    const timeString = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
     stagingData.unshift({ 
         id: ++stagingRowId, 
-        created_at: timeString,
         kode_po: kodePo, 
         customer_po: customerPo, 
         nama_item: nama, 
@@ -126,6 +110,7 @@ function addEstimasiLokal() {
     
     renderHeaderDanTabel();
     
+    // Reset form
     document.getElementById('in-nama-item').value = ''; 
     document.getElementById('in-panjang').value = ''; 
     document.getElementById('in-grade').value = ''; 
@@ -139,20 +124,38 @@ function hapusBarisStaging(id) {
     renderHeaderDanTabel(); 
 }
 
-async function hapusBarisDB(id) {
-    if(!confirm("Apakah Anda yakin ingin menghapus data PO ini secara permanen?")) return;
+async function hapusMassalPO() {
+    const checkedBoxes = document.querySelectorAll('.cb-row:checked');
+    if (checkedBoxes.length === 0) return alert("Centang minimal 1 baris PO yang ingin dihapus!");
+    
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${checkedBoxes.length} data PO ini secara permanen?`)) return;
+
+    const idsToDelete = Array.from(checkedBoxes).map(cb => cb.value);
+    
+    const btn = document.getElementById('btn-hapus-po');
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menghapus...';
+    btn.disabled = true;
+
     try {
-        const { error } = await db.from('po_estimasi').delete().eq('id', id);
+        const { error } = await db.from('po_estimasi').delete().in('id', idsToDelete);
         if (error) throw error;
-        alert("Data berhasil dihapus!");
+        
+        alert("Data PO berhasil dihapus!");
         muatDataEstimasiDB();
     } catch (e) {
         alert("Gagal menghapus data: " + e.message);
+    } finally {
+        btn.innerHTML = ori;
+        btn.disabled = false;
+        lucide.createIcons();
     }
 }
 
 function toggleAllStaging(checked) { 
-    document.querySelectorAll('.cb-row').forEach(cb => cb.checked = checked); 
+    document.querySelectorAll('.cb-row').forEach(cb => {
+        if(cb.closest('tr').style.display !== 'none') cb.checked = checked;
+    }); 
 }
 
 async function simpanMassalKeDatabase() {
@@ -160,7 +163,7 @@ async function simpanMassalKeDatabase() {
     const btn = document.getElementById('btn-submit-db'); const oriText = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MENYIMPAN...'; btn.disabled = true;
 
-    // REVISI: Mengirimkan tanggal hari ini sebagai default untuk tgl_estimasi_kirim
+    // Default date to bypass not-null constraint
     const defaultDate = new Date().toISOString().split('T')[0];
 
     const payload = stagingData.map(d => ({ 
@@ -172,6 +175,7 @@ async function simpanMassalKeDatabase() {
         grade: d.grade, 
         dus: d.dus,
         qty_po: d.qty_po, 
+        qty_terpenuhi: 0,
         note: d.note, 
         pic: currentUser.username 
     }));
@@ -420,46 +424,51 @@ function renderHeaderDanTabel() {
 
     let dataset = currentMode === 'input' ? stagingData : dbRecordsRaw;
 
-    thead.innerHTML = `
-        <tr>
-            <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="toggleAllStaging(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500"></th>
-            <th class="hdr-std w-10 col-btn text-center relative border-r border-slate-600"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-rose-400"></i></th>
-            ${thSort(2, 'No', 'col-no w-12')}
-            ${thSort(3, 'Waktu Input', 'col-waktu')}
-            ${thSort(4, 'Kode PO', 'col-kode_po')}
-            ${thSort(5, 'Customer PO', 'col-customer_po')}
-            ${thSort(6, 'Nama Item', 'col-nama text-blue-300')}
-            ${thSort(7, 'Panjang', 'col-pjg')}
-            ${thSort(8, 'Grade', 'col-grade')}
-            ${thSort(9, 'Dus', 'col-dus')}
-            ${thSort(10, 'QTY PO', 'col-qty text-orange-300')}
-            ${thSort(11, 'Note', 'col-note')}
-            ${currentMode === 'tabel' ? thSort(12, 'PIC', 'col-pic') : ''}
-        </tr>`;
+    let thHtml = `<tr>
+        <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600">PILIH<br><input type="checkbox" onchange="toggleAllStaging(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>`;
+    
+    if (currentMode === 'input') {
+        thHtml += `<th class="hdr-std w-10 col-btn text-center relative border-r border-slate-600"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-rose-400"></i></th>
+        ${thSort(2, 'No', 'col-no w-12')}
+        ${thSort(3, 'Kode PO', 'col-kode_po')}
+        ${thSort(4, 'Customer PO', 'col-customer_po')}
+        ${thSort(5, 'Nama Item', 'col-nama text-blue-300')}
+        ${thSort(6, 'Panjang', 'col-pjg')}
+        ${thSort(7, 'Grade', 'col-grade')}
+        ${thSort(8, 'Dus', 'col-dus')}
+        ${thSort(9, 'QTY PO', 'col-qty text-orange-300')}
+        ${thSort(10, 'Note', 'col-note')}`;
+    } else {
+        thHtml += `${thSort(1, 'No', 'col-no w-12')}
+        ${thSort(2, 'Kode PO', 'col-kode_po')}
+        ${thSort(3, 'Customer PO', 'col-customer_po')}
+        ${thSort(4, 'Nama Item', 'col-nama text-blue-300')}
+        ${thSort(5, 'Panjang', 'col-pjg')}
+        ${thSort(6, 'Grade', 'col-grade')}
+        ${thSort(7, 'Dus', 'col-dus')}
+        ${thSort(8, 'QTY PO', 'col-qty text-orange-300')}
+        ${thSort(9, 'QTY TERPENUHI', 'col-qty_terpenuhi text-emerald-300')}
+        ${thSort(10, 'Note', 'col-note')}
+        ${thSort(11, 'PIC', 'col-pic')}`;
+    }
+    thHtml += `</tr>`;
+    thead.innerHTML = thHtml;
     
     if(dataset.length === 0) { 
         let msg = currentMode === 'input' ? 'Belum ada data ditambahkan ke tabel sementara.' : 'Tidak ada data PO di database.';
-        tbody.innerHTML = `<tr><td colspan="13" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> ${msg}</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="12" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> ${msg}</td></tr>`; 
         applyPagination(); return; 
     }
     
     let h = '';
     dataset.forEach((r, i) => {
-        let tglStr = currentMode === 'input' ? r.created_at : formatTglIntl(r.created_at);
-        
-        // REVISI: Nomor urut. Jika input, yang terbaru (index 0) adalah nomor terbesar.
         let noUrut = currentMode === 'input' ? (dataset.length - i) : (i + 1);
         
-        let btnHapus = currentMode === 'input' 
-            ? `<button onclick="hapusBarisStaging(${r.id})" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`
-            : `<button onclick="hapusBarisDB(${r.id})" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
-
         h += `
             <tr class="hover:bg-slate-50 transition r-row text-sm">
-                <td class="px-4 py-3 text-center col-cb border-b border-r border-slate-200"><input type="checkbox" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 text-center col-btn border-b border-r border-slate-200">${btnHapus}</td>
+                <td class="px-4 py-3 text-center col-cb border-b border-r border-slate-200"><input type="checkbox" value="${r.id}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                ${currentMode === 'input' ? `<td class="px-4 py-3 text-center col-btn border-b border-r border-slate-200"><button onclick="hapusBarisStaging(${r.id})" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>` : ''}
                 <td class="px-4 py-3 font-bold text-slate-500 text-center col-no border-b border-r border-slate-200">${noUrut}</td>
-                <td class="px-4 py-3 text-slate-600 font-medium col-waktu border-b border-r border-slate-200" data-search="${tglStr}">${tglStr}</td>
                 <td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-b border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
                 <td class="px-4 py-3 font-bold text-slate-700 col-customer_po border-b border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
                 <td class="px-4 py-3 font-bold text-blue-700 text-left col-nama border-b border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
@@ -467,6 +476,7 @@ function renderHeaderDanTabel() {
                 <td class="px-4 py-3 font-medium text-slate-700 col-grade border-b border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 col-dus border-b border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
                 <td class="px-4 py-3 font-black text-orange-600 bg-orange-50/50 col-qty border-b border-r border-slate-200" data-search="${r.qty_po}">${r.qty_po}</td>
+                ${currentMode === 'tabel' ? `<td class="px-4 py-3 font-black text-emerald-600 bg-emerald-50/50 col-qty_terpenuhi border-b border-r border-slate-200" data-search="${r.qty_terpenuhi || 0}">${r.qty_terpenuhi || 0}</td>` : ''}
                 <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket border-b border-r border-slate-200" data-search="${r.note || '-'}">${r.note || '-'}</td>
                 ${currentMode === 'tabel' ? `<td class="px-4 py-3 font-bold uppercase text-xs text-slate-400 col-pic border-b border-r border-slate-200" data-search="${r.pic || '-'}">${r.pic || '-'}</td>` : ''}
             </tr>`;
