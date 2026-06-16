@@ -14,7 +14,8 @@ let currentFilterCol = '';
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || { username: 'Admin' };
 
 document.addEventListener('DOMContentLoaded', async () => {
-    initModernLayout({ id: 'estimasi_pengiriman', title: 'PO & ESTIMASI', url: 'estimasi_pengiriman.html' });
+    // REVISI: Ubah id dan url sesuai dengan nama file baru
+    initModernLayout({ id: 'po', title: 'PO & ESTIMASI', url: 'po.html' });
     
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
@@ -96,8 +97,12 @@ function addEstimasiLokal() {
     if (!kodePo || !customerPo || !nama || !pjg || !grade || !dus || !qtyPo) return alert("PERHATIAN: Semua kolom wajib diisi kecuali Note!");
     if (pjg && !pjg.toUpperCase().endsWith('M')) pjg = pjg + "M"; else pjg = pjg.toUpperCase();
 
+    const now = new Date();
+    const timeString = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
     stagingData.unshift({ 
         id: ++stagingRowId, 
+        created_at: timeString,
         kode_po: kodePo, 
         customer_po: customerPo, 
         nama_item: nama, 
@@ -462,12 +467,19 @@ function renderHeaderDanTabel() {
     
     let h = '';
     dataset.forEach((r, i) => {
+        // Format tanggal untuk input (karena belum masuk DB, formatnya masih string lokal)
+        let tglStr = currentMode === 'input' ? r.created_at : formatTglIntl(r.created_at);
+        
         let noUrut = currentMode === 'input' ? (dataset.length - i) : (i + 1);
         
+        let btnHapus = currentMode === 'input' 
+            ? `<button onclick="hapusBarisStaging(${r.id})" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`
+            : '';
+
         h += `
             <tr class="hover:bg-slate-50 transition r-row text-sm">
                 <td class="px-4 py-3 text-center col-cb border-b border-r border-slate-200"><input type="checkbox" value="${r.id}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                ${currentMode === 'input' ? `<td class="px-4 py-3 text-center col-btn border-b border-r border-slate-200"><button onclick="hapusBarisStaging(${r.id})" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>` : ''}
+                ${currentMode === 'input' ? `<td class="px-4 py-3 text-center col-btn border-b border-r border-slate-200">${btnHapus}</td>` : ''}
                 <td class="px-4 py-3 font-bold text-slate-500 text-center col-no border-b border-r border-slate-200">${noUrut}</td>
                 <td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-b border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
                 <td class="px-4 py-3 font-bold text-slate-700 col-customer_po border-b border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
@@ -478,7 +490,7 @@ function renderHeaderDanTabel() {
                 <td class="px-4 py-3 font-black text-orange-600 bg-orange-50/50 col-qty border-b border-r border-slate-200" data-search="${r.qty_po}">${r.qty_po}</td>
                 ${currentMode === 'tabel' ? `<td class="px-4 py-3 font-black text-emerald-600 bg-emerald-50/50 col-qty_terpenuhi border-b border-r border-slate-200" data-search="${r.qty_terpenuhi || 0}">${r.qty_terpenuhi || 0}</td>` : ''}
                 <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket border-b border-r border-slate-200" data-search="${r.note || '-'}">${r.note || '-'}</td>
-                ${currentMode === 'tabel' ? `<td class="px-4 py-3 font-bold uppercase text-xs text-slate-400 col-pic border-b border-r border-slate-200" data-search="${r.pic || '-'}">${r.pic || '-'}</td>` : ''}
+                ${currentMode === 'tabel' ? `<td class="px-4 py-3 font-bold uppercase text-xs text-slate-400 col-pic border-b border-slate-200" data-search="${r.pic || '-'}">${r.pic || '-'}</td>` : ''}
             </tr>`;
     });
     tbody.innerHTML = h;
