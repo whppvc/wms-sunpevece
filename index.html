@@ -4,75 +4,155 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WMS Sunpevece - Login</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-blue-500 relative">
 
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1A2235;
+        }
+        
+        /* Custom Glassmorphism Card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        /* Custom Input Glass */
+        .glass-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+        }
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        .glass-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Geometric Background Shapes */
+        .shape-1 { position: absolute; top: -15%; right: -5%; width: 300px; height: 800px; background: rgba(255,255,255,0.03); transform: rotate(45deg); pointer-events: none; }
+        .shape-2 { position: absolute; top: -25%; right: 5%; width: 250px; height: 800px; background: rgba(255,255,255,0.02); transform: rotate(45deg); pointer-events: none; }
+        .shape-3 { position: absolute; top: -5%; right: -15%; width: 400px; height: 800px; background: rgba(255,255,255,0.02); transform: rotate(45deg); pointer-events: none; }
+        
+        .shape-4 { position: absolute; bottom: -20%; left: -10%; width: 200px; height: 600px; background: rgba(255,255,255,0.03); transform: rotate(45deg); pointer-events: none; border-radius: 40px; }
+        .shape-5 { position: absolute; bottom: -10%; left: -20%; width: 300px; height: 600px; background: rgba(255,255,255,0.02); transform: rotate(45deg); pointer-events: none; border-radius: 40px; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center relative overflow-hidden text-white">
+
+    <!-- Background Geometric Shapes -->
+    <div class="shape-1"></div>
+    <div class="shape-2"></div>
+    <div class="shape-3"></div>
+    <div class="shape-4"></div>
+    <div class="shape-5"></div>
+
+    <!-- Settings Button (Top Right) -->
     <div class="absolute top-6 right-6 z-20">
-        <button id="btn-setting" class="p-3 bg-white/10 rounded-full hover:bg-white/30 backdrop-blur-md border border-white/20 transition-all text-white shadow-lg cursor-pointer">
-            <i data-lucide="settings" class="w-6 h-6"></i>
+        <button id="btn-setting" class="w-10 h-10 flex items-center justify-center rounded-full glass-card hover:bg-white/20 transition-all cursor-pointer">
+            <i data-lucide="settings" class="w-4 h-4 text-white/70"></i>
         </button>
     </div>
 
-    <div id="popup-setting" class="hidden absolute inset-0 flex items-center justify-center bg-black/70 z-50 backdrop-blur-sm transition-all">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl w-[90%] max-w-sm border border-gray-100">
-            <h3 class="text-xl font-bold mb-4 text-center text-gray-800 flex flex-col items-center gap-2">
-                <i data-lucide="shield-alert" class="w-10 h-10 text-blue-600"></i>
-                Akses Creator
-            </h3>
-            <p id="error-setting" class="text-red-600 text-center text-sm mb-4 hidden font-semibold bg-red-50 border border-red-200 py-2 rounded-lg">PIN Salah!</p>
-            <input type="password" id="input-pass-setting" class="w-full p-4 text-2xl font-bold text-center tracking-[0.5em] border-2 border-gray-200 rounded-xl mb-6 text-black outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition" placeholder="••••">
-            <div class="flex justify-between gap-3">
-                <button id="btn-batal-setting" class="w-1/2 py-3 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold transition">Batal</button>
-                <button id="btn-masuk-setting" class="w-1/2 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold transition shadow-md">Masuk</button>
-            </div>
-        </div>
+    <!-- Sparkle Icon (Bottom Right) -->
+    <div class="absolute bottom-8 right-8 z-0 pointer-events-none">
+        <i data-lucide="sparkles" class="w-8 h-8 text-white/20"></i>
     </div>
 
-    <div class="relative z-10 bg-white/20 backdrop-blur-lg border border-white/30 p-10 rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] w-[90%] max-w-lg">
-        <div class="flex justify-center mb-6">
-            <div class="bg-white/90 p-4 rounded-2xl shadow-inner">
-                <img src="sunpevece.png" alt="Logo Sunpevece" class="h-16 object-contain" onerror="this.style.display='none'">
+    <!-- LOGIN CARD -->
+    <div class="relative z-10 w-[90%] max-w-[380px] glass-card rounded-[16px] p-8 sm:p-10">
+        
+        <!-- Logo -->
+        <div class="flex justify-center mb-5">
+            <div class="bg-white p-2.5 rounded-xl shadow-lg w-16 h-16 flex items-center justify-center">
+                <img src="sunpevece.png" alt="Logo" class="max-w-full max-h-full object-contain" onerror="this.style.display='none'">
             </div>
         </div>
         
-        <h2 class="text-3xl font-extrabold text-center text-white mb-8 tracking-wider uppercase drop-shadow-md">PORTAL WMS</h2>
+        <!-- Title -->
+        <h2 class="text-xl sm:text-2xl font-black text-center text-white mb-8 tracking-widest uppercase">PORTAL WMS</h2>
 
-        <div id="error-login" class="hidden mb-6 p-4 bg-red-500/80 backdrop-blur-sm border border-red-400 text-white text-sm rounded-xl font-semibold text-center shadow-lg">
+        <!-- Error Message -->
+        <div id="error-login" class="hidden mb-5 p-3 bg-red-500/20 border border-red-500/50 text-red-200 text-xs rounded-lg font-medium text-center backdrop-blur-sm">
             Password atau Username salah!
         </div>
 
+        <!-- Form -->
         <form id="form-login" class="space-y-5">
+            
+            <!-- Username Input -->
             <div>
-                <label class="block text-sm font-bold text-white/90 mb-2 ml-1">Username</label>
+                <label class="block text-[11px] font-medium text-white/70 mb-1.5 ml-1">Username</label>
                 <div class="relative">
-                    <i data-lucide="user" class="absolute left-4 top-4 w-5 h-5 text-gray-400"></i>
-                    <input type="text" id="username" class="w-full py-4 pl-12 pr-4 bg-white/90 border-0 rounded-xl outline-none text-black focus:ring-4 focus:ring-blue-300 transition shadow-inner" placeholder="Masukkan username" required>
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <i data-lucide="user" class="w-4 h-4 text-white/50"></i>
+                    </div>
+                    <input type="text" id="username" class="glass-input w-full h-11 pl-10 pr-4 rounded-lg outline-none text-sm transition-all" placeholder="Masukkan username" required autocomplete="off">
                 </div>
             </div>
+            
+            <!-- Password Input -->
             <div>
-                <label class="block text-sm font-bold text-white/90 mb-2 ml-1">Password</label>
+                <label class="block text-[11px] font-medium text-white/70 mb-1.5 ml-1">Password</label>
                 <div class="relative">
-                    <i data-lucide="lock" class="absolute left-4 top-4 w-5 h-5 text-gray-400"></i>
-                    <input type="password" id="password" class="w-full py-4 pl-12 pr-12 bg-white/90 border-0 rounded-xl outline-none text-black focus:ring-4 focus:ring-blue-300 transition shadow-inner" placeholder="Masukkan password" required>
-                    <button type="button" id="btn-toggle-pass" class="absolute right-4 top-4 text-gray-400 hover:text-blue-600 transition cursor-pointer">
-                        <i data-lucide="eye" id="icon-eye" class="w-6 h-6"></i>
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <i data-lucide="lock" class="w-4 h-4 text-white/50"></i>
+                    </div>
+                    <input type="password" id="password" class="glass-input w-full h-11 pl-10 pr-10 rounded-lg outline-none text-sm transition-all" placeholder="Masukkan password" required>
+                    <button type="button" id="btn-toggle-pass" class="absolute inset-y-0 right-0 pr-3.5 flex items-center cursor-pointer text-white/50 hover:text-white transition-colors">
+                        <i data-lucide="eye-off" id="icon-eye" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>
-            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-xl shadow-[0_4px_14px_0_rgba(37,99,235,0.39)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.23)] transition-all mt-6 text-lg flex items-center justify-center gap-2">
+            
+            <!-- Login Button -->
+            <button type="submit" class="w-full h-11 bg-[#2C5CC5] hover:bg-[#224a9e] text-white font-bold rounded-lg shadow-lg transition-all mt-2 text-sm flex items-center justify-center gap-2 active:scale-95">
                 <span>LOGIN</span>
-                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </button>
         </form>
+
+        <!-- Footer Links -->
+        <div class="flex justify-between items-center mt-6 text-[10px] text-white/50 font-medium">
+            <a href="#" class="hover:text-white transition-colors">Lupa kata sandi?</a>
+            <a href="#" class="hover:text-white transition-colors">Buat akun baru?</a>
+        </div>
+    </div>
+
+    <!-- POPUP SETTINGS (CREATOR ACCESS) -->
+    <div id="popup-setting" class="hidden absolute inset-0 flex items-center justify-center bg-[#1A2235]/80 z-50 backdrop-blur-md transition-all px-4">
+        <div class="glass-card p-8 rounded-2xl w-full max-w-sm border border-white/20">
+            <h3 class="text-lg font-bold mb-4 text-center text-white flex flex-col items-center gap-2">
+                <i data-lucide="shield-alert" class="w-8 h-8 text-blue-400"></i>
+                Akses Creator
+            </h3>
+            <p id="error-setting" class="text-red-300 text-center text-xs mb-4 hidden font-medium bg-red-500/20 border border-red-500/50 py-2 rounded-lg">PIN Salah!</p>
+            <input type="password" id="input-pass-setting" class="glass-input w-full h-14 text-2xl font-bold text-center tracking-[0.5em] rounded-xl mb-6 outline-none transition" placeholder="••••" autocomplete="off">
+            <div class="flex justify-between gap-3">
+                <button id="btn-batal-setting" class="w-1/2 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold transition text-sm">Batal</button>
+                <button id="btn-masuk-setting" class="w-1/2 py-2.5 bg-[#2C5CC5] hover:bg-[#224a9e] text-white rounded-xl font-bold transition shadow-md text-sm">Masuk</button>
+            </div>
+        </div>
     </div>
 
     <script>
         lucide.createIcons();
         
-        // MASUKKAN KUNCI SUPABASE ANDA DI SINI
+        // KREDENSIAL SUPABASE
         const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -83,37 +163,63 @@
             const iconEye = document.getElementById('icon-eye');
             if (passInput.type === 'password') {
                 passInput.type = 'text';
-                iconEye.setAttribute('data-lucide', 'eye-off');
+                iconEye.setAttribute('data-lucide', 'eye');
             } else {
                 passInput.type = 'password';
-                iconEye.setAttribute('data-lucide', 'eye');
+                iconEye.setAttribute('data-lucide', 'eye-off');
             }
             lucide.createIcons();
         });
 
-        // LOGIKA UI LAINNYA
+        // LOGIKA POPUP SETTING
         document.getElementById('btn-setting').addEventListener('click', () => document.getElementById('popup-setting').classList.remove('hidden'));
-        document.getElementById('btn-batal-setting').addEventListener('click', () => { document.getElementById('popup-setting').classList.add('hidden'); document.getElementById('input-pass-setting').value = ''; document.getElementById('error-setting').classList.add('hidden'); });
+        document.getElementById('btn-batal-setting').addEventListener('click', () => { 
+            document.getElementById('popup-setting').classList.add('hidden'); 
+            document.getElementById('input-pass-setting').value = ''; 
+            document.getElementById('error-setting').classList.add('hidden'); 
+        });
         document.getElementById('btn-masuk-setting').addEventListener('click', () => {
             if(document.getElementById('input-pass-setting').value === '9909') window.location.href = 'setting.html';
             else document.getElementById('error-setting').classList.remove('hidden');
         });
 
+        // LOGIKA LOGIN
         document.getElementById('form-login').addEventListener('submit', async (e) => {
             e.preventDefault();
             const userVal = document.getElementById('username').value;
             const passVal = document.getElementById('password').value;
             const errorLogin = document.getElementById('error-login');
             
-            const { data, error } = await db.from('app_users').select('*').eq('username', userVal).eq('password', passVal).single();
-            if (error || !data) errorLogin.classList.remove('hidden');
-            else {
-                errorLogin.classList.add('hidden');
-                localStorage.setItem('user_session', JSON.stringify(data));
-                window.location.href = 'menu.html';
+            // Animasi Loading pada tombol
+            const btnSubmit = e.target.querySelector('button[type="submit"]');
+            const oriBtnHtml = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>';
+            btnSubmit.disabled = true;
+            lucide.createIcons();
+
+            try {
+                const { data, error } = await db.from('app_users').select('*').eq('username', userVal).eq('password', passVal).single();
+                if (error || !data) {
+                    errorLogin.classList.remove('hidden');
+                } else {
+                    errorLogin.classList.add('hidden');
+                    localStorage.setItem('user_session', JSON.stringify(data));
+                    window.location.href = 'menu.html';
+                }
+            } catch (err) {
+                errorLogin.innerText = "Terjadi kesalahan jaringan.";
+                errorLogin.classList.remove('hidden');
+            } finally {
+                btnSubmit.innerHTML = oriBtnHtml;
+                btnSubmit.disabled = false;
+                lucide.createIcons();
             }
         });
-        window.onload = () => { if(localStorage.getItem('user_session')) window.location.href = 'menu.html'; };
+
+        // Cek Sesi saat halaman dimuat
+        window.onload = () => { 
+            if(localStorage.getItem('user_session')) window.location.replace('menu.html'); 
+        };
     </script>
 </body>
 </html>
