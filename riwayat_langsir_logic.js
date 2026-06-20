@@ -21,6 +21,7 @@ const currentUser = safeJSONParse(localStorage.getItem('user_session'), {usernam
 function tutupModalArea() { document.getElementById('modal-ganti-area').classList.add('hidden'); }
 function tutupModalSTBJ() { document.getElementById('modal-stbj-langsir').classList.add('hidden'); }
 function tutupModalHold() { document.getElementById('modal-hold-langsir').classList.add('hidden'); }
+function tutupSemuaPopup() { tutupModalArea(); tutupModalSTBJ(); tutupModalHold(); }
 
 document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'riwayat_langsir', title: 'RIWAYAT LANGSIR', url: 'riwayat_langsir.html' });
@@ -37,6 +38,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (menu && !menu.classList.contains('hidden')) {
             if (!menu.contains(e.target) && !e.target.closest('button[title^="Filter"]')) {
                 closeFilterMenu();
+            }
+        }
+
+        const actionMenu = document.getElementById('mobile-action-menu');
+        if (actionMenu && !actionMenu.classList.contains('hidden')) {
+            if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenu"]')) {
+                actionMenu.classList.add('hidden');
             }
         }
     });
@@ -56,6 +64,12 @@ document.addEventListener('DOMContentLoaded', () => {
         gantiModeRiwayat('qr');
     }, 200);
 });
+
+window.toggleActionMenu = function(e) {
+    if(e) e.stopPropagation();
+    const menu = document.getElementById('mobile-action-menu');
+    if(menu) menu.classList.toggle('hidden');
+};
 
 function sortTable(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-riwayat');
@@ -88,7 +102,7 @@ const thSort = (idx, label, cls = "") => {
 
     return `<th class="hdr-std ${cls} select-none relative border-r border-slate-200">
         <div class="flex items-center justify-center gap-1.5">
-            <span class="cursor-pointer flex items-center gap-1 hover:text-slate-800 transition" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
+            <span class="cursor-pointer flex items-center gap-1 hover:text-blue-300 transition" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
             ${filterBtn}
         </div>
     </th>`;
@@ -252,8 +266,8 @@ function updateFilterIcons() {
 function gantiModeRiwayat(m) {
     modeRiwayat = m;
     
-    const activeClass = 'pb-3 tab-active transition whitespace-nowrap flex items-center gap-2 text-sm';
-    const inactiveClass = 'pb-3 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-sm';
+    const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     
     ['qr', 'agregasi', 'hold'].forEach(tab => {
         const el = document.getElementById('tab-r-' + tab);
@@ -262,10 +276,12 @@ function gantiModeRiwayat(m) {
     
     const btnGA = document.getElementById('btn-ganti-area'); if(btnGA) btnGA.classList.toggle('hidden', m !== 'qr');
     const btnCL = document.getElementById('btn-cancel-langsir'); if(btnCL) btnCL.classList.toggle('hidden', m !== 'qr');
+    const btnCLMob = document.getElementById('btn-cancel-langsir-mob'); if(btnCLMob) btnCLMob.classList.toggle('hidden', m !== 'qr');
     
     const userRole = (currentUser.role || '').toLowerCase();
-    const btnHH = document.getElementById('btn-hapus-hold');
-    if(btnHH) btnHH.classList.toggle('hidden', !(m === 'hold' && ['creator', 'admin', 'pic area'].includes(userRole)));
+    const showHapus = (m === 'hold' && ['creator', 'admin', 'pic area'].includes(userRole));
+    const btnHH = document.getElementById('btn-hapus-hold'); if(btnHH) btnHH.classList.toggle('hidden', !showHapus);
+    const btnHHMob = document.getElementById('btn-hapus-hold-mob'); if(btnHHMob) btnHHMob.classList.toggle('hidden', !showHapus);
 
     activeFilters = {}; updateFilterIcons();
     renderTabelRiwayat();
@@ -364,6 +380,8 @@ function renderTabelRiwayat() {
         if(!thead || !tbody) return;
         sortState = {}; 
 
+        const rowClassBase = "bg-white even:bg-slate-100 transition r-row text-sm border-b border-slate-200";
+
         if(modeRiwayat === 'qr' || modeRiwayat === 'hold') {
             const isHold = modeRiwayat === 'hold'; const dataset = isHold ? holdLangsirRaw : logLangsirRaw;
             
@@ -396,24 +414,24 @@ function renderTabelRiwayat() {
                 const tgl = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
 
                 h += `
-                    <tr class="hover:bg-slate-50 transition r-row text-sm">
-                        <td class="px-4 py-3 text-center col-cb border-b border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                        <td class="px-4 py-3 text-slate-600 font-medium col-waktu border-b border-r border-slate-200" data-search="${tgl}">${tgl}</td>
-                        ${isHold ? `<td class="px-4 py-3 font-medium text-slate-700 col-troli border-b border-r border-slate-200" data-search="${r.troli || '-'}">${r.troli || '-'}</td>` : `<td class="px-4 py-3 hidden col-troli">-</td>`}
-                        <td class="px-4 py-3 col-area border-b border-r border-slate-200" data-search="${r.area || '-'}"><span class="text-emerald-600 font-bold">${r.area || '-'}</span></td>
-                        <td class="px-4 py-3 font-mono font-medium text-slate-800 tracking-wider col-qr border-b border-r border-slate-200" data-search="${r.qrcode}">${r.qrcode}</td>
-                        <td class="px-4 py-3 font-medium text-slate-600 col-tgl border-b border-r border-slate-200" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-600 col-mesin border-b border-r border-slate-200" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-600 col-shift border-b border-r border-slate-200" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-blue-600 col-jenis border-b border-r border-slate-200" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama border-b border-r border-slate-200" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-b border-r border-slate-200" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-700 col-grade border-b border-r border-slate-200" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-700 col-dus border-b border-r border-slate-200" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-700 col-shading border-b border-r border-slate-200" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-orange-600 col-customer border-b border-r border-slate-200" data-search="${r.customer_bawaan || '-'}">${r.customer_bawaan || '-'}</td>
-                        ${isHold ? `<td class="px-4 py-3 font-medium text-slate-500 text-left col-ket border-b border-r border-slate-200" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>` : `<td class="px-4 py-3 hidden col-ket">-</td>`}
-                        <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 col-pic border-b border-r border-slate-200" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
+                    <tr class="${rowClassBase}">
+                        <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                        <td class="px-4 py-3 text-slate-600 font-medium col-waktu border-r border-slate-200" data-search="${tgl}">${tgl}</td>
+                        ${isHold ? `<td class="px-4 py-3 font-medium text-slate-700 col-troli border-r border-slate-200" data-search="${r.troli || '-'}">${r.troli || '-'}</td>` : `<td class="px-4 py-3 hidden col-troli">-</td>`}
+                        <td class="px-4 py-3 col-area border-r border-slate-200" data-search="${r.area || '-'}"><span class="text-emerald-600 font-bold">${r.area || '-'}</span></td>
+                        <td class="px-4 py-3 font-mono font-medium text-slate-800 tracking-wider col-qr border-r border-slate-200 text-left" data-search="${r.qrcode}">${r.qrcode}</td>
+                        <td class="px-4 py-3 font-medium text-slate-600 col-tgl border-r border-slate-200" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-600 col-mesin border-r border-slate-200" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-600 col-shift border-r border-slate-200" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-700 col-jenis border-r border-slate-200" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama border-r border-slate-200" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-700 col-shading border-r border-slate-200" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-500 col-customer border-r border-slate-200" data-search="${r.customer_bawaan || '-'}">${r.customer_bawaan || '-'}</td>
+                        ${isHold ? `<td class="px-4 py-3 font-medium text-slate-500 text-left col-ket border-r border-slate-200" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>` : `<td class="px-4 py-3 hidden col-ket">-</td>`}
+                        <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 col-pic border-r border-slate-200" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
                     </tr>`;
             });
             tbody.innerHTML = h;
@@ -447,18 +465,18 @@ function renderTabelRiwayat() {
             let h = '';
             arr.forEach((r) => {
                 h += `
-                    <tr class="hover:bg-slate-50 transition r-row text-sm">
-                        <td class="px-4 py-3 text-center col-cb border-b border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="agg" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                        <td class="px-4 py-3 col-area border-b border-r border-slate-200" data-search="${r.area}"><span class="text-emerald-600 font-bold">${r.area}</span></td>
-                        <td class="px-4 py-3 font-medium text-blue-600 col-jenis border-b border-r border-slate-200" data-search="${r.jenis}">${r.jenis}</td>
-                        <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama border-b border-r border-slate-200" data-search="${r.nama}">${r.nama}</td>
-                        <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-b border-r border-slate-200" data-search="${r.pjg}">${r.pjg}</td>
-                        <td class="px-4 py-3 font-medium text-slate-700 col-grade border-b border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
-                        <td class="px-4 py-3 font-medium text-slate-700 col-dus border-b border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
-                        <td class="px-4 py-3 font-medium text-slate-700 col-shading border-b border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
-                        <td class="px-4 py-3 font-medium text-orange-600 col-customer border-b border-r border-slate-200" data-search="${r.customer}">${r.customer}</td>
-                        <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 col-pic border-b border-r border-slate-200" data-search="${r.pic || '-'}">${r.pic || '-'}</td>
-                        <td class="px-4 py-3 font-black text-emerald-700 col-qty border-b border-slate-200" data-search="${r.qty}">${r.qty}</td>
+                    <tr class="${rowClassBase}">
+                        <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="agg" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                        <td class="px-4 py-3 col-area border-r border-slate-200" data-search="${r.area}"><span class="text-emerald-600 font-bold">${r.area}</span></td>
+                        <td class="px-4 py-3 font-medium text-slate-700 col-jenis border-r border-slate-200" data-search="${r.jenis}">${r.jenis}</td>
+                        <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama border-r border-slate-200" data-search="${r.nama}">${r.nama}</td>
+                        <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.pjg}">${r.pjg}</td>
+                        <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
+                        <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
+                        <td class="px-4 py-3 font-medium text-slate-700 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
+                        <td class="px-4 py-3 font-medium text-slate-500 col-customer border-r border-slate-200" data-search="${r.customer}">${r.customer}</td>
+                        <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 col-pic border-r border-slate-200" data-search="${r.pic || '-'}">${r.pic || '-'}</td>
+                        <td class="px-4 py-3 font-black text-emerald-700 col-qty" data-search="${r.qty}">${r.qty}</td>
                     </tr>`;
             });
             tbody.innerHTML = h;
@@ -469,7 +487,7 @@ function renderTabelRiwayat() {
 }
 
 // ========================================================
-// FUNGSI AKSI DATABASE (CANCEL, GANTI AREA, SALIN)
+// FUNGSI AKSI DATABASE (CANCEL, GANTI AREA, SALIN, EXCEL)
 // ========================================================
 async function cancelLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked'); if(checkedBoxes.length === 0) return alert("Pilih minimal 1 baris!");
@@ -623,6 +641,37 @@ function salinDataTabel() {
         alert("Berhasil menyalin!");
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
 }
+
+window.downloadXLS = function() {
+    if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
+    
+    let ws_data = [];
+    const headers = Array.from(document.querySelectorAll('#thead-riwayat th'))
+        .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb'))
+        .map(th => th.innerText.trim().replace(/\n/g, ' '));
+    ws_data.push(headers);
+
+    document.querySelectorAll('.r-row').forEach(tr => {
+        if(tr.style.display !== 'none' && tr.querySelector('.cb-row:checked')) {
+            const rowData = [];
+            Array.from(tr.children).forEach(td => {
+                if(td.classList.contains('col-cb')) return;
+                if(window.getComputedStyle(td).display !== 'none') {
+                    let val = td.getAttribute('data-search') ? td.getAttribute('data-search') : td.innerText.trim();
+                    rowData.push(`"${val.replace(/\n/g, ' ')}"`);
+                }
+            });
+            ws_data.push(rowData);
+        }
+    });
+
+    if(ws_data.length <= 1) return alert("Pilih minimal 1 baris data untuk di-export!");
+
+    let ws = XLSX.utils.aoa_to_sheet(ws_data);
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Riwayat_Langsir");
+    XLSX.writeFile(wb, `Riwayat_Langsir_${modeRiwayat.toUpperCase()}.xlsx`);
+};
 
 // ========================================================
 // FUNGSI MODAL STBJ & HOLD (CARD FORMAT)
