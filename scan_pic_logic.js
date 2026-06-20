@@ -5,11 +5,9 @@ let riwayatKonversiList = [];
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 let masterData = { kamus: [] };
 
-// State Filter Excel & Paginasi
+// State Filter Excel
 let activeFilters = {}; 
 let currentFilterCol = '';
-let currentPage = 1;
-let rowsPerPage = 10; 
 let sortState = {};
 
 window.tutupSemuaModal = function() {
@@ -187,7 +185,7 @@ function sortTable(colIndex, headerEl) {
     document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-30'); });
     const icon = headerEl.querySelector('.sort-icon');
     if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
-    applyPagination();
+    updateTableDisplay();
 }
 
 const thSort = (idx, label, cls = "") => {
@@ -287,7 +285,7 @@ function saringTabelExcel() {
         if (show) { row.classList.remove('filtered-out'); } 
         else { row.classList.add('filtered-out'); let cb = row.querySelector('.cb-row'); if(cb) { cb.checked = false; highlightRow(cb); } }
     });
-    currentPage = 1; applyPagination();
+    updateTableDisplay();
 }
 function updateFilterIcons() {
     document.querySelectorAll('.filter-icon').forEach(icon => { icon.classList.remove('text-amber-400', 'opacity-100'); icon.classList.add('opacity-40', 'text-white'); });
@@ -298,41 +296,23 @@ function updateFilterIcons() {
 }
 
 // ========================================================
-// PAGINASI & RENDER TABEL
+// DISPLAY TABEL (TANPA PAGINASI)
 // ========================================================
-function changeRowsPerPage(val) {
-    if (val === 'ALL') { rowsPerPage = 999999; } 
-    else { rowsPerPage = parseInt(val); }
-    currentPage = 1; applyPagination();
-}
-
-function applyPagination() {
+function updateTableDisplay() {
     const allRows = Array.from(document.querySelectorAll('#tbody-pic tr.row-pic'));
-    allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
+    let visibleCount = 0;
     
-    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
-    const totalFiltered = visibleRows.length; const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
-    
-    if(currentPage > totalPages) currentPage = totalPages; 
-    if(currentPage < 1) currentPage = 1;
-
-    const startIndex = (currentPage - 1) * rowsPerPage; const endIndex = startIndex + rowsPerPage;
-
-    visibleRows.forEach((row, index) => {
-        if(index >= startIndex && index < endIndex) { row.style.display = ''; } 
-        else { row.style.display = 'none'; }
+    allRows.forEach(row => { 
+        if(row.classList.contains('filtered-out')) {
+            row.style.display = 'none';
+        } else {
+            row.style.display = '';
+            visibleCount++;
+        }
     });
-
-    if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
-    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
-    if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
+    
+    if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = visibleCount;
     updateSelectedCount();
-}
-
-function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } }
-function nextPage() { 
-    const totalVisible = document.querySelectorAll('#tbody-pic tr.row-pic:not(.filtered-out)').length;
-    if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
 }
 
 function updateSelectedCount() {
@@ -492,6 +472,7 @@ function renderTablePic(dataToRender) {
     lucide.createIcons();
     saringTabelExcel();
     initResizableColumns();
+    updateTableDisplay(); // Panggil ini di akhir untuk update jumlah baris
 }
 
 // ==========================================
