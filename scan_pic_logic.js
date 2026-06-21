@@ -1,3 +1,5 @@
+console.log("WMS Scan PIC Logic - Versi Panjang Fix v3"); // Penanda cache
+
 let currentMode = 'out';
 let dataPic = [];
 let picRowId = 0;
@@ -62,7 +64,6 @@ function extractCustomerFromSKU(id_sku) {
     return parts.length >= 7 ? parts[6] : '-';
 }
 
-// REVISI: Menerjemahkan Customer Bawaan dari Barcode sesuai master_2 (kode_customer -> customer)
 function translateBarcode(barcode) {
     const parts = barcode.split('/');
     let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customerBawaan: '-' };
@@ -97,10 +98,7 @@ function translateBarcode(barcode) {
             let rawMesin = match[1]; let rawShift = match[2]; let rawCustomer = match[3];   
             let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin); data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
             let cariShift = masterData.kamus.find(m => m.kode_shift === rawShift); data.shift = cariShift && cariShift.shift ? cariShift.shift : rawShift;
-            
-            // FIX: Mencari berdasarkan kode_customer, dan mengembalikan customer
-            let cariCustomer = masterData.kamus.find(m => m.kode_customer === rawCustomer); 
-            data.customerBawaan = cariCustomer && cariCustomer.customer ? cariCustomer.customer : rawCustomer;
+            let cariCustomer = masterData.kamus.find(m => m.kode_customer === rawCustomer); data.customerBawaan = cariCustomer && cariCustomer.customer ? cariCustomer.customer : rawCustomer;
         }
     }
     return data;
@@ -440,7 +438,6 @@ function renderTablePic(dataToRender) {
         if(d.status === 'VALID') badge = "bg-emerald-100 text-emerald-700 border-emerald-200";
         else if(d.status === 'KOSONG' || d.status === 'DUPLIKAT LOKAL') badge = "bg-red-100 text-red-700 border-red-200";
 
-        // REVISI: Tombol Lihat Customer dikembalikan
         let btnCustomer = d.customerAktualUI;
         if (d.status === 'VALID' && d.customerAktualUI !== '-' && d.customerAktualUI !== 'KOSONG' && d.customerAktualUI !== 'Cek Stok...') {
             btnCustomer = `<button onclick="window.bukaModalLihatCustomer('${encodeURIComponent(d.customerAktualUI)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 mx-auto w-full max-w-[100px] shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
@@ -507,7 +504,6 @@ window.verifikasiGudang = async function() {
                     d.area = matched.area; 
                     d.customerAsliDB = extractCustomerFromSKU(matched.id_sku);
                     d.customerAktualUI = d.customerAsliDB; 
-                    // REVISI: Tambahkan area ke baseSpec agar query stok_aktual lebih akurat
                     d.baseSpec = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}`;
                     uniqueSpecs.add(d.baseSpec);
                 } else {
@@ -519,7 +515,6 @@ window.verifikasiGudang = async function() {
             let customerDistMap = {};
             for (let spec of uniqueSpecs) {
                 let parts = spec.split('_'); 
-                // REVISI: Query stok_aktual dengan filter area juga
                 const { data: actData } = await db.from('stok_aktual').select('customer_aktual, qty')
                     .eq('nama_item', parts[0]).eq('panjang', parts[1]).eq('grade', parts[2])
                     .eq('dus', parts[3]).eq('shading', parts[4]).eq('area', parts[5]);
@@ -609,7 +604,6 @@ function bukaModalSimpanOut() {
     document.getElementById('modal-po-target').classList.remove('hidden');
 }
 
-// REVISI: Fungsi Buka Modal Lihat Customer
 window.bukaModalLihatCustomer = function(encodedCusts) {
     const custStr = decodeURIComponent(encodedCusts);
     const custArr = custStr.split('|').map(p => p.trim()).filter(p => p);
@@ -675,12 +669,13 @@ window.eksekusiSimpanFinalOut = async function() {
             if(stockCapacity[baseSpec] && stockCapacity[baseSpec] > 0) {
                 matchedRows.push(d); qrList.push(d.qrcode); stockCapacity[baseSpec] -= 1; 
 
+                // REVISI: Menggunakan panjang (bukan pjg) dan menambahkan fallback pjg untuk RPC
                 let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${customerTarget}_-`;
-                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: d.jenisItem, nama_item: d.namaItem, panjang: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, customer_aktual: customerTarget, ket: '-', qty: 0 };
+                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: d.jenisItem, nama_item: d.namaItem, panjang: d.panjang, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, customer_aktual: customerTarget, ket: '-', qty: 0 };
                 mapAktual[keyAkt].qty++;
 
                 let keyGlb = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${customerTarget}_-`;
-                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: d.jenisItem, nama_item: d.namaItem, panjang: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, customer_bawaan: customerTarget, ket: '-', qty: 0 };
+                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: d.jenisItem, nama_item: d.namaItem, panjang: d.panjang, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, customer_bawaan: customerTarget, ket: '-', qty: 0 };
                 mapGlobal[keyGlb].qty++;
             } else { unmatchedCount++; }
         } else { unmatchedCount++; }
@@ -693,7 +688,6 @@ window.eksekusiSimpanFinalOut = async function() {
         const { error: rpcError } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
         if (rpcError) throw rpcError;
 
-        // REVISI: Hapus dari hasil_langsir sesuai instruksi
         const { error: errDelHL } = await db.from('hasil_langsir').delete().in('qrcode', qrList);
         if (errDelHL) throw errDelHL;
 
@@ -735,7 +729,9 @@ window.eksekusiSimpanFinalOut = async function() {
         document.getElementById('input-keterangan-out').value = '';
         document.getElementById('select-aktifitas').value = '';
 
-    } catch(e) { alert("Kesalahan: " + e.message); } 
+    } catch(e) { 
+        alert("Kesalahan: " + e.message + "\n\nJika error ini masih muncul, mohon cek Function RPC 'eksekusi_keluar_aman' di Supabase dan pastikan tidak ada kata 'pjg' di dalamnya."); 
+    } 
     finally { btn.innerHTML = ori; btn.disabled = false; }
 };
 
