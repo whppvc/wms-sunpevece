@@ -1,4 +1,4 @@
-console.log("WMS Scan PIC Logic - Versi Panjang Fix v3"); // Penanda cache
+console.log("WMS Scan PIC Logic - Versi Pindah Area Fix"); // Penanda cache
 
 let currentMode = 'out';
 let dataPic = [];
@@ -990,12 +990,18 @@ window.eksekusiPindahArea = async function() {
             if(oldStok && oldStok.length > 0) {
                 custAktual = oldStok[0].customer_aktual;
                 ketAktual = oldStok[0].keterangan;
-                await db.from('stok_aktual').update({ qty: oldStok[0].qty - 1 }).eq('id', oldStok[0].id);
+                
+                // Deduct qty
+                if (oldStok[0].qty - 1 <= 0) {
+                    await db.from('stok_aktual').delete().eq('id', oldStok[0].id);
+                } else {
+                    await db.from('stok_aktual').update({ qty: oldStok[0].qty - 1 }).eq('id', oldStok[0].id);
+                }
             }
 
-            // 2. Update stok_qr (Hanya ubah area dan id_sku depannya)
-            let id_sku_baru = `${areaTarget}_${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${custAktual}_${ketAktual}`;
-            await db.from('stok_qr').update({ area: areaTarget, id_sku: id_sku_baru }).eq('qrcode', item.qrcode);
+            // 2. Update stok_qr (HANYA UBAH AREA, id_sku TETAP)
+            const { error: errUpdate } = await db.from('stok_qr').update({ area: areaTarget }).eq('qrcode', item.qrcode);
+            if (errUpdate) throw errUpdate;
 
             // 3. Tambah ke stok_aktual baru
             const { data: newStok } = await db.from('stok_aktual').select('*')
@@ -1006,6 +1012,7 @@ window.eksekusiPindahArea = async function() {
             if(newStok && newStok.length > 0) {
                 await db.from('stok_aktual').update({ qty: newStok[0].qty + 1 }).eq('id', newStok[0].id);
             } else {
+                let id_sku_baru = `${areaTarget}_${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${custAktual}_${ketAktual}`;
                 await db.from('stok_aktual').insert([{
                     id_sku: id_sku_baru,
                     jenis_item: item.jenisItem, nama_item: item.namaItem, panjang: item.panjang, grade: item.grade,
@@ -1033,7 +1040,8 @@ window.eksekusiPindahArea = async function() {
         }
 
         if (payloadBarangPindah.length > 0) {
-            await db.from('barang_pindah').insert(payloadBarangPindah);
+            const { error: errPindah } = await db.from('barang_pindah').insert(payloadBarangPindah);
+            if (errPindah) throw errPindah;
         }
 
         alert(`✅ SUKSES PINDAH AREA!\n${validItems.length} Item berhasil dipindahkan ke area ${areaTarget}.`);
