@@ -13,6 +13,7 @@ let sortState = {};
 window.tutupSemuaModal = function() {
     document.getElementById('modal-po-target').classList.add('hidden');
     document.getElementById('modal-riwayat-konversi').classList.add('hidden');
+    document.getElementById('modal-lihat-po').classList.add('hidden');
 };
 
 document.addEventListener('DOMContentLoaded', async () => { 
@@ -55,14 +56,12 @@ async function loadAreas() {
     } catch (e) { console.error("Gagal load area:", e); }
 }
 
-// REVISI: Mengambil Customer Aktual dari id_sku (Index ke-6)
 function extractCustomerFromSKU(id_sku) {
     if(!id_sku) return '-';
     const parts = id_sku.split('_');
     return parts.length >= 7 ? parts[6] : '-';
 }
 
-// REVISI: Menerjemahkan Customer Bawaan dari Barcode sesuai master_2 (kode_po -> po)
 function translateBarcode(barcode) {
     const parts = barcode.split('/');
     let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customerBawaan: '-' };
@@ -97,10 +96,7 @@ function translateBarcode(barcode) {
             let rawMesin = match[1]; let rawShift = match[2]; let rawCustomer = match[3];   
             let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin); data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
             let cariShift = masterData.kamus.find(m => m.kode_shift === rawShift); data.shift = cariShift && cariShift.shift ? cariShift.shift : rawShift;
-            
-            // FIX: Mencari berdasarkan kode_po, dan mengembalikan po
-            let cariCustomer = masterData.kamus.find(m => m.kode_po === rawCustomer); 
-            data.customerBawaan = cariCustomer && cariCustomer.po ? cariCustomer.po : rawCustomer;
+            let cariCustomer = masterData.kamus.find(m => m.kode_po === rawCustomer); data.customerBawaan = cariCustomer && cariCustomer.po ? cariCustomer.po : rawCustomer;
         }
     }
     return data;
@@ -440,7 +436,6 @@ function renderTablePic(dataToRender) {
         if(d.status === 'VALID') badge = "bg-emerald-100 text-emerald-700 border-emerald-200";
         else if(d.status === 'KOSONG' || d.status === 'DUPLIKAT LOKAL') badge = "bg-red-100 text-red-700 border-red-200";
 
-        // REVISI: Menampilkan Customer Aktual langsung di tabel (tanpa modal)
         let custBadges = '';
         if (d.status === 'VALID' && d.customerAktualUI !== '-' && d.customerAktualUI !== 'KOSONG' && d.customerAktualUI !== 'Cek Stok...') {
             let custArr = d.customerAktualUI.split('|').map(x => x.trim());
@@ -518,7 +513,8 @@ window.verifikasiGudang = async function() {
                     d.area = matched.area; 
                     d.customerAsliDB = extractCustomerFromSKU(matched.id_sku);
                     d.customerAktualUI = d.customerAsliDB; 
-                    d.baseSpec = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}`;
+                    // REVISI: Tambahkan area ke baseSpec agar query stok_aktual lebih akurat
+                    d.baseSpec = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}`;
                     uniqueSpecs.add(d.baseSpec);
                 } else {
                     d.status = 'KOSONG'; 
@@ -529,9 +525,10 @@ window.verifikasiGudang = async function() {
             let customerDistMap = {};
             for (let spec of uniqueSpecs) {
                 let parts = spec.split('_'); 
+                // REVISI: Query stok_aktual dengan filter area juga
                 const { data: actData } = await db.from('stok_aktual').select('customer_aktual, qty')
                     .eq('nama_item', parts[0]).eq('panjang', parts[1]).eq('grade', parts[2])
-                    .eq('dus', parts[3]).eq('shading', parts[4]);
+                    .eq('dus', parts[3]).eq('shading', parts[4]).eq('area', parts[5]);
                 
                 if(actData) {
                     customerDistMap[spec] = {};
@@ -643,10 +640,10 @@ window.eksekusiSimpanFinalOut = async function() {
     try {
         for(let spec of specsToProcess) {
             let parts = spec.split('_');
-            let [nm, pj, gr, ds, sh] = [parts[0], parts[1], parts[2], parts[3], parts[4]];
+            let [nm, pj, gr, ds, sh, ar] = [parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]];
             const { data, error } = await db.from('stok_aktual').select('qty')
                 .eq('nama_item', nm).eq('panjang', pj).eq('grade', gr).eq('dus', ds).eq('shading', sh)
-                .eq('customer_aktual', customerTarget); 
+                .eq('area', ar).eq('customer_aktual', customerTarget); 
             if (error) throw error;
             let count = 0; if(data) data.forEach(d => count += (d.qty || 0));
             stockCapacity[spec] = count;
@@ -679,6 +676,10 @@ window.eksekusiSimpanFinalOut = async function() {
         const payloadData = { qrs: qrList, aktuals: Object.values(mapAktual), globals: Object.values(mapGlobal) };
         const { error: rpcError } = await db.rpc('eksekusi_keluar_aman', { payload: payloadData });
         if (rpcError) throw rpcError;
+
+        // REVISI: Hapus dari hasil_langsir sesuai instruksi
+        const { error: errDelHL } = await db.from('hasil_langsir').delete().in('qrcode', qrList);
+        if (errDelHL) throw errDelHL;
 
         const { count, error: errCount } = await db.from('laporan_konversi').select('*', { count: 'exact', head: true });
         if(errCount) throw errCount;
