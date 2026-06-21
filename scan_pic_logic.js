@@ -13,7 +13,6 @@ let sortState = {};
 window.tutupSemuaModal = function() {
     document.getElementById('modal-po-target').classList.add('hidden');
     document.getElementById('modal-riwayat-konversi').classList.add('hidden');
-    document.getElementById('modal-lihat-po').classList.add('hidden');
 };
 
 document.addEventListener('DOMContentLoaded', async () => { 
@@ -56,12 +55,14 @@ async function loadAreas() {
     } catch (e) { console.error("Gagal load area:", e); }
 }
 
+// REVISI: Mengambil Customer Aktual dari id_sku (Index ke-6)
 function extractCustomerFromSKU(id_sku) {
     if(!id_sku) return '-';
     const parts = id_sku.split('_');
-    return parts.length >= 8 ? parts[7] : '-';
+    return parts.length >= 7 ? parts[6] : '-';
 }
 
+// REVISI: Menerjemahkan Customer Bawaan dari Barcode sesuai master_2 (kode_po -> po)
 function translateBarcode(barcode) {
     const parts = barcode.split('/');
     let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customerBawaan: '-' };
@@ -96,7 +97,10 @@ function translateBarcode(barcode) {
             let rawMesin = match[1]; let rawShift = match[2]; let rawCustomer = match[3];   
             let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin); data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
             let cariShift = masterData.kamus.find(m => m.kode_shift === rawShift); data.shift = cariShift && cariShift.shift ? cariShift.shift : rawShift;
-            let cariCustomer = masterData.kamus.find(m => m.kode_customer === rawCustomer); data.customerBawaan = cariCustomer && cariCustomer.customer ? cariCustomer.customer : rawCustomer;
+            
+            // FIX: Mencari berdasarkan kode_po, dan mengembalikan po
+            let cariCustomer = masterData.kamus.find(m => m.kode_po === rawCustomer); 
+            data.customerBawaan = cariCustomer && cariCustomer.po ? cariCustomer.po : rawCustomer;
         }
     }
     return data;
@@ -436,9 +440,21 @@ function renderTablePic(dataToRender) {
         if(d.status === 'VALID') badge = "bg-emerald-100 text-emerald-700 border-emerald-200";
         else if(d.status === 'KOSONG' || d.status === 'DUPLIKAT LOKAL') badge = "bg-red-100 text-red-700 border-red-200";
 
-        let btnCustomer = d.customerAktualUI;
+        // REVISI: Menampilkan Customer Aktual langsung di tabel (tanpa modal)
+        let custBadges = '';
         if (d.status === 'VALID' && d.customerAktualUI !== '-' && d.customerAktualUI !== 'KOSONG' && d.customerAktualUI !== 'Cek Stok...') {
-            btnCustomer = `<button onclick="window.bukaModalLihatCustomer('${encodeURIComponent(d.customerAktualUI)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 mx-auto w-full max-w-[100px] shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
+            let custArr = d.customerAktualUI.split('|').map(x => x.trim());
+            custBadges = custArr.map(c => {
+                let p = c.split('(');
+                let nm = p[0].trim();
+                let qt = p[1] ? p[1].replace(')','') : '';
+                return `<div class="bg-orange-50 border border-orange-200 text-orange-800 px-2 py-1 rounded text-[10px] font-bold whitespace-nowrap mb-1 flex justify-between items-center gap-2">
+                            <span>${nm}</span> 
+                            <span class="bg-orange-200 text-orange-900 px-1.5 py-0.5 rounded text-[9px]">${qt}</span>
+                        </div>`;
+            }).join('');
+        } else {
+            custBadges = `<span class="text-slate-400 italic font-bold text-[10px]">${d.customerAktualUI}</span>`;
         }
 
         html += `
@@ -465,7 +481,7 @@ function renderTablePic(dataToRender) {
                 <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${d.dus || '-'}">${d.dus || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 border-r border-slate-200 col-shading" data-search="${d.shading || '-'}">${d.shading || '-'}</td>
                 <td class="px-4 py-3 text-center font-medium text-slate-500 col-customer-bawaan border-r border-slate-200" data-search="${d.customerBawaan || '-'}">${d.customerBawaan || '-'}</td>
-                <td class="px-4 py-2 text-center col-customer-aktual" data-search="${d.customerAktualUI}">${btnCustomer}</td>
+                <td class="px-4 py-2 text-center col-customer-aktual" data-search="${d.customerAktualUI}">${custBadges}</td>
             </tr>`;
     });
     tbody.innerHTML = html; 
@@ -601,27 +617,6 @@ function bukaModalSimpanOut() {
 
     document.getElementById('modal-po-target').classList.remove('hidden');
 }
-
-window.bukaModalLihatCustomer = function(encodedCusts) {
-    const custStr = decodeURIComponent(encodedCusts);
-    const custArr = custStr.split('|').map(p => p.trim()).filter(p => p);
-    const ul = document.getElementById('list-customer-aktual');
-    if (custArr.length === 0 || custArr[0] === 'KOSONG') {
-        ul.innerHTML = '<li class="text-slate-400 italic font-medium p-3 bg-slate-50 rounded-md text-center border border-slate-200">Tidak ada Customer Aktual tersimpan.</li>';
-    } else {
-        ul.innerHTML = custArr.map(p => {
-            let parts = p.split('(');
-            let namaCust = parts[0].trim();
-            let qtyCust = parts[1] ? parts[1].replace(')', '').trim() : '';
-            return `<li class="p-3 bg-white border border-slate-200 shadow-sm text-slate-700 font-semibold rounded-md flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 text-slate-400"></i> <span>${namaCust}</span></div> 
-                        <span class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded text-xs font-black">${qtyCust}</span>
-                    </li>`;
-        }).join('');
-    }
-    lucide.createIcons();
-    document.getElementById('modal-lihat-po').classList.remove('hidden');
-};
 
 window.eksekusiSimpanFinalOut = async function() {
     const customerTarget = document.getElementById('out-customer-target').value;
