@@ -660,11 +660,11 @@ window.eksekusiSimpanFinalOut = async function() {
                 matchedRows.push(d); qrList.push(d.qrcode); stockCapacity[baseSpec] -= 1; 
 
                 let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${customerTarget}_-`;
-                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: d.jenisItem, nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, customer_aktual: customerTarget, ket: '-', qty: 0 };
+                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: d.jenisItem, nama_item: d.namaItem, panjang: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, customer_aktual: customerTarget, ket: '-', qty: 0 };
                 mapAktual[keyAkt].qty++;
 
                 let keyGlb = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${customerTarget}_-`;
-                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: d.jenisItem, nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, customer_bawaan: customerTarget, ket: '-', qty: 0 };
+                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: d.jenisItem, nama_item: d.namaItem, panjang: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, customer_bawaan: customerTarget, ket: '-', qty: 0 };
                 mapGlobal[keyGlb].qty++;
             } else { unmatchedCount++; }
         } else { unmatchedCount++; }
@@ -767,7 +767,7 @@ window.eksekusiSimpanFinalIn = async function() {
             shift: d.shift || '-',
             jenis_item: d.jenisItem || '-',
             nama_item: d.namaItem || '-',
-            pjg: d.panjang || '-',
+            panjang: d.panjang || '-',
             grade: d.grade || '-',
             dus: d.dus || '-',
             shading: d.shading || '-',
