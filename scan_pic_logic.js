@@ -56,7 +56,7 @@ async function loadAreas() {
     } catch (e) { console.error("Gagal load area:", e); }
 }
 
-function extractPOFromSKU(id_sku) {
+function extractCustomerFromSKU(id_sku) {
     if(!id_sku) return '-';
     const parts = id_sku.split('_');
     return parts.length >= 8 ? parts[7] : '-';
@@ -64,7 +64,7 @@ function extractPOFromSKU(id_sku) {
 
 function translateBarcode(barcode) {
     const parts = barcode.split('/');
-    let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', poBawaan: '-' };
+    let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customerBawaan: '-' };
     if (parts.length < 4) return data;
 
     const hurufDepan = barcode.charAt(0).toUpperCase();
@@ -93,10 +93,10 @@ function translateBarcode(barcode) {
 
         let sisaString = p3.substring(5); let match = sisaString.match(/(C.*?)(S.*?)(P.*)/);
         if (match) {
-            let rawMesin = match[1]; let rawShift = match[2]; let rawPO = match[3];   
+            let rawMesin = match[1]; let rawShift = match[2]; let rawCustomer = match[3];   
             let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin); data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
             let cariShift = masterData.kamus.find(m => m.kode_shift === rawShift); data.shift = cariShift && cariShift.shift ? cariShift.shift : rawShift;
-            let cariPO = masterData.kamus.find(m => m.kode_po === rawPO); data.poBawaan = cariPO && cariPO.po ? cariPO.po : rawPO;
+            let cariCustomer = masterData.kamus.find(m => m.kode_customer === rawCustomer); data.customerBawaan = cariCustomer && cariCustomer.customer ? cariCustomer.customer : rawCustomer;
         }
     }
     return data;
@@ -386,7 +386,7 @@ function handleScan(inputEl) {
         dataPic.unshift({ 
             id: ++picRowId, qrcode: code, 
             status: isDuplicate ? 'DUPLIKAT LOKAL' : 'BELUM CEK',
-            area: '?', ...trans, poAktualUI: 'Cek Stok...', baseSpec: '', poAsliDB: '-'
+            area: '?', ...trans, customerAktualUI: 'Cek Stok...', baseSpec: '', customerAsliDB: '-'
         });
     });
 
@@ -421,8 +421,8 @@ function renderTablePic(dataToRender) {
             ${thSort(12, 'Grade', 'col-grade')}
             ${thSort(13, 'Dus', 'col-dus')}
             ${thSort(14, 'Shading', 'col-shading')}
-            ${thSort(15, 'Customer Bawaan', 'col-po-bawaan')}
-            ${thSort(16, 'Customer Aktual (Stok)', 'col-po-aktual text-orange-300')}
+            ${thSort(15, 'Customer Bawaan', 'col-customer-bawaan')}
+            ${thSort(16, 'Customer Aktual (Stok)', 'col-customer-aktual text-orange-300')}
         </tr>`;
 
     if(dataToRender.length === 0) {
@@ -436,9 +436,9 @@ function renderTablePic(dataToRender) {
         if(d.status === 'VALID') badge = "bg-emerald-100 text-emerald-700 border-emerald-200";
         else if(d.status === 'KOSONG' || d.status === 'DUPLIKAT LOKAL') badge = "bg-red-100 text-red-700 border-red-200";
 
-        let btnPO = d.poAktualUI;
-        if (d.status === 'VALID' && d.poAktualUI !== '-' && d.poAktualUI !== 'KOSONG' && d.poAktualUI !== 'Cek Stok...') {
-            btnPO = `<button onclick="window.bukaModalLihatPO('${encodeURIComponent(d.poAktualUI)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 mx-auto w-full max-w-[100px] shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
+        let btnCustomer = d.customerAktualUI;
+        if (d.status === 'VALID' && d.customerAktualUI !== '-' && d.customerAktualUI !== 'KOSONG' && d.customerAktualUI !== 'Cek Stok...') {
+            btnCustomer = `<button onclick="window.bukaModalLihatCustomer('${encodeURIComponent(d.customerAktualUI)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 mx-auto w-full max-w-[100px] shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
         }
 
         html += `
@@ -464,15 +464,15 @@ function renderTablePic(dataToRender) {
                 <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${d.grade || '-'}">${d.grade || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${d.dus || '-'}">${d.dus || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 border-r border-slate-200 col-shading" data-search="${d.shading || '-'}">${d.shading || '-'}</td>
-                <td class="px-4 py-3 text-center font-medium text-slate-500 col-po-bawaan border-r border-slate-200" data-search="${d.poBawaan || '-'}">${d.poBawaan || '-'}</td>
-                <td class="px-4 py-2 text-center col-po-aktual" data-search="${d.poAktualUI}">${btnPO}</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-500 col-customer-bawaan border-r border-slate-200" data-search="${d.customerBawaan || '-'}">${d.customerBawaan || '-'}</td>
+                <td class="px-4 py-2 text-center col-customer-aktual" data-search="${d.customerAktualUI}">${btnCustomer}</td>
             </tr>`;
     });
     tbody.innerHTML = html; 
     lucide.createIcons();
     saringTabelExcel();
     initResizableColumns();
-    updateTableDisplay(); // Panggil ini di akhir untuk update jumlah baris
+    updateTableDisplay(); 
 }
 
 // ==========================================
@@ -500,17 +500,17 @@ window.verifikasiGudang = async function() {
                 if (matched) {
                     d.status = 'VALID'; 
                     d.area = matched.area; 
-                    d.poAsliDB = extractPOFromSKU(matched.id_sku);
-                    d.poAktualUI = d.poAsliDB; 
+                    d.customerAsliDB = extractCustomerFromSKU(matched.id_sku);
+                    d.customerAktualUI = d.customerAsliDB; 
                     d.baseSpec = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}`;
                     uniqueSpecs.add(d.baseSpec);
                 } else {
                     d.status = 'KOSONG'; 
-                    d.poAktualUI = '-';
+                    d.customerAktualUI = '-';
                 }
             });
 
-            let poDistMap = {};
+            let customerDistMap = {};
             for (let spec of uniqueSpecs) {
                 let parts = spec.split('_'); 
                 const { data: actData } = await db.from('stok_aktual').select('customer_aktual, qty')
@@ -518,22 +518,22 @@ window.verifikasiGudang = async function() {
                     .eq('dus', parts[3]).eq('shading', parts[4]);
                 
                 if(actData) {
-                    poDistMap[spec] = {};
+                    customerDistMap[spec] = {};
                     actData.forEach(a => {
-                        if(!poDistMap[spec][a.customer_aktual]) poDistMap[spec][a.customer_aktual] = 0;
-                        poDistMap[spec][a.customer_aktual] += a.qty;
+                        if(!customerDistMap[spec][a.customer_aktual]) customerDistMap[spec][a.customer_aktual] = 0;
+                        customerDistMap[spec][a.customer_aktual] += a.qty;
                     });
                 }
             }
 
             dataPic.forEach(d => { 
                 if (d.status === 'VALID') {
-                    let dist = poDistMap[d.baseSpec];
+                    let dist = customerDistMap[d.baseSpec];
                     let arr = [];
                     if(dist) {
-                        for(let po in dist) arr.push(`${po} (${dist[po]} Dus)`);
+                        for(let cust in dist) arr.push(`${cust} (${dist[cust]} Dus)`);
                     }
-                    d.poAktualUI = arr.length > 0 ? arr.join(' | ') : 'KOSONG';
+                    d.customerAktualUI = arr.length > 0 ? arr.join(' | ') : 'KOSONG';
                 } 
             });
             
@@ -544,11 +544,11 @@ window.verifikasiGudang = async function() {
             dataPic.forEach(d => {
                 if (existingQRs.includes(d.qrcode)) {
                     d.status = 'DUPLIKAT LOKAL'; 
-                    d.poAktualUI = '-';
+                    d.customerAktualUI = '-';
                     d.area = 'TOLAK';
                 } else {
                     d.status = 'VALID';
-                    d.poAktualUI = d.poBawaan || '-'; 
+                    d.customerAktualUI = d.customerBawaan || '-'; 
                     d.area = 'OK'; 
                 }
             });
@@ -582,40 +582,40 @@ function bukaModalSimpanOut() {
     let unverified = dataPic.filter(d => d.status !== 'VALID');
     if (unverified.length > 0) return alert("GAGAL! Terdapat barcode yang berstatus 'BELUM CEK' atau 'KOSONG'.\nHapus baris merah sebelum simpan.");
 
-    let poSet = new Set();
+    let customerSet = new Set();
     dataPic.forEach(d => {
-        if (d.poAktualUI && d.poAktualUI !== 'KOSONG / NON-PO' && d.poAktualUI !== '-' && d.poAktualUI !== '?') {
-            let parts = d.poAktualUI.split('|');
+        if (d.customerAktualUI && d.customerAktualUI !== 'KOSONG / NON-CUSTOMER' && d.customerAktualUI !== '-' && d.customerAktualUI !== '?') {
+            let parts = d.customerAktualUI.split('|');
             parts.forEach(p => {
-                let poName = p.split('(')[0].trim();
-                if(poName) poSet.add(poName);
+                let custName = p.split('(')[0].trim();
+                if(custName) customerSet.add(custName);
             });
         }
     });
 
-    if (poSet.size === 0) return alert("Barang yang Anda scan belum memiliki jatah Customer aktual di gudang untuk dikonversi OUT.");
+    if (customerSet.size === 0) return alert("Barang yang Anda scan belum memiliki jatah Customer aktual di gudang untuk dikonversi OUT.");
 
-    const sel = document.getElementById('out-po-target');
+    const sel = document.getElementById('out-customer-target');
     sel.innerHTML = '<option value="">-- PILIH CUSTOMER TARGET KONVERSI --</option>';
-    Array.from(poSet).sort().forEach(po => { sel.innerHTML += `<option value="${po}">${po}</option>`; });
+    Array.from(customerSet).sort().forEach(cust => { sel.innerHTML += `<option value="${cust}">${cust}</option>`; });
 
     document.getElementById('modal-po-target').classList.remove('hidden');
 }
 
-window.bukaModalLihatPO = function(encodedPOs) {
-    const poStr = decodeURIComponent(encodedPOs);
-    const poArr = poStr.split('|').map(p => p.trim()).filter(p => p);
-    const ul = document.getElementById('list-po-aktual');
-    if (poArr.length === 0 || poArr[0] === 'KOSONG') {
+window.bukaModalLihatCustomer = function(encodedCusts) {
+    const custStr = decodeURIComponent(encodedCusts);
+    const custArr = custStr.split('|').map(p => p.trim()).filter(p => p);
+    const ul = document.getElementById('list-customer-aktual');
+    if (custArr.length === 0 || custArr[0] === 'KOSONG') {
         ul.innerHTML = '<li class="text-slate-400 italic font-medium p-3 bg-slate-50 rounded-md text-center border border-slate-200">Tidak ada Customer Aktual tersimpan.</li>';
     } else {
-        ul.innerHTML = poArr.map(p => {
+        ul.innerHTML = custArr.map(p => {
             let parts = p.split('(');
-            let namaPo = parts[0].trim();
-            let qtyPo = parts[1] ? parts[1].replace(')', '').trim() : '';
+            let namaCust = parts[0].trim();
+            let qtyCust = parts[1] ? parts[1].replace(')', '').trim() : '';
             return `<li class="p-3 bg-white border border-slate-200 shadow-sm text-slate-700 font-semibold rounded-md flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 text-slate-400"></i> <span>${namaPo}</span></div> 
-                        <span class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded text-xs font-black">${qtyPo}</span>
+                        <div class="flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 text-slate-400"></i> <span>${namaCust}</span></div> 
+                        <span class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded text-xs font-black">${qtyCust}</span>
                     </li>`;
         }).join('');
     }
@@ -624,8 +624,8 @@ window.bukaModalLihatPO = function(encodedPOs) {
 };
 
 window.eksekusiSimpanFinalOut = async function() {
-    const poTarget = document.getElementById('out-po-target').value;
-    if(!poTarget) return alert("Wajib memilih Customer Tujuan Konversi!");
+    const customerTarget = document.getElementById('out-customer-target').value;
+    if(!customerTarget) return alert("Wajib memilih Customer Tujuan Konversi!");
 
     const rawAktifitas = document.getElementById('select-aktifitas').value;
     const aktifitas = "OUT - " + rawAktifitas; 
@@ -651,7 +651,7 @@ window.eksekusiSimpanFinalOut = async function() {
             let [nm, pj, gr, ds, sh] = [parts[0], parts[1], parts[2], parts[3], parts[4]];
             const { data, error } = await db.from('stok_aktual').select('qty')
                 .eq('nama_item', nm).eq('panjang', pj).eq('grade', gr).eq('dus', ds).eq('shading', sh)
-                .eq('customer_aktual', poTarget); 
+                .eq('customer_aktual', customerTarget); 
             if (error) throw error;
             let count = 0; if(data) data.forEach(d => count += (d.qty || 0));
             stockCapacity[spec] = count;
@@ -667,18 +667,18 @@ window.eksekusiSimpanFinalOut = async function() {
             if(stockCapacity[baseSpec] && stockCapacity[baseSpec] > 0) {
                 matchedRows.push(d); qrList.push(d.qrcode); stockCapacity[baseSpec] -= 1; 
 
-                let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${poTarget}_-`;
-                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: d.jenisItem, nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, customer_aktual: poTarget, ket: '-', qty: 0 };
+                let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${customerTarget}_-`;
+                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: d.jenisItem, nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, customer_aktual: customerTarget, ket: '-', qty: 0 };
                 mapAktual[keyAkt].qty++;
 
-                let keyGlb = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${poTarget}_-`;
-                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: d.jenisItem, nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, po_bawaan: poTarget, ket: '-', qty: 0 };
+                let keyGlb = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${customerTarget}_-`;
+                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: d.jenisItem, nama_item: d.namaItem, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, customer_bawaan: customerTarget, ket: '-', qty: 0 };
                 mapGlobal[keyGlb].qty++;
             } else { unmatchedCount++; }
         } else { unmatchedCount++; }
     });
 
-    if (qrList.length === 0) { alert(`❌ TIDAK ADA JATAH.\nSisa stok aktual untuk Customer "${poTarget}" adalah 0.`); btn.innerHTML = ori; btn.disabled = false; return; }
+    if (qrList.length === 0) { alert(`❌ TIDAK ADA JATAH.\nSisa stok aktual untuk Customer "${customerTarget}" adalah 0.`); btn.innerHTML = ori; btn.disabled = false; return; }
 
     try {
         const payloadData = { qrs: qrList, aktuals: Object.values(mapAktual), globals: Object.values(mapGlobal) };
@@ -698,7 +698,7 @@ window.eksekusiSimpanFinalOut = async function() {
                 tgl_produksi: d.tglProduksi || '-', mesin: d.mesin || '-', shift: d.shift || '-',
                 jenis_item: d.jenisItem || '-', nama_item: d.namaItem || '-', panjang: d.panjang || '-',
                 grade: d.grade || '-', dus: d.dus || '-', shading: d.shading || '-',
-                po_bawaan: d.poAsliDB || '-', po_aktual: poTarget, keterangan: keterangan || '-',
+                customer_bawaan: d.customerAsliDB || '-', customer_aktual: customerTarget, keterangan: keterangan || '-',
                 pic: currentUser.username, area: d.area || '-', status: 'PENDING'
             });
         });
@@ -709,13 +709,13 @@ window.eksekusiSimpanFinalOut = async function() {
 
         const payloadLog = {
             kode_konversi: kodeKonversi, aktifitas: aktifitas, qrcode: allQRs,
-            detail: JSON.stringify({ keterangan: keterangan || '-', po_target: poTarget, items: matchedRows }),
+            detail: JSON.stringify({ keterangan: keterangan || '-', customer_target: customerTarget, items: matchedRows }),
             qty_total: qrList.length, pic: currentUser.username
         };
         const { error: errInsert } = await db.from('laporan_konversi').insert([payloadLog]);
         if (errInsert) throw errInsert;
 
-        let msg = `✅ EKSEKUSI KONVERSI OUT BERHASIL!\n\nID Audit: ${kodeKonversi}\nCustomer Target: ${poTarget}\nBerhasil dipotong dari Kartu Stok: ${qrList.length} Dus dan dimasukkan ke Stok Konversi.`;
+        let msg = `✅ EKSEKUSI KONVERSI OUT BERHASIL!\n\nID Audit: ${kodeKonversi}\nCustomer Target: ${customerTarget}\nBerhasil dipotong dari Kartu Stok: ${qrList.length} Dus dan dimasukkan ke Stok Konversi.`;
         if (unmatchedCount > 0) msg += `\n\n⚠️ ${unmatchedCount} dus tidak diproses karena jatah Customer kurang atau status fisik belum VALID.`;
         alert(msg);
         
@@ -752,8 +752,8 @@ window.eksekusiSimpanFinalIn = async function() {
     let mapAktual = {};
 
     validItems.forEach(d => {
-        let poBawaanAsli = d.poBawaan && d.poBawaan !== '-' ? d.poBawaan : '-';
-        let id_sku_baru = `${areaTujuan}_${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${poBawaanAsli}_${ket}`;
+        let customerBawaanAsli = d.customerBawaan && d.customerBawaan !== '-' ? d.customerBawaan : '-';
+        let id_sku_baru = `${areaTujuan}_${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${customerBawaanAsli}_${ket}`;
         
         insertsStokQr.push({
             qrcode: d.qrcode,
@@ -775,8 +775,8 @@ window.eksekusiSimpanFinalIn = async function() {
             grade: d.grade || '-',
             dus: d.dus || '-',
             shading: d.shading || '-',
-            po_bawaan: poBawaanAsli,
-            po_aktual: poBawaanAsli,
+            customer_bawaan: customerBawaanAsli,
+            customer_aktual: customerBawaanAsli,
             keterangan: ket,
             pic: currentUser.username,
             area: areaTujuan,
@@ -793,7 +793,7 @@ window.eksekusiSimpanFinalIn = async function() {
                 dus: d.dus,
                 shading: d.shading,
                 area: areaTujuan,
-                customer_aktual: poBawaanAsli,
+                customer_aktual: customerBawaanAsli,
                 keterangan: ket,
                 qty: 0
             };
@@ -861,14 +861,14 @@ window.eksekusiPindahArea = async function() {
     
     try {
         for (let item of validItems) {
-            let poBawaanAsli = item.poAsliDB && item.poAsliDB !== '-' ? item.poAsliDB : '-';
-            let id_sku_baru = `${areaTarget}_${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${poBawaanAsli}_Pindah Area`;
+            let customerBawaanAsli = item.customerAsliDB && item.customerAsliDB !== '-' ? item.customerAsliDB : '-';
+            let id_sku_baru = `${areaTarget}_${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${customerBawaanAsli}_Pindah Area`;
             
-            let keyOld = `${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.area}_${poBawaanAsli}`;
+            let keyOld = `${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.area}_${customerBawaanAsli}`;
             if(!mapDeduct[keyOld]) mapDeduct[keyOld] = { ...item, qty: 0 };
             mapDeduct[keyOld].qty++;
 
-            let keyNew = `${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${areaTarget}_${poBawaanAsli}`;
+            let keyNew = `${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${areaTarget}_${customerBawaanAsli}`;
             if(!mapAdd[keyNew]) mapAdd[keyNew] = { ...item, area: areaTarget, qty: 0 };
             mapAdd[keyNew].qty++;
 
@@ -885,7 +885,7 @@ window.eksekusiPindahArea = async function() {
                 grade: item.grade || '-',
                 dus: item.dus || '-',
                 shading: item.shading || '-',
-                po: poBawaanAsli,
+                customer: customerBawaanAsli,
                 keterangan: 'Pindah Area',
                 area_awal: item.area, 
                 area_akhir: areaTarget,
@@ -903,7 +903,7 @@ window.eksekusiPindahArea = async function() {
             const { data: existing } = await db.from('stok_aktual').select('id, qty')
                 .eq('nama_item', item.namaItem).eq('panjang', item.panjang).eq('grade', item.grade)
                 .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
-                .eq('customer_aktual', item.poAsliDB).limit(1);
+                .eq('customer_aktual', item.customerAsliDB).limit(1);
             if(existing && existing.length > 0) {
                 await db.from('stok_aktual').update({ qty: existing[0].qty - item.qty }).eq('id', existing[0].id);
             }
@@ -914,14 +914,14 @@ window.eksekusiPindahArea = async function() {
             const { data: existing } = await db.from('stok_aktual').select('id, qty')
                 .eq('nama_item', item.namaItem).eq('panjang', item.panjang).eq('grade', item.grade)
                 .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
-                .eq('customer_aktual', item.poAsliDB).eq('keterangan', 'Pindah Area').limit(1);
+                .eq('customer_aktual', item.customerAsliDB).eq('keterangan', 'Pindah Area').limit(1);
             if(existing && existing.length > 0) {
                 await db.from('stok_aktual').update({ qty: existing[0].qty + item.qty }).eq('id', existing[0].id);
             } else {
                 await db.from('stok_aktual').insert([{
-                    id_sku: `${item.area}_${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.poAsliDB}_Pindah Area`,
+                    id_sku: `${item.area}_${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.customerAsliDB}_Pindah Area`,
                     jenis_item: item.jenisItem, nama_item: item.namaItem, panjang: item.panjang, grade: item.grade,
-                    dus: item.dus, shading: item.shading, area: item.area, customer_aktual: item.poAsliDB, keterangan: 'Pindah Area', qty: item.qty
+                    dus: item.dus, shading: item.shading, area: item.area, customer_aktual: item.customerAsliDB, keterangan: 'Pindah Area', qty: item.qty
                 }]);
             }
         }
@@ -964,7 +964,7 @@ window.bukaModalRiwayatPindah = async function() {
                     <td class="p-2 font-medium text-slate-700">${d.grade}</td>
                     <td class="p-2 font-medium text-slate-700">${d.dus}</td>
                     <td class="p-2 font-medium text-slate-700 border-r border-slate-200">${d.shading}</td>
-                    <td class="p-2 font-semibold text-orange-600">${d.po}</td>
+                    <td class="p-2 font-semibold text-orange-600">${d.customer}</td>
                     <td class="p-2 font-medium text-slate-500 text-left border-r border-slate-200">${d.keterangan || '-'}</td>
                     <td class="p-2 uppercase opacity-70 font-bold text-slate-500">${d.pic}</td>
                 </tr>`;
