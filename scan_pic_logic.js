@@ -1,5 +1,3 @@
-console.log("WMS Scan PIC Logic - Versi Panjang Fix v3"); // Penanda cache
-
 let currentMode = 'out';
 let dataPic = [];
 let picRowId = 0;
@@ -64,6 +62,7 @@ function extractCustomerFromSKU(id_sku) {
     return parts.length >= 7 ? parts[6] : '-';
 }
 
+// REVISI: Menerjemahkan Customer Bawaan dari Barcode sesuai master_2 (kode_customer -> customer)
 function translateBarcode(barcode) {
     const parts = barcode.split('/');
     let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customerBawaan: '-' };
@@ -98,7 +97,10 @@ function translateBarcode(barcode) {
             let rawMesin = match[1]; let rawShift = match[2]; let rawCustomer = match[3];   
             let cariMesin = masterData.kamus.find(m => m.kode_mesin === rawMesin); data.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : rawMesin;
             let cariShift = masterData.kamus.find(m => m.kode_shift === rawShift); data.shift = cariShift && cariShift.shift ? cariShift.shift : rawShift;
-            let cariCustomer = masterData.kamus.find(m => m.kode_customer === rawCustomer); data.customerBawaan = cariCustomer && cariCustomer.customer ? cariCustomer.customer : rawCustomer;
+            
+            // FIX: Mencari berdasarkan kode_customer, dan mengembalikan customer
+            let cariCustomer = masterData.kamus.find(m => m.kode_customer === rawCustomer); 
+            data.customerBawaan = cariCustomer && cariCustomer.customer ? cariCustomer.customer : rawCustomer;
         }
     }
     return data;
@@ -504,6 +506,7 @@ window.verifikasiGudang = async function() {
                     d.area = matched.area; 
                     d.customerAsliDB = extractCustomerFromSKU(matched.id_sku);
                     d.customerAktualUI = d.customerAsliDB; 
+                    // REVISI: Tambahkan area ke baseSpec agar query stok_aktual lebih akurat
                     d.baseSpec = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}`;
                     uniqueSpecs.add(d.baseSpec);
                 } else {
@@ -515,6 +518,7 @@ window.verifikasiGudang = async function() {
             let customerDistMap = {};
             for (let spec of uniqueSpecs) {
                 let parts = spec.split('_'); 
+                // REVISI: Query stok_aktual dengan filter area juga
                 const { data: actData } = await db.from('stok_aktual').select('customer_aktual, qty')
                     .eq('nama_item', parts[0]).eq('panjang', parts[1]).eq('grade', parts[2])
                     .eq('dus', parts[3]).eq('shading', parts[4]).eq('area', parts[5]);
@@ -669,13 +673,14 @@ window.eksekusiSimpanFinalOut = async function() {
             if(stockCapacity[baseSpec] && stockCapacity[baseSpec] > 0) {
                 matchedRows.push(d); qrList.push(d.qrcode); stockCapacity[baseSpec] -= 1; 
 
-                // REVISI: Menggunakan panjang (bukan pjg) dan menambahkan fallback pjg untuk RPC
+                // REVISI: Menghapus pjg: d.panjang dari payload
                 let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${customerTarget}_-`;
-                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: d.jenisItem, nama_item: d.namaItem, panjang: d.panjang, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, customer_aktual: customerTarget, ket: '-', qty: 0 };
+                if(!mapAktual[keyAkt]) mapAktual[keyAkt] = { jenis_item: d.jenisItem, nama_item: d.namaItem, panjang: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, area: d.area, customer_aktual: customerTarget, ket: '-', qty: 0 };
                 mapAktual[keyAkt].qty++;
 
+                // REVISI: Menghapus pjg: d.panjang dari payload
                 let keyGlb = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${customerTarget}_-`;
-                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: d.jenisItem, nama_item: d.namaItem, panjang: d.panjang, pjg: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, customer_bawaan: customerTarget, ket: '-', qty: 0 };
+                if(!mapGlobal[keyGlb]) mapGlobal[keyGlb] = { jenis_item: d.jenisItem, nama_item: d.namaItem, panjang: d.panjang, grade: d.grade, dus: d.dus, shading: d.shading, customer_bawaan: customerTarget, ket: '-', qty: 0 };
                 mapGlobal[keyGlb].qty++;
             } else { unmatchedCount++; }
         } else { unmatchedCount++; }
