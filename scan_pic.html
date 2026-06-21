@@ -220,14 +220,14 @@
         </div>
     </div>
 
-    <!-- MODAL PO TARGET (OUT) -->
+    <!-- MODAL CUSTOMER TARGET (OUT) -->
     <div id="modal-po-target" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/40 z-[80] px-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md border border-slate-200">
-            <h3 class="text-base font-semibold mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="package-minus" class="text-rose-600 w-5 h-5"></i> Tujuan PO Konversi Out</h3>
-            <p class="text-xs text-slate-500 mb-5 border-b border-slate-100 pb-3">Pilih PO Aktual target untuk mengeksekusi aktifitas konversi pemotongan stok ini.</p>
+            <h3 class="text-base font-semibold mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="package-minus" class="text-rose-600 w-5 h-5"></i> Tujuan Customer Konversi Out</h3>
+            <p class="text-xs text-slate-500 mb-5 border-b border-slate-100 pb-3">Pilih Customer Aktual target untuk mengeksekusi aktifitas konversi pemotongan stok ini.</p>
             <div class="mb-6">
-                <label class="block text-xs font-semibold text-slate-600 mb-2">Pilih PO Tujuan</label>
-                <select id="out-po-target" class="w-full p-2.5 border border-slate-300 rounded-md outline-none focus:border-rose-500 font-medium text-slate-800 uppercase cursor-pointer bg-white text-sm transition"></select>
+                <label class="block text-xs font-semibold text-slate-600 mb-2">Pilih Customer Tujuan</label>
+                <select id="out-customer-target" class="w-full p-2.5 border border-slate-300 rounded-md outline-none focus:border-rose-500 font-medium text-slate-800 uppercase cursor-pointer bg-white text-sm transition"></select>
             </div>
             <div class="flex justify-end gap-2">
                 <button type="button" onclick="tutupSemuaModal()" class="px-4 py-2 bg-white border border-slate-300 text-slate-600 font-medium rounded-md hover:bg-slate-50 transition text-sm">Batal</button>
@@ -236,15 +236,15 @@
         </div>
     </div>
 
-    <!-- MODAL LIHAT PO -->
+    <!-- MODAL LIHAT CUSTOMER -->
     <div id="modal-lihat-po" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/40 z-[100] px-4 backdrop-blur-sm">
         <div class="bg-white shadow-2xl w-full max-w-sm border border-slate-200 rounded-xl overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
-                <h3 class="font-semibold text-slate-800 flex items-center gap-2 text-base"><i data-lucide="tags" class="w-5 h-5 text-orange-600"></i> Alokasi PO Aktual</h3>
+                <h3 class="font-semibold text-slate-800 flex items-center gap-2 text-base"><i data-lucide="tags" class="w-5 h-5 text-orange-600"></i> Alokasi Customer Aktual</h3>
                 <button onclick="tutupSemuaModal()" class="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-md transition"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             <div class="p-5 max-h-[60vh] overflow-y-auto bg-slate-50/50 custom-scroll">
-                <ul id="list-po-aktual" class="space-y-2 text-sm font-medium text-slate-700"></ul>
+                <ul id="list-customer-aktual" class="space-y-2 text-sm font-medium text-slate-700"></ul>
             </div>
             <div class="p-4 bg-white border-t border-slate-100">
                 <button onclick="tutupSemuaModal()" class="w-full py-2 bg-slate-800 text-white font-medium text-sm hover:bg-slate-900 transition rounded-md shadow-sm">Tutup</button>
@@ -313,7 +313,7 @@
                              <th class="p-3 text-xs font-bold text-slate-500 uppercase">GRADE</th>
                              <th class="p-3 text-xs font-bold text-slate-500 uppercase">DUS</th>
                              <th class="p-3 text-xs font-bold text-slate-500 uppercase">SHADING</th>
-                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">PO</th>
+                             <th class="p-3 text-xs font-bold text-slate-500 uppercase">CUSTOMER</th>
                              <th class="p-3 text-xs font-bold text-slate-500 uppercase text-left">KETERANGAN</th>
                              <th class="p-3 text-xs font-bold text-slate-500 uppercase">PIC</th>
                          </tr>
