@@ -1,3 +1,5 @@
+console.log("WMS Scan PIC Logic - Versi Panjang Fix v3"); // Penanda cache
+
 let currentMode = 'out';
 let dataPic = [];
 let picRowId = 0;
@@ -14,7 +16,6 @@ window.tutupSemuaModal = function() {
     document.getElementById('modal-po-target').classList.add('hidden');
     document.getElementById('modal-riwayat-konversi').classList.add('hidden');
     document.getElementById('modal-lihat-po').classList.add('hidden');
-    document.getElementById('modal-detail-items').classList.add('hidden');
 };
 
 document.addEventListener('DOMContentLoaded', async () => { 
@@ -138,7 +139,6 @@ window.setModeKonversi = function(mode) {
         panelIn.classList.remove('hidden'); panelOut.classList.add('hidden'); panelPindah.classList.add('hidden');
         btnRiwayatPindah.classList.add('hidden');
         
-        // REVISI: Warna tombol Verifikasi Gudang di mode IN disamakan menjadi hitam
         btnVerifUmum.className = 'group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-slate-800';
         btnVerifUmum.innerHTML = '<div class="bg-slate-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="shield-check" class="w-4 h-4"></i></div><div class="bg-slate-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-700 transition">Verifikasi Gudang</div>';
         
@@ -542,16 +542,23 @@ window.verifikasiGudang = async function() {
             alert(`Selesai memverifikasi fisik Gudang untuk Mode ${currentMode.toUpperCase()}!`);
 
         } else if (currentMode === 'in') {
-            const existingQRs = foundDb.map(d => d.qrcode);
+            const { data: dbGlobals } = await db.from('stok_global').select('qrcode').in('qrcode', allQRs);
+            const { data: dbKonv } = await db.from('stok_konversi').select('qrcode').in('qrcode', allQRs);
+            
+            let qrSet = new Set(foundDb.map(d=>d.qrcode));
+            let glSet = new Set((dbGlobals||[]).map(d=>d.qrcode));
+            let kvSet = new Set((dbKonv||[]).map(d=>d.qrcode));
+
             dataPic.forEach(d => {
-                if (existingQRs.includes(d.qrcode)) {
-                    d.status = 'DUPLIKAT LOKAL'; 
-                    d.customerAktualUI = '-';
-                    d.area = 'TOLAK';
+                if (qrSet.has(d.qrcode)) {
+                    let matched = foundDb.find(x => x.qrcode === d.qrcode);
+                    d.status = 'DUPLIKAT LOKAL'; d.area = matched.area; d.customerAktualUI = '-';
+                } else if (glSet.has(d.qrcode)) {
+                    d.status = 'DUPLIKAT LOKAL'; d.area = 'STBJ'; d.customerAktualUI = '-';
+                } else if (kvSet.has(d.qrcode)) {
+                    d.status = 'DUPLIKAT LOKAL'; d.area = 'KONVERSI'; d.customerAktualUI = '-';
                 } else {
-                    d.status = 'VALID';
-                    d.customerAktualUI = d.customerBawaan || '-'; 
-                    d.area = 'OK'; 
+                    d.status = 'VALID'; d.area = 'OK'; d.customerAktualUI = d.customerBawaan || '-';
                 }
             });
             alert("Selesai memverifikasi fisik Gudang IN!\nBarcode yang VALID siap dimasukkan.");
@@ -734,7 +741,6 @@ window.eksekusiSimpanFinalOut = async function() {
     finally { btn.innerHTML = ori; btn.disabled = false; }
 };
 
-// REVISI: Fungsi Buka Modal Riwayat Konversi (Untuk Konversi IN)
 window.bukaModalRiwayatKonversi = async function() {
     const tbody = document.getElementById('tbody-modal-konversi');
     tbody.innerHTML = `<tr><td colspan="9" class="p-10"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-emerald-500"></i></td></tr>`;
@@ -742,7 +748,6 @@ window.bukaModalRiwayatKonversi = async function() {
     document.getElementById('modal-riwayat-konversi').classList.remove('hidden');
 
     try {
-        // REVISI: Ambil data dari stok_konversi
         const { data, error } = await db.from('stok_konversi').select('*').ilike('aktifitas', 'OUT%').order('created_at', {ascending: false});
         if(error) throw error;
         
@@ -751,7 +756,6 @@ window.bukaModalRiwayatKonversi = async function() {
             return; 
         }
 
-        // Grouping berdasarkan kode_konversi
         let grouped = {};
         data.forEach(d => {
             if(!grouped[d.kode_konversi]) {
@@ -847,7 +851,7 @@ window.eksekusiSimpanFinalIn = async function() {
     const kodeRef = document.getElementById('in-kode-konversi').value;
     const aktifitasRef = document.getElementById('in-aktifitas-ref').value;
     const areaTujuan = document.getElementById('in-area').value;
-    const ket = document.getElementById('input-keterangan-in').value.trim() || '-';
+    const ket = '-';
 
     if(!kodeRef) return alert("Pilih Kode Konversi OUT (PILIH KODE) sebagai referensi!");
     if(!areaTujuan) return alert("Pilih Area Tujuan Gudang terlebih dahulu!");
@@ -928,7 +932,7 @@ window.eksekusiSimpanFinalIn = async function() {
             kode_konversi: kodeRef, 
             aktifitas: `IN - ${aktifitasRef}`,
             qrcode: validItems.map(d=>d.qrcode).join(', '),
-            detail: JSON.stringify({ keterangan: ket, area_tujuan: areaTujuan, items: validItems }),
+            detail: JSON.stringify({ keterangan: 'IN Konversi', area_tujuan: areaTujuan, items: validItems }),
             qty_total: validItems.length,
             pic: currentUser.username
         };
@@ -953,7 +957,6 @@ window.eksekusiSimpanFinalIn = async function() {
         alert(`✅ BERHASIL KONVERSI IN!\n${validItems.length} dus masuk ke gudang pada area ${areaTujuan} & Saldo bertambah.`);
         dataPic = []; renderTablePic(dataPic);
         document.getElementById('in-kode-konversi').value = '';
-        document.getElementById('input-keterangan-in').value = '';
         
     } catch(err) { alert("GAGAL MENYIMPAN: " + err.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
@@ -972,26 +975,45 @@ window.eksekusiPindahArea = async function() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMINDAHKAN...'; btn.disabled = true;
 
     let payloadBarangPindah = [];
-    let mapDeduct = {};
-    let mapAdd = {};
     
     try {
         for (let item of validItems) {
-            let customerBawaanAsli = item.customerAsliDB && item.customerAsliDB !== '-' ? item.customerAsliDB : '-';
-            let id_sku_baru = `${areaTarget}_${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${customerBawaanAsli}_Pindah Area`;
+            // 1. Cari stok_aktual lama untuk deduct (Penting: Ambil customer_aktual dan keterangan saat ini)
+            const { data: oldStok } = await db.from('stok_aktual').select('*')
+                .eq('nama_item', item.namaItem).eq('panjang', item.panjang).eq('grade', item.grade)
+                .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
+                .gt('qty', 0).limit(1);
             
-            let keyOld = `${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.area}_${customerBawaanAsli}`;
-            if(!mapDeduct[keyOld]) mapDeduct[keyOld] = { ...item, qty: 0 };
-            mapDeduct[keyOld].qty++;
+            let custAktual = item.customerAsliDB && item.customerAsliDB !== '-' ? item.customerAsliDB : '-';
+            let ketAktual = '-';
 
-            let keyNew = `${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${areaTarget}_${customerBawaanAsli}`;
-            if(!mapAdd[keyNew]) mapAdd[keyNew] = { ...item, area: areaTarget, qty: 0 };
-            mapAdd[keyNew].qty++;
+            if(oldStok && oldStok.length > 0) {
+                custAktual = oldStok[0].customer_aktual;
+                ketAktual = oldStok[0].keterangan;
+                await db.from('stok_aktual').update({ qty: oldStok[0].qty - 1 }).eq('id', oldStok[0].id);
+            }
 
-            // REVISI: Hanya mengubah kolom area di stok_qr
-            const { error: errUpdate } = await db.from('stok_qr').update({ area: areaTarget }).eq('qrcode', item.qrcode);
-            if (errUpdate) throw errUpdate;
+            // 2. Update stok_qr (Hanya ubah area dan id_sku depannya)
+            let id_sku_baru = `${areaTarget}_${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${custAktual}_${ketAktual}`;
+            await db.from('stok_qr').update({ area: areaTarget, id_sku: id_sku_baru }).eq('qrcode', item.qrcode);
 
+            // 3. Tambah ke stok_aktual baru
+            const { data: newStok } = await db.from('stok_aktual').select('*')
+                .eq('nama_item', item.namaItem).eq('panjang', item.panjang).eq('grade', item.grade)
+                .eq('dus', item.dus).eq('shading', item.shading).eq('area', areaTarget)
+                .eq('customer_aktual', custAktual).eq('keterangan', ketAktual).limit(1);
+            
+            if(newStok && newStok.length > 0) {
+                await db.from('stok_aktual').update({ qty: newStok[0].qty + 1 }).eq('id', newStok[0].id);
+            } else {
+                await db.from('stok_aktual').insert([{
+                    id_sku: id_sku_baru,
+                    jenis_item: item.jenisItem, nama_item: item.namaItem, panjang: item.panjang, grade: item.grade,
+                    dus: item.dus, shading: item.shading, area: areaTarget, customer_aktual: custAktual, keterangan: ketAktual, qty: 1
+                }]);
+            }
+
+            // 4. Catat ke barang_pindah
             payloadBarangPindah.push({
                 qrcode: item.qrcode,
                 tgl_produksi: item.tglProduksi || '-',
@@ -1002,7 +1024,7 @@ window.eksekusiPindahArea = async function() {
                 grade: item.grade || '-',
                 dus: item.dus || '-',
                 shading: item.shading || '-',
-                customer: customerBawaanAsli,
+                customer: custAktual,
                 keterangan: 'Pindah Area',
                 area_awal: item.area, 
                 area_akhir: areaTarget,
@@ -1011,36 +1033,7 @@ window.eksekusiPindahArea = async function() {
         }
 
         if (payloadBarangPindah.length > 0) {
-            const { error: errPindah } = await db.from('barang_pindah').insert(payloadBarangPindah);
-            if (errPindah) throw errPindah;
-        }
-
-        for(let key in mapDeduct) {
-            let item = mapDeduct[key];
-            const { data: existing } = await db.from('stok_aktual').select('id, qty')
-                .eq('nama_item', item.namaItem).eq('panjang', item.panjang).eq('grade', item.grade)
-                .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
-                .eq('customer_aktual', item.customerAsliDB).limit(1);
-            if(existing && existing.length > 0) {
-                await db.from('stok_aktual').update({ qty: existing[0].qty - item.qty }).eq('id', existing[0].id);
-            }
-        }
-
-        for(let key in mapAdd) {
-            let item = mapAdd[key];
-            const { data: existing } = await db.from('stok_aktual').select('id, qty')
-                .eq('nama_item', item.namaItem).eq('panjang', item.panjang).eq('grade', item.grade)
-                .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
-                .eq('customer_aktual', item.customerAsliDB).eq('keterangan', 'Pindah Area').limit(1);
-            if(existing && existing.length > 0) {
-                await db.from('stok_aktual').update({ qty: existing[0].qty + item.qty }).eq('id', existing[0].id);
-            } else {
-                await db.from('stok_aktual').insert([{
-                    id_sku: `${item.area}_${item.namaItem}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.customerAsliDB}_Pindah Area`,
-                    jenis_item: item.jenisItem, nama_item: item.namaItem, panjang: item.panjang, grade: item.grade,
-                    dus: item.dus, shading: item.shading, area: item.area, customer_aktual: item.customerAsliDB, keterangan: 'Pindah Area', qty: item.qty
-                }]);
-            }
+            await db.from('barang_pindah').insert(payloadBarangPindah);
         }
 
         alert(`✅ SUKSES PINDAH AREA!\n${validItems.length} Item berhasil dipindahkan ke area ${areaTarget}.`);
