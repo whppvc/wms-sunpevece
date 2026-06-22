@@ -20,6 +20,7 @@
         .table-container { position: relative; will-change: transform; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* REVISI: Padding dikurangi agar tinggi header lebih rapi */
         .hdr-std { 
             background-color: #1e293b !important; 
             color: #ffffff !important; 
@@ -37,8 +38,10 @@
             background-clip: padding-box !important; 
         }
         
+        /* REVISI: Efek Select & Hover disamakan dengan Kartu Stok */
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
         tr.r-row:not(.selected-row):hover td { color: #4f46e5 !important; }
+        tr.r-row:not(.selected-row):hover td button { color: #4f46e5 !important; border-color: #4f46e5 !important; }
 
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
@@ -56,28 +59,81 @@
 
     <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
-        <!-- HEADER SECTION (TABS) -->
+        <!-- HEADER SECTION -->
         <div id="header-tabs" class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)]">
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
-                <button onclick="switchTab('tabel')" id="tab-tabel" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="table" class="w-4 h-4"></i> TABEL PO</button>
+                <button onclick="switchTab('input')" id="tab-input" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="file-plus-2" class="w-4 h-4"></i> INPUT PO</button>
+                <button onclick="switchTab('tabel')" id="tab-tabel" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="table" class="w-4 h-4"></i> TABEL PO</button>
                 <button onclick="switchTab('picking')" id="tab-picking" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="clipboard-list" class="w-4 h-4"></i> PICKING LIST</button>
             </div>
-            
-            <!-- Toolbar Picking List -->
-            <div id="toolbar-picking" class="hidden p-3 bg-slate-50/50 border-t border-slate-100 flex items-center gap-2">
-                <button onclick="bukaModalEditTgl()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-md shadow-sm flex items-center gap-2 text-xs transition active:scale-95 uppercase">
-                    <i data-lucide="calendar-days" class="w-4 h-4"></i> Edit Tgl Estimasi
+
+            <!-- COLLAPSIBLE INPUT BOX -->
+            <div id="view-input" class="bg-white border-b border-slate-200 flex flex-col">
+                <button onclick="toggleInputPO()" class="w-full bg-slate-50 p-3 flex justify-between items-center border-b border-slate-200 hover:bg-slate-100 transition active:bg-slate-200">
+                    <span class="font-black text-[11px] uppercase tracking-wide text-slate-700 flex items-center gap-2">
+                        <i data-lucide="package-plus" class="w-4 h-4"></i> INPUT PO BARU
+                    </span>
+                    <i data-lucide="chevron-up" id="icon-toggle-input" class="w-4 h-4 text-slate-500 transition-transform duration-300"></i>
                 </button>
+                
+                <div id="body-input-po" class="p-3 sm:p-4 transition-all duration-300 origin-top">
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-4">
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Kode PO</label>
+                            <input type="text" id="in-kode-po" class="w-full p-2 border border-slate-300 rounded-md font-bold text-xs outline-none focus:border-blue-600 bg-slate-50 uppercase" placeholder="Ketik Kode PO...">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Customer PO</label>
+                            <select id="in-customer-po" class="w-full p-2 border border-slate-300 rounded-md font-bold text-xs outline-none focus:border-blue-600 bg-slate-50 cursor-pointer uppercase">
+                                <option value="">-- Memuat --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Nama Item</label>
+                            <select id="in-nama-item" class="w-full p-2 border border-slate-300 rounded-md font-bold text-xs outline-none focus:border-blue-600 bg-slate-50 cursor-pointer">
+                                <option value="">-- Memuat --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Panjang</label>
+                            <input type="text" id="in-panjang" class="w-full p-2 border border-slate-300 rounded-md font-bold text-xs outline-none focus:border-blue-600 bg-slate-50 uppercase" placeholder="Cth: 4M">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Grade</label>
+                            <select id="in-grade" class="w-full p-2 border border-slate-300 rounded-md font-bold text-xs outline-none focus:border-blue-600 bg-slate-50 cursor-pointer">
+                                <option value="">-- Memuat --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Dus</label>
+                            <select id="in-dus" class="w-full p-2 border border-slate-300 rounded-md font-bold text-xs outline-none focus:border-blue-600 bg-slate-50 cursor-pointer">
+                                <option value="">-- Memuat --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">QTY PO</label>
+                            <input type="number" id="in-qty-po" class="w-full p-2 border border-orange-300 rounded-md font-black text-xs outline-none focus:border-orange-600 text-orange-700 bg-orange-50" placeholder="Cth: 100">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Note</label>
+                            <input type="text" id="in-note" class="w-full p-2 border border-slate-300 rounded-md font-bold text-xs outline-none focus:border-blue-600 bg-slate-50" placeholder="Catatan...">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button onclick="addEstimasiLokal()" class="px-6 py-2 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-md shadow-sm text-xs flex items-center gap-2 active:scale-95 transition uppercase"><i data-lucide="plus-circle" class="w-4 h-4"></i> Add Data</button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- HEADER ATUR ITEM & INPUT PO (Dengan Tombol Kembali) -->
-        <div id="header-back" class="hidden shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)]">
+        <!-- HEADER ATUR ITEM (Hanya muncul saat mode Atur Item) -->
+        <div id="header-atur" class="hidden shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)]">
             <div class="flex items-center gap-4 p-3 border-b border-slate-200 bg-slate-50">
                 <button onclick="switchTab('tabel')" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-md text-xs font-bold transition shadow-sm flex items-center gap-2 uppercase"><i data-lucide="arrow-left" class="w-4 h-4"></i> Kembali</button>
                 <div class="flex flex-col">
-                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest" id="lbl-back-title">Atur Item Untuk PO:</span>
-                    <span class="text-sm font-black text-blue-700 uppercase" id="lbl-po-aktif">INPUT PO BARU</span>
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Atur Item Untuk PO:</span>
+                    <span class="text-sm font-black text-blue-700 uppercase" id="lbl-po-aktif">-</span>
                 </div>
             </div>
         </div>
@@ -85,60 +141,7 @@
         <!-- MIDDLE SCROLL SECTION -->
         <div class="flex-1 min-h-0 bg-slate-200 p-2 overflow-hidden flex flex-col relative z-0">
             
-            <!-- VIEW INPUT PO -->
-            <div id="view-input" class="hidden flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll p-4 sm:p-6">
-                <div class="max-w-5xl mx-auto">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                        <div>
-                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Kode PO</label>
-                            <input type="text" id="in-kode-po" class="w-full p-2.5 border border-slate-300 rounded-md font-bold text-sm outline-none focus:border-blue-600 bg-slate-50 uppercase" placeholder="Ketik Kode PO...">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Customer PO</label>
-                            <div class="relative">
-                                <input type="text" id="in-customer-po" readonly class="w-full p-2.5 pr-10 border border-slate-300 rounded-md font-bold text-sm outline-none focus:border-blue-600 bg-white cursor-pointer uppercase" placeholder="Pilih Customer..." onclick="bukaModalPilih('customer')">
-                                <button onclick="bukaModalPilih('customer')" class="absolute right-1.5 top-1.5 bottom-1.5 px-2 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 transition"><i data-lucide="search" class="w-4 h-4"></i></button>
-                            </div>
-                        </div>
-                        <div class="lg:col-span-2">
-                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Nama Item</label>
-                            <div class="relative">
-                                <input type="text" id="in-nama-item" readonly class="w-full p-2.5 pr-10 border border-slate-300 rounded-md font-bold text-sm outline-none focus:border-blue-600 bg-white cursor-pointer" placeholder="Pilih Nama Item..." onclick="bukaModalPilih('item')">
-                                <button onclick="bukaModalPilih('item')" class="absolute right-1.5 top-1.5 bottom-1.5 px-2 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 transition"><i data-lucide="search" class="w-4 h-4"></i></button>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Panjang</label>
-                            <input type="text" id="in-panjang" class="w-full p-2.5 border border-slate-300 rounded-md font-bold text-sm outline-none focus:border-blue-600 bg-slate-50 uppercase" placeholder="Cth: 4M">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Grade</label>
-                            <select id="in-grade" class="w-full p-2.5 border border-slate-300 rounded-md font-bold text-sm outline-none focus:border-blue-600 bg-slate-50 cursor-pointer">
-                                <option value="">-- Pilih Grade --</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Dus</label>
-                            <select id="in-dus" class="w-full p-2.5 border border-slate-300 rounded-md font-bold text-sm outline-none focus:border-blue-600 bg-slate-50 cursor-pointer">
-                                <option value="">-- Pilih Dus --</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">QTY PO</label>
-                            <input type="number" id="in-qty-po" class="w-full p-2.5 border border-orange-300 rounded-md font-black text-sm outline-none focus:border-orange-600 text-orange-700 bg-orange-50" placeholder="Cth: 100">
-                        </div>
-                        <div class="lg:col-span-4">
-                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Note / Keterangan</label>
-                            <input type="text" id="in-note" class="w-full p-2.5 border border-slate-300 rounded-md font-bold text-sm outline-none focus:border-blue-600 bg-slate-50" placeholder="Catatan opsional...">
-                        </div>
-                    </div>
-                    <div class="flex justify-end border-t border-slate-200 pt-4">
-                        <button onclick="addEstimasiLokal()" class="px-8 py-3 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-md shadow-sm text-sm flex items-center gap-2 active:scale-95 transition uppercase"><i data-lucide="plus-circle" class="w-5 h-5"></i> Tambahkan ke List</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TABEL PO -->
+            <!-- TABEL PO & INPUT -->
             <div id="view-tabel" class="flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll table-container">
                 <table class="w-full text-center border-separate border-spacing-0 whitespace-nowrap" id="main-table">
                     <thead class="sticky top-0 z-40 shadow-md bg-slate-800" id="thead-po"></thead>
@@ -167,28 +170,25 @@
         <!-- FOOTER PAGINATION & ACTION -->
         <div class="shrink-0 w-full bg-white p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 border-t border-slate-200 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)]">
             
-            <!-- Info & Paginasi -->
-            <div id="footer-tabel" class="flex-1 flex flex-col md:flex-row justify-between items-center gap-4 w-full">
-                <div class="flex items-center gap-2 text-sm text-slate-500 flex-wrap">
-                    <button id="btn-tambah-po" onclick="bukaInputPO()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md shadow-sm flex items-center gap-2 text-xs transition active:scale-95 uppercase">
-                        <i data-lucide="plus" class="w-4 h-4"></i> Tambah PO
-                    </button>
+            <!-- Info & Paginasi (Tampil di Tab Tabel, Atur Item, Picking) -->
+            <div id="footer-tabel" class="hidden flex-1 flex flex-col md:flex-row justify-between items-center gap-4 w-full">
+                <div class="flex items-center gap-4 text-sm text-slate-500">
                     <button id="btn-hapus-po" onclick="hapusMassalPO()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-md shadow-sm flex items-center gap-2 text-xs transition active:scale-95 uppercase">
                         <i data-lucide="trash-2" class="w-4 h-4"></i> Hapus PO
                     </button>
                     <button id="btn-hapus-pick" onclick="hapusMassalPick()" class="hidden px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-md shadow-sm flex items-center gap-2 text-xs transition active:scale-95 uppercase">
                         <i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Pick
                     </button>
-                    
-                    <span class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-md text-slate-600 text-[11px] font-bold shadow-sm ml-2">Qty: <span id="lbl-total-qty" class="text-slate-900 font-medium ml-1">0</span></span>
-                    <span class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-md text-slate-600 text-[11px] font-bold shadow-sm" id="lbl-text-kodepo">Jml PO: <span id="lbl-total-kodepo" class="text-slate-900 font-medium ml-1">0</span></span>
-                    <span class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-md text-slate-600 text-[11px] font-bold shadow-sm hidden" id="lbl-text-dipilih">Dipilih: <span id="lbl-pilih-baris" class="text-blue-600 font-medium ml-1">0</span></span>
+                    <span class="w-1 h-1 rounded-full bg-slate-300" id="dot-hapus"></span>
+                    <span>Qty: <strong class="text-slate-800" id="lbl-total-qty">0</strong> dus</span>
+                    <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                    <span id="lbl-text-kodepo">Jumlah PO: <strong class="text-slate-800" id="lbl-total-kodepo">0</strong></span>
                 </div>
                 
                 <div class="flex items-center gap-3">
-                    <div class="flex items-center gap-1 bg-white border border-slate-300 p-1 rounded shadow-sm">
-                        <span class="text-[10px] font-bold text-slate-500 uppercase px-1">Baris:</span>
-                        <select id="select-rows-per-page" onchange="changeRowsPerPage(this.value)" class="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 rounded outline-none cursor-pointer px-1 py-0.5 transition">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500">Baris:</span>
+                        <select id="select-rows-per-page" onchange="changeRowsPerPage(this.value)" class="text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md outline-none cursor-pointer px-2 py-1 focus:border-blue-500 transition">
                             <option value="10" selected>10</option>
                             <option value="25">25</option>
                             <option value="50">50</option>
@@ -196,16 +196,16 @@
                             <option value="ALL">Semua</option>
                         </select>
                     </div>
-                    <div class="flex items-center gap-2 bg-white border border-slate-300 p-1 rounded shadow-sm">
-                        <button onclick="prevPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                        <span class="px-2 font-black text-xs text-slate-600 tracking-wide uppercase">Hal <span id="lbl-halaman" class="text-blue-600">1</span> / <span id="lbl-total-halaman">1</span></span>
-                        <button onclick="nextPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                    <div class="flex items-center gap-1">
+                        <button onclick="prevPage()" class="p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-md transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                        <span class="text-sm font-medium text-slate-700 px-2">Hal <span id="lbl-halaman">1</span> / <span id="lbl-total-halaman">1</span></span>
+                        <button onclick="nextPage()" class="p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-md transition"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                     </div>
                 </div>
             </div>
 
             <!-- Tombol Simpan (Hanya tampil di Tab Input) -->
-            <div id="footer-input" class="hidden w-full flex justify-end">
+            <div id="footer-input" class="w-full flex justify-end">
                 <button id="btn-submit-db" onclick="simpanMassalKeDatabase()" class="w-full md:w-auto px-8 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-md shadow-sm flex items-center justify-center gap-2 text-sm transition active:scale-95 uppercase border-b-4 border-emerald-800">
                     <i data-lucide="save" class="w-4 h-4"></i> <span>SIMPAN PO KE DATABASE</span>
                 </button>
@@ -267,40 +267,6 @@
             <div class="flex gap-2">
                 <button type="button" onclick="document.getElementById('modal-confirm-customer').classList.add('hidden')" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition cursor-pointer text-xs uppercase">Batal</button>
                 <button type="button" onclick="eksekusiPickFinal(true)" id="btn-ganti-cust" class="w-1/2 py-3 bg-orange-600 font-black rounded-xl shadow-sm text-white hover:bg-orange-700 transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase border-b-4 border-orange-800"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Ganti</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL PILIH ITEM / CUSTOMER (PENCARIAN) -->
-    <div id="modal-pilih-master" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 flex flex-col max-h-[80vh]">
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
-                <h3 class="font-black text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wide" id="title-modal-pilih"><i data-lucide="search" class="w-4 h-4 text-blue-600"></i> Pilih Data</h3>
-                <button onclick="document.getElementById('modal-pilih-master').classList.add('hidden')" class="text-slate-400 hover:text-rose-500 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
-            </div>
-            <div class="p-3 border-b border-slate-100 bg-white">
-                <input type="text" id="input-search-master" oninput="saringListMaster(this.value)" class="w-full p-2.5 border border-slate-300 rounded-md font-bold text-sm outline-none focus:border-blue-600 bg-slate-50" placeholder="Ketik untuk mencari...">
-            </div>
-            <div class="overflow-y-auto flex-1 custom-scroll p-2 bg-white">
-                <ul id="list-master-data" class="space-y-1"></ul>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL EDIT TANGGAL ESTIMASI -->
-    <div id="modal-edit-tgl" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200">
-            <h3 class="text-lg font-black mb-2 flex items-center gap-2 text-slate-800"><i data-lucide="calendar-days" class="text-indigo-600"></i> Edit Tgl Estimasi</h3>
-            <p class="text-xs font-bold text-slate-500 mb-5">Pilih tanggal estimasi pengiriman yang baru untuk PO yang dicentang.</p>
-            <div class="space-y-4 mb-6">
-                <div>
-                    <label class="block text-xs font-black uppercase text-slate-500 mb-2">Tanggal Baru</label>
-                    <input type="date" id="input-tgl-baru" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-600 font-bold text-slate-800 bg-slate-50 cursor-pointer">
-                </div>
-            </div>
-            <div class="flex gap-2">
-                <button type="button" onclick="document.getElementById('modal-edit-tgl').classList.add('hidden')" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase cursor-pointer hover:bg-slate-300 transition">Batal</button>
-                <button type="button" onclick="simpanEditTgl()" id="btn-simpan-tgl" class="w-2/3 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 border-b-4 border-indigo-800 flex justify-center items-center gap-2 cursor-pointer"><i data-lucide="save"></i> SIMPAN</button>
             </div>
         </div>
     </div>
