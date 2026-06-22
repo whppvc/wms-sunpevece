@@ -1,4 +1,4 @@
-console.log("WMS PO Logic - Fix Table & Save v4");
+console.log("WMS PO Logic - Fix Table Blank & Save v5");
 
 let currentMode = 'tabel';
 let stagingData = [];
@@ -254,7 +254,6 @@ window.toggleAllStaging = function(checked) {
     }); 
 };
 
-// REVISI: Payload disesuaikan dengan kolom di tabel po_estimasi
 window.simpanMassalKeDatabase = async function() {
     if (stagingData.length === 0) return alert("Tabel penampungan masih kosong!");
     const btn = document.getElementById('btn-submit-db'); const oriText = btn.innerHTML;
@@ -262,6 +261,7 @@ window.simpanMassalKeDatabase = async function() {
 
     const defaultDate = new Date().toISOString().split('T')[0];
 
+    // REVISI: Payload disesuaikan dengan kolom di tabel po_estimasi
     const payload = stagingData.map(d => ({ 
         tgl_estimasi_kirim: defaultDate,
         kode_po: d.kode_po, 
@@ -304,6 +304,7 @@ async function muatDataEstimasiDB() {
     }
 }
 
+// REVISI: Order by id descending (karena tidak ada created_at)
 async function muatDataPickingDB() {
     const tbody = document.getElementById('tbody-picking');
     tbody.innerHTML = `<tr><td colspan="14" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data Picking...</p></td></tr>`;
