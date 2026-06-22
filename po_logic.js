@@ -1,4 +1,4 @@
-let currentMode = 'input';
+let currentMode = 'tabel';
 let stagingData = [];
 let dbRecordsRaw = [];
 let dbPoAturRaw = []; 
@@ -17,6 +17,10 @@ let currentPage = 1;
 let rowsPerPage = 10; 
 let activeFilters = {}; 
 let currentFilterCol = ''; 
+
+// State Modal Pencarian
+let currentSearchType = ''; // 'item' atau 'customer'
+let masterListCache = [];
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || { username: 'Admin' };
 
@@ -43,20 +47,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     await ambilReferensiMaster2();
-    renderHeaderDanTabel();
+    switchTab('tabel'); // Default view
 });
-
-function toggleInputPO() {
-    const body = document.getElementById('body-input-po');
-    const icon = document.getElementById('icon-toggle-input');
-    if (body.classList.contains('hidden')) {
-        body.classList.remove('hidden');
-        icon.classList.remove('rotate-180');
-    } else {
-        body.classList.add('hidden');
-        icon.classList.add('rotate-180');
-    }
-}
 
 async function ambilReferensiMaster2() {
     try {
@@ -64,14 +56,10 @@ async function ambilReferensiMaster2() {
         if (error) throw error; 
         masterKamus = data || [];
         
-        const namaSet = [...new Set(masterKamus.map(x => (x.nama_item || '').trim()).filter(Boolean))].sort();
         const gradeSet = [...new Set(masterKamus.map(x => (x.grade || '').trim()).filter(Boolean))].sort();
-        const customerSet = [...new Set(masterKamus.map(x => (x.customer || '').trim()).filter(Boolean))].sort();
         const dusSet = [...new Set(masterKamus.map(x => (x.dus || '').trim()).filter(Boolean))].sort();
 
-        isiDropdown('in-nama-item', namaSet, '-- Pilih Item --');
         isiDropdown('in-grade', gradeSet, '-- Pilih Grade --');
-        isiDropdown('in-customer-po', customerSet, '-- Pilih Customer --');
         isiDropdown('in-dus', dusSet, '-- Pilih Dus --');
     } catch (e) { console.error("Gagal memuat dropdown acuan:", e.message); }
 }
@@ -82,36 +70,98 @@ function isiDropdown(elId, dataArray, placeholderText) {
     dataArray.forEach(val => html += `<option value="${val}">${val}</option>`); el.innerHTML = html;
 }
 
-function switchTab(mode) {
+// REVISI: Fungsi Buka Modal Pencarian Item/Customer
+window.bukaModalPilih = function(type) {
+    currentSearchType = type;
+    const title = document.getElementById('title-modal-pilih');
+    const inputSearch = document.getElementById('input-search-master');
+    
+    inputSearch.value = '';
+    
+    if(type === 'item') {
+        title.innerHTML = '<i data-lucide="box" class="w-4 h-4 text-blue-600"></i> Pilih Nama Item';
+        masterListCache = [...new Set(masterKamus.map(x => (x.nama_item || '').trim()).filter(Boolean))].sort();
+    } else {
+        title.innerHTML = '<i data-lucide="users" class="w-4 h-4 text-blue-600"></i> Pilih Customer PO';
+        masterListCache = [...new Set(masterKamus.map(x => (x.customer || '').trim()).filter(Boolean))].sort();
+    }
+    
+    renderListMaster(masterListCache);
+    document.getElementById('modal-pilih-master').classList.remove('hidden');
+    lucide.createIcons();
+    setTimeout(() => inputSearch.focus(), 100);
+};
+
+window.saringListMaster = function(val) {
+    const query = val.toLowerCase();
+    const filtered = masterListCache.filter(item => item.toLowerCase().includes(query));
+    renderListMaster(filtered);
+};
+
+function renderListMaster(dataArray) {
+    const ul = document.getElementById('list-master-data');
+    if(dataArray.length === 0) {
+        ul.innerHTML = '<li class="p-4 text-center text-slate-400 font-bold text-xs">Data tidak ditemukan.</li>';
+        return;
+    }
+    
+    ul.innerHTML = dataArray.map(item => `
+        <li>
+            <button onclick="pilihDataMaster('${item.replace(/'/g, "\\'")}')" class="w-full text-left p-3 hover:bg-blue-50 rounded-lg font-bold text-sm text-slate-700 transition border border-transparent hover:border-blue-200">
+                ${item}
+            </button>
+        </li>
+    `).join('');
+}
+
+window.pilihDataMaster = function(val) {
+    if(currentSearchType === 'item') {
+        document.getElementById('in-nama-item').value = val;
+    } else {
+        document.getElementById('in-customer-po').value = val;
+    }
+    document.getElementById('modal-pilih-master').classList.add('hidden');
+};
+
+// REVISI: Fungsi Buka/Tutup Input PO
+window.bukaInputPO = function() {
+    switchTab('input');
+};
+
+window.switchTab = function(mode) {
     currentMode = mode;
     
     // Toggle Views
     document.getElementById('view-input').classList.toggle('hidden', mode !== 'input');
-    document.getElementById('view-tabel').classList.toggle('hidden', mode !== 'tabel' && mode !== 'input');
+    document.getElementById('view-tabel').classList.toggle('hidden', mode !== 'tabel');
     document.getElementById('view-atur-item').classList.toggle('hidden', mode !== 'atur');
     document.getElementById('view-picking').classList.toggle('hidden', mode !== 'picking');
     
     // Toggle Headers
-    document.getElementById('header-tabs').classList.toggle('hidden', mode === 'atur');
-    document.getElementById('header-atur').classList.toggle('hidden', mode !== 'atur');
+    document.getElementById('header-tabs').classList.toggle('hidden', mode === 'atur' || mode === 'input');
+    document.getElementById('header-back').classList.toggle('hidden', mode !== 'atur' && mode !== 'input');
 
     // Toggle Footers
     document.getElementById('footer-input').classList.toggle('hidden', mode !== 'input');
     document.getElementById('footer-tabel').classList.toggle('hidden', mode === 'input');
     
     // Toggle Buttons in Footer
+    document.getElementById('btn-tambah-po').classList.toggle('hidden', mode !== 'tabel');
     document.getElementById('btn-hapus-po').classList.toggle('hidden', mode !== 'tabel');
     document.getElementById('btn-hapus-pick').classList.toggle('hidden', mode !== 'picking');
     document.getElementById('dot-hapus').classList.toggle('hidden', mode === 'atur');
     
     if(mode === 'atur') {
+        document.getElementById('lbl-back-title').innerText = 'Atur Item Untuk PO:';
         document.getElementById('lbl-text-kodepo').innerHTML = ``; 
+    } else if (mode === 'input') {
+        document.getElementById('lbl-back-title').innerText = 'Kembali ke Tabel PO';
+        document.getElementById('lbl-po-aktif').innerText = 'INPUT PO BARU';
     } else {
         document.getElementById('lbl-text-kodepo').innerHTML = `Jumlah PO: <strong class="text-slate-800" id="lbl-total-kodepo">0</strong>`;
     }
 
-    if(mode !== 'atur') {
-        document.getElementById('tab-input').className = mode === 'input' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    if(mode !== 'atur' && mode !== 'input') {
         document.getElementById('tab-tabel').className = mode === 'tabel' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
         document.getElementById('tab-picking').className = mode === 'picking' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     }
@@ -124,9 +174,9 @@ function switchTab(mode) {
     } else if (mode === 'picking') {
         muatDataPickingDB();
     }
-}
+};
 
-function addEstimasiLokal() {
+window.addEstimasiLokal = function() {
     const kodePo = document.getElementById('in-kode-po').value.trim().toUpperCase();
     const customerPo = document.getElementById('in-customer-po').value;
     const nama = document.getElementById('in-nama-item').value; 
@@ -164,14 +214,14 @@ function addEstimasiLokal() {
     document.getElementById('in-dus').value = ''; 
     document.getElementById('in-qty-po').value = ''; 
     document.getElementById('in-note').value = '';
-}
+};
 
-function hapusBarisStaging(id) { 
+window.hapusBarisStaging = function(id) { 
     stagingData = stagingData.filter(d => d.id !== id); 
     renderHeaderDanTabel(); 
-}
+};
 
-async function hapusMassalPO() {
+window.hapusMassalPO = async function() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
     if (checkedBoxes.length === 0) return alert("Centang minimal 1 baris PO yang ingin dihapus!");
     
@@ -197,16 +247,16 @@ async function hapusMassalPO() {
         btn.disabled = false;
         lucide.createIcons();
     }
-}
+};
 
-function toggleAllStaging(checked) { 
+window.toggleAllStaging = function(checked) { 
     document.querySelectorAll('.cb-row').forEach(cb => {
         if(cb.closest('tr').style.display !== 'none') cb.checked = checked;
         highlightRow(cb);
     }); 
-}
+};
 
-async function simpanMassalKeDatabase() {
+window.simpanMassalKeDatabase = async function() {
     if (stagingData.length === 0) return alert("Tabel penampungan masih kosong!");
     const btn = document.getElementById('btn-submit-db'); const oriText = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MENYIMPAN...'; btn.disabled = true;
@@ -233,13 +283,13 @@ async function simpanMassalKeDatabase() {
         if (error) throw error; 
         alert(`🚀 BERHASIL! ${payload.length} data PO sukses masuk database server.`);
         stagingData = []; 
-        renderHeaderDanTabel();
+        switchTab('tabel'); // Kembali ke tabel setelah simpan
     } catch (e) { 
         alert("GAGAL INSERT: " + e.message); 
     } finally { 
         btn.innerHTML = oriText; btn.disabled = false; lucide.createIcons(); 
     }
-}
+};
 
 async function muatDataEstimasiDB() {
     const tbody = document.getElementById('tbody-po');
@@ -274,7 +324,7 @@ async function muatDataPickingDB() {
 // ========================================================
 // LOGIKA ATUR ITEM (PICKING)
 // ========================================================
-async function aturItemPO(id) {
+window.aturItemPO = async function(id) {
     activePO = dbRecordsRaw.find(r => r.id == id);
     if(!activePO) return;
 
@@ -358,13 +408,14 @@ async function aturItemPO(id) {
     } catch(e) {
         tbody.innerHTML = `<tr><td colspan="14" class="p-5 text-red-500 font-bold">Error load: ${e.message}</td></tr>`;
     }
-}
+};
 
 function renderTabelAturItem() {
     const thead = document.getElementById('thead-atur');
     const tbody = document.getElementById('tbody-atur');
     sortState = {}; 
 
+    // REVISI: Header "PILIH" dihapus
     thead.innerHTML = `
         <tr>
             <th class="hdr-std w-12 col-pick border-r border-slate-600">Pick</th>
@@ -390,17 +441,19 @@ function renderTabelAturItem() {
     
     let h = '';
     dataAturItem.forEach((r, i) => {
+        // REVISI: Tombol Cancel Pick (Merah)
         let btnPick = r.isPicked 
-            ? `<span class="text-emerald-600 font-black text-[10px] uppercase"><i data-lucide="check-circle" class="w-4 h-4 mx-auto"></i></span>`
+            ? `<button onclick="batalPickItem('${r.id_picking}', ${r.qty})" class="bg-rose-600 text-white font-bold px-3 py-1.5 rounded hover:bg-rose-700 transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap"><i data-lucide="x" class="w-3 h-3 mr-1"></i> Cancel</button>`
             : `<button onclick="bukaModalPick(${i})" class="bg-blue-600 text-white font-bold px-3 py-1.5 rounded hover:bg-blue-700 transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap">Pick Item</button>`;
 
         let rowBg = r.isPicked ? 'bg-emerald-50 hover:bg-emerald-100' : 'bg-white even:bg-slate-100 hover:bg-slate-50';
+        let tglEstStr = r.tgl_estimasi !== '-' ? formatTglIntl(r.tgl_estimasi) : '-';
 
         h += `
             <tr class="border-b border-slate-200 transition r-row text-sm ${rowBg}">
                 <td class="px-4 py-3 text-center col-pick border-r border-slate-200">${btnPick}</td>
                 <td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
-                <td class="px-4 py-3 text-slate-600 font-medium col-tgl_est border-r border-slate-200" data-search="${r.tgl_estimasi}">${r.tgl_estimasi}</td>
+                <td class="px-4 py-3 text-slate-600 font-medium col-tgl_est border-r border-slate-200" data-search="${tglEstStr}">${tglEstStr}</td>
                 <td class="px-4 py-3 font-semibold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
                 <td class="px-4 py-3 font-semibold text-slate-800 col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 col-jenis border-r border-slate-200" data-search="${r.jenis_item}">${r.jenis_item}</td>
@@ -420,15 +473,34 @@ function renderTabelAturItem() {
     initResizableColumns();
 }
 
-function bukaModalPick(index) {
+// REVISI: Fungsi Batal Pick Item
+window.batalPickItem = async function(id_picking, qty_pick) {
+    if(!confirm("Batalkan pick item ini? Qty terpenuhi pada PO akan dikurangi otomatis.")) return;
+    
+    try {
+        const { error: errDel } = await db.from('po_atur').delete().eq('id', id_picking);
+        if(errDel) throw errDel;
+        
+        const newQty = Math.max(0, (activePO.qty_terpenuhi || 0) - qty_pick);
+        const { error: errPo } = await db.from('po_estimasi').update({ qty_terpenuhi: newQty }).eq('id', activePO.id);
+        if(errPo) throw errPo;
+        
+        await muatDataEstimasiDB(); // Reload background data
+        aturItemPO(activePO.id); // Reload modal data
+    } catch(e) {
+        alert("Gagal membatalkan pick: " + e.message);
+    }
+};
+
+window.bukaModalPick = function(index) {
     activePickItem = dataAturItem[index];
     document.getElementById('lbl-max-pick').innerText = activePickItem.qty;
     document.getElementById('input-qty-pick').value = '';
     document.getElementById('modal-pick-qty').classList.remove('hidden');
     setTimeout(() => document.getElementById('input-qty-pick').focus(), 100);
-}
+};
 
-function cekCustomerPick() {
+window.cekCustomerPick = function() {
     tempQtyPick = parseInt(document.getElementById('input-qty-pick').value);
     if(isNaN(tempQtyPick) || tempQtyPick <= 0) return alert("Jumlah dus tidak valid!");
     if(tempQtyPick > activePickItem.qty) return alert(`Maksimal dus yang bisa diambil adalah ${activePickItem.qty}!`);
@@ -442,9 +514,9 @@ function cekCustomerPick() {
     } else {
         eksekusiPickFinal(false);
     }
-}
+};
 
-async function eksekusiPickFinal(isGantiCustomer) {
+window.eksekusiPickFinal = async function(isGantiCustomer) {
     let finalIdSku = activePickItem.id_sku;
 
     if(isGantiCustomer) {
@@ -505,7 +577,7 @@ async function eksekusiPickFinal(isGantiCustomer) {
     } catch(e) {
         alert("Gagal memproses Pick Item: " + e.message);
     }
-}
+};
 
 function renderTabelPickingList() {
     const thead = document.getElementById('thead-picking');
@@ -562,7 +634,7 @@ function renderTabelPickingList() {
     initResizableColumns();
 }
 
-async function hapusMassalPick() {
+window.hapusMassalPick = async function() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
     if (checkedBoxes.length === 0) return alert("Centang minimal 1 baris Pick yang ingin dihapus!");
     
@@ -607,12 +679,12 @@ async function hapusMassalPick() {
         btn.disabled = false;
         lucide.createIcons();
     }
-}
+};
 
 // ========================================================
 // SORTING & FILTER EXCEL PRO
 // ========================================================
-function sortTable(colIndex, headerEl) {
+window.sortTable = function(colIndex, headerEl) {
     let tbodyId = currentMode === 'atur' ? 'tbody-atur' : (currentMode === 'picking' ? 'tbody-picking' : 'tbody-po');
     let rowClass = 'tr.r-row';
     
@@ -633,9 +705,9 @@ function sortTable(colIndex, headerEl) {
     const icon = headerEl.querySelector('.sort-icon');
     if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
     applyPagination();
-}
+};
 
-const thSort = (idx, label, cls = "") => {
+window.thSort = function(idx, label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-btn', 'col-no', 'col-atur', 'col-pick'].includes(colClass);
     
@@ -652,7 +724,7 @@ const thSort = (idx, label, cls = "") => {
     </th>`;
 };
 
-function openColumnFilter(event, colClass, colName) {
+window.openColumnFilter = function(event, colClass, colName) {
     event.stopPropagation(); currentFilterCol = colClass;
     document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
     let uniqueValues = new Set();
@@ -695,36 +767,36 @@ function openColumnFilter(event, colClass, colName) {
         menu.style.top = top + 'px'; menu.style.left = left + 'px';
     }
     const sInput = document.getElementById('filter-search-input'); if(sInput) sInput.focus();
-}
+};
 
-function toggleAllFilterValues(checked) {
+window.toggleAllFilterValues = function(checked) {
     document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
     updateSelectAllState();
-}
-function updateSelectAllState() {
+};
+window.updateSelectAllState = function() {
     const allCbs = document.querySelectorAll('.filter-val-cb'); const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
     const selectAll = document.getElementById('filter-select-all'); if(!selectAll) return;
     if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
     else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
     else { selectAll.checked = false; selectAll.indeterminate = true; }
-}
+};
 
-function searchFilterList(val) {
+window.searchFilterList = function(val) {
     const query = val.toLowerCase().split(' ').filter(x => x);
     document.querySelectorAll('.filter-val-item').forEach(label => {
         const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
         label.style.display = query.every(term => text.includes(term)) ? '' : 'none';
     });
-}
-function closeFilterMenu() { const menu = document.getElementById('excel-filter-menu'); if(menu) menu.classList.add('hidden'); }
-function clearFilterForCurrentCol() { delete activeFilters[currentFilterCol]; closeFilterMenu(); saringTabelExcel(); updateFilterIcons(); }
-function applyFilterForCurrentCol() {
+};
+window.closeFilterMenu = function() { const menu = document.getElementById('excel-filter-menu'); if(menu) menu.classList.add('hidden'); };
+window.clearFilterForCurrentCol = function() { delete activeFilters[currentFilterCol]; closeFilterMenu(); saringTabelExcel(); updateFilterIcons(); };
+window.applyFilterForCurrentCol = function() {
     const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked'); const totalBoxes = document.querySelectorAll('.filter-val-cb');
     if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') { delete activeFilters[currentFilterCol]; } 
     else { activeFilters[currentFilterCol] = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value)); }
     closeFilterMenu(); saringTabelExcel(); updateFilterIcons();
-}
-function saringTabelExcel() {
+};
+window.saringTabelExcel = function() {
     let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row' : (currentMode === 'picking' ? '#tbody-picking tr.r-row' : '#tbody-po tr.r-row');
     document.querySelectorAll(tbodyId).forEach(row => {
         let show = true;
@@ -736,25 +808,25 @@ function saringTabelExcel() {
         else { row.classList.add('filtered-out'); let cb = row.querySelector('.cb-row'); if(cb) { cb.checked = false; highlightRow(cb); } }
     });
     currentPage = 1; applyPagination();
-}
-function updateFilterIcons() {
+};
+window.updateFilterIcons = function() {
     document.querySelectorAll('.filter-icon').forEach(icon => { icon.classList.remove('text-amber-400', 'opacity-100'); icon.classList.add('opacity-40', 'text-white'); });
     for (let colClass in activeFilters) {
         const th = document.querySelector(`th.${colClass}`);
         if (th) { const icon = th.querySelector('.filter-icon'); if (icon) { icon.classList.remove('opacity-40', 'text-white'); icon.classList.add('text-amber-400', 'opacity-100'); } }
     }
-}
+};
 
 // ========================================================
 // PAGINASI & RENDER TABEL
 // ========================================================
-function changeRowsPerPage(val) {
+window.changeRowsPerPage = function(val) {
     if (val === 'ALL') { rowsPerPage = 999999; } 
     else { rowsPerPage = parseInt(val); }
     currentPage = 1; applyPagination();
-}
+};
 
-function applyPagination() {
+window.applyPagination = function() {
     let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row' : (currentMode === 'picking' ? '#tbody-picking tr.r-row' : '#tbody-po tr.r-row');
     const allRows = Array.from(document.querySelectorAll(tbodyId));
     allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
@@ -786,24 +858,24 @@ function applyPagination() {
     if(document.getElementById('lbl-total-kodepo')) document.getElementById('lbl-total-kodepo').innerText = uniquePOs.size;
     if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
     if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
-}
+};
 
-function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } }
-function nextPage() { 
+window.prevPage = function() { if(currentPage > 1) { currentPage--; applyPagination(); } };
+window.nextPage = function() { 
     let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row:not(.filtered-out)' : (currentMode === 'picking' ? '#tbody-picking tr.r-row:not(.filtered-out)' : '#tbody-po tr.r-row:not(.filtered-out)');
     const totalVisible = document.querySelectorAll(tbodyId).length;
     if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
-}
+};
 
-function highlightRow(cb) {
+window.highlightRow = function(cb) {
     const tr = cb.closest('tr');
     if (tr) {
         if (cb.checked) tr.classList.add('selected-row');
         else tr.classList.remove('selected-row');
     }
-}
+};
 
-function initResizableColumns() {
+window.initResizableColumns = function() {
     const cols = document.querySelectorAll('#main-table th, #table-atur th, #table-picking th');
     cols.forEach(col => {
         const existing = col.querySelector('.resizer');
@@ -832,17 +904,18 @@ function initResizableColumns() {
             resizer.classList.remove('resizing');
         };
     });
-}
+};
 
-function renderHeaderDanTabel() {
+window.renderHeaderDanTabel = function() {
     const thead = document.getElementById('thead-po');
     const tbody = document.getElementById('tbody-po');
     sortState = {}; 
 
     let dataset = currentMode === 'input' ? stagingData : dbRecordsRaw;
 
+    // REVISI: Hilangkan tulisan PILIH
     let thHtml = `<tr>
-        <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600">PILIH<br><input type="checkbox" onchange="toggleAllStaging(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>`;
+        <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="toggleAllStaging(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>`;
     
     if (currentMode === 'input') {
         thHtml += `<th class="hdr-std w-10 col-btn text-center relative border-r border-slate-600"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-rose-400"></i></th>
@@ -887,7 +960,7 @@ function renderHeaderDanTabel() {
         let noUrut = currentMode === 'input' ? (dataset.length - i) : (i + 1);
         
         let btnHapus = currentMode === 'input' 
-            ? `<button onclick="hapusBarisStaging(${r.id})" class="text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white border border-slate-200 p-1.5 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`
+            ? `<button onclick="hapusBarisStaging(${r.id})" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`
             : '';
 
         let qtyPo = parseInt(r.qty_po) || 0;
@@ -943,4 +1016,4 @@ function renderHeaderDanTabel() {
     lucide.createIcons(); 
     saringTabelExcel();
     initResizableColumns();
-}
+};
