@@ -1,7 +1,7 @@
 let currentMode = 'input';
 let stagingData = [];
 let dbRecordsRaw = [];
-let dbPoAturRaw = []; // Data dari tabel po_atur
+let dbPoAturRaw = []; 
 let masterKamus = [];
 let stagingRowId = 0;
 let sortState = {};
@@ -20,16 +20,14 @@ let currentFilterCol = '';
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || { username: 'Admin' };
 
+// REVISI: Format Tanggal menjadi DD/MM/YYYY
 function formatTglIntl(tglStr) {
     if(!tglStr) return '-';
-    const p = tglStr.split('-');
-    if(p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`; 
-    
-    if(tglStr.includes('T')) {
+    try {
         const d = new Date(tglStr);
-        return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    }
-    return tglStr;
+        if (isNaN(d.getTime())) return tglStr;
+        return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    } catch(e) { return tglStr; }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -109,7 +107,7 @@ function switchTab(mode) {
     if(mode === 'atur') {
         document.getElementById('lbl-text-kodepo').innerHTML = ``; 
     } else {
-        document.getElementById('lbl-text-kodepo').innerHTML = `Jumlah PO: <strong class="text-blue-600" id="lbl-total-kodepo">0</strong>`;
+        document.getElementById('lbl-text-kodepo').innerHTML = `Jumlah PO: <strong class="text-slate-800" id="lbl-total-kodepo">0</strong>`;
     }
 
     if(mode !== 'atur') {
@@ -204,6 +202,7 @@ async function hapusMassalPO() {
 function toggleAllStaging(checked) { 
     document.querySelectorAll('.cb-row').forEach(cb => {
         if(cb.closest('tr').style.display !== 'none') cb.checked = checked;
+        highlightRow(cb);
     }); 
 }
 
@@ -287,17 +286,14 @@ async function aturItemPO(id) {
     lucide.createIcons();
 
     try {
-        // 1. Tarik stok_aktual berdasarkan id_po
         const { data: stokData, error: errStok } = await db.from('stok_aktual').select('*').eq('id_po', activePO.id_po);
         if(errStok) throw errStok;
 
-        // 2. Tarik po_atur berdasarkan kode_po
         const { data: pickData, error: errPick } = await db.from('po_atur').select('*').eq('kode_po', activePO.kode_po);
         if(errPick) throw errPick;
 
         dataAturItem = [];
 
-        // Masukkan data yang sudah di-pick
         if(pickData) {
             pickData.forEach(p => {
                 dataAturItem.push({
@@ -321,10 +317,8 @@ async function aturItemPO(id) {
             });
         }
 
-        // Masukkan data stok aktual yang tersisa
         if(stokData) {
             stokData.forEach(s => {
-                // Hitung berapa yang sudah di-pick dari baris stok ini (berdasarkan id_sku)
                 let pickedQtyForThisStok = 0;
                 if(pickData) {
                     pickData.forEach(p => {
@@ -379,14 +373,14 @@ function renderTabelAturItem() {
             ${thSort(3, 'Customer PO', 'col-customer_po')}
             ${thSort(4, 'Area', 'col-area')}
             ${thSort(5, 'Jenis Item', 'col-jenis')}
-            ${thSort(6, 'Nama Item', 'col-nama text-blue-300')}
+            ${thSort(6, 'Nama Item', 'col-nama')}
             ${thSort(7, 'Panjang', 'col-pjg')}
             ${thSort(8, 'Grade', 'col-grade')}
             ${thSort(9, 'Dus', 'col-dus')}
             ${thSort(10, 'Shading', 'col-shading')}
             ${thSort(11, 'Customer Aktual', 'col-customer_aktual')}
             ${thSort(12, 'Keterangan', 'col-ket')}
-            ${thSort(13, 'QTY', 'col-qty text-emerald-300')}
+            ${thSort(13, 'QTY', 'col-qty')}
         </tr>`;
     
     if(dataAturItem.length === 0) { 
@@ -400,24 +394,24 @@ function renderTabelAturItem() {
             ? `<span class="text-emerald-600 font-black text-[10px] uppercase"><i data-lucide="check-circle" class="w-4 h-4 mx-auto"></i></span>`
             : `<button onclick="bukaModalPick(${i})" class="bg-blue-600 text-white font-bold px-3 py-1.5 rounded hover:bg-blue-700 transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap">Pick Item</button>`;
 
-        let rowBg = r.isPicked ? 'bg-emerald-50 hover:bg-emerald-100' : 'hover:bg-slate-50 bg-white';
+        let rowBg = r.isPicked ? 'bg-emerald-50 hover:bg-emerald-100' : 'bg-white even:bg-slate-100 hover:bg-slate-50';
 
         h += `
             <tr class="border-b border-slate-200 transition r-row text-sm ${rowBg}">
                 <td class="px-4 py-3 text-center col-pick border-r border-slate-200">${btnPick}</td>
                 <td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
                 <td class="px-4 py-3 text-slate-600 font-medium col-tgl_est border-r border-slate-200" data-search="${r.tgl_estimasi}">${r.tgl_estimasi}</td>
-                <td class="px-4 py-3 font-bold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
-                <td class="px-4 py-3 font-bold text-amber-600 col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
-                <td class="px-4 py-3 font-medium text-blue-600 col-jenis border-r border-slate-200" data-search="${r.jenis_item}">${r.jenis_item}</td>
-                <td class="px-4 py-3 font-bold text-slate-800 text-left col-nama border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
+                <td class="px-4 py-3 font-semibold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
+                <td class="px-4 py-3 font-semibold text-slate-800 col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 col-jenis border-r border-slate-200" data-search="${r.jenis_item}">${r.jenis_item}</td>
+                <td class="px-4 py-3 font-semibold text-slate-800 text-left col-nama border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
-                <td class="px-4 py-3 font-bold ${r.customer_aktual !== activePO.customer_po && !r.isPicked ? 'text-rose-600' : 'text-slate-700'} col-customer_aktual border-r border-slate-200" data-search="${r.customer_aktual}">${r.customer_aktual}</td>
+                <td class="px-4 py-3 font-semibold ${r.customer_aktual !== activePO.customer_po && !r.isPicked ? 'text-rose-600' : 'text-slate-700'} col-customer_aktual border-r border-slate-200" data-search="${r.customer_aktual}">${r.customer_aktual}</td>
                 <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket border-r border-slate-200" data-search="${r.keterangan}">${r.keterangan}</td>
-                <td class="px-4 py-3 font-black text-emerald-600 col-qty" data-search="${r.qty}">${r.qty}</td>
+                <td class="px-4 py-3 font-black text-slate-800 col-qty" data-search="${r.qty}">${r.qty}</td>
             </tr>`;
     });
     tbody.innerHTML = h;
@@ -466,10 +460,9 @@ async function eksekusiPickFinal(isGantiCustomer) {
             });
             if(error) throw error;
 
-            // Construct new id_sku based on the change
             let parts = activePickItem.id_sku.split('_');
             if(parts.length >= 8) {
-                parts[6] = activePO.customer_po; // Assuming index 6 is customer_aktual in id_sku
+                parts[6] = activePO.customer_po; 
                 finalIdSku = parts.join('_');
             }
 
@@ -482,7 +475,6 @@ async function eksekusiPickFinal(isGantiCustomer) {
     }
 
     try {
-        // 1. Insert ke po_atur
         const payloadPick = {
             kode_po: activePO.kode_po,
             tgl_estimasi: activePO.tgl_estimasi_kirim,
@@ -503,14 +495,12 @@ async function eksekusiPickFinal(isGantiCustomer) {
         const { error: errPick } = await db.from('po_atur').insert([payloadPick]);
         if(errPick) throw errPick;
 
-        // 2. Update qty_terpenuhi di po_estimasi
         const newQtyTerpenuhi = (activePO.qty_terpenuhi || 0) + tempQtyPick;
         const { error: errPo } = await db.from('po_estimasi').update({ qty_terpenuhi: newQtyTerpenuhi }).eq('id', activePO.id);
         if(errPo) throw errPo;
 
-        // Refresh Data
-        await muatDataEstimasiDB(); // Reload background data
-        aturItemPO(activePO.id); // Reload modal data
+        await muatDataEstimasiDB(); 
+        aturItemPO(activePO.id); 
 
     } catch(e) {
         alert("Gagal memproses Pick Item: " + e.message);
@@ -530,14 +520,14 @@ function renderTabelPickingList() {
             ${thSort(3, 'Customer PO', 'col-customer_po')}
             ${thSort(4, 'Area', 'col-area')}
             ${thSort(5, 'Jenis Item', 'col-jenis')}
-            ${thSort(6, 'Nama Item', 'col-nama text-blue-300')}
+            ${thSort(6, 'Nama Item', 'col-nama')}
             ${thSort(7, 'Panjang', 'col-pjg')}
             ${thSort(8, 'Grade', 'col-grade')}
             ${thSort(9, 'Dus', 'col-dus')}
             ${thSort(10, 'Shading', 'col-shading')}
             ${thSort(11, 'Customer Aktual', 'col-customer_aktual')}
             ${thSort(12, 'Keterangan', 'col-ket')}
-            ${thSort(13, 'QTY PICK', 'col-qty text-emerald-300')}
+            ${thSort(13, 'QTY PICK', 'col-qty')}
         </tr>`;
     
     if(dbPoAturRaw.length === 0) { 
@@ -547,22 +537,23 @@ function renderTabelPickingList() {
     
     let h = '';
     dbPoAturRaw.forEach((r, i) => {
+        let tglEstStr = formatTglIntl(r.tgl_estimasi);
         h += `
-            <tr class="border-b border-slate-200 hover:bg-slate-50 transition r-row text-sm bg-white">
+            <tr class="bg-white even:bg-slate-100 transition r-row text-sm border-b border-slate-200">
                 <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" data-kodepo="${r.kode_po}" data-qty="${r.qty_pick}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
-                <td class="px-4 py-3 text-slate-600 font-medium col-tgl_est border-r border-slate-200" data-search="${r.tgl_estimasi}">${r.tgl_estimasi || '-'}</td>
-                <td class="px-4 py-3 font-bold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
-                <td class="px-4 py-3 font-bold text-amber-600 col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
-                <td class="px-4 py-3 font-medium text-blue-600 col-jenis border-r border-slate-200" data-search="${r.jenis_item}">${r.jenis_item || '-'}</td>
-                <td class="px-4 py-3 font-bold text-slate-800 text-left col-nama border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
+                <td class="px-4 py-3 text-slate-600 font-medium col-tgl_est border-r border-slate-200" data-search="${tglEstStr}">${tglEstStr}</td>
+                <td class="px-4 py-3 font-semibold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
+                <td class="px-4 py-3 font-semibold text-slate-800 col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 col-jenis border-r border-slate-200" data-search="${r.jenis_item}">${r.jenis_item || '-'}</td>
+                <td class="px-4 py-3 font-semibold text-slate-800 text-left col-nama border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
-                <td class="px-4 py-3 font-bold text-slate-700 col-customer_aktual border-r border-slate-200" data-search="${r.customer_aktual}">${r.customer_aktual}</td>
+                <td class="px-4 py-3 font-semibold text-slate-700 col-customer_aktual border-r border-slate-200" data-search="${r.customer_aktual}">${r.customer_aktual}</td>
                 <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket border-r border-slate-200" data-search="${r.keterangan}">${r.keterangan || '-'}</td>
-                <td class="px-4 py-3 font-black text-emerald-600 col-qty" data-search="${r.qty_pick}">${r.qty_pick}</td>
+                <td class="px-4 py-3 font-black text-slate-800 col-qty" data-search="${r.qty_pick}">${r.qty_pick}</td>
             </tr>`;
     });
     tbody.innerHTML = h;
@@ -583,7 +574,6 @@ async function hapusMassalPick() {
     btn.disabled = true;
 
     try {
-        // Kelompokkan pengurangan qty berdasarkan kode_po
         let poDeductions = {};
         let idsToDelete = [];
 
@@ -596,11 +586,9 @@ async function hapusMassalPick() {
             poDeductions[kodePo] += qty;
         });
 
-        // 1. Hapus dari po_atur
         const { error: errDel } = await db.from('po_atur').delete().in('id', idsToDelete);
         if (errDel) throw errDel;
 
-        // 2. Kurangi qty_terpenuhi di po_estimasi
         for(let kode in poDeductions) {
             const { data: poData } = await db.from('po_estimasi').select('id, qty_terpenuhi').eq('kode_po', kode).limit(1);
             if(poData && poData.length > 0) {
@@ -610,8 +598,8 @@ async function hapusMassalPick() {
         }
         
         alert("Data Pick berhasil dihapus!");
-        muatDataPickingDB(); // Reload picking list
-        muatDataEstimasiDB(); // Reload PO list in background
+        muatDataPickingDB(); 
+        muatDataEstimasiDB(); 
     } catch (e) {
         alert("Gagal menghapus data: " + e.message);
     } finally {
@@ -745,7 +733,7 @@ function saringTabelExcel() {
             if (cell) { if (!allowed.includes(cell.getAttribute('data-search') || cell.innerText.trim())) { show = false; break; } }
         }
         if (show) { row.classList.remove('filtered-out'); } 
-        else { row.classList.add('filtered-out'); let cb = row.querySelector('.cb-row'); if(cb) { cb.checked = false; } }
+        else { row.classList.add('filtered-out'); let cb = row.querySelector('.cb-row'); if(cb) { cb.checked = false; highlightRow(cb); } }
     });
     currentPage = 1; applyPagination();
 }
@@ -807,6 +795,14 @@ function nextPage() {
     if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
 }
 
+function highlightRow(cb) {
+    const tr = cb.closest('tr');
+    if (tr) {
+        if (cb.checked) tr.classList.add('selected-row');
+        else tr.classList.remove('selected-row');
+    }
+}
+
 function initResizableColumns() {
     const cols = document.querySelectorAll('#main-table th, #table-atur th, #table-picking th');
     cols.forEach(col => {
@@ -853,26 +849,28 @@ function renderHeaderDanTabel() {
         ${thSort(2, 'No', 'col-no w-12')}
         ${thSort(3, 'Kode PO', 'col-kode_po')}
         ${thSort(4, 'Customer PO', 'col-customer_po')}
-        ${thSort(5, 'Nama Item', 'col-nama text-blue-300')}
+        ${thSort(5, 'Nama Item', 'col-nama')}
         ${thSort(6, 'Panjang', 'col-pjg')}
         ${thSort(7, 'Grade', 'col-grade')}
         ${thSort(8, 'Dus', 'col-dus')}
-        ${thSort(9, 'QTY PO', 'col-qty text-orange-300')}
-        ${thSort(10, 'Note', 'col-note')}`;
+        ${thSort(9, 'QTY PO', 'col-qty')}
+        ${thSort(10, 'Status', 'col-status')}
+        ${thSort(11, 'Note', 'col-note')}`;
     } else {
         thHtml += `<th class="hdr-std w-12 col-atur text-center relative border-r border-slate-600">Atur Item</th>
         ${thSort(2, 'No', 'col-no w-12')}
         ${thSort(3, 'Waktu Input', 'col-waktu')}
         ${thSort(4, 'Kode PO', 'col-kode_po')}
         ${thSort(5, 'Customer PO', 'col-customer_po')}
-        ${thSort(6, 'Nama Item', 'col-nama text-blue-300')}
+        ${thSort(6, 'Nama Item', 'col-nama')}
         ${thSort(7, 'Panjang', 'col-pjg')}
         ${thSort(8, 'Grade', 'col-grade')}
         ${thSort(9, 'Dus', 'col-dus')}
-        ${thSort(10, 'QTY PO', 'col-qty text-orange-300')}
-        ${thSort(11, 'QTY TERPENUHI', 'col-qty_terpenuhi text-emerald-300')}
-        ${thSort(12, 'Note', 'col-note')}
-        ${thSort(13, 'PIC', 'col-pic')}`;
+        ${thSort(10, 'QTY PO', 'col-qty')}
+        ${thSort(11, 'QTY TERPENUHI', 'col-qty_terpenuhi')}
+        ${thSort(12, 'Status', 'col-status')}
+        ${thSort(13, 'Note', 'col-note')}
+        ${thSort(14, 'PIC', 'col-pic')}`;
     }
     thHtml += `</tr>`;
     thead.innerHTML = thHtml;
@@ -889,44 +887,54 @@ function renderHeaderDanTabel() {
         let noUrut = currentMode === 'input' ? (dataset.length - i) : (i + 1);
         
         let btnHapus = currentMode === 'input' 
-            ? `<button onclick="hapusBarisStaging(${r.id})" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded transition shadow-sm active:scale-95 mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`
+            ? `<button onclick="hapusBarisStaging(${r.id})" class="text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white border border-slate-200 p-1.5 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`
             : '';
 
-        let isLengkap = currentMode === 'tabel' && r.qty_terpenuhi >= r.qty_po && r.qty_po > 0;
-        let trClass = isLengkap ? 'bg-emerald-100 hover:bg-emerald-200' : 'hover:bg-slate-50 bg-white';
+        let qtyPo = parseInt(r.qty_po) || 0;
+        let qtyTerpenuhi = parseInt(r.qty_terpenuhi) || 0;
+        let isLengkap = currentMode === 'tabel' && qtyTerpenuhi >= qtyPo && qtyPo > 0;
+        
+        let statusBadge = isLengkap 
+            ? '<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold text-[10px] border border-emerald-200">DONE</span>' 
+            : '<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold text-[10px] border border-amber-200">PROSES</span>';
 
-        h += `<tr class="border-b border-slate-200 transition r-row text-sm ${trClass}">`;
+        if(currentMode === 'input') statusBadge = '<span class="bg-slate-100 text-slate-500 px-2 py-1 rounded font-bold text-[10px] border border-slate-200">DRAFT</span>';
+
+        let trClass = "bg-white even:bg-slate-100 transition r-row text-sm border-b border-slate-200";
+
+        h += `<tr class="${trClass}">`;
         
         if (currentMode === 'input') {
-            h += `<td class="px-4 py-3 text-center col-cb border-b border-r border-slate-200"><input type="checkbox" value="${r.id}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>`;
-            h += `<td class="px-4 py-3 text-center col-btn border-b border-r border-slate-200">${btnHapus}</td>`;
+            h += `<td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" onchange="highlightRow(this)" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>`;
+            h += `<td class="px-4 py-3 text-center col-btn border-r border-slate-200">${btnHapus}</td>`;
         } else {
-            h += `<td class="px-4 py-3 text-center col-cb border-b border-r border-slate-200"><input type="checkbox" value="${r.id}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>`;
-            h += `<td class="px-4 py-3 text-center col-atur border-b border-r border-slate-200"><button onclick="aturItemPO('${r.id}')" class="bg-blue-600 text-white font-bold px-3 py-1.5 rounded hover:bg-blue-700 transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap">Atur Item</button></td>`;
+            h += `<td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" onchange="highlightRow(this)" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>`;
+            h += `<td class="px-4 py-3 text-center col-atur border-r border-slate-200"><button onclick="aturItemPO('${r.id}')" class="bg-blue-600 text-white font-bold px-3 py-1.5 rounded hover:bg-blue-700 transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap">Atur Item</button></td>`;
         }
         
-        h += `<td class="px-4 py-3 font-bold text-slate-500 text-center col-no border-b border-r border-slate-200">${noUrut}</td>`;
+        h += `<td class="px-4 py-3 font-bold text-slate-500 text-center col-no border-r border-slate-200">${noUrut}</td>`;
         
         if (currentMode === 'tabel') {
-            h += `<td class="px-4 py-3 text-slate-600 font-medium col-waktu border-b border-r border-slate-200" data-search="${tglStr}">${tglStr}</td>`;
+            h += `<td class="px-4 py-3 text-slate-600 font-medium col-waktu border-r border-slate-200" data-search="${tglStr}">${tglStr}</td>`;
         }
 
-        h += `<td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-b border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
-              <td class="px-4 py-3 font-bold text-slate-700 col-customer_po border-b border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
-              <td class="px-4 py-3 font-bold text-blue-700 text-left col-nama border-b border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
-              <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-b border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
-              <td class="px-4 py-3 font-medium text-slate-700 col-grade border-b border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
-              <td class="px-4 py-3 font-medium text-slate-700 col-dus border-b border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
-              <td class="px-4 py-3 font-black text-orange-600 bg-orange-50/50 col-qty border-b border-r border-slate-200" data-search="${r.qty_po}">${r.qty_po}</td>`;
+        h += `<td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
+              <td class="px-4 py-3 font-semibold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
+              <td class="px-4 py-3 font-semibold text-slate-800 text-left col-nama border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
+              <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
+              <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
+              <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
+              <td class="px-4 py-3 font-black text-slate-800 col-qty border-r border-slate-200" data-search="${qtyPo}">${qtyPo}</td>`;
               
         if (currentMode === 'tabel') {
-            h += `<td class="px-4 py-3 font-black text-emerald-600 bg-emerald-50/50 col-qty_terpenuhi border-b border-r border-slate-200" data-search="${r.qty_terpenuhi || 0}">${r.qty_terpenuhi || 0}</td>`;
+            h += `<td class="px-4 py-3 font-black text-slate-800 col-qty_terpenuhi border-r border-slate-200" data-search="${qtyTerpenuhi}">${qtyTerpenuhi}</td>`;
         }
         
-        h += `<td class="px-4 py-3 font-medium text-slate-500 text-left col-ket border-b border-r border-slate-200" data-search="${r.note || '-'}">${r.note || '-'}</td>`;
+        h += `<td class="px-4 py-3 text-center col-status border-r border-slate-200" data-search="${isLengkap ? 'DONE' : 'PROSES'}">${statusBadge}</td>`;
+        h += `<td class="px-4 py-3 font-medium text-slate-500 text-left col-ket border-r border-slate-200" data-search="${r.note || '-'}">${r.note || '-'}</td>`;
         
         if (currentMode === 'tabel') {
-            h += `<td class="px-4 py-3 font-bold uppercase text-xs text-slate-400 col-pic border-b border-slate-200" data-search="${r.pic || '-'}">${r.pic || '-'}</td>`;
+            h += `<td class="px-4 py-3 font-bold uppercase text-xs text-slate-400 col-pic" data-search="${r.pic || '-'}">${r.pic || '-'}</td>`;
         }
         
         h += `</tr>`;
