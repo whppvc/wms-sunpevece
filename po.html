@@ -63,7 +63,7 @@
                 <button onclick="switchTab('picking')" id="tab-picking" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="clipboard-list" class="w-4 h-4"></i> PICKING LIST</button>
             </div>
             
-            <!-- REVISI: Toolbar Picking List (Edit Tgl Estimasi) -->
+            <!-- Toolbar Picking List -->
             <div id="toolbar-picking" class="hidden p-3 bg-slate-50/50 border-t border-slate-100 flex items-center gap-2">
                 <button onclick="bukaModalEditTgl()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-md shadow-sm flex items-center gap-2 text-xs transition active:scale-95 uppercase">
                     <i data-lucide="calendar-days" class="w-4 h-4"></i> Edit Tgl Estimasi
@@ -167,7 +167,7 @@
         <!-- FOOTER PAGINATION & ACTION -->
         <div class="shrink-0 w-full bg-white p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 border-t border-slate-200 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)]">
             
-            <!-- Info & Paginasi (Tampil di Tab Tabel, Atur Item, Picking) -->
+            <!-- Info & Paginasi -->
             <div id="footer-tabel" class="flex-1 flex flex-col md:flex-row justify-between items-center gap-4 w-full">
                 <div class="flex items-center gap-2 text-sm text-slate-500 flex-wrap">
                     <button id="btn-tambah-po" onclick="bukaInputPO()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md shadow-sm flex items-center gap-2 text-xs transition active:scale-95 uppercase">
@@ -180,10 +180,11 @@
                         <i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Pick
                     </button>
                     
-                    <!-- REVISI: Indikator Footer Disamakan dengan Kartu Stok -->
-                    <span class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-md text-slate-600 text-[11px] font-bold shadow-sm ml-2">Qty: <span id="lbl-total-qty" class="text-slate-900 font-medium ml-1">0</span></span>
-                    <span class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-md text-slate-600 text-[11px] font-bold shadow-sm" id="lbl-text-kodepo">Jml PO: <span id="lbl-total-kodepo" class="text-slate-900 font-medium ml-1">0</span></span>
-                    <span class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-md text-slate-600 text-[11px] font-bold shadow-sm hidden" id="lbl-text-dipilih">Dipilih: <span id="lbl-pilih-baris" class="text-blue-600 font-medium ml-1">0</span></span>
+                    <!-- REVISI: Indikator Footer Berwarna -->
+                    <span class="bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-md text-blue-800 text-[11px] font-bold shadow-sm ml-2">Baris: <span id="lbl-tampil-baris" class="text-blue-900 font-black ml-1">0</span></span>
+                    <span class="bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-md text-amber-800 text-[11px] font-bold shadow-sm">Qty: <span id="lbl-total-qty" class="text-amber-900 font-black ml-1">0</span></span>
+                    <span class="bg-emerald-100 border border-emerald-300 px-3 py-1.5 rounded-md text-emerald-800 text-[11px] font-bold shadow-sm" id="lbl-text-kodepo">Jml PO: <span id="lbl-total-kodepo" class="text-emerald-900 font-black ml-1">0</span></span>
+                    <span class="bg-purple-100 border border-purple-300 px-3 py-1.5 rounded-md text-purple-800 text-[11px] font-bold shadow-sm hidden" id="lbl-text-dipilih">Dipilih: <span id="lbl-pilih-baris" class="text-purple-900 font-black ml-1">0</span></span>
                 </div>
                 
                 <div class="flex items-center gap-3">
@@ -288,7 +289,7 @@
         </div>
     </div>
 
-    <!-- REVISI: MODAL EDIT TANGGAL ESTIMASI -->
+    <!-- MODAL EDIT TANGGAL ESTIMASI -->
     <div id="modal-edit-tgl" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200">
             <h3 class="text-lg font-black mb-2 flex items-center gap-2 text-slate-800"><i data-lucide="calendar-days" class="text-indigo-600"></i> Edit Tgl Estimasi</h3>
@@ -307,5 +308,6 @@
     </div>
 
     <script src="po_logic.js"></script>
+    <script src="po_modals.js"></script>
 </body>
 </html>
