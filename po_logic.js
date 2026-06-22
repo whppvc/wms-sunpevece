@@ -1,4 +1,4 @@
-console.log("WMS PO Logic - Fix Table Blank & Save v6");
+console.log("WMS PO Logic - Fix Schema Database v7");
 
 let currentMode = 'tabel';
 let stagingData = [];
@@ -254,6 +254,7 @@ window.toggleAllStaging = function(checked) {
     }); 
 };
 
+// FIX: Payload disesuaikan dengan skema SQL asli
 window.simpanMassalKeDatabase = async function() {
     if (stagingData.length === 0) return alert("Tabel penampungan masih kosong!");
     const btn = document.getElementById('btn-submit-db'); const oriText = btn.innerHTML;
@@ -263,15 +264,17 @@ window.simpanMassalKeDatabase = async function() {
 
     const payload = stagingData.map(d => ({ 
         tgl_estimasi_kirim: defaultDate,
+        id_po: `${d.nama_item}_${d.panjang}_${d.grade}`,
         kode_po: d.kode_po, 
         customer_po: d.customer_po, 
         nama_item: d.nama_item, 
         panjang: d.panjang, 
         grade: d.grade, 
         dus: d.dus,
-        qty_po: d.qty_po, 
-        qty_terpenuhi: 0,
-        note: d.note
+        qty_po: String(d.qty_po), // FIX: Pastikan dikirim sebagai text
+        qty_terpenuhi: "0",       // FIX: Pastikan dikirim sebagai text
+        note: d.note,
+        pic: currentUser.username
     }));
     
     try {
@@ -287,13 +290,14 @@ window.simpanMassalKeDatabase = async function() {
     }
 };
 
+// FIX: Order by created_at DESC
 async function muatDataEstimasiDB() {
     const tbody = document.getElementById('tbody-po');
     tbody.innerHTML = `<tr><td colspan="14" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm text-center">Menarik Data PO...</p></td></tr>`;
     lucide.createIcons();
     
     try {
-        const { data, error } = await db.from('po_estimasi').select('*').order('id', { ascending: false });
+        const { data, error } = await db.from('po_estimasi').select('*').order('created_at', { ascending: false });
         if (error) throw error; 
         dbRecordsRaw = data || [];
         window.renderHeaderDanTabel();
@@ -302,13 +306,14 @@ async function muatDataEstimasiDB() {
     }
 }
 
+// FIX: Order by created_at DESC
 async function muatDataPickingDB() {
     const tbody = document.getElementById('tbody-picking');
     tbody.innerHTML = `<tr><td colspan="14" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm text-center">Menarik Data Picking...</p></td></tr>`;
     lucide.createIcons();
     
     try {
-        const { data, error } = await db.from('po_atur').select('*').order('id', { ascending: false });
+        const { data, error } = await db.from('po_atur').select('*').order('created_at', { ascending: false });
         if (error) throw error; 
         dbPoAturRaw = data || [];
         window.renderTabelPickingList();
@@ -474,6 +479,7 @@ window.renderTabelAturItem = function() {
     }
 };
 
+// FIX: ParseInt untuk qty_terpenuhi
 window.batalPickItem = async function(id_picking, qty_pick) {
     if(!confirm("Batalkan pick item ini? Qty terpenuhi pada PO akan dikurangi otomatis.")) return;
     
@@ -481,8 +487,8 @@ window.batalPickItem = async function(id_picking, qty_pick) {
         const { error: errDel } = await db.from('po_atur').delete().eq('id', id_picking);
         if(errDel) throw errDel;
         
-        const newQty = Math.max(0, (activePO.qty_terpenuhi || 0) - qty_pick);
-        const { error: errPo } = await db.from('po_estimasi').update({ qty_terpenuhi: newQty }).eq('id', activePO.id);
+        const newQty = Math.max(0, (parseInt(activePO.qty_terpenuhi) || 0) - qty_pick);
+        const { error: errPo } = await db.from('po_estimasi').update({ qty_terpenuhi: String(newQty) }).eq('id', activePO.id);
         if(errPo) throw errPo;
         
         await muatDataEstimasiDB(); 
@@ -516,6 +522,7 @@ window.cekCustomerPick = function() {
     }
 };
 
+// FIX: ParseInt untuk qty_terpenuhi
 window.eksekusiPickFinal = async function(isGantiCustomer) {
     let finalIdSku = activePickItem.id_sku;
 
@@ -561,14 +568,14 @@ window.eksekusiPickFinal = async function(isGantiCustomer) {
             keterangan: activePickItem.keterangan,
             qty_pick: tempQtyPick,
             customer_aktual: isGantiCustomer ? activePO.customer_po : activePickItem.customer_aktual,
-            id_po: `${activePO.nama_item}_${activePO.panjang}_${activePO.grade}`,
+            id_po: activePO.id_po,
             id_sku: finalIdSku
         };
         const { error: errPick } = await db.from('po_atur').insert([payloadPick]);
         if(errPick) throw errPick;
 
-        const newQtyTerpenuhi = (activePO.qty_terpenuhi || 0) + tempQtyPick;
-        const { error: errPo } = await db.from('po_estimasi').update({ qty_terpenuhi: newQtyTerpenuhi }).eq('id', activePO.id);
+        const newQtyTerpenuhi = (parseInt(activePO.qty_terpenuhi) || 0) + tempQtyPick;
+        const { error: errPo } = await db.from('po_estimasi').update({ qty_terpenuhi: String(newQtyTerpenuhi) }).eq('id', activePO.id);
         if(errPo) throw errPo;
 
         await muatDataEstimasiDB(); 
@@ -580,63 +587,58 @@ window.eksekusiPickFinal = async function(isGantiCustomer) {
 };
 
 window.renderTabelPickingList = function() {
-    try {
-        const thead = document.getElementById('thead-picking');
-        const tbody = document.getElementById('tbody-picking');
-        sortState = {}; 
+    const thead = document.getElementById('thead-picking');
+    const tbody = document.getElementById('tbody-picking');
+    sortState = {}; 
 
-        thead.innerHTML = `
-            <tr>
-                <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="window.toggleAllPickingRows(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>
-                ${window.thSort(1, 'Kode PO', 'col-kode_po')}
-                ${window.thSort(2, 'Tgl Estimasi', 'col-tgl_est')}
-                ${window.thSort(3, 'Customer PO', 'col-customer_po')}
-                ${window.thSort(4, 'Area', 'col-area')}
-                ${window.thSort(5, 'Jenis Item', 'col-jenis')}
-                ${window.thSort(6, 'Nama Item', 'col-nama')}
-                ${window.thSort(7, 'Panjang', 'col-pjg')}
-                ${window.thSort(8, 'Grade', 'col-grade')}
-                ${window.thSort(9, 'Dus', 'col-dus')}
-                ${window.thSort(10, 'Shading', 'col-shading')}
-                ${window.thSort(11, 'Customer Aktual', 'col-customer_aktual')}
-                ${window.thSort(12, 'Keterangan', 'col-ket')}
-                ${window.thSort(13, 'QTY PICK', 'col-qty')}
-            </tr>`;
-        
-        if(dbPoAturRaw.length === 0) { 
-            tbody.innerHTML = `<tr><td colspan="14" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data picking.</td></tr>`; 
-            window.applyPagination(); return; 
-        }
-        
-        let h = '';
-        dbPoAturRaw.forEach((r, i) => {
-            let tglEstStr = formatTglIntl(r.tgl_estimasi);
-            h += `
-                <tr class="bg-white even:bg-slate-100 transition r-row-pick text-sm border-b border-slate-200">
-                    <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" data-kodepo="${r.kode_po}" data-qty="${r.qty_pick}" onchange="window.updateSelectedPickCount()" class="pick-row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
-                    <td class="px-4 py-3 text-slate-600 font-medium col-tgl_est border-r border-slate-200" data-search="${tglEstStr}">${tglEstStr}</td>
-                    <td class="px-4 py-3 font-semibold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
-                    <td class="px-4 py-3 font-semibold text-slate-800 col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-jenis border-r border-slate-200" data-search="${r.jenis_item}">${r.jenis_item || '-'}</td>
-                    <td class="px-4 py-3 font-semibold text-slate-800 text-center col-nama border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-3 font-semibold text-slate-700 col-customer_aktual border-r border-slate-200" data-search="${r.customer_aktual}">${r.customer_aktual}</td>
-                    <td class="px-4 py-3 font-medium text-slate-500 text-center col-ket border-r border-slate-200" data-search="${r.keterangan}">${r.keterangan || '-'}</td>
-                    <td class="px-4 py-3 font-black text-slate-800 col-qty" data-search="${r.qty_pick}">${r.qty_pick}</td>
-                </tr>`;
-        });
-        tbody.innerHTML = h;
-        lucide.createIcons(); 
-        window.saringTabelExcel();
-        window.initResizableColumns();
-    } catch (error) {
-        console.error("Error in renderTabelPickingList:", error);
-        document.getElementById('tbody-picking').innerHTML = `<tr><td colspan="14" class="p-5 text-red-500 font-bold text-center">Terjadi kesalahan render: ${error.message}</td></tr>`;
+    thead.innerHTML = `
+        <tr>
+            <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="window.toggleAllPickingRows(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>
+            ${window.thSort(1, 'Kode PO', 'col-kode_po')}
+            ${window.thSort(2, 'Tgl Estimasi', 'col-tgl_est')}
+            ${window.thSort(3, 'Customer PO', 'col-customer_po')}
+            ${window.thSort(4, 'Area', 'col-area')}
+            ${window.thSort(5, 'Jenis Item', 'col-jenis')}
+            ${window.thSort(6, 'Nama Item', 'col-nama')}
+            ${window.thSort(7, 'Panjang', 'col-pjg')}
+            ${window.thSort(8, 'Grade', 'col-grade')}
+            ${window.thSort(9, 'Dus', 'col-dus')}
+            ${window.thSort(10, 'Shading', 'col-shading')}
+            ${window.thSort(11, 'Customer Aktual', 'col-customer_aktual')}
+            ${window.thSort(12, 'Keterangan', 'col-ket')}
+            ${window.thSort(13, 'QTY PICK', 'col-qty')}
+        </tr>`;
+    
+    if(dbPoAturRaw.length === 0) { 
+        tbody.innerHTML = `<tr><td colspan="14" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data picking.</td></tr>`; 
+        window.applyPagination(); return; 
     }
+    
+    let h = '';
+    dbPoAturRaw.forEach((r, i) => {
+        let tglEstStr = formatTglIntl(r.tgl_estimasi);
+        h += `
+            <tr class="bg-white even:bg-slate-100 transition r-row-pick text-sm border-b border-slate-200">
+                <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" data-kodepo="${r.kode_po}" data-qty="${r.qty_pick}" onchange="window.updateSelectedPickCount()" class="pick-row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
+                <td class="px-4 py-3 text-slate-600 font-medium col-tgl_est border-r border-slate-200" data-search="${tglEstStr}">${tglEstStr}</td>
+                <td class="px-4 py-3 font-semibold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
+                <td class="px-4 py-3 font-semibold text-slate-800 col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 col-jenis border-r border-slate-200" data-search="${r.jenis_item}">${r.jenis_item || '-'}</td>
+                <td class="px-4 py-3 font-semibold text-slate-800 text-center col-nama border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
+                <td class="px-4 py-3 font-semibold text-slate-700 col-customer_aktual border-r border-slate-200" data-search="${r.customer_aktual}">${r.customer_aktual}</td>
+                <td class="px-4 py-3 font-medium text-slate-500 text-center col-ket border-r border-slate-200" data-search="${r.keterangan}">${r.keterangan || '-'}</td>
+                <td class="px-4 py-3 font-black text-slate-800 col-qty" data-search="${r.qty_pick}">${r.qty_pick}</td>
+            </tr>`;
+    });
+    tbody.innerHTML = h;
+    lucide.createIcons(); 
+    window.saringTabelExcel();
+    window.initResizableColumns();
 };
 
 window.updateSelectedPickCount = function() {
