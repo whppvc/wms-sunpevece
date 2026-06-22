@@ -19,12 +19,11 @@ let activeFilters = {};
 let currentFilterCol = ''; 
 
 // State Modal Pencarian
-let currentSearchType = ''; // 'item' atau 'customer'
+let currentSearchType = ''; 
 let masterListCache = [];
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || { username: 'Admin' };
 
-// REVISI: Format Tanggal menjadi DD/MM/YYYY
 function formatTglIntl(tglStr) {
     if(!tglStr) return '-';
     try {
@@ -47,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     await ambilReferensiMaster2();
-    switchTab('tabel'); // Default view
+    switchTab('tabel'); 
 });
 
 async function ambilReferensiMaster2() {
@@ -70,7 +69,6 @@ function isiDropdown(elId, dataArray, placeholderText) {
     dataArray.forEach(val => html += `<option value="${val}">${val}</option>`); el.innerHTML = html;
 }
 
-// REVISI: Fungsi Buka Modal Pencarian Item/Customer
 window.bukaModalPilih = function(type) {
     currentSearchType = type;
     const title = document.getElementById('title-modal-pilih');
@@ -123,7 +121,6 @@ window.pilihDataMaster = function(val) {
     document.getElementById('modal-pilih-master').classList.add('hidden');
 };
 
-// REVISI: Fungsi Buka/Tutup Input PO
 window.bukaInputPO = function() {
     switchTab('input');
 };
@@ -131,25 +128,27 @@ window.bukaInputPO = function() {
 window.switchTab = function(mode) {
     currentMode = mode;
     
-    // Toggle Views
     document.getElementById('view-input').classList.toggle('hidden', mode !== 'input');
     document.getElementById('view-tabel').classList.toggle('hidden', mode !== 'tabel');
     document.getElementById('view-atur-item').classList.toggle('hidden', mode !== 'atur');
     document.getElementById('view-picking').classList.toggle('hidden', mode !== 'picking');
     
-    // Toggle Headers
     document.getElementById('header-tabs').classList.toggle('hidden', mode === 'atur' || mode === 'input');
     document.getElementById('header-back').classList.toggle('hidden', mode !== 'atur' && mode !== 'input');
+    
+    // REVISI: Tampilkan toolbar picking (Edit Tgl Estimasi) hanya di tab picking
+    document.getElementById('toolbar-picking').classList.toggle('hidden', mode !== 'picking');
 
-    // Toggle Footers
     document.getElementById('footer-input').classList.toggle('hidden', mode !== 'input');
     document.getElementById('footer-tabel').classList.toggle('hidden', mode === 'input');
     
-    // Toggle Buttons in Footer
     document.getElementById('btn-tambah-po').classList.toggle('hidden', mode !== 'tabel');
     document.getElementById('btn-hapus-po').classList.toggle('hidden', mode !== 'tabel');
     document.getElementById('btn-hapus-pick').classList.toggle('hidden', mode !== 'picking');
     document.getElementById('dot-hapus').classList.toggle('hidden', mode === 'atur');
+    
+    // REVISI: Tampilkan badge "Dipilih" hanya di tab picking
+    document.getElementById('lbl-text-dipilih').classList.toggle('hidden', mode !== 'picking');
     
     if(mode === 'atur') {
         document.getElementById('lbl-back-title').innerText = 'Atur Item Untuk PO:';
@@ -158,7 +157,7 @@ window.switchTab = function(mode) {
         document.getElementById('lbl-back-title').innerText = 'Kembali ke Tabel PO';
         document.getElementById('lbl-po-aktif').innerText = 'INPUT PO BARU';
     } else {
-        document.getElementById('lbl-text-kodepo').innerHTML = `Jumlah PO: <strong class="text-slate-800" id="lbl-total-kodepo">0</strong>`;
+        document.getElementById('lbl-text-kodepo').innerHTML = `Jml PO: <span id="lbl-total-kodepo" class="text-slate-900 font-medium ml-1">0</span>`;
     }
 
     if(mode !== 'atur' && mode !== 'input') {
@@ -207,7 +206,6 @@ window.addEstimasiLokal = function() {
     
     renderHeaderDanTabel();
     
-    // Reset form
     document.getElementById('in-nama-item').value = ''; 
     document.getElementById('in-panjang').value = ''; 
     document.getElementById('in-grade').value = ''; 
@@ -283,7 +281,7 @@ window.simpanMassalKeDatabase = async function() {
         if (error) throw error; 
         alert(`🚀 BERHASIL! ${payload.length} data PO sukses masuk database server.`);
         stagingData = []; 
-        switchTab('tabel'); // Kembali ke tabel setelah simpan
+        switchTab('tabel'); 
     } catch (e) { 
         alert("GAGAL INSERT: " + e.message); 
     } finally { 
@@ -415,7 +413,6 @@ function renderTabelAturItem() {
     const tbody = document.getElementById('tbody-atur');
     sortState = {}; 
 
-    // REVISI: Header "PILIH" dihapus
     thead.innerHTML = `
         <tr>
             <th class="hdr-std w-12 col-pick border-r border-slate-600">Pick</th>
@@ -441,10 +438,9 @@ function renderTabelAturItem() {
     
     let h = '';
     dataAturItem.forEach((r, i) => {
-        // REVISI: Tombol Cancel Pick (Merah)
         let btnPick = r.isPicked 
-            ? `<button onclick="batalPickItem('${r.id_picking}', ${r.qty})" class="bg-rose-600 text-white font-bold px-3 py-1.5 rounded hover:bg-rose-700 transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap"><i data-lucide="x" class="w-3 h-3 mr-1"></i> Cancel</button>`
-            : `<button onclick="bukaModalPick(${i})" class="bg-blue-600 text-white font-bold px-3 py-1.5 rounded hover:bg-blue-700 transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap">Pick Item</button>`;
+            ? `<button onclick="batalPickItem('${r.id_picking}', ${r.qty})" class="bg-rose-600 text-white font-bold px-3 py-1.5 rounded transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap"><i data-lucide="x" class="w-3 h-3 mr-1"></i> Cancel</button>`
+            : `<button onclick="bukaModalPick(${i})" class="bg-blue-600 text-white font-bold px-3 py-1.5 rounded transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap">Pick Item</button>`;
 
         let rowBg = r.isPicked ? 'bg-emerald-50 hover:bg-emerald-100' : 'bg-white even:bg-slate-100 hover:bg-slate-50';
         let tglEstStr = r.tgl_estimasi !== '-' ? formatTglIntl(r.tgl_estimasi) : '-';
@@ -473,7 +469,6 @@ function renderTabelAturItem() {
     initResizableColumns();
 }
 
-// REVISI: Fungsi Batal Pick Item
 window.batalPickItem = async function(id_picking, qty_pick) {
     if(!confirm("Batalkan pick item ini? Qty terpenuhi pada PO akan dikurangi otomatis.")) return;
     
@@ -485,8 +480,8 @@ window.batalPickItem = async function(id_picking, qty_pick) {
         const { error: errPo } = await db.from('po_estimasi').update({ qty_terpenuhi: newQty }).eq('id', activePO.id);
         if(errPo) throw errPo;
         
-        await muatDataEstimasiDB(); // Reload background data
-        aturItemPO(activePO.id); // Reload modal data
+        await muatDataEstimasiDB(); 
+        aturItemPO(activePO.id); 
     } catch(e) {
         alert("Gagal membatalkan pick: " + e.message);
     }
@@ -586,7 +581,7 @@ function renderTabelPickingList() {
 
     thead.innerHTML = `
         <tr>
-            <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="toggleAllStaging(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>
+            <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="toggleAllPickingRows(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>
             ${thSort(1, 'Kode PO', 'col-kode_po')}
             ${thSort(2, 'Tgl Estimasi', 'col-tgl_est')}
             ${thSort(3, 'Customer PO', 'col-customer_po')}
@@ -611,8 +606,8 @@ function renderTabelPickingList() {
     dbPoAturRaw.forEach((r, i) => {
         let tglEstStr = formatTglIntl(r.tgl_estimasi);
         h += `
-            <tr class="bg-white even:bg-slate-100 transition r-row text-sm border-b border-slate-200">
-                <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" data-kodepo="${r.kode_po}" data-qty="${r.qty_pick}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+            <tr class="bg-white even:bg-slate-100 transition r-row-pick text-sm border-b border-slate-200">
+                <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" data-kodepo="${r.kode_po}" data-qty="${r.qty_pick}" onchange="updateSelectedPickCount()" class="pick-row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
                 <td class="px-4 py-3 text-slate-600 font-medium col-tgl_est border-r border-slate-200" data-search="${tglEstStr}">${tglEstStr}</td>
                 <td class="px-4 py-3 font-semibold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
@@ -635,7 +630,7 @@ function renderTabelPickingList() {
 }
 
 window.hapusMassalPick = async function() {
-    const checkedBoxes = document.querySelectorAll('.cb-row:checked');
+    const checkedBoxes = document.querySelectorAll('.pick-row-cb:checked');
     if (checkedBoxes.length === 0) return alert("Centang minimal 1 baris Pick yang ingin dihapus!");
     
     if (!confirm(`Apakah Anda yakin ingin menghapus ${checkedBoxes.length} data Pick ini?\n(Qty Terpenuhi pada PO akan dikurangi otomatis)`)) return;
@@ -681,12 +676,94 @@ window.hapusMassalPick = async function() {
     }
 };
 
+// REVISI: Fungsi Update Badge Dipilih
+window.updateSelectedPickCount = function() {
+    const checkedBoxes = document.querySelectorAll('.pick-row-cb:checked');
+    let totalQty = 0;
+    checkedBoxes.forEach(cb => {
+        totalQty += parseInt(cb.getAttribute('data-qty')) || 0;
+        const tr = cb.closest('tr');
+        if(cb.checked) tr.classList.add('selected-row');
+        else tr.classList.remove('selected-row');
+    });
+    document.getElementById('lbl-pilih-baris').innerText = totalQty;
+};
+
+// REVISI: Fungsi Centang Semua di Picking List
+window.toggleAllPickingRows = function(checked) {
+    document.querySelectorAll('#tbody-picking .r-row-pick').forEach(row => {
+        if (!row.classList.contains('filtered-out') && row.style.display !== 'none') {
+            const cb = row.querySelector('.pick-row-cb');
+            if (cb) cb.checked = checked;
+        }
+    });
+    updateSelectedPickCount();
+};
+
+// REVISI: Fungsi Edit Tanggal Estimasi
+window.bukaModalEditTgl = function() {
+    const checkedBoxes = document.querySelectorAll('.pick-row-cb:checked');
+    if(checkedBoxes.length === 0) return alert("Centang minimal 1 baris di Picking List yang ingin diubah tanggalnya!");
+    
+    document.getElementById('input-tgl-baru').value = '';
+    document.getElementById('modal-edit-tgl').classList.remove('hidden');
+};
+
+window.simpanEditTgl = async function() {
+    const tglBaru = document.getElementById('input-tgl-baru').value;
+    if(!tglBaru) return alert("Pilih tanggal baru terlebih dahulu!");
+
+    const checkedBoxes = document.querySelectorAll('.pick-row-cb:checked');
+    const btn = document.getElementById('btn-simpan-tgl');
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> PROSES...';
+    btn.disabled = true;
+
+    try {
+        let poSet = new Set();
+        let pickIds = [];
+
+        checkedBoxes.forEach(cb => {
+            poSet.add(cb.getAttribute('data-kodepo'));
+            pickIds.push(cb.value);
+        });
+
+        const arrPo = Array.from(poSet);
+
+        // 1. Update di tabel po_estimasi
+        if(arrPo.length > 0) {
+            const { error: errPo } = await db.from('po_estimasi').update({ tgl_estimasi_kirim: tglBaru }).in('kode_po', arrPo);
+            if(errPo) throw errPo;
+        }
+
+        // 2. Update di tabel po_atur
+        if(pickIds.length > 0) {
+            const { error: errPick } = await db.from('po_atur').update({ tgl_estimasi: tglBaru }).in('id', pickIds);
+            if(errPick) throw errPick;
+        }
+
+        alert("Berhasil mengubah Tanggal Estimasi!");
+        document.getElementById('modal-edit-tgl').classList.add('hidden');
+        
+        // Reload data
+        await muatDataPickingDB();
+        await muatDataEstimasiDB();
+
+    } catch(e) {
+        alert("Gagal mengubah tanggal: " + e.message);
+    } finally {
+        btn.innerHTML = ori;
+        btn.disabled = false;
+        lucide.createIcons();
+    }
+};
+
 // ========================================================
 // SORTING & FILTER EXCEL PRO
 // ========================================================
 window.sortTable = function(colIndex, headerEl) {
     let tbodyId = currentMode === 'atur' ? 'tbody-atur' : (currentMode === 'picking' ? 'tbody-picking' : 'tbody-po');
-    let rowClass = 'tr.r-row';
+    let rowClass = currentMode === 'picking' ? 'tr.r-row-pick' : 'tr.r-row';
     
     const tbody = document.getElementById(tbodyId);
     const rows = Array.from(tbody.querySelectorAll(rowClass));
@@ -729,7 +806,7 @@ window.openColumnFilter = function(event, colClass, colName) {
     document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
     let uniqueValues = new Set();
     
-    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row' : (currentMode === 'picking' ? '#tbody-picking tr.r-row' : '#tbody-po tr.r-row');
+    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row' : (currentMode === 'picking' ? '#tbody-picking tr.r-row-pick' : '#tbody-po tr.r-row');
 
     document.querySelectorAll(tbodyId).forEach(row => {
         let showBasedOnOthers = true;
@@ -797,7 +874,7 @@ window.applyFilterForCurrentCol = function() {
     closeFilterMenu(); saringTabelExcel(); updateFilterIcons();
 };
 window.saringTabelExcel = function() {
-    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row' : (currentMode === 'picking' ? '#tbody-picking tr.r-row' : '#tbody-po tr.r-row');
+    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row' : (currentMode === 'picking' ? '#tbody-picking tr.r-row-pick' : '#tbody-po tr.r-row');
     document.querySelectorAll(tbodyId).forEach(row => {
         let show = true;
         for (let colClass in activeFilters) {
@@ -805,7 +882,7 @@ window.saringTabelExcel = function() {
             if (cell) { if (!allowed.includes(cell.getAttribute('data-search') || cell.innerText.trim())) { show = false; break; } }
         }
         if (show) { row.classList.remove('filtered-out'); } 
-        else { row.classList.add('filtered-out'); let cb = row.querySelector('.cb-row'); if(cb) { cb.checked = false; highlightRow(cb); } }
+        else { row.classList.add('filtered-out'); let cb = row.querySelector('.cb-row') || row.querySelector('.pick-row-cb'); if(cb) { cb.checked = false; highlightRow(cb); } }
     });
     currentPage = 1; applyPagination();
 };
@@ -827,7 +904,7 @@ window.changeRowsPerPage = function(val) {
 };
 
 window.applyPagination = function() {
-    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row' : (currentMode === 'picking' ? '#tbody-picking tr.r-row' : '#tbody-po tr.r-row');
+    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row' : (currentMode === 'picking' ? '#tbody-picking tr.r-row-pick' : '#tbody-po tr.r-row');
     const allRows = Array.from(document.querySelectorAll(tbodyId));
     allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
     
@@ -858,11 +935,13 @@ window.applyPagination = function() {
     if(document.getElementById('lbl-total-kodepo')) document.getElementById('lbl-total-kodepo').innerText = uniquePOs.size;
     if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
     if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
+    
+    if(currentMode === 'picking') updateSelectedPickCount();
 };
 
 window.prevPage = function() { if(currentPage > 1) { currentPage--; applyPagination(); } };
 window.nextPage = function() { 
-    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row:not(.filtered-out)' : (currentMode === 'picking' ? '#tbody-picking tr.r-row:not(.filtered-out)' : '#tbody-po tr.r-row:not(.filtered-out)');
+    let tbodyId = currentMode === 'atur' ? '#tbody-atur tr.r-row:not(.filtered-out)' : (currentMode === 'picking' ? '#tbody-picking tr.r-row-pick:not(.filtered-out)' : '#tbody-po tr.r-row:not(.filtered-out)');
     const totalVisible = document.querySelectorAll(tbodyId).length;
     if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
 };
@@ -913,7 +992,6 @@ window.renderHeaderDanTabel = function() {
 
     let dataset = currentMode === 'input' ? stagingData : dbRecordsRaw;
 
-    // REVISI: Hilangkan tulisan PILIH
     let thHtml = `<tr>
         <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="toggleAllStaging(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>`;
     
