@@ -1,4 +1,4 @@
-console.log("WMS PO Logic - Fix Table Blank & Save v5");
+console.log("WMS PO Logic - Fix Table Blank & Save v6");
 
 let currentMode = 'tabel';
 let stagingData = [];
@@ -261,7 +261,6 @@ window.simpanMassalKeDatabase = async function() {
 
     const defaultDate = new Date().toISOString().split('T')[0];
 
-    // REVISI: Payload disesuaikan dengan kolom di tabel po_estimasi
     const payload = stagingData.map(d => ({ 
         tgl_estimasi_kirim: defaultDate,
         kode_po: d.kode_po, 
@@ -288,10 +287,9 @@ window.simpanMassalKeDatabase = async function() {
     }
 };
 
-// REVISI: Order by id descending (karena tidak ada created_at)
 async function muatDataEstimasiDB() {
     const tbody = document.getElementById('tbody-po');
-    tbody.innerHTML = `<tr><td colspan="14" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data PO...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm text-center">Menarik Data PO...</p></td></tr>`;
     lucide.createIcons();
     
     try {
@@ -300,14 +298,13 @@ async function muatDataEstimasiDB() {
         dbRecordsRaw = data || [];
         window.renderHeaderDanTabel();
     } catch (e) { 
-        tbody.innerHTML = `<tr><td colspan="14" class="p-5 text-red-500 font-bold">Error load: ${e.message}</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="14" class="p-5 text-red-500 font-bold text-center">Error load: ${e.message}</td></tr>`; 
     }
 }
 
-// REVISI: Order by id descending (karena tidak ada created_at)
 async function muatDataPickingDB() {
     const tbody = document.getElementById('tbody-picking');
-    tbody.innerHTML = `<tr><td colspan="14" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data Picking...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm text-center">Menarik Data Picking...</p></td></tr>`;
     lucide.createIcons();
     
     try {
@@ -316,7 +313,7 @@ async function muatDataPickingDB() {
         dbPoAturRaw = data || [];
         window.renderTabelPickingList();
     } catch (e) { 
-        tbody.innerHTML = `<tr><td colspan="14" class="p-5 text-red-500 font-bold">Error load: ${e.message}</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="14" class="p-5 text-red-500 font-bold text-center">Error load: ${e.message}</td></tr>`; 
     }
 }
 
@@ -331,11 +328,10 @@ window.aturItemPO = async function(id) {
     document.getElementById('lbl-po-aktif').innerText = activePO.kode_po;
     
     const tbody = document.getElementById('tbody-atur');
-    tbody.innerHTML = `<tr><td colspan="14" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-blue-500"></i><p class="font-bold text-slate-400 text-sm">Mencari stok di gudang...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-blue-500"></i><p class="font-bold text-slate-400 text-sm text-center">Mencari stok di gudang...</p></td></tr>`;
     lucide.createIcons();
 
     try {
-        // Generate id_po untuk pencarian stok
         const id_po_search = `${activePO.nama_item}_${activePO.panjang}_${activePO.grade}`;
         
         const { data: stokData, error: errStok } = await db.from('stok_aktual').select('*').eq('id_po', id_po_search);
@@ -408,69 +404,74 @@ window.aturItemPO = async function(id) {
         window.renderTabelAturItem();
 
     } catch(e) {
-        tbody.innerHTML = `<tr><td colspan="14" class="p-5 text-red-500 font-bold">Error load: ${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="14" class="p-5 text-red-500 font-bold text-center">Error load: ${e.message}</td></tr>`;
     }
 };
 
 window.renderTabelAturItem = function() {
-    const thead = document.getElementById('thead-atur');
-    const tbody = document.getElementById('tbody-atur');
-    sortState = {}; 
+    try {
+        const thead = document.getElementById('thead-atur');
+        const tbody = document.getElementById('tbody-atur');
+        sortState = {}; 
 
-    thead.innerHTML = `
-        <tr>
-            <th class="hdr-std w-12 col-pick border-r border-slate-600">Pick</th>
-            ${window.thSort(1, 'Kode PO', 'col-kode_po')}
-            ${window.thSort(2, 'Tgl Estimasi', 'col-tgl_est')}
-            ${window.thSort(3, 'Customer PO', 'col-customer_po')}
-            ${window.thSort(4, 'Area', 'col-area')}
-            ${window.thSort(5, 'Jenis Item', 'col-jenis')}
-            ${window.thSort(6, 'Nama Item', 'col-nama')}
-            ${window.thSort(7, 'Panjang', 'col-pjg')}
-            ${window.thSort(8, 'Grade', 'col-grade')}
-            ${window.thSort(9, 'Dus', 'col-dus')}
-            ${window.thSort(10, 'Shading', 'col-shading')}
-            ${window.thSort(11, 'Customer Aktual', 'col-customer_aktual')}
-            ${window.thSort(12, 'Keterangan', 'col-ket')}
-            ${window.thSort(13, 'QTY', 'col-qty')}
-        </tr>`;
-    
-    if(dataAturItem.length === 0) { 
-        tbody.innerHTML = `<tr><td colspan="14" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Tidak ada stok tersedia untuk item ini.</td></tr>`; 
-        window.applyPagination(); return; 
-    }
-    
-    let h = '';
-    dataAturItem.forEach((r, i) => {
-        let btnPick = r.isPicked 
-            ? `<button onclick="window.batalPickItem('${r.id_picking}', ${r.qty})" class="bg-rose-600 text-white font-bold px-3 py-1.5 rounded transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap"><i data-lucide="x" class="w-3 h-3 mr-1"></i> Cancel</button>`
-            : `<button onclick="window.bukaModalPick(${i})" class="bg-blue-600 text-white font-bold px-3 py-1.5 rounded transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap">Pick Item</button>`;
-
-        let rowBg = r.isPicked ? 'bg-emerald-50 hover:bg-emerald-100' : 'bg-white even:bg-slate-100 hover:bg-slate-50';
-        let tglEstStr = r.tgl_estimasi !== '-' ? formatTglIntl(r.tgl_estimasi) : '-';
-
-        h += `
-            <tr class="border-b border-slate-200 transition r-row text-sm ${rowBg}">
-                <td class="px-4 py-3 text-center col-pick border-r border-slate-200">${btnPick}</td>
-                <td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
-                <td class="px-4 py-3 text-slate-600 font-medium col-tgl_est border-r border-slate-200" data-search="${tglEstStr}">${tglEstStr}</td>
-                <td class="px-4 py-3 font-semibold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
-                <td class="px-4 py-3 font-semibold text-slate-800 col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-jenis border-r border-slate-200" data-search="${r.jenis_item}">${r.jenis_item}</td>
-                <td class="px-4 py-3 font-semibold text-slate-800 text-center col-nama border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
-                <td class="px-4 py-3 font-semibold ${r.customer_aktual !== activePO.customer_po && !r.isPicked ? 'text-rose-600' : 'text-slate-700'} col-customer_aktual border-r border-slate-200" data-search="${r.customer_aktual}">${r.customer_aktual}</td>
-                <td class="px-4 py-3 font-medium text-slate-500 text-center col-ket border-r border-slate-200" data-search="${r.keterangan}">${r.keterangan}</td>
-                <td class="px-4 py-3 font-black text-slate-800 col-qty" data-search="${r.qty}">${r.qty}</td>
+        thead.innerHTML = `
+            <tr>
+                <th class="hdr-std w-12 col-pick border-r border-slate-600">Pick</th>
+                ${window.thSort(1, 'Kode PO', 'col-kode_po')}
+                ${window.thSort(2, 'Tgl Estimasi', 'col-tgl_est')}
+                ${window.thSort(3, 'Customer PO', 'col-customer_po')}
+                ${window.thSort(4, 'Area', 'col-area')}
+                ${window.thSort(5, 'Jenis Item', 'col-jenis')}
+                ${window.thSort(6, 'Nama Item', 'col-nama')}
+                ${window.thSort(7, 'Panjang', 'col-pjg')}
+                ${window.thSort(8, 'Grade', 'col-grade')}
+                ${window.thSort(9, 'Dus', 'col-dus')}
+                ${window.thSort(10, 'Shading', 'col-shading')}
+                ${window.thSort(11, 'Customer Aktual', 'col-customer_aktual')}
+                ${window.thSort(12, 'Keterangan', 'col-ket')}
+                ${window.thSort(13, 'QTY', 'col-qty')}
             </tr>`;
-    });
-    tbody.innerHTML = h;
-    lucide.createIcons(); 
-    window.saringTabelExcel();
-    window.initResizableColumns();
+        
+        if(dataAturItem.length === 0) { 
+            tbody.innerHTML = `<tr><td colspan="14" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Tidak ada stok tersedia untuk item ini.</td></tr>`; 
+            window.applyPagination(); return; 
+        }
+        
+        let h = '';
+        dataAturItem.forEach((r, i) => {
+            let btnPick = r.isPicked 
+                ? `<button onclick="window.batalPickItem('${r.id_picking}', ${r.qty})" class="bg-rose-600 text-white font-bold px-3 py-1.5 rounded transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap"><i data-lucide="x" class="w-3 h-3 mr-1"></i> Cancel</button>`
+                : `<button onclick="window.bukaModalPick(${i})" class="bg-blue-600 text-white font-bold px-3 py-1.5 rounded transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap">Pick Item</button>`;
+
+            let rowBg = r.isPicked ? 'bg-emerald-50 hover:bg-emerald-100' : 'bg-white even:bg-slate-100 hover:bg-slate-50';
+            let tglEstStr = r.tgl_estimasi !== '-' ? formatTglIntl(r.tgl_estimasi) : '-';
+
+            h += `
+                <tr class="border-b border-slate-200 transition r-row text-sm ${rowBg}">
+                    <td class="px-4 py-3 text-center col-pick border-r border-slate-200">${btnPick}</td>
+                    <td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
+                    <td class="px-4 py-3 text-slate-600 font-medium col-tgl_est border-r border-slate-200" data-search="${tglEstStr}">${tglEstStr}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-800 col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 col-jenis border-r border-slate-200" data-search="${r.jenis_item}">${r.jenis_item}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-800 text-center col-nama border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-3 font-semibold ${r.customer_aktual !== activePO.customer_po && !r.isPicked ? 'text-rose-600' : 'text-slate-700'} col-customer_aktual border-r border-slate-200" data-search="${r.customer_aktual}">${r.customer_aktual}</td>
+                    <td class="px-4 py-3 font-medium text-slate-500 text-center col-ket border-r border-slate-200" data-search="${r.keterangan}">${r.keterangan}</td>
+                    <td class="px-4 py-3 font-black text-slate-800 col-qty" data-search="${r.qty}">${r.qty}</td>
+                </tr>`;
+        });
+        tbody.innerHTML = h;
+        lucide.createIcons(); 
+        window.saringTabelExcel();
+        window.initResizableColumns();
+    } catch (error) {
+        console.error("Error in renderTabelAturItem:", error);
+        document.getElementById('tbody-atur').innerHTML = `<tr><td colspan="14" class="p-5 text-red-500 font-bold text-center">Terjadi kesalahan render: ${error.message}</td></tr>`;
+    }
 };
 
 window.batalPickItem = async function(id_picking, qty_pick) {
@@ -579,58 +580,63 @@ window.eksekusiPickFinal = async function(isGantiCustomer) {
 };
 
 window.renderTabelPickingList = function() {
-    const thead = document.getElementById('thead-picking');
-    const tbody = document.getElementById('tbody-picking');
-    sortState = {}; 
+    try {
+        const thead = document.getElementById('thead-picking');
+        const tbody = document.getElementById('tbody-picking');
+        sortState = {}; 
 
-    thead.innerHTML = `
-        <tr>
-            <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="window.toggleAllPickingRows(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>
-            ${window.thSort(1, 'Kode PO', 'col-kode_po')}
-            ${window.thSort(2, 'Tgl Estimasi', 'col-tgl_est')}
-            ${window.thSort(3, 'Customer PO', 'col-customer_po')}
-            ${window.thSort(4, 'Area', 'col-area')}
-            ${window.thSort(5, 'Jenis Item', 'col-jenis')}
-            ${window.thSort(6, 'Nama Item', 'col-nama')}
-            ${window.thSort(7, 'Panjang', 'col-pjg')}
-            ${window.thSort(8, 'Grade', 'col-grade')}
-            ${window.thSort(9, 'Dus', 'col-dus')}
-            ${window.thSort(10, 'Shading', 'col-shading')}
-            ${window.thSort(11, 'Customer Aktual', 'col-customer_aktual')}
-            ${window.thSort(12, 'Keterangan', 'col-ket')}
-            ${window.thSort(13, 'QTY PICK', 'col-qty')}
-        </tr>`;
-    
-    if(dbPoAturRaw.length === 0) { 
-        tbody.innerHTML = `<tr><td colspan="14" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data picking.</td></tr>`; 
-        window.applyPagination(); return; 
-    }
-    
-    let h = '';
-    dbPoAturRaw.forEach((r, i) => {
-        let tglEstStr = formatTglIntl(r.tgl_estimasi);
-        h += `
-            <tr class="bg-white even:bg-slate-100 transition r-row-pick text-sm border-b border-slate-200">
-                <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" data-kodepo="${r.kode_po}" data-qty="${r.qty_pick}" onchange="window.updateSelectedPickCount()" class="pick-row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
-                <td class="px-4 py-3 text-slate-600 font-medium col-tgl_est border-r border-slate-200" data-search="${tglEstStr}">${tglEstStr}</td>
-                <td class="px-4 py-3 font-semibold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
-                <td class="px-4 py-3 font-semibold text-slate-800 col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-jenis border-r border-slate-200" data-search="${r.jenis_item}">${r.jenis_item || '-'}</td>
-                <td class="px-4 py-3 font-semibold text-slate-800 text-center col-nama border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
-                <td class="px-4 py-3 font-semibold text-slate-700 col-customer_aktual border-r border-slate-200" data-search="${r.customer_aktual}">${r.customer_aktual}</td>
-                <td class="px-4 py-3 font-medium text-slate-500 text-center col-ket border-r border-slate-200" data-search="${r.keterangan}">${r.keterangan || '-'}</td>
-                <td class="px-4 py-3 font-black text-slate-800 col-qty" data-search="${r.qty_pick}">${r.qty_pick}</td>
+        thead.innerHTML = `
+            <tr>
+                <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="window.toggleAllPickingRows(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>
+                ${window.thSort(1, 'Kode PO', 'col-kode_po')}
+                ${window.thSort(2, 'Tgl Estimasi', 'col-tgl_est')}
+                ${window.thSort(3, 'Customer PO', 'col-customer_po')}
+                ${window.thSort(4, 'Area', 'col-area')}
+                ${window.thSort(5, 'Jenis Item', 'col-jenis')}
+                ${window.thSort(6, 'Nama Item', 'col-nama')}
+                ${window.thSort(7, 'Panjang', 'col-pjg')}
+                ${window.thSort(8, 'Grade', 'col-grade')}
+                ${window.thSort(9, 'Dus', 'col-dus')}
+                ${window.thSort(10, 'Shading', 'col-shading')}
+                ${window.thSort(11, 'Customer Aktual', 'col-customer_aktual')}
+                ${window.thSort(12, 'Keterangan', 'col-ket')}
+                ${window.thSort(13, 'QTY PICK', 'col-qty')}
             </tr>`;
-    });
-    tbody.innerHTML = h;
-    lucide.createIcons(); 
-    window.saringTabelExcel();
-    window.initResizableColumns();
+        
+        if(dbPoAturRaw.length === 0) { 
+            tbody.innerHTML = `<tr><td colspan="14" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data picking.</td></tr>`; 
+            window.applyPagination(); return; 
+        }
+        
+        let h = '';
+        dbPoAturRaw.forEach((r, i) => {
+            let tglEstStr = formatTglIntl(r.tgl_estimasi);
+            h += `
+                <tr class="bg-white even:bg-slate-100 transition r-row-pick text-sm border-b border-slate-200">
+                    <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" data-kodepo="${r.kode_po}" data-qty="${r.qty_pick}" onchange="window.updateSelectedPickCount()" class="pick-row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
+                    <td class="px-4 py-3 text-slate-600 font-medium col-tgl_est border-r border-slate-200" data-search="${tglEstStr}">${tglEstStr}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-800 col-area border-r border-slate-200" data-search="${r.area}">${r.area}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 col-jenis border-r border-slate-200" data-search="${r.jenis_item}">${r.jenis_item || '-'}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-800 text-center col-nama border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-700 col-customer_aktual border-r border-slate-200" data-search="${r.customer_aktual}">${r.customer_aktual}</td>
+                    <td class="px-4 py-3 font-medium text-slate-500 text-center col-ket border-r border-slate-200" data-search="${r.keterangan}">${r.keterangan || '-'}</td>
+                    <td class="px-4 py-3 font-black text-slate-800 col-qty" data-search="${r.qty_pick}">${r.qty_pick}</td>
+                </tr>`;
+        });
+        tbody.innerHTML = h;
+        lucide.createIcons(); 
+        window.saringTabelExcel();
+        window.initResizableColumns();
+    } catch (error) {
+        console.error("Error in renderTabelPickingList:", error);
+        document.getElementById('tbody-picking').innerHTML = `<tr><td colspan="14" class="p-5 text-red-500 font-bold text-center">Terjadi kesalahan render: ${error.message}</td></tr>`;
+    }
 };
 
 window.updateSelectedPickCount = function() {
@@ -948,112 +954,117 @@ window.initResizableColumns = function() {
 };
 
 window.renderHeaderDanTabel = function() {
-    const thead = document.getElementById('thead-po');
-    const tbody = document.getElementById('tbody-po');
-    sortState = {}; 
+    try {
+        const thead = document.getElementById('thead-po');
+        const tbody = document.getElementById('tbody-po');
+        sortState = {}; 
 
-    let dataset = currentMode === 'input' ? stagingData : dbRecordsRaw;
+        let dataset = currentMode === 'input' ? stagingData : dbRecordsRaw;
 
-    let thHtml = `<tr>
-        <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="window.toggleAllStaging(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>`;
-    
-    if (currentMode === 'input') {
-        thHtml += `<th class="hdr-std w-10 col-btn text-center relative border-r border-slate-600"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-rose-400"></i></th>
-        ${window.thSort(2, 'No', 'col-no w-12')}
-        ${window.thSort(3, 'Kode PO', 'col-kode_po')}
-        ${window.thSort(4, 'Customer PO', 'col-customer_po')}
-        ${window.thSort(5, 'Nama Item', 'col-nama')}
-        ${window.thSort(6, 'Panjang', 'col-pjg')}
-        ${window.thSort(7, 'Grade', 'col-grade')}
-        ${window.thSort(8, 'Dus', 'col-dus')}
-        ${window.thSort(9, 'QTY PO', 'col-qty')}
-        ${window.thSort(10, 'Status', 'col-status')}
-        ${window.thSort(11, 'Note', 'col-note')}`;
-    } else {
-        thHtml += `<th class="hdr-std w-12 col-atur text-center relative border-r border-slate-600">Atur Item</th>
-        ${window.thSort(2, 'No', 'col-no w-12')}
-        ${window.thSort(3, 'Waktu Input', 'col-waktu')}
-        ${window.thSort(4, 'Kode PO', 'col-kode_po')}
-        ${window.thSort(5, 'Customer PO', 'col-customer_po')}
-        ${window.thSort(6, 'Nama Item', 'col-nama')}
-        ${window.thSort(7, 'Panjang', 'col-pjg')}
-        ${window.thSort(8, 'Grade', 'col-grade')}
-        ${window.thSort(9, 'Dus', 'col-dus')}
-        ${window.thSort(10, 'QTY PO', 'col-qty')}
-        ${window.thSort(11, 'QTY PICK', 'col-qty_terpenuhi')}
-        ${window.thSort(12, 'Status', 'col-status')}
-        ${window.thSort(13, 'Note', 'col-note')}
-        ${window.thSort(14, 'PIC', 'col-pic')}`;
-    }
-    thHtml += `</tr>`;
-    thead.innerHTML = thHtml;
-    
-    if(dataset.length === 0) { 
-        let msg = currentMode === 'input' ? 'Belum ada data ditambahkan ke tabel sementara.' : 'Tidak ada data PO di database.';
-        tbody.innerHTML = `<tr><td colspan="14" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> ${msg}</td></tr>`; 
-        window.applyPagination(); return; 
-    }
-    
-    let h = '';
-    dataset.forEach((r, i) => {
-        let tglStr = currentMode === 'input' ? r.created_at : formatTglIntl(r.tgl_estimasi_kirim);
-        let noUrut = currentMode === 'input' ? (dataset.length - i) : (i + 1);
-        
-        let btnHapus = currentMode === 'input' 
-            ? `<button onclick="window.hapusBarisStaging(${r.id})" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`
-            : '';
-
-        let qtyPo = parseInt(r.qty_po) || 0;
-        let qtyTerpenuhi = parseInt(r.qty_terpenuhi) || 0;
-        let isLengkap = currentMode === 'tabel' && qtyTerpenuhi >= qtyPo && qtyPo > 0;
-        
-        let statusBadge = isLengkap 
-            ? '<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold text-[10px] border border-emerald-200">DONE</span>' 
-            : '<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold text-[10px] border border-amber-200">PROSES</span>';
-
-        if(currentMode === 'input') statusBadge = '<span class="bg-slate-100 text-slate-500 px-2 py-1 rounded font-bold text-[10px] border border-slate-200">DRAFT</span>';
-
-        let trClass = "bg-white even:bg-slate-100 transition r-row text-sm border-b border-slate-200";
-
-        h += `<tr class="${trClass}">`;
+        let thHtml = `<tr>
+            <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="window.toggleAllStaging(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"></th>`;
         
         if (currentMode === 'input') {
-            h += `<td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>`;
-            h += `<td class="px-4 py-3 text-center col-btn border-r border-slate-200">${btnHapus}</td>`;
+            thHtml += `<th class="hdr-std w-10 col-btn text-center relative border-r border-slate-600"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-rose-400"></i></th>
+            ${window.thSort(2, 'No', 'col-no w-12')}
+            ${window.thSort(3, 'Kode PO', 'col-kode_po')}
+            ${window.thSort(4, 'Customer PO', 'col-customer_po')}
+            ${window.thSort(5, 'Nama Item', 'col-nama')}
+            ${window.thSort(6, 'Panjang', 'col-pjg')}
+            ${window.thSort(7, 'Grade', 'col-grade')}
+            ${window.thSort(8, 'Dus', 'col-dus')}
+            ${window.thSort(9, 'QTY PO', 'col-qty')}
+            ${window.thSort(10, 'Status', 'col-status')}
+            ${window.thSort(11, 'Note', 'col-note')}`;
         } else {
-            h += `<td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>`;
-            h += `<td class="px-4 py-3 text-center col-atur border-r border-slate-200"><button onclick="window.aturItemPO('${r.id}')" class="bg-blue-600 text-white font-bold px-3 py-1.5 rounded hover:bg-blue-700 transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap">Atur Item</button></td>`;
+            thHtml += `<th class="hdr-std w-12 col-atur text-center relative border-r border-slate-600">Atur Item</th>
+            ${window.thSort(2, 'No', 'col-no w-12')}
+            ${window.thSort(3, 'Waktu Input', 'col-waktu')}
+            ${window.thSort(4, 'Kode PO', 'col-kode_po')}
+            ${window.thSort(5, 'Customer PO', 'col-customer_po')}
+            ${window.thSort(6, 'Nama Item', 'col-nama')}
+            ${window.thSort(7, 'Panjang', 'col-pjg')}
+            ${window.thSort(8, 'Grade', 'col-grade')}
+            ${window.thSort(9, 'Dus', 'col-dus')}
+            ${window.thSort(10, 'QTY PO', 'col-qty')}
+            ${window.thSort(11, 'QTY PICK', 'col-qty_terpenuhi')}
+            ${window.thSort(12, 'Status', 'col-status')}
+            ${window.thSort(13, 'Note', 'col-note')}
+            ${window.thSort(14, 'PIC', 'col-pic')}`;
+        }
+        thHtml += `</tr>`;
+        thead.innerHTML = thHtml;
+        
+        if(dataset.length === 0) { 
+            let msg = currentMode === 'input' ? 'Belum ada data ditambahkan ke tabel sementara.' : 'Tidak ada data PO di database.';
+            tbody.innerHTML = `<tr><td colspan="14" class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> ${msg}</td></tr>`; 
+            window.applyPagination(); return; 
         }
         
-        h += `<td class="px-4 py-3 font-bold text-slate-500 text-center col-no border-r border-slate-200">${noUrut}</td>`;
-        
-        if (currentMode === 'tabel') {
-            h += `<td class="px-4 py-3 text-slate-600 font-medium col-waktu border-r border-slate-200" data-search="${tglStr}">${tglStr}</td>`;
-        }
+        let h = '';
+        dataset.forEach((r, i) => {
+            let tglStr = currentMode === 'input' ? r.created_at : formatTglIntl(r.tgl_estimasi_kirim);
+            let noUrut = currentMode === 'input' ? (dataset.length - i) : (i + 1);
+            
+            let btnHapus = currentMode === 'input' 
+                ? `<button onclick="window.hapusBarisStaging(${r.id})" class="text-rose-500 hover:text-white hover:bg-rose-600 bg-white border border-slate-200 p-1.5 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`
+                : '';
 
-        h += `<td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
-              <td class="px-4 py-3 font-semibold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
-              <td class="px-4 py-3 font-semibold text-slate-800 text-center col-nama border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
-              <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
-              <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
-              <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
-              <td class="px-4 py-3 font-black text-slate-800 col-qty border-r border-slate-200" data-search="${qtyPo}">${qtyPo}</td>`;
-              
-        if (currentMode === 'tabel') {
-            h += `<td class="px-4 py-3 font-black text-slate-800 col-qty_terpenuhi border-r border-slate-200" data-search="${qtyTerpenuhi}">${qtyTerpenuhi}</td>`;
-        }
-        
-        h += `<td class="px-4 py-3 text-center col-status border-r border-slate-200" data-search="${isLengkap ? 'DONE' : 'PROSES'}">${statusBadge}</td>`;
-        h += `<td class="px-4 py-3 font-medium text-slate-500 text-center col-ket border-r border-slate-200" data-search="${r.note || '-'}">${r.note || '-'}</td>`;
-        
-        if (currentMode === 'tabel') {
-            h += `<td class="px-4 py-3 font-bold uppercase text-xs text-slate-400 col-pic" data-search="${r.pic || '-'}">${r.pic || '-'}</td>`;
-        }
-        
-        h += `</tr>`;
-    });
-    tbody.innerHTML = h;
-    lucide.createIcons(); 
-    window.saringTabelExcel();
-    window.initResizableColumns();
+            let qtyPo = parseInt(r.qty_po) || 0;
+            let qtyTerpenuhi = parseInt(r.qty_terpenuhi) || 0;
+            let isLengkap = currentMode === 'tabel' && qtyTerpenuhi >= qtyPo && qtyPo > 0;
+            
+            let statusBadge = isLengkap 
+                ? '<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold text-[10px] border border-emerald-200">DONE</span>' 
+                : '<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold text-[10px] border border-amber-200">PROSES</span>';
+
+            if(currentMode === 'input') statusBadge = '<span class="bg-slate-100 text-slate-500 px-2 py-1 rounded font-bold text-[10px] border border-slate-200">DRAFT</span>';
+
+            let trClass = "bg-white even:bg-slate-100 transition r-row text-sm border-b border-slate-200";
+
+            h += `<tr class="${trClass}">`;
+            
+            if (currentMode === 'input') {
+                h += `<td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>`;
+                h += `<td class="px-4 py-3 text-center col-btn border-r border-slate-200">${btnHapus}</td>`;
+            } else {
+                h += `<td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>`;
+                h += `<td class="px-4 py-3 text-center col-atur border-r border-slate-200"><button onclick="window.aturItemPO('${r.id}')" class="bg-blue-600 text-white font-bold px-3 py-1.5 rounded hover:bg-blue-700 transition mx-auto flex text-[10px] uppercase shadow-sm active:scale-95 whitespace-nowrap">Atur Item</button></td>`;
+            }
+            
+            h += `<td class="px-4 py-3 font-bold text-slate-500 text-center col-no border-r border-slate-200">${noUrut}</td>`;
+            
+            if (currentMode === 'tabel') {
+                h += `<td class="px-4 py-3 text-slate-600 font-medium col-waktu border-r border-slate-200" data-search="${tglStr}">${tglStr}</td>`;
+            }
+
+            h += `<td class="px-4 py-3 font-black text-slate-800 tracking-wider col-kode_po border-r border-slate-200" data-search="${r.kode_po}">${r.kode_po}</td>
+                  <td class="px-4 py-3 font-semibold text-slate-700 col-customer_po border-r border-slate-200" data-search="${r.customer_po}">${r.customer_po}</td>
+                  <td class="px-4 py-3 font-semibold text-slate-800 text-center col-nama border-r border-slate-200" data-search="${r.nama_item}">${r.nama_item}</td>
+                  <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
+                  <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
+                  <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
+                  <td class="px-4 py-3 font-black text-slate-800 col-qty border-r border-slate-200" data-search="${qtyPo}">${qtyPo}</td>`;
+                  
+            if (currentMode === 'tabel') {
+                h += `<td class="px-4 py-3 font-black text-slate-800 col-qty_terpenuhi border-r border-slate-200" data-search="${qtyTerpenuhi}">${qtyTerpenuhi}</td>`;
+            }
+            
+            h += `<td class="px-4 py-3 text-center col-status border-r border-slate-200" data-search="${isLengkap ? 'DONE' : 'PROSES'}">${statusBadge}</td>`;
+            h += `<td class="px-4 py-3 font-medium text-slate-500 text-center col-ket border-r border-slate-200" data-search="${r.note || '-'}">${r.note || '-'}</td>`;
+            
+            if (currentMode === 'tabel') {
+                h += `<td class="px-4 py-3 font-bold uppercase text-xs text-slate-400 col-pic" data-search="${r.pic || '-'}">${r.pic || '-'}</td>`;
+            }
+            
+            h += `</tr>`;
+        });
+        tbody.innerHTML = h;
+        lucide.createIcons(); 
+        window.saringTabelExcel();
+        window.initResizableColumns();
+    } catch (error) {
+        console.error("Error in renderHeaderDanTabel:", error);
+        document.getElementById('tbody-po').innerHTML = `<tr><td colspan="14" class="p-5 text-red-500 font-bold text-center">Terjadi kesalahan render: ${error.message}</td></tr>`;
+    }
 };
