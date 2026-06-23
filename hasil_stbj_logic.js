@@ -6,7 +6,7 @@ let jasperData = [];
 let sortState = {}; 
 
 let currentPage = 1;
-let rowsPerPage = 10; // REVISI: Disamakan dengan Kartu Stok (Default 10)
+let rowsPerPage = 10; 
 let activeFilters = {}; 
 let currentFilterCol = ''; 
 
@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // REVISI: Menutup dropdown action menu mobile jika klik di luar
         const actionMenu = document.getElementById('mobile-action-menu');
         if (actionMenu && !actionMenu.classList.contains('hidden')) {
             if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenu"]')) {
@@ -45,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 200);
 });
 
-// REVISI: Fungsi untuk toggle menu dropdown di mobile
 window.toggleActionMenu = function(e) {
     if(e) e.stopPropagation();
     const menu = document.getElementById('mobile-action-menu');
@@ -347,6 +345,7 @@ function renderHeaderDanTabel() {
                 statData = `<span class="text-indigo-600 font-black uppercase">${r.status_data}</span>`;
             }
 
+            // REVISI: Menggunakan font-medium dan text-slate-700 untuk menyamakan dengan Kartu Stok
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -358,21 +357,21 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-3 text-center col-status-gudang border-r border-slate-200" data-search="${r.is_in_gudang ? 'IN GUDANG' : 'STBJ'}">${htmlStatusGudang}</td>
                     ${tabelSekarang === 'hold_stbj' ? `<td class="px-4 py-3 text-center font-black text-amber-600 col-status border-r border-slate-200" data-search="${r.status || 'HOLD'}">${r.status || 'HOLD'}</td>` : '<td class="px-4 py-3 hidden col-status border-r border-slate-200">-</td>'}
                     <td class="px-4 py-3 text-center col-status-data border-r border-slate-200" data-search="${r.status_data || '-'}">${statData}</td>
-                    <td class="px-4 py-3 text-center text-slate-600 font-medium col-waktu border-r border-slate-200" data-search="${tgl}">${tgl}</td>
-                    <td class="px-4 py-3 text-center font-bold text-slate-700 col-troli border-r border-slate-200" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
-                    <td class="px-4 py-3 text-left font-mono font-bold text-slate-800 col-qr border-r border-slate-200" data-search="${r.qrcode}">${r.qrcode}</td>
-                    <td class="px-4 py-3 text-center text-slate-600 font-medium col-tgl border-r border-slate-200" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
-                    <td class="px-4 py-3 text-center text-slate-600 font-medium col-mesin border-r border-slate-200" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
-                    <td class="px-4 py-3 text-center text-slate-600 font-medium col-shift border-r border-slate-200" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
-                    <td class="px-4 py-3 text-center font-bold text-blue-600 col-jenis border-r border-slate-200" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
-                    <td class="px-4 py-3 text-left font-bold text-slate-800 col-nama border-r border-slate-200" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-waktu border-r border-slate-200" data-search="${tgl}">${tgl}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-troli border-r border-slate-200" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
+                    <td class="px-4 py-3 text-left font-mono font-medium text-slate-800 col-qr border-r border-slate-200" data-search="${r.qrcode}">${r.qrcode}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-tgl border-r border-slate-200" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-mesin border-r border-slate-200" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-shift border-r border-slate-200" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-jenis border-r border-slate-200" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-nama border-r border-slate-200" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-700 col-shading border-r border-slate-200" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
-                    <td class="px-4 py-3 text-center font-bold text-orange-600 col-customer border-r border-slate-200" data-search="${r.customer_bawaan || '-'}">${r.customer_bawaan || '-'}</td>
-                    <td class="px-4 py-3 text-left text-slate-500 font-medium col-ket border-r border-slate-200" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
-                    <td class="px-4 py-3 text-center text-xs font-bold text-slate-400 col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-500 col-customer border-r border-slate-200" data-search="${r.customer_bawaan || '-'}">${r.customer_bawaan || '-'}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-500 col-ket border-r border-slate-200" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-500 col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
@@ -444,6 +443,7 @@ function renderHeaderDanTabel() {
                 statData = `<span class="text-indigo-600 font-black uppercase">${r.sData}</span>`;
             }
 
+            // REVISI: Menggunakan font-medium dan text-slate-700 untuk menyamakan dengan Kartu Stok
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -451,20 +451,20 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-3 hidden col-status border-r border-slate-200">-</td>
                     <td class="px-4 py-3 text-center col-status-data border-r border-slate-200" data-search="${r.sData || '-'}">${statData}</td>
                     <td class="px-4 py-3 hidden col-waktu border-r border-slate-200">-</td>
-                    <td class="px-4 py-3 text-center font-bold text-slate-700 col-troli border-r border-slate-200" data-search="${gabunganTroli}">${gabunganTroli}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-troli border-r border-slate-200" data-search="${gabunganTroli}">${gabunganTroli}</td>
                     <td class="px-4 py-3 hidden col-qr border-r border-slate-200">-</td>
-                    <td class="px-4 py-3 text-center text-slate-600 font-medium col-tgl border-r border-slate-200" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
-                    <td class="px-4 py-3 text-center text-slate-600 font-medium col-mesin border-r border-slate-200" data-search="${r.mesin}">${r.mesin}</td>
-                    <td class="px-4 py-3 text-center text-slate-600 font-medium col-shift border-r border-slate-200" data-search="${r.shift}">${r.shift}</td>
-                    <td class="px-4 py-3 text-center font-bold text-blue-600 col-jenis border-r border-slate-200" data-search="${r.jenisItem}">${r.jenisItem}</td>
-                    <td class="px-4 py-3 text-left font-bold text-slate-800 col-nama border-r border-slate-200" data-search="${r.displayNama}">${r.displayNama}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-tgl border-r border-slate-200" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-mesin border-r border-slate-200" data-search="${r.mesin}">${r.mesin}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-shift border-r border-slate-200" data-search="${r.shift}">${r.shift}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-jenis border-r border-slate-200" data-search="${r.jenisItem}">${r.jenisItem}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-nama border-r border-slate-200" data-search="${r.displayNama}">${r.displayNama}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-700 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-3 text-center font-bold text-orange-600 col-customer border-r border-slate-200" data-search="${r.customer}">${r.customer}</td>
-                    <td class="px-4 py-3 text-center font-black text-emerald-700 col-qty border-r border-slate-200" data-search="${r.qty}">${r.qty}</td>
-                    <td class="px-4 py-3 text-left text-slate-500 font-medium col-ket border-r border-slate-200" data-search="${displayKet}">${displayKet}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-500 col-customer border-r border-slate-200" data-search="${r.customer}">${r.customer}</td>
+                    <td class="px-4 py-3 text-center font-black text-emerald-700 text-base col-qty border-r border-slate-200" data-search="${r.qty}">${r.qty}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-500 col-ket border-r border-slate-200" data-search="${displayKet}">${displayKet}</td>
                     <td class="px-4 py-3 hidden col-pic border-r border-slate-200">-</td>
                 </tr>`;
         });
