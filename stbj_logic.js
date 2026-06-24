@@ -1,4 +1,3 @@
-let currentTab = 'scan';
 let dataStbj = []; 
 let deletedStbjStack = []; 
 let masterKamus = [];
@@ -19,25 +18,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadInitialSTBJData();
 });
 
-function toggleInputSTBJ() {
-    const body = document.getElementById('body-input-stbj');
-    const icon = document.getElementById('icon-toggle-input');
-    if (body.classList.contains('hidden')) {
-        body.classList.remove('hidden');
-        icon.classList.remove('rotate-180');
-    } else {
-        body.classList.add('hidden');
-        icon.classList.add('rotate-180');
-    }
-}
+window.bukaModalAdd = function() {
+    document.getElementById('modal-add-scan').classList.remove('hidden');
+    setTimeout(() => document.getElementById('input-qrcode').focus(), 100);
+};
 
-function switchTab(tab) {
-    currentTab = tab;
-    document.getElementById('view-scan').classList.toggle('hidden', tab !== 'scan');
-    document.getElementById('view-csv').classList.toggle('hidden', tab !== 'csv');
-    document.getElementById('btn-tab-scan').className = tab === 'scan' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-    document.getElementById('btn-tab-csv').className = tab === 'csv' ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:text-slate-800 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-}
+window.tutupModalAdd = function() {
+    document.getElementById('modal-add-scan').classList.add('hidden');
+};
 
 async function loadInitialSTBJData() {
     try {
@@ -78,54 +66,21 @@ document.getElementById('form-scan').addEventListener('submit', (e) => {
             ...trans 
         });
     });
+    
     renderTable();
-    inputEl.value = ''; inputEl.focus();
+    
+    // Kosongkan input agar bisa scan terus menerus tanpa menutup modal
+    inputEl.value = ''; 
+    inputEl.focus();
     
     const scrollContainer = document.getElementById('scroll-container');
     if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
 });
 
-function prosesCSV() {
-    const troli = document.getElementById('select-troli').value;
-    const fileInput = document.getElementById('input-csv');
-    if(!troli) return alert("Pilih Troli terlebih dahulu!");
-    if(!fileInput.files.length) return alert("Pilih file CSV!");
-
-    Papa.parse(fileInput.files[0], {
-        header: false, skipEmptyLines: true,
-        complete: function(results) {
-            let added = 0;
-            results.data.forEach(row => {
-                const code = row[0] ? row[0].trim() : '';
-                if(code) {
-                    const isLocalDuplicate = dataStbj.some(d => d.qrcode === code);
-                    const trans = translateBarcode(code);
-                    
-                    dataStbj.push({ 
-                        id: ++globalRowId, 
-                        qrcode: code, 
-                        troli: troli, 
-                        status: 'BELUM CEK', 
-                        keterangan: isLocalDuplicate ? 'DUPLIKAT SCAN' : 'Dari CSV', 
-                        pic: currentUser.username, 
-                        isLocalDuplicate: isLocalDuplicate, 
-                        ...trans 
-                    });
-                    added++;
-                }
-            });
-            alert(`${added} QR Code dari CSV berhasil dimuat ke tabel.`); renderTable(); fileInput.value = '';
-            
-            const scrollContainer = document.getElementById('scroll-container');
-            if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
-        }
-    });
-}
-
 function renderTable() {
     const tbody = document.getElementById('tbody-stbj');
     if(dataStbj.length === 0) {
-        tbody.innerHTML = '<div class="p-10 text-center font-medium text-slate-400"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan / di-import.</div>';
+        tbody.innerHTML = '<div class="p-10 text-center font-medium text-slate-400"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan.</div>';
         document.getElementById('lbl-tampil-baris').innerText = '0';
         lucide.createIcons(); return;
     }
@@ -247,6 +202,7 @@ function toggleSidebarFilter() {
 function tutupPopups() {
     document.getElementById('sidebar-filter').classList.add('translate-x-full');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
+    tutupModalAdd();
 }
 
 function resetFilterSTBJ() {
