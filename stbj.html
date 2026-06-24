@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     
     <script src="global.js"></script>
     
@@ -18,10 +17,7 @@
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
         .selected-row { border-color: #2563eb !important; background-color: #dbeafe !important; }
-        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
-        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
     </style>
 </head>
 <body class="font-sans text-slate-800">
@@ -30,54 +26,8 @@
         
         <div class="shrink-0 bg-white flex flex-col z-20 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)] border-b border-slate-200">
             
-            <!-- TABS -->
-            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
-                <button onclick="switchTab('scan')" id="btn-tab-scan" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="barcode" class="w-4 h-4"></i> SCAN ITEM PER DUS</button>
-                <button onclick="switchTab('csv')" id="btn-tab-csv" class="px-6 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> IMPORT CSV</button>
-            </div>
-
-            <!-- INPUT AREA -->
-            <div class="bg-white border-b border-slate-200 flex flex-col">
-                <button onclick="toggleInputSTBJ()" class="w-full bg-slate-50 p-3 flex justify-between items-center border-b border-slate-200 hover:bg-slate-100 transition active:bg-slate-200">
-                    <span class="font-black text-[11px] uppercase tracking-wide text-slate-700 flex items-center gap-2">
-                        <i data-lucide="package-plus" class="w-4 h-4"></i> INPUT DATA STBJ
-                    </span>
-                    <i data-lucide="chevron-up" id="icon-toggle-input" class="w-4 h-4 text-slate-500 transition-transform duration-300"></i>
-                </button>
-                
-                <div id="body-input-stbj" class="p-3 sm:p-4 transition-all duration-300 origin-top">
-                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                        <div class="md:col-span-3">
-                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Pilih Troli</label>
-                            <select id="select-troli" class="w-full h-11 px-3 border border-slate-300 rounded-md font-bold outline-none focus:border-blue-600 text-slate-800 cursor-pointer bg-slate-50 text-sm">
-                                <option value="">-- Memuat Troli... --</option>
-                            </select>
-                        </div>
-
-                        <div id="view-scan" class="md:col-span-9">
-                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Scan Fisik Kardus</label>
-                            <form id="form-scan" class="flex gap-2">
-                                <div class="relative flex-1">
-                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
-                                    <input type="text" id="input-qrcode" class="w-full h-11 pl-10 pr-3 border border-slate-300 rounded-md outline-none focus:border-blue-600 font-mono font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
-                                </div>
-                                <button type="submit" class="h-11 bg-blue-700 hover:bg-blue-800 text-white px-4 sm:px-6 rounded-md font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 text-xs sm:text-sm uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> <span class="hidden sm:inline">ADD</span></button>
-                            </form>
-                        </div>
-
-                        <div id="view-csv" class="md:col-span-9 hidden">
-                            <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Upload File CSV</label>
-                            <div class="flex gap-2">
-                                <input type="file" id="input-csv" accept=".csv" class="flex-1 h-11 px-3 py-2 border border-slate-300 rounded-md outline-none text-sm font-bold text-slate-700 bg-slate-50 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-black file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition cursor-pointer">
-                                <button onclick="prosesCSV()" class="h-11 bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-6 rounded-md font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 text-xs sm:text-sm uppercase"><i data-lucide="upload-cloud" class="w-4 h-4"></i> <span class="hidden sm:inline">PROSES</span></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- TOOLBAR AKSI -->
-            <div class="p-3 sm:p-4 flex items-center justify-between bg-slate-50/50 border-t border-slate-100 w-full">
+            <div class="p-3 sm:p-4 flex items-center justify-between bg-slate-50/50 w-full">
                 <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar">
                     <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="shrink-0 flex items-stretch rounded-md overflow-hidden shadow-sm active:scale-95 transition h-9 border border-slate-800">
                         <div class="w-9 bg-slate-900 text-white flex items-center justify-center shrink-0"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
@@ -123,11 +73,39 @@
 
         <!-- FOOTER ACTION -->
         <div class="shrink-0 w-full bg-slate-50 p-2 flex items-center gap-2 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300 pb-4">
+            <button onclick="bukaModalAdd()" class="w-[50px] h-[50px] bg-[#0f172a] hover:bg-black text-white flex justify-center items-center shadow-md active:scale-95 shrink-0 transition rounded border-b-4 border-slate-900">
+                <i data-lucide="plus" class="w-7 h-7"></i>
+            </button>
             <button id="btn-save" onclick="saveToDatabaseSTBJ()" class="flex-1 h-[50px] bg-[#058c5e] hover:bg-[#04724d] text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-[#035237]">
                 <i data-lucide="save" class="w-5 h-5"></i> SIMPAN KE GUDANG
             </button>
         </div>
         
+    </div>
+
+    <!-- MODAL ADD SCAN -->
+    <div id="modal-add-scan" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[60] p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 p-5">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="scan-line" class="w-5 h-5 text-blue-600"></i> INPUT DATA STBJ</h3>
+                <button type="button" onclick="tutupModalAdd()" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <form id="form-scan" class="flex flex-col gap-4">
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Pilih Troli</label>
+                    <select id="select-troli" class="w-full p-2.5 border border-slate-300 rounded font-bold outline-none focus:border-blue-500 text-slate-800 cursor-pointer bg-slate-50 text-sm">
+                        <option value="">-- Memuat Troli... --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Scan Fisik Kardus</label>
+                    <input type="text" id="input-qrcode" class="w-full p-2.5 border border-slate-300 rounded outline-none focus:border-blue-500 font-mono font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
+                </div>
+                <button type="submit" class="mt-2 w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded font-black shadow transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-4 border-black">
+                    <i data-lucide="plus-square" class="w-4 h-4"></i> TAMBAHKAN KODE
+                </button>
+            </form>
+        </div>
     </div>
 
     <!-- SIDEBAR FILTER LENGKAP -->
