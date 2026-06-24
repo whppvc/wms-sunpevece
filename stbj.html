@@ -12,39 +12,31 @@
     <script src="global.js"></script>
     
     <style>
-        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; touch-action: pan-y; }
-        .custom-scroll::-webkit-scrollbar { width: 12px; height: 12px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-left: 1px solid #cbd5e1; border-top: 1px solid #cbd5e1; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border: 3px solid #f1f5f9; border-radius: 10px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
-        .table-container { position: relative; will-change: transform; }
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; touch-action: pan-y; background-color: #f8fafc; }
+        .custom-scroll::-webkit-scrollbar { width: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        .hdr-std { 
-            background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; 
-            border-bottom: 2px solid #cbd5e1 !important; padding: 0.75rem; text-transform: uppercase; 
-            font-family: inherit; font-size: 12px; font-weight: 800; white-space: nowrap; 
-            position: sticky; top: 0; z-index: 40 !important; background-clip: padding-box !important; 
-        }
-        
+        .selected-row { border-color: #2563eb !important; background-color: #dbeafe !important; }
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
-        tr.selected-row td { background-color: #dbeafe !important; }
-
-        .resizer { position: absolute; top: 0; right: 0; width: 5px; cursor: col-resize; user-select: none; height: 100%; z-index: 50; }
-        .resizer:hover, .resizing { background-color: rgba(59, 130, 246, 0.5); }
     </style>
 </head>
-<body class="font-sans bg-slate-50 text-slate-800">
+<body class="font-sans text-slate-800">
 
-    <div class="flex flex-col h-full w-full">
+    <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
-        <div class="shrink-0 bg-slate-50 flex flex-col z-20 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)] border-b border-slate-300">
+        <div class="shrink-0 bg-white flex flex-col z-20 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)] border-b border-slate-200">
+            
+            <!-- TABS -->
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
-                <button onclick="switchTab('scan')" id="btn-tab-scan" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs"><i data-lucide="barcode" class="w-4 h-4"></i> SCAN ITEM PER DUS</button>
-                <button onclick="switchTab('csv')" id="btn-tab-csv" class="px-6 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> IMPORT CSV</button>
+                <button onclick="switchTab('scan')" id="btn-tab-scan" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="barcode" class="w-4 h-4"></i> SCAN ITEM PER DUS</button>
+                <button onclick="switchTab('csv')" id="btn-tab-csv" class="px-6 py-3.5 tab-inactive hover:text-slate-800 hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> IMPORT CSV</button>
             </div>
 
+            <!-- INPUT AREA -->
             <div class="bg-white border-b border-slate-200 flex flex-col">
                 <button onclick="toggleInputSTBJ()" class="w-full bg-slate-50 p-3 flex justify-between items-center border-b border-slate-200 hover:bg-slate-100 transition active:bg-slate-200">
                     <span class="font-black text-[11px] uppercase tracking-wide text-slate-700 flex items-center gap-2">
@@ -57,7 +49,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                         <div class="md:col-span-3">
                             <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Pilih Troli</label>
-                            <select id="select-troli" class="w-full h-11 px-3 border-2 border-slate-200 rounded-lg font-bold outline-none focus:border-blue-600 text-slate-800 cursor-pointer bg-slate-50 text-sm shadow-inner">
+                            <select id="select-troli" class="w-full h-11 px-3 border border-slate-300 rounded-md font-bold outline-none focus:border-blue-600 text-slate-800 cursor-pointer bg-slate-50 text-sm">
                                 <option value="">-- Memuat Troli... --</option>
                             </select>
                         </div>
@@ -67,131 +59,108 @@
                             <form id="form-scan" class="flex gap-2">
                                 <div class="relative flex-1">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="scan-line" class="w-5 h-5 text-slate-400"></i></div>
-                                    <input type="text" id="input-qrcode" class="w-full h-11 pl-11 pr-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-600 font-black text-slate-800 text-sm sm:text-base bg-slate-50 placeholder-slate-400 transition shadow-inner" placeholder="Arahkan scanner..." autocomplete="off">
+                                    <input type="text" id="input-qrcode" class="w-full h-11 pl-10 pr-3 border border-slate-300 rounded-md outline-none focus:border-blue-600 font-mono font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
                                 </div>
-                                <button type="submit" class="h-11 bg-blue-700 hover:bg-blue-800 text-white px-4 sm:px-6 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-blue-900 text-xs sm:text-sm uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> <span class="hidden sm:inline">ADD</span></button>
+                                <button type="submit" class="h-11 bg-blue-700 hover:bg-blue-800 text-white px-4 sm:px-6 rounded-md font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 text-xs sm:text-sm uppercase"><i data-lucide="plus-square" class="w-4 h-4"></i> <span class="hidden sm:inline">ADD</span></button>
                             </form>
                         </div>
 
                         <div id="view-csv" class="md:col-span-9 hidden">
                             <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Upload File CSV</label>
                             <div class="flex gap-2">
-                                <input type="file" id="input-csv" accept=".csv" class="flex-1 h-11 px-3 py-2 border-2 border-slate-200 rounded-lg outline-none text-sm font-bold text-slate-700 bg-slate-50 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-black file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition cursor-pointer shadow-inner">
-                                <button onclick="prosesCSV()" class="h-11 bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-6 rounded-lg font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 border-b-2 border-emerald-800 text-xs sm:text-sm uppercase"><i data-lucide="upload-cloud" class="w-4 h-4"></i> <span class="hidden sm:inline">PROSES</span></button>
+                                <input type="file" id="input-csv" accept=".csv" class="flex-1 h-11 px-3 py-2 border border-slate-300 rounded-md outline-none text-sm font-bold text-slate-700 bg-slate-50 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-black file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition cursor-pointer">
+                                <button onclick="prosesCSV()" class="h-11 bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-6 rounded-md font-black shadow-sm cursor-pointer transition active:scale-95 flex items-center justify-center gap-2 text-xs sm:text-sm uppercase"><i data-lucide="upload-cloud" class="w-4 h-4"></i> <span class="hidden sm:inline">PROSES</span></button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="flex gap-2 overflow-x-auto p-2 bg-slate-50 hide-scrollbar whitespace-nowrap scroll-smooth select-none">
-                <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-black">
-                    <div class="bg-black text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="search-check" class="w-4 h-4"></i></div>
-                    <div class="bg-slate-900 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-black transition">Verifikasi Kode</div>
-                </button>
-                <div class="w-px h-8 bg-slate-300 mx-1 shrink-0"></div> 
-                <button onclick="undoHapusSTBJ()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-rose-700">
-                    <div class="bg-rose-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
-                    <div class="bg-rose-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-rose-500 transition">Undo</div>
-                </button>
-                <button onclick="holdManual()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded overflow-hidden border border-amber-600">
-                    <div class="bg-amber-600 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="pause-circle" class="w-4 h-4"></i></div>
-                    <div class="bg-amber-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-amber-400 transition">Hold Item</div>
-                </button>
+            <!-- TOOLBAR AKSI -->
+            <div class="p-3 sm:p-4 flex items-center justify-between bg-slate-50/50 border-t border-slate-100 w-full">
+                <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar">
+                    <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="shrink-0 flex items-stretch rounded-md overflow-hidden shadow-sm active:scale-95 transition h-9 border border-slate-800">
+                        <div class="w-9 bg-slate-900 text-white flex items-center justify-center shrink-0"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
+                        <div class="flex-1 bg-slate-800 text-white font-black text-[11px] uppercase flex items-center justify-center px-3 tracking-wider">Verifikasi</div>
+                    </button>
+
+                    <button onclick="undoHapusSTBJ()" class="shrink-0 flex items-stretch rounded-md overflow-hidden shadow-sm active:scale-95 transition h-9 border border-rose-700">
+                        <div class="w-9 bg-rose-700 text-white flex items-center justify-center shrink-0"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
+                        <div class="flex-1 bg-rose-600 text-white font-black text-[11px] uppercase flex items-center justify-center px-3 tracking-wider">Undo</div>
+                    </button>
+
+                    <button onclick="holdManual()" class="shrink-0 flex items-stretch rounded-md overflow-hidden shadow-sm active:scale-95 transition h-9 border border-amber-600">
+                        <div class="w-9 bg-amber-700 text-white flex items-center justify-center shrink-0"><i data-lucide="pause-circle" class="w-4 h-4"></i></div>
+                        <div class="flex-1 bg-amber-500 text-white font-black text-[11px] uppercase flex items-center justify-center px-3 tracking-wider">Hold Item</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- SELECT ALL & QTY & FILTER -->
+            <div class="flex justify-between items-center px-3 py-2 bg-white border-t border-slate-200">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" onchange="toggleAll(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-400" id="cb-all">
+                    <label for="cb-all" class="text-[11px] font-black text-slate-500 uppercase tracking-wide cursor-pointer">Pilih Semua</label>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="bg-cyan-50 border border-cyan-300 px-3 py-1.5 rounded text-cyan-800 text-[11px] font-black shadow-sm uppercase tracking-wider">
+                        Total Qty: <span id="lbl-tampil-baris" class="text-slate-900 text-[13px] ml-1">0</span> Dus
+                    </div>
+                    <!-- ICON FILTER -->
+                    <button onclick="toggleSidebarFilter()" class="p-1.5 bg-white border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition shadow-sm active:scale-95">
+                        <i data-lucide="filter" class="w-5 h-5"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
+        <!-- MIDDLE SCROLL SECTION (CARD VIEW) -->
         <div class="flex-1 min-h-0 bg-slate-200 p-2 overflow-hidden flex flex-col relative z-0">
-            <div class="flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll table-container">
-                <table class="w-full text-center border-separate border-spacing-0 whitespace-nowrap" id="table-stbj">
-                    <thead class="sticky top-0 z-40 shadow-md bg-slate-800">
-                        <tr>
-                            <th class="hdr-std w-10 col-cb relative"><input type="checkbox" onchange="toggleAll(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded"></th>
-                            <th class="hdr-std w-10 col-btn relative"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-slate-400"></i></th>
-                            <th class="hdr-std w-12 col-no relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(2, this.closest('th'))">No <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span></div></th>
-                            <th class="hdr-std col-status relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(3, this.closest('th'))">Status <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span><button onclick="openColumnFilter(event, 'col-status', 'Status')" class="p-1 hover:bg-slate-600 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button></div></th>
-                            <th class="hdr-std col-troli relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(4, this.closest('th'))">Troli <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span><button onclick="openColumnFilter(event, 'col-troli', 'Troli')" class="p-1 hover:bg-slate-600 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button></div></th>
-                            <th class="hdr-std border-r border-slate-500 col-qr relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(5, this.closest('th'))">Text QRCode <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span><button onclick="openColumnFilter(event, 'col-qr', 'QRCode')" class="p-1 hover:bg-slate-600 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button></div></th>
-                            <th class="hdr-std col-tgl relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(6, this.closest('th'))">Tgl Produksi <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span><button onclick="openColumnFilter(event, 'col-tgl', 'Tgl Produksi')" class="p-1 hover:bg-slate-600 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button></div></th>
-                            <th class="hdr-std col-mesin relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(7, this.closest('th'))">Mesin <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span><button onclick="openColumnFilter(event, 'col-mesin', 'Mesin')" class="p-1 hover:bg-slate-600 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button></div></th>
-                            <th class="hdr-std border-r border-slate-500 col-shift relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(8, this.closest('th'))">Shift <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span><button onclick="openColumnFilter(event, 'col-shift', 'Shift')" class="p-1 hover:bg-slate-600 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button></div></th>
-                            <th class="hdr-std text-blue-300 col-jenis relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(9, this.closest('th'))">Jenis Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span><button onclick="openColumnFilter(event, 'col-jenis', 'Jenis Item')" class="p-1 hover:bg-slate-600 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button></div></th>
-                            <th class="hdr-std col-nama relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(10, this.closest('th'))">Nama Item <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span><button onclick="openColumnFilter(event, 'col-nama', 'Nama Item')" class="p-1 hover:bg-slate-600 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button></div></th>
-                            <th class="hdr-std col-pjg relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(11, this.closest('th'))">Pjg <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span><button onclick="openColumnFilter(event, 'col-pjg', 'Panjang')" class="p-1 hover:bg-slate-600 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button></div></th>
-                            <th class="hdr-std col-grade relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(12, this.closest('th'))">Grade <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span><button onclick="openColumnFilter(event, 'col-grade', 'Grade')" class="p-1 hover:bg-slate-600 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button></div></th>
-                            <th class="hdr-std col-dus relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(13, this.closest('th'))">Dus <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span><button onclick="openColumnFilter(event, 'col-dus', 'Dus')" class="p-1 hover:bg-slate-600 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button></div></th>
-                            <th class="hdr-std border-r border-slate-500 col-shading relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(14, this.closest('th'))">Shading <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span><button onclick="openColumnFilter(event, 'col-shading', 'Shading')" class="p-1 hover:bg-slate-600 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button></div></th>
-                            <th class="hdr-std col-customer relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(15, this.closest('th'))">Customer Bawaan <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span><button onclick="openColumnFilter(event, 'col-customer', 'Customer Bawaan')" class="p-1 hover:bg-slate-600 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button></div></th>
-                            <th class="hdr-std col-ket relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(16, this.closest('th'))">Keterangan <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span><button onclick="openColumnFilter(event, 'col-ket', 'Keterangan')" class="p-1 hover:bg-slate-600 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button></div></th>
-                            <th class="hdr-std col-pic relative"><div class="flex items-center justify-center gap-1"><span class="cursor-pointer hover:text-blue-300 transition flex items-center gap-1" onclick="sortTable(17, this.closest('th'))">PIC Input <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-50"></i></span><button onclick="openColumnFilter(event, 'col-pic', 'PIC Input')" class="p-1 hover:bg-slate-600 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button></div></th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody-stbj" class="text-center text-slate-700">
-                        <tr><td colspan="18" class="p-10 text-slate-400 font-bold"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan / di-import.</td></tr>
-                    </tbody>
-                </table>
+            <div class="flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll" id="scroll-container">
+                <div id="tbody-stbj" class="flex flex-col gap-0 w-full"></div>
             </div>
         </div>
 
-        <div class="shrink-0 w-full bg-slate-50 p-2 sm:p-3 flex items-center justify-end z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
-            <button id="btn-save" onclick="saveToDatabaseSTBJ()" class="w-full md:w-auto px-8 py-2.5 sm:py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 text-sm tracking-wide cursor-pointer transition active:scale-95 uppercase border-b-4 border-emerald-800">
-                <i data-lucide="save" class="w-5 h-5"></i> 
-                <span>SIMPAN KE GUDANG</span>
-                <span class="hidden sm:inline font-semibold text-[10px] ml-2 bg-emerald-800 px-2 py-1 rounded-md opacity-90">(Unik = Masuk, Duplikat = Hold)</span>
+        <!-- FOOTER ACTION -->
+        <div class="shrink-0 w-full bg-slate-50 p-2 flex items-center gap-2 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300 pb-4">
+            <button id="btn-save" onclick="saveToDatabaseSTBJ()" class="flex-1 h-[50px] bg-[#058c5e] hover:bg-[#04724d] text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-[#035237]">
+                <i data-lucide="save" class="w-5 h-5"></i> SIMPAN KE GUDANG
             </button>
         </div>
         
     </div>
 
-    <!-- MODAL FILTER EXCEL -->
-    <div id="excel-filter-menu" class="hidden absolute bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm">
-        <div class="p-3 border-b border-slate-200 bg-slate-100 flex justify-between items-center rounded-t-lg">
-            <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
-            <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-rose-500 bg-white p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
-        </div>
-        <div class="p-2 border-b border-slate-200 bg-white">
-            <div class="relative">
-                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2"></i>
-                <input type="text" id="filter-search-input" oninput="searchFilterList(this.value)" class="w-full pl-8 p-1.5 text-xs font-bold border border-slate-300 bg-slate-50 rounded focus:border-blue-500 focus:bg-white outline-none transition" placeholder="Cari Spesifik...">
-            </div>
-        </div>
-        <div class="p-2 max-h-48 overflow-y-auto flex flex-col gap-1 text-xs bg-white" id="filter-values-list"></div>
-        <div class="p-2 border-t border-slate-200 bg-slate-50 flex justify-between gap-2 rounded-b-lg">
-            <button onclick="clearFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100 transition shadow-sm">Reset</button>
-            <button onclick="applyFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-700 transition shadow-sm">Terapkan</button>
-        </div>
-    </div>
-
-    <!-- SIDEBAR FILTER (POP-UP Z-INDEX TINGGI) -->
-    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[60] flex flex-col">
+    <!-- SIDEBAR FILTER LENGKAP -->
+    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Tabel</h3>
-            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data</h3>
+            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
-        <div class="p-3 flex flex-col gap-3 overflow-y-auto">
+        <div class="p-3 flex flex-col gap-3 overflow-y-auto custom-scroll flex-1">
             <div class="grid grid-cols-2 gap-2">
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label><input type="text" id="fs-status" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label><input type="text" id="fs-troli" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="fs-qr" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="text" id="fs-tgl" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label><input type="text" id="fs-mesin" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label><input type="text" id="fs-shift" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><input type="text" id="fs-jenis" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><input type="text" id="fs-nama" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><input type="text" id="fs-pjg" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><input type="text" id="fs-grade" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><input type="text" id="fs-dus" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="fs-shading" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer</label><input type="text" id="fs-customer" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
-                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="fs-ket" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border-2 border-slate-200 rounded focus:border-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label><input type="text" id="fs-status" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label><input type="text" id="fs-troli" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="fs-qr" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="text" id="fs-tgl" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label><input type="text" id="fs-mesin" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label><input type="text" id="fs-shift" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><input type="text" id="fs-jenis" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><input type="text" id="fs-nama" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><input type="text" id="fs-pjg" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><input type="text" id="fs-grade" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><input type="text" id="fs-dus" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="fs-shading" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer</label><input type="text" id="fs-customer" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="fs-ket" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
             </div>
-            <button onclick="resetFilterSTBJ()" class="mt-2 py-2.5 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-xs uppercase transition border border-slate-300">RESET FILTER</button>
+            <button onclick="resetFilterSTBJ()" class="mt-2 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black rounded text-xs uppercase transition shrink-0">RESET FILTER</button>
         </div>
     </div>
 
     <!-- OVERLAY -->
     <div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-[50] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
+    <script src="wms_parser.js"></script>
     <script src="stbj_logic.js"></script>
 </body>
 </html>
