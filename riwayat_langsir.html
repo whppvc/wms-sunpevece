@@ -9,7 +9,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
-    <!-- PINDAHKAN GLOBAL.JS KE SINI -->
     <script src="global.js"></script>
     
     <style>
@@ -21,42 +20,49 @@
         .table-container { position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* DESAIN HEADER ALA OMNIFUL (DARK NAVY) */
         .hdr-std { 
-            background-color: #1e293b !important; 
+            background-color: #0f172a !important; 
             color: #ffffff !important; 
-            text-align: center !important; 
-            padding: 0.75rem 1rem !important; 
-            font-size: 0.75rem !important; 
-            font-weight: 600 !important; 
-            text-transform: uppercase !important; 
-            letter-spacing: 0.05em !important; 
+            text-align: left !important; 
+            padding: 1rem 1rem !important; 
+            font-size: 0.85rem !important; 
+            font-weight: 500 !important; 
+            text-transform: capitalize !important; 
+            letter-spacing: 0.025em !important; 
             white-space: nowrap !important; 
             position: sticky !important; 
             top: 0 !important; 
             z-index: 20 !important; 
-            border-bottom: 1px solid #e2e8f0 !important; 
-            background-clip: padding-box !important;
+            border: none !important; 
         }
         
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
 
-        /* Warna Hijau Tosca Cerah (Soft) untuk baris yang dipilih */
+        /* DESAIN TABEL BODY (ZEBRA & VERTICAL LINES) */
+        #main-table { border-collapse: collapse; }
+        #main-table td { 
+            border-right: 1px solid #cbd5e1; 
+            border-bottom: 1px solid #cbd5e1 !important; 
+        }
+        #main-table td:last-child { border-right: none; } 
+
+        /* Zebra Striping Tegas */
+        tr.r-row { background-color: #f8fafc !important; } 
+        tr.r-row:nth-child(even) { background-color: #e2e8f0 !important; } 
+
+        /* Highlight Baris Terpilih */
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
-        
-        /* Hover baris mengubah warna teks menjadi Indigo/Ungu Elegan yang ramah mata */
-        tr.r-row:not(.selected-row):hover td { color: #4f46e5 !important; }
-        tr.r-row:not(.selected-row):hover td button { color: #4f46e5 !important; border-color: #4f46e5 !important; }
     </style>
 </head>
 <body class="font-sans text-slate-800">
 
-    <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
+    <div class="flex flex-col h-full w-full">
         
         <!-- HEADER SECTION -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
             
-            <!-- Tabs -->
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
                 <button onclick="gantiModeRiwayat('qr')" id="tab-r-qr" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="list" class="w-4 h-4"></i> Detail QRCode</button>
                 <button onclick="gantiModeRiwayat('agregasi')" id="tab-r-agregasi" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="bar-chart-2" class="w-4 h-4"></i> Rangkuman Item & Qty</button>
@@ -79,7 +85,7 @@
                     </button>
                 </div>
 
-                <!-- KANAN (PC MODE): Cancel, Hapus, Salin, Excel -->
+                <!-- KANAN (PC MODE) -->
                 <div class="hidden sm:flex items-center gap-2 ml-auto">
                     <button onclick="cancelLangsir()" id="btn-cancel-langsir" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-rose-700">
                         <div class="bg-rose-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
@@ -102,7 +108,7 @@
                     </button>
                 </div>
 
-                <!-- KANAN (MOBILE MODE): Dropdown Menu -->
+                <!-- KANAN (MOBILE MODE) -->
                 <div class="sm:hidden relative ml-auto">
                     <button onclick="toggleActionMenu(event)" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition">
                         <i data-lucide="menu" class="w-5 h-5"></i>
@@ -119,23 +125,22 @@
         </div>
 
         <!-- MIDDLE SCROLL SECTION -->
-        <div class="flex-1 min-h-0 bg-white overflow-hidden flex flex-col relative z-0">
-            <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container">
-                <table class="w-full text-center border-collapse whitespace-nowrap" id="main-table">
+        <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
+            <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-t-xl shadow-sm border border-slate-300">
+                <table class="w-full text-left border-collapse whitespace-nowrap" id="main-table">
                     <thead class="sticky top-0 z-10" id="thead-riwayat"></thead>
-                    <tbody id="tbody-riwayat" class="text-slate-700"></tbody>
+                    <tbody id="tbody-riwayat" class="text-slate-800"></tbody>
                 </table>
             </div>
         </div>
 
         <!-- FOOTER PAGINATION -->
-        <div class="shrink-0 w-full bg-slate-50 p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
+        <div class="shrink-0 w-full bg-white p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
             
-            <!-- Footer Badges -->
             <div class="flex items-center gap-2 flex-wrap justify-center">
-                <span class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-md text-slate-600 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-slate-900 font-medium ml-1">0</span></span>
-                <span class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-md text-slate-600 text-[11px] font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-slate-900 font-medium ml-1">0</span></span>
-                <span class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-md text-slate-600 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-blue-600 font-medium ml-1">0</span></span>
+                <span class="bg-blue-50 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-medium ml-1">0</span></span>
+                <span class="bg-amber-50 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-amber-900 font-medium ml-1">0</span></span>
+                <span class="bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded text-emerald-800 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-medium ml-1">0</span></span>
             </div>
             
             <div class="flex items-center gap-3">
@@ -235,8 +240,7 @@
         </div>
     </div>
 
-    <div id="overlay-klik-luar" onclick="tutupSemuaPopup()" class="hidden fixed inset-0 z-[40] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
-
+    <script src="wms_parser.js"></script>
     <script src="riwayat_langsir_logic.js"></script>
 </body>
 </html>
