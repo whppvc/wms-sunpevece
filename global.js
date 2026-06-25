@@ -45,7 +45,7 @@ const APP_MENUS = [
     { id: 'master_data', title: 'Master Data', icon: 'database', url: 'master_data.html' }
 ];
 
-// INJEKSI CSS STANDAR
+// INJEKSI CSS STANDAR & LOGIKA SIDEBAR
 const style = document.createElement('style');
 style.innerHTML = `
     .hide-scrollbar::-webkit-scrollbar { display: none; } 
@@ -54,14 +54,46 @@ style.innerHTML = `
     /* Override padding bawaan HTML lama agar full screen */
     body > div.absolute.inset-0 { padding-top: 0 !important; position: relative !important; height: 100% !important; }
     
+    /* Transisi Sidebar */
+    #app-sidebar { transition: width 0.3s ease, transform 0.3s ease; }
+    
     /* Tooltip untuk Slim Sidebar */
     .sidebar-tooltip {
         visibility: hidden; opacity: 0; position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
-        margin-left: 10px; background-color: #1e293b; color: white; padding: 4px 10px; border-radius: 6px;
-        font-size: 11px; font-weight: bold; white-space: nowrap; z-index: 100; transition: all 0.2s;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin-left: 10px; background-color: #1e293b; color: white; padding: 6px 12px; border-radius: 6px;
+        font-size: 12px; font-weight: bold; white-space: nowrap; z-index: 100; transition: all 0.2s;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); pointer-events: none;
     }
     .sidebar-item:hover .sidebar-tooltip { visibility: visible; opacity: 1; margin-left: 15px; }
+    
+    /* DESKTOP STATE (Lebar Dinamis) */
+    @media (min-width: 640px) {
+        /* Mode Ramping (Default) */
+        #app-sidebar:not(.expanded) { width: 4.5rem; }
+        #app-sidebar:not(.expanded) .sidebar-text { display: none; }
+        #app-sidebar:not(.expanded) .sidebar-logo-text { display: none; }
+        #app-sidebar:not(.expanded) .sidebar-item { justify-content: center; padding: 0; width: 3rem; margin: 0 auto; }
+        #app-sidebar:not(.expanded) .sidebar-divider { width: 2rem; margin: 0.5rem auto; }
+        
+        /* Mode Lebar (Expanded) */
+        #app-sidebar.expanded { width: 16rem; }
+        #app-sidebar.expanded .sidebar-text { display: block; }
+        #app-sidebar.expanded .sidebar-logo-text { display: block; }
+        #app-sidebar.expanded .sidebar-item { justify-content: flex-start; padding: 0 1rem; width: 100%; }
+        #app-sidebar.expanded .sidebar-tooltip { display: none !important; }
+        #app-sidebar.expanded .sidebar-divider { width: 100%; padding: 0 1rem; text-align: left; background: transparent; height: auto; margin-top: 1rem; }
+        #app-sidebar.expanded #btn-expand-container { justify-content: flex-end; padding-right: 1rem; }
+    }
+    
+    /* MOBILE STATE (Selalu Lebar saat dibuka) */
+    @media (max-width: 639px) {
+        #app-sidebar { width: 16rem; }
+        .sidebar-text { display: block; }
+        .sidebar-logo-text { display: block; }
+        .sidebar-item { justify-content: flex-start; padding: 0 1rem; width: 100%; }
+        .sidebar-tooltip { display: none !important; }
+        .sidebar-divider { width: 100%; padding: 0 1rem; text-align: left; background: transparent; height: auto; margin-top: 1rem; }
+    }
 `;
 document.head.appendChild(style);
 
@@ -71,6 +103,11 @@ function initModernLayout(pageMeta) {
     
     const user = JSON.parse(sessionString);
     const initial = user.username.charAt(0).toUpperCase();
+    
+    // Cek state sidebar dari localStorage
+    const isExpanded = localStorage.getItem('sidebar_expanded') === 'true';
+    const expandedClass = isExpanded ? 'expanded' : '';
+    const expandIcon = isExpanded ? 'chevron-left' : 'chevron-right';
 
     const originalNodes = Array.from(document.body.childNodes);
     document.body.innerHTML = ''; 
@@ -79,29 +116,33 @@ function initModernLayout(pageMeta) {
     layoutWrapper.className = 'flex h-screen bg-slate-50 overflow-hidden font-sans w-full';
 
     // ==========================================
-    // 1. SLIM SIDEBAR (KIRI - GELAP)
+    // 1. SIDEBAR (KIRI - GELAP)
     // ==========================================
     let sidebarHTML = `
-        <aside id="app-sidebar" class="fixed sm:relative inset-y-0 left-0 z-50 w-16 bg-[#0f172a] flex flex-col items-center py-4 transition-transform duration-300 -translate-x-full sm:translate-x-0 shadow-2xl sm:shadow-none border-r border-slate-800 shrink-0">
+        <aside id="app-sidebar" class="fixed sm:relative inset-y-0 left-0 z-50 bg-[#0f172a] flex flex-col py-4 transform -translate-x-full sm:translate-x-0 shadow-2xl sm:shadow-none border-r border-slate-800 shrink-0 ${expandedClass}">
             
             <!-- Logo / Home -->
-            <a href="menu.html" class="mb-6 w-10 h-10 bg-blue-600 hover:bg-blue-500 rounded-xl flex items-center justify-center shadow-lg transition cursor-pointer">
-                <span class="text-white font-black text-xl">S</span>
+            <a href="menu.html" class="mb-6 flex items-center justify-center gap-3 px-4 h-10 transition cursor-pointer overflow-hidden shrink-0">
+                <div class="bg-white p-1 rounded-lg shrink-0 flex items-center justify-center w-10 h-10">
+                    <img src="sunpevece.png" alt="Logo" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                </div>
+                <span class="sidebar-logo-text text-white font-black text-lg tracking-wider whitespace-nowrap">SUNPEVECE</span>
             </a>
             
             <!-- Menu Icons -->
-            <div class="flex flex-col gap-3 w-full px-2 overflow-y-auto hide-scrollbar items-center flex-1">
+            <div class="flex flex-col gap-2 w-full px-3 overflow-y-auto hide-scrollbar flex-1">
     `;
     
     APP_MENUS.forEach(menu => {
         if (menu.isDivider) { 
-            sidebarHTML += `<div class="mt-2 mb-1 w-8 border-b border-slate-700"></div>`; 
+            sidebarHTML += `<div class="sidebar-divider h-px bg-slate-700 my-1 text-[10px] font-black text-slate-400 uppercase tracking-widest overflow-hidden whitespace-nowrap"><span class="sidebar-text">${menu.title}</span></div>`; 
         } else {
             const isActive = pageMeta && menu.id === pageMeta.id;
             const bgClass = isActive ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-white';
             sidebarHTML += `
-                <a href="${menu.url}" class="sidebar-item relative flex items-center justify-center w-10 h-10 rounded-xl transition-all cursor-pointer ${bgClass}">
-                    <i data-lucide="${menu.icon}" class="w-5 h-5"></i>
+                <a href="${menu.url}" class="sidebar-item relative flex items-center h-10 rounded-xl transition-all cursor-pointer ${bgClass}">
+                    <i data-lucide="${menu.icon}" class="w-5 h-5 shrink-0"></i>
+                    <span class="sidebar-text ml-3 text-sm font-bold whitespace-nowrap">${menu.title}</span>
                     <div class="sidebar-tooltip">${menu.title}</div>
                 </a>
             `;
@@ -109,6 +150,13 @@ function initModernLayout(pageMeta) {
     });
     
     sidebarHTML += `
+            </div>
+
+            <!-- Expand/Collapse Button (Bottom) -->
+            <div id="btn-expand-container" class="mt-auto pt-4 px-3 w-full border-t border-slate-800 hidden sm:flex justify-center transition-all">
+                <button onclick="toggleSidebarExpand()" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition cursor-pointer bg-slate-900 border border-slate-700 shadow-sm">
+                    <i data-lucide="${expandIcon}" id="icon-expand-sidebar" class="w-5 h-5"></i>
+                </button>
             </div>
         </aside>
         <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/60 z-40 hidden backdrop-blur-sm transition-opacity sm:hidden"></div>
@@ -129,7 +177,7 @@ function initModernLayout(pageMeta) {
                     <i data-lucide="menu" class="w-6 h-6"></i>
                 </button>
                 <div class="flex items-center gap-3">
-                    <i data-lucide="menu" class="w-5 h-5 text-slate-400 hidden sm:block"></i>
+                    <!-- REVISI: Garis 3 (Hamburger) dihilangkan pada versi Desktop -->
                     <h1 class="text-base sm:text-lg font-black tracking-wide uppercase text-slate-800">${pageMeta ? pageMeta.title : 'WMS PORTAL'}</h1>
                 </div>
             </div>
@@ -174,7 +222,6 @@ function initModernLayout(pageMeta) {
     
     // Pindahkan semua elemen body lama ke dalam mainContent
     originalNodes.forEach(node => {
-        // Hapus class padding top bawaan HTML lama agar tidak ada ruang kosong di atas
         if(node.nodeType === 1 && node.classList.contains('pt-[104px]')) {
             node.classList.remove('pt-[104px]');
             node.classList.remove('absolute');
@@ -243,6 +290,21 @@ function initModernLayout(pageMeta) {
 window.toggleSidebar = function() { 
     document.getElementById('app-sidebar').classList.toggle('-translate-x-full'); 
     document.getElementById('sidebar-overlay').classList.toggle('hidden'); 
+};
+
+window.toggleSidebarExpand = function() {
+    const sidebar = document.getElementById('app-sidebar');
+    const icon = document.getElementById('icon-expand-sidebar');
+    sidebar.classList.toggle('expanded');
+    
+    if(sidebar.classList.contains('expanded')) {
+        localStorage.setItem('sidebar_expanded', 'true');
+        icon.setAttribute('data-lucide', 'chevron-left');
+    } else {
+        localStorage.setItem('sidebar_expanded', 'false');
+        icon.setAttribute('data-lucide', 'chevron-right');
+    }
+    lucide.createIcons();
 };
 
 window.toggleProfileMenu = function() { 
