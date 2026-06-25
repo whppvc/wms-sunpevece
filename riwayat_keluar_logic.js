@@ -6,7 +6,6 @@ let jasperData = [];
 let sortState = {}; 
 let globalCheckedCancel = []; 
 
-// State Filter Excel & Paginasi
 let activeFilters = {}; 
 let currentFilterCol = '';
 let currentPage = 1;
@@ -20,8 +19,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
-            if (!menu.contains(e.target) && !e.target.closest('button[onclick^="openColumnFilter"]')) {
+            if (!menu.contains(e.target) && !e.target.closest('button[title^="Filter"]')) {
                 closeFilterMenu();
+            }
+        }
+        
+        const actionMenu = document.getElementById('mobile-action-menu');
+        if (actionMenu && !actionMenu.classList.contains('hidden')) {
+            if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenu"]')) {
+                actionMenu.classList.add('hidden');
             }
         }
     });
@@ -32,6 +38,12 @@ document.addEventListener('DOMContentLoaded', () => {
         await muatDataDariSupabase();
     }, 200);
 });
+
+window.toggleActionMenu = function(e) {
+    if(e) e.stopPropagation();
+    const menu = document.getElementById('mobile-action-menu');
+    if(menu) menu.classList.toggle('hidden');
+};
 
 async function loadAreasForCancel() {
     try {
@@ -46,7 +58,11 @@ async function loadAreasForCancel() {
 }
 
 async function loadKamusDanJasper() {
-    const { data: d2 } = await db.from('master_2').select('*'); if(d2) kamusData = d2;
+    const { data: d2 } = await db.from('master_2').select('*'); 
+    if(d2) {
+        kamusData = d2;
+        window.masterData = { kamus: d2 };
+    }
     try {
         const { data: dj } = await db.from('nama_jasper').select('*').order('created_at', {ascending: false});
         if(dj) jasperData = dj;
@@ -61,7 +77,7 @@ function extractPOFromSKU(id_sku) {
 
 async function muatDataDariSupabase() {
     const tbody = document.getElementById('tbody-keluar');
-    tbody.innerHTML = `<tr><td colspan="22" class="p-10"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data Keluar...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data Keluar...</p></td></tr>`;
     lucide.createIcons();
     
     let queryKeluar = db.from('stok_keluar').select('*').order('created_at', {ascending: false}); 
@@ -78,46 +94,6 @@ async function muatDataDariSupabase() {
     } catch(err) { 
         tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; 
     }
-}
-
-function translateBarcode(barcode) {
-    let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customer: '-', jasper: '-' };
-    if(!barcode) return td;
-    const parts = barcode.split('/'); if (parts.length < 1) return td;
-    
-    const hurufDepan = barcode.charAt(0).toUpperCase();
-    if (hurufDepan === 'P') td.jenisItem = 'Plafon'; else if (hurufDepan === 'L') td.jenisItem = 'List'; else if (hurufDepan === 'W') td.jenisItem = 'WPC'; else td.jenisItem = hurufDepan;
-
-    let rawItem = parts[0]; let cariItem = kamusData.find(m => m.kode_nama_item === rawItem); 
-    td.namaItem = cariItem && cariItem.nama_item ? cariItem.nama_item : rawItem; td.shading = parts[1] || '-';
-    
-    const p2 = parts[2];
-    if (p2 && p2.length >= 4) {
-        let dP = (p2.length === 5) ? 2 : 1; let rP = p2.substring(0, dP); td.panjang = (dP === 1) ? rP + "M" : rP[0] + "." + rP[1] + "M"; 
-        let rG = p2.substring(dP, dP + 1); td.grade = rG === '1' ? 'BAGUS' : (rG === '2' ? 'A' : rG);
-        let rD = p2.substring(p2.length - 2); let cD = kamusData.find(m => m.kode_dus === rD); td.dus = cD && cD.dus ? cD.dus : rD;
-    }
-    const p3 = parts[3];
-    if (p3 && p3.length >= 5) {
-        const dayOfYear = parseInt(p3.substring(0, 3)); const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
-        if (!isNaN(dayOfYear) && !isNaN(realYear)) {
-            const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
-            td.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
-        }
-        let s = p3.substring(5); let m = s.match(/(C.*?)(S.*?)(P.*)/);
-        if (m) {
-            let cM = kamusData.find(x => x.kode_mesin === m[1]); td.mesin = cM && cM.mesin ? cM.mesin : m[1];
-            let cS = kamusData.find(x => x.kode_shift === m[2]); td.shift = cS && cS.shift ? cS.shift : m[2];
-            let cCustomer = kamusData.find(x => x.kode_customer === m[3]); td.customer = cCustomer && cCustomer.customer ? cCustomer.customer : m[3];
-        }
-    }
-
-    if(jasperData && jasperData.length > 0) {
-        const cJasper = jasperData.find(j => j.nama_item === td.namaItem && j.panjang === td.panjang && j.grade === td.grade);
-        td.jasper = cJasper ? cJasper.nama_jasper : `JAS-${td.namaItem}`;
-    } else { td.jasper = `JAS-${td.namaItem}`; }
-
-    return td;
 }
 
 function setMode(m) {
@@ -142,9 +118,6 @@ function setMode(m) {
     renderHeaderDanTabel();
 }
 
-// ========================================================
-// SORTING & FILTER EXCEL PRO
-// ========================================================
 function sortTable(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-keluar');
     const rows = Array.from(tbody.querySelectorAll('tr.text-row'));
@@ -170,12 +143,14 @@ const thSort = (idx, label, cls = "") => {
     const noFilter = ['col-cb', 'col-btn', 'col-no'].includes(colClass);
     
     const filterBtn = noFilter ? '' : `
-        <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-600 rounded ml-1 transition" title="Filter ${label}">
+        <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded ml-1 transition" title="Filter ${label}">
             <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
         </button>`;
 
-    return `<th class="hdr-std ${cls} select-none relative border-r border-slate-600">
-        <div class="flex items-center justify-center gap-1.5">
+    const justifyClass = noFilter ? 'justify-center' : 'justify-start';
+
+    return `<th class="hdr-std ${cls} select-none">
+        <div class="flex items-center ${justifyClass} gap-1.5">
             <span class="cursor-pointer flex items-center gap-1 hover:text-blue-300 transition" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
             ${filterBtn}
         </div>
@@ -273,9 +248,6 @@ function updateFilterIcons() {
     }
 }
 
-// ========================================================
-// PAGINASI & RENDER TABEL
-// ========================================================
 function changeRowsPerPage(val) {
     if (val === 'ALL') { rowsPerPage = 999999; } 
     else { rowsPerPage = parseInt(val); }
@@ -341,55 +313,25 @@ function toggleSemuaCentang(checked) {
     });
 }
 
-function initResizableColumns() {
-    const cols = document.querySelectorAll('#table-keluar-main th');
-    cols.forEach(col => {
-        const existing = col.querySelector('.resizer');
-        if(existing) existing.remove();
-
-        const resizer = document.createElement('div');
-        resizer.classList.add('resizer');
-        col.appendChild(resizer);
-        
-        let x = 0; let w = 0;
-        resizer.addEventListener('mousedown', function(e) {
-            x = e.clientX;
-            w = parseInt(window.getComputedStyle(col).width, 10);
-            document.addEventListener('mousemove', mouseMoveHandler);
-            document.addEventListener('mouseup', mouseUpHandler);
-            resizer.classList.add('resizing');
-        });
-        const mouseMoveHandler = function(e) {
-            const dx = e.clientX - x;
-            col.style.width = `${w + dx}px`;
-            col.style.minWidth = `${w + dx}px`;
-        };
-        const mouseUpHandler = function() {
-            document.removeEventListener('mousemove', mouseMoveHandler);
-            document.removeEventListener('mouseup', mouseUpHandler);
-            resizer.classList.remove('resizing');
-        };
-    });
-}
-
 function renderHeaderDanTabel() {
     const thead = document.getElementById('thead-keluar');
     const tbody = document.getElementById('tbody-keluar');
     sortState = {};
 
     let targetData = modeSekarang === 'hold' ? holdDataRaw : rawDataRaw;
+    const rowClassBase = "transition text-row text-sm";
 
     if(modeSekarang === 'qrcode' || modeSekarang === 'hold') {
         thead.innerHTML = `
             <tr>
-                <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500"></th>
-                ${thSort(1, 'No', 'col-no w-12')}
+                <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500"></th>
+                ${thSort(1, 'No', 'col-no w-12 text-center')}
                 ${thSort(2, 'Waktu Keluar', 'col-waktu')}
                 ${thSort(3, 'QRCode', 'col-qr')}
                 ${thSort(4, 'Tgl Produksi', 'col-tgl')}
                 ${thSort(5, 'Mesin', 'col-mesin')}
                 ${thSort(6, 'Shift', 'col-shift')}
-                ${thSort(7, 'Jenis Item', 'col-jenis text-blue-300')}
+                ${thSort(7, 'Jenis Item', 'col-jenis')}
                 ${thSort(8, 'Nama Item', 'col-nama')}
                 ${thSort(9, 'Pjg', 'col-pjg')}
                 ${thSort(10, 'Grade', 'col-grade')}
@@ -407,28 +349,28 @@ function renderHeaderDanTabel() {
         targetData.forEach((r, i) => {
             const dt = new Date(r.created_at);
             const tglKeluar = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
-            const td = translateBarcode(r.qrcode);
+            const td = window.translateBarcode(r.qrcode);
             const customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku); 
 
             h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row transition text-sm bg-white">
-                    <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 font-bold text-slate-500 text-center col-no border-r border-slate-200">${i+1}</td>
-                    <td class="px-4 py-3 text-slate-600 font-medium text-center col-waktu border-r border-slate-200" data-search="${tglKeluar}">${tglKeluar}</td>
-                    <td class="px-4 py-3 font-mono font-bold text-slate-900 text-left tracking-wider border-r border-slate-200 col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
-                    <td class="px-4 py-3 font-medium text-slate-600 text-center col-tgl border-r border-slate-200" data-search="${td.tglProduksi}">${td.tglProduksi}</td>
-                    <td class="px-4 py-3 font-medium text-slate-600 text-center col-mesin border-r border-slate-200" data-search="${td.mesin}">${td.mesin}</td>
-                    <td class="px-4 py-3 font-medium text-slate-600 text-center border-r border-slate-200 col-shift" data-search="${td.shift}">${td.shift}</td>
-                    <td class="px-4 py-3 font-medium text-blue-600 text-center col-jenis border-r border-slate-200" data-search="${td.jenisItem}">${td.jenisItem}</td>
-                    <td class="px-4 py-3 font-bold text-slate-800 text-left col-nama border-r border-slate-200" data-search="${td.namaItem}">${td.namaItem}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-center col-pjg border-r border-slate-200" data-search="${td.panjang}">${td.panjang}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-center col-grade border-r border-slate-200" data-search="${td.grade}">${td.grade}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-center col-dus border-r border-slate-200" data-search="${td.dus}">${td.dus}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-center border-r border-slate-200 col-shading" data-search="${td.shading}">${td.shading}</td>
-                    <td class="px-4 py-3 font-medium text-orange-600 text-center col-customer border-r border-slate-200" data-search="${td.customer}">${td.customer}</td>
-                    <td class="px-4 py-3 font-black text-amber-600 text-center col-tujuan border-r border-slate-200" data-search="${customerKeluar}">${customerKeluar}</td>
-                    <td class="px-4 py-3 text-slate-600 font-medium text-left border-r border-slate-200 col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
-                    <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 text-center col-pic" data-search="${r.pic_keluar || '-'}">${r.pic_keluar || '-'}</td>
+                <tr class="${rowClassBase}">
+                    <td class="px-4 py-4 text-center col-cb"><input type="checkbox" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-4 font-bold text-slate-500 text-center col-no">${i+1}</td>
+                    <td class="px-4 py-4 text-slate-600 font-medium text-left col-waktu" data-search="${tglKeluar}">${tglKeluar}</td>
+                    <td class="px-4 py-4 font-mono font-bold text-slate-900 text-left tracking-wider col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
+                    <td class="px-4 py-4 font-medium text-slate-600 text-left col-tgl" data-search="${td.tglProduksi}">${td.tglProduksi}</td>
+                    <td class="px-4 py-4 font-medium text-slate-600 text-left col-mesin" data-search="${td.mesin}">${td.mesin}</td>
+                    <td class="px-4 py-4 font-medium text-slate-600 text-left col-shift" data-search="${td.shift}">${td.shift}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-jenis" data-search="${td.jenisItem}">${td.jenisItem}</td>
+                    <td class="px-4 py-4 font-medium text-slate-800 text-left col-nama" data-search="${td.namaItem}">${td.namaItem}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-pjg" data-search="${td.panjang}">${td.panjang}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-grade" data-search="${td.grade}">${td.grade}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-dus" data-search="${td.dus}">${td.dus}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-shading" data-search="${td.shading}">${td.shading}</td>
+                    <td class="px-4 py-4 font-medium text-slate-500 text-left col-customer" data-search="${td.customer}">${td.customer}</td>
+                    <td class="px-4 py-4 font-black text-amber-600 text-left col-tujuan" data-search="${customerKeluar}">${customerKeluar}</td>
+                    <td class="px-4 py-4 text-slate-500 font-medium text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
+                    <td class="px-4 py-4 font-medium uppercase text-xs text-slate-400 text-left col-pic" data-search="${r.pic_keluar || '-'}">${r.pic_keluar || '-'}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
@@ -437,13 +379,13 @@ function renderHeaderDanTabel() {
         const isJasper = modeSekarang === 'jasper';
         thead.innerHTML = `
             <tr>
-                <th class="hdr-std w-10 col-cb text-center relative border-r border-slate-600"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500"></th>
-                ${thSort(1, 'No', 'col-no w-12')}
+                <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500"></th>
+                ${thSort(1, 'No', 'col-no w-12 text-center')}
                 ${thSort(2, 'Tgl Produksi', 'col-tgl')}
                 ${thSort(3, 'Mesin', 'col-mesin')}
                 ${thSort(4, 'Shift', 'col-shift')}
                 ${thSort(5, 'Jenis Item', 'col-jenis')}
-                ${thSort(6, isJasper ? 'Nama Barang Jasper' : 'Nama Item', 'col-nama text-blue-300')}
+                ${thSort(6, isJasper ? 'Nama Barang Jasper' : 'Nama Item', 'col-nama')}
                 ${thSort(7, 'Pjg', 'col-pjg')}
                 ${thSort(8, 'Grade', 'col-grade')}
                 ${thSort(9, 'Dus', 'col-dus')}
@@ -456,7 +398,7 @@ function renderHeaderDanTabel() {
         
         let groups = {};
         targetData.forEach(r => {
-            let t = translateBarcode(r.qrcode); 
+            let t = window.translateBarcode(r.qrcode); 
             let n = isJasper ? t.jasper : t.namaItem;
             
             let ket = r.keterangan || 'TANPA_KETERANGAN';
@@ -478,29 +420,28 @@ function renderHeaderDanTabel() {
         arr.forEach((r, i) => {
             const displayKet = (r.ket === 'TANPA_KETERANGAN') ? '-' : r.ket; 
             h += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 text-row text-center transition text-sm bg-white">
-                    <td class="px-4 py-3 col-cb border-r border-slate-200"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 font-bold text-slate-500 col-no border-r border-slate-200">${i+1}</td>
-                    <td class="px-4 py-3 font-medium text-slate-600 col-tgl border-r border-slate-200" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
-                    <td class="px-4 py-3 font-medium text-slate-600 col-mesin border-r border-slate-200" data-search="${r.mesin}">${r.mesin}</td>
-                    <td class="px-4 py-3 font-medium text-slate-600 border-r border-slate-200 col-shift" data-search="${r.shift}">${r.shift}</td>
-                    <td class="px-4 py-3 font-medium text-blue-600 col-jenis border-r border-slate-200" data-search="${r.jenisItem}">${r.jenisItem}</td>
-                    <td class="px-4 py-3 font-bold text-slate-800 text-left col-nama border-r border-slate-200" data-search="${r.displayNama}">${r.displayNama}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 border-r border-slate-200 col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-3 font-medium text-orange-600 col-customer border-r border-slate-200" data-search="${r.customer}">${r.customer}</td>
-                    <td class="px-4 py-3 font-black text-amber-600 col-tujuan border-r border-slate-200" data-search="${r.tj}">${r.tj}</td>
-                    <td class="px-4 py-3 font-black text-emerald-700 col-qty border-r border-slate-200" data-search="${r.qty}">${r.qty}</td>
-                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${displayKet}">${displayKet}</td>
+                <tr class="${rowClassBase}">
+                    <td class="px-4 py-4 text-center col-cb"><input type="checkbox" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-4 font-bold text-slate-500 text-center col-no">${i+1}</td>
+                    <td class="px-4 py-4 font-medium text-slate-600 text-left col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
+                    <td class="px-4 py-4 font-medium text-slate-600 text-left col-mesin" data-search="${r.mesin}">${r.mesin}</td>
+                    <td class="px-4 py-4 font-medium text-slate-600 text-left col-shift" data-search="${r.shift}">${r.shift}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenisItem}">${r.jenisItem}</td>
+                    <td class="px-4 py-4 font-medium text-slate-800 text-left col-nama" data-search="${r.displayNama}">${r.displayNama}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-pjg" data-search="${r.panjang}">${r.panjang}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-4 font-medium text-slate-500 text-left col-customer" data-search="${r.customer}">${r.customer}</td>
+                    <td class="px-4 py-4 font-black text-amber-600 text-left col-tujuan" data-search="${r.tj}">${r.tj}</td>
+                    <td class="px-4 py-4 font-black text-emerald-700 text-center col-qty" data-search="${r.qty}">${r.qty}</td>
+                    <td class="px-4 py-4 font-medium text-slate-500 text-left col-ket" data-search="${displayKet}">${displayKet}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
     }
     lucide.createIcons(); 
     saringTabelExcel();
-    initResizableColumns();
 }
 
 async function aksiMassal(tipe) {
@@ -638,7 +579,7 @@ async function eksekusiCancelHold() {
 
         alert(`✅ SUKSES CANCEL KELUAR!\n${globalCheckedCancel.length} item telah dikembalikan ke Kartu Stok pada Area "${areaCancel}".`);
         muatDataDariSupabase();
-        tutupPopups();
+        document.getElementById('modal-cancel-hold').classList.add('hidden');
     } catch(e) { alert("GAGAL RETUR: " + e.message); }
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
