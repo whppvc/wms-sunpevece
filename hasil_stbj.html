@@ -44,13 +44,13 @@
         #table-stbj-main { border-collapse: collapse; }
         #table-stbj-main td { 
             border-right: 1px solid #cbd5e1; /* Garis vertikal antar kolom */
-            border-bottom: 1px solid #cbd5e1 !important; /* REVISI: Garis horizontal antar baris dikembalikan */
+            border-bottom: none !important; /* REVISI: Dihilangkan agar persis seperti gambar */
         }
         #table-stbj-main td:last-child { border-right: none; } 
 
-        /* Zebra Striping Tegas */
-        tr.text-row { background-color: #ffffff; }
-        tr.text-row:nth-child(even) { background-color: #e2e8f0 !important; } 
+        /* REVISI: Zebra Striping ala Gambar (Abu muda & Abu agak gelap) */
+        tr.text-row { background-color: #f8fafc !important; } /* Abu-abu sangat muda (Slate-50) */
+        tr.text-row:nth-child(even) { background-color: #e2e8f0 !important; } /* Abu-abu lebih gelap sedikit (Slate-200) */
 
         /* Highlight Baris Terpilih */
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
