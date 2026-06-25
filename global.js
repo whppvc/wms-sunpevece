@@ -25,23 +25,23 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // ==========================================
 const APP_MENUS = [
     { id: 'dashboard', title: 'Dashboard Utama', icon: 'layout-dashboard', url: 'menu.html' },
-    { isDivider: true, title: 'IN' },
+    { isDivider: true, title: 'INBOUND' },
     { id: 'stbj', title: 'Scan STBJ', icon: 'shield-check', url: 'stbj.html' },
     { id: 'hasil_stbj', title: 'Hasil STBJ', icon: 'clipboard-list', url: 'hasil_stbj.html' },
     { id: 'langsir', title: 'Langsir Gudang', icon: 'log-in', url: 'langsir.html' },
     { id: 'riwayat_langsir', title: 'Riwayat Langsir', icon: 'history', url: 'riwayat_langsir.html' },
-    { isDivider: true, title: 'INV' },
+    { isDivider: true, title: 'INVENTORY' },
     { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers', url: 'kartu_stok.html' },
     { id: 'opname', title: 'Stock Opname', icon: 'clipboard-check', url: 'opname.html' },
-    { isDivider: true, title: 'PIC' },
+    { isDivider: true, title: 'MUTASI' },
     { id: 'scan_pic', title: 'Scan PIC Area', icon: 'user-check', url: 'scan_pic.html' },
     { id: 'riwayat_mutasi', title: 'Riwayat Konversi', icon: 'arrow-right-left', url: 'riwayat_konversi.html' },
-    { isDivider: true, title: 'OUT' },
+    { isDivider: true, title: 'OUTBOUND' },
     { id: 'po', title: 'PO & Estimasi', icon: 'clipboard-check', url: 'po.html' },
     { id: 'picking_list', title: 'Picking List', icon: 'clipboard-pen', url: 'picking_list.html' },
     { id: 'keluar', title: 'Kirim / Keluar', icon: 'truck', url: 'keluar.html' },
     { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' },
-    { isDivider: true, title: 'CFG' },
+    { isDivider: true, title: 'CONFIG' },
     { id: 'master_data', title: 'Master Data', icon: 'database', url: 'master_data.html' }
 ];
 
@@ -57,42 +57,31 @@ style.innerHTML = `
     /* Transisi Sidebar */
     #app-sidebar { transition: width 0.3s ease, transform 0.3s ease; }
     
-    /* Tooltip untuk Slim Sidebar */
-    .sidebar-tooltip {
-        visibility: hidden; opacity: 0; position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
-        margin-left: 10px; background-color: #1e293b; color: white; padding: 6px 12px; border-radius: 6px;
-        font-size: 12px; font-weight: bold; white-space: nowrap; z-index: 100; transition: all 0.2s;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); pointer-events: none;
-    }
-    .sidebar-item:hover .sidebar-tooltip { visibility: visible; opacity: 1; margin-left: 15px; }
-    
     /* DESKTOP STATE (Lebar Dinamis) */
     @media (min-width: 640px) {
         /* Mode Ramping (Default) */
-        #app-sidebar:not(.expanded) { width: 4.5rem; }
-        #app-sidebar:not(.expanded) .sidebar-text { display: none; }
-        #app-sidebar:not(.expanded) .sidebar-logo-text { display: none; }
-        #app-sidebar:not(.expanded) .sidebar-item { justify-content: center; padding: 0; width: 3rem; margin: 0 auto; }
-        #app-sidebar:not(.expanded) .sidebar-divider { width: 2rem; margin: 0.5rem auto; }
+        #app-sidebar:not(.expanded) { width: 4.5rem !important; }
+        #app-sidebar:not(.expanded) .sidebar-text { display: none !important; }
+        #app-sidebar:not(.expanded) .sidebar-logo-text { display: none !important; }
+        #app-sidebar:not(.expanded) .sidebar-item { justify-content: center !important; padding: 0 !important; width: 3rem !important; margin: 0 auto !important; }
+        #app-sidebar:not(.expanded) .sidebar-divider { width: 2rem !important; margin: 0.5rem auto !important; }
         
         /* Mode Lebar (Expanded) */
-        #app-sidebar.expanded { width: 16rem; }
-        #app-sidebar.expanded .sidebar-text { display: block; }
-        #app-sidebar.expanded .sidebar-logo-text { display: block; }
-        #app-sidebar.expanded .sidebar-item { justify-content: flex-start; padding: 0 1rem; width: 100%; }
-        #app-sidebar.expanded .sidebar-tooltip { display: none !important; }
-        #app-sidebar.expanded .sidebar-divider { width: 100%; padding: 0 1rem; text-align: left; background: transparent; height: auto; margin-top: 1rem; }
-        #app-sidebar.expanded #btn-expand-container { justify-content: flex-end; padding-right: 1rem; }
+        #app-sidebar.expanded { width: 16rem !important; }
+        #app-sidebar.expanded .sidebar-text { display: block !important; }
+        #app-sidebar.expanded .sidebar-logo-text { display: block !important; }
+        #app-sidebar.expanded .sidebar-item { justify-content: flex-start !important; padding: 0 1rem !important; width: 100% !important; }
+        #app-sidebar.expanded .sidebar-divider { width: 100% !important; padding: 0 1rem !important; text-align: left !important; background: transparent !important; height: auto !important; margin-top: 1rem !important; }
+        #app-sidebar.expanded #btn-expand-container { justify-content: flex-end !important; padding-right: 1rem !important; }
     }
     
     /* MOBILE STATE (Selalu Lebar saat dibuka) */
     @media (max-width: 639px) {
-        #app-sidebar { width: 16rem; }
-        .sidebar-text { display: block; }
-        .sidebar-logo-text { display: block; }
-        .sidebar-item { justify-content: flex-start; padding: 0 1rem; width: 100%; }
-        .sidebar-tooltip { display: none !important; }
-        .sidebar-divider { width: 100%; padding: 0 1rem; text-align: left; background: transparent; height: auto; margin-top: 1rem; }
+        #app-sidebar { width: 16rem !important; }
+        .sidebar-text { display: block !important; }
+        .sidebar-logo-text { display: block !important; }
+        .sidebar-item { justify-content: flex-start !important; padding: 0 1rem !important; width: 100% !important; }
+        .sidebar-divider { width: 100% !important; padding: 0 1rem !important; text-align: left !important; background: transparent !important; height: auto !important; margin-top: 1rem !important; }
     }
 `;
 document.head.appendChild(style);
@@ -104,7 +93,7 @@ function initModernLayout(pageMeta) {
     const user = JSON.parse(sessionString);
     const initial = user.username.charAt(0).toUpperCase();
     
-    // Cek state sidebar dari localStorage
+    // Cek state sidebar dari localStorage (Default: Ramping/False)
     const isExpanded = localStorage.getItem('sidebar_expanded') === 'true';
     const expandedClass = isExpanded ? 'expanded' : '';
     const expandIcon = isExpanded ? 'chevron-left' : 'chevron-right';
@@ -113,17 +102,17 @@ function initModernLayout(pageMeta) {
     document.body.innerHTML = ''; 
 
     const layoutWrapper = document.createElement('div');
-    layoutWrapper.className = 'flex h-screen bg-slate-50 overflow-hidden font-sans w-full';
+    layoutWrapper.className = 'flex h-screen bg-slate-100 overflow-hidden font-sans w-full';
 
     // ==========================================
     // 1. SIDEBAR (KIRI - GELAP)
     // ==========================================
     let sidebarHTML = `
-        <aside id="app-sidebar" class="fixed sm:relative inset-y-0 left-0 z-50 bg-[#0f172a] flex flex-col py-4 transform -translate-x-full sm:translate-x-0 shadow-2xl sm:shadow-none border-r border-slate-800 shrink-0 ${expandedClass}">
+        <aside id="app-sidebar" class="fixed sm:relative inset-y-0 left-0 z-[70] sm:z-40 bg-[#0f172a] flex flex-col py-4 transform -translate-x-full sm:translate-x-0 shadow-2xl sm:shadow-none border-r border-slate-800 shrink-0 ${expandedClass}">
             
             <!-- Logo / Home -->
             <a href="menu.html" class="mb-6 flex items-center justify-center gap-3 px-4 h-10 transition cursor-pointer overflow-hidden shrink-0">
-                <div class="bg-white p-1 rounded-lg shrink-0 flex items-center justify-center w-10 h-10">
+                <div class="bg-white p-1 rounded-lg shrink-0 flex items-center justify-center w-10 h-10 shadow-md">
                     <img src="sunpevece.png" alt="Logo" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
                 </div>
                 <span class="sidebar-logo-text text-white font-black text-lg tracking-wider whitespace-nowrap">SUNPEVECE</span>
@@ -140,10 +129,9 @@ function initModernLayout(pageMeta) {
             const isActive = pageMeta && menu.id === pageMeta.id;
             const bgClass = isActive ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-white';
             sidebarHTML += `
-                <a href="${menu.url}" class="sidebar-item relative flex items-center h-10 rounded-xl transition-all cursor-pointer ${bgClass}">
+                <a href="${menu.url}" data-title="${menu.title}" class="sidebar-item relative flex items-center h-10 rounded-xl transition-all cursor-pointer ${bgClass}">
                     <i data-lucide="${menu.icon}" class="w-5 h-5 shrink-0"></i>
                     <span class="sidebar-text ml-3 text-sm font-bold whitespace-nowrap">${menu.title}</span>
-                    <div class="sidebar-tooltip">${menu.title}</div>
                 </a>
             `;
         }
@@ -152,21 +140,23 @@ function initModernLayout(pageMeta) {
     sidebarHTML += `
             </div>
 
-            <!-- Expand/Collapse Button (Bottom) -->
+            <!-- Expand/Collapse Button (Bottom Desktop Only) -->
             <div id="btn-expand-container" class="mt-auto pt-4 px-3 w-full border-t border-slate-800 hidden sm:flex justify-center transition-all">
                 <button onclick="toggleSidebarExpand()" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition cursor-pointer bg-slate-900 border border-slate-700 shadow-sm">
                     <i data-lucide="${expandIcon}" id="icon-expand-sidebar" class="w-5 h-5"></i>
                 </button>
             </div>
         </aside>
-        <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/60 z-40 hidden backdrop-blur-sm transition-opacity sm:hidden"></div>
+        
+        <!-- Overlay Mobile -->
+        <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/60 z-[60] hidden backdrop-blur-sm transition-opacity sm:hidden"></div>
     `;
 
     // ==========================================
     // 2. AREA KANAN (HEADER PUTIH + KONTEN)
     // ==========================================
     let rightArea = document.createElement('div');
-    rightArea.className = 'flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-slate-50';
+    rightArea.className = 'flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-slate-100';
     
     let headerHTML = `
         <header class="bg-white text-slate-800 flex items-center justify-between h-16 px-4 sm:px-6 border-b border-slate-200 z-30 shrink-0 shadow-sm">
@@ -177,7 +167,6 @@ function initModernLayout(pageMeta) {
                     <i data-lucide="menu" class="w-6 h-6"></i>
                 </button>
                 <div class="flex items-center gap-3">
-                    <!-- REVISI: Garis 3 (Hamburger) dihilangkan pada versi Desktop -->
                     <h1 class="text-base sm:text-lg font-black tracking-wide uppercase text-slate-800">${pageMeta ? pageMeta.title : 'WMS PORTAL'}</h1>
                 </div>
             </div>
@@ -218,7 +207,8 @@ function initModernLayout(pageMeta) {
     
     // Bungkus konten asli HTML ke dalam tag <main>
     let mainContent = document.createElement('main');
-    mainContent.className = 'flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 relative flex flex-col';
+    // Memberikan padding (Jarak) antara Header/Sidebar dengan isi konten
+    mainContent.className = 'flex-1 overflow-x-hidden overflow-y-auto bg-slate-100 p-4 sm:p-6 pb-20 relative flex flex-col gap-4';
     
     // Pindahkan semua elemen body lama ke dalam mainContent
     originalNodes.forEach(node => {
@@ -227,6 +217,9 @@ function initModernLayout(pageMeta) {
             node.classList.remove('absolute');
             node.classList.remove('inset-0');
             node.classList.add('flex-1');
+            node.classList.add('rounded-xl'); // Membuat sudut konten melengkung rapi
+            node.classList.add('overflow-hidden');
+            node.classList.add('shadow-sm');
         }
         mainContent.appendChild(node);
     });
@@ -280,6 +273,34 @@ function initModernLayout(pageMeta) {
     layoutWrapper.insertAdjacentHTML('beforeend', modalsHTML);
     document.body.appendChild(layoutWrapper);
     
+    // ==========================================
+    // 4. GLOBAL TOOLTIP LOGIC (HOVER SIDEBAR)
+    // ==========================================
+    const globalTooltip = document.createElement('div');
+    globalTooltip.id = 'global-sidebar-tooltip';
+    globalTooltip.className = 'fixed hidden bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-md shadow-lg z-[100] pointer-events-none whitespace-nowrap transition-opacity duration-200 opacity-0';
+    document.body.appendChild(globalTooltip);
+
+    setTimeout(() => {
+        document.querySelectorAll('.sidebar-item').forEach(item => {
+            item.addEventListener('mouseenter', (e) => {
+                // Hanya muncul jika di Desktop DAN Sidebar sedang Ramping
+                if (window.innerWidth >= 640 && !document.getElementById('app-sidebar').classList.contains('expanded')) {
+                    const rect = item.getBoundingClientRect();
+                    globalTooltip.innerText = item.getAttribute('data-title');
+                    globalTooltip.style.top = (rect.top + (rect.height / 2) - 14) + 'px';
+                    globalTooltip.style.left = (rect.right + 12) + 'px';
+                    globalTooltip.classList.remove('hidden');
+                    setTimeout(() => globalTooltip.classList.remove('opacity-0'), 10);
+                }
+            });
+            item.addEventListener('mouseleave', () => {
+                globalTooltip.classList.add('opacity-0');
+                setTimeout(() => globalTooltip.classList.add('hidden'), 200);
+            });
+        });
+    }, 100);
+
     lucide.createIcons();
     setTimeout(cekNotifikasiInbox, 1000); 
 }
