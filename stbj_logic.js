@@ -41,7 +41,7 @@ async function loadInitialSTBJData() {
     } catch (err) { console.error("Gagal muat referensi:", err); }
 }
 
-// FUNGSI PENERJEMAH BARCODE (DIKEMBALIKAN)
+// FUNGSI PENERJEMAH BARCODE
 function translateBarcode(barcode) {
     let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customer: '-' };
     const parts = barcode.split('/'); if (parts.length < 4) return td;
@@ -115,6 +115,7 @@ function renderTable() {
     if(dataStbj.length === 0) {
         tbody.innerHTML = '<div class="p-10 text-center font-medium text-slate-400"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan.</div>';
         document.getElementById('lbl-tampil-baris').innerText = '0';
+        updateFilterDropdowns(); // Update dropdown filter
         lucide.createIcons(); return;
     }
     
@@ -178,7 +179,57 @@ function renderTable() {
     });
     tbody.innerHTML = html; 
     document.getElementById('lbl-tampil-baris').innerText = dataStbj.length;
+    
+    updateFilterDropdowns(); // Update dropdown filter setiap kali tabel dirender
     lucide.createIcons(); 
+}
+
+// REVISI: Fungsi untuk mengisi opsi dropdown filter secara dinamis
+function updateFilterDropdowns() {
+    const fields = {
+        'fs-status': 'statusUI', // Custom logic untuk status
+        'fs-troli': 'troli',
+        'fs-tgl': 'tglProduksi',
+        'fs-mesin': 'mesin',
+        'fs-shift': 'shift',
+        'fs-jenis': 'jenisItem',
+        'fs-nama': 'namaItem',
+        'fs-pjg': 'panjang',
+        'fs-grade': 'grade',
+        'fs-dus': 'dus',
+        'fs-shading': 'shading',
+        'fs-customer': 'customer'
+    };
+
+    for (let id in fields) {
+        const select = document.getElementById(id);
+        if (!select) continue;
+        
+        const currentVal = select.value; // Simpan pilihan user sebelumnya
+        const key = fields[id];
+        
+        let uniqueVals = [];
+        if (key === 'statusUI') {
+            uniqueVals = [...new Set(dataStbj.map(d => {
+                if(d.status === 'BELUM CEK' && d.isLocalDuplicate) return 'DUPLIKAT SCAN';
+                return d.status;
+            }))].sort();
+        } else {
+            uniqueVals = [...new Set(dataStbj.map(item => item[key] || '-'))].sort();
+        }
+        
+        let html = '<option value="">-- Semua --</option>';
+        uniqueVals.forEach(val => {
+            html += `<option value="${val}">${val}</option>`;
+        });
+        
+        select.innerHTML = html;
+        
+        // Kembalikan pilihan jika masih ada di daftar
+        if (uniqueVals.includes(currentVal)) {
+            select.value = currentVal;
+        }
+    }
 }
 
 function highlightRow(cb) {
@@ -244,36 +295,55 @@ function resetFilterSTBJ() {
     saringTabelSTBJ(); toggleSidebarFilter();
 }
 
+// REVISI: Logika filter disesuaikan untuk Dropdown (Exact Match)
 function saringTabelSTBJ() {
     const f = {
-        status: document.getElementById('fs-status')?.value.toLowerCase() || '',
-        troli: document.getElementById('fs-troli')?.value.toLowerCase() || '',
+        status: document.getElementById('fs-status')?.value || '',
+        troli: document.getElementById('fs-troli')?.value || '',
         qr: document.getElementById('fs-qr')?.value.toLowerCase() || '',
-        tgl: document.getElementById('fs-tgl')?.value.toLowerCase() || '',
-        mesin: document.getElementById('fs-mesin')?.value.toLowerCase() || '',
-        shift: document.getElementById('fs-shift')?.value.toLowerCase() || '',
-        jenis: document.getElementById('fs-jenis')?.value.toLowerCase() || '',
-        nama: document.getElementById('fs-nama')?.value.toLowerCase() || '',
-        pjg: document.getElementById('fs-pjg')?.value.toLowerCase() || '',
-        grade: document.getElementById('fs-grade')?.value.toLowerCase() || '',
-        dus: document.getElementById('fs-dus')?.value.toLowerCase() || '',
-        shading: document.getElementById('fs-shading')?.value.toLowerCase() || '',
-        customer: document.getElementById('fs-customer')?.value.toLowerCase() || '',
+        tgl: document.getElementById('fs-tgl')?.value || '',
+        mesin: document.getElementById('fs-mesin')?.value || '',
+        shift: document.getElementById('fs-shift')?.value || '',
+        jenis: document.getElementById('fs-jenis')?.value || '',
+        nama: document.getElementById('fs-nama')?.value || '',
+        pjg: document.getElementById('fs-pjg')?.value || '',
+        grade: document.getElementById('fs-grade')?.value || '',
+        dus: document.getElementById('fs-dus')?.value || '',
+        shading: document.getElementById('fs-shading')?.value || '',
+        customer: document.getElementById('fs-customer')?.value || '',
         ket: document.getElementById('fs-ket')?.value.toLowerCase() || ''
     };
 
     let visibleCount = 0;
     document.querySelectorAll('.row-stbj').forEach(row => {
         let show = true;
-        for(let key in f) {
+        
+        // Exact match untuk Dropdown
+        const exactFields = ['status', 'troli', 'tgl', 'mesin', 'shift', 'jenis', 'nama', 'pjg', 'grade', 'dus', 'shading', 'customer'];
+        for(let key of exactFields) {
             if(f[key]) {
                 const cell = row.querySelector('.col-' + key);
                 if(cell) {
-                    let text = cell.tagName === 'INPUT' ? cell.value.toLowerCase() : cell.innerText.toLowerCase();
-                    if(!text.includes(f[key])) { show = false; break; }
+                    let text = cell.innerText.trim();
+                    if(text !== f[key]) { show = false; break; }
                 }
             }
         }
+
+        // Partial match untuk Text Input (QRCode & Keterangan)
+        if(show && f.qr) {
+            const cell = row.querySelector('.col-qr');
+            if(cell && !cell.innerText.toLowerCase().includes(f.qr)) show = false;
+        }
+        if(show && f.ket) {
+            const cell = row.querySelector('.col-ket');
+            if(cell) {
+                let inputEl = cell.querySelector('input');
+                let text = inputEl ? inputEl.value.toLowerCase() : cell.innerText.toLowerCase();
+                if(!text.includes(f.ket)) show = false;
+            }
+        }
+
         row.style.display = show ? 'flex' : 'none';
         if(show) visibleCount++;
     });
