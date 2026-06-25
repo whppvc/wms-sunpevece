@@ -59,14 +59,12 @@ style.innerHTML = `
     
     /* DESKTOP STATE (Lebar Dinamis) */
     @media (min-width: 640px) {
-        /* Mode Ramping (Default) */
         #app-sidebar:not(.expanded) { width: 4.5rem !important; }
         #app-sidebar:not(.expanded) .sidebar-text { display: none !important; }
         #app-sidebar:not(.expanded) .sidebar-logo-text { display: none !important; }
         #app-sidebar:not(.expanded) .sidebar-item { justify-content: center !important; padding: 0 !important; width: 3rem !important; margin: 0 auto !important; }
         #app-sidebar:not(.expanded) .sidebar-divider { width: 2rem !important; margin: 0.5rem auto !important; }
         
-        /* Mode Lebar (Expanded) */
         #app-sidebar.expanded { width: 16rem !important; }
         #app-sidebar.expanded .sidebar-text { display: block !important; }
         #app-sidebar.expanded .sidebar-logo-text { display: block !important; }
@@ -83,6 +81,15 @@ style.innerHTML = `
         .sidebar-item { justify-content: flex-start !important; padding: 0 1rem !important; width: 100% !important; }
         .sidebar-divider { width: 100% !important; padding: 0 1rem !important; text-align: left !important; background: transparent !important; height: auto !important; margin-top: 1rem !important; }
     }
+
+    /* Tooltip untuk Slim Sidebar */
+    .sidebar-tooltip {
+        visibility: hidden; opacity: 0; position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+        margin-left: 10px; background-color: #1e293b; color: white; padding: 6px 12px; border-radius: 6px;
+        font-size: 12px; font-weight: bold; white-space: nowrap; z-index: 100; transition: all 0.2s;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); pointer-events: none;
+    }
+    .sidebar-item:hover .sidebar-tooltip { visibility: visible; opacity: 1; margin-left: 15px; }
 `;
 document.head.appendChild(style);
 
@@ -93,7 +100,6 @@ function initModernLayout(pageMeta) {
     const user = JSON.parse(sessionString);
     const initial = user.username.charAt(0).toUpperCase();
     
-    // Cek state sidebar dari localStorage (Default: Ramping/False)
     const isExpanded = localStorage.getItem('sidebar_expanded') === 'true';
     const expandedClass = isExpanded ? 'expanded' : '';
     const expandIcon = isExpanded ? 'chevron-left' : 'chevron-right';
@@ -101,24 +107,21 @@ function initModernLayout(pageMeta) {
     const originalNodes = Array.from(document.body.childNodes);
     document.body.innerHTML = ''; 
 
+    // REVISI: Menggunakan h-[100dvh] agar presisi di mobile browser
     const layoutWrapper = document.createElement('div');
-    layoutWrapper.className = 'flex h-screen bg-slate-100 overflow-hidden font-sans w-full';
+    layoutWrapper.className = 'flex h-[100dvh] bg-slate-100 overflow-hidden font-sans w-full';
 
     // ==========================================
     // 1. SIDEBAR (KIRI - GELAP)
     // ==========================================
     let sidebarHTML = `
         <aside id="app-sidebar" class="fixed sm:relative inset-y-0 left-0 z-[70] sm:z-40 bg-[#0f172a] flex flex-col py-4 transform -translate-x-full sm:translate-x-0 shadow-2xl sm:shadow-none border-r border-slate-800 shrink-0 ${expandedClass}">
-            
-            <!-- Logo / Home -->
             <a href="menu.html" class="mb-6 flex items-center justify-center gap-3 px-4 h-10 transition cursor-pointer overflow-hidden shrink-0">
                 <div class="bg-white p-1 rounded-lg shrink-0 flex items-center justify-center w-10 h-10 shadow-md">
                     <img src="sunpevece.png" alt="Logo" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
                 </div>
                 <span class="sidebar-logo-text text-white font-black text-lg tracking-wider whitespace-nowrap">SUNPEVECE</span>
             </a>
-            
-            <!-- Menu Icons -->
             <div class="flex flex-col gap-2 w-full px-3 overflow-y-auto hide-scrollbar flex-1">
     `;
     
@@ -139,16 +142,12 @@ function initModernLayout(pageMeta) {
     
     sidebarHTML += `
             </div>
-
-            <!-- Expand/Collapse Button (Bottom Desktop Only) -->
             <div id="btn-expand-container" class="mt-auto pt-4 px-3 w-full border-t border-slate-800 hidden sm:flex justify-center transition-all">
                 <button onclick="toggleSidebarExpand()" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition cursor-pointer bg-slate-900 border border-slate-700 shadow-sm">
                     <i data-lucide="${expandIcon}" id="icon-expand-sidebar" class="w-5 h-5"></i>
                 </button>
             </div>
         </aside>
-        
-        <!-- Overlay Mobile -->
         <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/60 z-[60] hidden backdrop-blur-sm transition-opacity sm:hidden"></div>
     `;
 
@@ -156,12 +155,10 @@ function initModernLayout(pageMeta) {
     // 2. AREA KANAN (HEADER PUTIH + KONTEN)
     // ==========================================
     let rightArea = document.createElement('div');
-    rightArea.className = 'flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-slate-100';
+    rightArea.className = 'flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden bg-slate-100';
     
     let headerHTML = `
         <header class="bg-white text-slate-800 flex items-center justify-between h-16 px-4 sm:px-6 border-b border-slate-200 z-30 shrink-0 shadow-sm">
-            
-            <!-- Kiri: Hamburger (Mobile) & Judul Halaman -->
             <div class="flex items-center gap-4">
                 <button onclick="toggleSidebar()" class="sm:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition cursor-pointer">
                     <i data-lucide="menu" class="w-6 h-6"></i>
@@ -170,25 +167,17 @@ function initModernLayout(pageMeta) {
                     <h1 class="text-base sm:text-lg font-black tracking-wide uppercase text-slate-800">${pageMeta ? pageMeta.title : 'WMS PORTAL'}</h1>
                 </div>
             </div>
-            
-            <!-- Kanan: Notifikasi & Profil -->
             <div class="flex items-center gap-3 sm:gap-5">
-                
-                <!-- Inbox Request -->
                 <button onclick="bukaModalInbox()" class="relative p-2 rounded-full hover:bg-slate-100 text-slate-500 transition cursor-pointer" title="Request Ganti Customer">
                     <i data-lucide="mail" class="w-5 h-5"></i>
                     <span id="inbox-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
                 </button>
-
-                <!-- User Profile -->
                 <div class="relative">
                     <button onclick="toggleProfileMenu()" class="flex items-center gap-2 p-1 hover:bg-slate-50 rounded-full transition pr-3 cursor-pointer border border-transparent hover:border-slate-200">
                         <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black shadow-inner text-sm">${initial}</div>
                         <span class="text-xs font-black uppercase text-slate-700 hidden sm:block">${user.username}</span>
                         <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 hidden sm:block"></i>
                     </button>
-                    
-                    <!-- Dropdown Profil -->
                     <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-50 text-slate-800">
                         <div class="px-4 py-2 border-b border-slate-100 mb-1">
                             <p class="text-[10px] font-bold text-slate-400 uppercase">Login sebagai</p>
@@ -205,21 +194,16 @@ function initModernLayout(pageMeta) {
 
     rightArea.innerHTML = headerHTML;
     
-    // Bungkus konten asli HTML ke dalam tag <main>
+    // REVISI: mainContent dibuat flex-col murni tanpa padding berlebih agar HTML di dalamnya yang mengatur padding
     let mainContent = document.createElement('main');
-    // Memberikan padding (Jarak) antara Header/Sidebar dengan isi konten
-    mainContent.className = 'flex-1 overflow-x-hidden overflow-y-auto bg-slate-100 p-4 sm:p-6 pb-20 relative flex flex-col gap-4';
+    mainContent.className = 'flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-100 relative';
     
-    // Pindahkan semua elemen body lama ke dalam mainContent
     originalNodes.forEach(node => {
         if(node.nodeType === 1 && node.classList.contains('pt-[104px]')) {
             node.classList.remove('pt-[104px]');
             node.classList.remove('absolute');
             node.classList.remove('inset-0');
             node.classList.add('flex-1');
-            node.classList.add('rounded-xl'); // Membuat sudut konten melengkung rapi
-            node.classList.add('overflow-hidden');
-            node.classList.add('shadow-sm');
         }
         mainContent.appendChild(node);
     });
@@ -284,7 +268,6 @@ function initModernLayout(pageMeta) {
     setTimeout(() => {
         document.querySelectorAll('.sidebar-item').forEach(item => {
             item.addEventListener('mouseenter', (e) => {
-                // Hanya muncul jika di Desktop DAN Sidebar sedang Ramping
                 if (window.innerWidth >= 640 && !document.getElementById('app-sidebar').classList.contains('expanded')) {
                     const rect = item.getBoundingClientRect();
                     globalTooltip.innerText = item.getAttribute('data-title');
@@ -348,7 +331,6 @@ window.logout = function() {
     } 
 };
 
-// Tutup dropdown profil jika klik di luar
 document.addEventListener('click', (e) => { 
     const dropdown = document.getElementById('profile-dropdown'); 
     if (dropdown && !e.target.closest('.relative')) dropdown.classList.add('hidden'); 
