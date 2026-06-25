@@ -39,12 +39,14 @@
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
 
-        /* STANDAR KARTU STOK: Warna Hijau Tosca Cerah untuk baris yang dipilih */
+        /* Warna Hijau Tosca Cerah untuk baris yang dipilih */
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
         
-        /* STANDAR KARTU STOK: Hover baris mengubah warna teks menjadi Indigo/Ungu Elegan */
-        tr.text-row:not(.selected-row):hover td { color: #4f46e5 !important; }
-        tr.text-row:not(.selected-row):hover td button { color: #4f46e5 !important; border-color: #4f46e5 !important; }
+        /* REVISI: Hover baris mengubah teks menjadi BOLD (bukan ungu) */
+        tr.text-row:not(.selected-row):hover td,
+        tr.text-row:not(.selected-row):hover td span { 
+            font-weight: 900 !important; 
+        }
     </style>
 </head>
 <body class="font-sans text-slate-800">
