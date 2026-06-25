@@ -22,19 +22,19 @@
         
         /* DESAIN HEADER ALA OMNIFUL (DARK NAVY) */
         .hdr-std { 
-            background-color: #0f172a !important; /* Dark Navy */
+            background-color: #0f172a !important; 
             color: #ffffff !important; 
             text-align: left !important; 
-            padding: 1rem 1rem !important; /* Padding lebih luas */
+            padding: 1rem 1rem !important; 
             font-size: 0.85rem !important; 
             font-weight: 500 !important; 
-            text-transform: capitalize !important; /* Tidak All Caps agar lebih elegan */
+            text-transform: capitalize !important; 
             letter-spacing: 0.025em !important; 
             white-space: nowrap !important; 
             position: sticky !important; 
             top: 0 !important; 
             z-index: 20 !important; 
-            border: none !important; /* Hilangkan border di header */
+            border: none !important; 
         }
         
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
@@ -44,13 +44,13 @@
         #table-stbj-main { border-collapse: collapse; }
         #table-stbj-main td { 
             border-right: 1px solid #cbd5e1; /* Garis vertikal antar kolom */
-            border-bottom: none !important; /* Hilangkan garis horizontal */
+            border-bottom: 1px solid #cbd5e1 !important; /* REVISI: Garis horizontal antar baris dikembalikan */
         }
-        #table-stbj-main td:last-child { border-right: none; } /* Hilangkan garis di kolom paling kanan */
+        #table-stbj-main td:last-child { border-right: none; } 
 
         /* Zebra Striping Tegas */
         tr.text-row { background-color: #ffffff; }
-        tr.text-row:nth-child(even) { background-color: #e2e8f0 !important; } /* Warna abu-abu tegas */
+        tr.text-row:nth-child(even) { background-color: #e2e8f0 !important; } 
 
         /* Highlight Baris Terpilih */
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
@@ -128,7 +128,6 @@
 
         <!-- MIDDLE SCROLL SECTION -->
         <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
-            <!-- Tambahan rounded-t-xl agar sudut atas tabel melengkung -->
             <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-t-xl shadow-sm border border-slate-300">
                 <table class="w-full text-left border-collapse whitespace-nowrap" id="table-stbj-main">
                     <thead class="sticky top-0 z-10" id="thead-stbj"></thead>
