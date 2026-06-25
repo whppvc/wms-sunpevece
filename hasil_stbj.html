@@ -20,29 +20,40 @@
         .table-container { position: relative; will-change: transform; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* DESAIN HEADER ALA OMNIFUL (DARK NAVY) */
         .hdr-std { 
-            background-color: #1e293b !important; 
+            background-color: #0f172a !important; /* Dark Navy */
             color: #ffffff !important; 
-            text-align: center !important; 
-            padding: 0.75rem 1rem !important; 
-            font-size: 0.75rem !important; 
-            font-weight: 600 !important; 
-            text-transform: uppercase !important; 
-            letter-spacing: 0.05em !important; 
+            text-align: left !important; 
+            padding: 1rem 1rem !important; /* Padding lebih luas */
+            font-size: 0.85rem !important; 
+            font-weight: 500 !important; 
+            text-transform: capitalize !important; /* Tidak All Caps agar lebih elegan */
+            letter-spacing: 0.025em !important; 
             white-space: nowrap !important; 
             position: sticky !important; 
             top: 0 !important; 
             z-index: 20 !important; 
-            border-bottom: 1px solid #e2e8f0 !important; 
+            border: none !important; /* Hilangkan border di header */
         }
         
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
 
-        /* Warna Hijau Tosca Cerah untuk baris yang dipilih */
+        /* DESAIN TABEL BODY (ZEBRA & VERTICAL LINES) */
+        #table-stbj-main { border-collapse: collapse; }
+        #table-stbj-main td { 
+            border-right: 1px solid #cbd5e1; /* Garis vertikal antar kolom */
+            border-bottom: none !important; /* Hilangkan garis horizontal */
+        }
+        #table-stbj-main td:last-child { border-right: none; } /* Hilangkan garis di kolom paling kanan */
+
+        /* Zebra Striping Tegas */
+        tr.text-row { background-color: #ffffff; }
+        tr.text-row:nth-child(even) { background-color: #e2e8f0 !important; } /* Warna abu-abu tegas */
+
+        /* Highlight Baris Terpilih */
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
-        
-        /* Efek hover teks (ungu/bold) sudah dihapus sepenuhnya */
     </style>
 </head>
 <body class="font-sans text-slate-800">
@@ -116,22 +127,23 @@
         </div>
 
         <!-- MIDDLE SCROLL SECTION -->
-        <div class="flex-1 min-h-0 bg-white overflow-hidden flex flex-col relative z-0">
-            <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container">
-                <table class="w-full text-center border-collapse whitespace-nowrap" id="table-stbj-main">
+        <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
+            <!-- Tambahan rounded-t-xl agar sudut atas tabel melengkung -->
+            <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-t-xl shadow-sm border border-slate-300">
+                <table class="w-full text-left border-collapse whitespace-nowrap" id="table-stbj-main">
                     <thead class="sticky top-0 z-10" id="thead-stbj"></thead>
-                    <tbody id="tbody-stbj" class="text-slate-700"></tbody>
+                    <tbody id="tbody-stbj" class="text-slate-800"></tbody>
                 </table>
             </div>
         </div>
 
         <!-- FOOTER PAGINATION -->
-        <div class="shrink-0 w-full bg-slate-50 p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
+        <div class="shrink-0 w-full bg-white p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
             
             <div class="flex items-center gap-2 flex-wrap justify-center">
-                <span class="bg-blue-100 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-medium ml-1">0</span></span>
-                <span class="bg-amber-100 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-amber-900 font-medium ml-1">0</span></span>
-                <span class="bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded text-emerald-800 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-medium ml-1">0</span></span>
+                <span class="bg-blue-50 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-medium ml-1">0</span></span>
+                <span class="bg-amber-50 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-amber-900 font-medium ml-1">0</span></span>
+                <span class="bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded text-emerald-800 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-medium ml-1">0</span></span>
             </div>
             
             <div class="flex items-center gap-3">
