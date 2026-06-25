@@ -162,12 +162,12 @@ window.bukaBreakdown = function(gKey) {
     tbody.innerHTML = item.areas.map((a, i) => {
         const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
         return `
-            <tr class="bg-white even:bg-slate-50 hover:bg-blue-50/50 transition bd-row text-sm border-b border-slate-200">
-                <td class="p-3 text-center"><input type="checkbox" onchange="window.highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-qty="${a.qty}" data-ket="${a.keterangan}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="p-3 font-semibold text-slate-800">${a.area}</td>
-                <td class="p-3 font-semibold text-slate-800 col-po">${a.po_aktual}</td>
-                <td class="p-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
-                <td class="p-3 font-black text-emerald-700">${a.qty}</td>
+            <tr class="transition bd-row text-sm">
+                <td class="px-4 py-4 text-center"><input type="checkbox" onchange="window.highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-qty="${a.qty}" data-ket="${a.keterangan}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-4 font-semibold text-slate-800 text-left">${a.area}</td>
+                <td class="px-4 py-4 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
+                <td class="px-4 py-4 font-medium text-slate-600 text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
+                <td class="px-4 py-4 font-black text-emerald-700 text-center">${a.qty}</td>
             </tr>`;
     }).join('');
 
