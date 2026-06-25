@@ -9,7 +9,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
-    <!-- PINDAHKAN GLOBAL.JS KE SINI -->
     <script src="global.js"></script>
     
     <style>
@@ -21,31 +20,40 @@
         .table-container { position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* DESAIN HEADER ALA OMNIFUL (DARK NAVY) */
         .hdr-std { 
-            background-color: #1e293b !important; 
+            background-color: #0f172a !important; 
             color: #ffffff !important; 
-            text-align: center !important; 
-            padding: 0.75rem 1rem !important; 
-            font-size: 0.75rem !important; 
-            font-weight: 600 !important; 
-            text-transform: uppercase !important; 
-            letter-spacing: 0.05em !important; 
+            text-align: left !important; 
+            padding: 1rem 1rem !important; 
+            font-size: 0.85rem !important; 
+            font-weight: 500 !important; 
+            text-transform: capitalize !important; 
+            letter-spacing: 0.025em !important; 
             white-space: nowrap !important; 
             position: sticky !important; 
             top: 0 !important; 
             z-index: 20 !important; 
-            border-bottom: 1px solid #e2e8f0 !important; 
+            border: none !important; 
         }
         
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
 
-        /* Warna Hijau Tosca Cerah (Soft) untuk baris yang dipilih */
+        /* DESAIN TABEL BODY (ZEBRA & VERTICAL LINES) */
+        #main-table, #table-breakdown { border-collapse: collapse; }
+        #main-table td, #table-breakdown td { 
+            border-right: 1px solid #cbd5e1; 
+            border-bottom: none !important; 
+        }
+        #main-table td:last-child, #table-breakdown td:last-child { border-right: none; } 
+
+        /* Zebra Striping Tegas */
+        tr.row-ks, tr.bd-row { background-color: #f8fafc !important; } 
+        tr.row-ks:nth-child(even), tr.bd-row:nth-child(even) { background-color: #e2e8f0 !important; } 
+
+        /* Highlight Baris Terpilih */
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
-        
-        /* Hover baris mengubah warna teks menjadi Indigo/Ungu Elegan yang ramah mata */
-        tr.row-ks:not(.selected-row):hover td { color: #4f46e5 !important; }
-        tr.row-ks:not(.selected-row):hover td button { color: #4f46e5 !important; border-color: #4f46e5 !important; }
     </style>
 </head>
 <body class="font-sans text-slate-800">
@@ -65,13 +73,13 @@
             <!-- Toolbar Layout PC & Mobile -->
             <div class="p-3 sm:p-4 flex items-center bg-slate-50/50 border-t border-slate-100 w-full">
                 
-                <!-- KIRI: Ganti Customer Aktual (REVISI: Warna Navy / Ungu Tua) -->
+                <!-- KIRI: Ganti Customer Aktual -->
                 <button id="btn-ganti-po-main" onclick="siapkanGantiPO('main')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-indigo-800">
                     <div class="bg-indigo-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="tags" class="w-4 h-4"></i></div>
                     <div class="bg-indigo-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-indigo-700 transition">Ganti Customer Aktual</div>
                 </button>
 
-                <!-- KANAN (PC MODE): Salin, Excel, Sinkron DB (REVISI: ml-auto agar selalu di kanan) -->
+                <!-- KANAN (PC MODE) -->
                 <div class="hidden sm:flex items-center gap-2 ml-auto">
                     <button onclick="salinData()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-slate-300 bg-white hover:bg-slate-50">
                         <div class="text-slate-600 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="copy" class="w-4 h-4"></i></div>
@@ -89,7 +97,7 @@
                     </button>
                 </div>
 
-                <!-- KANAN (MOBILE MODE): Dropdown Menu (REVISI: ml-auto agar selalu di kanan) -->
+                <!-- KANAN (MOBILE MODE) -->
                 <div class="sm:hidden relative ml-auto">
                     <button onclick="toggleActionMenu(event)" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition">
                         <i data-lucide="menu" class="w-5 h-5"></i>
@@ -105,23 +113,22 @@
         </div>
 
         <!-- MIDDLE SCROLL SECTION -->
-        <div class="flex-1 min-h-0 bg-white overflow-hidden flex flex-col relative z-0">
-            <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container" id="wrapper-table-ks">
-                <table class="w-full text-center border-collapse whitespace-nowrap" id="main-table">
+        <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
+            <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-t-xl shadow-sm border border-slate-300" id="wrapper-table-ks">
+                <table class="w-full text-left border-collapse whitespace-nowrap" id="main-table">
                     <thead class="sticky top-0 z-10" id="thead-ks"></thead>
-                    <tbody id="tbody-ks" class="text-slate-700"></tbody>
+                    <tbody id="tbody-ks" class="text-slate-800"></tbody>
                 </table>
             </div>
         </div>
 
         <!-- FOOTER PAGINATION -->
-        <div class="shrink-0 w-full bg-slate-50 p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
+        <div class="shrink-0 w-full bg-white p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
             
-            <!-- REVISI: Footer dikembalikan ke warna asli, tapi font angkanya tidak bold (font-medium) -->
             <div class="flex items-center gap-2 flex-wrap justify-center">
-                <span class="bg-blue-100 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-medium ml-1">0</span></span>
-                <span class="bg-amber-100 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-amber-900 font-medium ml-1">0</span></span>
-                <span class="bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded text-emerald-800 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-medium ml-1">0</span></span>
+                <span class="bg-blue-50 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-medium ml-1">0</span></span>
+                <span class="bg-amber-50 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-amber-900 font-medium ml-1">0</span></span>
+                <span class="bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded text-emerald-800 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-medium ml-1">0</span></span>
             </div>
             
             <div class="flex items-center gap-3">
@@ -195,18 +202,17 @@
             </div>
             <div class="p-3 bg-slate-50/50 border-b border-slate-100 flex gap-2 overflow-x-auto hide-scrollbar">
                 <button onclick="salinDataBreakdown()" class="px-4 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-sm flex items-center gap-2 shadow-sm transition rounded-md shrink-0"><i data-lucide="copy" class="w-4 h-4"></i> Salin Detail</button>
-                <!-- REVISI: Tombol Ganti Customer di Breakdown juga diubah jadi Navy/Ungu Tua -->
                 <button onclick="siapkanGantiPO('breakdown')" class="px-4 py-1.5 bg-indigo-800 hover:bg-indigo-900 text-white font-medium text-sm flex items-center gap-2 shadow-sm transition rounded-md shrink-0"><i data-lucide="tags" class="w-4 h-4"></i> Ganti Customer Aktual</button>
             </div>
             <div class="overflow-y-auto flex-1 custom-scroll bg-white">
-                <table class="w-full border-collapse text-sm whitespace-nowrap text-center" id="table-breakdown">
+                <table class="w-full border-collapse text-sm whitespace-nowrap text-left" id="table-breakdown">
                     <thead class="sticky top-0 z-10">
                         <tr>
-                            <th class="hdr-std w-10"><input type="checkbox" onchange="toggleCentangBreakdown(this.checked)" class="cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500"></th>
+                            <th class="hdr-std w-10 text-center"><input type="checkbox" onchange="toggleCentangBreakdown(this.checked)" class="cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500"></th>
                             <th class="hdr-std">Area Penyimpanan</th>
                             <th class="hdr-std">Customer Aktual</th>
-                            <th class="hdr-std text-left">Keterangan</th>
-                            <th class="hdr-std text-emerald-600">Total Dus (QTY)</th>
+                            <th class="hdr-std">Keterangan</th>
+                            <th class="hdr-std text-emerald-600 text-center">Total Dus (QTY)</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-breakdown" class="text-slate-700"></tbody>
