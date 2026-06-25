@@ -232,6 +232,7 @@ window.sortTable = function(colIndex, headerEl) {
     window.applyPagination();
 };
 
+// REVISI: thSort diubah agar justify-start (Rata Kiri)
 window.thSort = function(idx, label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-open'].includes(colClass);
@@ -294,6 +295,7 @@ window.renderTabel = function() {
             let poString = poArr.length > 0 ? poArr.join(' | ') : 'KOSONG';
             let btnPO = `<button onclick="window.bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
 
+            // REVISI: Padding diubah menjadi px-4 py-4 dan text-left
             return `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
