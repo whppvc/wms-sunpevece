@@ -132,7 +132,6 @@ function sortTable(colIndex, headerEl) {
     applyPagination();
 }
 
-// REVISI: thSort diubah agar justify-start (Rata Kiri) sesuai desain Omniful
 const thSort = (idx, label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-btn'].includes(colClass);
@@ -142,7 +141,6 @@ const thSort = (idx, label, cls = "") => {
             <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
         </button>`;
 
-    // Jika kolom checkbox atau button, biarkan center. Sisanya rata kiri.
     const justifyClass = noFilter ? 'justify-center' : 'justify-start';
 
     return `<th class="hdr-std ${cls} select-none">
@@ -299,7 +297,6 @@ function renderHeaderDanTabel() {
     const tbody = document.getElementById('tbody-stbj');
     sortState = {};
 
-    // REVISI: Menggunakan class text-row untuk zebra striping via CSS
     const rowClassBase = "transition text-row text-sm";
 
     if(modeSekarang === 'qrcode') {
@@ -346,10 +343,10 @@ function renderHeaderDanTabel() {
             
             let statData = '-';
             if (r.status_data && r.status_data !== 'BELUM') {
-                statData = `<span class="text-indigo-600 font-black uppercase">${r.status_data}</span>`;
+                // REVISI 1: font-medium (tidak bold)
+                statData = `<span class="text-indigo-600 font-medium uppercase">${r.status_data}</span>`;
             }
 
-            // REVISI: Padding diubah menjadi px-4 py-4 agar lebih luas sesuai desain Omniful
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -373,7 +370,8 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-500 col-customer" data-search="${r.customer_bawaan || '-'}">${r.customer_bawaan || '-'}</td>
+                    <!-- REVISI 2: text-slate-900 (hitam) -->
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-customer" data-search="${r.customer_bawaan || '-'}">${r.customer_bawaan || '-'}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-500 col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-400 col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
                 </tr>`;
@@ -444,7 +442,8 @@ function renderHeaderDanTabel() {
             
             let statData = '-';
             if (r.sData && r.sData !== 'BELUM') {
-                statData = `<span class="text-indigo-600 font-black uppercase">${r.sData}</span>`;
+                // REVISI 1: font-medium (tidak bold)
+                statData = `<span class="text-indigo-600 font-medium uppercase">${r.sData}</span>`;
             }
 
             h += `
@@ -465,7 +464,8 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-grade" data-search="${r.grade}">${r.grade}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-dus" data-search="${r.dus}">${r.dus}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-500 col-customer" data-search="${r.customer}">${r.customer}</td>
+                    <!-- REVISI 2: text-slate-900 (hitam) -->
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-customer" data-search="${r.customer}">${r.customer}</td>
                     <td class="px-4 py-4 text-center font-black text-emerald-700 col-qty" data-search="${r.qty}">${r.qty}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-500 col-ket" data-search="${displayKet}">${displayKet}</td>
                     <td class="px-4 py-4 hidden col-pic">-</td>
@@ -801,7 +801,7 @@ async function aksiMassal(tipe) {
         ws_data.push(headers);
 
         document.querySelectorAll('.row-cb:checked').forEach(cb => {
-            const tr = closest('tr');
+            const tr = cb.closest('tr');
             const rowData = [];
             Array.from(tr.children).forEach(td => {
                 if(td.classList.contains('col-cb') || td.classList.contains('col-btn')) return;
