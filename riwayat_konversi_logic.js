@@ -2,16 +2,15 @@ let dataRiwayatRaw = [];
 let modeTabAktif = 'PROSES'; 
 let sortState = {}; 
 
-// Variabel Paginasi Kencang & Filter Excel
 let currentPage = 1;
-const rowsPerPage = 8;
+let rowsPerPage = 8;
 let activeFilters = {}; 
 let currentFilterCol = ''; 
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'admin'};
 
 document.addEventListener('DOMContentLoaded', () => {
-    initModernLayout({ id: 'riwayat_konversi', title: 'RIWAYAT KONVERSI', url: 'riwayat_konversi.html' });
+    initModernLayout({ id: 'riwayat_mutasi', title: 'RIWAYAT KONVERSI', url: 'riwayat_konversi.html' });
     
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
@@ -20,17 +19,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 closeFilterMenu();
             }
         }
+        
+        const actionMenu = document.getElementById('mobile-action-menu');
+        if (actionMenu && !actionMenu.classList.contains('hidden')) {
+            if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenu"]')) {
+                actionMenu.classList.add('hidden');
+            }
+        }
     });
 
     muatDataRiwayat();
 });
 
-// ========================================================
-// 1. FETCH DATA DARI SUPABASE & PARSING
-// ========================================================
+window.toggleActionMenu = function(e) {
+    if(e) e.stopPropagation();
+    const menu = document.getElementById('mobile-action-menu');
+    if(menu) menu.classList.toggle('hidden');
+};
+
 async function muatDataRiwayat() {
     const tbody = document.getElementById('tbody-riwayat');
-    if(tbody) tbody.innerHTML = `<tr><td colspan="10" class="p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500 text-xs">Menarik histori dari laporan_konversi...</p></td></tr>`;
+    if(tbody) tbody.innerHTML = `<tr><td colspan="10" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500 text-xs">Menarik histori dari laporan_konversi...</p></td></tr>`;
     lucide.createIcons();
 
     try {
@@ -38,9 +47,9 @@ async function muatDataRiwayat() {
         if (error) throw error;
 
         dataRiwayatRaw = data || [];
-        gantiModeTab(modeTabAktif); // Render based on current tab
+        gantiModeTab(modeTabAktif); 
     } catch (error) {
-        if(tbody) tbody.innerHTML = `<tr><td colspan="10" class="p-10 text-red-500 font-bold text-xs uppercase">Gagal memuat data: ${error.message}</td></tr>`;
+        if(tbody) tbody.innerHTML = `<tr><td colspan="10" class="p-10 text-center text-red-500 font-bold text-xs uppercase">Gagal memuat data: ${error.message}</td></tr>`;
     }
 }
 
@@ -66,32 +75,23 @@ function parseDetail(detailString) {
     return res;
 }
 
-// ========================================================
-// 2. NAVIGASI TAB & PENGATURAN UI
-// ========================================================
 function gantiModeTab(mode) {
     modeTabAktif = mode;
     
-    // UI Tab Styling
-    const activeClass = 'px-6 py-3.5 font-black text-xs uppercase transition whitespace-nowrap flex items-center gap-2 text-blue-700 bg-blue-50 border-b-4 border-blue-700';
-    const inactiveClass = 'px-6 py-3.5 font-bold text-xs uppercase transition whitespace-nowrap flex items-center gap-2 text-slate-500 border-b-4 border-transparent hover:text-slate-800 hover:bg-slate-50 bg-white';
+    const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     
     document.getElementById('tab-proses').className = (mode === 'PROSES') ? activeClass : inactiveClass;
     document.getElementById('tab-done').className = (mode === 'DONE') ? activeClass : inactiveClass;
 
-    // Toggle Buttons based on Tab
     document.getElementById('btn-done-konv').classList.toggle('hidden', mode === 'DONE');
     document.getElementById('btn-batal-done').classList.toggle('hidden', mode === 'PROSES');
 
-    // Reset Filters & Pagination state
     activeFilters = {}; updateFilterIcons(); currentPage = 1;
     
     renderTabelUtama();
 }
 
-// ========================================================
-// 3. SORTING HEADER ALA EXCEL
-// ========================================================
 function sortTable(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-riwayat');
     const rows = Array.from(tbody.querySelectorAll('tr.r-row'));
@@ -117,27 +117,25 @@ const thSort = (idx, label, cls = "") => {
     const noFilter = ['col-cb', 'col-btn'].includes(colClass);
     
     const filterBtn = noFilter ? '' : `
-        <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-600 rounded ml-1 transition" title="Filter ${label}">
+        <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded ml-1 transition" title="Filter ${label}">
             <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
         </button>`;
 
-    return `<th class="hdr-std ${cls} hover:bg-slate-700 transition select-none">
-        <div class="flex items-center justify-center">
-            <span class="cursor-pointer flex items-center gap-1.5" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
+    const justifyClass = noFilter ? 'justify-center' : 'justify-start';
+
+    return `<th class="hdr-std ${cls} select-none">
+        <div class="flex items-center ${justifyClass} gap-1.5">
+            <span class="cursor-pointer flex items-center gap-1 hover:text-blue-300 transition" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
             ${filterBtn}
         </div>
     </th>`;
 };
 
-// ========================================================
-// 4. RENDER TABEL & PAGINASI KENCANG
-// ========================================================
 function renderTabelUtama() {
     const thead = document.getElementById('thead-riwayat');
     const tbody = document.getElementById('tbody-riwayat');
     if(!thead || !tbody) return;
 
-    // Filter Data by Tab Status
     const dataset = dataRiwayatRaw.filter(r => {
         let statusDB = r.status || 'PROSES';
         return (modeTabAktif === 'PROSES') ? statusDB !== 'DONE' : statusDB === 'DONE';
@@ -145,19 +143,19 @@ function renderTabelUtama() {
 
     thead.innerHTML = `
         <tr>
-            <th class="hdr-std w-10 col-cb border-r border-slate-500"><input type="checkbox" onchange="toggleCentangSemua(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded"></th>
-            ${thSort(1, 'Waktu', 'col-waktu border-r border-slate-500')}
-            ${thSort(2, 'Kode Konversi', 'col-kode text-blue-300 border-r border-slate-500')}
-            ${thSort(3, 'Aktifitas', 'col-aktifitas text-rose-300 border-r border-slate-500')}
-            ${thSort(4, 'Keterangan', 'col-ket text-left pl-3 border-r border-slate-500')}
-            ${thSort(5, 'Detail Item', 'col-detail text-left pl-3 border-r border-slate-500')}
-            ${thSort(6, 'Total Dus', 'col-qty text-emerald-300 border-r border-slate-500')}
-            ${thSort(7, 'PIC', 'col-pic border-r border-slate-500')}
-            <th class="hdr-std col-btn">Action</th>
+            <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="toggleCentangSemua(this.checked)" class="cursor-pointer w-4 h-4 text-blue-600 rounded"></th>
+            ${thSort(1, 'Waktu', 'col-waktu')}
+            ${thSort(2, 'Kode Konversi', 'col-kode')}
+            ${thSort(3, 'Aktifitas', 'col-aktifitas')}
+            ${thSort(4, 'Keterangan', 'col-ket')}
+            ${thSort(5, 'Detail Item', 'col-detail')}
+            ${thSort(6, 'Total Dus', 'col-qty')}
+            ${thSort(7, 'PIC', 'col-pic')}
+            <th class="hdr-std col-btn text-center">Action</th>
         </tr>`;
 
     if(dataset.length === 0) {
-        tbody.innerHTML = `<tr id="empty-row-langsir"><td colspan="9" class="p-10 font-bold text-slate-400 text-xs uppercase">Tidak ada data di tab ${modeTabAktif}.</td></tr>`;
+        tbody.innerHTML = `<tr id="empty-row-langsir"><td colspan="9" class="p-10 text-center font-bold text-slate-400 text-xs uppercase">Tidak ada data di tab ${modeTabAktif}.</td></tr>`;
         applyPagination(); return;
     }
 
@@ -168,19 +166,19 @@ function renderTabelUtama() {
         const tglStr = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 
         h += `
-            <tr class="hover:bg-slate-100 transition r-row text-[11px] bg-white border-b border-slate-200">
-                <td class="p-3 col-cb border-r border-slate-200">
+            <tr class="transition r-row text-sm">
+                <td class="px-4 py-4 text-center col-cb">
                     <input type="checkbox" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300" onchange="highlightRow(this)" data-id="${r.id}" data-kode="${r.kode_konversi}">
                 </td>
-                <td class="p-3 font-semibold text-slate-600 text-center col-waktu border-r border-slate-200" data-search="${tglStr}">${tglStr}</td>
-                <td class="p-3 font-black text-blue-700 bg-blue-50/50 text-center col-kode border-r border-slate-200" data-search="${r.kode_konversi}">${r.kode_konversi || '-'}</td>
-                <td class="p-3 font-black text-rose-600 uppercase text-center col-aktifitas border-r border-slate-200" data-search="${r.aktifitas}">${r.aktifitas || '-'}</td>
-                <td class="p-3 font-semibold text-slate-600 text-left whitespace-normal min-w-[150px] leading-relaxed col-ket border-r border-slate-200" data-search="${pd.ket}">${pd.ket}</td>
-                <td class="p-3 font-semibold text-slate-600 text-left whitespace-normal min-w-[200px] leading-relaxed col-detail border-r border-slate-200" data-search="${pd.rangkuman}">${pd.rangkuman}</td>
-                <td class="p-3 font-black text-emerald-800 bg-emerald-50 text-center col-qty border-r border-slate-200 text-sm" data-search="${r.qty_total}">${r.qty_total || 0}</td>
-                <td class="p-3 font-black text-slate-800 uppercase text-center col-pic border-r border-slate-200" data-search="${r.pic}">${r.pic || '-'}</td>
-                <td class="p-3 col-btn text-center">
-                    <button onclick="bukaModalDetail('${r.id}')" class="p-1.5 px-3 bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white font-bold text-[10px] uppercase rounded shadow-sm transition flex mx-auto items-center justify-center gap-1">
+                <td class="px-4 py-4 font-medium text-slate-700 text-left col-waktu" data-search="${tglStr}">${tglStr}</td>
+                <td class="px-4 py-4 font-black text-blue-700 text-left col-kode" data-search="${r.kode_konversi}">${r.kode_konversi || '-'}</td>
+                <td class="px-4 py-4 font-black text-rose-600 uppercase text-left col-aktifitas" data-search="${r.aktifitas}">${r.aktifitas || '-'}</td>
+                <td class="px-4 py-4 font-medium text-slate-600 text-left whitespace-normal min-w-[150px] leading-relaxed col-ket" data-search="${pd.ket}">${pd.ket}</td>
+                <td class="px-4 py-4 font-medium text-slate-600 text-left whitespace-normal min-w-[200px] leading-relaxed col-detail" data-search="${pd.rangkuman}">${pd.rangkuman}</td>
+                <td class="px-4 py-4 font-black text-emerald-700 text-center col-qty" data-search="${r.qty_total}">${r.qty_total || 0}</td>
+                <td class="px-4 py-4 font-medium text-slate-500 uppercase text-left col-pic" data-search="${r.pic}">${r.pic || '-'}</td>
+                <td class="px-4 py-4 col-btn text-center">
+                    <button onclick="bukaModalDetail('${r.id}')" class="p-1.5 px-3 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 font-bold text-[10px] uppercase rounded-md shadow-sm transition flex mx-auto items-center justify-center gap-1">
                         <i data-lucide="list-collapse" class="w-3 h-3"></i> Detail
                     </button>
                 </td>
@@ -189,7 +187,7 @@ function renderTabelUtama() {
     
     tbody.innerHTML = h;
     lucide.createIcons();
-    saringTabelExcel(); // Will automatically trigger pagination
+    saringTabelExcel(); 
 }
 
 function applyPagination() {
@@ -247,9 +245,12 @@ function highlightRow(cb) {
     updateSelectedCount();
 }
 
-// ========================================================
-// 5. FILTER EXCEL LOGIC
-// ========================================================
+function changeRowsPerPage(val) {
+    if (val === 'ALL') { rowsPerPage = 999999; } 
+    else { rowsPerPage = parseInt(val); }
+    currentPage = 1; applyPagination();
+}
+
 function openColumnFilter(event, colClass, colName) {
     event.stopPropagation(); currentFilterCol = colClass;
     document.getElementById('filter-col-name').innerText = `FILTER: ${colName}`;
@@ -340,15 +341,11 @@ function updateFilterIcons() {
     }
 }
 
-// ========================================================
-// 6. ACTION: DONE & KEMBALI KE PROSES
-// ========================================================
 async function eksekusiDoneKonversi() {
     const cbs = document.querySelectorAll('.cb-row:checked');
     if(cbs.length === 0) return alert("Pilih minimal 1 baris konversi di tabel PROSES.");
     if(!confirm(`Menandai konversi sebagai DONE?\nSemua log dengan kode konversi yang sama akan ikut dipindah.`)) return;
 
-    // Kumpulkan kode unik agar sistem memindah semua dengan kode yang sama
     let setKode = new Set();
     cbs.forEach(cb => setKode.add(cb.getAttribute('data-kode')));
     const arrKode = Array.from(setKode);
@@ -380,9 +377,6 @@ async function eksekusiKembaliKeProses() {
     } catch(e) { alert("Error update status: " + e.message); }
 }
 
-// ========================================================
-// 7. ACTION: CANCEL KE STOK & COPY EXCEL
-// ========================================================
 function bukaModalCancel() {
     const cbs = document.querySelectorAll('.cb-row:checked');
     if (cbs.length === 0) return alert("Centang baris konversi yang ingin dibatalkan & dikembalikan fisik kardusnya ke Stok.");
@@ -464,9 +458,6 @@ function salinDataTabel() {
     navigator.clipboard.writeText(copyString).then(() => alert("Berhasil disalin! Silahkan Paste (CTRL+V) di Excel/Notepad."));
 }
 
-// ========================================================
-// 8. POPUP DETAIL ITEM FISIK
-// ========================================================
 function bukaModalDetail(id) {
     const row = dataRiwayatRaw.find(r => r.id == id);
     if (!row) return;
@@ -481,18 +472,18 @@ function bukaModalDetail(id) {
     pd.items.forEach((d, i) => {
         html += `
             <tr class="border-b border-slate-200 hover:bg-slate-50 transition text-[11px]">
-                <td class="p-2 font-bold text-slate-400">${i + 1}</td>
-                <td class="p-2 font-mono font-bold text-[10px] border-r border-slate-200">${d.qrcode}</td>
-                <td class="p-2 font-bold">${d.tglProduksi || '-'}</td>
-                <td class="p-2 font-bold">${d.mesin || '-'}</td>
-                <td class="p-2 font-bold border-r border-slate-200">${d.shift || '-'}</td>
+                <td class="p-2 font-bold text-slate-400 text-center">${i + 1}</td>
+                <td class="p-2 font-mono font-bold text-[10px] text-left">${d.qrcode}</td>
+                <td class="p-2 font-bold text-left">${d.tglProduksi || '-'}</td>
+                <td class="p-2 font-bold text-left">${d.mesin || '-'}</td>
+                <td class="p-2 font-bold text-left">${d.shift || '-'}</td>
                 <td class="p-2 font-bold text-left text-slate-800">${d.namaItem || '-'}</td>
-                <td class="p-2 font-bold">${d.panjang || '-'}</td>
-                <td class="p-2 font-bold">${d.grade || '-'}</td>
-                <td class="p-2 font-bold">${d.dus || '-'}</td>
-                <td class="p-2 font-bold border-r border-slate-200">${d.shading || '-'}</td>
-                <td class="p-2 text-center font-bold text-slate-400">${d.poAsliDB || '-'}</td>
-                <td class="p-2 text-center font-black text-orange-600 bg-orange-50 border-l border-slate-200">${pd.po_target}</td>
+                <td class="p-2 font-bold text-left">${d.panjang || '-'}</td>
+                <td class="p-2 font-bold text-left">${d.grade || '-'}</td>
+                <td class="p-2 font-bold text-left">${d.dus || '-'}</td>
+                <td class="p-2 font-bold text-left">${d.shading || '-'}</td>
+                <td class="p-2 text-left font-bold text-slate-400">${d.poAsliDB || '-'}</td>
+                <td class="p-2 text-left font-black text-orange-600 bg-orange-50">${pd.po_target}</td>
             </tr>`;
     });
 
