@@ -37,41 +37,11 @@ async function loadInitialSTBJData() {
             trolis.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
         }
         const { data: mData2 } = await db.from('master_2').select('*');
-        if(mData2) masterKamus = mData2;
-    } catch (err) { console.error("Gagal muat referensi:", err); }
-}
-
-// FUNGSI PENERJEMAH BARCODE
-function translateBarcode(barcode) {
-    let td = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customer: '-' };
-    const parts = barcode.split('/'); if (parts.length < 4) return td;
-    
-    const hurufDepan = barcode.charAt(0).toUpperCase();
-    if (hurufDepan === 'P') td.jenisItem = 'Plafon'; else if (hurufDepan === 'L') td.jenisItem = 'List'; else if (hurufDepan === 'W') td.jenisItem = 'WPC'; else td.jenisItem = hurufDepan;
-
-    let rawItem = parts[0]; let cariItem = masterKamus.find(m => m.kode_nama_item === rawItem); 
-    td.namaItem = cariItem && cariItem.nama_item ? cariItem.nama_item : rawItem; td.shading = parts[1];
-    
-    const p2 = parts[2];
-    if (p2 && p2.length >= 4) {
-        let digitPjg = (p2.length === 5) ? 2 : 1; let rawPjg = p2.substring(0, digitPjg);
-        td.panjang = (digitPjg === 1) ? rawPjg + "M" : rawPjg[0] + "." + rawPjg[1] + "M"; 
-        let rawGrade = p2.substring(digitPjg, digitPjg + 1); td.grade = rawGrade === '1' ? 'BAGUS' : (rawGrade === '2' ? 'A' : rawGrade);
-        let rawDus = p2.substring(p2.length - 2); let cariDus = masterKamus.find(m => m.kode_dus === rawDus); td.dus = cariDus && cariDus.dus ? cariDus.dus : rawDus;
-    }
-    const p3 = parts[3];
-    if (p3.length >= 5) {
-        const dayOfYear = parseInt(p3.substring(0, 3)); const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
-        const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
-        td.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
-        let sisaString = p3.substring(5); let match = sisaString.match(/(C.*?)(S.*?)(P.*)/);
-        if (match) {
-            let cariMesin = masterKamus.find(m => m.kode_mesin === match[1]); td.mesin = cariMesin && cariMesin.mesin ? cariMesin.mesin : match[1];
-            let cariShift = masterKamus.find(m => m.kode_shift === match[2]); td.shift = cariShift && cariShift.shift ? cariShift.shift : match[2];
-            let cariCustomer = masterKamus.find(m => m.kode_customer === match[3]); td.customer = cariCustomer && cariCustomer.customer ? cariCustomer.customer : match[3];
+        if(mData2) {
+            masterKamus = mData2;
+            window.masterData = { kamus: mData2 }; // Pastikan wms_parser.js bisa baca
         }
-    }
-    return td;
+    } catch (err) { console.error("Gagal muat referensi:", err); }
 }
 
 document.getElementById('form-scan').addEventListener('submit', (e) => {
@@ -86,7 +56,7 @@ document.getElementById('form-scan').addEventListener('submit', (e) => {
     
     codes.forEach(code => {
         const isLocalDuplicate = dataStbj.some(d => d.qrcode === code);
-        const trans = translateBarcode(code);
+        const trans = window.translateBarcode(code);
         
         dataStbj.push({ 
             id: ++globalRowId, 
@@ -115,7 +85,7 @@ function renderTable() {
     if(dataStbj.length === 0) {
         tbody.innerHTML = '<div class="p-10 text-center font-medium text-slate-400"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan.</div>';
         document.getElementById('lbl-tampil-baris').innerText = '0';
-        updateFilterDropdowns(); // Update dropdown filter
+        updateFilterDropdowns(); 
         lucide.createIcons(); return;
     }
     
@@ -130,13 +100,14 @@ function renderTable() {
         if(d.status === 'SUDAH STBJ') badgeClass = "bg-red-600 text-white border-red-700"; 
         if(d.status === 'DUPLIKAT SCAN') badgeClass = "bg-red-600 text-white border-red-700";
         if(d.status === 'HOLD') badgeClass = "bg-amber-500 text-white border-amber-600";
+        if(d.status === 'IN GUDANG') badgeClass = "bg-red-600 text-white border-red-700"; // REVISI: Status baru
 
         if(d.status === 'BELUM CEK' && d.isLocalDuplicate) {
             badgeClass = "bg-red-600 text-white border-red-700";
             displayStatus = "DUPLIKAT SCAN";
         }
 
-        const isRedHighlight = d.status === 'SUDAH STBJ' || d.status === 'DUPLIKAT SCAN' || d.isLocalDuplicate;
+        const isRedHighlight = d.status === 'SUDAH STBJ' || d.status === 'DUPLIKAT SCAN' || d.status === 'IN GUDANG' || d.isLocalDuplicate;
         const rowClass = isRedHighlight ? 'bg-red-50 hover:bg-red-100' : (d.status === 'HOLD' ? 'bg-amber-50 hover:bg-amber-100' : 'bg-white hover:bg-slate-50');
 
         html += `
@@ -180,14 +151,13 @@ function renderTable() {
     tbody.innerHTML = html; 
     document.getElementById('lbl-tampil-baris').innerText = dataStbj.length;
     
-    updateFilterDropdowns(); // Update dropdown filter setiap kali tabel dirender
+    updateFilterDropdowns(); 
     lucide.createIcons(); 
 }
 
-// REVISI: Fungsi untuk mengisi opsi dropdown filter secara dinamis
 function updateFilterDropdowns() {
     const fields = {
-        'fs-status': 'statusUI', // Custom logic untuk status
+        'fs-status': 'statusUI', 
         'fs-troli': 'troli',
         'fs-tgl': 'tglProduksi',
         'fs-mesin': 'mesin',
@@ -205,7 +175,7 @@ function updateFilterDropdowns() {
         const select = document.getElementById(id);
         if (!select) continue;
         
-        const currentVal = select.value; // Simpan pilihan user sebelumnya
+        const currentVal = select.value; 
         const key = fields[id];
         
         let uniqueVals = [];
@@ -225,7 +195,6 @@ function updateFilterDropdowns() {
         
         select.innerHTML = html;
         
-        // Kembalikan pilihan jika masih ada di daftar
         if (uniqueVals.includes(currentVal)) {
             select.value = currentVal;
         }
@@ -295,7 +264,6 @@ function resetFilterSTBJ() {
     saringTabelSTBJ(); toggleSidebarFilter();
 }
 
-// REVISI: Logika filter disesuaikan untuk Dropdown (Exact Match)
 function saringTabelSTBJ() {
     const f = {
         status: document.getElementById('fs-status')?.value || '',
@@ -318,7 +286,6 @@ function saringTabelSTBJ() {
     document.querySelectorAll('.row-stbj').forEach(row => {
         let show = true;
         
-        // Exact match untuk Dropdown
         const exactFields = ['status', 'troli', 'tgl', 'mesin', 'shift', 'jenis', 'nama', 'pjg', 'grade', 'dus', 'shading', 'customer'];
         for(let key of exactFields) {
             if(f[key]) {
@@ -330,7 +297,6 @@ function saringTabelSTBJ() {
             }
         }
 
-        // Partial match untuk Text Input (QRCode & Keterangan)
         if(show && f.qr) {
             const cell = row.querySelector('.col-qr');
             if(cell && !cell.innerText.toLowerCase().includes(f.qr)) show = false;
@@ -350,6 +316,7 @@ function saringTabelSTBJ() {
     document.getElementById('lbl-tampil-baris').innerText = visibleCount;
 }
 
+// REVISI: Logika Verifikasi Gudang dirombak agar mengecek ke 3 tabel sekaligus
 async function cekGudangSTBJ() {
     if(dataStbj.length === 0) return alert("Belum ada data.");
     const btn = document.getElementById('btn-cek-gudang'); const ori = btn.innerHTML;
@@ -357,28 +324,46 @@ async function cekGudangSTBJ() {
 
     const allQRs = dataStbj.map(d => d.qrcode);
     try {
-        const { data: resStokGlobal, error } = await db.from('stok_global').select('qrcode').in('qrcode', allQRs);
-        if(error) throw error;
-        
-        const existingGlobal = resStokGlobal.map(d => d.qrcode);
+        // Cek ke 3 tabel sekaligus
+        const [resGlobal, resGudang, resHold] = await Promise.all([
+            db.from('stok_global').select('qrcode').in('qrcode', allQRs),
+            db.from('stok_qr').select('qrcode').in('qrcode', allQRs),
+            db.from('hold_stbj').select('qrcode').in('qrcode', allQRs)
+        ]);
+
+        if(resGlobal.error) throw resGlobal.error;
+        if(resGudang.error) throw resGudang.error;
+        if(resHold.error) throw resHold.error;
+
+        const setGlobal = new Set((resGlobal.data || []).map(d => d.qrcode));
+        const setGudang = new Set((resGudang.data || []).map(d => d.qrcode));
+        const setHold = new Set((resHold.data || []).map(d => d.qrcode));
 
         let infoDuplikat = 0;
         dataStbj.forEach(d => {
-            if(d.status === 'HOLD') return; 
+            if(d.status === 'HOLD' && d.keterangan === 'Dihold Manual') return; 
             
-            if (existingGlobal.includes(d.qrcode)) {
-                d.status = 'SUDAH STBJ'; 
+            if (setGudang.has(d.qrcode)) {
+                d.status = 'IN GUDANG';
+                d.keterangan = 'SUDAH ADA DI KARTU STOK';
+                infoDuplikat++;
+            } else if (setGlobal.has(d.qrcode)) {
+                d.status = 'SUDAH STBJ';
                 d.keterangan = 'SUDAH ADA DI STOK GLOBAL';
+                infoDuplikat++;
+            } else if (setHold.has(d.qrcode)) {
+                d.status = 'HOLD';
+                d.keterangan = 'ADA DI TABEL HOLD';
                 infoDuplikat++;
             } else if (d.isLocalDuplicate) {
                 d.status = 'DUPLIKAT SCAN';
             } else {
-                d.status = 'BELUM STBJ'; 
+                d.status = 'BELUM STBJ';
             }
         });
 
         renderTable();
-        if(infoDuplikat > 0) alert(`Verifikasi Selesai!\nDitemukan ${infoDuplikat} data DUPLIKAT (sudah ada di Stok Global).`);
+        if(infoDuplikat > 0) alert(`Verifikasi Selesai!\nDitemukan ${infoDuplikat} data DUPLIKAT (Sudah STBJ / Sudah di Gudang).`);
         else alert("Verifikasi Selesai!\nSemua data UNIK (Belum STBJ) dan aman untuk disimpan.");
 
     } catch (err) { alert("Gagal cek database: " + err.message); }
@@ -394,7 +379,8 @@ async function saveToDatabaseSTBJ() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btn.disabled = true;
 
     const UNIKs = dataStbj.filter(d => d.status === 'BELUM STBJ');
-    const dupes = dataStbj.filter(d => d.status === 'SUDAH STBJ' || d.status === 'DUPLIKAT SCAN' || d.status === 'HOLD');
+    // REVISI: 'IN GUDANG' juga dianggap sebagai duplikat yang tidak boleh masuk stok_global lagi
+    const dupes = dataStbj.filter(d => d.status === 'SUDAH STBJ' || d.status === 'DUPLIKAT SCAN' || d.status === 'HOLD' || d.status === 'IN GUDANG');
 
     const mapToSchema = (d, finalStatus) => ({
         troli: d.troli,
