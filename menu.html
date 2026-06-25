@@ -3,80 +3,289 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS - Menu Utama</title>
+    <title>WMS - Dashboard Utama</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <!-- PINDAHKAN GLOBAL.JS KE SINI -->
     <script src="global.js"></script>
 </head>
-<body class="font-sans">
+<body class="font-sans text-slate-800">
 
-    <div class="w-full">
-        <header class="mb-6 border-b border-slate-200 pb-4">
-            <h2 class="text-2xl font-black text-slate-800 tracking-tight">MENU UTAMA WMS</h2>
-        </header>
-
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            
-            <div onclick="window.location.href='stbj.html'" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-slate-800 hover:shadow-md transition cursor-pointer text-center group">
-                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-slate-700 mb-3 group-hover:bg-slate-800 group-hover:text-white transition"><i data-lucide="shield-check" class="w-6 h-6"></i></div>
-                <h3 class="font-bold text-slate-800 text-sm">Scan STBJ</h3>
+    <div class="w-full max-w-7xl mx-auto space-y-6">
+        
+        <!-- HEADER DASHBOARD -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div>
+                <h2 class="text-2xl font-black text-slate-800 tracking-tight">Selamat Datang, <span id="lbl-user-name" class="text-blue-600">Admin</span>! 👋</h2>
+                <p class="text-sm font-medium text-slate-500 mt-1">Berikut adalah ringkasan aktivitas gudang Anda hari ini.</p>
             </div>
-            <div onclick="window.location.href='hasil_stbj.html'" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-slate-800 hover:shadow-md transition cursor-pointer text-center group">
-                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-slate-700 mb-3 group-hover:bg-slate-800 group-hover:text-white transition"><i data-lucide="clipboard-list" class="w-6 h-6"></i></div>
-                <h3 class="font-bold text-slate-800 text-sm">Hasil STBJ</h3>
-            </div>
-            <div onclick="window.location.href='kartu_stok.html'" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-slate-800 hover:shadow-md transition cursor-pointer text-center group">
-                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-slate-700 mb-3 group-hover:bg-slate-800 group-hover:text-white transition"><i data-lucide="layers" class="w-6 h-6"></i></div>
-                <h3 class="font-bold text-slate-800 text-sm">Kartu Stok</h3>
-            </div>
-            <div onclick="window.location.href='langsir.html'" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-slate-800 hover:shadow-md transition cursor-pointer text-center group">
-                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-slate-700 mb-3 group-hover:bg-slate-800 group-hover:text-white transition"><i data-lucide="log-in" class="w-6 h-6"></i></div>
-                <h3 class="font-bold text-slate-800 text-sm">Langsir Gudang</h3>
-            </div>
-            <div onclick="window.location.href='riwayat_langsir.html'" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-slate-800 hover:shadow-md transition cursor-pointer text-center group">
-                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-slate-700 mb-3 group-hover:bg-slate-800 group-hover:text-white transition"><i data-lucide="history" class="w-6 h-6"></i></div>
-                <h3 class="font-bold text-slate-800 text-sm">Riwayat Langsir</h3>
-            </div>
-            <div onclick="window.location.href='scan_pic.html'" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-slate-800 hover:shadow-md transition cursor-pointer text-center group">
-                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-slate-700 mb-3 group-hover:bg-slate-800 group-hover:text-white transition">
-                    <i data-lucide="user-check" class="w-6 h-6"></i> 
+            <div class="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                <div class="relative flex items-center justify-center w-8 h-8">
+                    <div id="ping-indicator" class="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75"></div>
+                    <div class="relative w-3 h-3 rounded-full bg-emerald-500 border-2 border-white"></div>
                 </div>
-                <h3 class="font-bold text-slate-800 text-sm">Scan PIC AREA</h3>
-            </div>
-            <div onclick="window.location.href='riwayat_konversi.html'" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-slate-800 hover:shadow-md transition cursor-pointer text-center group">
-                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-slate-700 mb-3 group-hover:bg-slate-800 group-hover:text-white transition"><i data-lucide="arrow-right-left" class="w-6 h-6"></i></div>
-                <h3 class="font-bold text-slate-800 text-sm">Riwayat Konversi</h3>
-            </div>
-            <div onclick="window.location.href='opname.html'" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-slate-800 hover:shadow-md transition cursor-pointer text-center group">
-                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-slate-700 mb-3 group-hover:bg-slate-800 group-hover:text-white transition"><i data-lucide="clipboard-check" class="w-6 h-6"></i></div>
-                <h3 class="font-bold text-slate-800 text-sm">Stock Opname</h3>
-            </div>
-            <div onclick="window.location.href='po.html'" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-slate-800 hover:shadow-md transition cursor-pointer text-center group">
-                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-slate-700 mb-3 group-hover:bg-slate-800 group-hover:text-white transition"><i data-lucide="clipboard-check" class="w-6 h-6"></i></div>
-                <h3 class="font-bold text-slate-800 text-sm">PO & Estimasi</h3>
-            </div>
-            <div onclick="window.location.href='picking_list.html'" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-slate-800 hover:shadow-md transition cursor-pointer text-center group">
-                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-slate-700 mb-3 group-hover:bg-slate-800 group-hover:text-white transition"><i data-lucide="clipboard-pen" class="w-6 h-6"></i></div>
-                <h3 class="font-bold text-slate-800 text-sm">Picking List</h3>
-            </div>
-            <div onclick="window.location.href='keluar.html'" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-slate-800 hover:shadow-md transition cursor-pointer text-center group">
-                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-slate-700 mb-3 group-hover:bg-slate-800 group-hover:text-white transition"><i data-lucide="truck" class="w-6 h-6"></i></div>
-                <h3 class="font-bold text-slate-800 text-sm">Kirim Keluar</h3>
-            </div>
-            <div onclick="window.location.href='riwayat_keluar.html'" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-slate-800 hover:shadow-md transition cursor-pointer text-center group">
-                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-slate-700 mb-3 group-hover:bg-slate-800 group-hover:text-white transition"><i data-lucide="history" class="w-6 h-6"></i></div>
-                <h3 class="font-bold text-slate-800 text-sm">Riwayat Keluar</h3>
-            </div>
-            <div onclick="window.location.href='master_data.html'" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-slate-800 hover:shadow-md transition cursor-pointer text-center group">
-                <div class="bg-slate-100 w-12 h-12 mx-auto rounded-full flex items-center justify-center text-slate-700 mb-3 group-hover:bg-slate-800 group-hover:text-white transition"><i data-lucide="database" class="w-6 h-6"></i></div>
-                <h3 class="font-bold text-slate-800 text-sm">Master Data</h3>
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider">System Status</span>
+                    <span id="lbl-ping" class="text-xs font-bold text-emerald-600">Online (Memuat...)</span>
+                </div>
             </div>
         </div>
+
+        <!-- STATISTIK UTAMA (TOP CARDS) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+            
+            <!-- Card 1: Belum Dilangsir -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
+                <div class="absolute -right-6 -top-6 w-24 h-24 bg-amber-50 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                <div class="relative z-10 flex justify-between items-start">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-xs font-black uppercase tracking-wider text-slate-400">Belum Dilangsir</span>
+                        <span id="stat-stbj" class="text-4xl font-black text-slate-800">0</span>
+                        <span class="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md w-max mt-1">Di Area Transit / Hold</span>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-inner">
+                        <i data-lucide="package-search" class="w-6 h-6"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2: Total Stok Gudang -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
+                <div class="absolute -right-6 -top-6 w-24 h-24 bg-blue-50 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                <div class="relative z-10 flex justify-between items-start">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-xs font-black uppercase tracking-wider text-slate-400">Total Stok Gudang</span>
+                        <span id="stat-stok" class="text-4xl font-black text-slate-800">0</span>
+                        <span class="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md w-max mt-1">Kardus Tersedia</span>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-inner">
+                        <i data-lucide="layers" class="w-6 h-6"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3: Barang Keluar Hari Ini -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
+                <div class="absolute -right-6 -top-6 w-24 h-24 bg-emerald-50 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                <div class="relative z-10 flex justify-between items-start">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-xs font-black uppercase tracking-wider text-slate-400">Keluar Hari Ini</span>
+                        <span id="stat-keluar" class="text-4xl font-black text-slate-800">0</span>
+                        <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md w-max mt-1">Telah Dikirim</span>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-inner">
+                        <i data-lucide="truck" class="w-6 h-6"></i>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- BAGIAN BAWAH: GRAFIK & AKTIVITAS TERAKHIR -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Kiri: Progress Bar & Quick Actions -->
+            <div class="lg:col-span-1 space-y-6">
+                
+                <!-- Progress Kapasitas (Ilustrasi) -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-sm font-black uppercase tracking-wider text-slate-700 mb-4 flex items-center gap-2"><i data-lucide="activity" class="w-4 h-4 text-blue-600"></i> Rasio Pergerakan</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-xs font-bold text-slate-500 mb-1">
+                                <span>Inbound (Masuk)</span>
+                                <span id="lbl-rasio-in" class="text-slate-800">0%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                                <div id="bar-in" class="bg-blue-500 h-2.5 rounded-full transition-all duration-1000" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between text-xs font-bold text-slate-500 mb-1">
+                                <span>Outbound (Keluar)</span>
+                                <span id="lbl-rasio-out" class="text-slate-800">0%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                                <div id="bar-out" class="bg-emerald-500 h-2.5 rounded-full transition-all duration-1000" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-sm font-black uppercase tracking-wider text-slate-700 mb-4 flex items-center gap-2"><i data-lucide="zap" class="w-4 h-4 text-amber-500"></i> Akses Cepat</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="window.location.href='stbj.html'" class="p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl flex flex-col items-center justify-center gap-2 transition group cursor-pointer">
+                            <i data-lucide="shield-check" class="w-6 h-6 text-slate-400 group-hover:text-blue-600 transition"></i>
+                            <span class="text-[10px] font-bold text-slate-600 group-hover:text-blue-700 uppercase">Scan STBJ</span>
+                        </button>
+                        <button onclick="window.location.href='langsir.html'" class="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl flex flex-col items-center justify-center gap-2 transition group cursor-pointer">
+                            <i data-lucide="log-in" class="w-6 h-6 text-slate-400 group-hover:text-indigo-600 transition"></i>
+                            <span class="text-[10px] font-bold text-slate-600 group-hover:text-indigo-700 uppercase">Langsir</span>
+                        </button>
+                        <button onclick="window.location.href='po.html'" class="p-3 bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-200 rounded-xl flex flex-col items-center justify-center gap-2 transition group cursor-pointer">
+                            <i data-lucide="clipboard-check" class="w-6 h-6 text-slate-400 group-hover:text-orange-600 transition"></i>
+                            <span class="text-[10px] font-bold text-slate-600 group-hover:text-orange-700 uppercase">Input PO</span>
+                        </button>
+                        <button onclick="window.location.href='keluar.html'" class="p-3 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 rounded-xl flex flex-col items-center justify-center gap-2 transition group cursor-pointer">
+                            <i data-lucide="truck" class="w-6 h-6 text-slate-400 group-hover:text-emerald-600 transition"></i>
+                            <span class="text-[10px] font-bold text-slate-600 group-hover:text-emerald-700 uppercase">Kirim</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Kanan: Aktivitas Terakhir -->
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h3 class="text-sm font-black uppercase tracking-wider text-slate-700 flex items-center gap-2"><i data-lucide="history" class="w-4 h-4 text-indigo-600"></i> Aktivitas Terakhir</h3>
+                    <button onclick="loadDashboardData()" class="text-slate-400 hover:text-blue-600 transition" title="Refresh Data"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
+                </div>
+                <div class="flex-1 p-0 overflow-y-auto hide-scrollbar">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <tbody id="tbody-aktivitas" class="divide-y divide-slate-100">
+                            <tr><td class="p-10 text-center text-slate-400 font-bold"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i> Memuat aktivitas...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
     </div>
 
-    <script>document.addEventListener('DOMContentLoaded', () => { initModernLayout({ id: 'dashboard', title: 'DASHBOARD', url: 'menu.html' }); });</script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => { 
+            initModernLayout({ id: 'dashboard', title: 'DASHBOARD', url: 'menu.html' }); 
+            
+            const user = JSON.parse(localStorage.getItem('user_session'));
+            if(user) document.getElementById('lbl-user-name').innerText = user.username;
+
+            loadDashboardData();
+            cekPing();
+            setInterval(cekPing, 30000); // Cek ping setiap 30 detik
+        });
+
+        async function cekPing() {
+            const start = Date.now();
+            try {
+                const { error } = await db.from('master_area').select('id').limit(1);
+                if(error) throw error;
+                const end = Date.now();
+                const ping = end - start;
+                
+                const lbl = document.getElementById('lbl-ping');
+                const indicator = document.getElementById('ping-indicator');
+                
+                lbl.innerText = `Online (${ping}ms)`;
+                lbl.className = 'text-xs font-bold text-emerald-600';
+                indicator.className = 'absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75';
+                indicator.nextElementSibling.className = 'relative w-3 h-3 rounded-full bg-emerald-500 border-2 border-white';
+                
+                if(ping > 1000) {
+                    lbl.className = 'text-xs font-bold text-amber-600';
+                    indicator.className = 'absolute inset-0 rounded-full bg-amber-400 animate-ping opacity-75';
+                    indicator.nextElementSibling.className = 'relative w-3 h-3 rounded-full bg-amber-500 border-2 border-white';
+                }
+            } catch(e) {
+                const lbl = document.getElementById('lbl-ping');
+                const indicator = document.getElementById('ping-indicator');
+                lbl.innerText = `Offline / Error`;
+                lbl.className = 'text-xs font-bold text-rose-600';
+                indicator.className = 'hidden';
+                indicator.nextElementSibling.className = 'relative w-3 h-3 rounded-full bg-rose-500 border-2 border-white';
+            }
+        }
+
+        async function loadDashboardData() {
+            try {
+                // 1. Ambil Count Belum Dilangsir (stok_global)
+                const { count: countStbj } = await db.from('stok_global').select('*', { count: 'exact', head: true });
+                document.getElementById('stat-stbj').innerText = countStbj || 0;
+
+                // 2. Ambil Count Total Stok Gudang (stok_qr)
+                const { count: countStok } = await db.from('stok_qr').select('*', { count: 'exact', head: true });
+                document.getElementById('stat-stok').innerText = countStok || 0;
+
+                // 3. Ambil Count Barang Keluar Hari Ini
+                const today = new Date().toISOString().split('T')[0];
+                const { count: countKeluar } = await db.from('stok_keluar').select('*', { count: 'exact', head: true }).gte('created_at', today + 'T00:00:00Z');
+                document.getElementById('stat-keluar').innerText = countKeluar || 0;
+
+                // 4. Hitung Rasio (Ilustrasi Sederhana)
+                let totalAktivitas = (countStbj || 0) + (countStok || 0) + (countKeluar || 0);
+                if(totalAktivitas > 0) {
+                    let pctIn = Math.round(((countStbj || 0) / totalAktivitas) * 100);
+                    let pctOut = Math.round(((countKeluar || 0) / totalAktivitas) * 100);
+                    
+                    document.getElementById('lbl-rasio-in').innerText = pctIn + '%';
+                    document.getElementById('bar-in').style.width = pctIn + '%';
+                    
+                    document.getElementById('lbl-rasio-out').innerText = pctOut + '%';
+                    document.getElementById('bar-out').style.width = pctOut + '%';
+                }
+
+                // 5. Ambil 5 Aktivitas Terakhir (Gabungan Masuk & Keluar)
+                const [resMasuk, resKeluar] = await Promise.all([
+                    db.from('hasil_langsir').select('qrcode, nama_item, created_at, pic_input').order('created_at', {ascending: false}).limit(3),
+                    db.from('stok_keluar').select('qrcode, nama_item, created_at, pic_keluar').order('created_at', {ascending: false}).limit(3)
+                ]);
+
+                let aktivitas = [];
+                if(resMasuk.data) resMasuk.data.forEach(d => aktivitas.push({ type: 'IN', ...d, pic: d.pic_input }));
+                if(resKeluar.data) resKeluar.data.forEach(d => aktivitas.push({ type: 'OUT', ...d, pic: d.pic_keluar }));
+
+                // Urutkan berdasarkan waktu terbaru
+                aktivitas.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                aktivitas = aktivitas.slice(0, 5); // Ambil 5 teratas
+
+                const tbody = document.getElementById('tbody-aktivitas');
+                if(aktivitas.length === 0) {
+                    tbody.innerHTML = '<tr><td class="p-10 text-center text-slate-400 font-bold">Belum ada aktivitas hari ini.</td></tr>';
+                } else {
+                    let html = '';
+                    aktivitas.forEach(a => {
+                        const dt = new Date(a.created_at);
+                        const waktu = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+                        
+                        const isMasuk = a.type === 'IN';
+                        const icon = isMasuk ? '<i data-lucide="arrow-down-to-line" class="w-4 h-4 text-blue-600"></i>' : '<i data-lucide="arrow-up-from-line" class="w-4 h-4 text-emerald-600"></i>';
+                        const bgIcon = isMasuk ? 'bg-blue-100' : 'bg-emerald-100';
+                        const textAksi = isMasuk ? 'Masuk Gudang' : 'Keluar Gudang';
+
+                        html += `
+                            <tr class="hover:bg-slate-50 transition group">
+                                <td class="p-4 w-12">
+                                    <div class="w-8 h-8 rounded-full ${bgIcon} flex items-center justify-center shadow-sm">${icon}</div>
+                                </td>
+                                <td class="p-4">
+                                    <div class="flex flex-col">
+                                        <span class="font-bold text-slate-800">${a.nama_item || 'Item Tidak Diketahui'}</span>
+                                        <span class="text-[11px] font-medium text-slate-500 font-mono">${a.qrcode}</span>
+                                    </div>
+                                </td>
+                                <td class="p-4 text-right">
+                                    <div class="flex flex-col items-end">
+                                        <span class="text-xs font-black text-slate-600">${textAksi}</span>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase">${waktu} • Oleh ${a.pic || 'Sistem'}</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    tbody.innerHTML = html;
+                    lucide.createIcons();
+                }
+
+            } catch(e) {
+                console.error("Gagal load dashboard:", e);
+            }
+        }
+    </script>
 </body>
 </html>
