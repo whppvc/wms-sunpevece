@@ -1,424 +1,159 @@
-let dataStbj = []; 
-let deletedStbjStack = []; 
-let masterKamus = [];
-let globalRowId = 0;
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>WMS - Scan STBJ</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
+<script src="global.js"></script>
 
-document.addEventListener('DOMContentLoaded', async () => { 
-    initModernLayout({ id: 'stbj', title: 'SCAN STBJ', url: 'stbj.html' }); 
-    
-    document.body.style.overflow = 'hidden';
-    const wmsMain = document.querySelector('main');
-    if(wmsMain) {
-        wmsMain.style.overflow = 'hidden';
-        wmsMain.style.padding = '0'; 
-    }
+<style>
+html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; touch-action: pan-y; background-color: #f8fafc; }
+.custom-scroll::-webkit-scrollbar { width: 8px; }
+.custom-scroll::-webkit-scrollbar-track { background: transparent; }
+.custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.selected-row { border-color: #2563eb !important; background-color: #dbeafe !important; }
+</style>
+</head>
+<body class="font-sans text-slate-800">
 
-    await loadInitialSTBJData();
-});
+<div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
 
-window.bukaModalAdd = function() {
-    document.getElementById('modal-add-scan').classList.remove('hidden');
-    setTimeout(() => document.getElementById('input-qrcode').focus(), 100);
-};
+<div class="shrink-0 bg-white flex flex-col z-20 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)] border-b border-slate-200">
 
-window.tutupModalAdd = function() {
-    document.getElementById('modal-add-scan').classList.add('hidden');
-};
+<!-- TOOLBAR AKSI -->
+<div class="p-3 sm:p-4 flex items-center justify-between bg-slate-50/50 w-full">
+<div class="flex gap-2 items-center overflow-x-auto hide-scrollbar">
+<button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="shrink-0 flex items-stretch rounded-md overflow-hidden shadow-sm active:scale-95 transition h-9 border border-slate-800">
+<div class="w-9 bg-slate-900 text-white flex items-center justify-center shrink-0"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
+<div class="flex-1 bg-slate-800 text-white font-black text-[11px] uppercase flex items-center justify-center px-3 tracking-wider">Verifikasi</div>
+</button>
 
-async function loadInitialSTBJData() {
-    try {
-        const { data: mData1 } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
-        if(mData1) {
-            const trolis = [...new Set(mData1.map(r => r.nama_troli).filter(x => x))];
-            const sel = document.getElementById('select-troli');
-            sel.innerHTML = '<option value="">-- Memuat Troli... --</option>';
-            trolis.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
-        }
-        const { data: mData2 } = await db.from('master_2').select('*');
-        if(mData2) {
-            masterKamus = mData2;
-            window.masterData = { kamus: mData2 }; // Pastikan wms_parser.js bisa baca
-        }
-    } catch (err) { console.error("Gagal muat referensi:", err); }
-}
+<button onclick="undoHapusSTBJ()" class="shrink-0 flex items-stretch rounded-md overflow-hidden shadow-sm active:scale-95 transition h-9 border border-rose-700">
+<div class="w-9 bg-rose-700 text-white flex items-center justify-center shrink-0"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
+<div class="flex-1 bg-rose-600 text-white font-black text-[11px] uppercase flex items-center justify-center px-3 tracking-wider">Undo</div>
+</button>
 
-document.getElementById('form-scan').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const troli = document.getElementById('select-troli').value;
-    const inputEl = document.getElementById('input-qrcode');
-    const rawInput = inputEl.value.trim();
-    if(!troli) return alert("Pilih Troli terlebih dahulu!");
-    if(!rawInput) return;
+<button onclick="holdManual()" class="shrink-0 flex items-stretch rounded-md overflow-hidden shadow-sm active:scale-95 transition h-9 border border-amber-600">
+<div class="w-9 bg-amber-700 text-white flex items-center justify-center shrink-0"><i data-lucide="pause-circle" class="w-4 h-4"></i></div>
+<div class="flex-1 bg-amber-500 text-white font-black text-[11px] uppercase flex items-center justify-center px-3 tracking-wider">Hold Item</div>
+</button>
+</div>
+</div>
 
-    const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
-    
-    codes.forEach(code => {
-        const isLocalDuplicate = dataStbj.some(d => d.qrcode === code);
-        const trans = window.translateBarcode(code);
-        
-        dataStbj.push({ 
-            id: ++globalRowId, 
-            qrcode: code, 
-            troli: troli, 
-            status: 'BELUM CEK', 
-            keterangan: isLocalDuplicate ? 'DUPLIKAT SCAN' : '', 
-            pic: currentUser.username, 
-            isLocalDuplicate: isLocalDuplicate,
-            ...trans 
-        });
-    });
-    
-    renderTable();
-    
-    // Kosongkan input agar bisa scan terus menerus tanpa menutup modal
-    inputEl.value = ''; 
-    inputEl.focus();
-    
-    const scrollContainer = document.getElementById('scroll-container');
-    if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
-});
+<!-- SELECT ALL & QTY & FILTER -->
+<div class="flex justify-between items-center px-3 py-2 bg-white border-t border-slate-200">
+<div class="flex items-center gap-2">
+<input type="checkbox" onchange="toggleAll(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-400" id="cb-all">
+<label for="cb-all" class="text-[11px] font-black text-slate-500 uppercase tracking-wide cursor-pointer">Pilih Semua</label>
+</div>
+<div class="flex items-center gap-2">
+<div class="bg-cyan-50 border border-cyan-300 px-3 py-1.5 rounded text-cyan-800 text-[11px] font-black shadow-sm uppercase tracking-wider">
+Total Qty: <span id="lbl-tampil-baris" class="text-slate-900 text-[13px] ml-1">0</span> Dus
+</div>
+<!-- ICON FILTER -->
+<button onclick="toggleSidebarFilter()" class="p-1.5 bg-white border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition shadow-sm active:scale-95">
+<i data-lucide="filter" class="w-5 h-5"></i>
+</button>
+</div>
+</div>
+</div>
 
-function renderTable() {
-    const tbody = document.getElementById('tbody-stbj');
-    if(dataStbj.length === 0) {
-        tbody.innerHTML = '<div class="p-10 text-center font-medium text-slate-400"><i data-lucide="box" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan.</div>';
-        document.getElementById('lbl-tampil-baris').innerText = '0';
-        updateFilterDropdowns(); 
-        lucide.createIcons(); return;
-    }
-    
-    let html = '';
-    let count = 1;
+<!-- MIDDLE SCROLL SECTION (CARD VIEW) -->
+<div class="flex-1 min-h-0 bg-slate-200 p-2 overflow-hidden flex flex-col relative z-0">
+<div class="flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll" id="scroll-container">
+<div id="tbody-stbj" class="flex flex-col gap-0 w-full"></div>
+</div>
+</div>
 
-    dataStbj.forEach((d) => {
-        let badgeClass = "bg-slate-200 text-slate-700 border-slate-300";
-        let displayStatus = d.status;
+<!-- FOOTER ACTION -->
+<div class="shrink-0 w-full bg-slate-50 p-2 flex items-center gap-2 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300 pb-4">
+<button onclick="bukaModalAdd()" class="w-[50px] h-[50px] bg-[#0f172a] hover:bg-black text-white flex justify-center items-center shadow-md active:scale-95 shrink-0 transition rounded border-b-4 border-slate-900">
+<i data-lucide="plus" class="w-7 h-7"></i>
+</button>
+<button id="btn-save" onclick="saveToDatabaseSTBJ()" class="flex-1 h-[50px] bg-[#058c5e] hover:bg-[#04724d] text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-[#035237]">
+<i data-lucide="save" class="w-5 h-5"></i> SIMPAN KE GUDANG
+</button>
+</div>
 
-        if(d.status === 'BELUM STBJ') badgeClass = "bg-orange-500 text-white border-orange-600";
-        if(d.status === 'SUDAH STBJ') badgeClass = "bg-red-600 text-white border-red-700"; 
-        if(d.status === 'DUPLIKAT SCAN') badgeClass = "bg-red-600 text-white border-red-700";
-        if(d.status === 'HOLD') badgeClass = "bg-amber-500 text-white border-amber-600";
-        if(d.status === 'IN GUDANG') badgeClass = "bg-red-600 text-white border-red-700"; // REVISI: Status baru
+</div>
 
-        if(d.status === 'BELUM CEK' && d.isLocalDuplicate) {
-            badgeClass = "bg-red-600 text-white border-red-700";
-            displayStatus = "DUPLIKAT SCAN";
-        }
+<!-- MODAL ADD SCAN -->
+<div id="modal-add-scan" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[60] p-4 backdrop-blur-sm transition-opacity">
+<div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 p-5">
+<div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+<h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="scan-line" class="w-5 h-5 text-blue-600"></i> INPUT DATA STBJ</h3>
+<button type="button" onclick="tutupModalAdd()" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+</div>
+<form id="form-scan" class="flex flex-col gap-4">
+<div>
+<label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Pilih Troli</label>
+<select id="select-troli" class="w-full p-2.5 border border-slate-300 rounded font-bold outline-none focus:border-blue-500 text-slate-800 cursor-pointer bg-slate-50 text-sm">
+<option value="">-- Memuat Troli... --</option>
+</select>
+</div>
+<div>
+<label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Scan Fisik Kardus</label>
+<input type="text" id="input-qrcode" class="w-full p-2.5 border border-slate-300 rounded outline-none focus:border-blue-500 font-mono font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
+</div>
+<button type="submit" class="mt-2 w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded font-black shadow transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-4 border-black">
+<i data-lucide="plus-square" class="w-4 h-4"></i> TAMBAHKAN KODE
+</button>
+</form>
+</div>
+</div>
 
-        const isRedHighlight = d.status === 'SUDAH STBJ' || d.status === 'DUPLIKAT SCAN' || d.status === 'IN GUDANG' || d.isLocalDuplicate;
-        const rowClass = isRedHighlight ? 'bg-red-50 hover:bg-red-100' : (d.status === 'HOLD' ? 'bg-amber-50 hover:bg-amber-100' : 'bg-white hover:bg-slate-50');
+    <!-- SIDEBAR FILTER LENGKAP -->
+    <!-- SIDEBAR FILTER LENGKAP (REVISI DROPDOWN) -->
+<div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
+<div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+<h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data</h3>
+<button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+</div>
+<div class="p-3 flex flex-col gap-3 overflow-y-auto custom-scroll flex-1">
+<div class="grid grid-cols-2 gap-2">
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label><input type="text" id="fs-status" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label><input type="text" id="fs-troli" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="fs-qr" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="text" id="fs-tgl" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label><input type="text" id="fs-mesin" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label><input type="text" id="fs-shift" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><input type="text" id="fs-jenis" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><input type="text" id="fs-nama" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><input type="text" id="fs-pjg" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><input type="text" id="fs-grade" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><input type="text" id="fs-dus" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="fs-shading" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer</label><input type="text" id="fs-customer" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="fs-ket" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label><select id="fs-status" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label><select id="fs-troli" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="fs-qr" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50" placeholder="Ketik QR Code..."></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><select id="fs-tgl" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label><select id="fs-mesin" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label><select id="fs-shift" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><select id="fs-jenis" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><select id="fs-nama" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><select id="fs-pjg" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><select id="fs-grade" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><select id="fs-dus" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><select id="fs-shading" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer</label><select id="fs-customer" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="fs-ket" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50" placeholder="Ketik Keterangan..."></div>
+</div>
+<button onclick="resetFilterSTBJ()" class="mt-2 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black rounded text-xs uppercase transition shrink-0">RESET FILTER</button>
+</div>
+</div>
 
-        html += `
-            <div class="row-stbj ${rowClass} border-b border-slate-300 p-2.5 relative transition w-full flex shrink-0">
-                <div class="flex flex-col items-center justify-start pr-2 mr-2 border-r border-slate-300 w-10 shrink-0 pt-1">
-                    <div class="font-black text-slate-800 text-xl mb-3 leading-none no-cell">${count++}</div>
-                    <input type="checkbox" value="${d.id}" onchange="highlightRow(this)" class="row-cb cursor-pointer w-4 h-4 accent-blue-600 rounded bg-white border-slate-400">
-                </div>
-                
-                <div class="flex-1 flex flex-col gap-0 w-full min-w-0">
-                    <div class="flex justify-between items-start mb-0.5">
-                        <div class="font-black text-[22px] text-emerald-700 leading-none col-troli">${d.troli || '-'}</div>
-                        <button onclick="hapusBaris(${d.id})" class="bg-slate-700 text-white p-1.5 rounded hover:bg-rose-600 transition active:scale-95 shrink-0"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                    </div>
-                    
-                    <div class="font-mono font-black text-slate-900 text-[13px] break-all leading-tight col-qr">${d.qrcode}</div>
-                    
-                    <div class="text-[12px] font-bold text-slate-600 tracking-tight">
-                        <span class="col-tgl">${d.tglProduksi}</span> - <span class="col-mesin">${d.mesin}</span> - <span class="col-shift">${d.shift}</span>
-                    </div>
-                    
-                    <div class="text-[13px] font-black text-slate-900 leading-snug my-0.5">
-                        <span class="col-nama">${d.namaItem}</span> - <span class="col-pjg">${d.panjang}</span> - <span class="col-grade">${d.grade}</span> - <span class="col-dus">${d.dus}</span>
-                        <span class="col-jenis hidden">${d.jenisItem}</span>
-                    </div>
-                    
-                    <div class="text-[12px] font-bold text-blue-600 col-shading">${d.shading}</div>
-                    <div class="text-[12px] font-bold text-orange-600 col-customer uppercase">${d.customer}</div>
-                    
-                    <div class="mt-1.5 mb-1">
-                        <input type="text" onchange="updateKet(${d.id}, this.value)" value="${d.keterangan}" class="w-full p-1.5 text-[11px] font-bold border border-slate-300 rounded outline-none focus:border-blue-500 bg-white/80 col-ket" placeholder="Keterangan...">
-                    </div>
-                    
-                    <div class="flex flex-row flex-wrap items-center gap-1.5 mt-0.5">
-                        <span class="font-bold px-3 py-1 text-[10px] rounded-sm border col-status ${badgeClass}">${displayStatus}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    tbody.innerHTML = html; 
-    document.getElementById('lbl-tampil-baris').innerText = dataStbj.length;
-    
-    updateFilterDropdowns(); 
-    lucide.createIcons(); 
-}
+<!-- OVERLAY -->
+<div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-[50] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
-function updateFilterDropdowns() {
-    const fields = {
-        'fs-status': 'statusUI', 
-        'fs-troli': 'troli',
-        'fs-tgl': 'tglProduksi',
-        'fs-mesin': 'mesin',
-        'fs-shift': 'shift',
-        'fs-jenis': 'jenisItem',
-        'fs-nama': 'namaItem',
-        'fs-pjg': 'panjang',
-        'fs-grade': 'grade',
-        'fs-dus': 'dus',
-        'fs-shading': 'shading',
-        'fs-customer': 'customer'
-    };
-
-    for (let id in fields) {
-        const select = document.getElementById(id);
-        if (!select) continue;
-        
-        const currentVal = select.value; 
-        const key = fields[id];
-        
-        let uniqueVals = [];
-        if (key === 'statusUI') {
-            uniqueVals = [...new Set(dataStbj.map(d => {
-                if(d.status === 'BELUM CEK' && d.isLocalDuplicate) return 'DUPLIKAT SCAN';
-                return d.status;
-            }))].sort();
-        } else {
-            uniqueVals = [...new Set(dataStbj.map(item => item[key] || '-'))].sort();
-        }
-        
-        let html = '<option value="">-- Semua --</option>';
-        uniqueVals.forEach(val => {
-            html += `<option value="${val}">${val}</option>`;
-        });
-        
-        select.innerHTML = html;
-        
-        if (uniqueVals.includes(currentVal)) {
-            select.value = currentVal;
-        }
-    }
-}
-
-function highlightRow(cb) {
-    const div = cb.closest('.row-stbj');
-    if (div) {
-        if (cb.checked) div.classList.add('selected-row');
-        else div.classList.remove('selected-row');
-    }
-}
-
-function toggleAll(checked) { 
-    document.querySelectorAll('.row-cb').forEach(cb => {
-        const row = cb.closest('.row-stbj');
-        if (row && row.style.display !== 'none') {
-            cb.checked = checked;
-            highlightRow(cb);
-        }
-    }); 
-}
-
-function getCheckedIds() {
-    const ids = []; document.querySelectorAll('.row-cb:checked').forEach(cb => ids.push(parseInt(cb.value))); return ids;
-}
-
-function hapusBaris(id) {
-    const removed = dataStbj.find(d => d.id === id);
-    if(removed) {
-        deletedStbjStack.push([removed]);
-        dataStbj = dataStbj.filter(d => d.id !== id);
-        renderTable();
-    }
-}
-
-function undoHapusSTBJ() {
-    if(deletedStbjStack.length === 0) return alert("Tidak ada histori penghapusan yang dapat di-undo.");
-    const last = deletedStbjStack.pop();
-    dataStbj = [...dataStbj, ...last]; 
-    renderTable();
-}
-
-function holdManual() {
-    const ids = getCheckedIds(); if(ids.length === 0) return alert("Centang baris yang ingin di-HOLD manual!");
-    dataStbj.forEach(d => { if(ids.includes(d.id)) { d.status = 'HOLD'; d.keterangan = 'Dihold Manual'; } });
-    renderTable(); document.querySelector('#cb-all').checked = false;
-}
-
-function updateKet(id, val) { const item = dataStbj.find(d => d.id === id); if(item) item.keterangan = val; }
-
-function toggleSidebarFilter() {
-    document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
-    document.getElementById('overlay-klik-luar').classList.toggle('hidden');
-}
-
-function tutupPopups() {
-    document.getElementById('sidebar-filter').classList.add('translate-x-full');
-    document.getElementById('overlay-klik-luar').classList.add('hidden');
-    tutupModalAdd();
-}
-
-function resetFilterSTBJ() {
-    const ids = ['fs-status','fs-troli','fs-qr','fs-tgl','fs-mesin','fs-shift','fs-jenis','fs-nama','fs-pjg','fs-grade','fs-dus','fs-shading','fs-customer','fs-ket'];
-    ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; });
-    saringTabelSTBJ(); toggleSidebarFilter();
-}
-
-function saringTabelSTBJ() {
-    const f = {
-        status: document.getElementById('fs-status')?.value || '',
-        troli: document.getElementById('fs-troli')?.value || '',
-        qr: document.getElementById('fs-qr')?.value.toLowerCase() || '',
-        tgl: document.getElementById('fs-tgl')?.value || '',
-        mesin: document.getElementById('fs-mesin')?.value || '',
-        shift: document.getElementById('fs-shift')?.value || '',
-        jenis: document.getElementById('fs-jenis')?.value || '',
-        nama: document.getElementById('fs-nama')?.value || '',
-        pjg: document.getElementById('fs-pjg')?.value || '',
-        grade: document.getElementById('fs-grade')?.value || '',
-        dus: document.getElementById('fs-dus')?.value || '',
-        shading: document.getElementById('fs-shading')?.value || '',
-        customer: document.getElementById('fs-customer')?.value || '',
-        ket: document.getElementById('fs-ket')?.value.toLowerCase() || ''
-    };
-
-    let visibleCount = 0;
-    document.querySelectorAll('.row-stbj').forEach(row => {
-        let show = true;
-        
-        const exactFields = ['status', 'troli', 'tgl', 'mesin', 'shift', 'jenis', 'nama', 'pjg', 'grade', 'dus', 'shading', 'customer'];
-        for(let key of exactFields) {
-            if(f[key]) {
-                const cell = row.querySelector('.col-' + key);
-                if(cell) {
-                    let text = cell.innerText.trim();
-                    if(text !== f[key]) { show = false; break; }
-                }
-            }
-        }
-
-        if(show && f.qr) {
-            const cell = row.querySelector('.col-qr');
-            if(cell && !cell.innerText.toLowerCase().includes(f.qr)) show = false;
-        }
-        if(show && f.ket) {
-            const cell = row.querySelector('.col-ket');
-            if(cell) {
-                let inputEl = cell.querySelector('input');
-                let text = inputEl ? inputEl.value.toLowerCase() : cell.innerText.toLowerCase();
-                if(!text.includes(f.ket)) show = false;
-            }
-        }
-
-        row.style.display = show ? 'flex' : 'none';
-        if(show) visibleCount++;
-    });
-    document.getElementById('lbl-tampil-baris').innerText = visibleCount;
-}
-
-// REVISI: Logika Verifikasi Gudang dirombak agar mengecek ke 3 tabel sekaligus
-async function cekGudangSTBJ() {
-    if(dataStbj.length === 0) return alert("Belum ada data.");
-    const btn = document.getElementById('btn-cek-gudang'); const ori = btn.innerHTML;
-    btn.innerHTML = '<div class="bg-slate-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="animate-spin w-4 h-4"></i></div><div class="bg-slate-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-700 transition">Mengecek...</div>'; btn.disabled = true;
-
-    const allQRs = dataStbj.map(d => d.qrcode);
-    try {
-        // Cek ke 3 tabel sekaligus
-        const [resGlobal, resGudang, resHold] = await Promise.all([
-            db.from('stok_global').select('qrcode').in('qrcode', allQRs),
-            db.from('stok_qr').select('qrcode').in('qrcode', allQRs),
-            db.from('hold_stbj').select('qrcode').in('qrcode', allQRs)
-        ]);
-
-        if(resGlobal.error) throw resGlobal.error;
-        if(resGudang.error) throw resGudang.error;
-        if(resHold.error) throw resHold.error;
-
-        const setGlobal = new Set((resGlobal.data || []).map(d => d.qrcode));
-        const setGudang = new Set((resGudang.data || []).map(d => d.qrcode));
-        const setHold = new Set((resHold.data || []).map(d => d.qrcode));
-
-        let infoDuplikat = 0;
-        dataStbj.forEach(d => {
-            if(d.status === 'HOLD' && d.keterangan === 'Dihold Manual') return; 
-            
-            if (setGudang.has(d.qrcode)) {
-                d.status = 'IN GUDANG';
-                d.keterangan = 'SUDAH ADA DI KARTU STOK';
-                infoDuplikat++;
-            } else if (setGlobal.has(d.qrcode)) {
-                d.status = 'SUDAH STBJ';
-                d.keterangan = 'SUDAH ADA DI STOK GLOBAL';
-                infoDuplikat++;
-            } else if (setHold.has(d.qrcode)) {
-                d.status = 'HOLD';
-                d.keterangan = 'ADA DI TABEL HOLD';
-                infoDuplikat++;
-            } else if (d.isLocalDuplicate) {
-                d.status = 'DUPLIKAT SCAN';
-            } else {
-                d.status = 'BELUM STBJ';
-            }
-        });
-
-        renderTable();
-        if(infoDuplikat > 0) alert(`Verifikasi Selesai!\nDitemukan ${infoDuplikat} data DUPLIKAT (Sudah STBJ / Sudah di Gudang).`);
-        else alert("Verifikasi Selesai!\nSemua data UNIK (Belum STBJ) dan aman untuk disimpan.");
-
-    } catch (err) { alert("Gagal cek database: " + err.message); }
-    finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
-}
-
-async function saveToDatabaseSTBJ() {
-    if(dataStbj.length === 0) return alert('Data kosong!');
-    const blmCek = dataStbj.filter(d => d.status === 'BELUM CEK');
-    if(blmCek.length > 0) return alert('Tekan tombol Verifikasi Kode terlebih dahulu sebelum menyimpan!');
-
-    const btn = document.getElementById('btn-save'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btn.disabled = true;
-
-    const UNIKs = dataStbj.filter(d => d.status === 'BELUM STBJ');
-    // REVISI: 'IN GUDANG' juga dianggap sebagai duplikat yang tidak boleh masuk stok_global lagi
-    const dupes = dataStbj.filter(d => d.status === 'SUDAH STBJ' || d.status === 'DUPLIKAT SCAN' || d.status === 'HOLD' || d.status === 'IN GUDANG');
-
-    const mapToSchema = (d, finalStatus) => ({
-        troli: d.troli,
-        qrcode: d.qrcode,
-        tgl_produksi: d.tglProduksi,
-        shift: d.shift,
-        mesin: d.mesin,
-        jenis_item: d.jenisItem, 
-        nama_item: d.namaItem,
-        panjang: d.panjang,
-        grade: d.grade,
-        dus: d.dus,
-        shading: d.shading,
-        customer_bawaan: d.customer,
-        keterangan: d.keterangan || '-',
-        status: finalStatus,
-        status_data: 'BELUM',
-        posisi: 'TROLI',
-        pic_input: d.pic,
-        created_at: new Date().toISOString() 
-    });
-
-    try {
-        if(UNIKs.length > 0) {
-            const payloadGlobal = UNIKs.map(d => mapToSchema(d, 'SUDAH STBJ'));
-            const { error: err1 } = await db.from('stok_global').insert(payloadGlobal);
-            if(err1) throw err1;
-        }
-        
-        if(dupes.length > 0) {
-            const payloadHold = dupes.map(d => mapToSchema(d, 'HOLD'));
-            const { error: err2 } = await db.from('hold_stbj').insert(payloadHold);
-            if(err2) throw err2;
-        }
-
-        alert(`BERHASIL DISIMPAN!\n- ${UNIKs.length} Barang UNIK masuk ke Stok Global\n- ${dupes.length} Barang Hold/Duplikat masuk ke Hold STBJ`);
-        dataStbj = []; renderTable();
-        document.getElementById('cb-all').checked = false;
-    } catch (err) { alert('GAGAL MENYIMPAN: ' + err.message); } 
-    finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
-}
+<script src="wms_parser.js"></script>
+<script src="stbj_logic.js"></script>
+</body>
+</html>
