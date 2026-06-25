@@ -132,17 +132,21 @@ function sortTable(colIndex, headerEl) {
     applyPagination();
 }
 
+// REVISI: thSort diubah agar justify-start (Rata Kiri) sesuai desain Omniful
 const thSort = (idx, label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-btn'].includes(colClass);
     
     const filterBtn = noFilter ? '' : `
-        <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-600 rounded ml-1 transition" title="Filter ${label}">
+        <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded ml-1 transition" title="Filter ${label}">
             <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
         </button>`;
 
+    // Jika kolom checkbox atau button, biarkan center. Sisanya rata kiri.
+    const justifyClass = noFilter ? 'justify-center' : 'justify-start';
+
     return `<th class="hdr-std ${cls} select-none">
-        <div class="flex items-center justify-center gap-1.5">
+        <div class="flex items-center ${justifyClass} gap-1.5">
             <span class="cursor-pointer flex items-center gap-1 hover:text-blue-300 transition" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
             ${filterBtn}
         </div>
@@ -295,14 +299,14 @@ function renderHeaderDanTabel() {
     const tbody = document.getElementById('tbody-stbj');
     sortState = {};
 
-    // REVISI: Menyamakan class baris dengan Kartu Stok
-    const rowClassBase = "bg-white even:bg-slate-100 transition text-row text-sm border-b border-slate-200";
+    // REVISI: Menggunakan class text-row untuk zebra striping via CSS
+    const rowClassBase = "transition text-row text-sm";
 
     if(modeSekarang === 'qrcode') {
         thead.innerHTML = `
             <tr>
-                <th class="hdr-std w-10 col-cb text-center border-r border-slate-600"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
-                <th class="hdr-std w-10 col-btn text-center border-r border-slate-600"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-slate-400"></i></th>
+                <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
+                <th class="hdr-std w-10 col-btn text-center"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-slate-400"></i></th>
                 ${thSort(2, 'Status Item', 'col-status-gudang')}
                 ${tabelSekarang === 'hold_stbj' ? thSort(3, 'Status Hold', 'col-status') : '<th class="hdr-std hidden col-status">Status Hold</th>'}
                 ${thSort(tabelSekarang==='hold_stbj'?4:3, 'Collect', 'col-status-data')}
@@ -323,7 +327,7 @@ function renderHeaderDanTabel() {
                 ${thSort(tabelSekarang==='hold_stbj'?19:18, 'PIC Input', 'col-pic')}
             </tr>`;
         
-        if(rawDataRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="22" class="px-4 py-8 text-center font-bold text-slate-400 border-b border-slate-200">Tabel Kosong.</td></tr>`; return; }
+        if(rawDataRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="22" class="px-4 py-8 text-center font-bold text-slate-400">Tabel Kosong.</td></tr>`; return; }
         
         let h = '';
         rawDataRaw.forEach((r, i) => {
@@ -345,49 +349,49 @@ function renderHeaderDanTabel() {
                 statData = `<span class="text-indigo-600 font-black uppercase">${r.status_data}</span>`;
             }
 
-            // REVISI: Menggunakan font-medium dan text-slate-700 untuk menyamakan dengan Kartu Stok
+            // REVISI: Padding diubah menjadi px-4 py-4 agar lebih luas sesuai desain Omniful
             h += `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 text-center col-btn border-r border-slate-200">
+                    <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-4 text-center col-btn">
                         <button onclick="aksiHapusPerBaris('${r.qrcode}')" class="text-slate-400 hover:text-rose-600 transition p-1.5 rounded-md hover:bg-rose-50 mx-auto flex shadow-sm border border-transparent hover:border-rose-200">
                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </button>
                     </td>
-                    <td class="px-4 py-3 text-center col-status-gudang border-r border-slate-200" data-search="${r.is_in_gudang ? 'IN GUDANG' : 'STBJ'}">${htmlStatusGudang}</td>
-                    ${tabelSekarang === 'hold_stbj' ? `<td class="px-4 py-3 text-center font-black text-amber-600 col-status border-r border-slate-200" data-search="${r.status || 'HOLD'}">${r.status || 'HOLD'}</td>` : '<td class="px-4 py-3 hidden col-status border-r border-slate-200">-</td>'}
-                    <td class="px-4 py-3 text-center col-status-data border-r border-slate-200" data-search="${r.status_data || '-'}">${statData}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-waktu border-r border-slate-200" data-search="${tgl}">${tgl}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-troli border-r border-slate-200" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
-                    <td class="px-4 py-3 text-left font-mono font-medium text-slate-800 col-qr border-r border-slate-200" data-search="${r.qrcode}">${r.qrcode}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-tgl border-r border-slate-200" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-mesin border-r border-slate-200" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-shift border-r border-slate-200" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-jenis border-r border-slate-200" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-nama border-r border-slate-200" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-shading border-r border-slate-200" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-500 col-customer border-r border-slate-200" data-search="${r.customer_bawaan || '-'}">${r.customer_bawaan || '-'}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-500 col-ket border-r border-slate-200" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-500 col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
+                    <td class="px-4 py-4 text-left col-status-gudang" data-search="${r.is_in_gudang ? 'IN GUDANG' : 'STBJ'}">${htmlStatusGudang}</td>
+                    ${tabelSekarang === 'hold_stbj' ? `<td class="px-4 py-4 text-left font-black text-amber-600 col-status" data-search="${r.status || 'HOLD'}">${r.status || 'HOLD'}</td>` : '<td class="px-4 py-4 hidden col-status">-</td>'}
+                    <td class="px-4 py-4 text-left col-status-data" data-search="${r.status_data || '-'}">${statData}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-waktu" data-search="${tgl}">${tgl}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-troli" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
+                    <td class="px-4 py-4 text-left font-mono font-medium text-slate-800 col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-tgl" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-mesin" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-shift" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-jenis" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-800 col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-pjg" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-500 col-customer" data-search="${r.customer_bawaan || '-'}">${r.customer_bawaan || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-500 col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-400 col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
-        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="22" class="px-4 py-8 text-center font-bold text-slate-400 border-b border-slate-200">Tidak ada data cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="22" class="px-4 py-8 text-center font-bold text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
     } 
     else if(modeSekarang === 'item' || modeSekarang === 'jasper') {
         const isJasper = modeSekarang === 'jasper';
         
         thead.innerHTML = `
             <tr>
-                <th class="hdr-std w-10 col-cb text-center border-r border-slate-600"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
+                <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
                 <th class="hdr-std col-status-gudang hidden">Status Item</th>
                 <th class="hdr-std col-status hidden">Status Hold</th>
                 ${thSort(3, 'Collect', 'col-status-data')}
                 <th class="hdr-std col-waktu hidden">Waktu Scan</th>
-                ${thSort(5, 'TROLI', 'col-troli')}
+                ${thSort(5, 'Troli Gabungan', 'col-troli')}
                 <th class="hdr-std col-qr hidden">QRCode</th>
                 ${thSort(7, 'Tgl Produksi', 'col-tgl')}
                 ${thSort(8, 'Mesin', 'col-mesin')}
@@ -431,7 +435,7 @@ function renderHeaderDanTabel() {
         });
 
         let arr = Object.values(groups);
-        if(arr.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="20" class="px-4 py-8 text-center font-bold text-slate-400 border-b border-slate-200">Kosong.</td></tr>`; return; }
+        if(arr.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="20" class="px-4 py-8 text-center font-bold text-slate-400">Kosong.</td></tr>`; return; }
 
         let h = '';
         arr.forEach((r) => {
@@ -443,33 +447,32 @@ function renderHeaderDanTabel() {
                 statData = `<span class="text-indigo-600 font-black uppercase">${r.sData}</span>`;
             }
 
-            // REVISI: Menggunakan font-medium dan text-slate-700 untuk menyamakan dengan Kartu Stok
             h += `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-3 text-center col-cb border-r border-slate-200"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 hidden col-status-gudang border-r border-slate-200">-</td>
-                    <td class="px-4 py-3 hidden col-status border-r border-slate-200">-</td>
-                    <td class="px-4 py-3 text-center col-status-data border-r border-slate-200" data-search="${r.sData || '-'}">${statData}</td>
-                    <td class="px-4 py-3 hidden col-waktu border-r border-slate-200">-</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-troli border-r border-slate-200" data-search="${gabunganTroli}">${gabunganTroli}</td>
-                    <td class="px-4 py-3 hidden col-qr border-r border-slate-200">-</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-tgl border-r border-slate-200" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-mesin border-r border-slate-200" data-search="${r.mesin}">${r.mesin}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-shift border-r border-slate-200" data-search="${r.shift}">${r.shift}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-jenis border-r border-slate-200" data-search="${r.jenisItem}">${r.jenisItem}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-nama border-r border-slate-200" data-search="${r.displayNama}">${r.displayNama}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-pjg border-r border-slate-200" data-search="${r.panjang}">${r.panjang}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-grade border-r border-slate-200" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-dus border-r border-slate-200" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-700 col-shading border-r border-slate-200" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-500 col-customer border-r border-slate-200" data-search="${r.customer}">${r.customer}</td>
-                    <td class="px-4 py-3 text-center font-black text-emerald-700 text-base col-qty border-r border-slate-200" data-search="${r.qty}">${r.qty}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-500 col-ket border-r border-slate-200" data-search="${displayKet}">${displayKet}</td>
-                    <td class="px-4 py-3 hidden col-pic border-r border-slate-200">-</td>
+                    <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-4 hidden col-status-gudang">-</td>
+                    <td class="px-4 py-4 hidden col-status">-</td>
+                    <td class="px-4 py-4 text-left col-status-data" data-search="${r.sData || '-'}">${statData}</td>
+                    <td class="px-4 py-4 hidden col-waktu">-</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-troli" data-search="${gabunganTroli}">${gabunganTroli}</td>
+                    <td class="px-4 py-4 hidden col-qr">-</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-mesin" data-search="${r.mesin}">${r.mesin}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-shift" data-search="${r.shift}">${r.shift}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-jenis" data-search="${r.jenisItem}">${r.jenisItem}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-800 col-nama" data-search="${r.displayNama}">${r.displayNama}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-pjg" data-search="${r.panjang}">${r.panjang}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-500 col-customer" data-search="${r.customer}">${r.customer}</td>
+                    <td class="px-4 py-4 text-center font-black text-emerald-700 col-qty" data-search="${r.qty}">${r.qty}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-500 col-ket" data-search="${displayKet}">${displayKet}</td>
+                    <td class="px-4 py-4 hidden col-pic">-</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
-        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="20" class="px-4 py-8 text-center font-bold text-slate-400 border-b border-slate-200">Tidak ada data cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="20" class="px-4 py-8 text-center font-bold text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
     }
     lucide.createIcons(); saringTabelExcel();
 }
@@ -750,7 +753,7 @@ async function aksiMassal(tipe) {
         if(!confirm(`Tandai ${checkedValues.length} QrCode sebagai COLLECTED oleh ${currentUser.username}?`)) return;
         const btn = document.getElementById('btn-massal-collect');
         const btnMob = document.getElementById('btn-massal-collect-mob');
-        if(btn) { btn.innerHTML = '<div class="bg-indigo-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-indigo-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-indigo-700 transition">Collect</div>'; btn.disabled = true; }
+        if(btn) { btn.innerHTML = '<div class="bg-indigo-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="animate-spin w-4 h-4"></i></div><div class="bg-indigo-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-indigo-700 transition">Collect</div>'; btn.disabled = true; }
         if(btnMob) { btnMob.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-indigo-700"></i> Memproses...'; btnMob.disabled = true; }
         
         let updates = [];
@@ -798,7 +801,7 @@ async function aksiMassal(tipe) {
         ws_data.push(headers);
 
         document.querySelectorAll('.row-cb:checked').forEach(cb => {
-            const tr = cb.closest('tr');
+            const tr = closest('tr');
             const rowData = [];
             Array.from(tr.children).forEach(td => {
                 if(td.classList.contains('col-cb') || td.classList.contains('col-btn')) return;
