@@ -1,5 +1,5 @@
 // ==========================================
-// 0. ROUTE GUARD (KEAMANAN HALAMAN)
+// 0. ROUTE GUARD (PENJAGA KEAMANAN HALAMAN)
 // ==========================================
 (function checkSecurity() {
     const path = window.location.pathname;
@@ -51,10 +51,13 @@ style.innerHTML = `
     .hide-scrollbar::-webkit-scrollbar { display: none; } 
     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
+    /* Override padding bawaan HTML lama agar full screen */
     body > div.absolute.inset-0 { padding-top: 0 !important; position: relative !important; height: 100% !important; }
     
+    /* Transisi Sidebar */
     #app-sidebar { transition: width 0.3s ease, transform 0.3s ease; }
     
+    /* DESKTOP STATE (Lebar Dinamis) */
     @media (min-width: 640px) {
         #app-sidebar:not(.expanded) { width: 4.5rem !important; }
         #app-sidebar:not(.expanded) .sidebar-text { display: none !important; }
@@ -70,25 +73,13 @@ style.innerHTML = `
         #app-sidebar.expanded #btn-expand-container { justify-content: flex-end !important; padding-right: 1rem !important; }
     }
     
+    /* MOBILE STATE (Selalu Lebar saat dibuka) */
     @media (max-width: 639px) {
         #app-sidebar { width: 16rem !important; }
         .sidebar-text { display: block !important; }
         .sidebar-logo-text { display: block !important; }
         .sidebar-item { justify-content: flex-start !important; padding: 0 1rem !important; width: 100% !important; }
         .sidebar-divider { width: 100% !important; padding: 0 1rem !important; text-align: left !important; background: transparent !important; height: auto !important; margin-top: 1rem !important; }
-    }
-
-    /* REVISI TOOLTIP: Murni CSS agar tidak flickering */
-    .sidebar-item { position: relative; }
-    .sidebar-tooltip {
-        visibility: hidden; opacity: 0; position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
-        margin-left: 10px; background-color: #1e293b; color: white; padding: 6px 12px; border-radius: 6px;
-        font-size: 12px; font-weight: bold; white-space: nowrap; z-index: 100; transition: all 0.2s ease;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); pointer-events: none;
-    }
-    /* Tooltip hanya muncul jika sidebar TIDAK expanded */
-    #app-sidebar:not(.expanded) .sidebar-item:hover .sidebar-tooltip { 
-        visibility: visible; opacity: 1; margin-left: 15px; 
     }
 `;
 document.head.appendChild(style);
@@ -131,10 +122,9 @@ function initModernLayout(pageMeta) {
             const isActive = pageMeta && menu.id === pageMeta.id;
             const bgClass = isActive ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-white';
             sidebarHTML += `
-                <a href="${menu.url}" class="sidebar-item flex items-center h-10 rounded-xl transition-all cursor-pointer ${bgClass}">
-                    <i data-lucide="${menu.icon}" class="w-5 h-5 shrink-0"></i>
-                    <span class="sidebar-text ml-3 text-sm font-bold whitespace-nowrap">${menu.title}</span>
-                    <div class="sidebar-tooltip">${menu.title}</div>
+                <a href="${menu.url}" data-title="${menu.title}" class="sidebar-item relative flex items-center h-10 rounded-xl transition-all cursor-pointer ${bgClass}">
+                    <i data-lucide="${menu.icon}" class="w-5 h-5 shrink-0 pointer-events-none"></i>
+                    <span class="sidebar-text ml-3 text-sm font-bold whitespace-nowrap pointer-events-none">${menu.title}</span>
                 </a>
             `;
         }
@@ -256,6 +246,44 @@ function initModernLayout(pageMeta) {
     layoutWrapper.insertAdjacentHTML('beforeend', modalsHTML);
     document.body.appendChild(layoutWrapper);
     
+    // ==========================================
+    // 4. GLOBAL TOOLTIP LOGIC (ANTI FLICKER)
+    // ==========================================
+    const globalTooltip = document.createElement('div');
+    globalTooltip.id = 'global-sidebar-tooltip';
+    globalTooltip.className = 'fixed hidden bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-md shadow-xl z-[9999] pointer-events-none whitespace-nowrap transition-opacity duration-200 opacity-0 border border-slate-700';
+    document.body.appendChild(globalTooltip);
+
+    // Menggunakan Event Delegation agar area hover mencakup seluruh kotak <a>
+    document.body.addEventListener('mouseover', (e) => {
+        const item = e.target.closest('.sidebar-item');
+        if (item) {
+            const sidebar = document.getElementById('app-sidebar');
+            if (window.innerWidth >= 640 && sidebar && !sidebar.classList.contains('expanded')) {
+                const rect = item.getBoundingClientRect();
+                globalTooltip.innerText = item.getAttribute('data-title');
+                globalTooltip.style.top = (rect.top + (rect.height / 2) - 16) + 'px';
+                globalTooltip.style.left = (rect.right + 15) + 'px';
+                
+                globalTooltip.classList.remove('hidden');
+                void globalTooltip.offsetWidth; // force reflow
+                globalTooltip.classList.remove('opacity-0');
+            }
+        }
+    });
+
+    document.body.addEventListener('mouseout', (e) => {
+        const item = e.target.closest('.sidebar-item');
+        if (item) {
+            globalTooltip.classList.add('opacity-0');
+            setTimeout(() => {
+                if(globalTooltip.classList.contains('opacity-0')) {
+                    globalTooltip.classList.add('hidden');
+                }
+            }, 200);
+        }
+    });
+
     lucide.createIcons();
     setTimeout(cekNotifikasiInbox, 1000); 
 }
