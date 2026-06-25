@@ -36,7 +36,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
         
-        // Menutup dropdown action menu mobile jika klik di luar
         const actionMenu = document.getElementById('mobile-action-menu');
         if (actionMenu && !actionMenu.classList.contains('hidden')) {
             if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenu"]')) {
@@ -49,7 +48,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(window.muatDataStok, 200);
 });
 
-// Fungsi untuk toggle menu dropdown di mobile
 window.toggleActionMenu = function(e) {
     if(e) e.stopPropagation();
     const menu = document.getElementById('mobile-action-menu');
@@ -239,12 +237,14 @@ window.thSort = function(idx, label, cls = "") {
     const noFilter = ['col-cb', 'col-open'].includes(colClass);
     
     const filterBtn = noFilter ? '' : `
-        <button onclick="window.openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-200 rounded ml-1 transition text-slate-400 hover:text-slate-700" title="Filter ${label}">
-            <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon transition-all"></i>
+        <button onclick="window.openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded ml-1 transition" title="Filter ${label}">
+            <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
         </button>`;
 
+    const justifyClass = noFilter ? 'justify-center' : 'justify-start';
+
     return `<th class="hdr-std ${cls} select-none">
-        <div class="flex items-center justify-center gap-1.5">
+        <div class="flex items-center ${justifyClass} gap-1.5">
             <span class="cursor-pointer flex items-center gap-1 hover:text-blue-300 transition" onclick="window.sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
             ${filterBtn}
         </div>
@@ -256,8 +256,7 @@ window.renderTabel = function() {
     const tbody = document.getElementById('tbody-ks');
     window.sortState = {}; 
 
-    // REVISI 1: even:bg-slate-100 untuk striping yang lebih gelap
-    const rowClassBase = "bg-white even:bg-slate-100 transition row-ks text-sm border-b border-slate-200";
+    const rowClassBase = "transition row-ks text-sm";
 
     if(window.modeKS === 'qr') {
         thead.innerHTML = `
@@ -293,25 +292,25 @@ window.renderTabel = function() {
                 }
             }
             let poString = poArr.length > 0 ? poArr.join(' | ') : 'KOSONG';
-            let btnPO = `<button onclick="window.bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 mx-auto w-full max-w-[100px] shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
+            let btnPO = `<button onclick="window.bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
 
             return `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 font-semibold text-slate-800 col-area" data-search="${r.area}">${r.area}</td>
-                    <td class="px-4 py-3 font-mono font-medium text-slate-800 col-qr text-left" data-search="${r.qrcode}">${r.qrcode}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-mesin" data-search="${r.mesin}">${r.mesin}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-shift" data-search="${r.shift}">${r.shift}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-pjg" data-search="${r.pjg}">${r.pjg}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-grade" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-dus" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-3 font-medium text-slate-500 col-po-bawaan" data-search="${r.po_bawaan}">${r.po_bawaan}</td>
-                    <td class="px-4 py-2 col-po" data-search="${poString}">${btnPO}</td>
-                    <td class="px-4 py-3 font-medium text-slate-500 col-ket text-left" data-search="${r.ket}">${r.ket}</td>
+                    <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-4 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
+                    <td class="px-4 py-4 font-mono font-medium text-slate-800 text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-mesin" data-search="${r.mesin}">${r.mesin}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-shift" data-search="${r.shift}">${r.shift}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
+                    <td class="px-4 py-4 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-4 font-medium text-slate-500 text-left col-po-bawaan" data-search="${r.po_bawaan}">${r.po_bawaan}</td>
+                    <td class="px-4 py-4 text-left col-po" data-search="${poString}">${btnPO}</td>
+                    <td class="px-4 py-4 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
                 </tr>`;
         }).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="15" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -338,17 +337,17 @@ window.renderTabel = function() {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             return `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-qty="${r.qty}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 font-semibold text-slate-800 col-area" data-search="${r.area}">${r.area}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-pjg" data-search="${r.pjg}">${r.pjg}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-grade" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-dus" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-3 font-semibold text-slate-800 col-po" data-search="${r.po_aktual}">${r.po_aktual}</td>
-                    <td class="px-4 py-3 font-medium text-slate-500 col-ket text-left" data-search="${r.keterangan}">${r.keterangan}</td>
-                    <td class="px-4 py-3 font-black text-emerald-700 col-qty text-base" data-search="${r.qty}">${r.qty}</td>
+                    <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-qty="${r.qty}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-4 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
+                    <td class="px-4 py-4 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-4 font-semibold text-slate-900 text-left col-po" data-search="${r.po_aktual}">${r.po_aktual}</td>
+                    <td class="px-4 py-4 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
+                    <td class="px-4 py-4 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
                 </tr>`;
         }).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -373,17 +372,17 @@ window.renderTabel = function() {
 
         tbody.innerHTML = window.dataKSGlobal.map((r) => `
             <tr class="${rowClassBase}">
-                <td class="px-4 py-3 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 text-center col-open"><button onclick="window.bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-pjg" data-search="${r.pjg}">${r.pjg}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-grade" data-search="${r.grade}">${r.grade}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-dus" data-search="${r.dus}">${r.dus}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-shading" data-search="${r.shading}">${r.shading}</td>
-                <td class="px-4 py-3 font-semibold text-slate-800 col-po" data-search="${r.po}">${r.po}</td>
-                <td class="px-4 py-3 font-medium text-slate-500 col-ket text-left" data-search="${r.ket}">${r.ket}</td>
-                <td class="px-4 py-3 font-black text-emerald-700 col-qty text-base" data-search="${r.qty}">${r.qty}</td>
+                <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-4 text-center col-open"><button onclick="window.bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
+                <td class="px-4 py-4 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
+                <td class="px-4 py-4 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
+                <td class="px-4 py-4 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                <td class="px-4 py-4 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
+                <td class="px-4 py-4 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
+                <td class="px-4 py-4 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
+                <td class="px-4 py-4 font-semibold text-slate-900 text-left col-po" data-search="${r.po}">${r.po}</td>
+                <td class="px-4 py-4 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
+                <td class="px-4 py-4 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
             </tr>
         `).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -405,14 +404,14 @@ window.renderTabel = function() {
 
         tbody.innerHTML = window.stokLembaranRaw.map((r) => `
             <tr class="${rowClassBase}">
-                <td class="px-4 py-3 text-center col-cb"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 font-semibold text-slate-800 col-area" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
-                <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-pjg" data-search="${r.pjg || '-'}">${r.pjg || '-'}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
-                <td class="px-4 py-3 font-medium text-slate-500 col-ket text-left" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
+                <td class="px-4 py-4 text-center col-cb"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-4 font-semibold text-slate-800 text-left col-area" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
+                <td class="px-4 py-4 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
+                <td class="px-4 py-4 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg || '-'}">${r.pjg || '-'}</td>
+                <td class="px-4 py-4 font-medium text-slate-700 text-left col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
+                <td class="px-4 py-4 font-medium text-slate-700 text-left col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
+                <td class="px-4 py-4 font-medium text-slate-700 text-left col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
+                <td class="px-4 py-4 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
             </tr>
         `).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="8" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -541,7 +540,6 @@ window.eksekusiGantiPO = async function() {
             let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
             qtySisaUntukDiupdate -= qtyPotong;
 
-            // Memanggil RPC Supabase yang sudah diupdate
             const { error } = await db.rpc('ganti_customer_aktual_ks_v2', { 
                 p_id_sku: row.id_sku,
                 p_customer_lama: row.po_aktual,
