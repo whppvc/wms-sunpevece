@@ -387,7 +387,7 @@ function renderHeaderDanTabel() {
                 <th class="hdr-std col-status hidden">Status Hold</th>
                 ${thSort(3, 'Collect', 'col-status-data')}
                 <th class="hdr-std col-waktu hidden">Waktu Scan</th>
-                ${thSort(5, 'Troli Gabungan', 'col-troli')}
+                ${thSort(5, 'TROLI', 'col-troli')}
                 <th class="hdr-std col-qr hidden">QRCode</th>
                 ${thSort(7, 'Tgl Produksi', 'col-tgl')}
                 ${thSort(8, 'Mesin', 'col-mesin')}
