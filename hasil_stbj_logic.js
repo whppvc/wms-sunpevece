@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setTimeout(async () => {
         await loadKamusDanJasper();
-        await loadUserPreferences(); // Load urutan kolom dari DB
+        loadUserPreferences(); // Load urutan kolom dari Local Storage
         await muatDataDariSupabase();
     }, 200);
 });
@@ -55,16 +55,17 @@ window.toggleActionMenu = function(e) {
 };
 
 // ========================================================
-// FUNGSI PREFERENSI KOLOM (DRAG & DROP + DB)
+// FUNGSI PREFERENSI KOLOM (DRAG & DROP + LOCAL STORAGE)
 // ========================================================
-async function loadUserPreferences() {
-    try {
-        const { data, error } = await db.from('app_users').select('col_order_stbj').eq('username', currentUser.username).single();
-        if (data && data.col_order_stbj) {
-            userColOrder = typeof data.col_order_stbj === 'string' ? JSON.parse(data.col_order_stbj) : data.col_order_stbj;
+function loadUserPreferences() {
+    // REVISI: Menggunakan Local Storage agar super cepat dan tidak membebani DB
+    const savedOrder = localStorage.getItem(`col_order_stbj_${currentUser.username}`);
+    if (savedOrder) {
+        try {
+            userColOrder = JSON.parse(savedOrder);
+        } catch(e) {
+            userColOrder = [];
         }
-    } catch (e) {
-        console.log("Belum ada preferensi kolom atau kolom col_order_stbj belum dibuat di DB.");
     }
 }
 
@@ -73,12 +74,10 @@ function toggleSidebarKolom() {
     const overlay = document.getElementById('overlay-klik-luar');
     
     if (sidebar.classList.contains('translate-x-full')) {
-        // Buka Sidebar
         sidebar.classList.remove('translate-x-full');
         overlay.classList.remove('hidden');
         renderDragList();
     } else {
-        // Tutup Sidebar
         sidebar.classList.add('translate-x-full');
         overlay.classList.add('hidden');
     }
@@ -98,7 +97,7 @@ function renderDragList() {
     
     headers.forEach(th => {
         const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
-        const label = th.innerText.trim() || 'Tombol Aksi';
+        const label = th.innerText.trim() || 'Kolom';
         
         const div = document.createElement('div');
         div.className = 'drag-item flex items-center justify-between p-3 bg-white border border-slate-200 rounded-md shadow-sm hover:border-blue-400 transition';
@@ -109,7 +108,6 @@ function renderDragList() {
             <i data-lucide="grip-vertical" class="w-4 h-4 text-slate-400"></i>
         `;
         
-        // Event Listeners untuk Drag & Drop
         div.addEventListener('dragstart', () => { div.classList.add('dragging'); });
         div.addEventListener('dragend', () => { div.classList.remove('dragging'); });
         
@@ -143,34 +141,30 @@ function getDragAfterElement(container, y) {
     }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
-async function simpanUrutanKolom() {
+function simpanUrutanKolom() {
     const items = document.querySelectorAll('.drag-item');
     let newOrder = [];
     items.forEach(item => newOrder.push(item.getAttribute('data-col')));
     
     userColOrder = newOrder;
     
-    try {
-        const { error } = await db.from('app_users').update({ col_order_stbj: JSON.stringify(newOrder) }).eq('username', currentUser.username);
-        if (error) throw error;
-        
-        alert("Urutan kolom berhasil disimpan!");
-        toggleSidebarKolom();
-        renderHeaderDanTabel(); // Render ulang dengan urutan baru
-    } catch (e) {
-        alert("Gagal menyimpan ke database. Pastikan kolom 'col_order_stbj' sudah dibuat di tabel app_users.");
-    }
+    // REVISI: Simpan ke Local Storage
+    localStorage.setItem(`col_order_stbj_${currentUser.username}`, JSON.stringify(newOrder));
+    
+    alert("Urutan kolom berhasil disimpan di perangkat ini!");
+    toggleSidebarKolom();
+    renderHeaderDanTabel(); // Render ulang dengan urutan baru
 }
 
-async function resetUrutanKolom() {
+function resetUrutanKolom() {
     if(!confirm("Kembalikan urutan kolom ke default (bawaan sistem)?")) return;
     userColOrder = [];
-    try {
-        await db.from('app_users').update({ col_order_stbj: null }).eq('username', currentUser.username);
-        alert("Urutan dikembalikan ke default.");
-        toggleSidebarKolom();
-        renderHeaderDanTabel();
-    } catch (e) {}
+    // REVISI: Hapus dari Local Storage
+    localStorage.removeItem(`col_order_stbj_${currentUser.username}`);
+    
+    alert("Urutan dikembalikan ke default.");
+    toggleSidebarKolom();
+    renderHeaderDanTabel();
 }
 
 // FUNGSI INTI: Menyusun ulang DOM Tabel berdasarkan userColOrder
@@ -306,7 +300,7 @@ function sortTable(colIndex, headerEl) {
 
 const thSort = (idx, label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
-    const noFilter = ['col-cb', 'col-btn'].includes(colClass);
+    const noFilter = ['col-cb'].includes(colClass);
     
     const filterBtn = noFilter ? '' : `
         <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded ml-1 transition" title="Filter ${label}">
@@ -472,28 +466,28 @@ function renderHeaderDanTabel() {
     const rowClassBase = "transition text-row text-sm";
 
     if(modeSekarang === 'qrcode') {
+        // REVISI: Kolom Aksi/Hapus dihilangkan dari Header
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center border-r border-slate-600"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
-                <th class="hdr-std w-10 col-btn text-center border-r border-slate-600"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-slate-400"></i></th>
-                ${thSort(2, 'Status Item', 'col-status-gudang')}
-                ${tabelSekarang === 'hold_stbj' ? thSort(3, 'Status Hold', 'col-status') : '<th class="hdr-std hidden col-status">Status Hold</th>'}
-                ${thSort(tabelSekarang==='hold_stbj'?4:3, 'Collect', 'col-status-data')}
-                ${thSort(tabelSekarang==='hold_stbj'?5:4, 'Waktu Scan', 'col-waktu')}
-                ${thSort(tabelSekarang==='hold_stbj'?6:5, 'Troli', 'col-troli')}
-                ${thSort(tabelSekarang==='hold_stbj'?7:6, 'QRCode', 'col-qr')}
-                ${thSort(tabelSekarang==='hold_stbj'?8:7, 'Tgl Produksi', 'col-tgl')}
-                ${thSort(tabelSekarang==='hold_stbj'?9:8, 'Mesin', 'col-mesin')}
-                ${thSort(tabelSekarang==='hold_stbj'?10:9, 'Shift', 'col-shift')}
-                ${thSort(tabelSekarang==='hold_stbj'?11:10, 'Jenis Item', 'col-jenis')}
-                ${thSort(tabelSekarang==='hold_stbj'?12:11, 'Nama Item', 'col-nama')}
-                ${thSort(tabelSekarang==='hold_stbj'?13:12, 'Pjg', 'col-pjg')}
-                ${thSort(tabelSekarang==='hold_stbj'?14:13, 'Grade', 'col-grade')}
-                ${thSort(tabelSekarang==='hold_stbj'?15:14, 'Dus', 'col-dus')}
-                ${thSort(tabelSekarang==='hold_stbj'?16:15, 'Shading', 'col-shading')}
-                ${thSort(tabelSekarang==='hold_stbj'?17:16, 'Customer Bawaan', 'col-customer')}
-                ${thSort(tabelSekarang==='hold_stbj'?18:17, 'Keterangan', 'col-ket')}
-                ${thSort(tabelSekarang==='hold_stbj'?19:18, 'PIC Input', 'col-pic')}
+                ${thSort(1, 'Status Item', 'col-status-gudang')}
+                ${tabelSekarang === 'hold_stbj' ? thSort(2, 'Status Hold', 'col-status') : '<th class="hdr-std hidden col-status">Status Hold</th>'}
+                ${thSort(tabelSekarang==='hold_stbj'?3:2, 'Collect', 'col-status-data')}
+                ${thSort(tabelSekarang==='hold_stbj'?4:3, 'Waktu Scan', 'col-waktu')}
+                ${thSort(tabelSekarang==='hold_stbj'?5:4, 'Troli', 'col-troli')}
+                ${thSort(tabelSekarang==='hold_stbj'?6:5, 'QRCode', 'col-qr')}
+                ${thSort(tabelSekarang==='hold_stbj'?7:6, 'Tgl Produksi', 'col-tgl')}
+                ${thSort(tabelSekarang==='hold_stbj'?8:7, 'Mesin', 'col-mesin')}
+                ${thSort(tabelSekarang==='hold_stbj'?9:8, 'Shift', 'col-shift')}
+                ${thSort(tabelSekarang==='hold_stbj'?10:9, 'Jenis Item', 'col-jenis')}
+                ${thSort(tabelSekarang==='hold_stbj'?11:10, 'Nama Item', 'col-nama')}
+                ${thSort(tabelSekarang==='hold_stbj'?12:11, 'Pjg', 'col-pjg')}
+                ${thSort(tabelSekarang==='hold_stbj'?13:12, 'Grade', 'col-grade')}
+                ${thSort(tabelSekarang==='hold_stbj'?14:13, 'Dus', 'col-dus')}
+                ${thSort(tabelSekarang==='hold_stbj'?15:14, 'Shading', 'col-shading')}
+                ${thSort(tabelSekarang==='hold_stbj'?16:15, 'Customer Bawaan', 'col-customer')}
+                ${thSort(tabelSekarang==='hold_stbj'?17:16, 'Keterangan', 'col-ket')}
+                ${thSort(tabelSekarang==='hold_stbj'?18:17, 'PIC Input', 'col-pic')}
             </tr>`;
         
         if(rawDataRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="22" class="px-4 py-8 text-center font-bold text-slate-400 border-b border-slate-200">Tabel Kosong.</td></tr>`; return; }
@@ -518,14 +512,10 @@ function renderHeaderDanTabel() {
                 statData = `<span class="text-indigo-600 font-medium uppercase">${r.status_data}</span>`;
             }
 
+            // REVISI: Kolom Aksi/Hapus dihilangkan dari Body
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-4 text-center col-btn">
-                        <button onclick="aksiHapusPerBaris('${r.qrcode}')" class="text-slate-400 hover:text-rose-600 transition p-1.5 rounded-md hover:bg-rose-50 mx-auto flex shadow-sm border border-transparent hover:border-rose-200">
-                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                        </button>
-                    </td>
                     <td class="px-4 py-4 text-left col-status-gudang" data-search="${r.is_in_gudang ? 'IN GUDANG' : 'STBJ'}">${htmlStatusGudang}</td>
                     ${tabelSekarang === 'hold_stbj' ? `<td class="px-4 py-4 text-left font-black text-amber-600 col-status" data-search="${r.status || 'HOLD'}">${r.status || 'HOLD'}</td>` : '<td class="px-4 py-4 hidden col-status">-</td>'}
                     <td class="px-4 py-4 text-left col-status-data" data-search="${r.status_data || '-'}">${statData}</td>
@@ -603,7 +593,7 @@ function renderHeaderDanTabel() {
         });
 
         let arr = Object.values(groups);
-        if(arr.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="20" class="px-4 py-8 text-center font-bold text-slate-400 border-b border-slate-200">Kosong.</td></tr>`; return; }
+        if(arr.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="20" class="px-4 py-8 text-center font-bold text-slate-400">Kosong.</td></tr>`; return; }
 
         let h = '';
         arr.forEach((r) => {
@@ -640,12 +630,10 @@ function renderHeaderDanTabel() {
                 </tr>`;
         });
         tbody.innerHTML = h;
-        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="20" class="px-4 py-8 text-center font-bold text-slate-400 border-b border-slate-200">Tidak ada data cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="20" class="px-4 py-8 text-center font-bold text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
     }
     
-    // REVISI: Panggil applyColumnOrder() setelah tabel dirender
     applyColumnOrder();
-    
     lucide.createIcons(); 
     saringTabelExcel();
 }
@@ -859,15 +847,6 @@ async function simpanDataJasper() {
     }
 }
 
-async function aksiHapusPerBaris(qrcode) {
-    if(!confirm(`Hapus permanen QRCode ini dari tabel ${tabelSekarang}?`)) return;
-    try {
-        const { error } = await db.from(tabelSekarang).delete().eq('qrcode', qrcode);
-        if(error) throw error;
-        await muatDataDariSupabase();
-    } catch(e) { alert("Gagal hapus: " + e.message); }
-}
-
 async function aksiMassal(tipe) {
     let checkedValues = [];
     document.querySelectorAll('.row-cb:checked').forEach(cb => { cb.value.split(',').forEach(v => { if(v) checkedValues.push(v); }); });
@@ -876,7 +855,7 @@ async function aksiMassal(tipe) {
     if(tipe === 'salin') {
         let textSalin = "";
         const headers = Array.from(document.querySelectorAll('#thead-stbj th'))
-            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-btn'))
+            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb'))
             .map(th => th.innerText.trim().replace(/\n/g, ' '));
         textSalin += headers.join('\t') + '\n';
 
@@ -884,7 +863,7 @@ async function aksiMassal(tipe) {
             const tr = cb.closest('tr');
             const rowData = [];
             Array.from(tr.children).forEach(td => {
-                if(td.classList.contains('col-cb') || td.classList.contains('col-btn')) return;
+                if(td.classList.contains('col-cb')) return;
                 if(window.getComputedStyle(td).display !== 'none') {
                     let val = td.getAttribute('data-search') ? td.getAttribute('data-search') : td.innerText.trim();
                     rowData.push(val.replace(/\n/g, ' '));
@@ -983,7 +962,7 @@ async function aksiMassal(tipe) {
         
         let ws_data = [];
         const headers = Array.from(document.querySelectorAll('#thead-stbj th'))
-            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-btn'))
+            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb'))
             .map(th => th.innerText.trim().replace(/\n/g, ' '));
         ws_data.push(headers);
 
@@ -991,7 +970,7 @@ async function aksiMassal(tipe) {
             const tr = cb.closest('tr');
             const rowData = [];
             Array.from(tr.children).forEach(td => {
-                if(td.classList.contains('col-cb') || td.classList.contains('col-btn')) return;
+                if(td.classList.contains('col-cb')) return;
                 if(window.getComputedStyle(td).display !== 'none') {
                     let val = td.getAttribute('data-search') ? td.getAttribute('data-search') : td.innerText.trim();
                     rowData.push(val.replace(/\n/g, ' '));
