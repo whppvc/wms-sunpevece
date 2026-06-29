@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setTimeout(async () => {
         await loadKamusDanJasper();
-        loadUserPreferences(); // Load urutan kolom dari Local Storage
+        loadUserPreferences(); 
         await muatDataDariSupabase();
     }, 200);
 });
@@ -58,7 +58,6 @@ window.toggleActionMenu = function(e) {
 // FUNGSI PREFERENSI KOLOM (DRAG & DROP + LOCAL STORAGE)
 // ========================================================
 function loadUserPreferences() {
-    // REVISI: Menggunakan Local Storage agar super cepat dan tidak membebani DB
     const savedOrder = localStorage.getItem(`col_order_stbj_${currentUser.username}`);
     if (savedOrder) {
         try {
@@ -92,7 +91,6 @@ function renderDragList() {
     const container = document.getElementById('kolom-drag-container');
     container.innerHTML = '';
     
-    // Ambil semua header yang ada saat ini (kecuali checkbox)
     const headers = Array.from(document.querySelectorAll('#thead-stbj th')).filter(th => !th.classList.contains('col-cb'));
     
     headers.forEach(th => {
@@ -147,19 +145,16 @@ function simpanUrutanKolom() {
     items.forEach(item => newOrder.push(item.getAttribute('data-col')));
     
     userColOrder = newOrder;
-    
-    // REVISI: Simpan ke Local Storage
     localStorage.setItem(`col_order_stbj_${currentUser.username}`, JSON.stringify(newOrder));
     
     alert("Urutan kolom berhasil disimpan di perangkat ini!");
     toggleSidebarKolom();
-    renderHeaderDanTabel(); // Render ulang dengan urutan baru
+    renderHeaderDanTabel(); 
 }
 
 function resetUrutanKolom() {
     if(!confirm("Kembalikan urutan kolom ke default (bawaan sistem)?")) return;
     userColOrder = [];
-    // REVISI: Hapus dari Local Storage
     localStorage.removeItem(`col_order_stbj_${currentUser.username}`);
     
     alert("Urutan dikembalikan ke default.");
@@ -167,7 +162,6 @@ function resetUrutanKolom() {
     renderHeaderDanTabel();
 }
 
-// FUNGSI INTI: Menyusun ulang DOM Tabel berdasarkan userColOrder
 function applyColumnOrder() {
     if (!userColOrder || userColOrder.length === 0) return;
 
@@ -176,9 +170,8 @@ function applyColumnOrder() {
 
     rows.forEach(row => {
         const cells = Array.from(row.children);
-        if (cells.length <= 1) return; // Skip baris kosong/pesan error
+        if (cells.length <= 1) return; 
 
-        // Pisahkan checkbox (selalu paling kiri)
         const cbCell = cells.find(c => c.classList.contains('col-cb'));
         
         const cellMap = {};
@@ -187,17 +180,15 @@ function applyColumnOrder() {
             if (colClass) cellMap[colClass] = c;
         });
 
-        row.innerHTML = ''; // Kosongkan baris
-        if (cbCell) row.appendChild(cbCell); // Masukkan checkbox pertama
+        row.innerHTML = ''; 
+        if (cbCell) row.appendChild(cbCell); 
 
-        // Masukkan sel berdasarkan urutan user
         userColOrder.forEach(colId => {
             if (cellMap[colId]) {
                 row.appendChild(cellMap[colId]);
             }
         });
 
-        // Masukkan sisa sel yang mungkin tidak ada di array preferensi (fallback)
         cells.forEach(c => {
             const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
             if (colClass !== 'col-cb' && !userColOrder.includes(colClass)) {
@@ -466,7 +457,6 @@ function renderHeaderDanTabel() {
     const rowClassBase = "transition text-row text-sm";
 
     if(modeSekarang === 'qrcode') {
-        // REVISI: Kolom Aksi/Hapus dihilangkan dari Header
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center border-r border-slate-600"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
@@ -512,7 +502,6 @@ function renderHeaderDanTabel() {
                 statData = `<span class="text-indigo-600 font-medium uppercase">${r.status_data}</span>`;
             }
 
-            // REVISI: Kolom Aksi/Hapus dihilangkan dari Body
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -847,6 +836,15 @@ async function simpanDataJasper() {
     }
 }
 
+async function aksiHapusPerBaris(qrcode) {
+    if(!confirm(`Hapus permanen QRCode ini dari tabel ${tabelSekarang}?`)) return;
+    try {
+        const { error } = await db.from(tabelSekarang).delete().eq('qrcode', qrcode);
+        if(error) throw error;
+        await muatDataDariSupabase();
+    } catch(e) { alert("Gagal hapus: " + e.message); }
+}
+
 async function aksiMassal(tipe) {
     let checkedValues = [];
     document.querySelectorAll('.row-cb:checked').forEach(cb => { cb.value.split(',').forEach(v => { if(v) checkedValues.push(v); }); });
@@ -855,7 +853,7 @@ async function aksiMassal(tipe) {
     if(tipe === 'salin') {
         let textSalin = "";
         const headers = Array.from(document.querySelectorAll('#thead-stbj th'))
-            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb'))
+            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-btn'))
             .map(th => th.innerText.trim().replace(/\n/g, ' '));
         textSalin += headers.join('\t') + '\n';
 
@@ -863,7 +861,7 @@ async function aksiMassal(tipe) {
             const tr = cb.closest('tr');
             const rowData = [];
             Array.from(tr.children).forEach(td => {
-                if(td.classList.contains('col-cb')) return;
+                if(td.classList.contains('col-cb') || td.classList.contains('col-btn')) return;
                 if(window.getComputedStyle(td).display !== 'none') {
                     let val = td.getAttribute('data-search') ? td.getAttribute('data-search') : td.innerText.trim();
                     rowData.push(val.replace(/\n/g, ' '));
@@ -962,7 +960,7 @@ async function aksiMassal(tipe) {
         
         let ws_data = [];
         const headers = Array.from(document.querySelectorAll('#thead-stbj th'))
-            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb'))
+            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-btn'))
             .map(th => th.innerText.trim().replace(/\n/g, ' '));
         ws_data.push(headers);
 
@@ -970,7 +968,7 @@ async function aksiMassal(tipe) {
             const tr = cb.closest('tr');
             const rowData = [];
             Array.from(tr.children).forEach(td => {
-                if(td.classList.contains('col-cb')) return;
+                if(td.classList.contains('col-cb') || td.classList.contains('col-btn')) return;
                 if(window.getComputedStyle(td).display !== 'none') {
                     let val = td.getAttribute('data-search') ? td.getAttribute('data-search') : td.innerText.trim();
                     rowData.push(val.replace(/\n/g, ' '));
