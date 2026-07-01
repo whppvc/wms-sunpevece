@@ -1,6 +1,7 @@
 let dataStbj = []; 
 let deletedStbjStack = []; 
 let masterKamus = [];
+let jasperData = []; // REVISI: Variabel penampung data Jasper
 let globalRowId = 0;
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
@@ -29,6 +30,7 @@ window.tutupModalAdd = function() {
 
 async function loadInitialSTBJData() {
     try {
+        // Load Troli
         const { data: mData1 } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
         if(mData1) {
             const trolis = [...new Set(mData1.map(r => r.nama_troli).filter(x => x))];
@@ -36,11 +38,18 @@ async function loadInitialSTBJData() {
             sel.innerHTML = '<option value="">-- Memuat Troli... --</option>';
             trolis.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
         }
+        
+        // Load Kamus Master
         const { data: mData2 } = await db.from('master_2').select('*');
         if(mData2) {
             masterKamus = mData2;
             window.masterData = { kamus: mData2 }; 
         }
+
+        // REVISI: Load Katalog Jasper
+        const { data: dj } = await db.from('nama_jasper').select('*');
+        if(dj) jasperData = dj;
+
     } catch (err) { console.error("Gagal muat referensi:", err); }
 }
 
@@ -315,7 +324,6 @@ function saringTabelSTBJ() {
     document.getElementById('lbl-tampil-baris').innerText = visibleCount;
 }
 
-// REVISI: Cek ke tabel hasil_stbj
 async function cekGudangSTBJ() {
     if(dataStbj.length === 0) return alert("Belum ada data.");
     const btn = document.getElementById('btn-cek-gudang'); const ori = btn.innerHTML;
@@ -368,7 +376,6 @@ async function cekGudangSTBJ() {
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
-// REVISI: Simpan ke tabel hasil_stbj
 async function saveToDatabaseSTBJ() {
     if(dataStbj.length === 0) return alert('Data kosong!');
     const blmCek = dataStbj.filter(d => d.status === 'BELUM CEK');
@@ -380,27 +387,36 @@ async function saveToDatabaseSTBJ() {
     const UNIKs = dataStbj.filter(d => d.status === 'BELUM STBJ');
     const dupes = dataStbj.filter(d => d.status === 'SUDAH STBJ' || d.status === 'DUPLIKAT SCAN' || d.status === 'HOLD' || d.status === 'IN GUDANG');
 
-    const mapToHasil = (d, finalStatus) => ({
-        troli: d.troli,
-        qrcode: d.qrcode,
-        tgl_produksi: d.tglProduksi,
-        shift: d.shift,
-        mesin: d.mesin,
-        jenis_item: d.jenisItem, 
-        nama_item: d.namaItem,
-        panjang: d.panjang,
-        grade: d.grade,
-        dus: d.dus,
-        shading: d.shading,
-        customer: d.customer, // REVISI: Kolom customer
-        keterangan: d.keterangan || '-',
-        status: finalStatus,
-        status_data: 'BELUM',
-        posisi: 'STBJ',
-        pic_input: d.pic,
-        nama_jasper: '-', // REVISI: Kolom nama_jasper
-        created_at: new Date().toISOString() 
-    });
+    // REVISI: Fungsi map untuk tabel hasil_stbj (mencari nama_jasper)
+    const mapToHasil = (d, finalStatus) => {
+        let jName = `JAS-${d.namaItem}`;
+        if (jasperData && jasperData.length > 0) {
+            const cJasper = jasperData.find(j => j.nama_item === d.namaItem && j.panjang === d.panjang && j.grade === d.grade);
+            if (cJasper) jName = cJasper.nama_jasper;
+        }
+
+        return {
+            troli: d.troli,
+            qrcode: d.qrcode,
+            tgl_produksi: d.tglProduksi,
+            shift: d.shift,
+            mesin: d.mesin,
+            jenis_item: d.jenisItem, 
+            nama_item: d.namaItem,
+            panjang: d.panjang,
+            grade: d.grade,
+            dus: d.dus,
+            shading: d.shading,
+            customer: d.customer, 
+            keterangan: d.keterangan || '-',
+            status: finalStatus,
+            status_data: 'BELUM',
+            posisi: 'STBJ',
+            pic_input: d.pic,
+            nama_jasper: jName, // <-- REVISI: Disimpan ke DB
+            created_at: new Date().toISOString() 
+        };
+    };
 
     const mapToHold = (d, finalStatus) => ({
         troli: d.troli,
@@ -414,7 +430,7 @@ async function saveToDatabaseSTBJ() {
         grade: d.grade,
         dus: d.dus,
         shading: d.shading,
-        customer_bawaan: d.customer, // Tabel hold_stbj masih pakai customer_bawaan
+        customer_bawaan: d.customer, 
         keterangan: d.keterangan || '-',
         status: finalStatus,
         status_data: 'BELUM',
