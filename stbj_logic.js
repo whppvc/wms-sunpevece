@@ -39,7 +39,7 @@ async function loadInitialSTBJData() {
         const { data: mData2 } = await db.from('master_2').select('*');
         if(mData2) {
             masterKamus = mData2;
-            window.masterData = { kamus: mData2 }; // Pastikan wms_parser.js bisa baca
+            window.masterData = { kamus: mData2 }; 
         }
     } catch (err) { console.error("Gagal muat referensi:", err); }
 }
@@ -72,7 +72,6 @@ document.getElementById('form-scan').addEventListener('submit', (e) => {
     
     renderTable();
     
-    // Kosongkan input agar bisa scan terus menerus tanpa menutup modal
     inputEl.value = ''; 
     inputEl.focus();
     
@@ -100,7 +99,7 @@ function renderTable() {
         if(d.status === 'SUDAH STBJ') badgeClass = "bg-red-600 text-white border-red-700"; 
         if(d.status === 'DUPLIKAT SCAN') badgeClass = "bg-red-600 text-white border-red-700";
         if(d.status === 'HOLD') badgeClass = "bg-amber-500 text-white border-amber-600";
-        if(d.status === 'IN GUDANG') badgeClass = "bg-red-600 text-white border-red-700"; // REVISI: Status baru
+        if(d.status === 'IN GUDANG') badgeClass = "bg-red-600 text-white border-red-700"; 
 
         if(d.status === 'BELUM CEK' && d.isLocalDuplicate) {
             badgeClass = "bg-red-600 text-white border-red-700";
@@ -316,7 +315,7 @@ function saringTabelSTBJ() {
     document.getElementById('lbl-tampil-baris').innerText = visibleCount;
 }
 
-// REVISI: Logika Verifikasi Gudang dirombak agar mengecek ke 3 tabel sekaligus
+// REVISI: Cek ke tabel hasil_stbj
 async function cekGudangSTBJ() {
     if(dataStbj.length === 0) return alert("Belum ada data.");
     const btn = document.getElementById('btn-cek-gudang'); const ori = btn.innerHTML;
@@ -324,18 +323,17 @@ async function cekGudangSTBJ() {
 
     const allQRs = dataStbj.map(d => d.qrcode);
     try {
-        // Cek ke 3 tabel sekaligus
-        const [resGlobal, resGudang, resHold] = await Promise.all([
-            db.from('stok_global').select('qrcode').in('qrcode', allQRs),
+        const [resHasil, resGudang, resHold] = await Promise.all([
+            db.from('hasil_stbj').select('qrcode').in('qrcode', allQRs),
             db.from('stok_qr').select('qrcode').in('qrcode', allQRs),
             db.from('hold_stbj').select('qrcode').in('qrcode', allQRs)
         ]);
 
-        if(resGlobal.error) throw resGlobal.error;
+        if(resHasil.error) throw resHasil.error;
         if(resGudang.error) throw resGudang.error;
         if(resHold.error) throw resHold.error;
 
-        const setGlobal = new Set((resGlobal.data || []).map(d => d.qrcode));
+        const setHasil = new Set((resHasil.data || []).map(d => d.qrcode));
         const setGudang = new Set((resGudang.data || []).map(d => d.qrcode));
         const setHold = new Set((resHold.data || []).map(d => d.qrcode));
 
@@ -347,9 +345,9 @@ async function cekGudangSTBJ() {
                 d.status = 'IN GUDANG';
                 d.keterangan = 'SUDAH ADA DI KARTU STOK';
                 infoDuplikat++;
-            } else if (setGlobal.has(d.qrcode)) {
+            } else if (setHasil.has(d.qrcode)) {
                 d.status = 'SUDAH STBJ';
-                d.keterangan = 'SUDAH ADA DI STOK GLOBAL';
+                d.keterangan = 'SUDAH ADA DI HASIL STBJ';
                 infoDuplikat++;
             } else if (setHold.has(d.qrcode)) {
                 d.status = 'HOLD';
@@ -370,6 +368,7 @@ async function cekGudangSTBJ() {
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
+// REVISI: Simpan ke tabel hasil_stbj
 async function saveToDatabaseSTBJ() {
     if(dataStbj.length === 0) return alert('Data kosong!');
     const blmCek = dataStbj.filter(d => d.status === 'BELUM CEK');
@@ -379,10 +378,9 @@ async function saveToDatabaseSTBJ() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btn.disabled = true;
 
     const UNIKs = dataStbj.filter(d => d.status === 'BELUM STBJ');
-    // REVISI: 'IN GUDANG' juga dianggap sebagai duplikat yang tidak boleh masuk stok_global lagi
     const dupes = dataStbj.filter(d => d.status === 'SUDAH STBJ' || d.status === 'DUPLIKAT SCAN' || d.status === 'HOLD' || d.status === 'IN GUDANG');
 
-    const mapToSchema = (d, finalStatus) => ({
+    const mapToHasil = (d, finalStatus) => ({
         troli: d.troli,
         qrcode: d.qrcode,
         tgl_produksi: d.tglProduksi,
@@ -394,7 +392,29 @@ async function saveToDatabaseSTBJ() {
         grade: d.grade,
         dus: d.dus,
         shading: d.shading,
-        customer_bawaan: d.customer,
+        customer: d.customer, // REVISI: Kolom customer
+        keterangan: d.keterangan || '-',
+        status: finalStatus,
+        status_data: 'BELUM',
+        posisi: 'STBJ',
+        pic_input: d.pic,
+        nama_jasper: '-', // REVISI: Kolom nama_jasper
+        created_at: new Date().toISOString() 
+    });
+
+    const mapToHold = (d, finalStatus) => ({
+        troli: d.troli,
+        qrcode: d.qrcode,
+        tgl_produksi: d.tglProduksi,
+        shift: d.shift,
+        mesin: d.mesin,
+        jenis_item: d.jenisItem, 
+        nama_item: d.namaItem,
+        panjang: d.panjang,
+        grade: d.grade,
+        dus: d.dus,
+        shading: d.shading,
+        customer_bawaan: d.customer, // Tabel hold_stbj masih pakai customer_bawaan
         keterangan: d.keterangan || '-',
         status: finalStatus,
         status_data: 'BELUM',
@@ -405,18 +425,18 @@ async function saveToDatabaseSTBJ() {
 
     try {
         if(UNIKs.length > 0) {
-            const payloadGlobal = UNIKs.map(d => mapToSchema(d, 'SUDAH STBJ'));
-            const { error: err1 } = await db.from('stok_global').insert(payloadGlobal);
+            const payloadHasil = UNIKs.map(d => mapToHasil(d, 'SUDAH STBJ'));
+            const { error: err1 } = await db.from('hasil_stbj').insert(payloadHasil);
             if(err1) throw err1;
         }
         
         if(dupes.length > 0) {
-            const payloadHold = dupes.map(d => mapToSchema(d, 'HOLD'));
+            const payloadHold = dupes.map(d => mapToHold(d, 'HOLD'));
             const { error: err2 } = await db.from('hold_stbj').insert(payloadHold);
             if(err2) throw err2;
         }
 
-        alert(`BERHASIL DISIMPAN!\n- ${UNIKs.length} Barang UNIK masuk ke Stok Global\n- ${dupes.length} Barang Hold/Duplikat masuk ke Hold STBJ`);
+        alert(`BERHASIL DISIMPAN!\n- ${UNIKs.length} Barang UNIK masuk ke Hasil STBJ\n- ${dupes.length} Barang Hold/Duplikat masuk ke Hold STBJ`);
         dataStbj = []; renderTable();
         document.getElementById('cb-all').checked = false;
     } catch (err) { alert('GAGAL MENYIMPAN: ' + err.message); } 
