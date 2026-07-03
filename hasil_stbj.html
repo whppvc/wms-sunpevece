@@ -72,55 +72,37 @@
                     </select>
                 </div>
 
-                <div class="hidden sm:flex items-center gap-2 ml-auto">
-                    <button onclick="bukaDaftarKatalog()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-purple-800">
+                <!-- REVISI: Toolbar Kanan (Desktop & Mobile Digabung) -->
+                <div class="flex items-center gap-2 ml-auto relative">
+                    
+                    <!-- Tombol yang tetap di luar -->
+                    <button onclick="bukaDaftarKatalog()" class="hidden sm:flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-purple-800">
                         <div class="bg-purple-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="database" class="w-4 h-4"></i></div>
-                        <div class="bg-purple-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-purple-700 transition">Katalog Jasper</div>
+                        <div class="bg-purple-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide hover:bg-purple-700 transition">Katalog Jasper</div>
                     </button>
                     
-                    <button onclick="aksiMassal('collect')" id="btn-massal-collect" class="hidden group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-indigo-800">
+                    <button onclick="aksiMassal('collect')" id="btn-massal-collect" class="hidden sm:flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-indigo-800">
                         <div class="bg-indigo-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="check-square" class="w-4 h-4"></i></div>
-                        <div class="bg-indigo-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-indigo-700 transition">Collect</div>
+                        <div class="bg-indigo-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide hover:bg-indigo-700 transition">Collect</div>
                     </button>
 
-                    <button onclick="aksiMassal('hapus')" id="btn-hapus" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-rose-700">
-                        <div class="bg-rose-800 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="trash-2" class="w-4 h-4"></i></div>
-                        <div class="bg-rose-700 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-rose-600 transition">Hapus</div>
-                    </button>
-                    
-                    <button onclick="aksiMassal('hold')" id="btn-hold" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-amber-600">
-                        <div class="bg-amber-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="pause-circle" class="w-4 h-4"></i></div>
-                        <div class="bg-amber-500 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-amber-400 transition">Hold</div>
-                    </button>
-                    
-                    <button onclick="aksiMassal('salin')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-slate-300 bg-white hover:bg-slate-50">
-                        <div class="text-slate-600 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="copy" class="w-4 h-4"></i></div>
-                        <div class="text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide transition">Salin</div>
-                    </button>
-
-                    <button onclick="aksiMassal('xlsx')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-slate-300 bg-white hover:bg-slate-50">
-                        <div class="text-emerald-600 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i></div>
-                        <div class="text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide transition">Excel</div>
-                    </button>
-
-                    <button onclick="toggleSidebarKolom()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-blue-600 bg-white hover:bg-blue-50 ml-2">
-                        <div class="text-blue-600 flex items-center justify-center px-3 py-2.5 border-r border-blue-200"><i data-lucide="columns" class="w-4 h-4"></i></div>
-                        <div class="text-blue-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide transition">Atur Kolom</div>
-                    </button>
-                </div>
-
-                <div class="sm:hidden relative ml-auto">
-                    <!-- REVISI: Memastikan onclick memanggil toggleActionMenuMobile -->
+                    <!-- Tombol Induk (Garis 3) -->
                     <button onclick="toggleActionMenuMobile(event)" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition">
                         <i data-lucide="menu" class="w-5 h-5"></i>
                     </button>
+                    
+                    <!-- Dropdown Menu -->
                     <div id="mobile-action-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
+                        
+                        <!-- Muncul di Mobile Saja -->
                         <button onclick="bukaDaftarKatalog(); toggleActionMenuMobile(event)" class="sm:hidden text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="database" class="w-4 h-4"></i> Katalog Jasper</button>
                         <button onclick="aksiMassal('collect'); toggleActionMenuMobile(event)" id="btn-massal-collect-mob" class="hidden sm:hidden text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-indigo-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="check-square" class="w-4 h-4"></i> Collect</button>
+                        
+                        <!-- Muncul di Desktop & Mobile -->
                         <button onclick="aksiMassal('hapus'); toggleActionMenuMobile(event)" id="btn-hapus-mob" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-rose-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Item</button>
                         <button onclick="aksiMassal('hold'); toggleActionMenuMobile(event)" id="btn-hold-mob" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-amber-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Item</button>
                         <button onclick="aksiMassal('salin'); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
-                        <button onclick="aksiMassal('xlsx'); toggleActionMenuMobile(event)" class="text-left px-4 py-3 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
+                        <button onclick="aksiMassal('xlsx'); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
                         <button onclick="toggleSidebarKolom(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 text-xs font-bold text-blue-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</button>
                     </div>
                 </div>
@@ -244,16 +226,17 @@
                 <input type="hidden" id="j-id"> 
                 <div>
                     <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
-                    <input type="text" id="j-nama" class="w-full p-2.5 text-sm border border-slate-300 rounded-md focus:border-blue-500 outline-none font-bold shadow-inner" placeholder="Contoh: PLAFON 103 SILVER">
+                    <!-- REVISI: Input dibuat readonly dan background abu-abu -->
+                    <input type="text" id="j-nama" readonly class="w-full p-2.5 text-sm border border-slate-300 rounded-md outline-none font-bold bg-slate-100 text-slate-500 cursor-not-allowed">
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
-                        <input type="text" id="j-pjg" class="w-full p-2.5 text-sm border border-slate-300 rounded-md focus:border-blue-500 outline-none font-bold shadow-inner" placeholder="Contoh: 4M / 5M">
+                        <input type="text" id="j-pjg" readonly class="w-full p-2.5 text-sm border border-slate-300 rounded-md outline-none font-bold bg-slate-100 text-slate-500 cursor-not-allowed">
                     </div>
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
-                        <input type="text" id="j-grade" class="w-full p-2.5 text-sm border border-slate-300 rounded-md focus:border-blue-500 outline-none font-bold shadow-inner" placeholder="Contoh: A / BAGUS">
+                        <input type="text" id="j-grade" readonly class="w-full p-2.5 text-sm border border-slate-300 rounded-md outline-none font-bold bg-slate-100 text-slate-500 cursor-not-allowed">
                     </div>
                 </div>
                 <div>
