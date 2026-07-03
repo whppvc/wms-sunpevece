@@ -47,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 200);
 });
 
-// REVISI: Nama fungsi diubah agar tidak bentrok dengan global.js
 window.toggleActionMenuMobile = function(e) {
     if(e) e.stopPropagation();
     const menu = document.getElementById('mobile-action-menu');
@@ -285,7 +284,7 @@ function sortTable(colIndex, headerEl) {
 
 const thSort = (idx, label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
-    const noFilter = ['col-cb', 'col-btn'].includes(colClass);
+    const noFilter = ['col-cb'].includes(colClass);
     
     const filterBtn = noFilter ? '' : `
         <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded ml-1 transition" title="Filter ${label}">
@@ -525,7 +524,7 @@ function renderHeaderDanTabel() {
     else if(modeSekarang === 'item' || modeSekarang === 'jasper') {
         const isJasper = modeSekarang === 'jasper';
         
-        // REVISI: Menambahkan kolom Edit Jasper di sebelah Nama Jasper
+        // REVISI: Pindahkan kolom Jasper dan Edit ke sebelah Nama Item
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
@@ -539,7 +538,7 @@ function renderHeaderDanTabel() {
                 ${thSort(8, 'Mesin', 'col-mesin')}
                 ${thSort(9, 'Shift', 'col-shift')}
                 ${thSort(10, 'Jenis Item', 'col-jenis')}
-                ${thSort(11, 'Nama Item', 'col-nama')}
+                ${thSort(11, isJasper ? 'Nama Barang Jasper' : 'Nama Item', 'col-nama')}
                 ${isJasper ? thSort(11.5, 'Nama Jasper', 'col-jasper text-purple-300') : ''}
                 ${isJasper ? '<th class="hdr-std w-10 text-center col-btn-edit">Edit</th>' : ''}
                 ${thSort(12, 'Panjang', 'col-pjg')}
@@ -599,7 +598,6 @@ function renderHeaderDanTabel() {
                 statData = `<span class="text-indigo-600 font-medium uppercase">${r.sData}</span>`;
             }
 
-            // REVISI: Tombol Edit Jasper
             let btnEditJasper = '';
             if(isJasper) {
                 const jData = encodeURIComponent(JSON.stringify({
@@ -787,7 +785,6 @@ function saringKatalogList() {
 }
 
 function bukaModalKatalogForm(isEdit = false, encodedData = null) {
-    // REVISI: Jika dibuka dari baris tabel, tutup modal list katalog agar tidak menumpuk
     document.getElementById('modal-list-katalog').classList.add('hidden');
     document.getElementById('modal-katalog').classList.remove('hidden');
     
@@ -849,8 +846,6 @@ async function simpanDataJasper() {
         
         await loadKamusDanJasper(); 
         renderKatalogList(); 
-        
-        // REVISI: Update tabel utama agar nama jasper langsung berubah
         muatDataDariSupabase(); 
         
     } catch(e) {
@@ -897,7 +892,7 @@ async function aksiMassal(tipe) {
         alert(`Tersalin baris! Buka Excel dan Paste (Ctrl+V).`);
     } 
     else if(tipe === 'hold') {
-        if(tabelSekarang === 'hasil_stbj') {
+        if(tabelSekarang === 'stok_global') {
             if(!confirm(`Pindahkan ${checkedValues.length} data HASIL -> tabel HOLD (Duplikat)?`)) return;
             const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ 
                 troli: r.troli, qrcode: r.qrcode, tgl_produksi: r.tgl_produksi, shift: r.shift, mesin: r.mesin, 
@@ -906,7 +901,7 @@ async function aksiMassal(tipe) {
                 posisi: r.posisi, pic_input: r.pic_input 
             }));
             const { error: errAdd } = await db.from('hold_stbj').upsert(dataPindah);
-            if(!errAdd) { await db.from('hasil_stbj').delete().in('qrcode', checkedValues); muatDataDariSupabase(); }
+            if(!errAdd) { await db.from('stok_global').delete().in('qrcode', checkedValues); muatDataDariSupabase(); }
         } else {
             if(!confirm(`Unhold ${checkedValues.length} data HOLD -> tabel HASIL (Unique)?`)) return;
             const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ 
