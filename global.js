@@ -236,9 +236,10 @@ function initModernLayout(pageMeta) {
                             <thead class="sticky top-0 z-10 bg-[#0f172a] text-white shadow-sm">
                                 <tr>
                                     <th class="p-3 w-10 text-center"><input type="checkbox" onchange="toggleAllInbox(this.checked)" class="rounded text-blue-500 focus:ring-0 cursor-pointer"></th>
-                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700">Tgl Pesan</th>
-                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700">Pengirim</th>
-                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700 w-1/2">Perihal</th>
+                                    <!-- REVISI: text-center ditambahkan ke semua th -->
+                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700 text-center">Tgl Pesan</th>
+                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700 text-center">Pengirim</th>
+                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700 w-1/2 text-center">Perihal</th>
                                     <th class="p-3 font-semibold tracking-wider border-l border-slate-700 text-center">Status</th>
                                 </tr>
                             </thead>
@@ -425,14 +426,18 @@ async function cekNotifikasiInbox() {
 window.bukaModalInbox = async function() {
     tutupModal('profile-dropdown');
     document.getElementById('modal-inbox').classList.remove('hidden');
+    
+    // REVISI: Hanya ganti view, jangan panggil loadInboxData() di sini
+    // karena akan dipanggil oleh kembaliKeListInbox()
     kembaliKeListInbox(); 
-    await loadInboxData();
 };
 
 window.kembaliKeListInbox = function() {
     document.getElementById('inbox-view-list').classList.remove('hidden');
     document.getElementById('inbox-view-read').classList.add('hidden');
     document.getElementById('inbox-view-compose').classList.add('hidden');
+    
+    // REVISI: Panggil loadInboxData HANYA di sini agar tidak double
     loadInboxData(); 
 };
 
@@ -442,6 +447,8 @@ async function loadInboxData() {
     lucide.createIcons();
 
     const user = JSON.parse(localStorage.getItem('user_session'));
+    
+    // REVISI: Kosongkan array sebelum diisi ulang
     inboxDataGlobal = [];
 
     try {
@@ -525,9 +532,9 @@ function renderInboxTable() {
                 <td class="p-3 text-center" onclick="event.stopPropagation()">
                     <input type="checkbox" value="${d.id}" data-type="${d.type}" class="cb-inbox rounded text-blue-500 focus:ring-0 cursor-pointer w-4 h-4 border-slate-300">
                 </td>
-                <td class="p-3 text-xs ${textClass}" onclick="bacaPesan(${index})">${tgl}</td>
-                <td class="p-3 text-sm ${textClass}" onclick="bacaPesan(${index})">${d.sender}</td>
-                <td class="p-3 text-sm ${textClass} truncate max-w-[200px]" onclick="bacaPesan(${index})">${iconType}${d.subject}</td>
+                <td class="p-3 text-xs text-center ${textClass}" onclick="bacaPesan(${index})">${tgl}</td>
+                <td class="p-3 text-sm text-center ${textClass}" onclick="bacaPesan(${index})">${d.sender}</td>
+                <td class="p-3 text-sm text-center ${textClass} truncate max-w-[200px]" onclick="bacaPesan(${index})">${iconType}${d.subject}</td>
                 <td class="p-3 text-center" onclick="bacaPesan(${index})">${badge}</td>
             </tr>
         `;
@@ -587,7 +594,6 @@ window.bukaBuatPesan = async function() {
     sel.innerHTML = '<option value="">Memuat...</option>';
     
     try {
-        // REVISI: Mengambil username dan role dari app_users
         const { data, error } = await db.from('app_users').select('username, role').order('username');
         if(error) throw error;
         
@@ -596,7 +602,6 @@ window.bukaBuatPesan = async function() {
         
         data.forEach(u => {
             if(u.username !== currentUser.username) {
-                // REVISI: Format [username] - [role]
                 html += `<option value="${u.username}">${u.username} - ${u.role || 'User'}</option>`;
             }
         });
