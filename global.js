@@ -236,7 +236,6 @@ function initModernLayout(pageMeta) {
                             <thead class="sticky top-0 z-10 bg-[#0f172a] text-white shadow-sm">
                                 <tr>
                                     <th class="p-3 w-10 text-center"><input type="checkbox" onchange="toggleAllInbox(this.checked)" class="rounded text-blue-500 focus:ring-0 cursor-pointer"></th>
-                                    <!-- REVISI: text-center ditambahkan ke semua th -->
                                     <th class="p-3 font-semibold tracking-wider border-l border-slate-700 text-center">Tgl Pesan</th>
                                     <th class="p-3 font-semibold tracking-wider border-l border-slate-700 text-center">Pengirim</th>
                                     <th class="p-3 font-semibold tracking-wider border-l border-slate-700 w-1/2 text-center">Perihal</th>
@@ -429,7 +428,11 @@ window.bukaModalInbox = async function() {
     
     // REVISI: Hanya ganti view, jangan panggil loadInboxData() di sini
     // karena akan dipanggil oleh kembaliKeListInbox()
-    kembaliKeListInbox(); 
+    document.getElementById('inbox-view-list').classList.remove('hidden');
+    document.getElementById('inbox-view-read').classList.add('hidden');
+    document.getElementById('inbox-view-compose').classList.add('hidden');
+    
+    await loadInboxData();
 };
 
 window.kembaliKeListInbox = function() {
@@ -448,8 +451,8 @@ async function loadInboxData() {
 
     const user = JSON.parse(localStorage.getItem('user_session'));
     
-    // REVISI: Kosongkan array sebelum diisi ulang
-    inboxDataGlobal = [];
+    // REVISI: Gunakan array temporary agar tidak terjadi race condition
+    let tempInbox = [];
 
     try {
         const { data: msgs, error: errMsgs } = await db.from('app_messages')
@@ -461,7 +464,7 @@ async function loadInboxData() {
         
         if(msgs) {
             msgs.forEach(m => {
-                inboxDataGlobal.push({
+                tempInbox.push({
                     id: m.id,
                     type: 'MESSAGE',
                     created_at: m.created_at,
@@ -482,7 +485,7 @@ async function loadInboxData() {
             
             if(reqs) {
                 reqs.forEach(r => {
-                    inboxDataGlobal.push({
+                    tempInbox.push({
                         id: r.id,
                         type: 'REQ_CUSTOMER',
                         created_at: r.created_at,
@@ -496,8 +499,10 @@ async function loadInboxData() {
             }
         }
 
-        inboxDataGlobal.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
+        tempInbox.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        
+        // REVISI: Assign ke global setelah semua proses selesai
+        inboxDataGlobal = tempInbox;
         renderInboxTable();
 
     } catch (err) {
