@@ -1,5 +1,5 @@
 let modeSekarang = 'qrcode'; 
-let tabelSekarang = 'hasil_stbj'; 
+let tabelSekarang = 'hasil_stbj'; // Memastikan default ke tabel hasil_stbj
 let rawDataRaw = [];
 let kamusData = [];
 let jasperData = [];
@@ -284,7 +284,7 @@ function sortTable(colIndex, headerEl) {
 
 const thSort = (idx, label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
-    const noFilter = ['col-cb'].includes(colClass);
+    const noFilter = ['col-cb', 'col-btn', 'col-btn-edit'].includes(colClass);
     
     const filterBtn = noFilter ? '' : `
         <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded ml-1 transition" title="Filter ${label}">
@@ -513,7 +513,7 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-customer" data-search="${r.customer_bawaan || '-'}">${r.customer_bawaan || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-customer" data-search="${r.customer || '-'}">${r.customer || '-'}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-500 col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-400 col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
                 </tr>`;
@@ -524,7 +524,7 @@ function renderHeaderDanTabel() {
     else if(modeSekarang === 'item' || modeSekarang === 'jasper') {
         const isJasper = modeSekarang === 'jasper';
         
-        // REVISI: Pindahkan kolom Jasper dan Edit ke sebelah Nama Item
+        // REVISI: Nama Item -> Nama Jasper -> Edit
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
@@ -538,8 +538,8 @@ function renderHeaderDanTabel() {
                 ${thSort(8, 'Mesin', 'col-mesin')}
                 ${thSort(9, 'Shift', 'col-shift')}
                 ${thSort(10, 'Jenis Item', 'col-jenis')}
-                ${thSort(11, isJasper ? 'Nama Barang Jasper' : 'Nama Item', 'col-nama')}
-                ${isJasper ? thSort(11.5, 'Nama Jasper', 'col-jasper text-purple-300') : ''}
+                ${thSort(11, 'Nama Item', 'col-nama')}
+                ${isJasper ? thSort(11.1, 'Nama Jasper', 'col-jasper text-purple-300') : ''}
                 ${isJasper ? '<th class="hdr-std w-10 text-center col-btn-edit">Edit</th>' : ''}
                 ${thSort(12, 'Panjang', 'col-pjg')}
                 ${thSort(13, 'Grade', 'col-grade')}
@@ -571,11 +571,14 @@ function renderHeaderDanTabel() {
             
             let ket = r.keterangan || 'TANPA_KETERANGAN';
             let sData = r.status_data || 'BELUM';
-            let key = `${r.jenis_item}_${n}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.customer_bawaan}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}`;
+            
+            // REVISI: Menggunakan r.customer (sesuai schema hasil_stbj)
+            let cust = r.customer || '-';
+            let key = `${r.jenis_item}_${n}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${cust}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}`;
             
             if(!groups[key]) {
                 groups[key] = { 
-                    jenisItem: r.jenis_item, namaItemAsli: n, displayNama: jName, jasperId: jId, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, customer: r.customer_bawaan,
+                    jenisItem: r.jenis_item, namaItemAsli: n, displayNama: jName, jasperId: jId, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, customer: cust,
                     tglProduksi: r.tgl_produksi, mesin: r.mesin, shift: r.shift,
                     qty: 0, qrcodes: [], trolis: new Set(), ket: ket, sData: sData 
                 };
@@ -892,7 +895,7 @@ async function aksiMassal(tipe) {
         alert(`Tersalin baris! Buka Excel dan Paste (Ctrl+V).`);
     } 
     else if(tipe === 'hold') {
-        if(tabelSekarang === 'stok_global') {
+        if(tabelSekarang === 'hasil_stbj') {
             if(!confirm(`Pindahkan ${checkedValues.length} data HASIL -> tabel HOLD (Duplikat)?`)) return;
             const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ 
                 troli: r.troli, qrcode: r.qrcode, tgl_produksi: r.tgl_produksi, shift: r.shift, mesin: r.mesin, 
@@ -901,7 +904,7 @@ async function aksiMassal(tipe) {
                 posisi: r.posisi, pic_input: r.pic_input 
             }));
             const { error: errAdd } = await db.from('hold_stbj').upsert(dataPindah);
-            if(!errAdd) { await db.from('stok_global').delete().in('qrcode', checkedValues); muatDataDariSupabase(); }
+            if(!errAdd) { await db.from('hasil_stbj').delete().in('qrcode', checkedValues); muatDataDariSupabase(); }
         } else {
             if(!confirm(`Unhold ${checkedValues.length} data HOLD -> tabel HASIL (Unique)?`)) return;
             const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ 
