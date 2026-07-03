@@ -262,7 +262,6 @@ function setMode(m) {
 
 function switchTable(val) { tabelSekarang = val; muatDataDariSupabase(); }
 
-// REVISI: Fungsi Sort Table diperbaiki agar dinamis mengikuti urutan kolom hasil Drag & Drop
 function sortTable(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-stbj');
     const rows = Array.from(tbody.querySelectorAll('tr.text-row'));
@@ -283,8 +282,7 @@ function sortTable(colIndex, headerEl) {
     applyPagination();
 }
 
-// REVISI: Menghapus parameter idx statis, diganti dengan this.closest('th').cellIndex
-const thSort = (label, cls = "") => {
+const thSort = (idx, label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-btn', 'col-btn-edit'].includes(colClass);
     
@@ -297,7 +295,7 @@ const thSort = (label, cls = "") => {
 
     return `<th class="hdr-std ${cls} select-none">
         <div class="flex items-center ${justifyClass} gap-1.5">
-            <span class="cursor-pointer flex items-center gap-1 hover:text-blue-300 transition" onclick="sortTable(this.closest('th').cellIndex, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
+            <span class="cursor-pointer flex items-center gap-1 hover:text-blue-300 transition" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
             ${filterBtn}
         </div>
     </th>`;
@@ -474,24 +472,24 @@ function renderHeaderDanTabel() {
             <tr>
                 <th class="hdr-std w-10 col-cb text-center border-r border-slate-600"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
                 <th class="hdr-std w-10 col-btn text-center border-r border-slate-600"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-slate-400"></i></th>
-                ${thSort('Status Item', 'col-status-gudang')}
-                ${tabelSekarang === 'hold_stbj' ? thSort('Status Hold', 'col-status') : '<th class="hdr-std hidden col-status">Status Hold</th>'}
-                ${thSort('Collect', 'col-status-data')}
-                ${thSort('Waktu Scan', 'col-waktu')}
-                ${thSort('Troli', 'col-troli')}
-                ${thSort('QRCode', 'col-qr')}
-                ${thSort('Tgl Produksi', 'col-tgl')}
-                ${thSort('Mesin', 'col-mesin')}
-                ${thSort('Shift', 'col-shift')}
-                ${thSort('Jenis Item', 'col-jenis')}
-                ${thSort('Nama Item', 'col-nama')}
-                ${thSort('Pjg', 'col-pjg')}
-                ${thSort('Grade', 'col-grade')}
-                ${thSort('Dus', 'col-dus')}
-                ${thSort('Shading', 'col-shading')}
-                ${thSort('Customer Bawaan', 'col-customer')}
-                ${thSort('Keterangan', 'col-ket')}
-                ${thSort('PIC Input', 'col-pic')}
+                ${thSort(2, 'Status Item', 'col-status-gudang')}
+                ${tabelSekarang === 'hold_stbj' ? thSort(3, 'Status Hold', 'col-status') : '<th class="hdr-std hidden col-status">Status Hold</th>'}
+                ${thSort(tabelSekarang==='hold_stbj'?4:3, 'Collect', 'col-status-data')}
+                ${thSort(tabelSekarang==='hold_stbj'?5:4, 'Waktu Scan', 'col-waktu')}
+                ${thSort(tabelSekarang==='hold_stbj'?6:5, 'Troli', 'col-troli')}
+                ${thSort(tabelSekarang==='hold_stbj'?7:6, 'QRCode', 'col-qr')}
+                ${thSort(tabelSekarang==='hold_stbj'?8:7, 'Tgl Produksi', 'col-tgl')}
+                ${thSort(tabelSekarang==='hold_stbj'?9:8, 'Mesin', 'col-mesin')}
+                ${thSort(tabelSekarang==='hold_stbj'?10:9, 'Shift', 'col-shift')}
+                ${thSort(tabelSekarang==='hold_stbj'?11:10, 'Jenis Item', 'col-jenis')}
+                ${thSort(tabelSekarang==='hold_stbj'?12:11, 'Nama Item', 'col-nama')}
+                ${thSort(tabelSekarang==='hold_stbj'?13:12, 'Pjg', 'col-pjg')}
+                ${thSort(tabelSekarang==='hold_stbj'?14:13, 'Grade', 'col-grade')}
+                ${thSort(tabelSekarang==='hold_stbj'?15:14, 'Dus', 'col-dus')}
+                ${thSort(tabelSekarang==='hold_stbj'?16:15, 'Shading', 'col-shading')}
+                ${thSort(tabelSekarang==='hold_stbj'?17:16, 'Customer Bawaan', 'col-customer')}
+                ${thSort(tabelSekarang==='hold_stbj'?18:17, 'Keterangan', 'col-ket')}
+                ${thSort(tabelSekarang==='hold_stbj'?19:18, 'PIC Input', 'col-pic')}
             </tr>`;
         
         if(rawDataRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="22" class="px-4 py-8 text-center font-bold text-slate-400 border-b border-slate-200">Tabel Kosong.</td></tr>`; return; }
@@ -516,6 +514,7 @@ function renderHeaderDanTabel() {
                 statData = `<span class="text-indigo-600 font-medium uppercase">${r.status_data}</span>`;
             }
 
+            // REVISI: Semua teks diubah menjadi text-slate-900 (Hitam)
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -527,21 +526,21 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-4 text-left col-status-gudang" data-search="${r.is_in_gudang ? 'IN GUDANG' : 'STBJ'}">${htmlStatusGudang}</td>
                     ${tabelSekarang === 'hold_stbj' ? `<td class="px-4 py-4 text-left font-black text-amber-600 col-status" data-search="${r.status || 'HOLD'}">${r.status || 'HOLD'}</td>` : '<td class="px-4 py-4 hidden col-status">-</td>'}
                     <td class="px-4 py-4 text-left col-status-data" data-search="${r.status_data || '-'}">${statData}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-waktu" data-search="${tgl}">${tgl}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-troli" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
-                    <td class="px-4 py-4 text-left font-mono font-medium text-slate-800 col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-tgl" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-mesin" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-shift" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-jenis" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-800 col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-pjg" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-waktu" data-search="${tgl}">${tgl}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-troli" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
+                    <td class="px-4 py-4 text-left font-mono font-medium text-slate-900 col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-tgl" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-mesin" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-shift" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-jenis" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-pjg" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-900 col-customer" data-search="${r.customer || '-'}">${r.customer || '-'}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-500 col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-400 col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
@@ -555,25 +554,25 @@ function renderHeaderDanTabel() {
                 <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
                 <th class="hdr-std col-status-gudang hidden">Status Item</th>
                 <th class="hdr-std col-status hidden">Status Hold</th>
-                ${thSort('Collect', 'col-status-data')}
+                ${thSort(3, 'Collect', 'col-status-data')}
                 <th class="hdr-std col-waktu hidden">Waktu Scan</th>
-                ${thSort('Troli Gabungan', 'col-troli')}
+                ${thSort(5, 'Troli Gabungan', 'col-troli')}
                 <th class="hdr-std col-qr hidden">QRCode</th>
-                ${thSort('Tgl Produksi', 'col-tgl')}
-                ${thSort('Mesin', 'col-mesin')}
-                ${thSort('Shift', 'col-shift')}
-                ${thSort('Jenis Item', 'col-jenis')}
-                ${thSort('Nama Item', 'col-nama')}
-                ${isJasper ? thSort('Nama Jasper', 'col-jasper text-purple-300') : ''}
+                ${thSort(7, 'Tgl Produksi', 'col-tgl')}
+                ${thSort(8, 'Mesin', 'col-mesin')}
+                ${thSort(9, 'Shift', 'col-shift')}
+                ${thSort(10, 'Jenis Item', 'col-jenis')}
+                ${thSort(11, 'Nama Item', 'col-nama')}
+                ${isJasper ? thSort(11.5, 'Nama Jasper', 'col-jasper text-purple-300') : ''}
                 ${isJasper ? '<th class="hdr-std w-10 text-center col-btn-edit">Edit</th>' : ''}
-                ${thSort('Panjang', 'col-pjg')}
-                ${thSort('Grade', 'col-grade')}
-                ${thSort('Dus', 'col-dus')}
-                ${thSort('Shading', 'col-shading')}
-                ${thSort('Customer Bawaan', 'col-customer')}
-                ${thSort('QTY (DUS)', 'col-qty')}
-                ${thSort('QTY (LEMBAR)', 'col-qty-lembar text-emerald-500')}
-                ${thSort('Keterangan', 'col-ket')}
+                ${thSort(12, 'Panjang', 'col-pjg')}
+                ${thSort(13, 'Grade', 'col-grade')}
+                ${thSort(14, 'Dus', 'col-dus')}
+                ${thSort(15, 'Shading', 'col-shading')}
+                ${thSort(16, 'Customer Bawaan', 'col-customer')}
+                ${thSort(17, 'QTY (DUS)', 'col-qty')}
+                ${thSort(17.5, 'QTY (LEMBAR)', 'col-qty-lembar text-emerald-500')}
+                ${thSort(18, 'Keterangan', 'col-ket')}
                 <th class="hdr-std col-pic hidden">PIC Input</th>
             </tr>`;
         
@@ -639,6 +638,7 @@ function renderHeaderDanTabel() {
 
             let qtyLembar = hitungQtyLembar(r.jenisItem, r.namaItemAsli, r.qty);
 
+            // REVISI: Semua teks diubah menjadi text-slate-900 (Hitam)
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -646,23 +646,23 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-4 hidden col-status">-</td>
                     <td class="px-4 py-4 text-left col-status-data" data-search="${r.sData || '-'}">${statData}</td>
                     <td class="px-4 py-4 hidden col-waktu">-</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-troli" data-search="${gabunganTroli}">${gabunganTroli}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-troli" data-search="${gabunganTroli}">${gabunganTroli}</td>
                     <td class="px-4 py-4 hidden col-qr">-</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-mesin" data-search="${r.mesin}">${r.mesin}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-shift" data-search="${r.shift}">${r.shift}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-jenis" data-search="${r.jenisItem}">${r.jenisItem}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-800 col-nama" data-search="${r.namaItemAsli}">${r.namaItemAsli}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-mesin" data-search="${r.mesin}">${r.mesin}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-shift" data-search="${r.shift}">${r.shift}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-jenis" data-search="${r.jenisItem}">${r.jenisItem}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-nama" data-search="${r.namaItemAsli}">${r.namaItemAsli}</td>
                     ${isJasper ? `<td class="px-4 py-4 text-left font-black text-purple-700 col-jasper" data-search="${r.displayNama}">${r.displayNama}</td>` : ''}
                     ${btnEditJasper}
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-pjg" data-search="${r.panjang}">${r.panjang}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-grade" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-dus" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-700 col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-pjg" data-search="${r.panjang}">${r.panjang}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-shading" data-search="${r.shading}">${r.shading}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-900 col-customer" data-search="${r.customer}">${r.customer}</td>
                     <td class="px-4 py-4 text-center font-black text-emerald-700 col-qty" data-search="${r.qty}">${r.qty}</td>
                     <td class="px-4 py-4 text-center font-black text-emerald-600 col-qty-lembar" data-search="${qtyLembar}">${qtyLembar}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-500 col-ket" data-search="${displayKet}">${displayKet}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-ket" data-search="${displayKet}">${displayKet}</td>
                     <td class="px-4 py-4 hidden col-pic">-</td>
                 </tr>`;
         });
@@ -842,6 +842,7 @@ function bukaModalKatalogForm(isEdit = false, encodedData = null) {
 function tutupModalJasperForm() { document.getElementById('modal-katalog').classList.add('hidden'); }
 
 async function simpanDataJasper() {
+    const id = document.getElementById('j-id').value;
     const nama = document.getElementById('j-nama').value.trim();
     const pjg = document.getElementById('j-pjg').value.trim();
     const grade = document.getElementById('j-grade').value.trim();
@@ -854,19 +855,21 @@ async function simpanDataJasper() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...';
     btn.disabled = true;
 
-    try {
-        // 1. Cek apakah sudah ada di nama_jasper
-        const { data: existing, error: errCek } = await db.from('nama_jasper')
-            .select('id')
-            .eq('nama_item', nama).eq('panjang', pjg).eq('grade', grade).limit(1);
+    const payload = { nama_item: nama, panjang: pjg, grade: grade, nama_jasper: output };
 
-        if (existing && existing.length > 0) {
-            await db.from('nama_jasper').update({ nama_jasper: output }).eq('id', existing[0].id);
+    try {
+        let errorRes;
+        if(id) {
+            const { error } = await db.from('nama_jasper').update(payload).eq('id', id);
+            errorRes = error;
         } else {
-            await db.from('nama_jasper').insert([{ nama_item: nama, panjang: pjg, grade: grade, nama_jasper: output }]);
+            const { error } = await db.from('nama_jasper').insert([payload]);
+            errorRes = error;
         }
 
-        // 2. Update langsung ke hasil_stbj
+        if(errorRes) throw errorRes;
+        
+        // Update langsung ke hasil_stbj
         const { error: errUpdateHasil } = await db.from('hasil_stbj')
             .update({ nama_jasper: output })
             .eq('nama_item', nama)
