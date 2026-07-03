@@ -1,5 +1,5 @@
 let modeSekarang = 'qrcode'; 
-let tabelSekarang = 'hasil_stbj'; // Memastikan default ke tabel hasil_stbj
+let tabelSekarang = 'hasil_stbj'; 
 let rawDataRaw = [];
 let kamusData = [];
 let jasperData = [];
@@ -262,6 +262,7 @@ function setMode(m) {
 
 function switchTable(val) { tabelSekarang = val; muatDataDariSupabase(); }
 
+// REVISI: Fungsi Sort Table diperbaiki agar dinamis mengikuti urutan kolom hasil Drag & Drop
 function sortTable(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-stbj');
     const rows = Array.from(tbody.querySelectorAll('tr.text-row'));
@@ -282,7 +283,8 @@ function sortTable(colIndex, headerEl) {
     applyPagination();
 }
 
-const thSort = (idx, label, cls = "") => {
+// REVISI: Menghapus parameter idx statis, diganti dengan this.closest('th').cellIndex
+const thSort = (label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-btn', 'col-btn-edit'].includes(colClass);
     
@@ -295,7 +297,7 @@ const thSort = (idx, label, cls = "") => {
 
     return `<th class="hdr-std ${cls} select-none">
         <div class="flex items-center ${justifyClass} gap-1.5">
-            <span class="cursor-pointer flex items-center gap-1 hover:text-blue-300 transition" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
+            <span class="cursor-pointer flex items-center gap-1 hover:text-blue-300 transition" onclick="sortTable(this.closest('th').cellIndex, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
             ${filterBtn}
         </div>
     </th>`;
@@ -442,6 +444,24 @@ function updateFilterIcons() {
     }
 }
 
+// REVISI: Fungsi Hitung QTY Lembar
+function hitungQtyLembar(jenis, nama, qtyDus) {
+    if (!qtyDus) return 0;
+    let j = (jenis || '').toUpperCase();
+    let n = (nama || '').toUpperCase();
+    
+    if (j === 'PLAFON') return qtyDus * 15;
+    if (j === 'LIST' || j === 'LIS') {
+        if (n.includes('PROFILE IV')) return qtyDus * 60;
+        if (n.includes('PROFILE V')) return qtyDus * 60;
+        if (n.includes('PROFILE II')) return qtyDus * 48;
+        if (n.includes('PROFILE I')) return qtyDus * 140;
+        if (n.includes('CONNECTOR')) return qtyDus * 80;
+        return qtyDus * 24; // Default (termasuk Profile VI)
+    }
+    return 0;
+}
+
 function renderHeaderDanTabel() {
     const thead = document.getElementById('thead-stbj');
     const tbody = document.getElementById('tbody-stbj');
@@ -453,24 +473,25 @@ function renderHeaderDanTabel() {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center border-r border-slate-600"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
-                ${thSort(1, 'Status Item', 'col-status-gudang')}
-                ${tabelSekarang === 'hold_stbj' ? thSort(2, 'Status Hold', 'col-status') : '<th class="hdr-std hidden col-status">Status Hold</th>'}
-                ${thSort(tabelSekarang==='hold_stbj'?3:2, 'Collect', 'col-status-data')}
-                ${thSort(tabelSekarang==='hold_stbj'?4:3, 'Waktu Scan', 'col-waktu')}
-                ${thSort(tabelSekarang==='hold_stbj'?5:4, 'Troli', 'col-troli')}
-                ${thSort(tabelSekarang==='hold_stbj'?6:5, 'QRCode', 'col-qr')}
-                ${thSort(tabelSekarang==='hold_stbj'?7:6, 'Tgl Produksi', 'col-tgl')}
-                ${thSort(tabelSekarang==='hold_stbj'?8:7, 'Mesin', 'col-mesin')}
-                ${thSort(tabelSekarang==='hold_stbj'?9:8, 'Shift', 'col-shift')}
-                ${thSort(tabelSekarang==='hold_stbj'?10:9, 'Jenis Item', 'col-jenis')}
-                ${thSort(tabelSekarang==='hold_stbj'?11:10, 'Nama Item', 'col-nama')}
-                ${thSort(tabelSekarang==='hold_stbj'?12:11, 'Pjg', 'col-pjg')}
-                ${thSort(tabelSekarang==='hold_stbj'?13:12, 'Grade', 'col-grade')}
-                ${thSort(tabelSekarang==='hold_stbj'?14:13, 'Dus', 'col-dus')}
-                ${thSort(tabelSekarang==='hold_stbj'?15:14, 'Shading', 'col-shading')}
-                ${thSort(tabelSekarang==='hold_stbj'?16:15, 'Customer Bawaan', 'col-customer')}
-                ${thSort(tabelSekarang==='hold_stbj'?17:16, 'Keterangan', 'col-ket')}
-                ${thSort(tabelSekarang==='hold_stbj'?18:17, 'PIC Input', 'col-pic')}
+                <th class="hdr-std w-10 col-btn text-center border-r border-slate-600"><i data-lucide="trash-2" class="w-4 h-4 mx-auto text-slate-400"></i></th>
+                ${thSort('Status Item', 'col-status-gudang')}
+                ${tabelSekarang === 'hold_stbj' ? thSort('Status Hold', 'col-status') : '<th class="hdr-std hidden col-status">Status Hold</th>'}
+                ${thSort('Collect', 'col-status-data')}
+                ${thSort('Waktu Scan', 'col-waktu')}
+                ${thSort('Troli', 'col-troli')}
+                ${thSort('QRCode', 'col-qr')}
+                ${thSort('Tgl Produksi', 'col-tgl')}
+                ${thSort('Mesin', 'col-mesin')}
+                ${thSort('Shift', 'col-shift')}
+                ${thSort('Jenis Item', 'col-jenis')}
+                ${thSort('Nama Item', 'col-nama')}
+                ${thSort('Pjg', 'col-pjg')}
+                ${thSort('Grade', 'col-grade')}
+                ${thSort('Dus', 'col-dus')}
+                ${thSort('Shading', 'col-shading')}
+                ${thSort('Customer Bawaan', 'col-customer')}
+                ${thSort('Keterangan', 'col-ket')}
+                ${thSort('PIC Input', 'col-pic')}
             </tr>`;
         
         if(rawDataRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="22" class="px-4 py-8 text-center font-bold text-slate-400 border-b border-slate-200">Tabel Kosong.</td></tr>`; return; }
@@ -498,6 +519,11 @@ function renderHeaderDanTabel() {
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-4 text-center col-btn">
+                        <button onclick="aksiHapusPerBaris('${r.qrcode}')" class="text-slate-400 hover:text-rose-600 transition p-1.5 rounded-md hover:bg-rose-50 mx-auto flex shadow-sm border border-transparent hover:border-rose-200">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
                     <td class="px-4 py-4 text-left col-status-gudang" data-search="${r.is_in_gudang ? 'IN GUDANG' : 'STBJ'}">${htmlStatusGudang}</td>
                     ${tabelSekarang === 'hold_stbj' ? `<td class="px-4 py-4 text-left font-black text-amber-600 col-status" data-search="${r.status || 'HOLD'}">${r.status || 'HOLD'}</td>` : '<td class="px-4 py-4 hidden col-status">-</td>'}
                     <td class="px-4 py-4 text-left col-status-data" data-search="${r.status_data || '-'}">${statData}</td>
@@ -524,30 +550,30 @@ function renderHeaderDanTabel() {
     else if(modeSekarang === 'item' || modeSekarang === 'jasper') {
         const isJasper = modeSekarang === 'jasper';
         
-        // REVISI: Nama Item -> Nama Jasper -> Edit
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
                 <th class="hdr-std col-status-gudang hidden">Status Item</th>
                 <th class="hdr-std col-status hidden">Status Hold</th>
-                ${thSort(3, 'Collect', 'col-status-data')}
+                ${thSort('Collect', 'col-status-data')}
                 <th class="hdr-std col-waktu hidden">Waktu Scan</th>
-                ${thSort(5, 'Troli Gabungan', 'col-troli')}
+                ${thSort('Troli Gabungan', 'col-troli')}
                 <th class="hdr-std col-qr hidden">QRCode</th>
-                ${thSort(7, 'Tgl Produksi', 'col-tgl')}
-                ${thSort(8, 'Mesin', 'col-mesin')}
-                ${thSort(9, 'Shift', 'col-shift')}
-                ${thSort(10, 'Jenis Item', 'col-jenis')}
-                ${thSort(11, 'Nama Item', 'col-nama')}
-                ${isJasper ? thSort(11.1, 'Nama Jasper', 'col-jasper text-purple-300') : ''}
+                ${thSort('Tgl Produksi', 'col-tgl')}
+                ${thSort('Mesin', 'col-mesin')}
+                ${thSort('Shift', 'col-shift')}
+                ${thSort('Jenis Item', 'col-jenis')}
+                ${thSort('Nama Item', 'col-nama')}
+                ${isJasper ? thSort('Nama Jasper', 'col-jasper text-purple-300') : ''}
                 ${isJasper ? '<th class="hdr-std w-10 text-center col-btn-edit">Edit</th>' : ''}
-                ${thSort(12, 'Panjang', 'col-pjg')}
-                ${thSort(13, 'Grade', 'col-grade')}
-                ${thSort(14, 'Dus', 'col-dus')}
-                ${thSort(15, 'Shading', 'col-shading')}
-                ${thSort(16, 'Customer Bawaan', 'col-customer')}
-                ${thSort(17, 'QTY (DUS)', 'col-qty')}
-                ${thSort(18, 'Keterangan', 'col-ket')}
+                ${thSort('Panjang', 'col-pjg')}
+                ${thSort('Grade', 'col-grade')}
+                ${thSort('Dus', 'col-dus')}
+                ${thSort('Shading', 'col-shading')}
+                ${thSort('Customer Bawaan', 'col-customer')}
+                ${thSort('QTY (DUS)', 'col-qty')}
+                ${thSort('QTY (LEMBAR)', 'col-qty-lembar text-emerald-500')}
+                ${thSort('Keterangan', 'col-ket')}
                 <th class="hdr-std col-pic hidden">PIC Input</th>
             </tr>`;
         
@@ -571,8 +597,6 @@ function renderHeaderDanTabel() {
             
             let ket = r.keterangan || 'TANPA_KETERANGAN';
             let sData = r.status_data || 'BELUM';
-            
-            // REVISI: Menggunakan r.customer (sesuai schema hasil_stbj)
             let cust = r.customer || '-';
             let key = `${r.jenis_item}_${n}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${cust}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}`;
             
@@ -613,6 +637,8 @@ function renderHeaderDanTabel() {
                 btnEditJasper = `<td class="px-4 py-4 text-center col-btn-edit"><button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>`;
             }
 
+            let qtyLembar = hitungQtyLembar(r.jenisItem, r.namaItemAsli, r.qty);
+
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -635,6 +661,7 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-shading" data-search="${r.shading}">${r.shading}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-900 col-customer" data-search="${r.customer}">${r.customer}</td>
                     <td class="px-4 py-4 text-center font-black text-emerald-700 col-qty" data-search="${r.qty}">${r.qty}</td>
+                    <td class="px-4 py-4 text-center font-black text-emerald-600 col-qty-lembar" data-search="${qtyLembar}">${qtyLembar}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-500 col-ket" data-search="${displayKet}">${displayKet}</td>
                     <td class="px-4 py-4 hidden col-pic">-</td>
                 </tr>`;
@@ -815,7 +842,6 @@ function bukaModalKatalogForm(isEdit = false, encodedData = null) {
 function tutupModalJasperForm() { document.getElementById('modal-katalog').classList.add('hidden'); }
 
 async function simpanDataJasper() {
-    const id = document.getElementById('j-id').value;
     const nama = document.getElementById('j-nama').value.trim();
     const pjg = document.getElementById('j-pjg').value.trim();
     const grade = document.getElementById('j-grade').value.trim();
@@ -828,19 +854,26 @@ async function simpanDataJasper() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...';
     btn.disabled = true;
 
-    const payload = { nama_item: nama, panjang: pjg, grade: grade, nama_jasper: output };
-
     try {
-        let errorRes;
-        if(id) {
-            const { error } = await db.from('nama_jasper').update(payload).eq('id', id);
-            errorRes = error;
+        // 1. Cek apakah sudah ada di nama_jasper
+        const { data: existing, error: errCek } = await db.from('nama_jasper')
+            .select('id')
+            .eq('nama_item', nama).eq('panjang', pjg).eq('grade', grade).limit(1);
+
+        if (existing && existing.length > 0) {
+            await db.from('nama_jasper').update({ nama_jasper: output }).eq('id', existing[0].id);
         } else {
-            const { error } = await db.from('nama_jasper').insert([payload]);
-            errorRes = error;
+            await db.from('nama_jasper').insert([{ nama_item: nama, panjang: pjg, grade: grade, nama_jasper: output }]);
         }
 
-        if(errorRes) throw errorRes;
+        // 2. Update langsung ke hasil_stbj
+        const { error: errUpdateHasil } = await db.from('hasil_stbj')
+            .update({ nama_jasper: output })
+            .eq('nama_item', nama)
+            .eq('panjang', pjg)
+            .eq('grade', grade);
+            
+        if(errUpdateHasil) console.error("Gagal update hasil_stbj:", errUpdateHasil);
         
         tutupModalJasperForm();
         
