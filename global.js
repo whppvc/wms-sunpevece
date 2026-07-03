@@ -50,14 +50,9 @@ const style = document.createElement('style');
 style.innerHTML = `
     .hide-scrollbar::-webkit-scrollbar { display: none; } 
     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    
-    /* Override padding bawaan HTML lama agar full screen */
     body > div.absolute.inset-0 { padding-top: 0 !important; position: relative !important; height: 100% !important; }
-    
-    /* Transisi Sidebar */
     #app-sidebar { transition: width 0.3s ease, transform 0.3s ease; }
     
-    /* DESKTOP STATE (Lebar Dinamis) */
     @media (min-width: 640px) {
         #app-sidebar:not(.expanded) { width: 4.5rem !important; }
         #app-sidebar:not(.expanded) .sidebar-text { display: none !important; }
@@ -73,7 +68,6 @@ style.innerHTML = `
         #app-sidebar.expanded #btn-expand-container { justify-content: flex-end !important; padding-right: 1rem !important; }
     }
     
-    /* MOBILE STATE (Selalu Lebar saat dibuka) */
     @media (max-width: 639px) {
         #app-sidebar { width: 16rem !important; }
         .sidebar-text { display: block !important; }
@@ -81,6 +75,15 @@ style.innerHTML = `
         .sidebar-item { justify-content: flex-start !important; padding: 0 1rem !important; width: 100% !important; }
         .sidebar-divider { width: 100% !important; padding: 0 1rem !important; text-align: left !important; background: transparent !important; height: auto !important; margin-top: 1rem !important; }
     }
+
+    .sidebar-item { position: relative; }
+    .sidebar-tooltip {
+        visibility: hidden; opacity: 0; position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+        margin-left: 10px; background-color: #1e293b; color: white; padding: 6px 12px; border-radius: 6px;
+        font-size: 12px; font-weight: bold; white-space: nowrap; z-index: 100; transition: all 0.2s ease;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); pointer-events: none;
+    }
+    #app-sidebar:not(.expanded) .sidebar-item:hover .sidebar-tooltip { visibility: visible; opacity: 1; margin-left: 15px; }
 `;
 document.head.appendChild(style);
 
@@ -101,9 +104,7 @@ function initModernLayout(pageMeta) {
     const layoutWrapper = document.createElement('div');
     layoutWrapper.className = 'flex h-[100dvh] bg-slate-100 overflow-hidden font-sans w-full';
 
-    // ==========================================
-    // 1. SIDEBAR (KIRI - GELAP)
-    // ==========================================
+    // SIDEBAR
     let sidebarHTML = `
         <aside id="app-sidebar" class="fixed sm:relative inset-y-0 left-0 z-[70] sm:z-40 bg-[#0f172a] flex flex-col py-4 transform -translate-x-full sm:translate-x-0 shadow-2xl sm:shadow-none border-r border-slate-800 shrink-0 ${expandedClass}">
             <a href="menu.html" class="mb-6 flex items-center justify-center gap-3 px-4 h-10 transition cursor-pointer overflow-hidden shrink-0">
@@ -122,7 +123,7 @@ function initModernLayout(pageMeta) {
             const isActive = pageMeta && menu.id === pageMeta.id;
             const bgClass = isActive ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-white';
             sidebarHTML += `
-                <a href="${menu.url}" data-title="${menu.title}" class="sidebar-item relative flex items-center h-10 rounded-xl transition-all cursor-pointer ${bgClass}">
+                <a href="${menu.url}" data-title="${menu.title}" class="sidebar-item flex items-center h-10 rounded-xl transition-all cursor-pointer ${bgClass}">
                     <i data-lucide="${menu.icon}" class="w-5 h-5 shrink-0 pointer-events-none"></i>
                     <span class="sidebar-text ml-3 text-sm font-bold whitespace-nowrap pointer-events-none">${menu.title}</span>
                 </a>
@@ -141,9 +142,7 @@ function initModernLayout(pageMeta) {
         <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/60 z-[60] hidden backdrop-blur-sm transition-opacity sm:hidden"></div>
     `;
 
-    // ==========================================
-    // 2. AREA KANAN (HEADER PUTIH + KONTEN)
-    // ==========================================
+    // HEADER & KONTEN
     let rightArea = document.createElement('div');
     rightArea.className = 'flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden bg-slate-100';
     
@@ -158,7 +157,7 @@ function initModernLayout(pageMeta) {
                 </div>
             </div>
             <div class="flex items-center gap-3 sm:gap-5">
-                <button onclick="bukaModalInbox()" class="relative p-2 rounded-full hover:bg-slate-100 text-slate-500 transition cursor-pointer" title="Request Ganti Customer">
+                <button onclick="bukaModalInbox()" class="relative p-2 rounded-full hover:bg-slate-100 text-slate-500 transition cursor-pointer" title="Pesan & Notifikasi">
                     <i data-lucide="mail" class="w-5 h-5"></i>
                     <span id="inbox-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
                 </button>
@@ -198,12 +197,11 @@ function initModernLayout(pageMeta) {
     });
     
     rightArea.appendChild(mainContent);
-
     layoutWrapper.innerHTML = sidebarHTML;
     layoutWrapper.appendChild(rightArea);
 
     // ==========================================
-    // 3. MODALS (PASSWORD & INBOX)
+    // 3. MODALS (PASSWORD & NEW INBOX)
     // ==========================================
     const modalsHTML = `
         <div id="modal-password" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[90] px-4 backdrop-blur-sm">
@@ -217,44 +215,101 @@ function initModernLayout(pageMeta) {
             </div>
         </div>
         
+        <!-- MODAL INBOX BARU -->
         <div id="modal-inbox" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-2 sm:px-4 backdrop-blur-sm">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl border border-slate-200 text-slate-800 h-[80vh] flex flex-col overflow-hidden">
-                <div class="p-4 sm:p-5 flex justify-between items-center border-b border-slate-200 bg-slate-50">
-                    <h3 class="text-base font-black flex items-center gap-2 text-slate-800"><i data-lucide="mail-open" class="text-blue-600"></i> INBOX REQUEST GANTI CUSTOMER</h3>
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl border border-slate-200 text-slate-800 h-[85vh] flex flex-col overflow-hidden">
+                
+                <!-- Header Inbox -->
+                <div class="p-4 sm:p-5 flex justify-between items-center border-b border-slate-200 bg-slate-50 shrink-0">
+                    <h3 class="text-base font-black flex items-center gap-2 text-slate-800"><i data-lucide="mail" class="text-blue-600"></i> KOTAK PESAN (INBOX)</h3>
                     <button onclick="tutupModal('modal-inbox')" class="text-slate-400 hover:text-red-500 transition bg-white p-1.5 rounded-md border border-slate-200"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
-                <div class="flex-1 overflow-x-auto overflow-y-auto hide-scrollbar bg-white">
-                    <table class="w-full text-left border-collapse text-xs whitespace-nowrap">
-                        <thead class="sticky top-0 z-10 bg-slate-800 text-white shadow-sm">
-                            <tr>
-                                <th class="p-3 font-bold uppercase tracking-wider">PIC</th>
-                                <th class="p-3 font-bold uppercase tracking-wider border-l border-slate-700">QR Code</th>
-                                <th class="p-3 font-bold uppercase tracking-wider border-l border-slate-700">Customer Aktual (Lama)</th>
-                                <th class="p-3 font-black text-orange-300 border-x border-slate-700 bg-slate-900">Customer Request (Baru)</th>
-                                <th class="p-3 font-bold uppercase tracking-wider">Keterangan</th>
-                                <th class="p-3 font-bold uppercase tracking-wider text-center border-l border-slate-700">Aksi / Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbody-inbox" class="text-slate-700">
-                            <tr><td colspan="6" class="p-10 text-center text-slate-400 font-bold">Sedang memuat data...</td></tr>
-                        </tbody>
-                    </table>
+
+                <!-- VIEW 1: LIST PESAN -->
+                <div id="inbox-view-list" class="flex-1 flex flex-col overflow-hidden">
+                    <div class="p-3 bg-white border-b border-slate-200 flex justify-between items-center shrink-0">
+                        <button onclick="hapusPesanMassal()" class="px-4 py-2 bg-white border border-slate-300 text-rose-600 hover:bg-rose-50 font-bold rounded-md text-xs transition flex items-center gap-2 shadow-sm"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus</button>
+                        <button onclick="bukaBuatPesan()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md text-xs transition flex items-center gap-2 shadow-sm"><i data-lucide="pen-square" class="w-4 h-4"></i> Buat Pesan</button>
+                    </div>
+                    <div class="flex-1 overflow-x-auto overflow-y-auto hide-scrollbar bg-slate-50">
+                        <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+                            <thead class="sticky top-0 z-10 bg-[#0f172a] text-white shadow-sm">
+                                <tr>
+                                    <th class="p-3 w-10 text-center"><input type="checkbox" onchange="toggleAllInbox(this.checked)" class="rounded text-blue-500 focus:ring-0 cursor-pointer"></th>
+                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700">Tgl Pesan</th>
+                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700">Pengirim</th>
+                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700 w-1/2">Perihal</th>
+                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-inbox" class="text-slate-700 bg-white">
+                                <tr><td colspan="5" class="p-10 text-center text-slate-400 font-bold">Sedang memuat pesan...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
+                <!-- VIEW 2: BACA PESAN -->
+                <div id="inbox-view-read" class="hidden flex-1 flex flex-col overflow-hidden bg-white">
+                    <div class="p-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3 shrink-0">
+                        <button onclick="kembaliKeListInbox()" class="p-2 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition shadow-sm"><i data-lucide="arrow-left" class="w-4 h-4"></i></button>
+                        <span class="font-bold text-sm text-slate-700">Kembali ke Inbox</span>
+                    </div>
+                    <div class="p-6 overflow-y-auto custom-scroll flex-1">
+                        <div class="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
+                            <div>
+                                <h2 id="read-subject" class="text-xl font-black text-slate-800 mb-1">Perihal Pesan</h2>
+                                <p class="text-sm font-medium text-slate-500">Dari: <span id="read-sender" class="font-bold text-blue-600">Pengirim</span></p>
+                            </div>
+                            <span id="read-date" class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-md">Tanggal</span>
+                        </div>
+                        <div id="read-body" class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                            Isi pesan akan tampil di sini...
+                        </div>
+                        <!-- Container khusus untuk tombol aksi (misal: Terima Request) -->
+                        <div id="read-action-container" class="mt-8 pt-4 border-t border-slate-100 hidden"></div>
+                    </div>
+                </div>
+
+                <!-- VIEW 3: BUAT PESAN -->
+                <div id="inbox-view-compose" class="hidden flex-1 flex flex-col overflow-hidden bg-white">
+                    <div class="p-4 border-b border-slate-200 bg-slate-50 shrink-0">
+                        <h3 class="font-black text-slate-700 flex items-center gap-2"><i data-lucide="pen-square" class="w-4 h-4 text-blue-600"></i> Tulis Pesan Baru</h3>
+                    </div>
+                    <div class="p-6 overflow-y-auto custom-scroll flex-1 space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kirim Ke (User)</label>
+                            <select id="compose-recipient" class="w-full p-3 border border-slate-300 rounded-lg outline-none focus:border-blue-500 font-bold text-sm bg-slate-50 cursor-pointer">
+                                <option value="">-- Memuat User... --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Perihal</label>
+                            <input type="text" id="compose-subject" class="w-full p-3 border border-slate-300 rounded-lg outline-none focus:border-blue-500 font-bold text-sm bg-slate-50" placeholder="Judul pesan...">
+                        </div>
+                        <div class="flex-1 flex flex-col">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Isi Pesan</label>
+                            <textarea id="compose-body" class="w-full flex-1 min-h-[200px] p-3 border border-slate-300 rounded-lg outline-none focus:border-blue-500 text-sm bg-slate-50 resize-none" placeholder="Ketik pesan Anda di sini..."></textarea>
+                        </div>
+                    </div>
+                    <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 shrink-0">
+                        <button onclick="kembaliKeListInbox()" class="px-6 py-2.5 bg-white border border-slate-300 text-slate-600 font-bold rounded-lg hover:bg-slate-100 transition text-sm shadow-sm">Batal</button>
+                        <button onclick="kirimPesan()" id="btn-kirim-pesan" class="px-6 py-2.5 bg-blue-600 text-white font-black rounded-lg hover:bg-blue-700 transition shadow-sm flex items-center gap-2 text-sm"><i data-lucide="send" class="w-4 h-4"></i> Kirim Pesan</button>
+                    </div>
+                </div>
+
             </div>
         </div>
     `;
     layoutWrapper.insertAdjacentHTML('beforeend', modalsHTML);
     document.body.appendChild(layoutWrapper);
-    
-    // ==========================================
-    // 4. GLOBAL TOOLTIP LOGIC (ANTI FLICKER)
-    // ==========================================
+
+    // Global Tooltip Logic
     const globalTooltip = document.createElement('div');
     globalTooltip.id = 'global-sidebar-tooltip';
     globalTooltip.className = 'fixed hidden bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-md shadow-xl z-[9999] pointer-events-none whitespace-nowrap transition-opacity duration-200 opacity-0 border border-slate-700';
     document.body.appendChild(globalTooltip);
 
-    // Menggunakan Event Delegation agar area hover mencakup seluruh kotak <a>
     document.body.addEventListener('mouseover', (e) => {
         const item = e.target.closest('.sidebar-item');
         if (item) {
@@ -266,7 +321,7 @@ function initModernLayout(pageMeta) {
                 globalTooltip.style.left = (rect.right + 15) + 'px';
                 
                 globalTooltip.classList.remove('hidden');
-                void globalTooltip.offsetWidth; // force reflow
+                void globalTooltip.offsetWidth; 
                 globalTooltip.classList.remove('opacity-0');
             }
         }
@@ -337,13 +392,35 @@ document.addEventListener('click', (e) => {
 });
 
 // ==========================================
-// FUNGSI INBOX REQUEST CUSTOMER
+// FUNGSI SISTEM PESAN (INBOX BARU)
 // ==========================================
+let inboxDataGlobal = [];
+
 async function cekNotifikasiInbox() {
+    const user = JSON.parse(localStorage.getItem('user_session'));
+    if(!user) return;
+
     try {
-        const { count, error } = await db.from('request_ganti_customer').select('*', { count: 'exact', head: true }).eq('status', 'PENDING');
+        // Cek pesan biasa yang belum dibaca
+        const { count: msgCount } = await db.from('app_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('recipient', user.username)
+            .eq('status', 'UNREAD');
+
+        // Cek request ganti customer (Hanya untuk Admin/CS)
+        let reqCount = 0;
+        const canApprove = user.role === 'Admin' || user.role === 'CS' || user.username.toLowerCase().includes('admin');
+        if (canApprove) {
+            const { count } = await db.from('request_ganti_customer')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'PENDING');
+            reqCount = count || 0;
+        }
+
+        const totalUnread = (msgCount || 0) + reqCount;
         const badge = document.getElementById('inbox-badge');
-        if (badge && count > 0) badge.classList.remove('hidden');
+        
+        if (badge && totalUnread > 0) badge.classList.remove('hidden');
         else if (badge) badge.classList.add('hidden');
     } catch(e) { console.error("Gagal cek notif:", e); }
 }
@@ -351,46 +428,257 @@ async function cekNotifikasiInbox() {
 window.bukaModalInbox = async function() {
     tutupModal('profile-dropdown');
     document.getElementById('modal-inbox').classList.remove('hidden');
-    
+    kembaliKeListInbox(); // Pastikan selalu buka di view list
+    await loadInboxData();
+};
+
+window.kembaliKeListInbox = function() {
+    document.getElementById('inbox-view-list').classList.remove('hidden');
+    document.getElementById('inbox-view-read').classList.add('hidden');
+    document.getElementById('inbox-view-compose').classList.add('hidden');
+    loadInboxData(); // Refresh list
+};
+
+async function loadInboxData() {
     const tbody = document.getElementById('tbody-inbox');
-    tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i> Mengambil pesan...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i> Memuat pesan...</td></tr>';
     lucide.createIcons();
 
+    const user = JSON.parse(localStorage.getItem('user_session'));
+    inboxDataGlobal = [];
+
     try {
-        const { data, error } = await db.from('request_ganti_customer').select('*').eq('status', 'PENDING').order('created_at', { ascending: false });
-        if(error) throw error;
+        // 1. Ambil Pesan Biasa
+        const { data: msgs, error: errMsgs } = await db.from('app_messages')
+            .select('*')
+            .eq('recipient', user.username)
+            .order('created_at', { ascending: false });
         
-        if(data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-slate-400 font-bold"><i data-lucide="mail-check" class="w-8 h-8 mx-auto mb-2 opacity-50 text-emerald-500"></i> Tidak ada antrean request.</td></tr>';
-            lucide.createIcons();
-            return;
+        if(errMsgs) throw errMsgs;
+        
+        if(msgs) {
+            msgs.forEach(m => {
+                inboxDataGlobal.push({
+                    id: m.id,
+                    type: 'MESSAGE',
+                    created_at: m.created_at,
+                    sender: m.sender,
+                    subject: m.subject,
+                    body: m.body,
+                    status: m.status
+                });
+            });
         }
 
-        const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown', role: 'Staff'};
+        // 2. Ambil Request Ganti Customer (Jika berhak)
         const canApprove = user.role === 'Admin' || user.role === 'CS' || user.username.toLowerCase().includes('admin');
-        
-        let html = '';
-        data.forEach(d => {
-            let btnAksi = canApprove 
-                ? `<button onclick="terimaRequestPO(${d.id}, '${d.qrcode}', '${d.customer_request}')" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-md shadow-sm text-[10px] uppercase transition flex items-center gap-1 mx-auto"><i data-lucide="check-circle" class="w-3 h-3"></i> TERIMA</button>`
-                : `<span class="px-3 py-1 bg-amber-100 text-amber-700 font-bold rounded-md text-[10px] border border-amber-300">MENUNGGU CS</span>`;
+        if (canApprove) {
+            const { data: reqs, error: errReqs } = await db.from('request_ganti_customer')
+                .select('*')
+                .eq('status', 'PENDING')
+                .order('created_at', { ascending: false });
+            
+            if(reqs) {
+                reqs.forEach(r => {
+                    inboxDataGlobal.push({
+                        id: r.id,
+                        type: 'REQ_CUSTOMER',
+                        created_at: r.created_at,
+                        sender: r.pic_request || 'Sistem',
+                        subject: `Request Ganti Customer: ${r.qrcode}`,
+                        body: `Pengajuan ganti customer untuk kardus:\n\nQR Code: ${r.qrcode}\nCustomer Lama: ${r.customer_awal}\nCustomer Baru (Request): ${r.customer_request}\nKeterangan: ${r.keterangan || '-'}`,
+                        status: 'UNREAD', // Selalu unread sampai di-approve
+                        meta: r // Simpan data asli untuk proses approve
+                    });
+                });
+            }
+        }
 
-            html += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 transition bg-white even:bg-slate-50">
-                    <td class="p-3 font-black text-slate-800 uppercase border-r border-slate-200">${d.pic_request || '-'}</td>
-                    <td class="p-3 font-mono font-bold tracking-wider border-r border-slate-200">${d.qrcode}</td>
-                    <td class="p-3 font-bold text-slate-500 border-r border-slate-200">${d.customer_awal || '-'}</td>
-                    <td class="p-3 font-black text-orange-600 border-r border-slate-200 bg-orange-50/30">${d.customer_request}</td>
-                    <td class="p-3 font-medium text-slate-600 truncate max-w-[200px] border-r border-slate-200" title="${d.keterangan || '-'}">${d.keterangan || '-'}</td>
-                    <td class="p-3 text-center">${btnAksi}</td>
-                </tr>
-            `;
-        });
-        tbody.innerHTML = html;
-        lucide.createIcons();
+        // Urutkan gabungan berdasarkan tanggal terbaru
+        inboxDataGlobal.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        renderInboxTable();
 
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`;
+    }
+}
+
+function renderInboxTable() {
+    const tbody = document.getElementById('tbody-inbox');
+    
+    if(inboxDataGlobal.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-400 font-bold"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Kotak pesan kosong.</td></tr>';
+        lucide.createIcons();
+        return;
+    }
+
+    let html = '';
+    inboxDataGlobal.forEach((d, index) => {
+        const dt = new Date(d.created_at);
+        const tgl = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+        
+        const isUnread = d.status === 'UNREAD';
+        const textClass = isUnread ? 'font-black text-slate-900' : 'font-medium text-slate-500';
+        const badge = isUnread 
+            ? '<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-200">Baru</span>'
+            : '<span class="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200">Dibaca</span>';
+
+        const iconType = d.type === 'REQ_CUSTOMER' ? '<i data-lucide="file-warning" class="w-4 h-4 text-orange-500 inline mr-1"></i>' : '';
+
+        html += `
+            <tr class="border-b border-slate-200 hover:bg-slate-50 transition cursor-pointer group">
+                <td class="p-3 text-center" onclick="event.stopPropagation()">
+                    <input type="checkbox" value="${d.id}" data-type="${d.type}" class="cb-inbox rounded text-blue-500 focus:ring-0 cursor-pointer w-4 h-4 border-slate-300">
+                </td>
+                <td class="p-3 text-xs ${textClass}" onclick="bacaPesan(${index})">${tgl}</td>
+                <td class="p-3 text-sm ${textClass}" onclick="bacaPesan(${index})">${d.sender}</td>
+                <td class="p-3 text-sm ${textClass} truncate max-w-[200px]" onclick="bacaPesan(${index})">${iconType}${d.subject}</td>
+                <td class="p-3 text-center" onclick="bacaPesan(${index})">${badge}</td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+    lucide.createIcons();
+}
+
+window.toggleAllInbox = function(checked) {
+    document.querySelectorAll('.cb-inbox').forEach(cb => cb.checked = checked);
+};
+
+window.bacaPesan = async function(index) {
+    const msg = inboxDataGlobal[index];
+    if(!msg) return;
+
+    // Tampilkan data ke UI Read
+    const dt = new Date(msg.created_at);
+    document.getElementById('read-subject').innerText = msg.subject;
+    document.getElementById('read-sender').innerText = msg.sender;
+    document.getElementById('read-date').innerText = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    document.getElementById('read-body').innerText = msg.body;
+
+    const actionContainer = document.getElementById('read-action-container');
+    actionContainer.innerHTML = '';
+    actionContainer.classList.add('hidden');
+
+    // Jika ini request ganti customer, tampilkan tombol Terima
+    if (msg.type === 'REQ_CUSTOMER') {
+        actionContainer.classList.remove('hidden');
+        actionContainer.innerHTML = `
+            <button onclick="terimaRequestPO(${msg.meta.id}, '${msg.meta.qrcode}', '${msg.meta.customer_request}')" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2 text-sm">
+                <i data-lucide="check-circle" class="w-4 h-4"></i> TERIMA REQUEST INI
+            </button>
+        `;
+        lucide.createIcons();
+    } 
+    // Jika pesan biasa dan statusnya UNREAD, update ke READ di DB
+    else if (msg.type === 'MESSAGE' && msg.status === 'UNREAD') {
+        try {
+            await db.from('app_messages').update({ status: 'READ' }).eq('id', msg.id);
+            msg.status = 'READ'; // Update state lokal
+            cekNotifikasiInbox(); // Update badge
+        } catch(e) { console.error("Gagal update status read:", e); }
+    }
+
+    // Switch View
+    document.getElementById('inbox-view-list').classList.add('hidden');
+    document.getElementById('inbox-view-read').classList.remove('hidden');
+}
+
+window.bukaBuatPesan = async function() {
+    document.getElementById('inbox-view-list').classList.add('hidden');
+    document.getElementById('inbox-view-compose').classList.remove('hidden');
+    
+    // Reset Form
+    document.getElementById('compose-subject').value = '';
+    document.getElementById('compose-body').value = '';
+    
+    // Load Users untuk Dropdown
+    const sel = document.getElementById('compose-recipient');
+    sel.innerHTML = '<option value="">Memuat...</option>';
+    
+    try {
+        const { data, error } = await db.from('app_users').select('username').order('username');
+        if(error) throw error;
+        
+        let html = '<option value="">-- Pilih Penerima --</option>';
+        data.forEach(u => {
+            // Jangan tampilkan diri sendiri
+            if(u.username !== currentUser.username) {
+                html += `<option value="${u.username}">${u.username}</option>`;
+            }
+        });
+        sel.innerHTML = html;
+    } catch(e) {
+        sel.innerHTML = '<option value="">Gagal memuat user</option>';
+    }
+}
+
+window.kirimPesan = async function() {
+    const recipient = document.getElementById('compose-recipient').value;
+    const subject = document.getElementById('compose-subject').value.trim();
+    const body = document.getElementById('compose-body').value.trim();
+
+    if(!recipient) return alert("Pilih penerima pesan!");
+    if(!subject) return alert("Perihal tidak boleh kosong!");
+    if(!body) return alert("Isi pesan tidak boleh kosong!");
+
+    const btn = document.getElementById('btn-kirim-pesan');
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Mengirim...';
+    btn.disabled = true;
+
+    try {
+        const { error } = await db.from('app_messages').insert([{
+            sender: currentUser.username,
+            recipient: recipient,
+            subject: subject,
+            body: body,
+            status: 'UNREAD'
+        }]);
+
+        if(error) throw error;
+        
+        alert("Pesan berhasil dikirim!");
+        kembaliKeListInbox();
+    } catch(e) {
+        alert("Gagal mengirim pesan: " + e.message);
+    } finally {
+        btn.innerHTML = ori;
+        btn.disabled = false;
+        lucide.createIcons();
+    }
+}
+
+window.hapusPesanMassal = async function() {
+    const checked = document.querySelectorAll('.cb-inbox:checked');
+    if(checked.length === 0) return alert("Pilih pesan yang ingin dihapus!");
+    
+    if(!confirm(`Yakin ingin menghapus ${checked.length} pesan ini?`)) return;
+
+    let idsMsg = [];
+    let idsReq = [];
+
+    checked.forEach(cb => {
+        if(cb.getAttribute('data-type') === 'MESSAGE') idsMsg.push(cb.value);
+        else if(cb.getAttribute('data-type') === 'REQ_CUSTOMER') idsReq.push(cb.value);
+    });
+
+    try {
+        if(idsMsg.length > 0) {
+            await db.from('app_messages').delete().in('id', idsMsg);
+        }
+        if(idsReq.length > 0) {
+            // Untuk request, kita ubah statusnya jadi DITOLAK/DIHAPUS agar hilang dari inbox
+            await db.from('request_ganti_customer').update({ status: 'DITOLAK' }).in('id', idsReq);
+        }
+        
+        alert("Pesan berhasil dihapus.");
+        loadInboxData();
+        cekNotifikasiInbox();
+    } catch(e) {
+        alert("Gagal menghapus pesan: " + e.message);
     }
 }
 
@@ -418,7 +706,8 @@ window.terimaRequestPO = async function(idReq, qrcode, customerBaru) {
         const { error: errReq } = await db.from('request_ganti_customer').update({ status: 'SELESAI' }).eq('id', idReq);
         if(errReq) throw errReq;
 
-        bukaModalInbox(); 
+        alert("Request berhasil disetujui! Customer telah diganti.");
+        kembaliKeListInbox(); 
         cekNotifikasiInbox(); 
 
     } catch(err) {
