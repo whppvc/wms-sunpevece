@@ -266,7 +266,6 @@ function initModernLayout(pageMeta) {
                         <div id="read-body" class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                             Isi pesan akan tampil di sini...
                         </div>
-                        <!-- Container khusus untuk tombol aksi (misal: Terima Request) -->
                         <div id="read-action-container" class="mt-8 pt-4 border-t border-slate-100 hidden"></div>
                     </div>
                 </div>
@@ -401,13 +400,11 @@ async function cekNotifikasiInbox() {
     if(!user) return;
 
     try {
-        // Cek pesan biasa yang belum dibaca
         const { count: msgCount } = await db.from('app_messages')
             .select('*', { count: 'exact', head: true })
             .eq('recipient', user.username)
             .eq('status', 'UNREAD');
 
-        // Cek request ganti customer (Hanya untuk Admin/CS)
         let reqCount = 0;
         const canApprove = user.role === 'Admin' || user.role === 'CS' || user.username.toLowerCase().includes('admin');
         if (canApprove) {
@@ -428,7 +425,7 @@ async function cekNotifikasiInbox() {
 window.bukaModalInbox = async function() {
     tutupModal('profile-dropdown');
     document.getElementById('modal-inbox').classList.remove('hidden');
-    kembaliKeListInbox(); // Pastikan selalu buka di view list
+    kembaliKeListInbox(); 
     await loadInboxData();
 };
 
@@ -436,7 +433,7 @@ window.kembaliKeListInbox = function() {
     document.getElementById('inbox-view-list').classList.remove('hidden');
     document.getElementById('inbox-view-read').classList.add('hidden');
     document.getElementById('inbox-view-compose').classList.add('hidden');
-    loadInboxData(); // Refresh list
+    loadInboxData(); 
 };
 
 async function loadInboxData() {
@@ -448,7 +445,6 @@ async function loadInboxData() {
     inboxDataGlobal = [];
 
     try {
-        // 1. Ambil Pesan Biasa
         const { data: msgs, error: errMsgs } = await db.from('app_messages')
             .select('*')
             .eq('recipient', user.username)
@@ -470,7 +466,6 @@ async function loadInboxData() {
             });
         }
 
-        // 2. Ambil Request Ganti Customer (Jika berhak)
         const canApprove = user.role === 'Admin' || user.role === 'CS' || user.username.toLowerCase().includes('admin');
         if (canApprove) {
             const { data: reqs, error: errReqs } = await db.from('request_ganti_customer')
@@ -487,14 +482,13 @@ async function loadInboxData() {
                         sender: r.pic_request || 'Sistem',
                         subject: `Request Ganti Customer: ${r.qrcode}`,
                         body: `Pengajuan ganti customer untuk kardus:\n\nQR Code: ${r.qrcode}\nCustomer Lama: ${r.customer_awal}\nCustomer Baru (Request): ${r.customer_request}\nKeterangan: ${r.keterangan || '-'}`,
-                        status: 'UNREAD', // Selalu unread sampai di-approve
-                        meta: r // Simpan data asli untuk proses approve
+                        status: 'UNREAD', 
+                        meta: r 
                     });
                 });
             }
         }
 
-        // Urutkan gabungan berdasarkan tanggal terbaru
         inboxDataGlobal.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
         renderInboxTable();
@@ -551,7 +545,6 @@ window.bacaPesan = async function(index) {
     const msg = inboxDataGlobal[index];
     if(!msg) return;
 
-    // Tampilkan data ke UI Read
     const dt = new Date(msg.created_at);
     document.getElementById('read-subject').innerText = msg.subject;
     document.getElementById('read-sender').innerText = msg.sender;
@@ -562,7 +555,6 @@ window.bacaPesan = async function(index) {
     actionContainer.innerHTML = '';
     actionContainer.classList.add('hidden');
 
-    // Jika ini request ganti customer, tampilkan tombol Terima
     if (msg.type === 'REQ_CUSTOMER') {
         actionContainer.classList.remove('hidden');
         actionContainer.innerHTML = `
@@ -572,16 +564,14 @@ window.bacaPesan = async function(index) {
         `;
         lucide.createIcons();
     } 
-    // Jika pesan biasa dan statusnya UNREAD, update ke READ di DB
     else if (msg.type === 'MESSAGE' && msg.status === 'UNREAD') {
         try {
             await db.from('app_messages').update({ status: 'READ' }).eq('id', msg.id);
-            msg.status = 'READ'; // Update state lokal
-            cekNotifikasiInbox(); // Update badge
+            msg.status = 'READ'; 
+            cekNotifikasiInbox(); 
         } catch(e) { console.error("Gagal update status read:", e); }
     }
 
-    // Switch View
     document.getElementById('inbox-view-list').classList.add('hidden');
     document.getElementById('inbox-view-read').classList.remove('hidden');
 }
@@ -590,23 +580,24 @@ window.bukaBuatPesan = async function() {
     document.getElementById('inbox-view-list').classList.add('hidden');
     document.getElementById('inbox-view-compose').classList.remove('hidden');
     
-    // Reset Form
     document.getElementById('compose-subject').value = '';
     document.getElementById('compose-body').value = '';
     
-    // Load Users untuk Dropdown
     const sel = document.getElementById('compose-recipient');
     sel.innerHTML = '<option value="">Memuat...</option>';
     
     try {
-        const { data, error } = await db.from('app_users').select('username').order('username');
+        // REVISI: Mengambil username dan role dari app_users
+        const { data, error } = await db.from('app_users').select('username, role').order('username');
         if(error) throw error;
         
+        const currentUser = JSON.parse(localStorage.getItem('user_session'));
         let html = '<option value="">-- Pilih Penerima --</option>';
+        
         data.forEach(u => {
-            // Jangan tampilkan diri sendiri
             if(u.username !== currentUser.username) {
-                html += `<option value="${u.username}">${u.username}</option>`;
+                // REVISI: Format [username] - [role]
+                html += `<option value="${u.username}">${u.username} - ${u.role || 'User'}</option>`;
             }
         });
         sel.innerHTML = html;
@@ -616,6 +607,7 @@ window.bukaBuatPesan = async function() {
 }
 
 window.kirimPesan = async function() {
+    const currentUser = JSON.parse(localStorage.getItem('user_session'));
     const recipient = document.getElementById('compose-recipient').value;
     const subject = document.getElementById('compose-subject').value.trim();
     const body = document.getElementById('compose-body').value.trim();
@@ -670,7 +662,6 @@ window.hapusPesanMassal = async function() {
             await db.from('app_messages').delete().in('id', idsMsg);
         }
         if(idsReq.length > 0) {
-            // Untuk request, kita ubah statusnya jadi DITOLAK/DIHAPUS agar hilang dari inbox
             await db.from('request_ganti_customer').update({ status: 'DITOLAK' }).in('id', idsReq);
         }
         
