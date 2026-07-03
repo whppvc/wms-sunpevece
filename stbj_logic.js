@@ -1,7 +1,6 @@
 let dataStbj = []; 
 let deletedStbjStack = []; 
 let masterKamus = [];
-let jasperData = []; // REVISI: Variabel penampung data Jasper
 let globalRowId = 0;
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
@@ -30,7 +29,6 @@ window.tutupModalAdd = function() {
 
 async function loadInitialSTBJData() {
     try {
-        // Load Troli
         const { data: mData1 } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
         if(mData1) {
             const trolis = [...new Set(mData1.map(r => r.nama_troli).filter(x => x))];
@@ -38,18 +36,11 @@ async function loadInitialSTBJData() {
             sel.innerHTML = '<option value="">-- Memuat Troli... --</option>';
             trolis.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
         }
-        
-        // Load Kamus Master
         const { data: mData2 } = await db.from('master_2').select('*');
         if(mData2) {
             masterKamus = mData2;
             window.masterData = { kamus: mData2 }; 
         }
-
-        // REVISI: Load Katalog Jasper
-        const { data: dj } = await db.from('nama_jasper').select('*');
-        if(dj) jasperData = dj;
-
     } catch (err) { console.error("Gagal muat referensi:", err); }
 }
 
@@ -387,11 +378,10 @@ async function saveToDatabaseSTBJ() {
     const UNIKs = dataStbj.filter(d => d.status === 'BELUM STBJ');
     const dupes = dataStbj.filter(d => d.status === 'SUDAH STBJ' || d.status === 'DUPLIKAT SCAN' || d.status === 'HOLD' || d.status === 'IN GUDANG');
 
-    // REVISI: Fungsi map untuk tabel hasil_stbj (mencari nama_jasper)
     const mapToHasil = (d, finalStatus) => {
         let jName = `JAS-${d.namaItem}`;
-        if (jasperData && jasperData.length > 0) {
-            const cJasper = jasperData.find(j => j.nama_item === d.namaItem && j.panjang === d.panjang && j.grade === d.grade);
+        if (window.masterData && window.masterData.jasper) {
+            const cJasper = window.masterData.jasper.find(j => j.nama_item === d.namaItem && j.panjang === d.panjang && j.grade === d.grade);
             if (cJasper) jName = cJasper.nama_jasper;
         }
 
@@ -413,7 +403,7 @@ async function saveToDatabaseSTBJ() {
             status_data: 'BELUM',
             posisi: 'STBJ',
             pic_input: d.pic,
-            nama_jasper: jName, // <-- REVISI: Disimpan ke DB
+            nama_jasper: jName, 
             created_at: new Date().toISOString() 
         };
     };
