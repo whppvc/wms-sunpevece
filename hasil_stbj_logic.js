@@ -1,5 +1,5 @@
 let modeSekarang = 'qrcode'; 
-let tabelSekarang = 'hasil_stbj'; // REVISI: Default ke hasil_stbj
+let tabelSekarang = 'hasil_stbj'; 
 let rawDataRaw = [];
 let kamusData = [];
 let jasperData = [];
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const actionMenu = document.getElementById('mobile-action-menu');
         if (actionMenu && !actionMenu.classList.contains('hidden')) {
-            if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenu"]')) {
+            if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenuMobile"]')) {
                 actionMenu.classList.add('hidden');
             }
         }
@@ -47,7 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 200);
 });
 
-window.toggleActionMenu = function(e) {
+// REVISI: Nama fungsi diubah agar tidak bentrok dengan global.js
+window.toggleActionMenuMobile = function(e) {
     if(e) e.stopPropagation();
     const menu = document.getElementById('mobile-action-menu');
     if(menu) menu.classList.toggle('hidden');
@@ -235,13 +236,25 @@ function setMode(m) {
     
     const btnCollect = document.getElementById('btn-massal-collect');
     const btnCollectMob = document.getElementById('btn-massal-collect-mob');
+    const btnHold = document.getElementById('btn-hold');
+    const btnHoldMob = document.getElementById('btn-hold-mob');
+    const btnHapus = document.getElementById('btn-hapus');
+    const btnHapusMob = document.getElementById('btn-hapus-mob');
     
     if (m === 'item' || m === 'jasper') {
         if(btnCollect) btnCollect.classList.remove('hidden'); 
         if(btnCollectMob) btnCollectMob.classList.remove('hidden'); 
+        if(btnHold) btnHold.classList.add('hidden');
+        if(btnHoldMob) btnHoldMob.classList.add('hidden');
+        if(btnHapus) btnHapus.classList.add('hidden');
+        if(btnHapusMob) btnHapusMob.classList.add('hidden');
     } else {
         if(btnCollect) btnCollect.classList.add('hidden'); 
         if(btnCollectMob) btnCollectMob.classList.add('hidden'); 
+        if(btnHold) btnHold.classList.remove('hidden');
+        if(btnHoldMob) btnHoldMob.classList.remove('hidden');
+        if(btnHapus) btnHapus.classList.remove('hidden');
+        if(btnHapusMob) btnHapusMob.classList.remove('hidden');
     }
 
     activeFilters = {}; 
@@ -272,7 +285,7 @@ function sortTable(colIndex, headerEl) {
 
 const thSort = (idx, label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
-    const noFilter = ['col-cb'].includes(colClass);
+    const noFilter = ['col-cb', 'col-btn'].includes(colClass);
     
     const filterBtn = noFilter ? '' : `
         <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded ml-1 transition" title="Filter ${label}">
@@ -501,7 +514,7 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
-                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-customer" data-search="${r.customer || '-'}">${r.customer || '-'}</td>
+                    <td class="px-4 py-4 text-left font-medium text-slate-900 col-customer" data-search="${r.customer_bawaan || '-'}">${r.customer_bawaan || '-'}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-500 col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-400 col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
                 </tr>`;
@@ -512,7 +525,7 @@ function renderHeaderDanTabel() {
     else if(modeSekarang === 'item' || modeSekarang === 'jasper') {
         const isJasper = modeSekarang === 'jasper';
         
-        // REVISI: Menambahkan kolom Nama Item sebelum Nama Jasper
+        // REVISI: Menambahkan kolom Edit Jasper di sebelah Nama Jasper
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="toggleSemuaCentang(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
@@ -528,6 +541,7 @@ function renderHeaderDanTabel() {
                 ${thSort(10, 'Jenis Item', 'col-jenis')}
                 ${thSort(11, 'Nama Item', 'col-nama')}
                 ${isJasper ? thSort(11.5, 'Nama Jasper', 'col-jasper text-purple-300') : ''}
+                ${isJasper ? '<th class="hdr-std w-10 text-center col-btn-edit">Edit</th>' : ''}
                 ${thSort(12, 'Panjang', 'col-pjg')}
                 ${thSort(13, 'Grade', 'col-grade')}
                 ${thSort(14, 'Dus', 'col-dus')}
@@ -542,20 +556,27 @@ function renderHeaderDanTabel() {
         rawDataRaw.forEach(r => {
             let n = r.nama_item || '-';
             let jName = n;
+            let jId = '';
+            
             if(isJasper) {
                 if(jasperData && jasperData.length > 0) {
                     const cJasper = jasperData.find(j => j.nama_item === r.nama_item && j.panjang === r.panjang && j.grade === r.grade);
-                    jName = cJasper ? cJasper.nama_jasper : `JAS-${r.nama_item}`;
+                    if(cJasper) {
+                        jName = cJasper.nama_jasper;
+                        jId = cJasper.id;
+                    } else {
+                        jName = `JAS-${r.nama_item}`;
+                    }
                 } else { jName = `JAS-${r.nama_item}`; }
             }
             
             let ket = r.keterangan || 'TANPA_KETERANGAN';
             let sData = r.status_data || 'BELUM';
-            let key = `${r.jenis_item}_${n}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.customer}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}`;
+            let key = `${r.jenis_item}_${n}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.customer_bawaan}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}`;
             
             if(!groups[key]) {
                 groups[key] = { 
-                    jenisItem: r.jenis_item, namaItemAsli: n, displayNama: jName, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, customer: r.customer,
+                    jenisItem: r.jenis_item, namaItemAsli: n, displayNama: jName, jasperId: jId, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, customer: r.customer_bawaan,
                     tglProduksi: r.tgl_produksi, mesin: r.mesin, shift: r.shift,
                     qty: 0, qrcodes: [], trolis: new Set(), ket: ket, sData: sData 
                 };
@@ -578,6 +599,19 @@ function renderHeaderDanTabel() {
                 statData = `<span class="text-indigo-600 font-medium uppercase">${r.sData}</span>`;
             }
 
+            // REVISI: Tombol Edit Jasper
+            let btnEditJasper = '';
+            if(isJasper) {
+                const jData = encodeURIComponent(JSON.stringify({
+                    id: r.jasperId,
+                    nama_item: r.namaItemAsli,
+                    panjang: r.panjang,
+                    grade: r.grade,
+                    nama_jasper: r.displayNama
+                }));
+                btnEditJasper = `<td class="px-4 py-4 text-center col-btn-edit"><button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>`;
+            }
+
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -593,6 +627,7 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-jenis" data-search="${r.jenisItem}">${r.jenisItem}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-800 col-nama" data-search="${r.namaItemAsli}">${r.namaItemAsli}</td>
                     ${isJasper ? `<td class="px-4 py-4 text-left font-black text-purple-700 col-jasper" data-search="${r.displayNama}">${r.displayNama}</td>` : ''}
+                    ${btnEditJasper}
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-pjg" data-search="${r.panjang}">${r.panjang}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-grade" data-search="${r.grade}">${r.grade}</td>
                     <td class="px-4 py-4 text-left font-medium text-slate-700 col-dus" data-search="${r.dus}">${r.dus}</td>
@@ -752,6 +787,8 @@ function saringKatalogList() {
 }
 
 function bukaModalKatalogForm(isEdit = false, encodedData = null) {
+    // REVISI: Jika dibuka dari baris tabel, tutup modal list katalog agar tidak menumpuk
+    document.getElementById('modal-list-katalog').classList.add('hidden');
     document.getElementById('modal-katalog').classList.remove('hidden');
     
     const title = document.getElementById('title-modal-jasper');
@@ -812,6 +849,8 @@ async function simpanDataJasper() {
         
         await loadKamusDanJasper(); 
         renderKatalogList(); 
+        
+        // REVISI: Update tabel utama agar nama jasper langsung berubah
         muatDataDariSupabase(); 
         
     } catch(e) {
@@ -838,7 +877,7 @@ async function aksiMassal(tipe) {
     if(tipe === 'salin') {
         let textSalin = "";
         const headers = Array.from(document.querySelectorAll('#thead-stbj th'))
-            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb'))
+            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-btn') && !th.classList.contains('col-btn-edit'))
             .map(th => th.innerText.trim().replace(/\n/g, ' '));
         textSalin += headers.join('\t') + '\n';
 
@@ -846,7 +885,7 @@ async function aksiMassal(tipe) {
             const tr = cb.closest('tr');
             const rowData = [];
             Array.from(tr.children).forEach(td => {
-                if(td.classList.contains('col-cb')) return;
+                if(td.classList.contains('col-cb') || td.classList.contains('col-btn') || td.classList.contains('col-btn-edit')) return;
                 if(window.getComputedStyle(td).display !== 'none') {
                     let val = td.getAttribute('data-search') ? td.getAttribute('data-search') : td.innerText.trim();
                     rowData.push(val.replace(/\n/g, ' '));
@@ -945,7 +984,7 @@ async function aksiMassal(tipe) {
         
         let ws_data = [];
         const headers = Array.from(document.querySelectorAll('#thead-stbj th'))
-            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb'))
+            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-btn') && !th.classList.contains('col-btn-edit'))
             .map(th => th.innerText.trim().replace(/\n/g, ' '));
         ws_data.push(headers);
 
@@ -953,7 +992,7 @@ async function aksiMassal(tipe) {
             const tr = cb.closest('tr');
             const rowData = [];
             Array.from(tr.children).forEach(td => {
-                if(td.classList.contains('col-cb')) return;
+                if(td.classList.contains('col-cb') || td.classList.contains('col-btn') || td.classList.contains('col-btn-edit')) return;
                 if(window.getComputedStyle(td).display !== 'none') {
                     let val = td.getAttribute('data-search') ? td.getAttribute('data-search') : td.innerText.trim();
                     rowData.push(val.replace(/\n/g, ' '));
