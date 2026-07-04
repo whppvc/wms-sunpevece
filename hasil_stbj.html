@@ -20,44 +20,41 @@
         .table-container { position: relative; will-change: transform; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* MODERN SAAS TABLE DESIGN */
+        /* DESAIN HEADER ALA OMNIFUL (DARK NAVY) */
         .hdr-std { 
-            background-color: #0f172a !important; /* Dark Navy */
-            color: #f8fafc !important; /* Soft White */
+            background-color: #0f172a !important; 
+            color: #ffffff !important; 
             text-align: left !important; 
-            padding: 0.875rem 1rem !important; 
-            font-size: 0.75rem !important; /* text-xs */
-            font-weight: 600 !important; 
-            text-transform: uppercase !important; 
-            letter-spacing: 0.05em !important; 
+            padding: 1rem 1rem !important; 
+            font-size: 0.85rem !important; 
+            font-weight: 500 !important; 
+            text-transform: capitalize !important; 
+            letter-spacing: 0.025em !important; 
             white-space: nowrap !important; 
             position: sticky !important; 
             top: 0 !important; 
             z-index: 20 !important; 
-            border-bottom: 2px solid #020617 !important; 
-            border-right: 1px solid #1e293b !important; /* Subtle separator in header */
+            border: none !important; 
         }
-        .hdr-std:last-child { border-right: none !important; }
         
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
 
-        /* TABLE BODY DESIGN */
-        #table-stbj-main { border-collapse: separate; border-spacing: 0; }
+        /* DESAIN TABEL BODY (ZEBRA & VERTICAL LINES) */
+        #table-stbj-main { border-collapse: collapse; }
         #table-stbj-main td { 
-            border-right: 1px solid #e2e8f0 !important; /* Softer vertical border */
-            border-bottom: 1px solid #e2e8f0 !important; /* Softer horizontal border */
+            border-right: 1px solid #cbd5e1; 
+            border-bottom: 1px solid #cbd5e1 !important; 
         }
-        #table-stbj-main td:last-child { border-right: none !important; } 
+        #table-stbj-main td:last-child { border-right: none; } 
 
-        tr.text-row { background-color: #ffffff !important; transition: background-color 0.2s ease; } 
-        tr.text-row:nth-child(even) { background-color: #f8fafc !important; } /* Soft Zebra */
-        tr.text-row:hover td { background-color: #f1f5f9 !important; } /* Subtle Hover */
-        
-        /* Highlight Baris Terpilih (Sesuai Blueprint) */
+        /* Zebra Striping Tegas */
+        tr.text-row { background-color: #f8fafc !important; } 
+        tr.text-row:nth-child(even) { background-color: #e2e8f0 !important; } 
+
+        /* Highlight Baris Terpilih */
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
 
-        /* Drag & Drop Column Styles */
         .drag-item { cursor: grab; }
         .drag-item:active { cursor: grabbing; }
         .drag-item.dragging { opacity: 0.5; background-color: #e2e8f0; border: 2px dashed #3b82f6; }
