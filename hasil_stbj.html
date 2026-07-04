@@ -20,16 +20,16 @@
         .table-container { position: relative; will-change: transform; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* DESAIN HEADER ALA OMNIFUL (DARK NAVY) */
+        /* DESAIN HEADER ALA KARTU STOK (DARK NAVY) */
         .hdr-std { 
             background-color: #0f172a !important; 
             color: #ffffff !important; 
             text-align: left !important; 
-            padding: 1rem 1rem !important; 
-            font-size: 0.85rem !important; 
-            font-weight: 500 !important; 
-            text-transform: capitalize !important; 
-            letter-spacing: 0.025em !important; 
+            padding: 0.75rem 1rem !important; 
+            font-size: 0.75rem !important; 
+            font-weight: 600 !important; 
+            text-transform: uppercase !important; 
+            letter-spacing: 0.05em !important; 
             white-space: nowrap !important; 
             position: sticky !important; 
             top: 0 !important; 
@@ -40,13 +40,13 @@
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
 
-        /* DESAIN TABEL BODY (ZEBRA & VERTICAL LINES) */
+        /* DESAIN TABEL BODY (ZEBRA & VERTICAL LINES KEMBALI SEPERTI KARTU STOK) */
         #table-stbj-main { border-collapse: collapse; }
         #table-stbj-main td { 
-            border-right: 1px solid #cbd5e1; 
+            border-right: 1px solid #cbd5e1 !important; 
             border-bottom: 1px solid #cbd5e1 !important; 
         }
-        #table-stbj-main td:last-child { border-right: none; } 
+        #table-stbj-main td:last-child { border-right: none !important; } 
 
         /* Zebra Striping Tegas */
         tr.text-row { background-color: #f8fafc !important; } 
@@ -55,6 +55,7 @@
         /* Highlight Baris Terpilih */
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
 
+        /* Drag & Drop Column Styles */
         .drag-item { cursor: grab; }
         .drag-item:active { cursor: grabbing; }
         .drag-item.dragging { opacity: 0.5; background-color: #e2e8f0; border: 2px dashed #3b82f6; }
@@ -155,20 +156,20 @@
 
     </div>
 
-    <!-- MODAL FILTER EXCEL -->
-    <div id="excel-filter-menu" class="hidden absolute bg-white shadow-xl border border-slate-200 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm">
-        <div class="p-3 border-b border-slate-100 flex justify-between items-center rounded-t-lg">
+    <!-- MODAL FILTER EXCEL (DESAIN DIPERBAIKI ALA GOOGLE SHEETS) -->
+    <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm overflow-hidden">
+        <div class="p-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
             <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
-            <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-rose-500 bg-white p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+            <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-rose-500 bg-white border border-slate-200 p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
         </div>
         <div class="p-2 border-b border-slate-200 bg-white">
             <div class="relative">
                 <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2"></i>
-                <input type="text" id="filter-search-input" oninput="searchFilterList(this.value)" class="w-full pl-8 p-1.5 text-xs font-bold border border-slate-300 bg-slate-50 rounded focus:border-blue-500 focus:bg-white outline-none transition" placeholder="Cari Spesifik...">
+                <input type="text" id="filter-search-input" oninput="searchFilterList(this.value)" class="w-full pl-8 p-1.5 text-xs font-bold border border-slate-300 rounded focus:border-blue-500 outline-none transition" placeholder="Cari Spesifik...">
             </div>
         </div>
-        <div class="p-2 max-h-48 overflow-y-auto flex flex-col gap-1 text-xs bg-white" id="filter-values-list"></div>
-        <div class="p-2 border-t border-slate-200 bg-slate-50 flex justify-between gap-2 rounded-b-lg">
+        <div class="p-2 max-h-48 overflow-y-auto flex flex-col gap-1 text-xs bg-white custom-scroll" id="filter-values-list"></div>
+        <div class="p-2 border-t border-slate-200 bg-slate-50 flex justify-between gap-2">
             <button onclick="clearFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100 transition shadow-sm">Reset</button>
             <button onclick="applyFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-700 transition shadow-sm">Terapkan</button>
         </div>
