@@ -116,20 +116,133 @@ const thSort = (idx, label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-btn'].includes(colClass);
     
-    const filterBtn = noFilter ? '' : `
-        <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded ml-1 transition" title="Filter ${label}">
-            <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
-        </button>`;
+    if (noFilter) {
+        return `<th class="hdr-std ${cls} select-none text-center">
+            <div class="flex items-center justify-center w-full">${label}</div>
+        </th>`;
+    }
 
-    const justifyClass = noFilter ? 'justify-center' : 'justify-start';
-
-    return `<th class="hdr-std ${cls} select-none">
-        <div class="flex items-center ${justifyClass} gap-1.5">
-            <span class="cursor-pointer flex items-center gap-1 hover:text-blue-300 transition" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
-            ${filterBtn}
+    return `<th class="hdr-std ${cls} select-none group">
+        <div class="flex items-center justify-between w-full min-w-max gap-4">
+            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable(${idx}, this.closest('th'))" title="Sort ${label}">${label}</span>
+            <div class="flex items-center gap-1 shrink-0">
+                <button onclick="sortTable(${idx}, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
+                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 sort-icon opacity-40 group-hover:opacity-100 transition-opacity text-white"></i>
+                </button>
+                <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
+                    <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
+                </button>
+            </div>
         </div>
     </th>`;
 };
+
+// REVISI: Logika Posisi Popup Filter (Fixed Position & Smart Alignment)
+function openColumnFilter(event, colClass, colName) {
+    event.stopPropagation(); currentFilterCol = colClass;
+    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
+    let uniqueValues = new Set();
+    
+    document.querySelectorAll('#tbody-riwayat tr.r-row').forEach(row => {
+        let showBasedOnOthers = true;
+        for (let otherCol in activeFilters) {
+            if (otherCol !== colClass) { 
+                const allowed = activeFilters[otherCol]; const c = row.querySelector('.' + otherCol);
+                let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
+                if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
+            }
+        }
+        if (showBasedOnOthers) {
+            let cell = row.querySelector('.' + colClass);
+            if (cell) { let val = cell.getAttribute('data-search') || cell.innerText.trim(); if(val !== '') uniqueValues.add(val); }
+        }
+    });
+
+    let sortedValues = Array.from(uniqueValues).sort();
+    let listHtml = `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-0"> <span class="font-black text-slate-800">(PILIH SEMUA)</span></label>`;
+    
+    sortedValues.forEach(val => {
+        let isChecked = !activeFilters[colClass] || activeFilters[colClass].includes(val);
+        listHtml += `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded filter-val-item" data-value="${encodeURIComponent(val)}">
+            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-0" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
+            <span class="truncate font-bold text-slate-600">${val}</span>
+        </label>`;
+    });
+
+    document.getElementById('filter-values-list').innerHTML = listHtml; updateSelectAllState();
+    document.getElementById('filter-search-input').value = '';
+    
+    const menu = document.getElementById('excel-filter-menu');
+    if(menu) {
+        menu.classList.remove('hidden');
+        
+        const btnRect = event.currentTarget.getBoundingClientRect();
+        const menuWidth = 256; 
+        
+        let topPos = btnRect.bottom + 4; 
+        let leftPos = btnRect.left; 
+
+        if (leftPos + menuWidth > window.innerWidth) {
+            leftPos = btnRect.right - menuWidth;
+        }
+        
+        if (leftPos < 10) {
+            leftPos = 10;
+        }
+
+        menu.style.position = 'fixed'; 
+        menu.style.top = `${topPos}px`;
+        menu.style.left = `${leftPos}px`;
+    }
+    const sInput = document.getElementById('filter-search-input'); if(sInput) sInput.focus();
+}
+
+function toggleAllFilterValues(checked) {
+    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
+    updateSelectAllState();
+}
+function updateSelectAllState() {
+    const allCbs = document.querySelectorAll('.filter-val-cb'); const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
+    const selectAll = document.getElementById('filter-select-all'); if(!selectAll) return;
+    if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
+    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
+    else { selectAll.checked = false; selectAll.indeterminate = true; }
+}
+
+function searchFilterList(val) {
+    const query = val.toLowerCase().split(' ').filter(x => x);
+    document.querySelectorAll('.filter-val-item').forEach(label => {
+        const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
+        label.style.display = query.every(term => text.includes(term)) ? '' : 'none';
+    });
+}
+function closeFilterMenu() { const menu = document.getElementById('excel-filter-menu'); if(menu) menu.classList.add('hidden'); }
+function clearFilterForCurrentCol() { delete activeFilters[currentFilterCol]; closeFilterMenu(); saringTabelExcel(); updateFilterIcons(); }
+function applyFilterForCurrentCol() {
+    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked'); const totalBoxes = document.querySelectorAll('.filter-val-cb');
+    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') { delete activeFilters[currentFilterCol]; } 
+    else { activeFilters[currentFilterCol] = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value)); }
+    closeFilterMenu(); saringTabelExcel(); updateFilterIcons();
+}
+function saringTabelExcel() {
+    document.querySelectorAll('.r-row').forEach(row => {
+        let show = true;
+        for (let colClass in activeFilters) {
+            const allowed = activeFilters[colClass]; const cell = row.querySelector('.' + colClass);
+            if (cell) { if (!allowed.includes(cell.getAttribute('data-search') || cell.innerText.trim())) { show = false; break; } }
+        }
+        if (show) { row.classList.remove('filtered-out'); } 
+        else { row.classList.add('filtered-out'); let cb = row.querySelector('.cb-row'); if(cb) { cb.checked = false; highlightRow(cb); } }
+    });
+    currentPage = 1; applyPagination();
+}
+function updateFilterIcons() {
+    document.querySelectorAll('.filter-icon').forEach(icon => { icon.classList.remove('text-amber-400', 'opacity-100'); icon.classList.add('opacity-40', 'text-white'); });
+    for (let colClass in activeFilters) {
+        const th = document.querySelector(`th.${colClass}`);
+        if (th) { const icon = th.querySelector('.filter-icon'); if (icon) { icon.classList.remove('opacity-40', 'text-white'); icon.classList.add('text-amber-400', 'opacity-100'); } }
+    }
+}
 
 function renderTabelUtama() {
     const thead = document.getElementById('thead-riwayat');
@@ -249,96 +362,6 @@ function changeRowsPerPage(val) {
     if (val === 'ALL') { rowsPerPage = 999999; } 
     else { rowsPerPage = parseInt(val); }
     currentPage = 1; applyPagination();
-}
-
-function openColumnFilter(event, colClass, colName) {
-    event.stopPropagation(); currentFilterCol = colClass;
-    document.getElementById('filter-col-name').innerText = `FILTER: ${colName}`;
-    let uniqueValues = new Set();
-    
-    document.querySelectorAll('#tbody-riwayat tr.r-row').forEach(row => {
-        let showBasedOnOthers = true;
-        for (let otherCol in activeFilters) {
-            if (otherCol !== colClass) { 
-                const allowed = activeFilters[otherCol]; const c = row.querySelector('.' + otherCol);
-                let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
-                if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
-            }
-        }
-        if (showBasedOnOthers) {
-            let cell = row.querySelector('.' + colClass);
-            if (cell) { let val = cell.getAttribute('data-search') || cell.innerText.trim(); if(val !== '') uniqueValues.add(val); }
-        }
-    });
-
-    let sortedValues = Array.from(uniqueValues).sort();
-    let listHtml = `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-0"> <span class="font-black text-slate-800">(PILIH SEMUA)</span></label>`;
-    
-    sortedValues.forEach(val => {
-        let isChecked = !activeFilters[colClass] || activeFilters[colClass].includes(val);
-        listHtml += `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded filter-val-item" data-value="${encodeURIComponent(val)}">
-            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-0" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
-            <span class="truncate font-bold text-slate-600">${val}</span>
-        </label>`;
-    });
-
-    document.getElementById('filter-values-list').innerHTML = listHtml; updateSelectAllState();
-    document.getElementById('filter-search-input').value = '';
-    const rect = event.currentTarget.getBoundingClientRect(); const menu = document.getElementById('excel-filter-menu');
-    if(menu) {
-        menu.classList.remove('hidden');
-        let top = rect.bottom + window.scrollY + 5; let left = rect.left + window.scrollX;
-        if (left + 256 > window.innerWidth) { left = window.innerWidth - 266; }
-        menu.style.top = top + 'px'; menu.style.left = left + 'px';
-    }
-    const sInput = document.getElementById('filter-search-input'); if(sInput) sInput.focus();
-}
-
-function toggleAllFilterValues(checked) {
-    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
-    updateSelectAllState();
-}
-function updateSelectAllState() {
-    const allCbs = document.querySelectorAll('.filter-val-cb'); const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
-    const selectAll = document.getElementById('filter-select-all'); if(!selectAll) return;
-    if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
-    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
-    else { selectAll.checked = false; selectAll.indeterminate = true; }
-}
-
-function searchFilterList(val) {
-    const query = val.toLowerCase().split(' ').filter(x => x);
-    document.querySelectorAll('.filter-val-item').forEach(label => {
-        const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
-        label.style.display = query.every(term => text.includes(term)) ? '' : 'none';
-    });
-}
-function closeFilterMenu() { const menu = document.getElementById('excel-filter-menu'); if(menu) menu.classList.add('hidden'); }
-function clearFilterForCurrentCol() { delete activeFilters[currentFilterCol]; closeFilterMenu(); saringTabelExcel(); updateFilterIcons(); }
-function applyFilterForCurrentCol() {
-    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked'); const totalBoxes = document.querySelectorAll('.filter-val-cb');
-    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') { delete activeFilters[currentFilterCol]; } 
-    else { activeFilters[currentFilterCol] = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value)); }
-    closeFilterMenu(); saringTabelExcel(); updateFilterIcons();
-}
-function saringTabelExcel() {
-    document.querySelectorAll('.r-row').forEach(row => {
-        let show = true;
-        for (let colClass in activeFilters) {
-            const allowed = activeFilters[colClass]; const cell = row.querySelector('.' + colClass);
-            if (cell) { if (!allowed.includes(cell.getAttribute('data-search') || cell.innerText.trim())) { show = false; break; } }
-        }
-        if (show) { row.classList.remove('filtered-out'); } 
-        else { row.classList.add('filtered-out'); let cb = row.querySelector('.cb-row'); if(cb) { cb.checked = false; highlightRow(cb); } }
-    });
-    currentPage = 1; applyPagination();
-}
-function updateFilterIcons() {
-    document.querySelectorAll('.filter-icon').forEach(icon => { icon.classList.remove('text-amber-400', 'opacity-100'); icon.classList.add('opacity-40', 'text-white'); });
-    for (let colClass in activeFilters) {
-        const th = document.querySelector(`th.${colClass}`);
-        if (th) { const icon = th.querySelector('.filter-icon'); if (icon) { icon.classList.remove('opacity-40', 'text-white'); icon.classList.add('text-amber-400', 'opacity-100'); } }
-    }
 }
 
 async function eksekusiDoneKonversi() {
