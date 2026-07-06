@@ -126,6 +126,7 @@ async function ambilSemuaData() {
     }
 }
 
+// REVISI: Logika Posisi Popup Filter (Fixed Position & Smart Alignment)
 function openColumnFilter(event, colClass, colName) {
     event.stopPropagation(); currentFilterCol = colClass;
     document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
@@ -159,12 +160,31 @@ function openColumnFilter(event, colClass, colName) {
 
     document.getElementById('filter-values-list').innerHTML = listHtml; updateSelectAllState();
     document.getElementById('filter-search-input').value = '';
-    const rect = event.currentTarget.getBoundingClientRect(); const menu = document.getElementById('excel-filter-menu');
+    
+    const menu = document.getElementById('excel-filter-menu');
     if(menu) {
         menu.classList.remove('hidden');
-        let top = rect.bottom + window.scrollY + 5; let left = rect.left + window.scrollX;
-        if (left + 256 > window.innerWidth) { left = window.innerWidth - 266; }
-        menu.style.top = top + 'px'; menu.style.left = left + 'px';
+        
+        // Kalkulasi Posisi Pintar (Smart Positioning)
+        const btnRect = event.currentTarget.getBoundingClientRect();
+        const menuWidth = 256; // w-64 di Tailwind = 16rem = 256px
+        
+        let topPos = btnRect.bottom + 4; // Sedikit di bawah tombol
+        let leftPos = btnRect.left; // Default rata kiri tombol
+
+        // Jika melebihi batas kanan layar, geser ke kiri (rata kanan dengan tombol)
+        if (leftPos + menuWidth > window.innerWidth) {
+            leftPos = btnRect.right - menuWidth;
+        }
+        
+        // Jika masih melebihi batas kiri (sangat jarang), paksa rata kiri layar
+        if (leftPos < 10) {
+            leftPos = 10;
+        }
+
+        menu.style.position = 'fixed'; // Gunakan fixed agar tidak terpotong overflow container
+        menu.style.top = `${topPos}px`;
+        menu.style.left = `${leftPos}px`;
     }
     const sInput = document.getElementById('filter-search-input'); if(sInput) sInput.focus();
 }
