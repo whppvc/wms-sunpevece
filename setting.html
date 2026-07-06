@@ -19,7 +19,8 @@
                 <img src="sunpevece.png" alt="Logo" class="h-8 object-contain" onerror="this.style.display='none'">
                 <h2 class="font-black text-base tracking-wider uppercase">Creator Panel</h2>
             </div>
-            <button onclick="window.location.href='index.html'" class="mt-0 md:mt-4 block w-full md:w-auto text-center bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-2.5 px-3 rounded-lg transition cursor-pointer">Back to Login</button>
+            <!-- REVISI: Tombol Logout yang benar-benar menghapus sesi -->
+            <button onclick="localStorage.removeItem('user_session'); window.location.href='index.html'" class="mt-0 md:mt-4 block w-full md:w-auto text-center bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-2.5 px-3 rounded-lg transition cursor-pointer">Logout</button>
         </div>
         <nav class="flex-1 p-4 space-y-2">
             <button id="menu-user" class="w-full text-left px-4 py-3 rounded-lg font-bold text-sm transition bg-blue-600 text-white cursor-pointer flex items-center gap-2"><i data-lucide="users" class="w-4 h-4"></i> User Setting</button>
