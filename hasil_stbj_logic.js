@@ -282,10 +282,17 @@ function sortTable(colIndex, headerEl) {
     applyPagination();
 }
 
-// REVISI: Teks Rata Kiri, Icon (Sort & Filter) Rata Kanan
 const thSort = (label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
+    const noFilter = ['col-cb', 'col-btn', 'col-btn-edit'].includes(colClass);
     
+    const filterBtn = noFilter ? '' : `
+        <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
+            <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
+        </button>`;
+
+    const justifyClass = noFilter ? 'justify-center' : 'justify-start';
+
     return `<th class="hdr-std ${cls} select-none group">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
             <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable(this.closest('th').cellIndex, this.closest('th'))" title="Sort ${label}">${label}</span>
@@ -293,9 +300,7 @@ const thSort = (label, cls = "") => {
                 <button onclick="sortTable(this.closest('th').cellIndex, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 sort-icon opacity-40 group-hover:opacity-100 transition-opacity text-white"></i>
                 </button>
-                <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
-                    <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
-                </button>
+                ${filterBtn}
             </div>
         </div>
     </th>`;
@@ -397,7 +402,7 @@ function closeFilterMenu() { document.getElementById('excel-filter-menu').classL
 
 function clearFilterForCurrentCol() {
     delete activeFilters[currentFilterCol];
-    closeFilterMenu(); saringTabelExcel(); updateFilterIcons();
+    closeFilterMenu(); saringTabelExcel(); 
 }
 
 function applyFilterForCurrentCol() {
@@ -411,7 +416,7 @@ function applyFilterForCurrentCol() {
         activeFilters[currentFilterCol] = selectedVals;
     }
     
-    closeFilterMenu(); saringTabelExcel(); updateFilterIcons();
+    closeFilterMenu(); saringTabelExcel(); 
 }
 
 function saringTabelExcel() {
@@ -436,18 +441,22 @@ function saringTabelExcel() {
     });
     currentPage = 1; 
     applyPagination(); 
+    updateFilterIcons();
 }
 
 function updateFilterIcons() {
     document.querySelectorAll('.filter-icon').forEach(icon => {
         icon.classList.remove('text-amber-400', 'opacity-100');
-        icon.classList.add('opacity-40', 'text-white');
+        icon.classList.add('text-white', 'opacity-40');
     });
     for (let colClass in activeFilters) {
         const th = document.querySelector(`th.${colClass}`);
         if (th) {
             const icon = th.querySelector('.filter-icon');
-            if (icon) { icon.classList.remove('opacity-40', 'text-white'); icon.classList.add('text-amber-400', 'opacity-100'); }
+            if (icon) { 
+                icon.classList.remove('text-white', 'opacity-40'); 
+                icon.classList.add('text-amber-400', 'opacity-100'); 
+            }
         }
     }
 }
@@ -534,19 +543,19 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-3 text-left col-status-gudang" data-search="${r.is_in_gudang ? 'IN GUDANG' : 'STBJ'}">${htmlStatusGudang}</td>
                     ${tabelSekarang === 'hold_stbj' ? `<td class="px-4 py-3 text-left font-black text-amber-600 col-status" data-search="${r.status || 'HOLD'}">${r.status || 'HOLD'}</td>` : '<td class="px-4 py-3 hidden col-status">-</td>'}
                     <td class="px-4 py-3 text-left col-status-data" data-search="${r.status_data || '-'}">${statData}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-waktu" data-search="${tgl}">${tgl}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-troli" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-waktu" data-search="${tgl}">${tgl}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-troli" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
                     <td class="px-4 py-3 text-left font-mono font-bold text-slate-900 col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-tgl" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-mesin" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-shift" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-jenis" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-tgl" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-mesin" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-shift" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-jenis" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
                     <td class="px-4 py-3 text-left font-semibold text-slate-900 col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-pjg" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-customer" data-search="${r.customer || '-'}">${r.customer || '-'}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-pjg" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-customer" data-search="${r.customer || '-'}">${r.customer || '-'}</td>
                     <td class="px-4 py-3 text-left font-medium text-slate-600 col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
                     <td class="px-4 py-3 text-left font-medium text-slate-500 col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
                 </tr>`;
@@ -579,7 +588,7 @@ function renderHeaderDanTabel() {
                 ${thSort('Shading', 'col-shading')}
                 ${thSort('Customer Bawaan', 'col-customer')}
                 ${thSort('QTY (DUS)', 'col-qty')}
-                ${thSort('QTY (LEMBAR)', 'col-qty-lembar text-emerald-400')}
+                ${thSort('QTY (LEMBAR)', 'col-qty-lembar text-emerald-500')}
                 ${thSort('Keterangan', 'col-ket')}
                 <th class="hdr-std col-pic hidden">PIC Input</th>
             </tr>`;
@@ -653,23 +662,23 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-3 hidden col-status">-</td>
                     <td class="px-4 py-3 text-left col-status-data" data-search="${r.sData || '-'}">${statData}</td>
                     <td class="px-4 py-3 hidden col-waktu">-</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-troli" data-search="${gabunganTroli}">${gabunganTroli}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-troli" data-search="${gabunganTroli}">${gabunganTroli}</td>
                     <td class="px-4 py-3 hidden col-qr">-</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-mesin" data-search="${r.mesin}">${r.mesin}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-shift" data-search="${r.shift}">${r.shift}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-jenis" data-search="${r.jenisItem}">${r.jenisItem}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-mesin" data-search="${r.mesin}">${r.mesin}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-shift" data-search="${r.shift}">${r.shift}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-jenis" data-search="${r.jenisItem}">${r.jenisItem}</td>
                     <td class="px-4 py-3 text-left font-semibold text-slate-900 col-nama" data-search="${r.namaItemAsli}">${r.namaItemAsli}</td>
                     ${isJasper ? `<td class="px-4 py-3 text-left font-black text-purple-700 col-jasper" data-search="${r.displayNama}">${r.displayNama}</td>` : ''}
                     ${btnEditJasper}
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-pjg" data-search="${r.panjang}">${r.panjang}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-grade" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-dus" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-800 col-customer" data-search="${r.customer}">${r.customer}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-pjg" data-search="${r.panjang}">${r.panjang}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-customer" data-search="${r.customer}">${r.customer}</td>
                     <td class="px-4 py-3 text-center font-black text-emerald-700 col-qty" data-search="${r.qty}">${r.qty}</td>
                     <td class="px-4 py-3 text-center font-black text-emerald-600 col-qty-lembar" data-search="${qtyLembar}">${qtyLembar}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-600 col-ket" data-search="${displayKet}">${displayKet}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-ket" data-search="${displayKet}">${displayKet}</td>
                     <td class="px-4 py-3 hidden col-pic">-</td>
                 </tr>`;
         });
