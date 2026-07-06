@@ -93,17 +93,23 @@ const thSort = (idx, label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-btn', 'col-no'].includes(colClass);
     
-    const filterBtn = noFilter ? '' : `
-        <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded ml-1 transition" title="Filter ${label}">
-            <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
-        </button>`;
+    if (noFilter) {
+        return `<th class="hdr-std ${cls} select-none text-center">
+            <div class="flex items-center justify-center w-full">${label}</div>
+        </th>`;
+    }
 
-    const justifyClass = noFilter ? 'justify-center' : 'justify-start';
-
-    return `<th class="hdr-std ${cls} select-none">
-        <div class="flex items-center ${justifyClass} gap-1.5">
-            <span class="cursor-pointer flex items-center gap-1 hover:text-blue-300 transition" onclick="sortTable(${idx}, this.closest('th'))">${label} <i data-lucide="arrow-up-down" class="w-3 h-3 sort-icon opacity-30"></i></span>
-            ${filterBtn}
+    return `<th class="hdr-std ${cls} select-none group">
+        <div class="flex items-center justify-between w-full min-w-max gap-4">
+            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable(${idx}, this.closest('th'))" title="Sort ${label}">${label}</span>
+            <div class="flex items-center gap-1 shrink-0">
+                <button onclick="sortTable(${idx}, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
+                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 sort-icon opacity-40 group-hover:opacity-100 transition-opacity text-white"></i>
+                </button>
+                <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
+                    <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
+                </button>
+            </div>
         </div>
     </th>`;
 };
@@ -126,7 +132,6 @@ async function ambilSemuaData() {
     }
 }
 
-// REVISI: Logika Posisi Popup Filter (Fixed Position & Smart Alignment)
 function openColumnFilter(event, colClass, colName) {
     event.stopPropagation(); currentFilterCol = colClass;
     document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
@@ -165,24 +170,21 @@ function openColumnFilter(event, colClass, colName) {
     if(menu) {
         menu.classList.remove('hidden');
         
-        // Kalkulasi Posisi Pintar (Smart Positioning)
         const btnRect = event.currentTarget.getBoundingClientRect();
-        const menuWidth = 256; // w-64 di Tailwind = 16rem = 256px
+        const menuWidth = 256; 
         
-        let topPos = btnRect.bottom + 4; // Sedikit di bawah tombol
-        let leftPos = btnRect.left; // Default rata kiri tombol
+        let topPos = btnRect.bottom + 4; 
+        let leftPos = btnRect.left; 
 
-        // Jika melebihi batas kanan layar, geser ke kiri (rata kanan dengan tombol)
         if (leftPos + menuWidth > window.innerWidth) {
             leftPos = btnRect.right - menuWidth;
         }
         
-        // Jika masih melebihi batas kiri (sangat jarang), paksa rata kiri layar
         if (leftPos < 10) {
             leftPos = 10;
         }
 
-        menu.style.position = 'fixed'; // Gunakan fixed agar tidak terpotong overflow container
+        menu.style.position = 'fixed'; 
         menu.style.top = `${topPos}px`;
         menu.style.left = `${leftPos}px`;
     }
@@ -789,3 +791,4 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
         if(tbody) tbody.innerHTML = h;
     } catch (e) { if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal Memuat: ${e.message}</div>`; }
 }
+
