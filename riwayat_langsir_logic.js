@@ -211,12 +211,12 @@ function searchFilterList(val) {
     });
 }
 function closeFilterMenu() { const menu = document.getElementById('excel-filter-menu'); if(menu) menu.classList.add('hidden'); }
-function clearFilterForCurrentCol() { delete activeFilters[currentFilterCol]; closeFilterMenu(); saringTabelExcel(); updateFilterIcons(); }
+function clearFilterForCurrentCol() { delete activeFilters[currentFilterCol]; closeFilterMenu(); saringTabelExcel(); }
 function applyFilterForCurrentCol() {
     const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked'); const totalBoxes = document.querySelectorAll('.filter-val-cb');
     if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') { delete activeFilters[currentFilterCol]; } 
     else { activeFilters[currentFilterCol] = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value)); }
-    closeFilterMenu(); saringTabelExcel(); updateFilterIcons();
+    closeFilterMenu(); saringTabelExcel(); 
 }
 function saringTabelExcel() {
     document.querySelectorAll('.r-row').forEach(row => {
@@ -228,13 +228,22 @@ function saringTabelExcel() {
         if (show) { row.classList.remove('filtered-out'); } 
         else { row.classList.add('filtered-out'); let cb = row.querySelector('.cb-row'); if(cb) { cb.checked = false; highlightRow(cb); } }
     });
-    currentPage = 1; applyPagination();
+    currentPage = 1; applyPagination(); updateFilterIcons();
 }
 function updateFilterIcons() {
-    document.querySelectorAll('.filter-icon').forEach(icon => { icon.classList.remove('text-amber-400', 'opacity-100'); icon.classList.add('opacity-40', 'text-white'); });
+    document.querySelectorAll('.filter-icon').forEach(icon => { 
+        icon.classList.remove('text-amber-400', 'opacity-100'); 
+        icon.classList.add('text-white', 'opacity-40'); 
+    });
     for (let colClass in activeFilters) {
         const th = document.querySelector(`th.${colClass}`);
-        if (th) { const icon = th.querySelector('.filter-icon'); if (icon) { icon.classList.remove('opacity-40', 'text-white'); icon.classList.add('text-amber-400', 'opacity-100'); } }
+        if (th) { 
+            const icon = th.querySelector('.filter-icon'); 
+            if (icon) { 
+                icon.classList.remove('text-white', 'opacity-40'); 
+                icon.classList.add('text-amber-400', 'opacity-100'); 
+            } 
+        }
     }
 }
 
@@ -791,4 +800,3 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
         if(tbody) tbody.innerHTML = h;
     } catch (e) { if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal Memuat: ${e.message}</div>`; }
 }
-
