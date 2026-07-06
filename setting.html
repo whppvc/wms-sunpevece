@@ -19,7 +19,6 @@
                 <img src="sunpevece.png" alt="Logo" class="h-8 object-contain" onerror="this.style.display='none'">
                 <h2 class="font-black text-base tracking-wider uppercase">Creator Panel</h2>
             </div>
-            <!-- REVISI: Tombol Logout yang benar-benar menghapus sesi -->
             <button onclick="localStorage.removeItem('user_session'); window.location.href='index.html'" class="mt-0 md:mt-4 block w-full md:w-auto text-center bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-2.5 px-3 rounded-lg transition cursor-pointer">Logout</button>
         </div>
         <nav class="flex-1 p-4 space-y-2">
@@ -206,7 +205,10 @@
 
                     const box = document.createElement('div');
                     box.className = "flex flex-col md:flex-row md:items-start justify-between p-5 border border-slate-200 rounded-xl bg-slate-50 shadow-sm";
+                    
+                    // REVISI: Tambahkan data-title untuk dikirim ke Supabase
                     box.setAttribute('data-menuid', menu.id);
+                    box.setAttribute('data-title', menu.title);
 
                     let userCheckboxes = '';
                     allUsernames.forEach(uname => {
@@ -238,10 +240,18 @@
             const boxes = document.querySelectorAll('#akses-menu-container > div');
             let payload = [];
             
-            boxes.forEach(box => {
+            boxes.forEach((box, index) => {
                 const menuId = box.getAttribute('data-menuid');
+                const menuTitle = box.getAttribute('data-title'); // REVISI: Ambil title
                 const checked = Array.from(box.querySelectorAll('.cb-akses:checked')).map(cb => cb.value);
-                payload.push({ menu_id: menuId, allowed_users: checked.join(',') });
+                
+                // REVISI: Masukkan title dan sort_order ke dalam payload
+                payload.push({ 
+                    menu_id: menuId, 
+                    title: menuTitle,
+                    allowed_users: checked.join(','),
+                    sort_order: index 
+                });
             });
 
             const btn = document.getElementById('btn-save-akses');
