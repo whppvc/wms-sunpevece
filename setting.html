@@ -5,114 +5,97 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Control System - Web Setting</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>.dragging { opacity: 0.5; border: 2px dashed #3b82f6; background-color: #eff6ff; }</style>
+    
+    <!-- WAJIB LOAD GLOBAL.JS UNTUK MENDAPATKAN APP_MENUS -->
+    <script src="global.js"></script>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col md:flex-row font-sans text-gray-800">
+<body class="bg-slate-50 min-h-screen flex flex-col md:flex-row font-sans text-slate-800">
 
     <aside class="w-full md:w-64 bg-slate-900 text-white flex flex-col sticky top-0 h-auto md:h-screen shadow-xl z-20">
         <div class="p-5 bg-slate-950 flex items-center justify-between md:block">
             <div class="flex items-center gap-3">
                 <img src="sunpevece.png" alt="Logo" class="h-8 object-contain" onerror="this.style.display='none'">
-                <h2 class="font-bold text-base tracking-wider uppercase">Creator Panel</h2>
+                <h2 class="font-black text-base tracking-wider uppercase">Creator Panel</h2>
             </div>
-            <button onclick="window.location.href='index.html'" class="mt-0 md:mt-4 block w-full md:w-auto text-center bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 px-3 rounded transition cursor-pointer">Back to Login</button>
+            <button onclick="window.location.href='index.html'" class="mt-0 md:mt-4 block w-full md:w-auto text-center bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-2.5 px-3 rounded-lg transition cursor-pointer">Back to Login</button>
         </div>
         <nav class="flex-1 p-4 space-y-2">
-            <button id="menu-user" class="w-full text-left px-4 py-3 rounded-lg font-semibold text-sm transition bg-blue-600 text-white cursor-pointer flex items-center gap-2">👥 User Setting</button>
-            <button id="menu-akses" class="w-full text-left px-4 py-3 rounded-lg font-semibold text-sm transition hover:bg-slate-800 text-slate-300 cursor-pointer flex items-center gap-2">🛡️ Atur Akses Menu</button>
-            <button id="menu-kaidah" class="w-full text-left px-4 py-3 rounded-lg font-semibold text-sm transition hover:bg-slate-800 text-slate-300 cursor-pointer flex items-center gap-2">📖 Kaidah QR Code</button>
+            <button id="menu-user" class="w-full text-left px-4 py-3 rounded-lg font-bold text-sm transition bg-blue-600 text-white cursor-pointer flex items-center gap-2"><i data-lucide="users" class="w-4 h-4"></i> User Setting</button>
+            <button id="menu-akses" class="w-full text-left px-4 py-3 rounded-lg font-bold text-sm transition hover:bg-slate-800 text-slate-300 cursor-pointer flex items-center gap-2"><i data-lucide="shield-check" class="w-4 h-4"></i> Atur Akses Menu</button>
         </nav>
     </aside>
 
     <main class="flex-1 p-6 md:p-10 overflow-y-auto">
+        
+        <!-- SECTION USER MANAGEMENT -->
         <section id="section-user" class="space-y-6">
-            <h1 class="text-2xl font-extrabold text-slate-800 border-b pb-4">User Management</h1>
+            <h1 class="text-2xl font-black text-slate-800 border-b border-slate-200 pb-4">User Management</h1>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="bg-white p-6 rounded-xl shadow-md border h-fit">
-                    <h3 class="text-lg font-bold text-slate-700 mb-4" id="form-title">Tambah User Baru</h3>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-fit">
+                    <h3 class="text-lg font-black text-slate-700 mb-4 flex items-center gap-2" id="form-title"><i data-lucide="user-plus" class="w-5 h-5 text-blue-600"></i> Tambah User Baru</h3>
                     <form id="form-user" class="space-y-4">
                         <input type="hidden" id="user-id">
-                        <div><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Username</label><input type="text" id="input-username" class="w-full p-2.5 border rounded-lg text-sm" required></div>
-                        <div><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Password</label><input type="text" id="input-password" class="w-full p-2.5 border rounded-lg text-sm" required></div>
-                        <div><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Role</label><input type="text" id="input-role" class="w-full p-2.5 border rounded-lg text-sm" required></div>
+                        <div><label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Username</label><input type="text" id="input-username" class="w-full p-3 border border-slate-300 rounded-lg text-sm font-bold outline-none focus:border-blue-500 bg-slate-50" required></div>
+                        <div><label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Password</label><input type="text" id="input-password" class="w-full p-3 border border-slate-300 rounded-lg text-sm font-bold outline-none focus:border-blue-500 bg-slate-50" required></div>
+                        <div><label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Role</label><input type="text" id="input-role" class="w-full p-3 border border-slate-300 rounded-lg text-sm font-bold outline-none focus:border-blue-500 bg-slate-50" required></div>
                         <div class="flex gap-2 pt-2">
-                            <button type="button" id="btn-batal-edit" class="hidden w-1/2 py-2.5 bg-gray-200 font-bold rounded-lg text-xs">Batal</button>
-                            <button type="submit" id="btn-submit-user" class="w-full py-2.5 bg-blue-600 text-white font-bold rounded-lg text-xs">Simpan User</button>
+                            <button type="button" id="btn-batal-edit" class="hidden w-1/2 py-3 bg-slate-200 text-slate-700 font-black rounded-lg text-xs uppercase transition hover:bg-slate-300">Batal</button>
+                            <button type="submit" id="btn-submit-user" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg text-xs uppercase transition shadow-sm flex justify-center items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Simpan User</button>
                         </div>
                     </form>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-md border lg:col-span-2 overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead><tr class="bg-slate-100 text-slate-600 uppercase text-xs font-bold"><th class="p-3 border-b">Username</th><th class="p-3 border-b">Password</th><th class="p-3 border-b">Role</th><th class="p-3 border-b text-center">Aksi</th></tr></thead>
-                        <tbody id="table-user-body"><tr><td colspan="4" class="p-4 text-center">Memuat...</td></tr></tbody>
-                    </table>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 lg:col-span-2 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+                            <thead class="bg-slate-800 text-white">
+                                <tr>
+                                    <th class="p-4 text-xs font-bold uppercase tracking-wider">Username</th>
+                                    <th class="p-4 text-xs font-bold uppercase tracking-wider">Password</th>
+                                    <th class="p-4 text-xs font-bold uppercase tracking-wider">Role</th>
+                                    <th class="p-4 text-xs font-bold uppercase tracking-wider text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-user-body" class="divide-y divide-slate-200">
+                                <tr><td colspan="4" class="p-10 text-center"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto text-blue-500"></i></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </section>
 
+        <!-- SECTION ATUR AKSES MENU -->
         <section id="section-akses" class="space-y-6 hidden">
-            <h1 class="text-2xl font-extrabold text-slate-800 border-b pb-4">Atur Akses Menu & Sorting</h1>
-            <div class="bg-white p-6 rounded-xl shadow-md border max-w-4xl">
-                <div id="akses-menu-container" class="space-y-3"></div>
-                <button id="btn-save-akses" class="mt-6 w-full py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition">Simpan Pengaturan Akses & Urutan</button>
+            <div class="border-b border-slate-200 pb-4">
+                <h1 class="text-2xl font-black text-slate-800 mb-2">Atur Akses Menu</h1>
+                <p class="text-sm font-medium text-slate-500 leading-relaxed">Centang user yang diizinkan untuk melihat dan mengakses menu tertentu. Secara default, jika ada menu baru, semua user akan memiliki akses.</p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-5xl">
+                <div id="akses-menu-container" class="space-y-4"></div>
+                <button id="btn-save-akses" class="mt-6 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl transition shadow-md flex justify-center items-center gap-2 uppercase text-sm"><i data-lucide="check-circle" class="w-5 h-5"></i> Simpan Pengaturan Akses</button>
             </div>
         </section>
 
-        <section id="section-kaidah" class="space-y-6 hidden">
-            <div class="border-b pb-4">
-                <h1 class="text-2xl font-extrabold text-slate-800">Aturan Kamus QR Code</h1>
-                <p class="text-sm text-gray-500">Tentukan bagaimana sebuah kata diubah menjadi singkatan kode. Berlaku untuk Nama Item.</p>
-            </div>
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="bg-white p-6 rounded-xl shadow-md border h-fit">
-                    <h3 class="text-lg font-bold text-slate-700 mb-4" id="form-rule-title">Tambah Aturan Baru</h3>
-                    <form id="form-rule" class="space-y-4">
-                        <input type="hidden" id="rule-id">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Kata Asli di Master</label>
-                            <input type="text" id="input-kata" class="w-full p-2.5 border rounded-lg text-sm uppercase" oninput="this.value = this.value.toUpperCase()" placeholder="Cth: GLOSSY" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Kode QR-nya</label>
-                            <input type="text" id="input-kode" class="w-full p-2.5 border rounded-lg text-sm uppercase" oninput="this.value = this.value.toUpperCase()" placeholder="Cth: GLSY" required>
-                        </div>
-                        <div class="flex gap-2 pt-2">
-                            <button type="button" id="btn-batal-rule" class="hidden w-1/2 py-2.5 bg-gray-200 font-bold rounded-lg text-xs">Batal</button>
-                            <button type="submit" id="btn-submit-rule" class="w-full py-2.5 bg-blue-600 text-white font-bold rounded-lg text-xs">Simpan Aturan</button>
-                        </div>
-                    </form>
-                </div>
-                <div class="bg-white p-6 rounded-xl shadow-md border lg:col-span-2 overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead><tr class="bg-slate-100 text-slate-600 uppercase text-xs font-bold"><th class="p-3 border-b">Kata Asli</th><th class="p-3 border-b">Kode QR</th><th class="p-3 border-b text-center">Aksi</th></tr></thead>
-                        <tbody id="table-rule-body"><tr><td colspan="3" class="p-4 text-center">Memuat Kamus...</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
     </main>
 
     <script>
-        const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
-        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let allUsers = [];
 
         // NAVIGASI
-        const btnUser = document.getElementById('menu-user'), btnAkses = document.getElementById('menu-akses'), btnKaidah = document.getElementById('menu-kaidah');
-        const secUser = document.getElementById('section-user'), secAkses = document.getElementById('section-akses'), secKaidah = document.getElementById('section-kaidah');
+        const btnUser = document.getElementById('menu-user'), btnAkses = document.getElementById('menu-akses');
+        const secUser = document.getElementById('section-user'), secAkses = document.getElementById('section-akses');
         
         function activateTab(activeBtn, activeSec) {
-            [btnUser, btnAkses, btnKaidah].forEach(b => { b.classList.remove('bg-blue-600', 'text-white'); b.classList.add('text-slate-300', 'hover:bg-slate-800'); });
-            [secUser, secAkses, secKaidah].forEach(s => s.classList.add('hidden'));
+            [btnUser, btnAkses].forEach(b => { b.classList.remove('bg-blue-600', 'text-white'); b.classList.add('text-slate-300', 'hover:bg-slate-800'); });
+            [secUser, secAkses].forEach(s => s.classList.add('hidden'));
             activeBtn.classList.add('bg-blue-600', 'text-white'); activeBtn.classList.remove('text-slate-300', 'hover:bg-slate-800');
             activeSec.classList.remove('hidden');
         }
         
         btnUser.addEventListener('click', () => activateTab(btnUser, secUser));
         btnAkses.addEventListener('click', () => { activateTab(btnAkses, secAkses); renderMenuAccess(); });
-        btnKaidah.addEventListener('click', () => { activateTab(btnKaidah, secKaidah); fetchRules(); });
 
         // LOGIKA USER
         async function fetchUsers() {
@@ -121,111 +104,159 @@
             if (error) return;
             allUsers = data || []; tbody.innerHTML = '';
             allUsers.forEach(user => {
-                tbody.innerHTML += `<tr class="border-b hover:bg-slate-50"><td class="p-3">${user.username}</td><td class="p-3 font-mono text-gray-600">${user.password}</td><td class="p-3"><span class="px-2 py-1 text-xs font-bold bg-blue-100 text-blue-700">${user.role}</span></td>
-                <td class="p-3 text-center space-x-2"><button onclick="editUser(${user.id}, '${user.username}', '${user.password}', '${user.role}')" class="text-blue-600 font-bold text-xs">Edit</button>${user.username !== 'A' ? `<button onclick="deleteUser(${user.id})" class="text-red-600 font-bold text-xs">Hapus</button>` : ''}</td></tr>`;
+                tbody.innerHTML += `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-4 font-bold text-slate-800">${user.username}</td>
+                    <td class="p-4 font-mono text-slate-500">${user.password}</td>
+                    <td class="p-4"><span class="px-3 py-1 text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-700 rounded-md border border-blue-200">${user.role}</span></td>
+                    <td class="p-4 text-center flex justify-center gap-2">
+                        <button onclick="editUser(${user.id}, '${user.username}', '${user.password}', '${user.role}')" class="px-3 py-1.5 bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-700 font-bold text-xs rounded-md transition flex items-center gap-1"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Edit</button>
+                        <button onclick="deleteUser(${user.id})" class="px-3 py-1.5 bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 font-bold text-xs rounded-md transition flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Hapus</button>
+                    </td>
+                </tr>`;
             });
+            lucide.createIcons();
         }
+
         document.getElementById('form-user').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const id = document.getElementById('user-id').value, username = document.getElementById('input-username').value, password = document.getElementById('input-password').value, role = document.getElementById('input-role').value;
-            if (id) await db.from('app_users').update({ username, password, role }).eq('id', id); else await db.from('app_users').insert([{ username, password, role }]);
-            document.getElementById('user-id').value = ''; document.getElementById('form-user').reset(); fetchUsers();
-        });
-        window.editUser = (id, u, p, r) => { document.getElementById('user-id').value = id; document.getElementById('input-username').value = u; document.getElementById('input-password').value = p; document.getElementById('input-role').value = r; document.getElementById('btn-batal-edit').classList.remove('hidden'); document.getElementById('btn-submit-user').classList.add('w-1/2'); };
-        document.getElementById('btn-batal-edit').addEventListener('click', () => { document.getElementById('user-id').value = ''; document.getElementById('form-user').reset(); document.getElementById('btn-batal-edit').classList.add('hidden'); document.getElementById('btn-submit-user').classList.remove('w-1/2'); });
-        window.deleteUser = async (id) => { if (confirm('Yakin hapus?')) { await db.from('app_users').delete().eq('id', id); fetchUsers(); } };
+            const id = document.getElementById('user-id').value;
+            const username = document.getElementById('input-username').value;
+            const password = document.getElementById('input-password').value;
+            const role = document.getElementById('input-role').value;
+            
+            const btn = document.getElementById('btn-submit-user');
+            const ori = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Menyimpan...';
+            btn.disabled = true;
 
-        // LOGIKA KAIDAH QR (DIPERBAIKI)
-        async function fetchRules() {
-            const tbody = document.getElementById('table-rule-body');
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4">Memuat data dari database...</td></tr>';
-            
-            const { data, error } = await db.from('qr_rules').select('*').order('id', { ascending: true });
-            
-            if (error) { 
-                alert("Gagal memuat aturan: " + error.message);
-                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-red-500">Error memuat data</td></tr>`; 
-                return; 
-            }
-            
-            tbody.innerHTML = '';
-            if(data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4 text-gray-500">Kamus masih kosong. Silakan tambahkan aturan.</td></tr>';
-                return;
-            }
-
-            data.forEach(r => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b hover:bg-slate-50";
-                tr.innerHTML = `
-                    <td class="p-3 font-bold text-gray-700">${r.kata_asli}</td>
-                    <td class="p-3 font-mono text-blue-700 font-bold">${r.kode}</td>
-                    <td class="p-3 text-center space-x-2">
-                        <button onclick="editRule(${r.id}, '${r.kata_asli}', '${r.kode}')" class="text-blue-600 font-bold text-xs">Edit</button>
-                        <button onclick="deleteRule(${r.id})" class="text-red-600 font-bold text-xs">Hapus</button>
-                    </td>`;
-                tbody.appendChild(tr);
-            });
-        }
-
-        document.getElementById('form-rule').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('rule-id').value;
-            const kata = document.getElementById('input-kata').value;
-            const kode = document.getElementById('input-kode').value;
-            
             try {
                 if (id) {
-                    const { error } = await db.from('qr_rules').update({ kata_asli: kata, kode: kode }).eq('id', id);
+                    const { error } = await db.from('app_users').update({ username, password, role }).eq('id', id);
                     if(error) throw error;
                 } else {
-                    const { error } = await db.from('qr_rules').insert([{ kata_asli: kata, kode: kode }]);
+                    const { error } = await db.from('app_users').insert([{ username, password, role }]);
                     if(error) throw error;
                 }
-                document.getElementById('btn-batal-rule').click(); 
-                fetchRules();
-            } catch (err) {
-                alert("Gagal menyimpan aturan: " + err.message);
+                document.getElementById('user-id').value = ''; document.getElementById('form-user').reset(); 
+                document.getElementById('btn-batal-edit').click();
+                fetchUsers();
+            } catch(err) {
+                alert("Gagal menyimpan user: " + err.message);
+            } finally {
+                btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
             }
         });
 
-        window.editRule = (id, kata, kode) => {
-            document.getElementById('rule-id').value = id; document.getElementById('input-kata').value = kata; document.getElementById('input-kode').value = kode;
-            document.getElementById('form-rule-title').innerText = "Edit Aturan"; document.getElementById('btn-batal-rule').classList.remove('hidden'); document.getElementById('btn-submit-rule').classList.add('w-1/2');
+        window.editUser = (id, u, p, r) => { 
+            document.getElementById('user-id').value = id; 
+            document.getElementById('input-username').value = u; 
+            document.getElementById('input-password').value = p; 
+            document.getElementById('input-role').value = r; 
+            document.getElementById('btn-batal-edit').classList.remove('hidden'); 
+            document.getElementById('btn-submit-user').classList.add('w-1/2'); 
         };
-        document.getElementById('btn-batal-rule').addEventListener('click', () => {
-            document.getElementById('rule-id').value = ''; document.getElementById('form-rule').reset(); document.getElementById('form-rule-title').innerText = "Tambah Aturan Baru";
-            document.getElementById('btn-batal-rule').classList.add('hidden'); document.getElementById('btn-submit-rule').classList.remove('w-1/2');
-        });
-        window.deleteRule = async (id) => { if (confirm('Hapus aturan ini?')) { await db.from('qr_rules').delete().eq('id', id); fetchRules(); } };
 
-        // LOGIKA AKSES MENU
+        document.getElementById('btn-batal-edit').addEventListener('click', () => { 
+            document.getElementById('user-id').value = ''; 
+            document.getElementById('form-user').reset(); 
+            document.getElementById('btn-batal-edit').classList.add('hidden'); 
+            document.getElementById('btn-submit-user').classList.remove('w-1/2'); 
+        });
+
+        window.deleteUser = async (id) => { 
+            if (confirm('Yakin ingin menghapus user ini secara permanen?')) { 
+                try {
+                    const { error } = await db.from('app_users').delete().eq('id', id); 
+                    if(error) throw error;
+                    fetchUsers(); 
+                } catch(e) {
+                    alert("Gagal menghapus user: " + e.message);
+                }
+            } 
+        };
+
+        // LOGIKA AKSES MENU DINAMIS
         async function renderMenuAccess() {
-            const container = document.getElementById('akses-menu-container'); container.innerHTML = '<p class="text-gray-500">Memuat...</p>';
-            const { data: menus } = await db.from('menu_access').select('*').order('sort_order', { ascending: true });
-            container.innerHTML = '';
-            menus.forEach((menu) => {
-                const allowedArr = menu.allowed_users ? menu.allowed_users.split(',').map(s => s.trim()) : [];
-                const box = document.createElement('div'); box.className = "menu-draggable flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg bg-white cursor-move"; box.draggable = true; box.setAttribute('data-menuid', menu.menu_id);
-                let userCheckboxes = '';
-                allUsers.forEach(user => { const isChecked = allowedArr.includes(user.username) ? 'checked' : ''; const isDisabled = user.username === 'A' ? 'disabled checked' : ''; userCheckboxes += `<label class="flex items-center gap-1.5 text-sm border px-2 py-1 rounded cursor-pointer hover:bg-blue-50"><input type="checkbox" class="cb-akses" value="${user.username}" ${isChecked} ${isDisabled}> ${user.username}</label>`; });
-                box.innerHTML = `<div class="font-bold text-slate-800 w-full md:w-1/3 flex gap-3 mb-3 md:mb-0"><span class="text-gray-400">☰</span> 📦 ${menu.title}</div><div class="w-full md:w-2/3 flex flex-wrap gap-2">${userCheckboxes}</div>`;
-                container.appendChild(box);
-                box.addEventListener('dragstart', () => box.classList.add('dragging')); box.addEventListener('dragend', () => box.classList.remove('dragging'));
-            });
-            container.addEventListener('dragover', e => { e.preventDefault(); const afterElement = getDragAfterElement(container, e.clientY); const draggable = document.querySelector('.dragging'); if (afterElement == null) container.appendChild(draggable); else container.insertBefore(draggable, afterElement); });
-        }
-        function getDragAfterElement(container, y) {
-            const draggableElements = [...container.querySelectorAll('.menu-draggable:not(.dragging)')];
-            return draggableElements.reduce((closest, child) => { const box = child.getBoundingClientRect(); const offset = y - box.top - box.height / 2; return (offset < 0 && offset > closest.offset) ? { offset: offset, element: child } : closest; }, { offset: Number.NEGATIVE_INFINITY }).element;
-        }
-        document.getElementById('btn-save-akses').addEventListener('click', async () => {
-            const boxes = document.querySelectorAll('.menu-draggable');
-            for (let i = 0; i < boxes.length; i++) {
-                const menuId = boxes[i].getAttribute('data-menuid'), allowedUsers = Array.from(boxes[i].querySelectorAll('.cb-akses:checked')).map(cb => cb.value).join(',');
-                await db.from('menu_access').update({ allowed_users: allowedUsers, sort_order: i }).eq('menu_id', menuId);
+            const container = document.getElementById('akses-menu-container'); 
+            container.innerHTML = '<div class="text-center p-10"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-blue-500 mb-2"></i><p class="font-bold text-slate-500">Memuat Menu...</p></div>';
+            lucide.createIcons();
+
+            try {
+                const { data: users, error: errUsers } = await db.from('app_users').select('username').order('id', { ascending: true });
+                if(errUsers) throw errUsers;
+                const allUsernames = users.map(u => u.username);
+
+                const { data: savedAccess, error: errAccess } = await db.from('menu_access').select('*');
+                if(errAccess) throw errAccess;
+                
+                const accessMap = {};
+                savedAccess.forEach(row => {
+                    accessMap[row.menu_id] = row.allowed_users ? row.allowed_users.split(',') : [];
+                });
+
+                // Ambil menu dari global.js (Abaikan Divider)
+                const actualMenus = APP_MENUS.filter(m => !m.isDivider);
+
+                container.innerHTML = '';
+                actualMenus.forEach(menu => {
+                    // Default: semua user diizinkan jika belum ada di DB
+                    let allowedArr = accessMap[menu.id] !== undefined ? accessMap[menu.id] : allUsernames;
+
+                    const box = document.createElement('div');
+                    box.className = "flex flex-col md:flex-row md:items-start justify-between p-5 border border-slate-200 rounded-xl bg-slate-50 shadow-sm";
+                    box.setAttribute('data-menuid', menu.id);
+
+                    let userCheckboxes = '';
+                    allUsernames.forEach(uname => {
+                        const isChecked = allowedArr.includes(uname) ? 'checked' : '';
+                        userCheckboxes += `
+                            <label class="flex items-center gap-2 text-sm border border-slate-300 bg-white px-3 py-2 rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition shadow-sm">
+                                <input type="checkbox" class="cb-akses w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" value="${uname}" ${isChecked}> 
+                                <span class="font-bold text-slate-700">${uname}</span>
+                            </label>`;
+                    });
+
+                    box.innerHTML = `
+                        <div class="font-black text-slate-800 w-full md:w-1/3 flex items-center gap-3 mb-4 md:mb-0 text-base">
+                            <div class="p-2 bg-blue-100 text-blue-700 rounded-lg"><i data-lucide="${menu.icon}" class="w-5 h-5"></i></div>
+                            ${menu.title}
+                        </div>
+                        <div class="w-full md:w-2/3 flex flex-wrap gap-2">
+                            ${userCheckboxes}
+                        </div>`;
+                    container.appendChild(box);
+                });
+                lucide.createIcons();
+            } catch(e) {
+                container.innerHTML = `<div class="text-center p-10 text-red-500 font-bold">Gagal memuat: ${e.message}</div>`;
             }
-            alert("Akses dan Urutan Disimpan.");
+        }
+
+        document.getElementById('btn-save-akses').addEventListener('click', async () => {
+            const boxes = document.querySelectorAll('#akses-menu-container > div');
+            let payload = [];
+            
+            boxes.forEach(box => {
+                const menuId = box.getAttribute('data-menuid');
+                const checked = Array.from(box.querySelectorAll('.cb-akses:checked')).map(cb => cb.value);
+                payload.push({ menu_id: menuId, allowed_users: checked.join(',') });
+            });
+
+            const btn = document.getElementById('btn-save-akses');
+            const ori = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> MENYIMPAN...'; 
+            btn.disabled = true;
+
+            try {
+                const { error } = await db.from('menu_access').upsert(payload, { onConflict: 'menu_id' });
+                if(error) throw error;
+                alert("Akses Menu Berhasil Disimpan!\nPerubahan akan terlihat saat user memuat ulang halaman.");
+            } catch(e) {
+                alert("Gagal menyimpan: " + e.message);
+            } finally {
+                btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
+            }
         });
 
         fetchUsers();
