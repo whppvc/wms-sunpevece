@@ -100,7 +100,7 @@ window.closeFilterMenu = function() { document.getElementById('excel-filter-menu
 
 window.clearFilterForCurrentCol = function() {
     delete window.activeFilters[window.currentFilterCol];
-    window.closeFilterMenu(); window.saringTabelExcel(); window.updateFilterIcons();
+    window.closeFilterMenu(); window.saringTabelExcel(); 
 };
 
 window.applyFilterForCurrentCol = function() {
@@ -114,7 +114,7 @@ window.applyFilterForCurrentCol = function() {
         window.activeFilters[window.currentFilterCol] = selectedVals;
     }
     
-    window.closeFilterMenu(); window.saringTabelExcel(); window.updateFilterIcons();
+    window.closeFilterMenu(); window.saringTabelExcel(); 
 };
 
 window.saringTabelExcel = function() {
@@ -139,18 +139,22 @@ window.saringTabelExcel = function() {
     });
     window.currentPage = 1; 
     window.applyPagination(); 
+    window.updateFilterIcons();
 };
 
 window.updateFilterIcons = function() {
     document.querySelectorAll('.filter-icon').forEach(icon => {
-        icon.classList.remove('text-blue-600');
-        icon.classList.add('text-slate-400');
+        icon.classList.remove('text-amber-400', 'opacity-100');
+        icon.classList.add('text-white', 'opacity-40');
     });
     for (let colClass in window.activeFilters) {
         const th = document.querySelector(`th.${colClass}`);
         if (th) {
             const icon = th.querySelector('.filter-icon');
-            if (icon) { icon.classList.remove('text-slate-400'); icon.classList.add('text-blue-600'); }
+            if (icon) { 
+                icon.classList.remove('text-white', 'opacity-40'); 
+                icon.classList.add('text-amber-400', 'opacity-100'); 
+            }
         }
     }
 };
