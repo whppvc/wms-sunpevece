@@ -67,8 +67,10 @@ style.innerHTML = `
     :root {
         --tbl-hdr-bg: #0f172a;
         --tbl-hdr-text: #ffffff;
-        --tbl-row-1: #ffffff;
-        --tbl-row-2: #f8fafc;
+        --tbl-row-1: 255, 255, 255;
+        --tbl-row-2: 248, 250, 252;
+        --tbl-row-hover: 241, 245, 249;
+        --tbl-opacity: 1;
         --tbl-border: #e2e8f0;
     }
 
@@ -113,7 +115,6 @@ style.innerHTML = `
     .hdr-std { 
         background-color: var(--tbl-hdr-bg) !important; 
         color: var(--tbl-hdr-text) !important; 
-        text-align: left !important; 
         padding: 0.875rem 1rem !important; 
         font-size: 0.75rem !important; 
         font-weight: 600 !important; 
@@ -132,27 +133,56 @@ style.innerHTML = `
     td { border-right: 1px solid var(--tbl-border) !important; border-bottom: 1px solid var(--tbl-border) !important; }
     td:last-child { border-right: none !important; } 
 
-    .stripe-1 td { background-color: var(--tbl-row-1) !important; transition: background-color 0.2s ease; }
-    .stripe-2 td { background-color: var(--tbl-row-2) !important; transition: background-color 0.2s ease; }
+    .stripe-1 td { background-color: rgba(var(--tbl-row-1), var(--tbl-opacity)) !important; transition: background-color 0.2s ease; }
+    .stripe-2 td { background-color: rgba(var(--tbl-row-2), var(--tbl-opacity)) !important; transition: background-color 0.2s ease; }
     
-    .stripe-1:hover td, .stripe-2:hover td { background-color: #f1f5f9 !important; }
+    .stripe-1:hover td, .stripe-2:hover td, tr.text-row:hover td { background-color: rgba(var(--tbl-row-hover), 1) !important; }
     tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
 
     .sticky-col { position: sticky !important; left: 0 !important; z-index: 30 !important; }
     th.sticky-col { z-index: 40 !important; }
+    
+    /* Custom Range Slider */
+    input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #4f46e5; cursor: pointer; margin-top: -6px; }
+    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #cbd5e1; border-radius: 2px; }
 `;
 document.head.appendChild(style);
 
 // LOAD PREFERENCES
+const THEMES = {
+    row: {
+        gray: { r1: '255, 255, 255', r2: '248, 250, 252' },
+        blue: { r1: '255, 255, 255', r2: '239, 246, 255' },
+        green: { r1: '255, 255, 255', r2: '240, 253, 244' },
+        amber: { r1: '255, 255, 255', r2: '255, 251, 235' },
+        pink: { r1: '255, 255, 255', r2: '253, 242, 248' }
+    },
+    hover: {
+        gray: '241, 245, 249',
+        blue: '219, 234, 254',
+        green: '220, 252, 231',
+        amber: '254, 243, 199',
+        pink: '252, 231, 243'
+    }
+};
+
+let tempDesign = JSON.parse(localStorage.getItem('wms_table_design')) || {
+    hdrBg: '#0f172a', hdrText: '#ffffff', rowTheme: 'gray', hoverTheme: 'gray', opacity: 100, isZebra: true
+};
+
 function applyTableDesign() {
-    const pref = JSON.parse(localStorage.getItem('wms_table_design')) || {
-        hdrBg: '#0f172a', hdrText: '#ffffff', row1: '#ffffff', row2: '#f8fafc', border: '#e2e8f0', isZebra: true
-    };
-    document.documentElement.style.setProperty('--tbl-hdr-bg', pref.hdrBg);
-    document.documentElement.style.setProperty('--tbl-hdr-text', pref.hdrText);
-    document.documentElement.style.setProperty('--tbl-row-1', pref.row1);
-    document.documentElement.style.setProperty('--tbl-row-2', pref.isZebra ? pref.row2 : pref.row1);
-    document.documentElement.style.setProperty('--tbl-border', pref.border);
+    document.documentElement.style.setProperty('--tbl-hdr-bg', tempDesign.hdrBg);
+    document.documentElement.style.setProperty('--tbl-hdr-text', tempDesign.hdrText);
+    
+    const rTheme = THEMES.row[tempDesign.rowTheme] || THEMES.row.gray;
+    document.documentElement.style.setProperty('--tbl-row-1', rTheme.r1);
+    document.documentElement.style.setProperty('--tbl-row-2', tempDesign.isZebra ? rTheme.r2 : rTheme.r1);
+    
+    const hTheme = THEMES.hover[tempDesign.hoverTheme] || THEMES.hover.gray;
+    document.documentElement.style.setProperty('--tbl-row-hover', hTheme);
+    
+    document.documentElement.style.setProperty('--tbl-opacity', tempDesign.opacity / 100);
 }
 applyTableDesign();
 
@@ -292,7 +322,7 @@ async function initModernLayout(pageMeta) {
     layoutWrapper.appendChild(rightArea);
 
     // ==========================================
-    // MODALS (PASSWORD, INBOX, TABLE DESIGN)
+    // 3. MODALS (PASSWORD, INBOX, TABLE DESIGN)
     // ==========================================
     const modalsHTML = `
         <div id="modal-password" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[90] px-4 backdrop-blur-sm">
@@ -309,47 +339,60 @@ async function initModernLayout(pageMeta) {
         <!-- MODAL TABLE DESIGN CUSTOMIZER -->
         <div id="modal-table-design" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 text-slate-800">
-                <h3 class="text-lg font-black mb-1 flex items-center gap-2"><i data-lucide="palette" class="text-purple-600"></i> Desain Tabel Global</h3>
+                <h3 class="text-lg font-black mb-1 flex items-center gap-2"><i data-lucide="palette" class="text-indigo-600"></i> Desain Tabel Global</h3>
                 <p class="text-xs font-medium text-slate-500 mb-5">Pengaturan ini akan diterapkan ke seluruh tabel di WMS.</p>
                 
-                <div class="space-y-4 mb-6">
+                <div class="space-y-5 mb-6">
                     <label class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition">
                         <span class="text-sm font-bold text-slate-700">Aktifkan Zebra Striping</span>
-                        <input type="checkbox" id="td-zebra" class="w-5 h-5 accent-purple-600 cursor-pointer">
+                        <input type="checkbox" id="td-zebra" class="w-5 h-5 accent-indigo-600 cursor-pointer">
                     </label>
 
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Warna Header</label>
-                        <div class="flex gap-2">
-                            <button onclick="setTdColor('hdr', '#0f172a', '#ffffff')" class="w-8 h-8 rounded-full bg-[#0f172a] border-2 border-transparent focus:border-purple-500 ring-offset-2"></button>
-                            <button onclick="setTdColor('hdr', '#1e3a8a', '#ffffff')" class="w-8 h-8 rounded-full bg-[#1e3a8a] border-2 border-transparent focus:border-purple-500 ring-offset-2"></button>
-                            <button onclick="setTdColor('hdr', '#064e3b', '#ffffff')" class="w-8 h-8 rounded-full bg-[#064e3b] border-2 border-transparent focus:border-purple-500 ring-offset-2"></button>
-                            <button onclick="setTdColor('hdr', '#475569', '#ffffff')" class="w-8 h-8 rounded-full bg-[#475569] border-2 border-transparent focus:border-purple-500 ring-offset-2"></button>
+                        <div class="flex gap-3">
+                            <button onclick="setTdColor('hdr', '#0f172a', '#ffffff')" id="btn-hdr-#0f172a" class="w-8 h-8 rounded-full bg-[#0f172a] flex items-center justify-center text-white transition hover:scale-110"></button>
+                            <button onclick="setTdColor('hdr', '#1e3a8a', '#ffffff')" id="btn-hdr-#1e3a8a" class="w-8 h-8 rounded-full bg-[#1e3a8a] flex items-center justify-center text-white transition hover:scale-110"></button>
+                            <button onclick="setTdColor('hdr', '#064e3b', '#ffffff')" id="btn-hdr-#064e3b" class="w-8 h-8 rounded-full bg-[#064e3b] flex items-center justify-center text-white transition hover:scale-110"></button>
+                            <button onclick="setTdColor('hdr', '#475569', '#ffffff')" id="btn-hdr-#475569" class="w-8 h-8 rounded-full bg-[#475569] flex items-center justify-center text-white transition hover:scale-110"></button>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Baris Ganjil</label>
-                            <div class="flex gap-2">
-                                <button onclick="setTdColor('r1', '#ffffff')" class="w-8 h-8 rounded-full bg-[#ffffff] border-2 border-slate-300 focus:border-purple-500"></button>
-                                <button onclick="setTdColor('r1', '#f8fafc')" class="w-8 h-8 rounded-full bg-[#f8fafc] border-2 border-slate-300 focus:border-purple-500"></button>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Tema Belang (Row)</label>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="setTdColor('rowTheme', 'gray')" id="btn-row-gray" class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 transition hover:scale-110"></button>
+                                <button onclick="setTdColor('rowTheme', 'blue')" id="btn-row-blue" class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 transition hover:scale-110"></button>
+                                <button onclick="setTdColor('rowTheme', 'green')" id="btn-row-green" class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-600 transition hover:scale-110"></button>
+                                <button onclick="setTdColor('rowTheme', 'amber')" id="btn-row-amber" class="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 transition hover:scale-110"></button>
+                                <button onclick="setTdColor('rowTheme', 'pink')" id="btn-row-pink" class="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 transition hover:scale-110"></button>
                             </div>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Baris Genap</label>
-                            <div class="flex gap-2">
-                                <button onclick="setTdColor('r2', '#f8fafc')" class="w-8 h-8 rounded-full bg-[#f8fafc] border-2 border-slate-300 focus:border-purple-500"></button>
-                                <button onclick="setTdColor('r2', '#f1f5f9')" class="w-8 h-8 rounded-full bg-[#f1f5f9] border-2 border-slate-300 focus:border-purple-500"></button>
-                                <button onclick="setTdColor('r2', '#eff6ff')" class="w-8 h-8 rounded-full bg-[#eff6ff] border-2 border-slate-300 focus:border-purple-500"></button>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Tema Hover</label>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="setTdColor('hoverTheme', 'gray')" id="btn-hov-gray" class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 transition hover:scale-110"></button>
+                                <button onclick="setTdColor('hoverTheme', 'blue')" id="btn-hov-blue" class="w-6 h-6 rounded-full bg-blue-200 flex items-center justify-center text-blue-600 transition hover:scale-110"></button>
+                                <button onclick="setTdColor('hoverTheme', 'green')" id="btn-hov-green" class="w-6 h-6 rounded-full bg-green-200 flex items-center justify-center text-green-600 transition hover:scale-110"></button>
+                                <button onclick="setTdColor('hoverTheme', 'amber')" id="btn-hov-amber" class="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center text-amber-600 transition hover:scale-110"></button>
+                                <button onclick="setTdColor('hoverTheme', 'pink')" id="btn-hov-pink" class="w-6 h-6 rounded-full bg-pink-200 flex items-center justify-center text-pink-600 transition hover:scale-110"></button>
                             </div>
                         </div>
+                    </div>
+
+                    <div>
+                        <label class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-2">
+                            <span>Opacity Warna Belang</span>
+                            <span id="lbl-opacity" class="text-indigo-600">100%</span>
+                        </label>
+                        <input type="range" id="td-opacity" min="10" max="100" value="100" class="w-full" oninput="document.getElementById('lbl-opacity').innerText = this.value + '%'">
                     </div>
                 </div>
 
                 <div class="flex gap-2">
                     <button onclick="tutupModal('modal-table-design')" class="w-1/2 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition">Batal</button>
-                    <button onclick="saveTableDesign()" class="w-1/2 py-2.5 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition shadow-sm">Simpan</button>
+                    <button onclick="saveTableDesign()" class="w-1/2 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-sm">Simpan</button>
                 </div>
             </div>
         </div>
@@ -480,26 +523,45 @@ document.addEventListener('click', (e) => {
 // ==========================================
 // FUNGSI TABLE DESIGN CUSTOMIZER
 // ==========================================
-let tempDesign = JSON.parse(localStorage.getItem('wms_table_design')) || {
-    hdrBg: '#0f172a', hdrText: '#ffffff', row1: '#ffffff', row2: '#f8fafc', border: '#e2e8f0', isZebra: true
-};
-
 window.bukaModalTableDesign = function() {
     document.getElementById('td-zebra').checked = tempDesign.isZebra;
+    document.getElementById('td-opacity').value = tempDesign.opacity;
+    document.getElementById('lbl-opacity').innerText = tempDesign.opacity + '%';
+    updateDesignUI();
     bukaModal('modal-table-design');
 };
 
-window.setTdColor = function(type, color, text = null) {
-    if(type === 'hdr') { tempDesign.hdrBg = color; tempDesign.hdrText = text; }
-    if(type === 'r1') tempDesign.row1 = color;
-    if(type === 'r2') tempDesign.row2 = color;
+window.setTdColor = function(type, val, text = null) {
+    if(type === 'hdr') { tempDesign.hdrBg = val; tempDesign.hdrText = text; }
+    if(type === 'rowTheme') tempDesign.rowTheme = val;
+    if(type === 'hoverTheme') tempDesign.hoverTheme = val;
+    updateDesignUI();
 };
+
+function updateDesignUI() {
+    // Reset all checkmarks
+    document.querySelectorAll('[id^="btn-hdr-"], [id^="btn-row-"], [id^="btn-hov-"]').forEach(btn => btn.innerHTML = '');
+    
+    // Set checkmarks
+    const btnHdr = document.getElementById(`btn-hdr-${tempDesign.hdrBg}`);
+    if(btnHdr) btnHdr.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i>';
+    
+    const btnRow = document.getElementById(`btn-row-${tempDesign.rowTheme}`);
+    if(btnRow) btnRow.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
+    
+    const btnHov = document.getElementById(`btn-hov-${tempDesign.hoverTheme}`);
+    if(btnHov) btnHov.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
+    
+    lucide.createIcons();
+}
 
 window.saveTableDesign = function() {
     tempDesign.isZebra = document.getElementById('td-zebra').checked;
+    tempDesign.opacity = document.getElementById('td-opacity').value;
     localStorage.setItem('wms_table_design', JSON.stringify(tempDesign));
     applyTableDesign();
     tutupModal('modal-table-design');
+    
     // Trigger re-render to apply zebra classes if needed
     if(typeof applyPagination === 'function') applyPagination();
 };
@@ -655,4 +717,171 @@ function renderInboxTable() {
     
     tbody.innerHTML = html;
     lucide.createIcons();
+}
+
+window.toggleAllInbox = function(checked) {
+    document.querySelectorAll('.cb-inbox').forEach(cb => cb.checked = checked);
+};
+
+window.bacaPesan = async function(index) {
+    const msg = inboxDataGlobal[index];
+    if(!msg) return;
+
+    const dt = new Date(msg.created_at);
+    document.getElementById('read-subject').innerText = msg.subject;
+    document.getElementById('read-sender').innerText = msg.sender;
+    document.getElementById('read-date').innerText = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    document.getElementById('read-body').innerText = msg.body;
+
+    const actionContainer = document.getElementById('read-action-container');
+    actionContainer.innerHTML = '';
+    actionContainer.classList.add('hidden');
+
+    if (msg.type === 'REQ_CUSTOMER') {
+        actionContainer.classList.remove('hidden');
+        actionContainer.innerHTML = `
+            <button onclick="terimaRequestPO(${msg.meta.id}, '${msg.meta.qrcode}', '${msg.meta.customer_request}')" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2 text-sm">
+                <i data-lucide="check-circle" class="w-4 h-4"></i> TERIMA REQUEST INI
+            </button>
+        `;
+        lucide.createIcons();
+    } 
+    else if (msg.type === 'MESSAGE' && msg.status === 'UNREAD') {
+        try {
+            await db.from('app_messages').update({ status: 'READ' }).eq('id', msg.id);
+            msg.status = 'READ'; 
+            cekNotifikasiInbox(); 
+        } catch(e) { console.error("Gagal update status read:", e); }
+    }
+
+    document.getElementById('inbox-view-list').classList.add('hidden');
+    document.getElementById('inbox-view-read').classList.remove('hidden');
+}
+
+window.bukaBuatPesan = async function() {
+    document.getElementById('inbox-view-list').classList.add('hidden');
+    document.getElementById('inbox-view-compose').classList.remove('hidden');
+    
+    document.getElementById('compose-subject').value = '';
+    document.getElementById('compose-body').value = '';
+    
+    const sel = document.getElementById('compose-recipient');
+    sel.innerHTML = '<option value="">Memuat...</option>';
+    
+    try {
+        const { data, error } = await db.from('app_users').select('username, role').order('username');
+        if(error) throw error;
+        
+        const currentUser = JSON.parse(localStorage.getItem('user_session'));
+        let html = '<option value="">-- Pilih Penerima --</option>';
+        
+        data.forEach(u => {
+            if(u.username !== currentUser.username) {
+                html += `<option value="${u.username}">${u.username} - ${u.role || 'User'}</option>`;
+            }
+        });
+        sel.innerHTML = html;
+    } catch(e) {
+        sel.innerHTML = '<option value="">Gagal memuat user</option>';
+    }
+}
+
+window.kirimPesan = async function() {
+    const currentUser = JSON.parse(localStorage.getItem('user_session'));
+    const recipient = document.getElementById('compose-recipient').value;
+    const subject = document.getElementById('compose-subject').value.trim();
+    const body = document.getElementById('compose-body').value.trim();
+
+    if(!recipient) return alert("Pilih penerima pesan!");
+    if(!subject) return alert("Perihal tidak boleh kosong!");
+    if(!body) return alert("Isi pesan tidak boleh kosong!");
+
+    const btn = document.getElementById('btn-kirim-pesan');
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Mengirim...';
+    btn.disabled = true;
+
+    try {
+        const { error } = await db.from('app_messages').insert([{
+            sender: currentUser.username,
+            recipient: recipient,
+            subject: subject,
+            body: body,
+            status: 'UNREAD'
+        }]);
+
+        if(error) throw error;
+        
+        alert("Pesan berhasil dikirim!");
+        kembaliKeListInbox();
+    } catch(e) {
+        alert("Gagal mengirim pesan: " + e.message);
+    } finally {
+        btn.innerHTML = ori;
+        btn.disabled = false;
+        lucide.createIcons();
+    }
+}
+
+window.hapusPesanMassal = async function() {
+    const checked = document.querySelectorAll('.cb-inbox:checked');
+    if(checked.length === 0) return alert("Pilih pesan yang ingin dihapus!");
+    
+    if(!confirm(`Yakin ingin menghapus ${checked.length} pesan ini?`)) return;
+
+    let idsMsg = [];
+    let idsReq = [];
+
+    checked.forEach(cb => {
+        if(cb.getAttribute('data-type') === 'MESSAGE') idsMsg.push(cb.value);
+        else if(cb.getAttribute('data-type') === 'REQ_CUSTOMER') idsReq.push(cb.value);
+    });
+
+    try {
+        if(idsMsg.length > 0) {
+            await db.from('app_messages').delete().in('id', idsMsg);
+        }
+        if(idsReq.length > 0) {
+            await db.from('request_ganti_customer').update({ status: 'DITOLAK' }).in('id', idsReq);
+        }
+        
+        alert("Pesan berhasil dihapus.");
+        loadInboxData();
+        cekNotifikasiInbox();
+    } catch(e) {
+        alert("Gagal menghapus pesan: " + e.message);
+    }
+}
+
+window.terimaRequestPO = async function(idReq, qrcode, customerBaru) {
+    if(!confirm(`Yakin ingin mengganti Customer untuk kardus ${qrcode} menjadi ${customerBaru}?`)) return;
+
+    try {
+        const { data: stokData, error: errStok } = await db.from('stok_qr').select('id_sku').eq('qrcode', qrcode).single();
+        if(errStok || !stokData) throw new Error("Gagal mengambil kartu stok dari gudang (mungkin barang sudah keluar/terhapus).");
+
+        let id_sku = stokData.id_sku;
+        let parts = id_sku.split('_');
+        
+        if(parts.length >= 7) {
+            parts[6] = customerBaru; 
+        } else {
+            parts[parts.length - 1] = customerBaru;
+        }
+        
+        let sku_baru = parts.join('_'); 
+
+        const { error: errUpdate } = await db.from('stok_qr').update({ id_sku: sku_baru }).eq('qrcode', qrcode);
+        if(errUpdate) throw errUpdate;
+
+        const { error: errReq } = await db.from('request_ganti_customer').update({ status: 'SELESAI' }).eq('id', idReq);
+        if(errReq) throw errReq;
+
+        alert("Request berhasil disetujui! Customer telah diganti.");
+        kembaliKeListInbox(); 
+        cekNotifikasiInbox(); 
+
+    } catch(err) {
+        alert("Gagal memproses persetujuan: " + err.message);
+    }
 }
