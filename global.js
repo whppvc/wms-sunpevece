@@ -139,8 +139,13 @@ style.innerHTML = `
     .stripe-1:hover td, .stripe-2:hover td, tr.text-row:hover td { background-color: rgba(var(--tbl-row-hover), 1) !important; }
     tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
 
+    /* FREEZE PANE (STICKY COLUMN) CSS */
     .sticky-col { position: sticky !important; left: 0 !important; z-index: 30 !important; }
-    th.sticky-col { z-index: 40 !important; }
+    th.sticky-col { z-index: 40 !important; background-color: var(--tbl-hdr-bg) !important; }
+    .stripe-1 td.sticky-col { background-color: rgba(var(--tbl-row-1), var(--tbl-opacity)) !important; }
+    .stripe-2 td.sticky-col { background-color: rgba(var(--tbl-row-2), var(--tbl-opacity)) !important; }
+    tr.text-row:hover td.sticky-col { background-color: rgba(var(--tbl-row-hover), 1) !important; }
+    tr.selected-row td.sticky-col { background-color: #ccfbf1 !important; }
     
     /* Custom Range Slider */
     input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
@@ -539,10 +544,8 @@ window.setTdColor = function(type, val, text = null) {
 };
 
 function updateDesignUI() {
-    // Reset all checkmarks
     document.querySelectorAll('[id^="btn-hdr-"], [id^="btn-row-"], [id^="btn-hov-"]').forEach(btn => btn.innerHTML = '');
     
-    // Set checkmarks
     const btnHdr = document.getElementById(`btn-hdr-${tempDesign.hdrBg}`);
     if(btnHdr) btnHdr.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i>';
     
@@ -562,7 +565,6 @@ window.saveTableDesign = function() {
     applyTableDesign();
     tutupModal('modal-table-design');
     
-    // Trigger re-render to apply zebra classes if needed
     if(typeof applyPagination === 'function') applyPagination();
 };
 
