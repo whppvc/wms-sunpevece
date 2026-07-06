@@ -87,7 +87,7 @@ style.innerHTML = `
 `;
 document.head.appendChild(style);
 
-function initModernLayout(pageMeta) {
+async function initModernLayout(pageMeta) {
     const sessionString = localStorage.getItem('user_session');
     if (!sessionString) return; 
     
@@ -97,6 +97,33 @@ function initModernLayout(pageMeta) {
     const isExpanded = localStorage.getItem('sidebar_expanded') === 'true';
     const expandedClass = isExpanded ? 'expanded' : '';
     const expandIcon = isExpanded ? 'chevron-left' : 'chevron-right';
+
+    // AMBIL AKSES MENU DARI DATABASE
+    let allowedMenus = [];
+    try {
+        const { data } = await db.from('menu_access').select('*');
+        if(data) allowedMenus = data;
+    } catch(e) { console.error("Gagal load menu access", e); }
+
+    // FILTER MENU BERDASARKAN AKSES USER
+    const filteredMenus = APP_MENUS.filter(menu => {
+        if(menu.isDivider) return true; 
+        const rule = allowedMenus.find(r => r.menu_id === menu.id);
+        if(!rule) return true; // Default allow all jika belum diatur
+        const allowedUsers = rule.allowed_users ? rule.allowed_users.split(',') : [];
+        return allowedUsers.includes(user.username);
+    });
+
+    // BERSIHKAN DIVIDER YANG KOSONG/BERURUTAN
+    const finalMenus = [];
+    for(let i=0; i<filteredMenus.length; i++) {
+        const curr = filteredMenus[i];
+        if(curr.isDivider) {
+            if(i === filteredMenus.length - 1) continue; // Jangan tampil jika di akhir
+            if(filteredMenus[i+1].isDivider) continue; // Jangan tampil jika setelahnya divider lagi
+        }
+        finalMenus.push(curr);
+    }
 
     const originalNodes = Array.from(document.body.childNodes);
     document.body.innerHTML = ''; 
@@ -116,7 +143,7 @@ function initModernLayout(pageMeta) {
             <div class="flex flex-col gap-2 w-full px-3 overflow-y-auto hide-scrollbar flex-1">
     `;
     
-    APP_MENUS.forEach(menu => {
+    finalMenus.forEach(menu => {
         if (menu.isDivider) { 
             sidebarHTML += `<div class="sidebar-divider h-px bg-slate-700 my-1 text-[10px] font-black text-slate-400 uppercase tracking-widest overflow-hidden whitespace-nowrap"><span class="sidebar-text">${menu.title}</span></div>`; 
         } else {
@@ -426,8 +453,6 @@ window.bukaModalInbox = async function() {
     tutupModal('profile-dropdown');
     document.getElementById('modal-inbox').classList.remove('hidden');
     
-    // REVISI: Hanya ganti view, jangan panggil loadInboxData() di sini
-    // karena akan dipanggil oleh kembaliKeListInbox()
     document.getElementById('inbox-view-list').classList.remove('hidden');
     document.getElementById('inbox-view-read').classList.add('hidden');
     document.getElementById('inbox-view-compose').classList.add('hidden');
@@ -440,7 +465,6 @@ window.kembaliKeListInbox = function() {
     document.getElementById('inbox-view-read').classList.add('hidden');
     document.getElementById('inbox-view-compose').classList.add('hidden');
     
-    // REVISI: Panggil loadInboxData HANYA di sini agar tidak double
     loadInboxData(); 
 };
 
@@ -450,8 +474,6 @@ async function loadInboxData() {
     lucide.createIcons();
 
     const user = JSON.parse(localStorage.getItem('user_session'));
-    
-    // REVISI: Gunakan array temporary agar tidak terjadi race condition
     let tempInbox = [];
 
     try {
@@ -500,8 +522,6 @@ async function loadInboxData() {
         }
 
         tempInbox.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        
-        // REVISI: Assign ke global setelah semua proses selesai
         inboxDataGlobal = tempInbox;
         renderInboxTable();
 
