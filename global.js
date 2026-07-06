@@ -3,13 +3,30 @@
 // ==========================================
 (function checkSecurity() {
     const path = window.location.pathname;
-    const isLoginPage = path.endsWith('index.html') || path === '/' || path.endsWith('setting.html');
-    const session = localStorage.getItem('user_session');
+    const isLoginPage = path.endsWith('index.html') || path === '/';
+    const isSettingPage = path.endsWith('setting.html');
+    const sessionString = localStorage.getItem('user_session');
 
-    if (!session && !isLoginPage) {
+    // 1. Jika belum login dan bukan di halaman login -> Lempar ke Login
+    if (!sessionString && !isLoginPage) {
         window.location.replace('index.html');
-    } else if (session && isLoginPage) {
+    } 
+    // 2. Jika sudah login dan mencoba buka halaman login -> Lempar ke Dashboard
+    else if (sessionString && isLoginPage) {
         window.location.replace('menu.html');
+    }
+
+    // 3. Proteksi Khusus Halaman Setting (Hanya Role Creator yang boleh masuk)
+    if (sessionString && isSettingPage) {
+        try {
+            const user = JSON.parse(sessionString);
+            if (!user.role || user.role.toLowerCase() !== 'creator') {
+                window.location.replace('menu.html'); // Jika bukan creator, lempar ke dashboard
+            }
+        } catch(e) {
+            localStorage.removeItem('user_session');
+            window.location.replace('index.html');
+        }
     }
 })();
 
