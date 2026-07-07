@@ -221,24 +221,30 @@ async function loadKamusDanJasper() {
     } catch(e) { console.log("Tabel nama_jasper belum siap."); }
 }
 
-// REVISI: Mengambil SEMUA data dari hasil_stbj_langsir tanpa filter Supabase
 async function muatDataDariSupabase() {
     const tbody = document.getElementById('tbody-stbj');
     tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500 text-sm">Menarik Data...</p></td></tr>`;
     lucide.createIcons();
     try {
-        const { data, error } = await db.from('hasil_stbj_langsir')
-            .select('*')
-            .order('created_at', {ascending: false});
-            
-        if(error) throw error;
-        
-        if(data && data.length > 0) {
-            const qrs = data.map(d => d.qrcode);
-            const { data: stokData } = await db.from('stok_qr').select('qrcode').in('qrcode', qrs);
-            const stokSet = new Set((stokData || []).map(d => d.qrcode));
-            data.forEach(d => { d.is_in_gudang = stokSet.has(d.qrcode); });
+        let filterValues = [];
+        if (statusSekarang === 'STBJ') {
+            filterValues = ['STBJ', 'stbj', 'SUDAH STBJ', 'sudah stbj'];
+        } else if (statusSekarang === 'HOLD STBJ') {
+            filterValues = ['HOLD STBJ', 'hold stbj', 'HOLD', 'hold'];
+        } else if (statusSekarang === 'IN GUDANG') {
+            filterValues = ['IN GUDANG', 'in gudang'];
+        } else if (statusSekarang === 'HOLD LANGSIR') {
+            filterValues = ['HOLD LANGSIR', 'hold langsir'];
         }
+
+        let query = db.from('hasil_stbj_langsir').select('*').order('created_at', {ascending: false});
+        
+        if (statusSekarang !== 'ALL') {
+            query = query.in('status', filterValues);
+        }
+
+        const { data, error } = await query;
+        if(error) throw error;
 
         rawDataRaw = data || [];
         renderHeaderDanTabel();
@@ -279,18 +285,20 @@ function setMode(m) {
     renderHeaderDanTabel();
 }
 
-// REVISI: Filter Status sekarang dilakukan secara LOKAL (seperti filter Excel)
 function switchStatusFilter(val) { 
     statusSekarang = val; 
     
-    if(val === 'ALL') {
-        delete activeFilters['col-status'];
-    } else {
-        activeFilters['col-status'] = [val];
+    const btnHoldMob = document.getElementById('btn-hold-mob');
+    if(btnHoldMob) {
+        if(statusSekarang === 'STBJ') {
+            btnHoldMob.innerHTML = '<i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Item';
+        } else {
+            btnHoldMob.innerHTML = '<i data-lucide="play-circle" class="w-4 h-4"></i> Unhold Item';
+        }
+        lucide.createIcons();
     }
     
-    saringTabelExcel();
-    updateFilterIcons();
+    muatDataDariSupabase(); 
 }
 
 function sortTable(colIndex, headerEl) {
@@ -574,7 +582,7 @@ function highlightRow(checkbox, skipStateReset = false) {
     if(!skipStateReset) updateSelectedCount();
 }
 
-// REVISI: Kolom Status Data sekarang selalu tampil dan berwarna sesuai status
+// REVISI: Teks Status Tanpa Kotak (Text Only)
 function renderHeaderDanTabel() {
     const thead = document.getElementById('thead-stbj');
     const tbody = document.getElementById('tbody-stbj');
@@ -589,7 +597,7 @@ function renderHeaderDanTabel() {
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
                     <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
-                ${thSort('Status Data', 'col-status text-center')}
+                ${thSort('Status Item', 'col-status text-center')}
                 ${thSort('Collect', 'col-status-data text-center')}
                 ${thSort('Waktu Scan', 'col-waktu text-center')}
                 ${thSort('Troli', 'col-troli text-center')}
@@ -628,17 +636,28 @@ function renderHeaderDanTabel() {
                 statData = `<span class="text-indigo-600 font-medium uppercase">${r.status_data}</span>`;
             }
 
-            // REVISI: Pewarnaan Badge Status
-            let badgeStatus = "bg-slate-100 text-slate-600 border-slate-300";
-            if(r.status === 'STBJ') badgeStatus = "bg-emerald-100 text-emerald-700 border-emerald-300";
-            else if(r.status === 'HOLD STBJ' || r.status === 'HOLD LANGSIR') badgeStatus = "bg-amber-100 text-amber-700 border-amber-300";
-            else if(r.status === 'IN GUDANG') badgeStatus = "bg-blue-100 text-blue-700 border-blue-300";
-            else if(r.status === 'RETUR') badgeStatus = "bg-rose-100 text-rose-700 border-rose-300";
+            // REVISI: Pewarnaan Teks Status (Tanpa Kotak)
+            let textColor = "text-slate-600";
+            let displayStatus = r.status || '-';
+            
+            if(displayStatus === 'STBJ' || displayStatus === 'SUDAH STBJ') {
+                textColor = "text-slate-900"; // Hitam
+                displayStatus = 'SUDAH STBJ';
+            }
+            else if(displayStatus === 'HOLD STBJ' || displayStatus === 'HOLD LANGSIR') {
+                textColor = "text-orange-600"; // Oren
+            }
+            else if(displayStatus === 'IN GUDANG') {
+                textColor = "text-emerald-600"; // Hijau
+            }
+            else if(displayStatus === 'RETUR') {
+                textColor = "text-rose-600"; // Merah
+            }
 
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 text-center col-status" data-search="${r.status || '-'}"><span class="px-2 py-1 rounded text-[10px] font-black border ${badgeStatus}">${r.status || '-'}</span></td>
+                    <td class="px-4 py-3 text-center col-status" data-search="${displayStatus}"><span class="font-black ${textColor}">${displayStatus}</span></td>
                     <td class="px-4 py-3 text-center col-status-data" data-search="${r.status_data || '-'}">${statData}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-waktu" data-search="${tgl}">${tgl}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-troli" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
@@ -1015,7 +1034,6 @@ async function aksiHapusPerBaris(qrcode) {
     } catch(e) { alert("Gagal hapus: " + e.message); }
 }
 
-// REVISI: Fungsi Aksi Massal (Hold/Unhold) menggunakan Prompt
 async function aksiMassal(tipe) {
     let checkedValues = [];
     document.querySelectorAll('.row-cb:checked').forEach(cb => { cb.value.split(',').forEach(v => { if(v) checkedValues.push(v); }); });
