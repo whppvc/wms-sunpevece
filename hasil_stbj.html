@@ -20,14 +20,11 @@
         .table-container { position: relative; will-change: transform; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* DESAIN TAB BAR */
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
         
-        /* HIGHLIGHT ROW */
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
 
-        /* REVISI: Hapus background, color, position, dan z-index statis agar mengikuti global.js (Table Design Customizer) */
         .hdr-std { 
             text-align: center !important; 
             padding: 0.5rem 0.75rem !important; 
@@ -40,7 +37,6 @@
             background-clip: padding-box !important; 
         }
         
-        /* EFEK HOVER BARIS */
         tr.r-row:not(.selected-row):hover td { color: #4f46e5 !important; }
         tr.r-row:not(.selected-row):hover td button { color: #4f46e5 !important; border-color: #4f46e5 !important; }
 
@@ -67,9 +63,10 @@
             <div class="p-3 sm:p-4 flex items-center bg-slate-50/50 border-t border-slate-100 w-full">
                 <div class="flex items-center gap-3 shrink-0">
                     <label id="lbl-pilih-tabel" class="text-[11px] font-black text-slate-500 uppercase tracking-wide">Tabel:</label>
-                    <select id="select-tabel" onchange="switchTable(this.value)" class="p-2 sm:p-2.5 bg-white border border-slate-300 rounded-md font-black text-xs text-slate-800 outline-none cursor-pointer uppercase focus:border-blue-500 transition shadow-sm">
-                        <option value="hasil_stbj">STBJ MASUK</option> 
-                        <option value="hold_stbj">STBJ HOLD</option>
+                    <!-- REVISI: Mengubah id dan value untuk filter status -->
+                    <select id="select-status" onchange="switchStatusFilter(this.value)" class="p-2 sm:p-2.5 bg-white border border-slate-300 rounded-md font-black text-xs text-slate-800 outline-none cursor-pointer uppercase focus:border-blue-500 transition shadow-sm">
+                        <option value="STBJ">STBJ MASUK</option> 
+                        <option value="HOLD STBJ">STBJ HOLD</option>
                     </select>
                 </div>
 
@@ -106,7 +103,6 @@
         <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
             <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-t-xl shadow-sm border border-slate-300">
                 <table class="w-full text-left whitespace-nowrap" id="table-stbj-main">
-                    <!-- REVISI: z-50 agar header selalu di atas baris tabel saat di-scroll vertikal -->
                     <thead class="sticky top-0 z-50 shadow-sm" id="thead-stbj"></thead>
                     <tbody id="tbody-stbj" class="text-slate-800"></tbody>
                 </table>
@@ -192,7 +188,6 @@
             </div>
             <div class="overflow-y-auto px-4 pb-4 pt-0 flex-1 hide-scrollbar table-container">
                 <table class="w-full text-left border-separate border-spacing-0 text-sm whitespace-nowrap mt-3" id="table-katalog">
-                    <!-- REVISI: z-50 agar header selalu di atas baris tabel saat di-scroll vertikal -->
                     <thead class="sticky top-0 z-50 shadow-sm">
                         <tr>
                             <th class="hdr-std w-10">EDIT</th>
