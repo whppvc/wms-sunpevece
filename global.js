@@ -139,12 +139,14 @@ style.innerHTML = `
     .stripe-1:hover td, .stripe-2:hover td, tr.text-row:hover td { background-color: rgba(var(--tbl-row-hover), 1) !important; }
     tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
 
-    /* FREEZE PANE (STICKY COLUMN) CSS */
+    /* REVISI: FREEZE PANE (STICKY COLUMN) CSS - DIBUAT SOLID AGAR TIDAK TUMPANG TINDIH */
     .sticky-col { position: sticky !important; left: 0 !important; z-index: 30 !important; }
     th.sticky-col { z-index: 40 !important; background-color: var(--tbl-hdr-bg) !important; }
-    .stripe-1 td.sticky-col { background-color: rgba(var(--tbl-row-1), var(--tbl-opacity)) !important; }
-    .stripe-2 td.sticky-col { background-color: rgba(var(--tbl-row-2), var(--tbl-opacity)) !important; }
-    tr.text-row:hover td.sticky-col { background-color: rgba(var(--tbl-row-hover), 1) !important; }
+    
+    /* Pastikan warna background sticky column selalu solid (opacity 1) agar tidak tembus pandang */
+    .stripe-1 td.sticky-col { background-color: rgb(var(--tbl-row-1)) !important; }
+    .stripe-2 td.sticky-col { background-color: rgb(var(--tbl-row-2)) !important; }
+    tr.text-row:hover td.sticky-col { background-color: rgb(var(--tbl-row-hover)) !important; }
     tr.selected-row td.sticky-col { background-color: #ccfbf1 !important; }
     
     /* Custom Range Slider */
@@ -887,3 +889,4 @@ window.terimaRequestPO = async function(idReq, qrcode, customerBaru) {
         alert("Gagal memproses persetujuan: " + err.message);
     }
 }
+
