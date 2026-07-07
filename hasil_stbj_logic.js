@@ -64,7 +64,6 @@ function loadUserPreferences() {
         }
     }
     
-    // Load Rows Per Page Preference
     const savedRows = localStorage.getItem('wms_rows_per_page');
     if(savedRows) {
         rowsPerPage = parseInt(savedRows);
@@ -311,8 +310,6 @@ const thSort = (label, cls = "") => {
             <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
         </button>`;
 
-    const justifyClass = noFilter ? 'justify-center' : 'justify-start';
-
     return `<th class="hdr-std ${cls} select-none group">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
             <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable(this.closest('th').cellIndex, this.closest('th'))" title="Sort ${label}">${label}</span>
@@ -456,9 +453,12 @@ function saringTabelExcel() {
         } else { 
             row.classList.add('filtered-out'); 
             let cb = row.querySelector('.row-cb');
-            if(cb) { cb.checked = false; highlightRow(cb); } 
+            if(cb) { cb.checked = false; highlightRow(cb, true); } 
         }
     });
+    
+    selectAllState = 0;
+    updateSelectAllUI();
     currentPage = 1; 
     applyPagination(); 
 }
@@ -489,12 +489,14 @@ function hitungQtyLembar(jenis, nama, qtyDus) {
         if (n.includes('PROFILE II')) return qtyDus * 48;
         if (n.includes('PROFILE I')) return qtyDus * 140;
         if (n.includes('CONNECTOR')) return qtyDus * 80;
-        return qtyDus * 24; // Default (termasuk Profile VI)
+        return qtyDus * 24; 
     }
     return 0;
 }
 
-// REVISI: Tri-State Checkbox Logic
+// ========================================================
+// TRI-STATE CHECKBOX LOGIC (0: KOSONG, 1: PAGE, 2: ALL)
+// ========================================================
 window.cycleSelectAll = function() {
     selectAllState = (selectAllState + 1) % 3;
     updateSelectAllUI();
@@ -528,31 +530,46 @@ function applySelection() {
     if (selectAllState === 0) {
         allRows.forEach(row => {
             const cb = row.querySelector('.row-cb');
-            if(cb) { cb.checked = false; highlightRow(cb); }
+            if(cb) { cb.checked = false; highlightRow(cb, true); }
         });
     } else if (selectAllState === 1) {
         allRows.forEach(row => {
             const cb = row.querySelector('.row-cb');
-            if(cb) { cb.checked = false; highlightRow(cb); }
+            if(cb) { cb.checked = false; highlightRow(cb, true); }
         });
         visibleRows.forEach((row, index) => {
             if(index >= startIndex && index < endIndex) {
                 const cb = row.querySelector('.row-cb');
-                if(cb) { cb.checked = true; highlightRow(cb); }
+                if(cb) { cb.checked = true; highlightRow(cb, true); }
             }
         });
     } else if (selectAllState === 2) {
         visibleRows.forEach(row => {
             const cb = row.querySelector('.row-cb');
-            if(cb) { cb.checked = true; highlightRow(cb); }
+            if(cb) { cb.checked = true; highlightRow(cb, true); }
         });
     }
+    updateSelectedCount();
+}
+
+function highlightRow(checkbox, skipStateReset = false) {
+    const tr = checkbox.closest('tr');
+    if (checkbox.checked) { tr.classList.add('selected-row'); } 
+    else { tr.classList.remove('selected-row'); }
+    
+    if(!skipStateReset && !checkbox.checked && selectAllState !== 0) {
+        selectAllState = 0;
+        updateSelectAllUI();
+    }
+    
+    if(!skipStateReset) updateSelectedCount();
 }
 
 function renderHeaderDanTabel() {
     const thead = document.getElementById('thead-stbj');
     const tbody = document.getElementById('tbody-stbj');
     sortState = {};
+    selectAllState = 0; 
 
     const rowClassBase = "transition text-row text-[13px]";
 
@@ -761,19 +778,6 @@ function renderHeaderDanTabel() {
     updateSelectAllUI();
 }
 
-function highlightRow(checkbox) {
-    const tr = checkbox.closest('tr');
-    if (checkbox.checked) { tr.classList.add('selected-row'); } 
-    else { tr.classList.remove('selected-row'); }
-    
-    if(!checkbox.checked && selectAllState !== 0) {
-        selectAllState = 0;
-        updateSelectAllUI();
-    }
-    
-    updateSelectedCount();
-}
-
 function changeRowsPerPage(val) {
     const customInput = document.getElementById('input-custom-rows');
     if (val === 'ALL') {
@@ -789,7 +793,6 @@ function changeRowsPerPage(val) {
         customInput.classList.add('hidden');
     }
     
-    // Simpan ke Local Storage
     localStorage.setItem('wms_rows_per_page', rowsPerPage);
     
     currentPage = 1; 
@@ -806,7 +809,6 @@ function setCustomRowsPerPage(val) {
     }
 }
 
-// REVISI: Logika Zebra Striping Dinamis Anti-Bug
 function applyPagination() {
     const allRows = Array.from(document.querySelectorAll('#tbody-stbj tr.text-row'));
     
@@ -827,10 +829,8 @@ function applyPagination() {
 
     let sumQty = 0;
     visibleRows.forEach((row, index) => {
-        // Hapus class stripe lama
         row.classList.remove('stripe-1', 'stripe-2');
         
-        // Tambahkan class stripe baru berdasarkan index yang terlihat
         if (index % 2 === 0) row.classList.add('stripe-1');
         else row.classList.add('stripe-2');
 
@@ -853,7 +853,12 @@ function applyPagination() {
     if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
     if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
     
-    applySelection();
+    // Reset select all state jika pindah halaman (hanya jika state = 1 / current page)
+    if (selectAllState === 1) {
+        selectAllState = 0;
+        updateSelectAllUI();
+    }
+    
     updateSelectedCount();
 }
 
