@@ -15,6 +15,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         wmsMain.style.padding = '0'; 
     }
 
+    // REVISI FIX: Event Listener Form dipindah ke dalam DOMContentLoaded
+    const formScan = document.getElementById('form-scan');
+    if(formScan) {
+        formScan.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const troli = document.getElementById('select-troli').value;
+            const inputEl = document.getElementById('input-qrcode');
+            const rawInput = inputEl.value.trim();
+            if(!troli) return alert("Pilih Troli terlebih dahulu!");
+            if(!rawInput) return;
+
+            const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
+            
+            codes.forEach(code => {
+                const isLocalDuplicate = dataStbj.some(d => d.qrcode === code);
+                const trans = window.translateBarcode(code);
+                
+                dataStbj.push({ 
+                    id: ++globalRowId, 
+                    qrcode: code, 
+                    troli: troli, 
+                    status: 'BELUM CEK', 
+                    keterangan: isLocalDuplicate ? 'DUPLIKAT SCAN' : '', 
+                    pic: currentUser.username, 
+                    isLocalDuplicate: isLocalDuplicate,
+                    ...trans 
+                });
+            });
+            
+            renderTable();
+            
+            inputEl.value = ''; 
+            inputEl.focus();
+            
+            const scrollContainer = document.getElementById('scroll-container');
+            if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        });
+    }
+
     await loadInitialSTBJData();
 });
 
@@ -43,41 +82,6 @@ async function loadInitialSTBJData() {
         }
     } catch (err) { console.error("Gagal muat referensi:", err); }
 }
-
-document.getElementById('form-scan').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const troli = document.getElementById('select-troli').value;
-    const inputEl = document.getElementById('input-qrcode');
-    const rawInput = inputEl.value.trim();
-    if(!troli) return alert("Pilih Troli terlebih dahulu!");
-    if(!rawInput) return;
-
-    const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
-    
-    codes.forEach(code => {
-        const isLocalDuplicate = dataStbj.some(d => d.qrcode === code);
-        const trans = window.translateBarcode(code);
-        
-        dataStbj.push({ 
-            id: ++globalRowId, 
-            qrcode: code, 
-            troli: troli, 
-            status: 'BELUM CEK', 
-            keterangan: isLocalDuplicate ? 'DUPLIKAT SCAN' : '', 
-            pic: currentUser.username, 
-            isLocalDuplicate: isLocalDuplicate,
-            ...trans 
-        });
-    });
-    
-    renderTable();
-    
-    inputEl.value = ''; 
-    inputEl.focus();
-    
-    const scrollContainer = document.getElementById('scroll-container');
-    if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
-});
 
 function renderTable() {
     const tbody = document.getElementById('tbody-stbj');
@@ -133,7 +137,7 @@ function renderTable() {
                     </div>
                     
                     <div class="text-[13px] font-black text-slate-900 leading-snug my-0.5">
-                        <span class="col-nama">${d.namaItem}</span> - <span class="col-pjg">${d.panjang}</span> - <span class="col-grade">${d.grade}</span> - <span class="col-dus">${td.dus}</span>
+                        <span class="col-nama">${d.namaItem}</span> - <span class="col-pjg">${d.panjang}</span> - <span class="col-grade">${d.grade}</span> - <span class="col-dus">${d.dus}</span>
                         <span class="col-jenis hidden">${d.jenisItem}</span>
                     </div>
                     
