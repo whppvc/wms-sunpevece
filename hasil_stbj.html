@@ -62,11 +62,13 @@
 
             <div class="p-3 sm:p-4 flex items-center bg-slate-50/50 border-t border-slate-100 w-full">
                 <div class="flex items-center gap-3 shrink-0">
-                    <label id="lbl-pilih-tabel" class="text-[11px] font-black text-slate-500 uppercase tracking-wide">Tabel:</label>
-                    <!-- REVISI: Mengubah id dan value untuk filter status -->
+                    <label id="lbl-pilih-tabel" class="text-[11px] font-black text-slate-500 uppercase tracking-wide">Filter Status:</label>
                     <select id="select-status" onchange="switchStatusFilter(this.value)" class="p-2 sm:p-2.5 bg-white border border-slate-300 rounded-md font-black text-xs text-slate-800 outline-none cursor-pointer uppercase focus:border-blue-500 transition shadow-sm">
+                        <option value="ALL">SEMUA DATA</option> 
                         <option value="STBJ">STBJ MASUK</option> 
-                        <option value="HOLD STBJ">STBJ HOLD</option>
+                        <option value="HOLD STBJ">HOLD STBJ</option>
+                        <option value="IN GUDANG">IN GUDANG</option>
+                        <option value="HOLD LANGSIR">HOLD LANGSIR</option>
                     </select>
                 </div>
 
@@ -90,7 +92,7 @@
                         <button onclick="aksiMassal('collect'); toggleActionMenuMobile(event)" id="btn-massal-collect-mob" class="hidden sm:hidden text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-indigo-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="check-square" class="w-4 h-4"></i> Collect</button>
                         
                         <button onclick="aksiMassal('hapus'); toggleActionMenuMobile(event)" id="btn-hapus-mob" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-rose-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Item</button>
-                        <button onclick="aksiMassal('hold'); toggleActionMenuMobile(event)" id="btn-hold-mob" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-amber-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Item</button>
+                        <button onclick="aksiMassal('hold'); toggleActionMenuMobile(event)" id="btn-hold-mob" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-amber-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="settings-2" class="w-4 h-4"></i> Ubah Status</button>
                         <button onclick="aksiMassal('salin'); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
                         <button onclick="aksiMassal('xlsx'); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
                         <button onclick="toggleSidebarKolom(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-blue-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</button>
