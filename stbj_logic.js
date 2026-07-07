@@ -15,45 +15,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         wmsMain.style.padding = '0'; 
     }
 
-    // REVISI FIX: Event Listener Form dipindah ke dalam DOMContentLoaded
-    const formScan = document.getElementById('form-scan');
-    if(formScan) {
-        formScan.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const troli = document.getElementById('select-troli').value;
-            const inputEl = document.getElementById('input-qrcode');
-            const rawInput = inputEl.value.trim();
-            if(!troli) return alert("Pilih Troli terlebih dahulu!");
-            if(!rawInput) return;
-
-            const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
-            
-            codes.forEach(code => {
-                const isLocalDuplicate = dataStbj.some(d => d.qrcode === code);
-                const trans = window.translateBarcode(code);
-                
-                dataStbj.push({ 
-                    id: ++globalRowId, 
-                    qrcode: code, 
-                    troli: troli, 
-                    status: 'BELUM CEK', 
-                    keterangan: isLocalDuplicate ? 'DUPLIKAT SCAN' : '', 
-                    pic: currentUser.username, 
-                    isLocalDuplicate: isLocalDuplicate,
-                    ...trans 
-                });
-            });
-            
-            renderTable();
-            
-            inputEl.value = ''; 
-            inputEl.focus();
-            
-            const scrollContainer = document.getElementById('scroll-container');
-            if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
-        });
-    }
-
     await loadInitialSTBJData();
 });
 
@@ -82,6 +43,46 @@ async function loadInitialSTBJData() {
         }
     } catch (err) { console.error("Gagal muat referensi:", err); }
 }
+
+// REVISI FIX: Menggunakan Event Delegation agar tidak putus saat layout dirender ulang
+document.addEventListener('submit', function(e) {
+    if (e.target && e.target.id === 'form-scan') {
+        e.preventDefault();
+        const troli = document.getElementById('select-troli').value;
+        const inputEl = document.getElementById('input-qrcode');
+        const rawInput = inputEl.value.trim();
+        
+        if(!troli) return alert("Pilih Troli terlebih dahulu!");
+        if(!rawInput) return;
+
+        // Mendukung pemisahan dengan spasi, enter, atau titik koma
+        const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
+        
+        codes.forEach(code => {
+            const isLocalDuplicate = dataStbj.some(d => d.qrcode === code);
+            const trans = window.translateBarcode(code);
+            
+            dataStbj.push({ 
+                id: ++globalRowId, 
+                qrcode: code, 
+                troli: troli, 
+                status: 'BELUM CEK', 
+                keterangan: isLocalDuplicate ? 'DUPLIKAT SCAN' : '', 
+                pic: currentUser.username, 
+                isLocalDuplicate: isLocalDuplicate,
+                ...trans 
+            });
+        });
+        
+        renderTable();
+        
+        inputEl.value = ''; 
+        inputEl.focus();
+        
+        const scrollContainer = document.getElementById('scroll-container');
+        if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    }
+});
 
 function renderTable() {
     const tbody = document.getElementById('tbody-stbj');
@@ -431,6 +432,10 @@ async function saveToDatabaseSTBJ() {
         alert(`BERHASIL DISIMPAN!\n- ${UNIKs.length} Barang UNIK (STBJ)\n- ${dupes.length} Barang Hold/Duplikat (HOLD STBJ)`);
         dataStbj = []; renderTable();
         document.getElementById('cb-all').checked = false;
+        
+        // REVISI: Tutup modal setelah simpan
+        if(typeof tutupModalAdd === 'function') tutupModalAdd();
+        
     } catch (err) { alert('GAGAL MENYIMPAN: ' + err.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
