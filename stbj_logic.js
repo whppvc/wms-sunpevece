@@ -95,7 +95,6 @@ function renderTable() {
         let badgeClass = "bg-slate-200 text-slate-700 border-slate-300";
         let displayStatus = d.status;
 
-        // REVISI: Pewarnaan Status (SUDAH STBJ = Merah Font Putih)
         if(d.status === 'BELUM STBJ') {
             badgeClass = "bg-emerald-600 text-white border-emerald-700"; 
         } 
@@ -134,7 +133,7 @@ function renderTable() {
                     </div>
                     
                     <div class="text-[13px] font-black text-slate-900 leading-snug my-0.5">
-                        <span class="col-nama">${d.namaItem}</span> - <span class="col-pjg">${d.panjang}</span> - <span class="col-grade">${d.grade}</span> - <span class="col-dus">${d.dus}</span>
+                        <span class="col-nama">${d.namaItem}</span> - <span class="col-pjg">${d.panjang}</span> - <span class="col-grade">${d.grade}</span> - <span class="col-dus">${td.dus}</span>
                         <span class="col-jenis hidden">${d.jenisItem}</span>
                     </div>
                     
@@ -353,7 +352,6 @@ async function cekGudangSTBJ() {
                 infoDuplikat++;
             } else if (hasilMap[d.qrcode]) {
                 let statDB = hasilMap[d.qrcode].status;
-                // REVISI: Jika sudah STBJ, set status menjadi SUDAH STBJ agar berwarna merah
                 if (statDB === 'STBJ') {
                     d.status = 'SUDAH STBJ';
                     d.keterangan = 'SUDAH ADA DI DATABASE (STBJ)';
