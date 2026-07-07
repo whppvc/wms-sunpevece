@@ -269,7 +269,7 @@ function editKeteranganMassal() {
     toggleSemuaCentang(false);
 }
 
-// REVISI: Mengembalikan pengecekan ke tabel stok_qr untuk mencegah duplicate key error
+// REVISI: Logika Verifikasi Langsir sesuai aturan ketat
 async function VerifikasiDanCek() {
     const rows = document.querySelectorAll('.row-item:not(.deleted-row):not(.filtered-out)');
     if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
@@ -280,19 +280,17 @@ async function VerifikasiDanCek() {
     const qrs = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     
     try {
-        const [resHasil, resGlobal, resStok] = await Promise.all([
+        // HANYA CEK hasil_stbj_langsir dan stok_global
+        const [resHasil, resGlobal] = await Promise.all([
             db.from('hasil_stbj_langsir').select('qrcode, troli, keterangan, status').in('qrcode', qrs),
-            db.from('stok_global').select('qrcode').in('qrcode', qrs),
-            db.from('stok_qr').select('qrcode').in('qrcode', qrs) // CEK STOK GUDANG
+            db.from('stok_global').select('qrcode').in('qrcode', qrs)
         ]);
 
         if(resHasil.error) throw resHasil.error;
         if(resGlobal.error) throw resGlobal.error;
-        if(resStok.error) throw resStok.error;
 
         const hasilMap = {}; resHasil.data.forEach(d => hasilMap[d.qrcode] = d);
         const globalSet = new Set(resGlobal.data.map(d => d.qrcode));
-        const stokSet = new Set(resStok.data.map(d => d.qrcode)); // SET STOK GUDANG
         
         let hasError = false;
 
@@ -306,15 +304,7 @@ async function VerifikasiDanCek() {
             let statusClass = '';
             let internalStatus = 'invalid';
 
-            // 1. Cek apakah sudah ada di Gudang (Paling krusial untuk mencegah error insert)
-            if (stokSet.has(qr)) {
-                statusText = 'SUDAH DI GUDANG';
-                statusClass = 'bg-red-600 text-white border-red-800';
-                troliCell.innerText = hasilMap[qr]?.troli || '-';
-                hasError = true;
-            } 
-            // 2. Cek status di tabel hasil_stbj_langsir
-            else if (hasilMap[qr]) {
+            if (hasilMap[qr]) {
                 let statDB = hasilMap[qr].status;
                 troliCell.innerText = hasilMap[qr].troli || '-';
                 if(!ketCell.classList.contains('text-slate-800')) ketCell.innerText = hasilMap[qr].keterangan || '-';
@@ -332,23 +322,18 @@ async function VerifikasiDanCek() {
                     statusClass = 'bg-red-600 text-white border-red-800';
                     hasError = true;
                 }
-            } 
-            // 3. Cek apakah ada di stok_global tapi tidak ada di hasil_stbj_langsir
-            else if (globalSet.has(qr)) {
+            } else if (globalSet.has(qr)) {
                 statusText = 'DUPLIKAT DATA';
                 statusClass = 'bg-red-600 text-white border-red-800';
                 troliCell.innerText = '-';
                 hasError = true;
-            } 
-            // 4. Jika tidak ada di mana-mana
-            else {
+            } else {
                 statusText = 'BELUM STBJ';
                 statusClass = 'bg-red-600 text-white border-red-800';
                 troliCell.innerText = '-';
                 hasError = true;
             }
 
-            // Cek jika duplikat scan lokal
             if (statusSpan.innerText === 'DUPLIKAT SCAN') {
                 statusText = 'DUPLIKAT SCAN';
                 statusClass = 'bg-red-600 text-white border-red-800';
@@ -461,17 +446,15 @@ async function saveToSupabase() {
     });
 
     try {
-        // 1. Insert ke stok_qr (Fisik Gudang)
-        const { error: errInsert } = await db.from('stok_qr').insert(arrFisik);
+        // REVISI: Menggunakan UPSERT untuk stok_qr agar tidak error Duplicate Key
+        const { error: errInsert } = await db.from('stok_qr').upsert(arrFisik, { onConflict: 'qrcode' });
         if (errInsert) throw new Error("Gagal insert stok_qr: " + errInsert.message);
 
-        // 2. Update status di hasil_stbj_langsir menjadi 'IN GUDANG'
         const { error: errUpdate } = await db.from('hasil_stbj_langsir')
             .update({ status: 'IN GUDANG', pic_input: user.username })
             .in('qrcode', qrsToUpdate);
         if (errUpdate) throw new Error("Gagal update hasil_stbj_langsir: " + errUpdate.message);
 
-        // 3. Incremental Update ke stok_aktual
         for(let key in mapAktual) {
             let item = mapAktual[key];
             const { data: existing, error: errCek } = await db.from('stok_aktual').select('id, qty')
@@ -530,6 +513,7 @@ async function holdLangsir() {
         const customer = div.querySelector('.col-customer').innerText;
 
         qrsToHold.push(qr);
+        
         updates.push({
             qrcode: qr,
             tgl_produksi: tgl_produksi, mesin: mesin, shift: shift,
