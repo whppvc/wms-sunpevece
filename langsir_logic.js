@@ -123,10 +123,10 @@ function addRow(area, code, isDuplicate = false) {
     
     const td = typeof window.translateBarcode === 'function' ? window.translateBarcode(code) : {tglProduksi:'-', mesin:'-', shift:'-', jenisItem:'-', namaItem:'Unknown', panjang:'-', grade:'-', dus:'-', shading:'-', customer:'-'}; 
     
-    const stbjHtml = '<span class="text-slate-500 font-bold bg-slate-200 border border-slate-300 px-3 py-1 text-[10px] stbj-val rounded-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
-    const kodeHtml = isDuplicate 
-        ? '<span class="text-white font-bold bg-red-600 border border-red-800 px-3 py-1 text-[10px] kode-val rounded-sm shadow-sm" data-status="invalid">DUPLIKAT SCAN</span>'
-        : '<span class="text-slate-500 font-bold bg-slate-200 border border-slate-300 px-3 py-1 text-[10px] kode-val rounded-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
+    // REVISI: Hanya menggunakan 1 badge status agar lebih rapi
+    const statusHtml = isDuplicate 
+        ? '<span class="text-white font-bold bg-red-600 border border-red-800 px-3 py-1 text-[10px] status-val rounded-sm shadow-sm" data-status="invalid">DUPLIKAT SCAN</span>'
+        : '<span class="text-slate-500 font-bold bg-slate-200 border border-slate-300 px-3 py-1 text-[10px] status-val rounded-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
 
     div.innerHTML = `
         <div class="flex flex-col items-center justify-start pr-2 mr-2 border-r border-slate-300 w-10 shrink-0 pt-1">
@@ -158,8 +158,7 @@ function addRow(area, code, isDuplicate = false) {
             <div class="text-[11px] font-bold text-slate-500">Troli: <span class="col-troli troli-cell text-slate-700">-</span></div>
             
             <div class="flex flex-row flex-wrap items-center gap-1.5 mt-1.5">
-                ${stbjHtml}
-                ${kodeHtml}
+                ${statusHtml}
             </div>
         </div>
     `;
@@ -271,7 +270,7 @@ function editKeteranganMassal() {
     toggleSemuaCentang(false);
 }
 
-// REVISI: Verifikasi melihat ke hasil_stbj_langsir
+// REVISI: Logika Verifikasi Langsir sesuai instruksi
 async function VerifikasiDanCek() {
     const rows = document.querySelectorAll('.row-item:not(.deleted-row):not(.filtered-out)');
     if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
@@ -282,118 +281,109 @@ async function VerifikasiDanCek() {
     const qrs = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     
     try {
-        const [resGlobal, resHasil, resStok] = await Promise.all([
-            db.from('stok_global').select('qrcode, troli, keterangan').in('qrcode', qrs),
+        const [resHasil, resGlobal] = await Promise.all([
             db.from('hasil_stbj_langsir').select('qrcode, troli, keterangan, status').in('qrcode', qrs),
-            db.from('stok_qr').select('qrcode').in('qrcode', qrs)
+            db.from('stok_global').select('qrcode').in('qrcode', qrs)
         ]);
 
-        if(resGlobal.error) throw resGlobal.error;
         if(resHasil.error) throw resHasil.error;
-        if(resStok.error) throw resStok.error;
+        if(resGlobal.error) throw resGlobal.error;
 
-        const globalMap = {}; resGlobal.data.forEach(d => globalMap[d.qrcode] = d);
         const hasilMap = {}; resHasil.data.forEach(d => hasilMap[d.qrcode] = d);
-        const stokList = resStok.data.map(d => d.qrcode);
+        const globalSet = new Set(resGlobal.data.map(d => d.qrcode));
+        
         let hasError = false;
 
         rows.forEach(r => {
             const qr = r.querySelector('.qr-val').innerText;
-            const stbjSpan = r.querySelector('.stbj-val');
-            const kodeSpan = r.querySelector('.kode-val');
+            const statusSpan = r.querySelector('.status-val');
             const troliCell = r.querySelector('.troli-cell');
             const ketCell = r.querySelector('.ket-cell');
             
+            let statusText = '';
+            let statusClass = '';
+            let internalStatus = 'invalid';
+
             if (hasilMap[qr]) {
                 let statDB = hasilMap[qr].status;
-                if (statDB === 'STBJ') {
-                    stbjSpan.className = 'text-slate-900 font-bold bg-teal-100 border border-teal-300 px-3 py-1 text-[10px] stbj-val rounded-sm shadow-sm';
-                    stbjSpan.setAttribute('data-status', 'valid');
-                    stbjSpan.innerText = 'SUDAH STBJ';
-                    troliCell.innerText = hasilMap[qr].troli || '-';
-                    if(!ketCell.classList.contains('text-slate-800')) ketCell.innerText = hasilMap[qr].keterangan || '-';
-                } else if (statDB === 'HOLD STBJ' || statDB === 'HOLD LANGSIR') {
-                    stbjSpan.className = 'text-white font-bold bg-amber-500 border border-amber-600 px-3 py-1 text-[10px] stbj-val rounded-sm shadow-sm';
-                    stbjSpan.setAttribute('data-status', 'invalid-stbj');
-                    stbjSpan.innerText = statDB;
-                    troliCell.innerText = hasilMap[qr].troli || '-';
-                    if(!ketCell.classList.contains('text-slate-800')) ketCell.innerText = hasilMap[qr].keterangan || '-';
+                troliCell.innerText = hasilMap[qr].troli || '-';
+                if(!ketCell.classList.contains('text-slate-800')) ketCell.innerText = hasilMap[qr].keterangan || '-';
+
+                if (statDB === 'STBJ' || statDB === 'SUDAH STBJ') {
+                    statusText = 'SUDAH STBJ';
+                    statusClass = 'bg-emerald-600 text-white border-emerald-700';
+                    internalStatus = 'valid';
+                } else if (statDB === 'HOLD STBJ') {
+                    statusText = 'HOLD STBJ';
+                    statusClass = 'bg-orange-500 text-white border-orange-600';
                     hasError = true;
-                } else if (statDB === 'IN GUDANG') {
-                    stbjSpan.className = 'text-white font-bold bg-red-600 border border-red-800 px-3 py-1 text-[10px] stbj-val rounded-sm shadow-sm';
-                    stbjSpan.setAttribute('data-status', 'invalid-stbj');
-                    stbjSpan.innerText = 'SUDAH DI GUDANG';
-                    troliCell.innerText = hasilMap[qr].troli || '-';
-                    if(!ketCell.classList.contains('text-slate-800')) ketCell.innerText = hasilMap[qr].keterangan || '-';
+                } else if (statDB === 'IN GUDANG' || statDB === 'HOLD LANGSIR') {
+                    statusText = 'DUPLIKAT DATA';
+                    statusClass = 'bg-red-600 text-white border-red-800';
                     hasError = true;
                 }
-            } else if(globalMap[qr]) {
-                stbjSpan.className = 'text-slate-900 font-bold bg-teal-100 border border-teal-300 px-3 py-1 text-[10px] stbj-val rounded-sm shadow-sm';
-                stbjSpan.setAttribute('data-status', 'valid');
-                stbjSpan.innerText = 'BYPASS GLOBAL';
-                troliCell.innerText = globalMap[qr].troli || '-';
-                if(!ketCell.classList.contains('text-slate-800')) ketCell.innerText = globalMap[qr].keterangan || '-';
+            } else if (globalSet.has(qr)) {
+                statusText = 'DUPLIKAT DATA';
+                statusClass = 'bg-red-600 text-white border-red-800';
+                troliCell.innerText = '-';
+                hasError = true;
             } else {
-                stbjSpan.className = 'text-white font-bold bg-orange-500 border border-orange-600 px-3 py-1 text-[10px] stbj-val rounded-sm shadow-sm';
-                stbjSpan.setAttribute('data-status', 'invalid-stbj');
-                stbjSpan.innerText = 'BELUM STBJ';
-                troliCell.innerText = '-'; ketCell.innerText = '-'; hasError = true;
+                statusText = 'BELUM STBJ';
+                statusClass = 'bg-red-600 text-white border-red-800';
+                troliCell.innerText = '-';
+                hasError = true;
             }
 
-            if(kodeSpan.innerText.includes('DUPLIKAT SCAN')) {
+            // Cek jika duplikat scan lokal
+            if (statusSpan.innerText === 'DUPLIKAT SCAN') {
+                statusText = 'DUPLIKAT SCAN';
+                statusClass = 'bg-red-600 text-white border-red-800';
+                internalStatus = 'invalid';
                 hasError = true;
-            } 
-            else if(stokList.includes(qr)) {
-                kodeSpan.className = 'text-white font-bold bg-red-600 border border-red-800 px-3 py-1 text-[10px] kode-val rounded-sm shadow-sm';
-                kodeSpan.setAttribute('data-status', 'invalid');
-                kodeSpan.innerText = 'DUPLIKAT DATA';
+            }
+
+            statusSpan.className = `font-bold px-3 py-1 text-[10px] status-val rounded-sm shadow-sm ${statusClass}`;
+            statusSpan.innerText = statusText;
+            statusSpan.setAttribute('data-status', internalStatus);
+
+            if (internalStatus === 'invalid') {
                 r.classList.add('bg-red-50');
                 r.classList.remove('bg-white');
-                hasError = true;
             } else {
-                kodeSpan.className = 'text-[#0e744a] font-bold bg-[#a0ecd1] border border-[#76c2a7] px-3 py-1 text-[10px] kode-val rounded-sm shadow-sm';
-                kodeSpan.setAttribute('data-status', 'valid');
-                kodeSpan.innerText = 'ACCEPT';
                 r.classList.remove('bg-red-50');
                 r.classList.add('bg-white');
             }
         });
 
-        if(hasError) { alert("PERINGATAN!\nTerdapat data bermasalah. Pindahkan ke HOLD LANGSIR, atau hapus."); } 
-        else { alert("MANTAP!\nSemua data Valid. Siap disimpan."); }
+        if(hasError) { alert("PERINGATAN!\nTerdapat data bermasalah (Belum STBJ / Hold / Duplikat). Data tersebut TIDAK BISA disimpan."); } 
+        else { alert("MANTAP!\nSemua data Valid (SUDAH STBJ). Siap disimpan ke Gudang."); }
     } catch (e) { alert("Koneksi Error: " + e.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
-// REVISI: Simpan ke hasil_stbj_langsir dengan status 'IN GUDANG'
+// REVISI: Logika Simpan Langsir
 async function saveToSupabase() {
     const btn = document.getElementById('btn-save'); const original = btn.innerHTML;
     
     const activeRows = Array.from(document.querySelectorAll('.row-item:not(.deleted-row)'));
     if(activeRows.length === 0) return;
 
-    let adaYgBelumDicek = false;
-    let adaDuplikat = false;
-    let adaBelumStbj = false;
-
+    let hasInvalid = false;
     activeRows.forEach(r => {
-        const stbjStatus = r.querySelector('.stbj-val').getAttribute('data-status');
-        const kodeStatus = r.querySelector('.kode-val').getAttribute('data-status');
-        
-        if(stbjStatus === 'unverified' || kodeStatus === 'unverified') adaYgBelumDicek = true;
-        if(stbjStatus === 'invalid-stbj') adaBelumStbj = true;
-        if(kodeStatus === 'invalid') adaDuplikat = true;
+        if(r.querySelector('.status-val').getAttribute('data-status') !== 'valid') {
+            hasInvalid = true;
+        }
     });
 
-    if(adaYgBelumDicek || adaDuplikat || adaBelumStbj) {
-        return alert("GAGAL MENYIMPAN!\nTerdapat data bermasalah atau belum di-Verifikasi pada baris yang aktif.");
+    if(hasInvalid) {
+        return alert("TOLAK PENYIMPANAN!\nTerdapat data BELUM STBJ, HOLD, atau DUPLIKAT. Silakan hapus atau Hold baris yang merah terlebih dahulu.");
     }
 
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btn.disabled = true;
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
     
     let arrFisik = []; 
-    let arrHasilLangsir = []; 
+    let qrsToUpdate = []; 
     let mapAktual = {}; 
 
     activeRows.forEach(r => {
@@ -407,7 +397,6 @@ async function saveToSupabase() {
         let shading = r.querySelector('.col-shading').innerText; 
         let customer = r.querySelector('.col-customer').innerText; 
         let ket = r.querySelector('.ket-cell').innerText;
-        let troli = r.querySelector('.troli-cell').innerText;
         
         let tgl_produksi = r.querySelector('.col-tgl').innerText;
         let mesin = r.querySelector('.col-mesin').innerText;
@@ -435,24 +424,7 @@ async function saveToSupabase() {
             pic_input: user.username 
         });
 
-        arrHasilLangsir.push({
-            qrcode: qr,
-            area: area,
-            troli: troli,
-            tgl_produksi: tgl_produksi,
-            mesin: mesin,
-            shift: shift,
-            jenis_item: jenis,
-            nama_item: nama,
-            panjang: pjg,
-            grade: grade,
-            dus: dus,
-            shading: shading,
-            customer: customer,
-            keterangan: ket,
-            status: 'IN GUDANG',
-            pic_input: user.username
-        });
+        qrsToUpdate.push(qr);
 
         let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${customer}_${ket}`;
         if(!mapAktual[keyAkt]) {
@@ -476,13 +448,17 @@ async function saveToSupabase() {
     });
 
     try {
+        // 1. Insert ke stok_qr (Fisik Gudang)
         const { error: errInsert } = await db.from('stok_qr').insert(arrFisik);
         if (errInsert) throw new Error("Gagal insert stok_qr: " + errInsert.message);
 
-        // REVISI: Upsert ke hasil_stbj_langsir
-        const { error: errLangsir } = await db.from('hasil_stbj_langsir').upsert(arrHasilLangsir, { onConflict: 'qrcode' });
-        if (errLangsir) throw new Error("Gagal update hasil_stbj_langsir: " + errLangsir.message);
+        // 2. Update status di hasil_stbj_langsir menjadi 'IN GUDANG'
+        const { error: errUpdate } = await db.from('hasil_stbj_langsir')
+            .update({ status: 'IN GUDANG', area: arrFisik[0].area, pic_input: user.username })
+            .in('qrcode', qrsToUpdate);
+        if (errUpdate) throw new Error("Gagal update hasil_stbj_langsir: " + errUpdate.message);
 
+        // 3. Incremental Update ke stok_aktual
         for(let key in mapAktual) {
             let item = mapAktual[key];
             const { data: existing, error: errCek } = await db.from('stok_aktual').select('id, qty')
@@ -501,7 +477,7 @@ async function saveToSupabase() {
             }
         }
 
-        alert(`BERHASIL!\n${arrFisik.length} kardus masuk ke Gudang & Riwayat Langsir.`);
+        alert(`BERHASIL!\n${arrFisik.length} kardus masuk ke Gudang.`);
         document.getElementById('tbody-langsir').innerHTML = ''; 
         updateRowNumbers();
         updateTotalBaris();
@@ -513,7 +489,7 @@ async function saveToSupabase() {
     }
 }
 
-// REVISI: Hold Langsir ke hasil_stbj_langsir
+// REVISI: Hold Langsir hanya update status di hasil_stbj_langsir
 async function holdLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
     if(checkedBoxes.length === 0) return alert("Anda harus mencentang data yang bermasalah terlebih dahulu.");
@@ -522,41 +498,26 @@ async function holdLangsir() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>'; btn.disabled = true;
 
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
-    let payloadUpload = [];
+    let qrsToHold = [];
+    let updates = [];
 
     checkedBoxes.forEach(cb => {
         const div = cb.closest('.row-item');
         const qr = div.querySelector('.qr-val').innerText;
-        const troli = div.querySelector('.troli-cell').innerText;
-        const area = div.querySelector('.area-cell').innerText;
-        const ketStbj = div.querySelector('.stbj-val').innerText;
-        const ketKode = div.querySelector('.kode-val').innerText;
-        const noteKet = div.querySelector('.ket-cell').innerText;
+        const ketUser = div.querySelector('.ket-cell').innerText;
         
-        const tgl_produksi = div.querySelector('.col-tgl').innerText;
-        const mesin = div.querySelector('.col-mesin').innerText;
-        const shift = div.querySelector('.col-shift').innerText;
-        const jenis = div.querySelector('.col-jenis').innerText;
-        const nama = div.querySelector('.col-nama').innerText;
-        const pjg = div.querySelector('.col-pjg').innerText;
-        const grade = div.querySelector('.col-grade').innerText;
-        const dus = div.querySelector('.col-dus').innerText;
-        const shading = div.querySelector('.col-shading').innerText;
-        const customer = div.querySelector('.col-customer').innerText;
-
-        payloadUpload.push({
-            qrcode: qr, troli: troli, area: area,
-            tgl_produksi: tgl_produksi, mesin: mesin, shift: shift,
-            jenis_item: jenis, nama_item: nama, panjang: pjg, grade: grade,
-            dus: dus, shading: shading, customer: customer,
-            keterangan: `STBJ: ${ketStbj} | KODE: ${ketKode} | Ket User: ${noteKet}`,
+        qrsToHold.push(qr);
+        updates.push({
+            qrcode: qr,
             status: 'HOLD LANGSIR',
+            keterangan: `Di-hold saat Langsir. Note: ${ketUser}`,
             pic_input: user.username
         });
     });
 
     try {
-        const { error } = await db.from('hasil_stbj_langsir').upsert(payloadUpload, { onConflict: 'qrcode' });
+        // Upsert untuk memastikan jika belum ada di tabel, dia akan terbuat dengan status HOLD LANGSIR
+        const { error } = await db.from('hasil_stbj_langsir').upsert(updates, { onConflict: 'qrcode' });
         if(error) throw error;
         
         checkedBoxes.forEach(cb => { 
@@ -569,7 +530,7 @@ async function holdLangsir() {
         updateTotalBaris();
         document.querySelector('#cb-all').checked = false;
         
-        alert(`SUKSES!\n${payloadUpload.length} Data berhasil diasingkan ke "Hold Langsir".`);
+        alert(`SUKSES!\n${qrsToHold.length} Data berhasil diubah statusnya menjadi "HOLD LANGSIR".`);
     } catch(e) { alert("Gagal melakukan Hold: " + e.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
@@ -672,7 +633,6 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
     lucide.createIcons();
 
     try {
-        // REVISI: Ambil dari hasil_stbj_langsir berdasarkan status
         let statusFilter = tabelTarget === 'hold_stbj' ? 'HOLD STBJ' : 'HOLD LANGSIR';
         const { data, error } = await db.from('hasil_stbj_langsir').select('*').eq('status', statusFilter).order('created_at', {ascending: false}).limit(100);
         
