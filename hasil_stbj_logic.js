@@ -63,6 +63,25 @@ function loadUserPreferences() {
             userColOrder = [];
         }
     }
+    
+    // Load Rows Per Page Preference
+    const savedRows = localStorage.getItem('wms_rows_per_page');
+    if(savedRows) {
+        rowsPerPage = parseInt(savedRows);
+        const sel = document.getElementById('select-rows-per-page');
+        if(sel) {
+            let found = false;
+            Array.from(sel.options).forEach(opt => {
+                if(opt.value == rowsPerPage) { opt.selected = true; found = true; }
+            });
+            if(!found) {
+                sel.value = 'CUSTOM';
+                const inp = document.getElementById('input-custom-rows');
+                inp.classList.remove('hidden');
+                inp.value = rowsPerPage;
+            }
+        }
+    }
 }
 
 function toggleSidebarKolom() {
@@ -285,7 +304,7 @@ function sortTable(colIndex, headerEl) {
 
 const thSort = (label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
-    const noFilter = ['col-cb', 'col-btn-edit'].includes(colClass);
+    const noFilter = ['col-cb', 'col-btn', 'col-btn-edit'].includes(colClass);
     
     const filterBtn = noFilter ? '' : `
         <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
@@ -403,7 +422,7 @@ function closeFilterMenu() { document.getElementById('excel-filter-menu').classL
 
 function clearFilterForCurrentCol() {
     delete activeFilters[currentFilterCol];
-    closeFilterMenu(); saringTabelExcel(); 
+    closeFilterMenu(); saringTabelExcel(); updateFilterIcons();
 }
 
 function applyFilterForCurrentCol() {
@@ -417,7 +436,7 @@ function applyFilterForCurrentCol() {
         activeFilters[currentFilterCol] = selectedVals;
     }
     
-    closeFilterMenu(); saringTabelExcel(); 
+    closeFilterMenu(); saringTabelExcel(); updateFilterIcons();
 }
 
 function saringTabelExcel() {
@@ -442,22 +461,18 @@ function saringTabelExcel() {
     });
     currentPage = 1; 
     applyPagination(); 
-    updateFilterIcons();
 }
 
 function updateFilterIcons() {
     document.querySelectorAll('.filter-icon').forEach(icon => {
         icon.classList.remove('text-amber-400', 'opacity-100');
-        icon.classList.add('text-white', 'opacity-40');
+        icon.classList.add('opacity-40', 'text-white');
     });
     for (let colClass in activeFilters) {
         const th = document.querySelector(`th.${colClass}`);
         if (th) {
             const icon = th.querySelector('.filter-icon');
-            if (icon) { 
-                icon.classList.remove('text-white', 'opacity-40'); 
-                icon.classList.add('text-amber-400', 'opacity-100'); 
-            }
+            if (icon) { icon.classList.remove('opacity-40', 'text-white'); icon.classList.add('text-amber-400', 'opacity-100'); }
         }
     }
 }
@@ -479,9 +494,7 @@ function hitungQtyLembar(jenis, nama, qtyDus) {
     return 0;
 }
 
-// ==========================================
-// TRI-STATE CHECKBOX LOGIC
-// ==========================================
+// REVISI: Tri-State Checkbox Logic
 window.cycleSelectAll = function() {
     selectAllState = (selectAllState + 1) % 3;
     updateSelectAllUI();
@@ -494,13 +507,13 @@ function updateSelectAllUI() {
     
     if (selectAllState === 0) {
         btn.innerHTML = '';
-        btn.className = 'w-5 h-5 border-2 border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto';
+        btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto';
     } else if (selectAllState === 1) {
-        btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i>';
-        btn.className = 'w-5 h-5 border-2 border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto';
+        btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
+        btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto';
     } else if (selectAllState === 2) {
-        btn.innerHTML = '<i data-lucide="check-check" class="w-4 h-4"></i>';
-        btn.className = 'w-5 h-5 border-2 border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
+        btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>';
+        btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
     }
     lucide.createIcons();
 }
@@ -513,20 +526,19 @@ function applySelection() {
     const endIndex = startIndex + rowsPerPage;
 
     if (selectAllState === 0) {
-        visibleRows.forEach(row => {
+        allRows.forEach(row => {
             const cb = row.querySelector('.row-cb');
             if(cb) { cb.checked = false; highlightRow(cb); }
         });
     } else if (selectAllState === 1) {
-        visibleRows.forEach((row, index) => {
+        allRows.forEach(row => {
             const cb = row.querySelector('.row-cb');
-            if(cb) {
-                if(index >= startIndex && index < endIndex) {
-                    cb.checked = true;
-                } else {
-                    cb.checked = false;
-                }
-                highlightRow(cb);
+            if(cb) { cb.checked = false; highlightRow(cb); }
+        });
+        visibleRows.forEach((row, index) => {
+            if(index >= startIndex && index < endIndex) {
+                const cb = row.querySelector('.row-cb');
+                if(cb) { cb.checked = true; highlightRow(cb); }
             }
         });
     } else if (selectAllState === 2) {
@@ -548,12 +560,12 @@ function renderHeaderDanTabel() {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-5 h-5 border-2 border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto"></button>
+                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
                 ${thSort('Status Item', 'col-status-gudang text-center')}
                 ${tabelSekarang === 'hold_stbj' ? thSort('Status Hold', 'col-status text-center') : '<th class="hdr-std hidden col-status">Status Hold</th>'}
                 ${thSort('Collect', 'col-status-data text-center')}
-                ${thSort('Waktu Scan', 'col-waktu')}
+                ${thSort('Waktu Scan', 'col-waktu text-center')}
                 ${thSort('Troli', 'col-troli text-center')}
                 ${thSort('QRCode', 'col-qr')}
                 ${thSort('Tgl Produksi', 'col-tgl text-center')}
@@ -585,7 +597,7 @@ function renderHeaderDanTabel() {
                 }
             }
 
-            const htmlStatusGudang = r.is_in_gudang ? '<span class="text-amber-700 font-black">IN GUDANG</span>' : '<span class="text-emerald-600 font-black">STBJ</span>';
+            const htmlStatusGudang = r.is_in_gudang ? '<span class="text-amber-600 font-black">IN GUDANG</span>' : '<span class="text-emerald-500 font-black">STBJ</span>';
             
             let statData = '-';
             if (r.status_data && r.status_data !== 'BELUM') {
@@ -598,7 +610,7 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-3 text-center col-status-gudang" data-search="${r.is_in_gudang ? 'IN GUDANG' : 'STBJ'}">${htmlStatusGudang}</td>
                     ${tabelSekarang === 'hold_stbj' ? `<td class="px-4 py-3 text-center font-black text-rose-600 col-status" data-search="${r.status || 'HOLD'}">${r.status || 'HOLD'}</td>` : '<td class="px-4 py-3 hidden col-status">-</td>'}
                     <td class="px-4 py-3 text-center col-status-data" data-search="${r.status_data || '-'}">${statData}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-waktu" data-search="${tgl}">${tgl}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-waktu" data-search="${tgl}">${tgl}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-troli" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
                     <td class="px-4 py-3 text-left font-mono font-bold text-slate-900 col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-tgl" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
@@ -624,7 +636,7 @@ function renderHeaderDanTabel() {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-5 h-5 border-2 border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto"></button>
+                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
                 <th class="hdr-std col-status-gudang hidden">Status Item</th>
                 <th class="hdr-std col-status hidden">Status Hold</th>
@@ -776,6 +788,10 @@ function changeRowsPerPage(val) {
         rowsPerPage = parseInt(val);
         customInput.classList.add('hidden');
     }
+    
+    // Simpan ke Local Storage
+    localStorage.setItem('wms_rows_per_page', rowsPerPage);
+    
     currentPage = 1; 
     applyPagination();
 }
@@ -784,11 +800,13 @@ function setCustomRowsPerPage(val) {
     let parsed = parseInt(val);
     if (!isNaN(parsed) && parsed > 0) {
         rowsPerPage = parsed;
+        localStorage.setItem('wms_rows_per_page', rowsPerPage);
         currentPage = 1;
         applyPagination();
     }
 }
 
+// REVISI: Logika Zebra Striping Dinamis Anti-Bug
 function applyPagination() {
     const allRows = Array.from(document.querySelectorAll('#tbody-stbj tr.text-row'));
     
@@ -809,7 +827,10 @@ function applyPagination() {
 
     let sumQty = 0;
     visibleRows.forEach((row, index) => {
+        // Hapus class stripe lama
         row.classList.remove('stripe-1', 'stripe-2');
+        
+        // Tambahkan class stripe baru berdasarkan index yang terlihat
         if (index % 2 === 0) row.classList.add('stripe-1');
         else row.classList.add('stripe-2');
 
