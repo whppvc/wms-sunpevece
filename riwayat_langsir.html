@@ -20,59 +20,37 @@
         .table-container { position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* DESAIN HEADER ALA OMNIFUL (DARK NAVY) */
-        .hdr-std { 
-            background-color: #0f172a !important; 
-            color: #ffffff !important; 
-            text-align: left !important; 
-            padding: 1rem 1rem !important; 
-            font-size: 0.85rem !important; 
-            font-weight: 500 !important; 
-            text-transform: capitalize !important; 
-            letter-spacing: 0.025em !important; 
-            white-space: nowrap !important; 
-            position: sticky !important; 
-            top: 0 !important; 
-            z-index: 20 !important; 
-            border: none !important; 
-        }
-        
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
 
-        /* DESAIN TABEL BODY (ZEBRA & VERTICAL LINES) */
-        #main-table { border-collapse: collapse; }
-        #main-table td { 
-            border-right: 1px solid #cbd5e1; 
-            border-bottom: 1px solid #cbd5e1 !important; 
+        .hdr-std { 
+            text-align: center !important; 
+            padding: 0.5rem 0.75rem !important; 
+            font-size: 0.75rem !important; 
+            font-weight: 600 !important; 
+            text-transform: uppercase !important; 
+            letter-spacing: 0.05em !important; 
+            white-space: nowrap !important; 
+            border-bottom: 1px solid #e2e8f0 !important; 
+            background-clip: padding-box !important; 
         }
-        #main-table td:last-child { border-right: none; } 
 
-        /* Zebra Striping Tegas */
-        tr.r-row { background-color: #f8fafc !important; } 
-        tr.r-row:nth-child(even) { background-color: #e2e8f0 !important; } 
-
-        /* Highlight Baris Terpilih */
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
     </style>
 </head>
 <body class="font-sans text-slate-800">
 
-    <div class="flex flex-col h-full w-full">
+    <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
         <!-- HEADER SECTION -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
-            
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
                 <button onclick="gantiModeRiwayat('qr')" id="tab-r-qr" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="list" class="w-4 h-4"></i> Detail QRCode</button>
                 <button onclick="gantiModeRiwayat('agregasi')" id="tab-r-agregasi" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="bar-chart-2" class="w-4 h-4"></i> Rangkuman Item & Qty</button>
                 <button onclick="gantiModeRiwayat('hold')" id="tab-r-hold" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="pause-circle" class="w-4 h-4"></i> Tabel Hold</button>
             </div>
 
-            <!-- Toolbar Layout PC & Mobile -->
             <div class="p-3 sm:p-4 flex items-center justify-between bg-slate-50/50 border-t border-slate-100 w-full">
-                
-                <!-- KIRI: Ganti Area & Data STBJ -->
                 <div class="flex gap-2 items-center">
                     <button onclick="bukaModalGantiArea()" id="btn-ganti-area" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-orange-600">
                         <div class="bg-orange-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="map-pin" class="w-4 h-4"></i></div>
@@ -85,50 +63,26 @@
                     </button>
                 </div>
 
-                <!-- KANAN (PC MODE) -->
-                <div class="hidden sm:flex items-center gap-2 ml-auto">
-                    <button onclick="cancelLangsir()" id="btn-cancel-langsir" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-rose-700">
-                        <div class="bg-rose-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
-                        <div class="bg-rose-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-rose-500 transition">Cancel Langsir</div>
-                    </button>
-
-                    <button onclick="hapusBarisHold()" id="btn-hapus-hold" class="hidden group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-red-700">
-                        <div class="bg-red-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="trash-2" class="w-4 h-4"></i></div>
-                        <div class="bg-red-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-red-500 transition">Hapus Permanen</div>
-                    </button>
-
-                    <button onclick="salinDataTabel()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-slate-300 bg-white hover:bg-slate-50">
-                        <div class="text-slate-600 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="copy" class="w-4 h-4"></i></div>
-                        <div class="text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide transition">Salin</div>
-                    </button>
-
-                    <button onclick="downloadXLS()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-slate-300 bg-white hover:bg-slate-50">
-                        <div class="text-emerald-600 flex items-center justify-center px-3 py-2.5 border-r border-slate-300"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i></div>
-                        <div class="text-slate-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide transition">Excel</div>
-                    </button>
-                </div>
-
-                <!-- KANAN (MOBILE MODE) -->
-                <div class="sm:hidden relative ml-auto">
-                    <button onclick="toggleActionMenu(event)" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition">
+                <div class="relative ml-auto">
+                    <button onclick="toggleActionMenu(event)" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition" title="Menu Aksi">
                         <i data-lucide="menu" class="w-5 h-5"></i>
                     </button>
-                    <div id="mobile-action-menu" class="hidden absolute right-0 mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
+                    <div id="mobile-action-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
                         <button onclick="cancelLangsir(); toggleActionMenu(event)" id="btn-cancel-langsir-mob" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-rose-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Cancel Langsir</button>
                         <button onclick="hapusBarisHold(); toggleActionMenu(event)" id="btn-hapus-hold-mob" class="hidden text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-red-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Permanen</button>
                         <button onclick="salinDataTabel(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
-                        <button onclick="downloadXLS(); toggleActionMenu(event)" class="text-left px-4 py-3 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
+                        <button onclick="downloadXLS(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
+                        <button onclick="bukaModalTableDesign(); toggleActionMenu(event)" class="text-left px-4 py-3 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="palette" class="w-4 h-4 text-purple-600"></i> Table Design</button>
                     </div>
                 </div>
-
             </div>
         </div>
 
         <!-- MIDDLE SCROLL SECTION -->
         <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
             <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-t-xl shadow-sm border border-slate-300">
-                <table class="w-full text-left border-collapse whitespace-nowrap" id="main-table">
-                    <thead class="sticky top-0 z-10" id="thead-riwayat"></thead>
+                <table class="w-full text-left whitespace-nowrap" id="main-table">
+                    <thead class="sticky top-0 z-50 shadow-sm" id="thead-riwayat"></thead>
                     <tbody id="tbody-riwayat" class="text-slate-800"></tbody>
                 </table>
             </div>
@@ -136,13 +90,11 @@
 
         <!-- FOOTER PAGINATION -->
         <div class="shrink-0 w-full bg-white p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
-            
             <div class="flex items-center gap-2 flex-wrap justify-center">
                 <span class="bg-blue-50 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-medium ml-1">0</span></span>
                 <span class="bg-amber-50 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-amber-900 font-medium ml-1">0</span></span>
                 <span class="bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded text-emerald-800 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-medium ml-1">0</span></span>
             </div>
-            
             <div class="flex items-center gap-3">
                 <div class="flex items-center gap-1 bg-white border border-slate-300 p-1 rounded shadow-sm">
                     <span class="text-[10px] font-bold text-slate-500 uppercase px-1">Baris:</span>
@@ -156,7 +108,6 @@
                     </select>
                     <input type="number" id="input-custom-rows" oninput="setCustomRowsPerPage(this.value)" class="hidden w-16 text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 rounded outline-none px-1 py-0.5 text-center transition" placeholder="Jml...">
                 </div>
-                
                 <div class="flex items-center gap-2 bg-white border border-slate-300 p-1 rounded shadow-sm">
                     <button onclick="prevPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                     <span class="px-2 font-black text-xs text-slate-600 tracking-wide uppercase">Hal <span id="lbl-halaman" class="text-blue-600">1</span> / <span id="lbl-total-halaman">1</span></span>
@@ -167,7 +118,7 @@
 
     </div>
 
-    <!-- MODAL FILTER EXCEL (SMART POSITIONING) -->
+    <!-- MODAL FILTER EXCEL -->
     <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm overflow-hidden">
         <div class="p-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
             <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
