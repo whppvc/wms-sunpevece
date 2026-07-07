@@ -16,6 +16,7 @@ window.currentPage = 1;
 window.rowsPerPage = 10; 
 window.activeFilters = {}; 
 window.currentFilterCol = ''; 
+window.selectAllState = 0; // 0: none, 1: page, 2: all filtered
 
 function safeJSONParse(data, fallback = null) {
     if (!data || data === 'undefined' || data === 'null') return fallback;
@@ -232,7 +233,6 @@ window.sortTable = function(colIndex, headerEl) {
     window.applyPagination();
 };
 
-// REVISI: Teks Rata Kiri, Icon (Sort & Filter) Rata Kanan
 window.thSort = function(idx, label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-open'].includes(colClass);
@@ -262,13 +262,16 @@ window.renderTabel = function() {
     const thead = document.getElementById('thead-ks');
     const tbody = document.getElementById('tbody-ks');
     window.sortState = {}; 
+    window.selectAllState = 0;
 
-    const rowClassBase = "transition row-ks text-sm";
+    const rowClassBase = "transition row-ks text-[13px]";
 
     if(window.modeKS === 'qr') {
         thead.innerHTML = `
             <tr>
-                <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="window.toggleCentangUtama(this.checked)" class="cursor-pointer rounded border-slate-300 w-4 h-4 text-blue-600 focus:ring-blue-500"></th>
+                <th class="hdr-std w-10 col-cb text-center sticky-col">
+                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                </th>
                 ${window.thSort(1, 'Area', 'col-area')}
                 ${window.thSort(2, 'QRCode', 'col-qr')}
                 ${window.thSort(3, 'Tgl Produksi', 'col-tgl')}
@@ -303,21 +306,21 @@ window.renderTabel = function() {
 
             return `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-4 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
-                    <td class="px-4 py-4 font-mono font-medium text-slate-800 text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
-                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
-                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-mesin" data-search="${r.mesin}">${r.mesin}</td>
-                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-shift" data-search="${r.shift}">${r.shift}</td>
-                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                    <td class="px-4 py-4 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
-                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
-                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-4 font-medium text-slate-500 text-left col-po-bawaan" data-search="${r.po_bawaan}">${r.po_bawaan}</td>
-                    <td class="px-4 py-4 text-left col-po" data-search="${poString}">${btnPO}</td>
-                    <td class="px-4 py-4 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
+                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
+                    <td class="px-4 py-3 font-mono font-medium text-slate-800 text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-mesin" data-search="${r.mesin}">${r.mesin}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shift" data-search="${r.shift}">${r.shift}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
+                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-po-bawaan" data-search="${r.po_bawaan}">${r.po_bawaan}</td>
+                    <td class="px-4 py-3 text-left col-po" data-search="${poString}">${btnPO}</td>
+                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
                 </tr>`;
         }).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="15" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -325,7 +328,9 @@ window.renderTabel = function() {
     else if(window.modeKS === 'area') {
         thead.innerHTML = `
             <tr>
-                <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="window.toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
+                <th class="hdr-std w-10 col-cb text-center sticky-col">
+                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                </th>
                 ${window.thSort(1, 'Area', 'col-area')}
                 ${window.thSort(2, 'Jenis Item', 'col-jenis')}
                 ${window.thSort(3, 'Nama Item', 'col-nama')}
@@ -344,17 +349,17 @@ window.renderTabel = function() {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             return `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-qty="${r.qty}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-4 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
-                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                    <td class="px-4 py-4 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
-                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
-                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-4 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-4 font-semibold text-slate-900 text-left col-po" data-search="${r.po_aktual}">${r.po_aktual}</td>
-                    <td class="px-4 py-4 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
-                    <td class="px-4 py-4 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
+                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-qty="${r.qty}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
+                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po" data-search="${r.po_aktual}">${r.po_aktual}</td>
+                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
+                    <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
                 </tr>`;
         }).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -362,7 +367,9 @@ window.renderTabel = function() {
     else if (window.modeKS === 'global') {
         thead.innerHTML = `
             <tr>
-                <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="window.toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
+                <th class="hdr-std w-10 col-cb text-center sticky-col">
+                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                </th>
                 <th class="hdr-std w-12 col-open text-center">Detail</th>
                 ${window.thSort(2, 'Jenis Item', 'col-jenis')}
                 ${window.thSort(3, 'Nama Item', 'col-nama')}
@@ -379,17 +386,17 @@ window.renderTabel = function() {
 
         tbody.innerHTML = window.dataKSGlobal.map((r) => `
             <tr class="${rowClassBase}">
-                <td class="px-4 py-4 text-center col-cb"><input type="checkbox" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-4 text-center col-open"><button onclick="window.bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
-                <td class="px-4 py-4 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                <td class="px-4 py-4 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
-                <td class="px-4 py-4 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
-                <td class="px-4 py-4 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
-                <td class="px-4 py-4 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
-                <td class="px-4 py-4 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
-                <td class="px-4 py-4 font-semibold text-slate-900 text-left col-po" data-search="${r.po}">${r.po}</td>
-                <td class="px-4 py-4 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
-                <td class="px-4 py-4 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 text-center col-open"><button onclick="window.bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
+                <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
+                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po" data-search="${r.po}">${r.po}</td>
+                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
+                <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
             </tr>
         `).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -397,7 +404,9 @@ window.renderTabel = function() {
     else if (window.modeKS === 'lembaran') {
         thead.innerHTML = `
             <tr>
-                <th class="hdr-std w-10 col-cb text-center"><input type="checkbox" onchange="window.toggleCentangUtama(this.checked)" class="cursor-pointer rounded text-blue-600 border-slate-300 w-4 h-4 focus:ring-blue-500"></th>
+                <th class="hdr-std w-10 col-cb text-center sticky-col">
+                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                </th>
                 ${window.thSort(1, 'Kode Master', 'col-area')}
                 ${window.thSort(2, 'Nama Item', 'col-nama')}
                 ${window.thSort(3, 'Panjang', 'col-pjg')}
@@ -411,37 +420,22 @@ window.renderTabel = function() {
 
         tbody.innerHTML = window.stokLembaranRaw.map((r) => `
             <tr class="${rowClassBase}">
-                <td class="px-4 py-4 text-center col-cb"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-4 font-semibold text-slate-800 text-left col-area" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
-                <td class="px-4 py-4 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
-                <td class="px-4 py-4 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg || '-'}">${r.pjg || '-'}</td>
-                <td class="px-4 py-4 font-medium text-slate-700 text-left col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
-                <td class="px-4 py-4 font-medium text-slate-700 text-left col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
-                <td class="px-4 py-4 font-medium text-slate-700 text-left col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
-                <td class="px-4 py-4 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
+                <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg || '-'}">${r.pjg || '-'}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
+                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
             </tr>
         `).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="8" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     }
 
     lucide.createIcons(); 
+    window.updateSelectAllUI();
     window.saringTabelExcel(); 
-};
-
-window.highlightRow = function(checkbox) {
-    const tr = checkbox.closest('tr');
-    if (checkbox.checked) { tr.classList.add('selected-row'); } 
-    else { tr.classList.remove('selected-row'); }
-    window.updateSelectedCount();
-};
-
-window.toggleCentangUtama = function(checked) { 
-    document.querySelectorAll('.cb-main').forEach(cb => {
-        const row = cb.closest('tr');
-        if (row.style.display !== 'none' && !row.classList.contains('filtered-out')) {
-            cb.checked = checked; window.highlightRow(cb);
-        }
-    });
 };
 
 window.changeRowsPerPage = function(val) {
@@ -494,6 +488,10 @@ window.applyPagination = function() {
 
     let sumQty = 0;
     visibleRows.forEach((row, index) => {
+        row.classList.remove('stripe-1', 'stripe-2');
+        if (index % 2 === 0) row.classList.add('stripe-1');
+        else row.classList.add('stripe-2');
+
         const qtyCell = row.querySelector('.col-qty');
         if(qtyCell) { sumQty += parseInt(qtyCell.getAttribute('data-search') || qtyCell.innerText) || 0; } 
         else { sumQty += 1; }
@@ -510,6 +508,12 @@ window.applyPagination = function() {
     if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = window.currentPage;
     if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
     
+    if (window.selectAllState === 1) {
+        window.selectAllState = 0;
+        window.updateSelectAllUI();
+    }
+    
+    window.applySelection();
     window.updateSelectedCount();
 };
 
@@ -644,4 +648,265 @@ window.salinDataBreakdown = function() {
     navigator.clipboard.writeText(copyString).then(() => {
         alert("Berhasil menyalin detail breakdown!");
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
+};
+
+// ========================================================
+// FILTER EXCEL PRO (SMART FILTERING & POSITIONING)
+// ========================================================
+window.openColumnFilter = function(event, colClass, colName) {
+    event.stopPropagation();
+    window.currentFilterCol = colClass;
+    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
+
+    let uniqueValues = new Set();
+    
+    document.querySelectorAll('#tbody-ks tr.row-ks').forEach(row => {
+        let showBasedOnOthers = true;
+        for (let otherCol in window.activeFilters) {
+            if (otherCol !== colClass) { 
+                const allowed = window.activeFilters[otherCol];
+                const c = row.querySelector('.' + otherCol);
+                let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
+                if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
+            }
+        }
+        if (showBasedOnOthers) {
+            let cell = row.querySelector('.' + colClass);
+            if (cell) {
+                let val = cell.getAttribute('data-search') || cell.innerText.trim();
+                if(val !== '') uniqueValues.add(val);
+            }
+        }
+    });
+
+    let sortedValues = Array.from(uniqueValues).sort();
+    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
+    
+    sortedValues.forEach(val => {
+        let isChecked = true;
+        if (window.activeFilters[colClass] && !window.activeFilters[colClass].includes(val)) { isChecked = false; }
+        listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}">
+            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
+            <span class="truncate text-slate-600">${val}</span>
+        </label>`;
+    });
+
+    document.getElementById('filter-values-list').innerHTML = listHtml;
+    window.updateSelectAllState();
+    document.getElementById('filter-search-input').value = '';
+    
+    const menu = document.getElementById('excel-filter-menu');
+    menu.classList.remove('hidden');
+    
+    const btnRect = event.currentTarget.getBoundingClientRect();
+    const menuWidth = 256; 
+    
+    let topPos = btnRect.bottom + 4; 
+    let leftPos = btnRect.left; 
+
+    if (leftPos + menuWidth > window.innerWidth) {
+        leftPos = btnRect.right - menuWidth;
+    }
+    
+    if (leftPos < 10) {
+        leftPos = 10;
+    }
+
+    menu.style.position = 'fixed'; 
+    menu.style.top = `${topPos}px`;
+    menu.style.left = `${leftPos}px`;
+    
+    document.getElementById('filter-search-input').focus();
+};
+
+window.toggleAllFilterValues = function(checked) {
+    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
+    window.updateSelectAllState();
+};
+
+window.updateSelectAllState = function() {
+    const allCbs = document.querySelectorAll('.filter-val-cb');
+    const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
+    const selectAll = document.getElementById('filter-select-all');
+    if(!selectAll) return;
+    if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
+    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
+    else { selectAll.checked = false; selectAll.indeterminate = true; }
+};
+
+document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) window.updateSelectAllState(); });
+
+window.searchFilterList = function(val) {
+    const query = val.toLowerCase().split(' ').filter(x => x); 
+    document.querySelectorAll('.filter-val-item').forEach(label => {
+        const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
+        let matches = query.every(term => text.includes(term));
+        label.style.display = matches ? '' : 'none';
+    });
+};
+
+window.closeFilterMenu = function() { document.getElementById('excel-filter-menu').classList.add('hidden'); };
+
+window.clearFilterForCurrentCol = function() {
+    delete window.activeFilters[window.currentFilterCol];
+    window.closeFilterMenu(); window.saringTabelExcel(); 
+};
+
+window.applyFilterForCurrentCol = function() {
+    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
+    const totalBoxes = document.querySelectorAll('.filter-val-cb');
+    
+    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') {
+        delete window.activeFilters[window.currentFilterCol];
+    } else {
+        let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value));
+        window.activeFilters[window.currentFilterCol] = selectedVals;
+    }
+    
+    window.closeFilterMenu(); window.saringTabelExcel(); 
+};
+
+window.saringTabelExcel = function() {
+    document.querySelectorAll('.row-ks').forEach(row => {
+        let show = true;
+        for (let colClass in window.activeFilters) {
+            const allowedValues = window.activeFilters[colClass];
+            const cell = row.querySelector('.' + colClass);
+            if (cell) {
+                let text = cell.getAttribute('data-search') || cell.innerText.trim();
+                if (!allowedValues.includes(text)) { show = false; break; }
+            }
+        }
+        
+        if (show) { 
+            row.classList.remove('filtered-out'); 
+        } else { 
+            row.classList.add('filtered-out'); 
+            let cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = false; window.highlightRow(cb, true); } 
+        }
+    });
+    window.currentPage = 1; 
+    window.applyPagination(); 
+    window.updateFilterIcons();
+};
+
+window.updateFilterIcons = function() {
+    document.querySelectorAll('.filter-icon').forEach(icon => {
+        icon.classList.remove('text-amber-400', 'opacity-100');
+        icon.classList.add('text-white', 'opacity-40');
+    });
+    for (let colClass in window.activeFilters) {
+        const th = document.querySelector(`th.${colClass}`);
+        if (th) {
+            const icon = th.querySelector('.filter-icon');
+            if (icon) { 
+                icon.classList.remove('text-white', 'opacity-40'); 
+                icon.classList.add('text-amber-400', 'opacity-100'); 
+            }
+        }
+    }
+};
+
+// ========================================================
+// ACTION HANDLERS & MODALS
+// ========================================================
+window.tutupSemuaPopups = function() {
+    document.getElementById('modal-lihat-po').classList.add('hidden');
+    document.getElementById('modal-breakdown').classList.add('hidden');
+    document.getElementById('modal-po').classList.add('hidden');
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
+};
+
+window.bukaBreakdown = function(gKey) {
+    const item = window.dataKSGlobal.find(g => g.gKey === gKey); if(!item) return;
+
+    document.getElementById('bd-title-item').innerText = `${item.nama} | ${item.pjg} | ${item.grade} | DUS: ${item.dus} | SHADING: ${item.shading} | KET: ${item.ket}`;
+    window.currentBreakdownData = item.areas;
+
+    const tbody = document.getElementById('tbody-breakdown');
+    tbody.innerHTML = item.areas.map((a, i) => {
+        const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
+        const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
+        return `
+            <tr class="transition bd-row text-[13px] ${stripeClass}">
+                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="window.highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-qty="${a.qty}" data-ket="${a.keterangan}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
+                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
+                <td class="px-4 py-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
+                <td class="px-4 py-3 font-black text-emerald-700 text-center">${a.qty}</td>
+            </tr>`;
+    }).join('');
+
+    document.getElementById('modal-breakdown').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+};
+
+window.tutupModalBreakdown = function() { document.getElementById('modal-breakdown').classList.add('hidden'); document.getElementById('overlay-klik-luar').classList.add('hidden'); };
+
+window.highlightBdRow = function(cb) {
+    const tr = cb.closest('tr');
+    if(cb.checked) { tr.classList.add('selected-row'); } 
+    else { tr.classList.remove('selected-row'); }
+};
+
+window.toggleCentangBreakdown = function(checked) { 
+    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; window.highlightBdRow(cb); }); 
+};
+
+window.bukaModalLihatPO = function(encodedPOs) {
+    const poStr = decodeURIComponent(encodedPOs);
+    const poArr = poStr.split('|').map(p => p.trim()).filter(p => p);
+    const ul = document.getElementById('list-po-aktual');
+    if (poArr.length === 0 || poArr[0] === 'KOSONG') {
+        ul.innerHTML = '<li class="text-slate-400 italic font-medium p-3 bg-slate-50 rounded-md text-center border border-slate-200">Tidak ada Customer Aktual tersimpan.</li>';
+    } else {
+        ul.innerHTML = poArr.map(p => {
+            let parts = p.split('(');
+            let namaPo = parts[0].trim();
+            let qtyPo = parts[1] ? parts[1].replace(')', '').trim() : '';
+            return `<li class="p-3 bg-white border border-slate-200 shadow-sm text-slate-700 font-semibold rounded-md flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 text-slate-400"></i> <span>${namaPo}</span></div> 
+                        <span class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded text-xs font-black">${qtyPo}</span>
+                    </li>`;
+        }).join('');
+    }
+    lucide.createIcons();
+    document.getElementById('modal-lihat-po').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+};
+
+window.siapkanGantiPO = function(context) {
+    let checkboxes = [];
+    if(context === 'main') {
+        if(window.modeKS === 'global' || window.modeKS === 'lembaran') return;
+        checkboxes = document.querySelectorAll('.cb-main:checked');
+    } else { checkboxes = document.querySelectorAll('.cb-bd:checked'); }
+
+    if(checkboxes.length === 0) return alert('Silakan centang item / area yang ingin diganti Customer-nya.');
+
+    window.selectedForAction = []; let totalDus = 0;
+    checkboxes.forEach(cb => {
+        window.selectedForAction.push({ 
+            id_sku: cb.dataset.idsku, 
+            po_aktual: cb.dataset.po,
+            qty: parseInt(cb.dataset.qty)
+        });
+        totalDus += parseInt(cb.dataset.qty);
+    });
+
+    window.sourcePOContext = context;
+    document.getElementById('input-new-po').value = '';
+    const inputQty = document.getElementById('input-qty-ganti');
+    inputQty.value = totalDus; inputQty.max = totalDus; 
+
+    document.getElementById('modal-po').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+};
+
+window.tutupModalPO = function() { 
+    document.getElementById('modal-po').classList.add('hidden'); 
+    if(document.getElementById('modal-breakdown').classList.contains('hidden')) {
+        document.getElementById('overlay-klik-luar').classList.add('hidden'); 
+    }
 };
