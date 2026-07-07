@@ -95,18 +95,23 @@ function renderTable() {
         let badgeClass = "bg-slate-200 text-slate-700 border-slate-300";
         let displayStatus = d.status;
 
-        if(d.status === 'BELUM STBJ') badgeClass = "bg-orange-500 text-white border-orange-600";
-        if(d.status === 'SUDAH STBJ') badgeClass = "bg-red-600 text-white border-red-700"; 
-        if(d.status === 'DUPLIKAT SCAN') badgeClass = "bg-red-600 text-white border-red-700";
-        if(d.status === 'HOLD') badgeClass = "bg-amber-500 text-white border-amber-600";
-        if(d.status === 'IN GUDANG') badgeClass = "bg-red-600 text-white border-red-700"; 
+        // REVISI: Pewarnaan Status sesuai instruksi (Hijau & Merah)
+        if(d.status === 'BELUM STBJ') {
+            badgeClass = "bg-emerald-600 text-white border-emerald-700"; 
+        } 
+        else if(['RETUR', 'STBJ', 'HOLD STBJ', 'IN GUDANG', 'HOLD LANGSIR', 'DUPLIKAT SCAN'].includes(d.status)) {
+            badgeClass = "bg-red-600 text-white border-red-700"; 
+        }
+        else if(d.status === 'HOLD') {
+            badgeClass = "bg-amber-500 text-white border-amber-600";
+        }
 
         if(d.status === 'BELUM CEK' && d.isLocalDuplicate) {
             badgeClass = "bg-red-600 text-white border-red-700";
             displayStatus = "DUPLIKAT SCAN";
         }
 
-        const isRedHighlight = d.status === 'SUDAH STBJ' || d.status === 'DUPLIKAT SCAN' || d.status === 'IN GUDANG' || d.isLocalDuplicate;
+        const isRedHighlight = ['RETUR', 'STBJ', 'HOLD STBJ', 'IN GUDANG', 'HOLD LANGSIR', 'DUPLIKAT SCAN'].includes(d.status) || d.isLocalDuplicate;
         const rowClass = isRedHighlight ? 'bg-red-50 hover:bg-red-100' : (d.status === 'HOLD' ? 'bg-amber-50 hover:bg-amber-100' : 'bg-white hover:bg-slate-50');
 
         html += `
@@ -315,6 +320,7 @@ function saringTabelSTBJ() {
     document.getElementById('lbl-tampil-baris').innerText = visibleCount;
 }
 
+// REVISI: Logika Verifikasi Baru (hasil_stbj_langsir & stok_global)
 async function cekGudangSTBJ() {
     if(dataStbj.length === 0) return alert("Belum ada data.");
     const btn = document.getElementById('btn-cek-gudang'); const ori = btn.innerHTML;
@@ -322,35 +328,34 @@ async function cekGudangSTBJ() {
 
     const allQRs = dataStbj.map(d => d.qrcode);
     try {
-        const [resHasil, resGudang, resHold] = await Promise.all([
-            db.from('hasil_stbj').select('qrcode').in('qrcode', allQRs),
-            db.from('stok_qr').select('qrcode').in('qrcode', allQRs),
-            db.from('hold_stbj').select('qrcode').in('qrcode', allQRs)
+        const [resGlobal, resHasil] = await Promise.all([
+            db.from('stok_global').select('qrcode, jalur_masuk').in('qrcode', allQRs),
+            db.from('hasil_stbj_langsir').select('qrcode, status').in('qrcode', allQRs)
         ]);
 
+        if(resGlobal.error) throw resGlobal.error;
         if(resHasil.error) throw resHasil.error;
-        if(resGudang.error) throw resGudang.error;
-        if(resHold.error) throw resHold.error;
 
-        const setHasil = new Set((resHasil.data || []).map(d => d.qrcode));
-        const setGudang = new Set((resGudang.data || []).map(d => d.qrcode));
-        const setHold = new Set((resHold.data || []).map(d => d.qrcode));
+        const globalMap = {}; resGlobal.data.forEach(d => globalMap[d.qrcode] = d);
+        const hasilMap = {}; resHasil.data.forEach(d => hasilMap[d.qrcode] = d);
 
         let infoDuplikat = 0;
         dataStbj.forEach(d => {
             if(d.status === 'HOLD' && d.keterangan === 'Dihold Manual') return; 
             
-            if (setGudang.has(d.qrcode)) {
-                d.status = 'IN GUDANG';
-                d.keterangan = 'SUDAH ADA DI KARTU STOK';
+            let isRetur = false;
+            if (globalMap[d.qrcode] && (globalMap[d.qrcode].jalur_masuk || '').toLowerCase() === 'retur') {
+                isRetur = true;
+            }
+
+            if (isRetur) {
+                d.status = 'RETUR';
+                d.keterangan = 'BARANG RETUR DARI GLOBAL';
                 infoDuplikat++;
-            } else if (setHasil.has(d.qrcode)) {
-                d.status = 'SUDAH STBJ';
-                d.keterangan = 'SUDAH ADA DI HASIL STBJ';
-                infoDuplikat++;
-            } else if (setHold.has(d.qrcode)) {
-                d.status = 'HOLD';
-                d.keterangan = 'ADA DI TABEL HOLD';
+            } else if (hasilMap[d.qrcode]) {
+                let statDB = hasilMap[d.qrcode].status;
+                d.status = statDB; // 'STBJ', 'HOLD STBJ', 'IN GUDANG', 'HOLD LANGSIR'
+                d.keterangan = `SUDAH ADA DI DATABASE (${statDB})`;
                 infoDuplikat++;
             } else if (d.isLocalDuplicate) {
                 d.status = 'DUPLIKAT SCAN';
@@ -360,13 +365,14 @@ async function cekGudangSTBJ() {
         });
 
         renderTable();
-        if(infoDuplikat > 0) alert(`Verifikasi Selesai!\nDitemukan ${infoDuplikat} data DUPLIKAT (Sudah STBJ / Sudah di Gudang).`);
+        if(infoDuplikat > 0) alert(`Verifikasi Selesai!\nDitemukan ${infoDuplikat} data DUPLIKAT / RETUR.`);
         else alert("Verifikasi Selesai!\nSemua data UNIK (Belum STBJ) dan aman untuk disimpan.");
 
     } catch (err) { alert("Gagal cek database: " + err.message); }
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
+// REVISI: Simpan ke tabel hasil_stbj_langsir
 async function saveToDatabaseSTBJ() {
     if(dataStbj.length === 0) return alert('Data kosong!');
     const blmCek = dataStbj.filter(d => d.status === 'BELUM CEK');
@@ -376,9 +382,9 @@ async function saveToDatabaseSTBJ() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btn.disabled = true;
 
     const UNIKs = dataStbj.filter(d => d.status === 'BELUM STBJ');
-    const dupes = dataStbj.filter(d => d.status === 'SUDAH STBJ' || d.status === 'DUPLIKAT SCAN' || d.status === 'HOLD' || d.status === 'IN GUDANG');
+    const dupes = dataStbj.filter(d => d.status !== 'BELUM STBJ' && d.status !== 'BELUM CEK');
 
-    const mapToHasil = (d, finalStatus) => {
+    const mapToDB = (d, finalStatus) => {
         let jName = `JAS-${d.namaItem}`;
         if (window.masterData && window.masterData.jasper) {
             const cJasper = window.masterData.jasper.find(j => j.nama_item === d.namaItem && j.panjang === d.panjang && j.grade === d.grade);
@@ -393,6 +399,7 @@ async function saveToDatabaseSTBJ() {
             mesin: d.mesin,
             jenis_item: d.jenisItem, 
             nama_item: d.namaItem,
+            nama_jasper: jName, 
             panjang: d.panjang,
             grade: d.grade,
             dus: d.dus,
@@ -400,49 +407,22 @@ async function saveToDatabaseSTBJ() {
             customer: d.customer, 
             keterangan: d.keterangan || '-',
             status: finalStatus,
-            status_data: 'BELUM',
-            posisi: 'STBJ',
             pic_input: d.pic,
-            nama_jasper: jName, 
             created_at: new Date().toISOString() 
         };
     };
 
-    const mapToHold = (d, finalStatus) => ({
-        troli: d.troli,
-        qrcode: d.qrcode,
-        tgl_produksi: d.tglProduksi,
-        shift: d.shift,
-        mesin: d.mesin,
-        jenis_item: d.jenisItem, 
-        nama_item: d.namaItem,
-        panjang: d.panjang,
-        grade: d.grade,
-        dus: d.dus,
-        shading: d.shading,
-        customer_bawaan: d.customer, 
-        keterangan: d.keterangan || '-',
-        status: finalStatus,
-        status_data: 'BELUM',
-        posisi: 'TROLI',
-        pic_input: d.pic,
-        created_at: new Date().toISOString() 
-    });
-
     try {
-        if(UNIKs.length > 0) {
-            const payloadHasil = UNIKs.map(d => mapToHasil(d, 'SUDAH STBJ'));
-            const { error: err1 } = await db.from('hasil_stbj').insert(payloadHasil);
-            if(err1) throw err1;
-        }
-        
-        if(dupes.length > 0) {
-            const payloadHold = dupes.map(d => mapToHold(d, 'HOLD'));
-            const { error: err2 } = await db.from('hold_stbj').insert(payloadHold);
-            if(err2) throw err2;
+        let payload = [];
+        UNIKs.forEach(d => payload.push(mapToDB(d, 'STBJ')));
+        dupes.forEach(d => payload.push(mapToDB(d, 'HOLD STBJ')));
+
+        if(payload.length > 0) {
+            const { error } = await db.from('hasil_stbj_langsir').upsert(payload, { onConflict: 'qrcode' });
+            if(error) throw error;
         }
 
-        alert(`BERHASIL DISIMPAN!\n- ${UNIKs.length} Barang UNIK masuk ke Hasil STBJ\n- ${dupes.length} Barang Hold/Duplikat masuk ke Hold STBJ`);
+        alert(`BERHASIL DISIMPAN!\n- ${UNIKs.length} Barang UNIK (STBJ)\n- ${dupes.length} Barang Hold/Duplikat (HOLD STBJ)`);
         dataStbj = []; renderTable();
         document.getElementById('cb-all').checked = false;
     } catch (err) { alert('GAGAL MENYIMPAN: ' + err.message); } 
