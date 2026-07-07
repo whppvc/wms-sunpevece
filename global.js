@@ -196,10 +196,19 @@ function applyTableDesign() {
     
     document.documentElement.style.setProperty('--tbl-opacity', tempDesign.opacity / 100);
 
-    if(tempDesign.isHover === false) {
-        document.body.classList.add('disable-hover');
+    // REVISI: Cek kesiapan DOM body agar tidak crash di <head>
+    const runToggle = () => {
+        if(tempDesign.isHover === false) {
+            document.body.classList.add('disable-hover');
+        } else {
+            document.body.classList.remove('disable-hover');
+        }
+    };
+
+    if(document.body) {
+        runToggle();
     } else {
-        document.body.classList.remove('disable-hover');
+        document.addEventListener('DOMContentLoaded', runToggle);
     }
 }
 applyTableDesign();
@@ -835,6 +844,7 @@ window.kirimPesan = async function() {
         if(error) throw error;
         
         alert("Pesan berhasil dikirim!");
+        text.value = '';
         kembaliKeListInbox();
     } catch(e) {
         alert("Gagal mengirim pesan: " + e.message);
@@ -907,4 +917,3 @@ window.terimaRequestPO = async function(idReq, qrcode, customerBaru) {
         alert("Gagal memproses persetujuan: " + err.message);
     }
 }
-
