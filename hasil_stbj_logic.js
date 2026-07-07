@@ -1,5 +1,5 @@
 let modeSekarang = 'qrcode'; 
-let statusSekarang = 'STBJ'; // REVISI: Default filter status
+let statusSekarang = 'STBJ'; 
 let rawDataRaw = [];
 let kamusData = [];
 let jasperData = [];
@@ -221,13 +221,25 @@ async function loadKamusDanJasper() {
     } catch(e) { console.log("Tabel nama_jasper belum siap."); }
 }
 
-// REVISI: Mengambil data dari hasil_stbj_langsir berdasarkan status
+// REVISI: Mengambil data dari hasil_stbj_langsir dengan filter array (Case Insensitive / Legacy Support)
 async function muatDataDariSupabase() {
     const tbody = document.getElementById('tbody-stbj');
     tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500 text-sm">Menarik Data...</p></td></tr>`;
     lucide.createIcons();
     try {
-        const { data, error } = await db.from('hasil_stbj_langsir').select('*').eq('status', statusSekarang).order('created_at', {ascending: false});
+        // Menangkap berbagai variasi penulisan status di database
+        let filterValues = [];
+        if (statusSekarang === 'STBJ') {
+            filterValues = ['STBJ', 'stbj', 'SUDAH STBJ', 'sudah stbj'];
+        } else if (statusSekarang === 'HOLD STBJ') {
+            filterValues = ['HOLD STBJ', 'hold stbj', 'HOLD', 'hold'];
+        }
+
+        const { data, error } = await db.from('hasil_stbj_langsir')
+            .select('*')
+            .in('status', filterValues)
+            .order('created_at', {ascending: false});
+            
         if(error) throw error;
         
         if(data && data.length > 0) {
@@ -239,7 +251,9 @@ async function muatDataDariSupabase() {
 
         rawDataRaw = data || [];
         renderHeaderDanTabel();
-    } catch(err) { tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; }
+    } catch(err) { 
+        tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; 
+    }
 }
 
 function setMode(m) {
@@ -274,11 +288,9 @@ function setMode(m) {
     renderHeaderDanTabel();
 }
 
-// REVISI: Fungsi switchStatusFilter
 function switchStatusFilter(val) { 
     statusSekarang = val; 
     
-    // Ubah teks tombol Hold di mobile menu sesuai status
     const btnHoldMob = document.getElementById('btn-hold-mob');
     if(btnHoldMob) {
         if(statusSekarang === 'STBJ') {
@@ -782,8 +794,8 @@ function renderHeaderDanTabel() {
     
     applyColumnOrder();
     lucide.createIcons(); 
-    saringTabelExcel();
     updateSelectAllUI();
+    saringTabelExcel();
 }
 
 function changeRowsPerPage(val) {
@@ -979,7 +991,6 @@ async function simpanDataJasper() {
 
         if(errorRes) throw errorRes;
         
-        // REVISI: Update ke hasil_stbj_langsir
         const { error: errUpdateHasil } = await db.from('hasil_stbj_langsir')
             .update({ nama_jasper: output })
             .eq('nama_item', nama)
@@ -1041,7 +1052,6 @@ async function aksiMassal(tipe) {
         alert(`Tersalin baris! Buka Excel dan Paste (Ctrl+V).`);
     } 
     else if(tipe === 'hold') {
-        // REVISI: Update status di hasil_stbj_langsir
         if(statusSekarang === 'STBJ') {
             if(!confirm(`Ubah status ${checkedValues.length} data menjadi HOLD STBJ?`)) return;
             const { error } = await db.from('hasil_stbj_langsir').update({status: 'HOLD STBJ'}).in('qrcode', checkedValues);
