@@ -582,7 +582,6 @@ function highlightRow(checkbox, skipStateReset = false) {
     if(!skipStateReset) updateSelectedCount();
 }
 
-// REVISI: Teks Status Tanpa Kotak (Text Only)
 function renderHeaderDanTabel() {
     const thead = document.getElementById('thead-stbj');
     const tbody = document.getElementById('tbody-stbj');
@@ -636,22 +635,21 @@ function renderHeaderDanTabel() {
                 statData = `<span class="text-indigo-600 font-medium uppercase">${r.status_data}</span>`;
             }
 
-            // REVISI: Pewarnaan Teks Status (Tanpa Kotak)
             let textColor = "text-slate-600";
             let displayStatus = r.status || '-';
             
             if(displayStatus === 'STBJ' || displayStatus === 'SUDAH STBJ') {
-                textColor = "text-slate-900"; // Hitam
+                textColor = "text-slate-900"; 
                 displayStatus = 'SUDAH STBJ';
             }
             else if(displayStatus === 'HOLD STBJ' || displayStatus === 'HOLD LANGSIR') {
-                textColor = "text-orange-600"; // Oren
+                textColor = "text-orange-600"; 
             }
             else if(displayStatus === 'IN GUDANG') {
-                textColor = "text-emerald-600"; // Hijau
+                textColor = "text-emerald-600"; 
             }
             else if(displayStatus === 'RETUR') {
-                textColor = "text-rose-600"; // Merah
+                textColor = "text-rose-600"; 
             }
 
             h += `
@@ -775,6 +773,7 @@ function renderHeaderDanTabel() {
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 hidden col-status-gudang">-</td>
                     <td class="px-4 py-3 hidden col-status">-</td>
                     <td class="px-4 py-3 text-center col-status-data" data-search="${r.sData || '-'}">${statData}</td>
                     <td class="px-4 py-3 hidden col-waktu">-</td>
@@ -1063,25 +1062,20 @@ async function aksiMassal(tipe) {
     } 
     else if(tipe === 'hold') {
         const act = prompt(`Pilih Aksi untuk ${checkedValues.length} item:\n1 = Ubah ke HOLD STBJ\n2 = UNHOLD (Kembali ke STBJ)\n3 = Ubah ke HOLD LANGSIR`);
-        let targetStatus = '';
-        if(act === '1') targetStatus = 'HOLD STBJ';
-        else if(act === '2') targetStatus = 'STBJ';
-        else if(act === '3') targetStatus = 'HOLD LANGSIR';
-        else return;
+        if (act === null) return;
+        
+        let newStatus = '';
+        if (act === '1') newStatus = 'HOLD STBJ';
+        else if (act === '2') newStatus = 'STBJ';
+        else if (act === '3') newStatus = 'HOLD LANGSIR';
+        else return alert("Pilihan tidak valid. Ketik 1, 2, atau 3.");
 
-        const btn = document.getElementById('btn-hold-mob');
-        const ori = btn ? btn.innerHTML : '';
-        if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Proses...'; btn.disabled = true; }
-
-        try {
-            const { error } = await db.from('hasil_stbj_langsir').update({status: targetStatus}).in('qrcode', checkedValues);
-            if(error) throw error;
-            alert(`Berhasil mengubah status menjadi ${targetStatus}.`);
-            await muatDataDariSupabase();
-        } catch(e) {
-            alert("Gagal update: " + e.message);
-        } finally {
-            if(btn) { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
+        const { error } = await db.from('hasil_stbj_langsir').update({status: newStatus}).in('qrcode', checkedValues);
+        if(!error) {
+            alert(`Berhasil mengubah status menjadi ${newStatus}`);
+            muatDataDariSupabase();
+        } else {
+            alert("Gagal update status: " + error.message);
         }
     }
     else if (tipe === 'collect') {
