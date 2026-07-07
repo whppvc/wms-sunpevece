@@ -136,17 +136,22 @@ style.innerHTML = `
     .stripe-1 td { background-color: rgba(var(--tbl-row-1), var(--tbl-opacity)) !important; transition: background-color 0.2s ease; }
     .stripe-2 td { background-color: rgba(var(--tbl-row-2), var(--tbl-opacity)) !important; transition: background-color 0.2s ease; }
     
-    .stripe-1:hover td, .stripe-2:hover td, tr.text-row:hover td { background-color: rgba(var(--tbl-row-hover), 1) !important; }
+    /* REVISI: Hover Effect Toggle */
+    body:not(.disable-hover) .stripe-1:hover td, 
+    body:not(.disable-hover) .stripe-2:hover td, 
+    body:not(.disable-hover) tr.text-row:hover td,
+    body:not(.disable-hover) tr.r-row:hover td { background-color: rgba(var(--tbl-row-hover), 1) !important; }
+    
     tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
 
-    /* REVISI: FREEZE PANE (STICKY COLUMN) CSS - DIBUAT SOLID AGAR TIDAK TUMPANG TINDIH */
+    /* FREEZE PANE (STICKY COLUMN) CSS */
     .sticky-col { position: sticky !important; left: 0 !important; z-index: 30 !important; }
     th.sticky-col { z-index: 40 !important; background-color: var(--tbl-hdr-bg) !important; }
     
-    /* Pastikan warna background sticky column selalu solid (opacity 1) agar tidak tembus pandang */
     .stripe-1 td.sticky-col { background-color: rgb(var(--tbl-row-1)) !important; }
     .stripe-2 td.sticky-col { background-color: rgb(var(--tbl-row-2)) !important; }
-    tr.text-row:hover td.sticky-col { background-color: rgb(var(--tbl-row-hover)) !important; }
+    body:not(.disable-hover) tr.text-row:hover td.sticky-col,
+    body:not(.disable-hover) tr.r-row:hover td.sticky-col { background-color: rgb(var(--tbl-row-hover)) !important; }
     tr.selected-row td.sticky-col { background-color: #ccfbf1 !important; }
     
     /* Custom Range Slider */
@@ -175,7 +180,7 @@ const THEMES = {
 };
 
 let tempDesign = JSON.parse(localStorage.getItem('wms_table_design')) || {
-    hdrBg: '#0f172a', hdrText: '#ffffff', rowTheme: 'gray', hoverTheme: 'gray', opacity: 100, isZebra: true
+    hdrBg: '#0f172a', hdrText: '#ffffff', rowTheme: 'gray', hoverTheme: 'gray', opacity: 100, isZebra: true, isHover: true
 };
 
 function applyTableDesign() {
@@ -190,6 +195,12 @@ function applyTableDesign() {
     document.documentElement.style.setProperty('--tbl-row-hover', hTheme);
     
     document.documentElement.style.setProperty('--tbl-opacity', tempDesign.opacity / 100);
+
+    if(tempDesign.isHover === false) {
+        document.body.classList.add('disable-hover');
+    } else {
+        document.body.classList.remove('disable-hover');
+    }
 }
 applyTableDesign();
 
@@ -353,6 +364,11 @@ async function initModernLayout(pageMeta) {
                     <label class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition">
                         <span class="text-sm font-bold text-slate-700">Aktifkan Zebra Striping</span>
                         <input type="checkbox" id="td-zebra" class="w-5 h-5 accent-indigo-600 cursor-pointer">
+                    </label>
+
+                    <label class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition">
+                        <span class="text-sm font-bold text-slate-700">Aktifkan Efek Hover Baris</span>
+                        <input type="checkbox" id="td-hover" class="w-5 h-5 accent-indigo-600 cursor-pointer">
                     </label>
 
                     <div>
@@ -532,6 +548,7 @@ document.addEventListener('click', (e) => {
 // ==========================================
 window.bukaModalTableDesign = function() {
     document.getElementById('td-zebra').checked = tempDesign.isZebra;
+    document.getElementById('td-hover').checked = tempDesign.isHover !== false;
     document.getElementById('td-opacity').value = tempDesign.opacity;
     document.getElementById('lbl-opacity').innerText = tempDesign.opacity + '%';
     updateDesignUI();
@@ -562,6 +579,7 @@ function updateDesignUI() {
 
 window.saveTableDesign = function() {
     tempDesign.isZebra = document.getElementById('td-zebra').checked;
+    tempDesign.isHover = document.getElementById('td-hover').checked;
     tempDesign.opacity = document.getElementById('td-opacity').value;
     localStorage.setItem('wms_table_design', JSON.stringify(tempDesign));
     applyTableDesign();
