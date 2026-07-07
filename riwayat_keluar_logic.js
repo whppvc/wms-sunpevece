@@ -139,9 +139,10 @@ function sortTable(colIndex, headerEl) {
     applyPagination();
 }
 
-const thSort = (idx, label, cls = "") => {
+// REVISI: thSort sekarang otomatis mendeteksi cellIndex, tidak perlu parameter angka lagi
+const thSort = (label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
-    const noFilter = ['col-cb', 'col-btn', 'col-no'].includes(colClass);
+    const noFilter = ['col-cb', 'col-btn'].includes(colClass);
     
     if (noFilter) {
         return `<th class="hdr-std ${cls} select-none text-center">
@@ -151,9 +152,9 @@ const thSort = (idx, label, cls = "") => {
 
     return `<th class="hdr-std ${cls} select-none group">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
-            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable(${idx}, this.closest('th'))" title="Sort ${label}">${label}</span>
+            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable(this.closest('th').cellIndex, this.closest('th'))" title="Sort ${label}">${label}</span>
             <div class="flex items-center gap-1 shrink-0">
-                <button onclick="sortTable(${idx}, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
+                <button onclick="sortTable(this.closest('th').cellIndex, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 sort-icon opacity-40 group-hover:opacity-100 transition-opacity text-white"></i>
                 </button>
                 <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
@@ -423,25 +424,24 @@ function renderHeaderDanTabel() {
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
                     <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
-                ${thSort(1, 'No', 'col-no w-12 text-center')}
-                ${thSort(2, 'Waktu Keluar', 'col-waktu')}
-                ${thSort(3, 'QRCode', 'col-qr')}
-                ${thSort(4, 'Tgl Produksi', 'col-tgl')}
-                ${thSort(5, 'Mesin', 'col-mesin')}
-                ${thSort(6, 'Shift', 'col-shift')}
-                ${thSort(7, 'Jenis Item', 'col-jenis')}
-                ${thSort(8, 'Nama Item', 'col-nama')}
-                ${thSort(9, 'Pjg', 'col-pjg')}
-                ${thSort(10, 'Grade', 'col-grade')}
-                ${thSort(11, 'Dus', 'col-dus')}
-                ${thSort(12, 'Shading', 'col-shading')}
-                ${thSort(13, 'Customer Bawaan', 'col-customer')}
-                ${thSort(14, 'Customer Keluar', 'col-tujuan text-amber-300')}
-                ${thSort(15, 'Keterangan', 'col-ket')}
-                ${thSort(16, 'PIC Keluar', 'col-pic')}
+                ${thSort('Waktu Keluar', 'col-waktu')}
+                ${thSort('QRCode', 'col-qr')}
+                ${thSort('Tgl Produksi', 'col-tgl')}
+                ${thSort('Mesin', 'col-mesin')}
+                ${thSort('Shift', 'col-shift')}
+                ${thSort('Jenis Item', 'col-jenis')}
+                ${thSort('Nama Item', 'col-nama')}
+                ${thSort('Pjg', 'col-pjg')}
+                ${thSort('Grade', 'col-grade')}
+                ${thSort('Dus', 'col-dus')}
+                ${thSort('Shading', 'col-shading')}
+                ${thSort('Customer Bawaan', 'col-customer')}
+                ${thSort('Customer Keluar', 'col-tujuan text-amber-300')}
+                ${thSort('Keterangan', 'col-ket')}
+                ${thSort('PIC Keluar', 'col-pic')}
             </tr>`;
         
-        if(targetData.length === 0) { tbody.innerHTML = '<tr><td colspan="17" class="p-10 text-center font-medium text-slate-400">Tidak ada data.</td></tr>'; applyPagination(); return; }
+        if(targetData.length === 0) { tbody.innerHTML = '<tr><td colspan="16" class="p-10 text-center font-medium text-slate-400">Tidak ada data.</td></tr>'; applyPagination(); return; }
         
         let h = '';
         targetData.forEach((r, i) => {
@@ -453,7 +453,6 @@ function renderHeaderDanTabel() {
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.qrcode}" onchange="highlightRow(this)" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 font-bold text-slate-500 text-center col-no">${i+1}</td>
                     <td class="px-4 py-3 text-slate-600 font-medium text-left col-waktu" data-search="${tglKeluar}">${tglKeluar}</td>
                     <td class="px-4 py-3 font-mono font-bold text-slate-900 text-left tracking-wider col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
                     <td class="px-4 py-3 font-medium text-slate-600 text-left col-tgl" data-search="${td.tglProduksi}">${td.tglProduksi}</td>
@@ -480,20 +479,19 @@ function renderHeaderDanTabel() {
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
                     <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
-                ${thSort(1, 'No', 'col-no w-12 text-center')}
-                ${thSort(2, 'Tgl Produksi', 'col-tgl')}
-                ${thSort(3, 'Mesin', 'col-mesin')}
-                ${thSort(4, 'Shift', 'col-shift')}
-                ${thSort(5, 'Jenis Item', 'col-jenis')}
-                ${thSort(6, isJasper ? 'Nama Barang Jasper' : 'Nama Item', 'col-nama')}
-                ${thSort(7, 'Pjg', 'col-pjg')}
-                ${thSort(8, 'Grade', 'col-grade')}
-                ${thSort(9, 'Dus', 'col-dus')}
-                ${thSort(10, 'Shading', 'col-shading')}
-                ${thSort(11, 'Customer Bawaan', 'col-customer')}
-                ${thSort(12, 'Customer Keluar', 'col-tujuan text-amber-300')}
-                ${thSort(13, 'QTY KELUAR (DUS)', 'col-qty text-emerald-300')}
-                ${thSort(14, 'Keterangan', 'col-ket')}
+                ${thSort('Tgl Produksi', 'col-tgl')}
+                ${thSort('Mesin', 'col-mesin')}
+                ${thSort('Shift', 'col-shift')}
+                ${thSort('Jenis Item', 'col-jenis')}
+                ${thSort(isJasper ? 'Nama Barang Jasper' : 'Nama Item', 'col-nama')}
+                ${thSort('Pjg', 'col-pjg')}
+                ${thSort('Grade', 'col-grade')}
+                ${thSort('Dus', 'col-dus')}
+                ${thSort('Shading', 'col-shading')}
+                ${thSort('Customer Bawaan', 'col-customer')}
+                ${thSort('Customer Keluar', 'col-tujuan text-amber-300')}
+                ${thSort('QTY KELUAR (DUS)', 'col-qty text-emerald-300')}
+                ${thSort('Keterangan', 'col-ket')}
             </tr>`;
         
         let groups = {};
@@ -514,7 +512,7 @@ function renderHeaderDanTabel() {
         });
 
         let arr = Object.values(groups);
-        if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="15" class="p-10 text-center font-medium text-slate-400">Kosong.</td></tr>'; applyPagination(); return; }
+        if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="14" class="p-10 text-center font-medium text-slate-400">Kosong.</td></tr>'; applyPagination(); return; }
 
         let h = '';
         arr.forEach((r, i) => {
@@ -522,7 +520,6 @@ function renderHeaderDanTabel() {
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.qrcodes.join(',')}" onchange="highlightRow(this)" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 font-bold text-slate-500 text-center col-no">${i+1}</td>
                     <td class="px-4 py-3 font-medium text-slate-600 text-left col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
                     <td class="px-4 py-3 font-medium text-slate-600 text-left col-mesin" data-search="${r.mesin}">${r.mesin}</td>
                     <td class="px-4 py-3 font-medium text-slate-600 text-left col-shift" data-search="${r.shift}">${r.shift}</td>
