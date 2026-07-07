@@ -438,6 +438,19 @@ window.renderTabel = function() {
     window.saringTabelExcel(); 
 };
 
+window.highlightRow = function(checkbox, skipStateReset = false) {
+    const tr = checkbox.closest('tr');
+    if (checkbox.checked) { tr.classList.add('selected-row'); } 
+    else { tr.classList.remove('selected-row'); }
+    
+    if(!skipStateReset && !checkbox.checked && window.selectAllState !== 0) {
+        window.selectAllState = 0;
+        window.updateSelectAllUI();
+    }
+    
+    if(!skipStateReset) window.updateSelectedCount();
+};
+
 window.changeRowsPerPage = function(val) {
     const customInput = document.getElementById('input-custom-rows');
     if (val === 'ALL') {
@@ -786,6 +799,9 @@ window.saringTabelExcel = function() {
             if(cb) { cb.checked = false; window.highlightRow(cb, true); } 
         }
     });
+    
+    window.selectAllState = 0;
+    window.updateSelectAllUI();
     window.currentPage = 1; 
     window.applyPagination(); 
     window.updateFilterIcons();
@@ -909,4 +925,59 @@ window.tutupModalPO = function() {
     if(document.getElementById('modal-breakdown').classList.contains('hidden')) {
         document.getElementById('overlay-klik-luar').classList.add('hidden'); 
     }
+};
+
+window.cycleSelectAll = function() {
+    window.selectAllState = (window.selectAllState + 1) % 3;
+    window.updateSelectAllUI();
+    window.applySelection();
+};
+
+window.updateSelectAllUI = function() {
+    const btn = document.getElementById('btn-select-all');
+    if(!btn) return;
+    
+    if (window.selectAllState === 0) {
+        btn.innerHTML = '';
+        btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto';
+    } else if (window.selectAllState === 1) {
+        btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
+        btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto';
+    } else if (window.selectAllState === 2) {
+        btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>';
+        btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
+    }
+    lucide.createIcons();
+};
+
+window.applySelection = function() {
+    const allRows = Array.from(document.querySelectorAll('#tbody-ks tr.row-ks'));
+    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
+    
+    const startIndex = (window.currentPage - 1) * window.rowsPerPage;
+    const endIndex = startIndex + window.rowsPerPage;
+
+    if (window.selectAllState === 0) {
+        allRows.forEach(row => {
+            const cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = false; window.highlightRow(cb, true); }
+        });
+    } else if (window.selectAllState === 1) {
+        allRows.forEach(row => {
+            const cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = false; window.highlightRow(cb, true); }
+        });
+        visibleRows.forEach((row, index) => {
+            if(index >= startIndex && index < endIndex) {
+                const cb = row.querySelector('.cb-main');
+                if(cb) { cb.checked = true; window.highlightRow(cb, true); }
+            }
+        });
+    } else if (window.selectAllState === 2) {
+        visibleRows.forEach(row => {
+            const cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = true; window.highlightRow(cb, true); }
+        });
+    }
+    window.updateSelectedCount();
 };
