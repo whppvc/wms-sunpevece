@@ -123,7 +123,6 @@ function addRow(area, code, isDuplicate = false) {
     
     const td = typeof window.translateBarcode === 'function' ? window.translateBarcode(code) : {tglProduksi:'-', mesin:'-', shift:'-', jenisItem:'-', namaItem:'Unknown', panjang:'-', grade:'-', dus:'-', shading:'-', customer:'-'}; 
     
-    // REVISI: Hanya menggunakan 1 badge status agar lebih rapi
     const statusHtml = isDuplicate 
         ? '<span class="text-white font-bold bg-red-600 border border-red-800 px-3 py-1 text-[10px] status-val rounded-sm shadow-sm" data-status="invalid">DUPLIKAT SCAN</span>'
         : '<span class="text-slate-500 font-bold bg-slate-200 border border-slate-300 px-3 py-1 text-[10px] status-val rounded-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
@@ -270,7 +269,6 @@ function editKeteranganMassal() {
     toggleSemuaCentang(false);
 }
 
-// REVISI: Logika Verifikasi Langsir sesuai instruksi
 async function VerifikasiDanCek() {
     const rows = document.querySelectorAll('.row-item:not(.deleted-row):not(.filtered-out)');
     if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
@@ -334,7 +332,6 @@ async function VerifikasiDanCek() {
                 hasError = true;
             }
 
-            // Cek jika duplikat scan lokal
             if (statusSpan.innerText === 'DUPLIKAT SCAN') {
                 statusText = 'DUPLIKAT SCAN';
                 statusClass = 'bg-red-600 text-white border-red-800';
@@ -361,7 +358,6 @@ async function VerifikasiDanCek() {
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
-// REVISI: Logika Simpan Langsir
 async function saveToSupabase() {
     const btn = document.getElementById('btn-save'); const original = btn.innerHTML;
     
@@ -452,9 +448,9 @@ async function saveToSupabase() {
         const { error: errInsert } = await db.from('stok_qr').insert(arrFisik);
         if (errInsert) throw new Error("Gagal insert stok_qr: " + errInsert.message);
 
-        // 2. Update status di hasil_stbj_langsir menjadi 'IN GUDANG'
+        // 2. Update status di hasil_stbj_langsir menjadi 'IN GUDANG' (TANPA UPDATE AREA)
         const { error: errUpdate } = await db.from('hasil_stbj_langsir')
-            .update({ status: 'IN GUDANG', area: arrFisik[0].area, pic_input: user.username })
+            .update({ status: 'IN GUDANG', pic_input: user.username })
             .in('qrcode', qrsToUpdate);
         if (errUpdate) throw new Error("Gagal update hasil_stbj_langsir: " + errUpdate.message);
 
@@ -489,7 +485,6 @@ async function saveToSupabase() {
     }
 }
 
-// REVISI: Hold Langsir hanya update status di hasil_stbj_langsir
 async function holdLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
     if(checkedBoxes.length === 0) return alert("Anda harus mencentang data yang bermasalah terlebih dahulu.");
@@ -506,9 +501,25 @@ async function holdLangsir() {
         const qr = div.querySelector('.qr-val').innerText;
         const ketUser = div.querySelector('.ket-cell').innerText;
         
+        const tgl_produksi = div.querySelector('.col-tgl').innerText;
+        const mesin = div.querySelector('.col-mesin').innerText;
+        const shift = div.querySelector('.col-shift').innerText;
+        const jenis = div.querySelector('.col-jenis').innerText;
+        const nama = div.querySelector('.col-nama').innerText;
+        const pjg = div.querySelector('.col-pjg').innerText;
+        const grade = div.querySelector('.col-grade').innerText;
+        const dus = div.querySelector('.col-dus').innerText;
+        const shading = div.querySelector('.col-shading').innerText;
+        const customer = div.querySelector('.col-customer').innerText;
+
         qrsToHold.push(qr);
+        
+        // REVISI: Hapus area dari payload upsert hasil_stbj_langsir
         updates.push({
             qrcode: qr,
+            tgl_produksi: tgl_produksi, mesin: mesin, shift: shift,
+            jenis_item: jenis, nama_item: nama, panjang: pjg, grade: grade,
+            dus: dus, shading: shading, customer: customer,
             status: 'HOLD LANGSIR',
             keterangan: `Di-hold saat Langsir. Note: ${ketUser}`,
             pic_input: user.username
@@ -516,7 +527,6 @@ async function holdLangsir() {
     });
 
     try {
-        // Upsert untuk memastikan jika belum ada di tabel, dia akan terbuat dengan status HOLD LANGSIR
         const { error } = await db.from('hasil_stbj_langsir').upsert(updates, { onConflict: 'qrcode' });
         if(error) throw error;
         
