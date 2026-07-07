@@ -1,5 +1,5 @@
 let modeSekarang = 'qrcode'; 
-let tabelSekarang = 'hasil_stbj'; 
+let statusSekarang = 'STBJ'; // REVISI: Default filter status
 let rawDataRaw = [];
 let kamusData = [];
 let jasperData = [];
@@ -11,7 +11,7 @@ let activeFilters = {};
 let currentFilterCol = ''; 
 
 let userColOrder = []; 
-let selectAllState = 0; // 0: none, 1: page, 2: all filtered
+let selectAllState = 0; 
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
@@ -221,12 +221,13 @@ async function loadKamusDanJasper() {
     } catch(e) { console.log("Tabel nama_jasper belum siap."); }
 }
 
+// REVISI: Mengambil data dari hasil_stbj_langsir berdasarkan status
 async function muatDataDariSupabase() {
     const tbody = document.getElementById('tbody-stbj');
     tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500 text-sm">Menarik Data...</p></td></tr>`;
     lucide.createIcons();
     try {
-        const { data, error } = await db.from(tabelSekarang).select('*').order('created_at', {ascending: false});
+        const { data, error } = await db.from('hasil_stbj_langsir').select('*').eq('status', statusSekarang).order('created_at', {ascending: false});
         if(error) throw error;
         
         if(data && data.length > 0) {
@@ -254,32 +255,42 @@ function setMode(m) {
     
     const btnCollect = document.getElementById('btn-massal-collect');
     const btnCollectMob = document.getElementById('btn-massal-collect-mob');
-    const btnHold = document.getElementById('btn-hold');
-    const btnHoldMob = document.getElementById('btn-hold-mob');
-    const btnHapus = document.getElementById('btn-hapus');
-    const btnHapusMob = document.getElementById('btn-hapus-mob');
+    const btnHold = document.getElementById('btn-hold-mob');
+    const btnHapus = document.getElementById('btn-hapus-mob');
     
     if (m === 'item' || m === 'jasper') {
         if(btnCollect) btnCollect.classList.remove('hidden'); 
         if(btnCollectMob) btnCollectMob.classList.remove('hidden'); 
         if(btnHold) btnHold.classList.add('hidden');
-        if(btnHoldMob) btnHoldMob.classList.add('hidden');
         if(btnHapus) btnHapus.classList.add('hidden');
-        if(btnHapusMob) btnHapusMob.classList.add('hidden');
     } else {
         if(btnCollect) btnCollect.classList.add('hidden'); 
         if(btnCollectMob) btnCollectMob.classList.add('hidden'); 
         if(btnHold) btnHold.classList.remove('hidden');
-        if(btnHoldMob) btnHoldMob.classList.remove('hidden');
         if(btnHapus) btnHapus.classList.remove('hidden');
-        if(btnHapusMob) btnHapusMob.classList.remove('hidden');
     }
 
     activeFilters = {}; 
     renderHeaderDanTabel();
 }
 
-function switchTable(val) { tabelSekarang = val; muatDataDariSupabase(); }
+// REVISI: Fungsi switchStatusFilter
+function switchStatusFilter(val) { 
+    statusSekarang = val; 
+    
+    // Ubah teks tombol Hold di mobile menu sesuai status
+    const btnHoldMob = document.getElementById('btn-hold-mob');
+    if(btnHoldMob) {
+        if(statusSekarang === 'STBJ') {
+            btnHoldMob.innerHTML = '<i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Item';
+        } else {
+            btnHoldMob.innerHTML = '<i data-lucide="play-circle" class="w-4 h-4"></i> Unhold Item';
+        }
+        lucide.createIcons();
+    }
+    
+    muatDataDariSupabase(); 
+}
 
 function sortTable(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-stbj');
@@ -494,9 +505,6 @@ function hitungQtyLembar(jenis, nama, qtyDus) {
     return 0;
 }
 
-// ========================================================
-// TRI-STATE CHECKBOX LOGIC (0: KOSONG, 1: PAGE, 2: ALL)
-// ========================================================
 window.cycleSelectAll = function() {
     selectAllState = (selectAllState + 1) % 3;
     updateSelectAllUI();
@@ -580,7 +588,7 @@ function renderHeaderDanTabel() {
                     <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
                 ${thSort('Status Item', 'col-status-gudang text-center')}
-                ${tabelSekarang === 'hold_stbj' ? thSort('Status Hold', 'col-status text-center') : '<th class="hdr-std hidden col-status">Status Hold</th>'}
+                ${statusSekarang === 'HOLD STBJ' ? thSort('Status Hold', 'col-status text-center') : '<th class="hdr-std hidden col-status">Status Hold</th>'}
                 ${thSort('Collect', 'col-status-data text-center')}
                 ${thSort('Waktu Scan', 'col-waktu text-center')}
                 ${thSort('Troli', 'col-troli text-center')}
@@ -625,7 +633,7 @@ function renderHeaderDanTabel() {
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 text-center col-status-gudang" data-search="${r.is_in_gudang ? 'IN GUDANG' : 'STBJ'}">${htmlStatusGudang}</td>
-                    ${tabelSekarang === 'hold_stbj' ? `<td class="px-4 py-3 text-center font-black text-rose-600 col-status" data-search="${r.status || 'HOLD'}">${r.status || 'HOLD'}</td>` : '<td class="px-4 py-3 hidden col-status">-</td>'}
+                    ${statusSekarang === 'HOLD STBJ' ? `<td class="px-4 py-3 text-center font-black text-rose-600 col-status" data-search="${r.status || 'HOLD'}">${r.status || 'HOLD'}</td>` : '<td class="px-4 py-3 hidden col-status">-</td>'}
                     <td class="px-4 py-3 text-center col-status-data" data-search="${r.status_data || '-'}">${statData}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-waktu" data-search="${tgl}">${tgl}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-troli" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
@@ -853,12 +861,12 @@ function applyPagination() {
     if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
     if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
     
-    // Reset select all state jika pindah halaman (hanya jika state = 1 / current page)
     if (selectAllState === 1) {
         selectAllState = 0;
         updateSelectAllUI();
     }
     
+    applySelection();
     updateSelectedCount();
 }
 
@@ -971,13 +979,14 @@ async function simpanDataJasper() {
 
         if(errorRes) throw errorRes;
         
-        const { error: errUpdateHasil } = await db.from('hasil_stbj')
+        // REVISI: Update ke hasil_stbj_langsir
+        const { error: errUpdateHasil } = await db.from('hasil_stbj_langsir')
             .update({ nama_jasper: output })
             .eq('nama_item', nama)
             .eq('panjang', pjg)
             .eq('grade', grade);
             
-        if(errUpdateHasil) console.error("Gagal update hasil_stbj:", errUpdateHasil);
+        if(errUpdateHasil) console.error("Gagal update hasil_stbj_langsir:", errUpdateHasil);
         
         tutupModalJasperForm();
         
@@ -996,9 +1005,9 @@ async function simpanDataJasper() {
 }
 
 async function aksiHapusPerBaris(qrcode) {
-    if(!confirm(`Hapus permanen QRCode ini dari tabel ${tabelSekarang}?`)) return;
+    if(!confirm(`Hapus permanen QRCode ini dari database?`)) return;
     try {
-        const { error } = await db.from(tabelSekarang).delete().eq('qrcode', qrcode);
+        const { error } = await db.from('hasil_stbj_langsir').delete().eq('qrcode', qrcode);
         if(error) throw error;
         await muatDataDariSupabase();
     } catch(e) { alert("Gagal hapus: " + e.message); }
@@ -1032,26 +1041,15 @@ async function aksiMassal(tipe) {
         alert(`Tersalin baris! Buka Excel dan Paste (Ctrl+V).`);
     } 
     else if(tipe === 'hold') {
-        if(tabelSekarang === 'hasil_stbj') {
-            if(!confirm(`Pindahkan ${checkedValues.length} data HASIL -> tabel HOLD (Duplikat)?`)) return;
-            const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ 
-                troli: r.troli, qrcode: r.qrcode, tgl_produksi: r.tgl_produksi, shift: r.shift, mesin: r.mesin, 
-                nama_item: r.nama_item, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, 
-                customer_bawaan: r.customer, keterangan: r.keterangan, status: 'HOLD', status_data: r.status_data, 
-                posisi: r.posisi, pic_input: r.pic_input 
-            }));
-            const { error: errAdd } = await db.from('hold_stbj').upsert(dataPindah);
-            if(!errAdd) { await db.from('hasil_stbj').delete().in('qrcode', checkedValues); muatDataDariSupabase(); }
+        // REVISI: Update status di hasil_stbj_langsir
+        if(statusSekarang === 'STBJ') {
+            if(!confirm(`Ubah status ${checkedValues.length} data menjadi HOLD STBJ?`)) return;
+            const { error } = await db.from('hasil_stbj_langsir').update({status: 'HOLD STBJ'}).in('qrcode', checkedValues);
+            if(!error) muatDataDariSupabase();
         } else {
-            if(!confirm(`Unhold ${checkedValues.length} data HOLD -> tabel HASIL (Unique)?`)) return;
-            const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({ 
-                troli: r.troli, qrcode: r.qrcode, tgl_produksi: r.tgl_produksi, shift: r.shift, mesin: r.mesin, 
-                nama_item: r.nama_item, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, 
-                customer: r.customer_bawaan, keterangan: r.keterangan, status: 'SUDAH STBJ', status_data: r.status_data, 
-                posisi: r.posisi, pic_input: r.pic_input, nama_jasper: '-'
-            }));
-            const { error: errAdd } = await db.from('hasil_stbj').upsert(dataPindah);
-            if(!errAdd) { await db.from('hold_stbj').delete().in('qrcode', checkedValues); muatDataDariSupabase(); }
+            if(!confirm(`Unhold ${checkedValues.length} data kembali menjadi STBJ?`)) return;
+            const { error } = await db.from('hasil_stbj_langsir').update({status: 'STBJ'}).in('qrcode', checkedValues);
+            if(!error) muatDataDariSupabase();
         }
     }
     else if (tipe === 'collect') {
@@ -1085,7 +1083,7 @@ async function aksiMassal(tipe) {
             const chunkSize = 50;
             for (let i = 0; i < updates.length; i += chunkSize) {
                 const chunk = updates.slice(i, i + chunkSize);
-                await Promise.all(chunk.map(u => db.from(tabelSekarang).update({ status_data: u.status_data }).eq('qrcode', u.qrcode)));
+                await Promise.all(chunk.map(u => db.from('hasil_stbj_langsir').update({ status_data: u.status_data }).eq('qrcode', u.qrcode)));
             }
             await muatDataDariSupabase();
         } catch (error) {
@@ -1097,14 +1095,14 @@ async function aksiMassal(tipe) {
         lucide.createIcons();
     }
     else if(tipe === 'hapus') {
-        if(!confirm(`Yakin ingin menghapus permanen ${checkedValues.length} data ini dari tabel ${tabelSekarang}?`)) return;
+        if(!confirm(`Yakin ingin menghapus permanen ${checkedValues.length} data ini dari database?`)) return;
         
-        const btn = document.getElementById('btn-hapus'); 
+        const btn = document.getElementById('btn-hapus-mob'); 
         const ori = btn ? btn.innerHTML : '';
-        if(btn) { btn.innerHTML = '<div class="bg-rose-800 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-rose-700 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-rose-600 transition">Proses...</div>'; btn.disabled = true; }
+        if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Proses...'; btn.disabled = true; }
 
         try {
-            const { error } = await db.from(tabelSekarang).delete().in('qrcode', checkedValues);
+            const { error } = await db.from('hasil_stbj_langsir').delete().in('qrcode', checkedValues);
             if(error) throw error;
             alert(`Berhasil menghapus ${checkedValues.length} data.`);
             await muatDataDariSupabase();
@@ -1139,6 +1137,6 @@ async function aksiMassal(tipe) {
         let ws = XLSX.utils.aoa_to_sheet(ws_data);
         let wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "STBJ_Data");
-        XLSX.writeFile(wb, `STBJ_${tabelSekarang}_${modeSekarang.toUpperCase()}.xlsx`);
+        XLSX.writeFile(wb, `STBJ_${statusSekarang}_${modeSekarang.toUpperCase()}.xlsx`);
     }
 }
