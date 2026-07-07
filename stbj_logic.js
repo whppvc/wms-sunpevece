@@ -95,23 +95,23 @@ function renderTable() {
         let badgeClass = "bg-slate-200 text-slate-700 border-slate-300";
         let displayStatus = d.status;
 
-        // REVISI: Pewarnaan Status sesuai instruksi (Hijau & Merah)
+        // REVISI: Pewarnaan Status (SUDAH STBJ = Merah Font Putih)
         if(d.status === 'BELUM STBJ') {
             badgeClass = "bg-emerald-600 text-white border-emerald-700"; 
         } 
-        else if(['RETUR', 'STBJ', 'HOLD STBJ', 'IN GUDANG', 'HOLD LANGSIR', 'DUPLIKAT SCAN'].includes(d.status)) {
-            badgeClass = "bg-red-600 text-white border-red-700"; 
+        else if(['RETUR', 'STBJ', 'SUDAH STBJ', 'HOLD STBJ', 'IN GUDANG', 'HOLD LANGSIR', 'DUPLIKAT SCAN'].includes(d.status)) {
+            badgeClass = "bg-red-600 text-white border-red-800"; 
         }
         else if(d.status === 'HOLD') {
             badgeClass = "bg-amber-500 text-white border-amber-600";
         }
 
         if(d.status === 'BELUM CEK' && d.isLocalDuplicate) {
-            badgeClass = "bg-red-600 text-white border-red-700";
+            badgeClass = "bg-red-600 text-white border-red-800";
             displayStatus = "DUPLIKAT SCAN";
         }
 
-        const isRedHighlight = ['RETUR', 'STBJ', 'HOLD STBJ', 'IN GUDANG', 'HOLD LANGSIR', 'DUPLIKAT SCAN'].includes(d.status) || d.isLocalDuplicate;
+        const isRedHighlight = ['RETUR', 'STBJ', 'SUDAH STBJ', 'HOLD STBJ', 'IN GUDANG', 'HOLD LANGSIR', 'DUPLIKAT SCAN'].includes(d.status) || d.isLocalDuplicate;
         const rowClass = isRedHighlight ? 'bg-red-50 hover:bg-red-100' : (d.status === 'HOLD' ? 'bg-amber-50 hover:bg-amber-100' : 'bg-white hover:bg-slate-50');
 
         html += `
@@ -320,7 +320,6 @@ function saringTabelSTBJ() {
     document.getElementById('lbl-tampil-baris').innerText = visibleCount;
 }
 
-// REVISI: Logika Verifikasi Baru (hasil_stbj_langsir & stok_global)
 async function cekGudangSTBJ() {
     if(dataStbj.length === 0) return alert("Belum ada data.");
     const btn = document.getElementById('btn-cek-gudang'); const ori = btn.innerHTML;
@@ -354,8 +353,14 @@ async function cekGudangSTBJ() {
                 infoDuplikat++;
             } else if (hasilMap[d.qrcode]) {
                 let statDB = hasilMap[d.qrcode].status;
-                d.status = statDB; // 'STBJ', 'HOLD STBJ', 'IN GUDANG', 'HOLD LANGSIR'
-                d.keterangan = `SUDAH ADA DI DATABASE (${statDB})`;
+                // REVISI: Jika sudah STBJ, set status menjadi SUDAH STBJ agar berwarna merah
+                if (statDB === 'STBJ') {
+                    d.status = 'SUDAH STBJ';
+                    d.keterangan = 'SUDAH ADA DI DATABASE (STBJ)';
+                } else {
+                    d.status = statDB; 
+                    d.keterangan = `SUDAH ADA DI DATABASE (${statDB})`;
+                }
                 infoDuplikat++;
             } else if (d.isLocalDuplicate) {
                 d.status = 'DUPLIKAT SCAN';
@@ -372,7 +377,6 @@ async function cekGudangSTBJ() {
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
-// REVISI: Simpan ke tabel hasil_stbj_langsir
 async function saveToDatabaseSTBJ() {
     if(dataStbj.length === 0) return alert('Data kosong!');
     const blmCek = dataStbj.filter(d => d.status === 'BELUM CEK');
