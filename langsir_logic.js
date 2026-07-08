@@ -153,7 +153,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 200); 
 });
 
-// REVISI: Menambahkan class status-container di baris HTML
 function addRow(area, code, isDuplicate = false) {
     const div = document.createElement('div'); 
     const rowClass = isDuplicate ? 'bg-red-50 hover:bg-red-100' : 'bg-white hover:bg-slate-50';
@@ -196,7 +195,6 @@ function addRow(area, code, isDuplicate = false) {
             <div class="text-[11px] font-bold text-slate-500 mt-1">Keterangan: <span class="col-ket ket-cell text-slate-700">-</span></div>
             <div class="text-[11px] font-bold text-slate-500">Troli: <span class="col-troli troli-cell text-slate-700">-</span></div>
             
-            <!-- REVISI: Ditambahkan class status-container agar penambahan badge dinamis lebih mudah -->
             <div class="flex flex-row flex-wrap items-center gap-1.5 mt-1.5 status-container">
                 ${statusHtml}
             </div>
@@ -310,7 +308,6 @@ function editKeteranganMassal() {
     toggleSemuaCentang(false);
 }
 
-// REVISI: Logika Verifikasi untuk Menampilkan Badge Kuning "HOLD LANGSIR" di samping status
 async function VerifikasiDanCek() {
     const rows = document.querySelectorAll('.row-item:not(.deleted-row):not(.filtered-out)');
     if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
@@ -345,15 +342,24 @@ async function VerifikasiDanCek() {
             let internalStatus = 'invalid';
             let isHoldLangsir = false;
 
+            // REVISI: Cek apakah secara lokal ditandai manual sebagai Hold Langsir
+            let isManuallyHeld = r.getAttribute('data-hold-langsir') === 'true';
+
             if (hasilMap[qr]) {
                 let statDB = hasilMap[qr].status;
                 if(troliCell.innerText === '-' && hasilMap[qr].troli) troliCell.innerText = hasilMap[qr].troli;
                 if(!ketCell.classList.contains('text-slate-800')) ketCell.innerText = hasilMap[qr].keterangan || '-';
 
                 if (statDB === 'STBJ' || statDB === 'SUDAH STBJ') {
-                    statusText = 'SUDAH STBJ';
-                    statusClass = 'bg-emerald-600 text-white border-emerald-700';
-                    internalStatus = 'valid';
+                    if (isManuallyHeld) {
+                        statusText = 'HOLD LANGSIR';
+                        statusClass = 'bg-yellow-500 text-white border-yellow-600';
+                        internalStatus = 'valid_hold';
+                    } else {
+                        statusText = 'SUDAH STBJ';
+                        statusClass = 'bg-emerald-600 text-white border-emerald-700';
+                        internalStatus = 'valid';
+                    }
                 } else if (statDB === 'HOLD STBJ') {
                     statusText = 'HOLD STBJ';
                     statusClass = 'bg-orange-500 text-white border-orange-600';
@@ -365,7 +371,7 @@ async function VerifikasiDanCek() {
                 } else if (statDB === 'HOLD LANGSIR') {
                     statusText = 'DUPLIKAT DATA';
                     statusClass = 'bg-red-600 text-white border-red-800';
-                    isHoldLangsir = true; // Tandai untuk memunculkan badge kuning
+                    isHoldLangsir = true; 
                     hasError = true;
                 }
             } else if (globalSet.has(qr)) {
@@ -378,10 +384,8 @@ async function VerifikasiDanCek() {
                 hasError = true;
             }
 
-            // Render Badge Utama
             let statusHtml = `<span class="font-bold px-3 py-1 text-[10px] status-val rounded-sm shadow-sm ${statusClass}" data-status="${internalStatus}">${statusText}</span>`;
             
-            // REVISI: Jika status di DB adalah HOLD LANGSIR, tambahkan badge kuning di sampingnya
             if (isHoldLangsir) {
                 statusHtml += `<span class="bg-yellow-500 text-white font-bold px-3 py-1 text-[10px] rounded-sm shadow-sm border border-yellow-600">HOLD LANGSIR</span>`;
             }
@@ -416,10 +420,17 @@ async function saveToSupabase() {
     let holdItems = [];
 
     rowsToProcess.forEach(r => {
-        const status = r.querySelector('.status-val').getAttribute('data-status');
-        if (status === 'valid') validItems.push(r);
-        else if (status === 'valid_hold') holdItems.push(r);
-        else hasInvalid = true;
+        const statusVal = r.querySelector('.status-val');
+        const status = statusVal ? statusVal.getAttribute('data-status') : '';
+        const isManuallyHeld = r.getAttribute('data-hold-langsir') === 'true';
+
+        if (status === 'valid' && !isManuallyHeld) {
+            validItems.push(r);
+        } else if (status === 'valid_hold' || isManuallyHeld) {
+            holdItems.push(r);
+        } else {
+            hasInvalid = true;
+        }
     });
 
     if(hasInvalid) {
@@ -536,71 +547,31 @@ async function saveToSupabase() {
     }
 }
 
+// REVISI: Fungsi Hold Langsir (Hanya menandai secara LOKAL di UI, tidak langsung ke DB)
 async function holdLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
-    if(checkedBoxes.length === 0) return alert("Pilih (centang) item yang ingin di-Hold Langsir terlebih dahulu!");
-
-    if(!confirm(`Ubah status ${checkedBoxes.length} item yang dipilih menjadi HOLD LANGSIR?`)) return;
-
-    const btn = document.getElementById('btn-menu-utama'); const ori = btn ? btn.innerHTML : '';
-    if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>'; btn.disabled = true; }
-
-    const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
-    let updates = [];
-    let qrsToProcess = [];
+    if(checkedBoxes.length === 0) return alert("Pilih (centang) item yang ingin ditandai sebagai Hold Langsir!");
 
     checkedBoxes.forEach(cb => {
-        const div = cb.closest('.row-item');
-        const qr = div.querySelector('.qr-val').innerText;
-        const area = div.querySelector('.area-cell').innerText;
-        const ketUser = div.querySelector('.ket-cell').innerText;
+        const row = cb.closest('.row-item');
+        row.setAttribute('data-hold-langsir', 'true'); // Set penanda lokal
         
-        const tgl_produksi = div.querySelector('.col-tgl').innerText;
-        const mesin = div.querySelector('.col-mesin').innerText;
-        const shift = div.querySelector('.col-shift').innerText;
-        const jenis = div.querySelector('.col-jenis').innerText;
-        const nama = div.querySelector('.col-nama').innerText;
-        const pjg = div.querySelector('.col-pjg').innerText;
-        const grade = div.querySelector('.col-grade').innerText;
-        const dus = div.querySelector('.col-dus').innerText;
-        const shading = div.querySelector('.col-shading').innerText;
-        const customer = div.querySelector('.col-customer').innerText;
-
-        qrsToProcess.push(qr);
-
-        updates.push({
-            qrcode: qr,
-            tgl_produksi: tgl_produksi, mesin: mesin, shift: shift,
-            jenis_item: jenis, nama_item: nama, panjang: pjg, grade: grade,
-            dus: dus, shading: shading, customer: customer,
-            status: 'HOLD LANGSIR',
-            posisi: area === '?' ? null : area, 
-            keterangan: `Di-hold saat Langsir. Note: ${ketUser}`,
-            pic_input: user.username
-        });
+        const statusContainer = row.querySelector('.status-container');
+        if (statusContainer) {
+            // Ubah badge menjadi kuning HOLD LANGSIR secara lokal
+            statusContainer.innerHTML = `
+                <span class="font-bold px-3 py-1 text-[10px] status-val rounded-sm shadow-sm bg-yellow-500 text-white border border-yellow-600" data-status="valid_hold">HOLD LANGSIR</span>
+            `;
+        }
+        
+        // Uncheck & hilangkan highlight biru
+        cb.checked = false;
+        row.classList.remove('selected-row');
     });
 
-    try {
-        const { error } = await db.from('hasil_stbj_langsir').upsert(updates, { onConflict: 'qrcode' });
-        if(error) throw error;
-        
-        checkedBoxes.forEach(cb => { 
-            const div = cb.closest('.row-item');
-            deleteStack.push(div); 
-            div.classList.add('deleted-row');
-            div.style.display = 'none'; 
-        });
-        updateRowNumbers(); 
-        updateTotalBaris();
-        document.querySelector('#cb-all').checked = false;
-        
-        alert(`SUKSES!\n${updates.length} Data berhasil diubah statusnya menjadi "HOLD LANGSIR".`);
-    } catch(e) { 
-        alert("Gagal melakukan Hold Langsir: " + e.message); 
-    } finally { 
-        if(btn) { btn.innerHTML = ori; btn.disabled = false; } 
-        lucide.createIcons(); 
-    }
+    document.querySelector('#cb-all').checked = false;
+    
+    alert(`Berhasil menandai ${checkedBoxes.length} item sebagai HOLD LANGSIR di layar.\n\nSilakan Scan Area untuk item tersebut, lalu klik Simpan ke Gudang.`);
 }
 
 function salinDataTabel() {
