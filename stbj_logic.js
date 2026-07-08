@@ -29,22 +29,33 @@ window.tutupModalAdd = function() {
 
 async function loadInitialSTBJData() {
     try {
+        // 1. Muat data Troli dari master_1
         const { data: mData1 } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
         if(mData1) {
             const trolis = [...new Set(mData1.map(r => r.nama_troli).filter(x => x))];
             const sel = document.getElementById('select-troli');
-            sel.innerHTML = '<option value="">-- Memuat Troli... --</option>';
+            sel.innerHTML = '<option value="">-- Pilih Troli --</option>';
             trolis.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
         }
+
+        // 2. Muat data Kamus Item dari master_2
         const { data: mData2 } = await db.from('master_2').select('*');
         if(mData2) {
             masterKamus = mData2;
-            window.masterData = { kamus: mData2 }; 
+            if(!window.masterData) window.masterData = {};
+            window.masterData.kamus = mData2; 
+        }
+
+        // 3. Muat Katalog Nama Jasper dari Supabase (Perbaikan Baru)
+        const { data: mJasper, error: errJasper } = await db.from('nama_jasper').select('*');
+        if(!errJasper && mJasper) {
+            if(!window.masterData) window.masterData = {};
+            window.masterData.jasper = mJasper;
         }
     } catch (err) { console.error("Gagal muat referensi:", err); }
 }
 
-// REVISI FIX: Menggunakan Event Delegation agar tidak putus saat layout dirender ulang
+// Menggunakan Event Delegation agar tidak putus saat layout dirender ulang
 document.addEventListener('submit', function(e) {
     if (e.target && e.target.id === 'form-scan') {
         e.preventDefault();
@@ -240,14 +251,14 @@ function hapusBaris(id) {
     }
 }
 
-function undoHapusSTBJ() {
+window.undoHapusSTBJ = function() {
     if(deletedStbjStack.length === 0) return alert("Tidak ada histori penghapusan yang dapat di-undo.");
     const last = deletedStbjStack.pop();
     dataStbj = [...dataStbj, ...last]; 
     renderTable();
 }
 
-function holdManual() {
+window.holdManual = function() {
     const ids = getCheckedIds(); if(ids.length === 0) return alert("Centang baris yang ingin di-HOLD manual!");
     dataStbj.forEach(d => { if(ids.includes(d.id)) { d.status = 'HOLD'; d.keterangan = 'Dihold Manual'; } });
     renderTable(); document.querySelector('#cb-all').checked = false;
@@ -255,24 +266,24 @@ function holdManual() {
 
 function updateKet(id, val) { const item = dataStbj.find(d => d.id === id); if(item) item.keterangan = val; }
 
-function toggleSidebarFilter() {
+window.toggleSidebarFilter = function() {
     document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
     document.getElementById('overlay-klik-luar').classList.toggle('hidden');
 }
 
-function tutupPopups() {
+window.tutupPopups = function() {
     document.getElementById('sidebar-filter').classList.add('translate-x-full');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
-    tutupModalAdd();
+    window.tutupModalAdd();
 }
 
-function resetFilterSTBJ() {
+window.resetFilterSTBJ = function() {
     const ids = ['fs-status','fs-troli','fs-qr','fs-tgl','fs-mesin','fs-shift','fs-jenis','fs-nama','fs-pjg','fs-grade','fs-dus','fs-shading','fs-customer','fs-ket'];
     ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; });
-    saringTabelSTBJ(); toggleSidebarFilter();
+    window.saringTabelSTBJ(); window.toggleSidebarFilter();
 }
 
-function saringTabelSTBJ() {
+window.saringTabelSTBJ = function() {
     const f = {
         status: document.getElementById('fs-status')?.value || '',
         troli: document.getElementById('fs-troli')?.value || '',
@@ -324,7 +335,7 @@ function saringTabelSTBJ() {
     document.getElementById('lbl-tampil-baris').innerText = visibleCount;
 }
 
-async function cekGudangSTBJ() {
+window.cekGudangSTBJ = async function() {
     if(dataStbj.length === 0) return alert("Belum ada data.");
     const btn = document.getElementById('btn-cek-gudang'); const ori = btn.innerHTML;
     btn.innerHTML = '<div class="bg-slate-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="animate-spin w-4 h-4"></i></div><div class="bg-slate-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-700 transition">Mengecek...</div>'; btn.disabled = true;
@@ -380,7 +391,7 @@ async function cekGudangSTBJ() {
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
-async function saveToDatabaseSTBJ() {
+window.saveToDatabaseSTBJ = async function() {
     if(dataStbj.length === 0) return alert('Data kosong!');
     const blmCek = dataStbj.filter(d => d.status === 'BELUM CEK');
     if(blmCek.length > 0) return alert('Tekan tombol Verifikasi Kode terlebih dahulu sebelum menyimpan!');
@@ -392,9 +403,14 @@ async function saveToDatabaseSTBJ() {
     const dupes = dataStbj.filter(d => d.status !== 'BELUM STBJ' && d.status !== 'BELUM CEK');
 
     const mapToDB = (d, finalStatus) => {
+        // Cari nama jasper dari window.masterData.jasper yang sudah di-load (Perbaikan Baru)
         let jName = `JAS-${d.namaItem}`;
         if (window.masterData && window.masterData.jasper) {
-            const cJasper = window.masterData.jasper.find(j => j.nama_item === d.namaItem && j.panjang === d.panjang && j.grade === d.grade);
+            const cJasper = window.masterData.jasper.find(j => 
+                (j.nama_item || '').trim().toUpperCase() === (d.namaItem || '').trim().toUpperCase() && 
+                (j.panjang || '').trim().toUpperCase() === (d.panjang || '').trim().toUpperCase() && 
+                (j.grade || '').trim().toUpperCase() === (d.grade || '').trim().toUpperCase()
+            );
             if (cJasper) jName = cJasper.nama_jasper;
         }
 
@@ -433,8 +449,7 @@ async function saveToDatabaseSTBJ() {
         dataStbj = []; renderTable();
         document.getElementById('cb-all').checked = false;
         
-        // REVISI: Tutup modal setelah simpan
-        if(typeof tutupModalAdd === 'function') tutupModalAdd();
+        if(typeof window.tutupModalAdd === 'function') window.tutupModalAdd();
         
     } catch (err) { alert('GAGAL MENYIMPAN: ' + err.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
