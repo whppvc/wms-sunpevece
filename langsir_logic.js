@@ -69,7 +69,6 @@ document.addEventListener('click', function(e) {
 document.addEventListener('DOMContentLoaded', async () => {
     if(typeof initModernLayout === 'function') initModernLayout({ id: 'langsir', title: 'LANGSIR', url: 'langsir.html' }); 
     
-    // REVISI FIX: Event Delegation murni tanpa memanggil select-troli (Troli dihapus)
     document.addEventListener('submit', function(e) {
         if (e.target && e.target.id === 'form-scan') {
             e.preventDefault();
@@ -84,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             codes.forEach(code => { 
                 const isLocalDuplicate = existingQRs.includes(code);
-                addRow('?', code, isLocalDuplicate); // Area diset '?' secara default
+                addRow('?', code, isLocalDuplicate); 
                 if(!isLocalDuplicate) existingQRs.push(code); 
             });
             
@@ -154,7 +153,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 200); 
 });
 
-// REVISI: addRow disederhanakan tanpa parameter troli
 function addRow(area, code, isDuplicate = false) {
     const div = document.createElement('div'); 
     const rowClass = isDuplicate ? 'bg-red-50 hover:bg-red-100' : 'bg-white hover:bg-slate-50';
@@ -293,7 +291,7 @@ function editKeteranganMassal() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
     if (checkedBoxes.length === 0) return alert("Pilih / centang data yang keterangannya ingin diedit!");
 
-    const newKet = prompt(`Masukkan keterangan baru:\n(Akan menimpa Keterangan Verifikasi)`);
+    const newKet = prompt("Masukkan keterangan baru:");
     if (newKet === null) return; 
 
     checkedBoxes.forEach(cb => {
@@ -527,6 +525,74 @@ async function saveToSupabase() {
     } finally {
         btn.innerHTML = original; 
         btn.disabled = false; 
+    }
+}
+
+// REVISI: Fungsi Hold Langsir (Mengubah status menjadi HOLD LANGSIR & mencatat area/posisi jika ada)
+async function holdLangsir() {
+    const checkedBoxes = document.querySelectorAll('.cb-row:checked');
+    if(checkedBoxes.length === 0) return alert("Pilih (centang) item yang ingin di-Hold Langsir terlebih dahulu!");
+
+    if(!confirm(`Ubah status ${checkedBoxes.length} item yang dipilih menjadi HOLD LANGSIR?`)) return;
+
+    const btn = document.getElementById('btn-menu-utama'); const ori = btn ? btn.innerHTML : '';
+    if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>'; btn.disabled = true; }
+
+    const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
+    let updates = [];
+    let qrsToProcess = [];
+
+    checkedBoxes.forEach(cb => {
+        const div = cb.closest('.row-item');
+        const qr = div.querySelector('.qr-val').innerText;
+        const area = div.querySelector('.area-cell').innerText;
+        const ketUser = div.querySelector('.ket-cell').innerText;
+        
+        const tgl_produksi = div.querySelector('.col-tgl').innerText;
+        const mesin = div.querySelector('.col-mesin').innerText;
+        const shift = div.querySelector('.col-shift').innerText;
+        const jenis = div.querySelector('.col-jenis').innerText;
+        const nama = div.querySelector('.col-nama').innerText;
+        const pjg = div.querySelector('.col-pjg').innerText;
+        const grade = div.querySelector('.col-grade').innerText;
+        const dus = div.querySelector('.col-dus').innerText;
+        const shading = div.querySelector('.col-shading').innerText;
+        const customer = div.querySelector('.col-customer').innerText;
+
+        qrsToProcess.push(qr);
+
+        updates.push({
+            qrcode: qr,
+            tgl_produksi: tgl_produksi, mesin: mesin, shift: shift,
+            jenis_item: jenis, nama_item: nama, panjang: pjg, grade: grade,
+            dus: dus, shading: shading, customer: customer,
+            status: 'HOLD LANGSIR',
+            posisi: area === '?' ? null : area, // Rekam area jika sudah di-scan ke rak
+            keterangan: `Di-hold saat Langsir. Note: ${ketUser}`,
+            pic_input: user.username
+        });
+    });
+
+    try {
+        const { error } = await db.from('hasil_stbj_langsir').upsert(updates, { onConflict: 'qrcode' });
+        if(error) throw error;
+        
+        checkedBoxes.forEach(cb => { 
+            const div = cb.closest('.row-item');
+            deleteStack.push(div); 
+            div.classList.add('deleted-row');
+            div.style.display = 'none'; 
+        });
+        updateRowNumbers(); 
+        updateTotalBaris();
+        document.querySelector('#cb-all').checked = false;
+        
+        alert(`SUKSES!\n${updates.length} Data berhasil diubah statusnya menjadi "HOLD LANGSIR".`);
+    } catch(e) { 
+        alert("Gagal melakukan Hold Langsir: " + e.message); 
+    } finally { 
+        if(btn) { btn.innerHTML = ori; btn.disabled = false; } 
+        lucide.createIcons(); 
     }
 }
 
