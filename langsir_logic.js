@@ -16,7 +16,6 @@ window.tutupModalAdd = function() {
     document.getElementById('modal-add-scan').classList.add('hidden');
 };
 
-// REVISI: Fungsi Buka/Tutup Modal Scan Area
 window.bukaModalScanArea = function() {
     document.getElementById('modal-scan-area').classList.remove('hidden');
     setTimeout(() => document.getElementById('input-qrcode-area').focus(), 100);
@@ -70,11 +69,10 @@ document.addEventListener('click', function(e) {
 document.addEventListener('DOMContentLoaded', async () => {
     if(typeof initModernLayout === 'function') initModernLayout({ id: 'langsir', title: 'LANGSIR', url: 'langsir.html' }); 
     
-    // REVISI: Event Delegation untuk 2 Form (Troli & Area)
+    // REVISI FIX: Event Delegation untuk Form Scan agar tidak putus saat layout dirender
     document.addEventListener('submit', function(e) {
         if (e.target && e.target.id === 'form-scan') {
             e.preventDefault();
-            const troli = document.getElementById('select-troli').value;
             const rawInput = document.getElementById('input-qrcode').value.trim();
             
             if(!rawInput) return;
@@ -86,7 +84,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             codes.forEach(code => { 
                 const isLocalDuplicate = existingQRs.includes(code);
-                addRow('?', code, isLocalDuplicate, troli); // Area diset '?'
+                addRow('?', code, isLocalDuplicate); 
                 if(!isLocalDuplicate) existingQRs.push(code); 
             });
             
@@ -122,7 +120,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             document.getElementById('input-qrcode-area').value = '';
             
-            // Optional: Beri feedback visual
             const btnSubmit = e.target.querySelector('button[type="submit"]');
             const oriText = btnSubmit.innerHTML;
             btnSubmit.innerHTML = `<i data-lucide="check"></i> ${foundCount} ITEM DISET`;
@@ -133,15 +130,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setTimeout(async () => {
         try {
-            const { data: mDataTroli } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
-            if(mDataTroli) {
-                const trolis = [...new Set(mDataTroli.map(r => r.nama_troli).filter(x => x))];
-                const selTroli = document.getElementById('select-troli');
-                if(selTroli) {
-                    trolis.forEach(t => selTroli.innerHTML += `<option value="${t}">${t}</option>`);
-                }
-            }
-
             const { data: mDataArea } = await db.from('master_area').select('*').order('id', { ascending: true });
             if(mDataArea) {
                 masterData.area = [...new Set(mDataArea.map(r => (r.nama_area || r.area || '').trim()).filter(Boolean))]; 
@@ -166,7 +154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 200); 
 });
 
-function addRow(area, code, isDuplicate = false, troli = '-') {
+function addRow(area, code, isDuplicate = false) {
     const div = document.createElement('div'); 
     const rowClass = isDuplicate ? 'bg-red-50 hover:bg-red-100' : 'bg-white hover:bg-slate-50';
     div.className = `row-item ${rowClass} border-b border-slate-300 p-2.5 relative transition w-full flex shrink-0`; 
@@ -177,7 +165,6 @@ function addRow(area, code, isDuplicate = false, troli = '-') {
         ? '<span class="text-white font-bold bg-red-600 border border-red-800 px-3 py-1 text-[10px] status-val rounded-sm shadow-sm" data-status="invalid">DUPLIKAT SCAN</span>'
         : '<span class="text-slate-500 font-bold bg-slate-200 border border-slate-300 px-3 py-1 text-[10px] status-val rounded-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
 
-    // REVISI: Area '?' diberi warna merah agar mencolok
     const areaColor = area === '?' ? 'text-red-600' : 'text-emerald-700';
 
     div.innerHTML = `
@@ -207,7 +194,7 @@ function addRow(area, code, isDuplicate = false, troli = '-') {
             <div class="text-[12px] font-bold text-orange-600 col-customer uppercase">${td.customer}</div>
             
             <div class="text-[11px] font-bold text-slate-500 mt-1">Keterangan: <span class="col-ket ket-cell text-slate-700">-</span></div>
-            <div class="text-[11px] font-bold text-slate-500">Troli: <span class="col-troli troli-cell text-slate-700">${troli}</span></div>
+            <div class="text-[11px] font-bold text-slate-500">Troli: <span class="col-troli troli-cell text-slate-700">-</span></div>
             
             <div class="flex flex-row flex-wrap items-center gap-1.5 mt-1.5">
                 ${statusHtml}
@@ -367,7 +354,7 @@ async function VerifikasiDanCek() {
                 } else if (statDB === 'HOLD STBJ') {
                     statusText = 'HOLD STBJ';
                     statusClass = 'bg-orange-500 text-white border-orange-600';
-                    internalStatus = 'valid_hold'; // Boleh disimpan, nanti jadi HOLD LANGSIR
+                    internalStatus = 'valid_hold'; 
                 } else if (statDB === 'IN GUDANG' || statDB === 'HOLD LANGSIR') {
                     statusText = 'DUPLIKAT DATA';
                     statusClass = 'bg-red-600 text-white border-red-800';
@@ -403,8 +390,8 @@ async function VerifikasiDanCek() {
             }
         });
 
-        if(hasError) { alert("PERINGATAN!\nTerdapat data bermasalah (Belum STBJ / Duplikat). Data tersebut TIDAK BISA disimpan."); } 
-        else { alert("MANTAP!\nSemua data Valid. Silakan Scan Area Rak untuk menyimpan."); }
+        if(hasError) { alert("PERINGATAN!\nTerdapat data bermasalah (Belum STBJ / Hold / Duplikat). Data tersebut TIDAK BISA disimpan."); } 
+        else { alert("MANTAP!\nSemua data Valid (SUDAH STBJ). Siap disimpan ke Gudang."); }
     } catch (e) { alert("Koneksi Error: " + e.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
@@ -413,8 +400,6 @@ async function saveToSupabase() {
     const btn = document.getElementById('btn-save'); const original = btn.innerHTML;
     
     const activeRows = Array.from(document.querySelectorAll('.row-item:not(.deleted-row)'));
-    
-    // REVISI: Hanya proses baris yang sudah di-scan areanya (bukan '?')
     const rowsToProcess = activeRows.filter(r => r.querySelector('.area-cell').innerText !== '?');
 
     if(rowsToProcess.length === 0) return alert("Belum ada item yang di-scan ke Area Rak!");
@@ -442,7 +427,6 @@ async function saveToSupabase() {
     let updatesHold = [];
     let mapAktual = {}; 
 
-    // 1. Proses Item Valid (SUDAH STBJ -> IN GUDANG)
     validItems.forEach(r => {
         let area = r.querySelector('.area-cell').innerText; 
         let qr = r.querySelector('.qr-val').innerText;
@@ -484,7 +468,6 @@ async function saveToSupabase() {
         mapAktual[keyAkt].qty++;
     });
 
-    // 2. Proses Item Hold (HOLD STBJ -> HOLD LANGSIR)
     holdItems.forEach(r => {
         let area = r.querySelector('.area-cell').innerText; 
         let qr = r.querySelector('.qr-val').innerText;
@@ -497,7 +480,6 @@ async function saveToSupabase() {
     });
 
     try {
-        // Eksekusi Valid Items
         if (validItems.length > 0) {
             const { error: errInsert } = await db.from('stok_qr').upsert(arrFisik, { onConflict: 'qrcode' });
             if (errInsert) throw new Error("Gagal insert stok_qr: " + errInsert.message);
@@ -524,7 +506,6 @@ async function saveToSupabase() {
             }
         }
 
-        // Eksekusi Hold Items
         if (holdItems.length > 0) {
             const { error: errHold } = await db.from('hasil_stbj_langsir').upsert(updatesHold, { onConflict: 'qrcode' });
             if (errHold) throw new Error("Gagal update hold langsir: " + errHold.message);
@@ -532,7 +513,6 @@ async function saveToSupabase() {
 
         alert(`BERHASIL!\n${validItems.length} kardus masuk ke Gudang.\n${holdItems.length} kardus masuk ke Hold Langsir.`);
         
-        // Hapus baris yang sukses diproses dari DOM
         rowsToProcess.forEach(r => {
             deleteStack.push(r); 
             r.classList.add('deleted-row');
