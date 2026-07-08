@@ -773,7 +773,6 @@ function renderHeaderDanTabel() {
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 hidden col-status-gudang">-</td>
                     <td class="px-4 py-3 hidden col-status">-</td>
                     <td class="px-4 py-3 text-center col-status-data" data-search="${r.sData || '-'}">${statData}</td>
                     <td class="px-4 py-3 hidden col-waktu">-</td>
