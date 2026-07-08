@@ -801,13 +801,24 @@ function renderHeaderDanTabel() {
             let ket = r.keterangan || 'TANPA_KETERANGAN';
             let sData = r.status_data || 'BELUM';
             let cust = r.customer || '-';
-            let key = `${r.jenis_item}_${n}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${cust}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}`;
+
+            // REVISI 1: Ambil dan samakan status item untuk grouping
+            let itemStatus = r.status || '-';
+            if (itemStatus === 'STBJ' || itemStatus === 'SUDAH STBJ') {
+                itemStatus = 'SUDAH STBJ';
+            } else if (itemStatus === 'HOLD' || itemStatus === 'HOLD STBJ') {
+                itemStatus = 'HOLD STBJ';
+            }
+            
+            // Masukkan itemStatus ke dalam key agar item dengan status berbeda tidak tercampur
+            let key = `${r.jenis_item}_${n}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${cust}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}_${itemStatus}`;
             
             if(!groups[key]) {
                 groups[key] = { 
                     jenisItem: r.jenis_item, namaItemAsli: n, displayNama: jName, jasperId: jId, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, customer: cust,
                     tglProduksi: r.tgl_produksi, mesin: r.mesin, shift: r.shift,
-                    qty: 0, qrcodes: [], trolis: new Set(), ket: ket, sData: sData 
+                    qty: 0, qrcodes: [], trolis: new Set(), ket: ket, sData: sData,
+                    status: itemStatus // Simpan status ke dalam grup
                 };
             }
             groups[key].qty++; 
@@ -820,6 +831,7 @@ function renderHeaderDanTabel() {
 
         let h = '';
         arr.forEach((r) => {
+            const cbVal = r.qrcodes.join(',');
             const gabunganTroli = Array.from(r.trolis).join(', ') || '-';
             const displayKet = (r.ket === 'TANPA_KETERANGAN') ? '-' : r.ket; 
             
@@ -844,8 +856,11 @@ function renderHeaderDanTabel() {
 
             h += `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcodes.join(',')}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 hidden col-status">-</td>
+                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" value="${cbVal}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    
+                    <!-- REVISI 2: Tulis status asli ke data-search agar filter lokal dapat mendeteksi -->
+                    <td class="px-4 py-3 hidden col-status" data-search="${r.status}">${r.status}</td>
+                    
                     <td class="px-4 py-3 text-center col-status-data" data-search="${r.sData || '-'}">${statData}</td>
                     <td class="px-4 py-3 hidden col-waktu">-</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-troli" data-search="${gabunganTroli}">${gabunganTroli}</td>
