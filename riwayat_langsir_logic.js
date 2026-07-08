@@ -19,6 +19,41 @@ function safeJSONParse(data, fallback = null) {
 
 const currentUser = safeJSONParse(localStorage.getItem('user_session'), {username: 'Admin', role: 'admin'});
 
+// Helper untuk mendapatkan timestamp ISO 8601 dengan offset WIB (+07:00) yang akurat
+function getWIBTimestamp() {
+    const d = new Date();
+    const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+    const wib = new Date(utc + (3600000 * 7));
+    
+    const pad = (n) => String(n).padStart(2, '0');
+    const yyyy = wib.getFullYear();
+    const mm = pad(wib.getMonth() + 1);
+    const dd = pad(wib.getDate());
+    const hh = pad(wib.getHours());
+    const min = pad(wib.getMinutes());
+    const ss = pad(wib.getSeconds());
+    
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}+07:00`;
+}
+
+// Helper untuk memformat tampilan waktu ke format WIB Indonesia (DD/MM/YYYY HH:mm)
+function formatWIB(isoString) {
+    if (!isoString || isoString === '-') return '-';
+    try {
+        const dt = new Date(isoString);
+        if (isNaN(dt.getTime())) return isoString;
+        return new Intl.DateTimeFormat('id-ID', {
+            timeZone: 'Asia/Jakarta',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).format(dt).replace(/\./g, ':');
+    } catch(e) { return isoString; }
+}
+
 function tutupModalArea() { document.getElementById('modal-ganti-area').classList.add('hidden'); }
 function tutupModalSTBJ() { document.getElementById('modal-stbj-langsir').classList.add('hidden'); }
 function tutupModalHold() { document.getElementById('modal-hold-langsir').classList.add('hidden'); }
@@ -119,13 +154,17 @@ async function ambilSemuaData() {
     const tbody = document.getElementById('tbody-riwayat');
     if(tbody) tbody.innerHTML = `<tr><td colspan="19" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-medium text-slate-500 text-sm">Menarik Data...</p></td></tr>`;
     try {
-        const [resRiwayat, resHold] = await Promise.all([
-            db.from('hasil_langsir').select('*').order('created_at', {ascending: false}).limit(1000),
-            db.from('hold_langsir').select('*').order('created_at', {ascending: false})
-        ]);
-        
-        logLangsirRaw = resRiwayat.data || [];
-        holdLangsirRaw = resHold.data || [];
+        // Ambil data dari tabel log terpusat hasil_stbj_langsir
+        const { data, error } = await db.from('hasil_stbj_langsir')
+            .select('*')
+            .in('status', ['IN GUDANG', 'HOLD LANGSIR'])
+            .order('waktu_langsir', { ascending: false });
+
+        if (error) throw error;
+
+        // Pisahkan data log langsir (IN GUDANG) dan hold langsir (HOLD LANGSIR)
+        logLangsirRaw = (data || []).filter(r => r.status === 'IN GUDANG');
+        holdLangsirRaw = (data || []).filter(r => r.status === 'HOLD LANGSIR');
 
         renderTabelRiwayat();
     } catch(e) { 
@@ -250,33 +289,6 @@ function updateFilterIcons() {
     }
 }
 
-function gantiModeRiwayat(m) {
-    modeRiwayat = m;
-    
-    const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-    const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-    
-    ['qr', 'agregasi', 'hold'].forEach(tab => {
-        const el = document.getElementById('tab-r-' + tab);
-        if(el) el.className = (m === tab) ? activeClass : inactiveClass;
-    });
-    
-    const btnGA = document.getElementById('btn-ganti-area'); if(btnGA) btnGA.classList.toggle('hidden', m !== 'qr');
-    const btnCL = document.getElementById('btn-cancel-langsir'); if(btnCL) btnCL.classList.toggle('hidden', m !== 'qr');
-    const btnCLMob = document.getElementById('btn-cancel-langsir-mob'); if(btnCLMob) btnCLMob.classList.toggle('hidden', m !== 'qr');
-    
-    const userRole = (currentUser.role || '').toLowerCase();
-    const showHapus = (m === 'hold' && ['creator', 'admin', 'pic area'].includes(userRole));
-    const btnHH = document.getElementById('btn-hapus-hold'); if(btnHH) btnHH.classList.toggle('hidden', !showHapus);
-    const btnHHMob = document.getElementById('btn-hapus-hold-mob'); if(btnHHMob) btnHHMob.classList.toggle('hidden', !showHapus);
-
-    activeFilters = {}; updateFilterIcons();
-    renderTabelRiwayat();
-}
-
-// ========================================================
-// TRI-STATE CHECKBOX LOGIC
-// ========================================================
 window.cycleSelectAll = function() {
     selectAllState = (selectAllState + 1) % 3;
     updateSelectAllUI();
@@ -449,51 +461,49 @@ function renderTabelRiwayat() {
                     <th class="hdr-std w-10 col-cb text-center sticky-col">
                         <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                     </th>
-                    ${thSort(1, 'Waktu Masuk', 'col-waktu')}
-                    ${isHold ? thSort(2, 'Troli', 'col-troli') : '<th class="hdr-std hidden col-troli">-</th>'}
-                    ${thSort(isHold?3:2, 'Area', 'col-area')}
-                    ${thSort(isHold?4:3, 'QRCode', 'col-qr')}
-                    ${thSort(isHold?5:4, 'Tgl Produksi', 'col-tgl')}
-                    ${thSort(isHold?6:5, 'Mesin', 'col-mesin')}
-                    ${thSort(isHold?7:6, 'Shift', 'col-shift')}
-                    ${thSort(isHold?8:7, 'Jenis Item', 'col-jenis')}
-                    ${thSort(isHold?9:8, 'Nama Item', 'col-nama')}
-                    ${thSort(isHold?10:9, 'Panjang', 'col-pjg')}
-                    ${thSort(isHold?11:10, 'Grade', 'col-grade')}
-                    ${thSort(isHold?12:11, 'Dus', 'col-dus')}
-                    ${thSort(isHold?13:12, 'Shading', 'col-shading')}
-                    ${thSort(isHold?14:13, 'Customer Bawaan', 'col-customer')}
-                    ${isHold ? thSort(15, 'Keterangan', 'col-ket') : '<th class="hdr-std hidden col-ket">-</th>'}
-                    ${thSort(isHold?16:14, 'PIC', 'col-pic')}
+                    ${thSort(1, 'Waktu Langsir', 'col-waktu')}
+                    ${thSort(2, 'Troli', 'col-troli')}
+                    ${thSort(3, 'Area', 'col-area')}
+                    ${thSort(4, 'QRCode', 'col-qr')}
+                    ${thSort(5, 'Tgl Produksi', 'col-tgl')}
+                    ${thSort(6, 'Mesin', 'col-mesin')}
+                    ${thSort(7, 'Shift', 'col-shift')}
+                    ${thSort(8, 'Jenis Item', 'col-jenis')}
+                    ${thSort(9, 'Nama Item', 'col-nama')}
+                    ${thSort(10, 'Panjang', 'col-pjg')}
+                    ${thSort(11, 'Grade', 'col-grade')}
+                    ${thSort(12, 'Dus', 'col-dus')}
+                    ${thSort(13, 'Shading', 'col-shading')}
+                    ${thSort(14, 'Customer Bawaan', 'col-customer')}
+                    ${thSort(15, 'Keterangan', 'col-ket')}
+                    ${thSort(16, 'PIC', 'col-pic')}
                 </tr>`;
             
-            if(!dataset || dataset.length === 0) { tbody.innerHTML = `<tr id="empty-row-langsir"><td colspan="18" class="p-8 text-center font-medium text-slate-400">Tidak ada data.</td></tr>`; applyPagination(); return; }
+            if(!dataset || dataset.length === 0) { tbody.innerHTML = `<tr id="empty-row-langsir"><td colspan="17" class="p-8 text-center font-medium text-slate-400">Tidak ada data.</td></tr>`; applyPagination(); return; }
             
             let h = '';
             dataset.forEach((r, i) => {
-                const dt = new Date(r.created_at);
-                const tgl = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+                // Gunakan waktu_langsir sebagai acuan utama, fallback ke created_at
+                const tgl = formatWIB(r.waktu_langsir || r.created_at);
                 
-                const td = window.translateBarcode(r.qrcode);
-
                 h += `
                     <tr class="${rowClassBase}">
                         <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                         <td class="px-4 py-3 text-slate-600 font-medium text-left col-waktu" data-search="${tgl}">${tgl}</td>
-                        ${isHold ? `<td class="px-4 py-3 font-medium text-slate-700 text-left col-troli" data-search="${r.troli || '-'}">${r.troli || '-'}</td>` : `<td class="px-4 py-3 hidden col-troli">-</td>`}
-                        <td class="px-4 py-3 text-left col-area" data-search="${r.area || '-'}"><span class="text-emerald-600 font-bold">${r.area || '-'}</span></td>
+                        <td class="px-4 py-3 font-medium text-slate-700 text-left col-troli" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
+                        <td class="px-4 py-3 text-left col-area" data-search="${r.posisi || '-'}"><span class="text-emerald-600 font-bold">${r.posisi || '-'}</span></td>
                         <td class="px-4 py-3 font-mono font-medium text-slate-800 tracking-wider text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
-                        <td class="px-4 py-3 font-medium text-slate-600 text-left col-tgl" data-search="${td.tglProduksi || '-'}">${td.tglProduksi || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-600 text-left col-mesin" data-search="${td.mesin || '-'}">${td.mesin || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-600 text-left col-shift" data-search="${td.shift || '-'}">${td.shift || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${td.jenisItem || '-'}">${td.jenisItem || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${td.namaItem || '-'}">${td.namaItem || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${td.panjang || '-'}">${td.panjang || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${td.grade || '-'}">${td.grade || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${td.dus || '-'}">${td.dus || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${td.shading || '-'}">${td.shading || '-'}</td>
-                        <td class="px-4 py-3 font-medium text-slate-500 text-left col-customer" data-search="${td.customer || '-'}">${td.customer || '-'}</td>
-                        ${isHold ? `<td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>` : `<td class="px-4 py-3 hidden col-ket">-</td>`}
+                        <td class="px-4 py-3 font-medium text-slate-600 text-left col-tgl" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-600 text-left col-mesin" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-600 text-left col-shift" data-search="${r.shift || '-'}">${r.shift || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-500 text-left col-customer" data-search="${r.customer || '-'}">${r.customer || '-'}</td>
+                        <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
                         <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 text-left col-pic" data-search="${r.pic_input || '-'}">${r.pic_input || '-'}</td>
                     </tr>`;
             });
@@ -519,14 +529,13 @@ function renderTabelRiwayat() {
 
             let groups = {};
             logLangsirRaw.forEach(r => {
-                const td = window.translateBarcode(r.qrcode);
-                let key = `${r.area}_${td.jenisItem}_${td.namaItem}_${td.panjang}_${td.grade}_${td.dus}_${td.shading}_${td.customer}_${r.pic_input}`;
-                if(!groups[key]) groups[key] = { area: r.area, jenis: td.jenisItem, nama: td.namaItem, pjg: td.panjang, grade: td.grade, dus: td.dus, shading: td.shading, customer: td.customer, pic: r.pic_input, qty: 0 };
+                let key = `${r.posisi}_${r.jenis_item}_${r.nama_item}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.customer}_${r.pic_input}`;
+                if(!groups[key]) groups[key] = { area: r.posisi, jenis: r.jenis_item, nama: r.nama_item, pjg: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, customer: r.customer, pic: r.pic_input, qty: 0 };
                 groups[key].qty++;
             });
 
             let arr = Object.values(groups);
-            if(arr.length === 0) { tbody.innerHTML = `<tr id="empty-row-langsir"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Kosong.</td></tr>`; applyPagination(); return; }
+            if(arr.length === 0) { tbody.innerHTML = `<tr id="empty-row-langsir"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Kosong.</td></tr>`; applyPagination(); return; }
 
             let h = '';
             arr.forEach((r) => {
@@ -558,56 +567,43 @@ function renderTabelRiwayat() {
 // ========================================================
 async function cancelLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked'); if(checkedBoxes.length === 0) return alert("Pilih minimal 1 baris!");
-    if(!confirm(`Batal Langsir untuk ${checkedBoxes.length} kardus ini?\nData akan dihapus dari gudang dan dipindah ke tabel Hold Langsir.`)) return;
+    if(!confirm(`Batal Langsir untuk ${checkedBoxes.length} kardus ini?\nData akan dihapus dari gudang (stok_global & stok_aktual) dan statusnya di hasil_stbj_langsir dikembalikan ke 'HOLD LANGSIR'.`)) return;
     
     const btn = document.getElementById('btn-cancel-langsir'); 
-    const ori = btn.innerHTML;
+    const ori = btn ? btn.innerHTML : '';
     if(btn) { btn.innerHTML = 'Proses...'; btn.disabled = true; }
 
     let arrFisik = []; 
-    let payloadHold = [];
     let mapDeduct = {};
+    const wibNow = getWIBTimestamp();
     
     checkedBoxes.forEach(cb => {
         const qr = cb.value; 
         const r = logLangsirRaw.find(x => x.qrcode === qr);
         if(r) {
-            const td = window.translateBarcode(qr);
             arrFisik.push(qr);
-            payloadHold.push({ 
-                qrcode: qr, 
-                troli: r.troli || '-', 
-                area: r.area || '-', 
-                tgl_produksi: td.tglProduksi, 
-                mesin: td.mesin, 
-                shift: td.shift,
-                jenis_item: td.jenisItem, 
-                nama_item: td.namaItem, 
-                panjang: td.panjang, 
-                grade: td.grade,
-                dus: td.dus, 
-                shading: td.shading, 
-                customer_bawaan: td.customer,
-                keterangan: 'Cancel Langsir', 
-                pic_input: currentUser.username 
-            });
 
-            let keyAkt = `${td.namaItem}_${td.panjang}_${td.grade}_${td.dus}_${td.shading}_${r.area}_${td.customer}`;
-            if(!mapDeduct[keyAkt]) mapDeduct[keyAkt] = { nama_item: td.namaItem, pjg: td.panjang, grade: td.grade, dus: td.dus, shading: td.shading, area: r.area, customer_aktual: td.customer, qty: 0 };
+            let keyAkt = `${r.nama_item}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${r.posisi}_${r.customer}`;
+            if(!mapDeduct[keyAkt]) mapDeduct[keyAkt] = { nama_item: r.nama_item, pjg: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, area: r.posisi, customer_aktual: r.customer, qty: 0 };
             mapDeduct[keyAkt].qty++;
         }
     });
 
     try {
+        // 1. Hapus dari stok_qr dan stok_global
         const { error: errStok } = await db.from('stok_qr').delete().in('qrcode', arrFisik);
         if(errStok) throw errStok;
 
-        const { error: errHasil } = await db.from('hasil_langsir').delete().in('qrcode', arrFisik);
+        const { error: errGlobal } = await db.from('stok_global').delete().in('qrcode', arrFisik);
+        if(errGlobal) throw errGlobal;
+
+        // 2. Update status di hasil_stbj_langsir menjadi HOLD LANGSIR
+        const { error: errHasil } = await db.from('hasil_stbj_langsir')
+            .update({ status: 'HOLD LANGSIR', keterangan: 'Cancel Langsir', waktu_langsir: wibNow })
+            .in('qrcode', arrFisik);
         if(errHasil) throw errHasil;
 
-        const { error: errHold } = await db.from('hold_langsir').insert(payloadHold);
-        if(errHold) throw errHold;
-
+        // 3. Kurangi saldo di stok_aktual secara inkremental
         for(let key in mapDeduct) {
             let item = mapDeduct[key];
             const { data: existing } = await db.from('stok_aktual').select('id, qty')
@@ -616,12 +612,17 @@ async function cancelLangsir() {
                 .eq('customer_aktual', item.customer_aktual).limit(1);
             
             if(existing && existing.length > 0) {
-                await db.from('stok_aktual').update({ qty: existing[0].qty - item.qty }).eq('id', existing[0].id);
+                let newQty = existing[0].qty - item.qty;
+                if (newQty <= 0) {
+                    await db.from('stok_aktual').delete().eq('id', existing[0].id);
+                } else {
+                    await db.from('stok_aktual').update({ qty: newQty }).eq('id', existing[0].id);
+                }
             }
         }
         
         await ambilSemuaData();
-        alert(`SUKSES!\n${arrFisik.length} item berhasil di-cancel dan dipindah ke Hold Langsir.`);
+        alert(`SUKSES!\n\n${arrFisik.length} item berhasil di-cancel, dihapus dari kartu stok, dan statusnya dikembalikan ke 'HOLD LANGSIR'.`);
     } catch (e) { 
         alert("Gagal Cancel Langsir: " + e.message); 
     } finally { 
@@ -632,10 +633,12 @@ async function cancelLangsir() {
 
 async function hapusBarisHold() {
     const checked = document.querySelectorAll('.cb-row:checked'); if(checked.length === 0) return alert("Pilih baris!");
-    if(!confirm("Hapus permanen dari Hold?")) return;
+    if(!confirm("Hapus permanen data hold ini dari database?")) return;
     try {
-        await db.from('hold_langsir').delete().in('qrcode', Array.from(checked).map(cb => cb.value));
+        const { error } = await db.from('hasil_stbj_langsir').delete().in('qrcode', Array.from(checked).map(cb => cb.value));
+        if (error) throw error;
         await ambilSemuaData();
+        alert("Berhasil menghapus data hold.");
     } catch(e) { alert("Gagal: " + e.message); }
 }
 
@@ -654,35 +657,79 @@ async function eksekusiGantiArea() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked'); 
     const qrsToUpdate = Array.from(checkedBoxes).map(cb => cb.value);
     
-    let payloadItems = [];
-    
-    for(let qr of qrsToUpdate) {
-        let dbRow = logLangsirRaw.find(r => r.qrcode === qr);
-        if(dbRow) {
-            const td = window.translateBarcode(qr);
-            let id_sku_baru = `${newArea}_${td.namaItem}_${td.panjang}_${td.grade}_${td.dus}_${td.shading}_${td.customer}_-`;
-            
-            payloadItems.push({
-                qrcode: qr,
-                area_baru: newArea,
-                id_sku_baru: id_sku_baru,
-                pic: currentUser.username || 'Unknown'
-            });
-        }
-    }
-    
     try {
-        const { error } = await db.rpc('ganti_area_langsir', { payload: payloadItems }); 
-        if(error) throw error;
+        let mapDeduct = {};
+        let mapAdd = {};
         
-        tutupModalArea(); 
-        alert("Fungsi Sinkronisasi Wipe & Rebuild dinonaktifkan untuk menjaga integritas data Customer Aktual hasil editan user.\n\nSistem kini menggunakan metode Incremental Update (+/-) secara otomatis setiap kali ada transaksi.");
+        for(let qr of qrsToUpdate) {
+            let dbRow = logLangsirRaw.find(r => r.qrcode === qr);
+            if(dbRow) {
+                const oldArea = dbRow.posisi || '-';
+                
+                let id_sku_old = `${oldArea}_${dbRow.nama_item}_${dbRow.panjang}_${dbRow.grade}_${dbRow.dus}_${dbRow.shading}_${dbRow.customer}_-`;
+                let id_sku_baru = `${newArea}_${dbRow.nama_item}_${dbRow.panjang}_${dbRow.grade}_${dbRow.dus}_${dbRow.shading}_${dbRow.customer}_-`;
+                
+                // 1. Update stok_qr
+                await db.from('stok_qr').update({ area: newArea, id_sku: id_sku_baru }).eq('qrcode', qr);
+                
+                // 2. Update stok_global
+                await db.from('stok_global').update({ area: newArea, id_sku: id_sku_baru }).eq('qrcode', qr);
+                
+                // 3. Update hasil_stbj_langsir
+                await db.from('hasil_stbj_langsir').update({ posisi: newArea }).eq('qrcode', qr);
+                
+                // Akumulasi untuk stok_aktual
+                let keyOld = `${dbRow.nama_item}_${dbRow.panjang}_${dbRow.grade}_${dbRow.dus}_${dbRow.shading}_${oldArea}_${dbRow.customer}`;
+                if(!mapDeduct[keyOld]) mapDeduct[keyOld] = { nama_item: dbRow.nama_item, pjg: dbRow.panjang, grade: dbRow.grade, dus: dbRow.dus, shading: dbRow.shading, area: oldArea, customer_aktual: dbRow.customer, qty: 0 };
+                mapDeduct[keyOld].qty++;
+
+                let keyNew = `${dbRow.nama_item}_${dbRow.panjang}_${dbRow.grade}_${dbRow.dus}_${dbRow.shading}_${newArea}_${dbRow.customer}`;
+                if(!mapAdd[keyNew]) mapAdd[keyNew] = { id_sku: id_sku_baru, jenis_item: dbRow.jenis_item, nama_item: dbRow.nama_item, panjang: dbRow.panjang, grade: dbRow.grade, dus: dbRow.dus, shading: dbRow.shading, area: newArea, customer_bawaan: dbRow.customer, customer_aktual: dbRow.customer, keterangan: '-', qty: 0 };
+                mapAdd[keyNew].qty++;
+            }
+        }
+
+        // Eksekusi Pengurangan dari Area Lama
+        for(let key in mapDeduct) {
+            let item = mapDeduct[key];
+            const { data: existing } = await db.from('stok_aktual').select('id, qty')
+                .eq('nama_item', item.nama_item).eq('panjang', item.pjg).eq('grade', item.grade)
+                .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
+                .eq('customer_aktual', item.customer_aktual).limit(1);
+            
+            if(existing && existing.length > 0) {
+                let newQty = existing[0].qty - item.qty;
+                if (newQty <= 0) {
+                    await db.from('stok_aktual').delete().eq('id', existing[0].id);
+                } else {
+                    await db.from('stok_aktual').update({ qty: newQty }).eq('id', existing[0].id);
+                }
+            }
+        }
+
+        // Eksekusi Penambahan ke Area Baru
+        for(let key in mapAdd) {
+            let item = mapAdd[key];
+            const { data: existing } = await db.from('stok_aktual').select('id, qty')
+                .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
+                .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
+                .eq('customer_aktual', item.customer_aktual).limit(1);
+            
+            if(existing && existing.length > 0) {
+                await db.from('stok_aktual').update({ qty: existing[0].qty + item.qty }).eq('id', existing[0].id);
+            } else {
+                await db.from('stok_aktual').insert([item]);
+            }
+        }
+
+        tutupModalArea();
+        alert(`✅ BERHASIL!\n\n${qrsToUpdate.length} item berhasil dipindahkan ke area "${newArea}" dan saldo stok_aktual diperbarui.`);
         await ambilSemuaData();
-    } catch (error) { 
-        alert("Gagal: " + error.message + "\n\nPastikan Anda sudah membuat Function 'ganti_area_langsir' di SQL Editor Supabase."); 
-    } finally { 
-        if(btn) { btn.innerHTML = original; btn.disabled = false; } 
-        lucide.createIcons(); 
+    } catch (error) {
+        alert("Gagal memindahkan area: " + error.message);
+    } finally {
+        if(btn) { btn.innerHTML = original; btn.disabled = false; }
+        lucide.createIcons();
     }
 }
 
@@ -695,13 +742,13 @@ function salinDataTabel() {
         copyString = "Area\tJenis Item\tNama Item\tPjg\tGrade\tDus\tShading\tCustomer Bawaan\tPIC\tQTY\n";
         cek.forEach(cb => {
             const tr = cb.closest('tr');
-            copyString += `${tr.querySelector('.col-area')?.innerText || '-'}\t${tr.querySelector('.col-jenis')?.innerText || '-'}\t${tr.querySelector('.col-nama')?.innerText || '-'}\t${tr.querySelector('.col-pjg')?.innerText || '-'}\t${tr.querySelector('.col-grade')?.innerText || '-'}\t${tr.querySelector('.col-dus')?.innerText || '-'}\t${tr.querySelector('.col-shading')?.innerText || '-'}\t${tr.querySelector('.col-customer')?.innerText || '-'}\t${tr.querySelector('.col-pic')?.innerText || '-'}\t${tr.querySelector('.col-qty')?.innerText || '-'}\n`;
+            copyString += `${tr.querySelector('.col-area').innerText}\t${tr.querySelector('.col-jenis').innerText}\t${tr.querySelector('.col-nama').innerText}\t${tr.querySelector('.col-pjg').innerText}\t${tr.querySelector('.col-grade').innerText}\t${tr.querySelector('.col-dus').innerText}\t${tr.querySelector('.col-shading').innerText}\t${tr.querySelector('.col-customer').innerText}\t${tr.querySelector('.col-pic').innerText}\t${tr.querySelector('.col-qty').innerText}\n`;
         });
     } else {
-        copyString = "Waktu\tTroli\tArea\tQRCode\tTgl Produksi\tMesin\tShift\tNama Item\tPjg\tGrade\tDus\tShading\tCustomer\tKeterangan\n";
+        copyString = "Waktu Langsir\tTroli\tArea\tQRCode\tTgl Produksi\tMesin\tShift\tNama Item\tPjg\tGrade\tDus\tShading\tCustomer\tKeterangan\tPIC\n";
         cek.forEach(cb => {
             const tr = cb.closest('tr');
-            copyString += `${tr.querySelector('.col-waktu')?.innerText || '-'}\t${tr.querySelector('.col-troli')?.innerText || '-'}\t${tr.querySelector('.col-area')?.innerText || '-'}\t${tr.querySelector('.col-qr')?.innerText || '-'}\t${tr.querySelector('.col-tgl')?.innerText || '-'}\t${tr.querySelector('.col-mesin')?.innerText || '-'}\t${tr.querySelector('.col-shift')?.innerText || '-'}\t${tr.querySelector('.col-nama')?.innerText || '-'}\t${tr.querySelector('.col-pjg')?.innerText || '-'}\t${tr.querySelector('.col-grade')?.innerText || '-'}\t${tr.querySelector('.col-dus')?.innerText || '-'}\t${tr.querySelector('.col-shading')?.innerText || '-'}\t${tr.querySelector('.col-customer')?.innerText || '-'}\t${tr.querySelector('.col-ket')?.innerText || '-'}\n`;
+            copyString += `${tr.querySelector('.col-waktu')?.innerText || '-'}\t${tr.querySelector('.col-troli')?.innerText || '-'}\t${tr.querySelector('.col-area')?.innerText || '-'}\t${tr.querySelector('.col-qr')?.innerText || '-'}\t${tr.querySelector('.col-tgl')?.innerText || '-'}\t${tr.querySelector('.col-mesin')?.innerText || '-'}\t${tr.querySelector('.col-shift')?.innerText || '-'}\t${tr.querySelector('.col-nama')?.innerText || '-'}\t${tr.querySelector('.col-pjg')?.innerText || '-'}\t${tr.querySelector('.col-grade')?.innerText || '-'}\t${tr.querySelector('.col-dus')?.innerText || '-'}\t${tr.querySelector('.col-shading')?.innerText || '-'}\t${tr.querySelector('.col-customer')?.innerText || '-'}\t${tr.querySelector('.col-ket')?.innerText || '-'}\t${tr.querySelector('.col-pic')?.innerText || '-'}\n`;
         });
     }
 
@@ -751,35 +798,23 @@ async function bukaModalSTBJ() {
     lucide.createIcons();
 
     try {
-        const { data: globalData, error: errGlobal } = await db.from('stok_global').select('*').order('created_at', {ascending: false}).limit(200);
-        if(errGlobal) throw errGlobal;
+        // Ambil data STBJ yang belum dilangsir langsung dari hasil_stbj_langsir
+        const { data, error } = await db.from('hasil_stbj_langsir')
+            .select('*')
+            .eq('status', 'STBJ')
+            .order('created_at', { ascending: false })
+            .limit(200);
         
-        if(!globalData || globalData.length === 0) {
-            if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Data STBJ Kosong.</div>';
-            return;
-        }
-
-        const qrs = globalData.map(d => d.qrcode);
-        const { data: qrData, error: errQr } = await db.from('stok_qr').select('qrcode').in('qrcode', qrs);
-        if(errQr) throw errQr;
-
-        const qrSet = new Set(qrData.map(d => d.qrcode));
-        const filteredData = globalData.filter(d => !qrSet.has(d.qrcode));
-
-        if(filteredData.length === 0) {
-            if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Semua data STBJ sudah masuk gudang.</div>';
+        if(error) throw error;
+        
+        if(!data || data.length === 0) {
+            if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Data STBJ Kosong (Semua sudah dilangsir).</div>';
             return;
         }
 
         let h = '';
-        filteredData.forEach((r, i) => {
-            let tgl = '-';
-            if (r.created_at) {
-                const dt = new Date(r.created_at);
-                const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
-                tgl = `${dt.getDate()} ${months[dt.getMonth()]}, ${String(dt.getHours()).padStart(2,'0')}.${String(dt.getMinutes()).padStart(2,'0')}`;
-            }
-
+        data.forEach((r, i) => {
+            const tgl = formatWIB(r.created_at);
             h += `
                 <div class="row-modal-stbj bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1 mb-3">
                     <div class="flex justify-between items-center mb-1 border-b border-slate-100 pb-2">
@@ -792,12 +827,14 @@ async function bukaModalSTBJ() {
                     <div class="text-[12px] font-bold text-slate-600 leading-snug">
                         Item: <span class="text-blue-600">${r.jenis_item || '-'}</span> | <span class="text-slate-800">${r.nama_item || '-'}</span> | <span class="text-slate-800">${r.panjang || '-'}</span> | <span class="text-slate-800">${r.grade || '-'}</span> | <span class="text-slate-800">${r.dus || '-'}</span> | <span class="text-blue-600">${r.shading || '-'}</span>
                     </div>
-                    <div class="text-[12px] font-bold text-slate-600">Customer: <span class="text-orange-600">${r.customer_bawaan || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Customer: <span class="text-orange-600">${r.customer || '-'}</span></div>
                     <div class="text-[12px] font-bold text-slate-600">Keterangan: <span class="text-slate-800">${r.keterangan || '-'}</span></div>
                 </div>`;
         });
         if(tbody) tbody.innerHTML = h;
-    } catch (e) { if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal Memuat: ${e.message}</div>`; }
+    } catch (e) { 
+        if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal Memuat: ${e.message}</div>`; 
+    }
 }
 
 function saringTabelModalSTBJ() {
@@ -813,12 +850,15 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
     const tabStbj = document.getElementById('tab-hold-stbj');
     const tabLangsir = document.getElementById('tab-hold-langsir');
     
+    let statusFilter = 'HOLD STBJ';
     if(tabelTarget === 'hold_stbj') {
         tabStbj.className = 'pb-2 px-4 tab-active transition whitespace-nowrap text-xs uppercase font-bold';
         tabLangsir.className = 'pb-2 px-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap text-xs uppercase font-bold';
+        statusFilter = 'HOLD STBJ';
     } else {
         tabLangsir.className = 'pb-2 px-4 tab-active transition whitespace-nowrap text-xs uppercase font-bold';
         tabStbj.className = 'pb-2 px-4 tab-inactive hover:text-slate-800 transition whitespace-nowrap text-xs uppercase font-bold';
+        statusFilter = 'HOLD LANGSIR';
     }
 
     const tbody = document.getElementById('tbody-hold-modal');
@@ -826,39 +866,21 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
     lucide.createIcons();
 
     try {
-        const { data, error } = await db.from(tabelTarget).select('*').order('created_at', {ascending: false}).limit(100);
+        const { data, error } = await db.from('hasil_stbj_langsir')
+            .select('*')
+            .eq('status', statusFilter)
+            .order('created_at', {ascending: false})
+            .limit(100);
+            
         if(error) throw error;
         if(!data || data.length === 0) {
-            if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Tabel Hold Kosong.</div>';
+            if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-slate-400">Tabel ${statusFilter} Kosong.</div>`;
             return;
         }
 
         let h = '';
         data.forEach((r, i) => {
-            let tgl = '-';
-            if (r.created_at) {
-                const dt = new Date(r.created_at);
-                const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
-                tgl = `${dt.getDate()} ${months[dt.getMonth()]}, ${String(dt.getHours()).padStart(2,'0')}.${String(dt.getMinutes()).padStart(2,'0')}`;
-            }
-
-            let namaItem = r.nama_item || '-';
-            let pjg = r.panjang || '-';
-            let grade = r.grade || '-';
-            let dus = r.dus || '-';
-            let shading = r.shading || '-';
-            let customer = r.customer_bawaan || '-';
-            let jenis = r.jenis_item || '-';
-            let prod = r.tgl_produksi || '-';
-            let mesin = r.mesin || '-';
-            let shift = r.shift || '-';
-
-            if(tabelTarget === 'hold_langsir' && namaItem === '-') {
-                let td = typeof window.translateBarcode === 'function' ? window.translateBarcode(r.qrcode) : {};
-                namaItem = td.namaItem || '-'; pjg = td.panjang || '-'; grade = td.grade || '-';
-                dus = td.dus || '-'; shading = td.shading || '-'; customer = td.customer || '-';
-                jenis = td.jenisItem || '-'; prod = td.tglProduksi || '-'; mesin = td.mesin || '-'; shift = td.shift || '-';
-            }
+            const tgl = formatWIB(r.created_at);
 
             h += `
                 <div class="row-modal-hold bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1 mb-3">
@@ -868,11 +890,11 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
                     </div>
                     <div class="font-mono font-black text-slate-900 text-[13px] break-all">${r.qrcode}</div>
                     <div class="text-[12px] font-bold text-slate-600 mt-1">Troli: <span class="text-slate-800">${r.troli || '-'}</span></div>
-                    <div class="text-[12px] font-bold text-slate-600">Produksi: <span class="text-slate-800">${prod} - ${mesin} - ${shift}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Produksi: <span class="text-slate-800">${r.tgl_produksi || '-'} - ${r.mesin || '-'} - ${r.shift || '-'}</span></div>
                     <div class="text-[12px] font-bold text-slate-600 leading-snug">
-                        Item: <span class="text-blue-600">${jenis}</span> | <span class="text-slate-800">${namaItem}</span> | <span class="text-slate-800">${pjg}</span> | <span class="text-slate-800">${grade}</span> | <span class="text-slate-800">${dus}</span> | <span class="text-blue-600">${shading}</span>
+                        Item: <span class="text-blue-600">${r.jenis_item || '-'}</span> | <span class="text-slate-800">${r.nama_item || '-'}</span> | <span class="text-slate-800">${r.panjang || '-'}</span> | <span class="text-slate-800">${r.grade || '-'}</span> | <span class="text-slate-800">${r.dus || '-'}</span> | <span class="text-blue-600">${r.shading || '-'}</span>
                     </div>
-                    <div class="text-[12px] font-bold text-slate-600">Customer: <span class="text-orange-600">${customer}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Customer: <span class="text-orange-600">${r.customer || '-'}</span></div>
                     <div class="text-[12px] font-bold text-rose-600">Keterangan: <span class="text-rose-800">${r.keterangan || '-'}</span></div>
                 </div>`;
         });
