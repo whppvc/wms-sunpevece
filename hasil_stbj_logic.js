@@ -352,10 +352,19 @@ function setMode(m) {
         if(btnHapus) btnHapus.classList.remove('hidden');
     }
 
+    // REVISI: Amankan filter status sebelum mereset filter lainnya
+    const savedStatusFilter = activeFilters['col-status'];
+    
+    // Reset filter kolom Excel biasa (karena kolom antar mode berbeda)
     activeFilters = {}; 
+    
+    // Kembalikan filter status yang sedang aktif
+    if (savedStatusFilter) {
+        activeFilters['col-status'] = savedStatusFilter;
+    }
+
     renderHeaderDanTabel();
 }
-
 function switchStatusFilter(val) { 
     statusSekarang = val; 
     
