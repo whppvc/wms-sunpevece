@@ -136,7 +136,6 @@ style.innerHTML = `
     .stripe-1 td { background-color: rgba(var(--tbl-row-1), var(--tbl-opacity)) !important; transition: background-color 0.2s ease; }
     .stripe-2 td { background-color: rgba(var(--tbl-row-2), var(--tbl-opacity)) !important; transition: background-color 0.2s ease; }
     
-    /* REVISI: Hover Effect Toggle */
     body:not(.disable-hover) .stripe-1:hover td, 
     body:not(.disable-hover) .stripe-2:hover td, 
     body:not(.disable-hover) tr.text-row:hover td,
@@ -196,7 +195,6 @@ function applyTableDesign() {
     
     document.documentElement.style.setProperty('--tbl-opacity', tempDesign.opacity / 100);
 
-    // REVISI: Cek kesiapan DOM body agar tidak crash di <head>
     const runToggle = () => {
         if(tempDesign.isHover === false) {
             document.body.classList.add('disable-hover');
@@ -366,7 +364,7 @@ async function initModernLayout(pageMeta) {
         <!-- MODAL TABLE DESIGN CUSTOMIZER -->
         <div id="modal-table-design" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 text-slate-800">
-                <h3 class="text-lg font-black mb-1 flex items-center gap-2"><i data-lucide="palette" class="text-indigo-600"></i> Desain Tabel Global</h3>
+                <h3 class="text-lg font-black mb-1 flex items-center gap-2"><i data-lucide="palette" class="text-indigo-600"></i> Desain Tabel WMS</h3>
                 <p class="text-xs font-medium text-slate-500 mb-5">Pengaturan ini akan diterapkan ke seluruh tabel di WMS.</p>
                 
                 <div class="space-y-5 mb-6">
@@ -844,7 +842,6 @@ window.kirimPesan = async function() {
         if(error) throw error;
         
         alert("Pesan berhasil dikirim!");
-        text.value = '';
         kembaliKeListInbox();
     } catch(e) {
         alert("Gagal mengirim pesan: " + e.message);
