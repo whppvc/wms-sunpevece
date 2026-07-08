@@ -16,6 +16,16 @@ window.tutupModalAdd = function() {
     document.getElementById('modal-add-scan').classList.add('hidden');
 };
 
+// REVISI: Fungsi Buka/Tutup Modal Scan Area
+window.bukaModalScanArea = function() {
+    document.getElementById('modal-scan-area').classList.remove('hidden');
+    setTimeout(() => document.getElementById('input-qrcode-area').focus(), 100);
+};
+
+window.tutupModalScanArea = function() {
+    document.getElementById('modal-scan-area').classList.add('hidden');
+};
+
 window.toggleSidebarFilter = function() {
     document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
     document.getElementById('overlay-klik-luar').classList.toggle('hidden');
@@ -60,14 +70,15 @@ document.addEventListener('click', function(e) {
 document.addEventListener('DOMContentLoaded', async () => {
     if(typeof initModernLayout === 'function') initModernLayout({ id: 'langsir', title: 'LANGSIR', url: 'langsir.html' }); 
     
-    const formScan = document.getElementById('form-scan');
-    if(formScan) {
-        formScan.addEventListener('submit', (e) => {
+    // REVISI: Event Delegation untuk 2 Form (Troli & Area)
+    document.addEventListener('submit', function(e) {
+        if (e.target && e.target.id === 'form-scan') {
             e.preventDefault();
+            const troli = document.getElementById('select-troli').value;
             const rawInput = document.getElementById('input-qrcode').value.trim();
-            const area = document.getElementById('select-area').value;
-            if(!area || !rawInput) return alert("Pilih Area Simpan dan isi QR Code terlebih dahulu!");
             
+            if(!rawInput) return;
+
             const activeRows = Array.from(document.querySelectorAll('.row-item:not(.deleted-row)'));
             const existingQRs = activeRows.map(r => r.querySelector('.qr-val').innerText);
             
@@ -75,7 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             codes.forEach(code => { 
                 const isLocalDuplicate = existingQRs.includes(code);
-                addRow(area, code, isLocalDuplicate); 
+                addRow('?', code, isLocalDuplicate, troli); // Area diset '?'
                 if(!isLocalDuplicate) existingQRs.push(code); 
             });
             
@@ -83,21 +94,60 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateTotalBaris();
             
             document.getElementById('input-qrcode').value = '';
-            if(typeof tutupModalAdd === 'function') tutupModalAdd(); 
             
             const scrollContainer = document.getElementById('scroll-container');
             if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
-        });
-    }
+        }
+        else if (e.target && e.target.id === 'form-scan-area') {
+            e.preventDefault();
+            const area = document.getElementById('select-area-putaway').value;
+            const rawInput = document.getElementById('input-qrcode-area').value.trim();
+            
+            if(!area) return alert("Pilih Area Rak terlebih dahulu!");
+            if(!rawInput) return;
+
+            const codes = rawInput.split(/[\s;]+/).map(q => q.trim()).filter(q => q);
+            let foundCount = 0;
+
+            codes.forEach(code => {
+                const row = Array.from(document.querySelectorAll('.row-item:not(.deleted-row)')).find(r => r.querySelector('.qr-val').innerText === code);
+                if(row) {
+                    const areaCell = row.querySelector('.area-cell');
+                    areaCell.innerText = area;
+                    areaCell.classList.remove('text-red-600');
+                    areaCell.classList.add('text-emerald-700');
+                    foundCount++;
+                }
+            });
+
+            document.getElementById('input-qrcode-area').value = '';
+            
+            // Optional: Beri feedback visual
+            const btnSubmit = e.target.querySelector('button[type="submit"]');
+            const oriText = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = `<i data-lucide="check"></i> ${foundCount} ITEM DISET`;
+            lucide.createIcons();
+            setTimeout(() => { btnSubmit.innerHTML = oriText; lucide.createIcons(); }, 1500);
+        }
+    });
 
     setTimeout(async () => {
         try {
+            const { data: mDataTroli } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
+            if(mDataTroli) {
+                const trolis = [...new Set(mDataTroli.map(r => r.nama_troli).filter(x => x))];
+                const selTroli = document.getElementById('select-troli');
+                if(selTroli) {
+                    trolis.forEach(t => selTroli.innerHTML += `<option value="${t}">${t}</option>`);
+                }
+            }
+
             const { data: mDataArea } = await db.from('master_area').select('*').order('id', { ascending: true });
             if(mDataArea) {
                 masterData.area = [...new Set(mDataArea.map(r => (r.nama_area || r.area || '').trim()).filter(Boolean))]; 
-                const selArea = document.getElementById('select-area');
+                const selArea = document.getElementById('select-area-putaway');
                 if(selArea) { 
-                    selArea.innerHTML = '<option value="">-- Pilih Area --</option>'; 
+                    selArea.innerHTML = '<option value="">-- Pilih Area Rak --</option>'; 
                     masterData.area.forEach(a => selArea.innerHTML += `<option value="${a}">${a}</option>`); 
                 }
             }
@@ -116,7 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 200); 
 });
 
-function addRow(area, code, isDuplicate = false) {
+function addRow(area, code, isDuplicate = false, troli = '-') {
     const div = document.createElement('div'); 
     const rowClass = isDuplicate ? 'bg-red-50 hover:bg-red-100' : 'bg-white hover:bg-slate-50';
     div.className = `row-item ${rowClass} border-b border-slate-300 p-2.5 relative transition w-full flex shrink-0`; 
@@ -127,6 +177,9 @@ function addRow(area, code, isDuplicate = false) {
         ? '<span class="text-white font-bold bg-red-600 border border-red-800 px-3 py-1 text-[10px] status-val rounded-sm shadow-sm" data-status="invalid">DUPLIKAT SCAN</span>'
         : '<span class="text-slate-500 font-bold bg-slate-200 border border-slate-300 px-3 py-1 text-[10px] status-val rounded-sm" data-status="unverified">MENUNGGU VERIFIKASI...</span>';
 
+    // REVISI: Area '?' diberi warna merah agar mencolok
+    const areaColor = area === '?' ? 'text-red-600' : 'text-emerald-700';
+
     div.innerHTML = `
         <div class="flex flex-col items-center justify-start pr-2 mr-2 border-r border-slate-300 w-10 shrink-0 pt-1">
             <div class="font-black text-slate-800 text-xl mb-3 leading-none no-cell"></div>
@@ -135,7 +188,7 @@ function addRow(area, code, isDuplicate = false) {
         
         <div class="flex-1 flex flex-col gap-0 w-full min-w-0">
             <div class="flex justify-between items-start mb-0.5">
-                <div class="font-black text-[22px] text-emerald-700 leading-none area-cell col-area">${area}</div>
+                <div class="font-black text-[22px] ${areaColor} leading-none area-cell col-area">${area}</div>
                 <button onclick="deleteRow(this)" class="bg-slate-700 text-white p-1.5 rounded hover:bg-rose-600 transition active:scale-95 shrink-0"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
             </div>
             
@@ -154,7 +207,7 @@ function addRow(area, code, isDuplicate = false) {
             <div class="text-[12px] font-bold text-orange-600 col-customer uppercase">${td.customer}</div>
             
             <div class="text-[11px] font-bold text-slate-500 mt-1">Keterangan: <span class="col-ket ket-cell text-slate-700">-</span></div>
-            <div class="text-[11px] font-bold text-slate-500">Troli: <span class="col-troli troli-cell text-slate-700">-</span></div>
+            <div class="text-[11px] font-bold text-slate-500">Troli: <span class="col-troli troli-cell text-slate-700">${troli}</span></div>
             
             <div class="flex flex-row flex-wrap items-center gap-1.5 mt-1.5">
                 ${statusHtml}
@@ -269,7 +322,6 @@ function editKeteranganMassal() {
     toggleSemuaCentang(false);
 }
 
-// REVISI: Logika Verifikasi Langsir sesuai aturan ketat
 async function VerifikasiDanCek() {
     const rows = document.querySelectorAll('.row-item:not(.deleted-row):not(.filtered-out)');
     if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
@@ -280,7 +332,6 @@ async function VerifikasiDanCek() {
     const qrs = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     
     try {
-        // HANYA CEK hasil_stbj_langsir dan stok_global
         const [resHasil, resGlobal] = await Promise.all([
             db.from('hasil_stbj_langsir').select('qrcode, troli, keterangan, status').in('qrcode', qrs),
             db.from('stok_global').select('qrcode').in('qrcode', qrs)
@@ -306,7 +357,7 @@ async function VerifikasiDanCek() {
 
             if (hasilMap[qr]) {
                 let statDB = hasilMap[qr].status;
-                troliCell.innerText = hasilMap[qr].troli || '-';
+                if(troliCell.innerText === '-' && hasilMap[qr].troli) troliCell.innerText = hasilMap[qr].troli;
                 if(!ketCell.classList.contains('text-slate-800')) ketCell.innerText = hasilMap[qr].keterangan || '-';
 
                 if (statDB === 'STBJ' || statDB === 'SUDAH STBJ') {
@@ -316,7 +367,7 @@ async function VerifikasiDanCek() {
                 } else if (statDB === 'HOLD STBJ') {
                     statusText = 'HOLD STBJ';
                     statusClass = 'bg-orange-500 text-white border-orange-600';
-                    hasError = true;
+                    internalStatus = 'valid_hold'; // Boleh disimpan, nanti jadi HOLD LANGSIR
                 } else if (statDB === 'IN GUDANG' || statDB === 'HOLD LANGSIR') {
                     statusText = 'DUPLIKAT DATA';
                     statusClass = 'bg-red-600 text-white border-red-800';
@@ -325,12 +376,10 @@ async function VerifikasiDanCek() {
             } else if (globalSet.has(qr)) {
                 statusText = 'DUPLIKAT DATA';
                 statusClass = 'bg-red-600 text-white border-red-800';
-                troliCell.innerText = '-';
                 hasError = true;
             } else {
                 statusText = 'BELUM STBJ';
                 statusClass = 'bg-red-600 text-white border-red-800';
-                troliCell.innerText = '-';
                 hasError = true;
             }
 
@@ -354,8 +403,8 @@ async function VerifikasiDanCek() {
             }
         });
 
-        if(hasError) { alert("PERINGATAN!\nTerdapat data bermasalah (Belum STBJ / Hold / Duplikat). Data tersebut TIDAK BISA disimpan."); } 
-        else { alert("MANTAP!\nSemua data Valid (SUDAH STBJ). Siap disimpan ke Gudang."); }
+        if(hasError) { alert("PERINGATAN!\nTerdapat data bermasalah (Belum STBJ / Duplikat). Data tersebut TIDAK BISA disimpan."); } 
+        else { alert("MANTAP!\nSemua data Valid. Silakan Scan Area Rak untuk menyimpan."); }
     } catch (e) { alert("Koneksi Error: " + e.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
@@ -364,27 +413,37 @@ async function saveToSupabase() {
     const btn = document.getElementById('btn-save'); const original = btn.innerHTML;
     
     const activeRows = Array.from(document.querySelectorAll('.row-item:not(.deleted-row)'));
-    if(activeRows.length === 0) return;
+    
+    // REVISI: Hanya proses baris yang sudah di-scan areanya (bukan '?')
+    const rowsToProcess = activeRows.filter(r => r.querySelector('.area-cell').innerText !== '?');
+
+    if(rowsToProcess.length === 0) return alert("Belum ada item yang di-scan ke Area Rak!");
 
     let hasInvalid = false;
-    activeRows.forEach(r => {
-        if(r.querySelector('.status-val').getAttribute('data-status') !== 'valid') {
-            hasInvalid = true;
-        }
+    let validItems = [];
+    let holdItems = [];
+
+    rowsToProcess.forEach(r => {
+        const status = r.querySelector('.status-val').getAttribute('data-status');
+        if (status === 'valid') validItems.push(r);
+        else if (status === 'valid_hold') holdItems.push(r);
+        else hasInvalid = true;
     });
 
     if(hasInvalid) {
-        return alert("TOLAK PENYIMPANAN!\nTerdapat data BELUM STBJ, HOLD, atau DUPLIKAT. Silakan hapus atau Hold baris yang merah terlebih dahulu.");
+        return alert("TOLAK PENYIMPANAN!\nTerdapat data BELUM STBJ atau DUPLIKAT yang sudah diberi Area. Silakan hapus item merah tersebut dari layar sebelum menyimpan.");
     }
 
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btn.disabled = true;
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
     
     let arrFisik = []; 
-    let qrsToUpdate = []; 
+    let qrsToUpdateValid = []; 
+    let updatesHold = [];
     let mapAktual = {}; 
 
-    activeRows.forEach(r => {
+    // 1. Proses Item Valid (SUDAH STBJ -> IN GUDANG)
+    validItems.forEach(r => {
         let area = r.querySelector('.area-cell').innerText; 
         let qr = r.querySelector('.qr-val').innerText;
         let jenis = r.querySelector('.col-jenis').innerText; 
@@ -404,77 +463,82 @@ async function saveToSupabase() {
         let id_po = `${nama}_${pjg}_${grade}`;
         
         arrFisik.push({ 
-            qrcode: qr, 
-            area: area, 
-            id_sku: id_sku, 
-            id_po: id_po, 
-            tgl_produksi: tgl_produksi,
-            mesin: mesin,
-            shift: shift,
-            jenis_item: jenis,
-            nama_item: nama,
-            panjang: pjg, 
-            grade: grade,
-            dus: dus,
-            shading: shading,
-            customer_bawaan: customer,
-            keterangan: ket,
-            pic_input: user.username 
+            qrcode: qr, area: area, id_sku: id_sku, id_po: id_po, 
+            tgl_produksi: tgl_produksi, mesin: mesin, shift: shift,
+            jenis_item: jenis, nama_item: nama, panjang: pjg, grade: grade,
+            dus: dus, shading: shading, customer_bawaan: customer,
+            keterangan: ket, pic_input: user.username 
         });
 
-        qrsToUpdate.push(qr);
+        qrsToUpdateValid.push(qr);
 
         let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${customer}_${ket}`;
         if(!mapAktual[keyAkt]) {
             mapAktual[keyAkt] = {
-                id_sku: id_sku, 
-                id_po: id_po, 
-                jenis_item: jenis, 
-                nama_item: nama, 
-                panjang: pjg, 
-                grade: grade,
-                dus: dus, 
-                shading: shading, 
-                area: area, 
-                customer_bawaan: customer, 
-                customer_aktual: customer, 
-                keterangan: ket, 
-                qty: 0
+                id_sku: id_sku, id_po: id_po, jenis_item: jenis, nama_item: nama, 
+                panjang: pjg, grade: grade, dus: dus, shading: shading, 
+                area: area, customer_bawaan: customer, customer_aktual: customer, 
+                keterangan: ket, qty: 0
             };
         }
         mapAktual[keyAkt].qty++;
     });
 
+    // 2. Proses Item Hold (HOLD STBJ -> HOLD LANGSIR)
+    holdItems.forEach(r => {
+        let area = r.querySelector('.area-cell').innerText; 
+        let qr = r.querySelector('.qr-val').innerText;
+        updatesHold.push({
+            qrcode: qr,
+            status: 'HOLD LANGSIR',
+            posisi: area,
+            pic_input: user.username
+        });
+    });
+
     try {
-        // REVISI: Menggunakan UPSERT untuk stok_qr agar tidak error Duplicate Key
-        const { error: errInsert } = await db.from('stok_qr').upsert(arrFisik, { onConflict: 'qrcode' });
-        if (errInsert) throw new Error("Gagal insert stok_qr: " + errInsert.message);
+        // Eksekusi Valid Items
+        if (validItems.length > 0) {
+            const { error: errInsert } = await db.from('stok_qr').upsert(arrFisik, { onConflict: 'qrcode' });
+            if (errInsert) throw new Error("Gagal insert stok_qr: " + errInsert.message);
 
-        const { error: errUpdate } = await db.from('hasil_stbj_langsir')
-            .update({ status: 'IN GUDANG', pic_input: user.username })
-            .in('qrcode', qrsToUpdate);
-        if (errUpdate) throw new Error("Gagal update hasil_stbj_langsir: " + errUpdate.message);
+            const { error: errUpdate } = await db.from('hasil_stbj_langsir')
+                .update({ status: 'IN GUDANG', posisi: arrFisik[0].area, pic_input: user.username })
+                .in('qrcode', qrsToUpdateValid);
+            if (errUpdate) throw new Error("Gagal update hasil_stbj_langsir: " + errUpdate.message);
 
-        for(let key in mapAktual) {
-            let item = mapAktual[key];
-            const { data: existing, error: errCek } = await db.from('stok_aktual').select('id, qty')
-                .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
-                .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
-                .eq('customer_aktual', item.customer_aktual).eq('keterangan', item.keterangan).limit(1);
+            for(let key in mapAktual) {
+                let item = mapAktual[key];
+                const { data: existing, error: errCek } = await db.from('stok_aktual').select('id, qty')
+                    .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
+                    .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
+                    .eq('customer_aktual', item.customer_aktual).eq('keterangan', item.keterangan).limit(1);
 
-            if (errCek) throw new Error("Gagal cek stok_aktual: " + errCek.message);
+                if (errCek) throw new Error("Gagal cek stok_aktual: " + errCek.message);
 
-            if(existing && existing.length > 0) {
-                const { error: errUpd } = await db.from('stok_aktual').update({ qty: existing[0].qty + item.qty }).eq('id', existing[0].id);
-                if (errUpd) throw new Error("Gagal update stok_aktual: " + errUpd.message);
-            } else {
-                const { error: errIns } = await db.from('stok_aktual').insert([item]);
-                if (errIns) throw new Error("Gagal insert stok_aktual: " + errIns.message);
+                if(existing && existing.length > 0) {
+                    await db.from('stok_aktual').update({ qty: existing[0].qty + item.qty }).eq('id', existing[0].id);
+                } else {
+                    await db.from('stok_aktual').insert([item]);
+                }
             }
         }
 
-        alert(`BERHASIL!\n${arrFisik.length} kardus masuk ke Gudang.`);
-        document.getElementById('tbody-langsir').innerHTML = ''; 
+        // Eksekusi Hold Items
+        if (holdItems.length > 0) {
+            const { error: errHold } = await db.from('hasil_stbj_langsir').upsert(updatesHold, { onConflict: 'qrcode' });
+            if (errHold) throw new Error("Gagal update hold langsir: " + errHold.message);
+        }
+
+        alert(`BERHASIL!\n${validItems.length} kardus masuk ke Gudang.\n${holdItems.length} kardus masuk ke Hold Langsir.`);
+        
+        // Hapus baris yang sukses diproses dari DOM
+        rowsToProcess.forEach(r => {
+            deleteStack.push(r); 
+            r.classList.add('deleted-row');
+            r.style.display = 'none'; 
+        });
+        
         updateRowNumbers();
         updateTotalBaris();
     } catch (error) { 
@@ -483,65 +547,6 @@ async function saveToSupabase() {
         btn.innerHTML = original; 
         btn.disabled = false; 
     }
-}
-
-async function holdLangsir() {
-    const checkedBoxes = document.querySelectorAll('.cb-row:checked');
-    if(checkedBoxes.length === 0) return alert("Anda harus mencentang data yang bermasalah terlebih dahulu.");
-
-    const btn = document.getElementById('btn-menu-utama'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>'; btn.disabled = true;
-
-    const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
-    let qrsToHold = [];
-    let updates = [];
-
-    checkedBoxes.forEach(cb => {
-        const div = cb.closest('.row-item');
-        const qr = div.querySelector('.qr-val').innerText;
-        const ketUser = div.querySelector('.ket-cell').innerText;
-        
-        const tgl_produksi = div.querySelector('.col-tgl').innerText;
-        const mesin = div.querySelector('.col-mesin').innerText;
-        const shift = div.querySelector('.col-shift').innerText;
-        const jenis = div.querySelector('.col-jenis').innerText;
-        const nama = div.querySelector('.col-nama').innerText;
-        const pjg = div.querySelector('.col-pjg').innerText;
-        const grade = div.querySelector('.col-grade').innerText;
-        const dus = div.querySelector('.col-dus').innerText;
-        const shading = div.querySelector('.col-shading').innerText;
-        const customer = div.querySelector('.col-customer').innerText;
-
-        qrsToHold.push(qr);
-        
-        updates.push({
-            qrcode: qr,
-            tgl_produksi: tgl_produksi, mesin: mesin, shift: shift,
-            jenis_item: jenis, nama_item: nama, panjang: pjg, grade: grade,
-            dus: dus, shading: shading, customer: customer,
-            status: 'HOLD LANGSIR',
-            keterangan: `Di-hold saat Langsir. Note: ${ketUser}`,
-            pic_input: user.username
-        });
-    });
-
-    try {
-        const { error } = await db.from('hasil_stbj_langsir').upsert(updates, { onConflict: 'qrcode' });
-        if(error) throw error;
-        
-        checkedBoxes.forEach(cb => { 
-            const div = cb.closest('.row-item');
-            deleteStack.push(div); 
-            div.classList.add('deleted-row');
-            div.style.display = 'none'; 
-        });
-        updateRowNumbers(); 
-        updateTotalBaris();
-        document.querySelector('#cb-all').checked = false;
-        
-        alert(`SUKSES!\n${qrsToHold.length} Data berhasil diubah statusnya menjadi "HOLD LANGSIR".`);
-    } catch(e) { alert("Gagal melakukan Hold: " + e.message); } 
-    finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
 function salinDataTabel() {
