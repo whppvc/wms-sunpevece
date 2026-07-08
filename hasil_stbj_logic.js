@@ -360,8 +360,16 @@ function switchStatusFilter(val) {
     statusSekarang = val; 
     
     if(val === 'ALL') {
+        // Hapus filter status jika memilih SEMUA DATA
         delete activeFilters['col-status'];
+    } else if (val === 'STBJ') {
+        // Petakan STBJ agar mencocokkan baris berstatus 'STBJ' maupun 'SUDAH STBJ'
+        activeFilters['col-status'] = ['STBJ', 'SUDAH STBJ'];
+    } else if (val === 'HOLD STBJ') {
+        // Petakan HOLD STBJ agar mencocokkan 'HOLD STBJ' maupun 'HOLD'
+        activeFilters['col-status'] = ['HOLD STBJ', 'HOLD'];
     } else {
+        // Untuk status lainnya (e.g., 'IN GUDANG', 'HOLD LANGSIR')
         activeFilters['col-status'] = [val];
     }
     
