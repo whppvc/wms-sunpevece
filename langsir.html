@@ -57,7 +57,6 @@
                         <button onclick="toggleSidebarFilter(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2 border-b border-slate-100"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data</button>
                         <button onclick="salinDataTabel(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2 border-b border-slate-100"><i data-lucide="copy" class="w-4 h-4"></i> Salin Data</button>
                         <button onclick="undoDelete(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2 border-b border-slate-100"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo Hapus</button>
-                        <button onclick="holdLangsir(); toggleMenuUtama()" class="px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-2"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Bermasalah</button>
                     </div>
                 </div>
             </div>
@@ -79,9 +78,13 @@
             </div>
         </div>
 
+        <!-- REVISI: FOOTER ACTION DENGAN 2 TOMBOL SCAN -->
         <div class="shrink-0 w-full bg-slate-50 p-2 flex items-center gap-2 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300 pb-4">
-            <button onclick="bukaModalAdd()" class="w-[50px] h-[50px] bg-[#0f172a] hover:bg-black text-white flex justify-center items-center shadow-md active:scale-95 shrink-0 transition rounded border-b-4 border-slate-900">
-                <i data-lucide="plus" class="w-7 h-7"></i>
+            <button onclick="bukaModalAdd()" class="w-[50px] h-[50px] bg-[#0f172a] hover:bg-black text-white flex justify-center items-center shadow-md active:scale-95 shrink-0 transition rounded border-b-4 border-slate-900" title="Scan Troli">
+                <i data-lucide="shopping-cart" class="w-6 h-6"></i>
+            </button>
+            <button onclick="bukaModalScanArea()" class="w-[50px] h-[50px] bg-blue-600 hover:bg-blue-700 text-white flex justify-center items-center shadow-md active:scale-95 shrink-0 transition rounded border-b-4 border-blue-800" title="Scan ke Area">
+                <i data-lucide="map-pin" class="w-6 h-6"></i>
             </button>
             <button id="btn-save" onclick="saveToSupabase()" class="flex-1 h-[50px] bg-[#058c5e] hover:bg-[#04724d] text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-[#035237]">
                 <i data-lucide="save" class="w-5 h-5"></i> SIMPAN KE GUDANG
@@ -90,26 +93,51 @@
 
     </div>
 
-    <!-- MODAL ADD SCAN -->
+    <!-- MODAL 1: ADD SCAN TROLI (Tanpa Area) -->
     <div id="modal-add-scan" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[60] p-4 backdrop-blur-sm transition-opacity">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 p-5">
             <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="scan-line" class="w-5 h-5 text-blue-600"></i> INPUT DATA LANGSIR</h3>
+                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="shopping-cart" class="w-5 h-5 text-slate-800"></i> SCAN ITEM TROLI</h3>
                 <button type="button" onclick="tutupModalAdd()" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <form id="form-scan" class="flex flex-col gap-4">
                 <div>
-                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Pilih Area Simpan</label>
-                    <select id="select-area" class="w-full p-2.5 border border-slate-300 rounded font-bold outline-none focus:border-blue-500 text-slate-800 cursor-pointer bg-slate-50 text-sm">
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Pilih Troli (Opsional)</label>
+                    <select id="select-troli" class="w-full p-2.5 border border-slate-300 rounded font-bold outline-none focus:border-slate-800 text-slate-800 cursor-pointer bg-slate-50 text-sm">
+                        <option value="-">-- Tanpa Troli --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Scan Fisik Kardus</label>
+                    <input type="text" id="input-qrcode" class="w-full p-2.5 border border-slate-300 rounded outline-none focus:border-slate-800 font-mono font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
+                </div>
+                <button type="submit" class="mt-2 w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded font-black shadow transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-4 border-black">
+                    <i data-lucide="plus-square" class="w-4 h-4"></i> TAMBAHKAN KE LAYAR
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: SCAN KE AREA (Putaway) -->
+    <div id="modal-scan-area" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[60] p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 p-5">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+                <h3 class="font-black text-blue-700 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="map-pin" class="w-5 h-5 text-blue-600"></i> SCAN ITEM KE RAK/AREA</h3>
+                <button type="button" onclick="tutupModalScanArea()" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <form id="form-scan-area" class="flex flex-col gap-4">
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Pilih Area Rak</label>
+                    <select id="select-area-putaway" class="w-full p-2.5 border-2 border-blue-200 rounded font-bold outline-none focus:border-blue-600 text-blue-800 cursor-pointer bg-blue-50 text-sm" required>
                         <option value="">-- Memuat Area --</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Scan Fisik Kardus</label>
-                    <input type="text" id="input-qrcode" class="w-full p-2.5 border border-slate-300 rounded outline-none focus:border-blue-500 font-mono font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off">
+                    <input type="text" id="input-qrcode-area" class="w-full p-2.5 border border-slate-300 rounded outline-none focus:border-blue-600 font-mono font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition" placeholder="Arahkan scanner..." autocomplete="off" required>
                 </div>
-                <button type="submit" class="mt-2 w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded font-black shadow transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-4 border-black">
-                    <i data-lucide="plus-square" class="w-4 h-4"></i> TAMBAHKAN KODE
+                <button type="submit" class="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded font-black shadow transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-4 border-blue-800">
+                    <i data-lucide="check-square" class="w-4 h-4"></i> SET AREA ITEM
                 </button>
             </form>
         </div>
