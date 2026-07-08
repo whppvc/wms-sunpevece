@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const area = document.getElementById('select-area-putaway').value;
             const rawInput = document.getElementById('input-qrcode-area').value.trim();
             
-            if(!area) return alert("Pilih Area Rak terlebih dahulu!");
+            if(!area) return alert("Pilih Area terlebih dahulu!");
             if(!rawInput) return;
 
             const codes = rawInput.split(/[\s;]+/).map(q => q.trim()).filter(q => q);
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 masterData.area = [...new Set(mDataArea.map(r => (r.nama_area || r.area || '').trim()).filter(Boolean))]; 
                 const selArea = document.getElementById('select-area-putaway');
                 if(selArea) { 
-                    selArea.innerHTML = '<option value="">-- Pilih Area Rak --</option>'; 
+                    selArea.innerHTML = '<option value="">-- Pilih Area --</option>'; 
                     masterData.area.forEach(a => selArea.innerHTML += `<option value="${a}">${a}</option>`); 
                 }
             }
@@ -153,6 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 200); 
 });
 
+// REVISI: Menambahkan class status-container di baris HTML
 function addRow(area, code, isDuplicate = false) {
     const div = document.createElement('div'); 
     const rowClass = isDuplicate ? 'bg-red-50 hover:bg-red-100' : 'bg-white hover:bg-slate-50';
@@ -195,7 +196,8 @@ function addRow(area, code, isDuplicate = false) {
             <div class="text-[11px] font-bold text-slate-500 mt-1">Keterangan: <span class="col-ket ket-cell text-slate-700">-</span></div>
             <div class="text-[11px] font-bold text-slate-500">Troli: <span class="col-troli troli-cell text-slate-700">-</span></div>
             
-            <div class="flex flex-row flex-wrap items-center gap-1.5 mt-1.5">
+            <!-- REVISI: Ditambahkan class status-container agar penambahan badge dinamis lebih mudah -->
+            <div class="flex flex-row flex-wrap items-center gap-1.5 mt-1.5 status-container">
                 ${statusHtml}
             </div>
         </div>
@@ -308,6 +310,7 @@ function editKeteranganMassal() {
     toggleSemuaCentang(false);
 }
 
+// REVISI: Logika Verifikasi untuk Menampilkan Badge Kuning "HOLD LANGSIR" di samping status
 async function VerifikasiDanCek() {
     const rows = document.querySelectorAll('.row-item:not(.deleted-row):not(.filtered-out)');
     if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
@@ -333,13 +336,14 @@ async function VerifikasiDanCek() {
 
         rows.forEach(r => {
             const qr = r.querySelector('.qr-val').innerText;
-            const statusSpan = r.querySelector('.status-val');
+            const statusContainer = r.querySelector('.status-container');
             const troliCell = r.querySelector('.troli-cell');
             const ketCell = r.querySelector('.ket-cell');
             
             let statusText = '';
             let statusClass = '';
             let internalStatus = 'invalid';
+            let isHoldLangsir = false;
 
             if (hasilMap[qr]) {
                 let statDB = hasilMap[qr].status;
@@ -354,9 +358,14 @@ async function VerifikasiDanCek() {
                     statusText = 'HOLD STBJ';
                     statusClass = 'bg-orange-500 text-white border-orange-600';
                     internalStatus = 'valid_hold'; 
-                } else if (statDB === 'IN GUDANG' || statDB === 'HOLD LANGSIR') {
+                } else if (statDB === 'IN GUDANG') {
                     statusText = 'DUPLIKAT DATA';
                     statusClass = 'bg-red-600 text-white border-red-800';
+                    hasError = true;
+                } else if (statDB === 'HOLD LANGSIR') {
+                    statusText = 'DUPLIKAT DATA';
+                    statusClass = 'bg-red-600 text-white border-red-800';
+                    isHoldLangsir = true; // Tandai untuk memunculkan badge kuning
                     hasError = true;
                 }
             } else if (globalSet.has(qr)) {
@@ -369,16 +378,15 @@ async function VerifikasiDanCek() {
                 hasError = true;
             }
 
-            if (statusSpan.innerText === 'DUPLIKAT SCAN') {
-                statusText = 'DUPLIKAT SCAN';
-                statusClass = 'bg-red-600 text-white border-red-800';
-                internalStatus = 'invalid';
-                hasError = true;
+            // Render Badge Utama
+            let statusHtml = `<span class="font-bold px-3 py-1 text-[10px] status-val rounded-sm shadow-sm ${statusClass}" data-status="${internalStatus}">${statusText}</span>`;
+            
+            // REVISI: Jika status di DB adalah HOLD LANGSIR, tambahkan badge kuning di sampingnya
+            if (isHoldLangsir) {
+                statusHtml += `<span class="bg-yellow-500 text-white font-bold px-3 py-1 text-[10px] rounded-sm shadow-sm border border-yellow-600">HOLD LANGSIR</span>`;
             }
 
-            statusSpan.className = `font-bold px-3 py-1 text-[10px] status-val rounded-sm shadow-sm ${statusClass}`;
-            statusSpan.innerText = statusText;
-            statusSpan.setAttribute('data-status', internalStatus);
+            statusContainer.innerHTML = statusHtml;
 
             if (internalStatus === 'invalid') {
                 r.classList.add('bg-red-50');
@@ -390,7 +398,7 @@ async function VerifikasiDanCek() {
         });
 
         if(hasError) { alert("PERINGATAN!\nTerdapat data bermasalah (Belum STBJ / Duplikat). Data tersebut TIDAK BISA disimpan."); } 
-        else { alert("MANTAP!\nSemua data Valid. Silakan Scan Area Rak untuk menyimpan."); }
+        else { alert("MANTAP!\nSemua data Valid. Silakan Scan Area untuk menyimpan."); }
     } catch (e) { alert("Koneksi Error: " + e.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
@@ -401,7 +409,7 @@ async function saveToSupabase() {
     const activeRows = Array.from(document.querySelectorAll('.row-item:not(.deleted-row)'));
     const rowsToProcess = activeRows.filter(r => r.querySelector('.area-cell').innerText !== '?');
 
-    if(rowsToProcess.length === 0) return alert("Belum ada item yang di-scan ke Area Rak!");
+    if(rowsToProcess.length === 0) return alert("Belum ada item yang di-scan ke Area!");
 
     let hasInvalid = false;
     let validItems = [];
@@ -528,7 +536,6 @@ async function saveToSupabase() {
     }
 }
 
-// REVISI: Fungsi Hold Langsir (Mengubah status menjadi HOLD LANGSIR & mencatat area/posisi jika ada)
 async function holdLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
     if(checkedBoxes.length === 0) return alert("Pilih (centang) item yang ingin di-Hold Langsir terlebih dahulu!");
@@ -567,7 +574,7 @@ async function holdLangsir() {
             jenis_item: jenis, nama_item: nama, panjang: pjg, grade: grade,
             dus: dus, shading: shading, customer: customer,
             status: 'HOLD LANGSIR',
-            posisi: area === '?' ? null : area, // Rekam area jika sudah di-scan ke rak
+            posisi: area === '?' ? null : area, 
             keterangan: `Di-hold saat Langsir. Note: ${ketUser}`,
             pic_input: user.username
         });
