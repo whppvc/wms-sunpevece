@@ -406,7 +406,6 @@ async function VerifikasiDanCek() {
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
-// REVISI: Validasi Simpan menolak jika ada item yang sudah di-scan area tapi belum diverifikasi
 async function saveToSupabase() {
     const btn = document.getElementById('btn-save'); const original = btn.innerHTML;
     
@@ -415,7 +414,7 @@ async function saveToSupabase() {
 
     if(rowsToProcess.length === 0) return alert("Belum ada item yang di-scan ke Area!");
 
-    let hasUnverified = false; // REVISI: Penanda belum verifikasi
+    let hasUnverified = false; 
     let hasInvalid = false;
     let validItems = [];
     let holdItems = [];
@@ -425,7 +424,6 @@ async function saveToSupabase() {
         const status = statusVal ? statusVal.getAttribute('data-status') : 'unverified';
         const isManuallyHeld = r.getAttribute('data-hold-langsir') === 'true';
 
-        // REVISI: Jika status masih 'unverified', tolak simpan
         if (status === 'unverified') {
             hasUnverified = true;
         } else if (status === 'valid' && !isManuallyHeld) {
@@ -437,7 +435,6 @@ async function saveToSupabase() {
         }
     });
 
-    // REVISI: Alert khusus untuk item belum diverifikasi
     if(hasUnverified) {
         return alert("TOLAK PENYIMPANAN!\nTerdapat item yang sudah di-scan ke Area tetapi BELUM DIVERIFIKASI. Silakan klik tombol 'Verifikasi' terlebih dahulu!");
     }
@@ -483,7 +480,7 @@ async function saveToSupabase() {
 
         qrsToUpdateValid.push(qr);
 
-        let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_area_${customer}_${ket}`;
+        let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${customer}_${ket}`;
         if(!mapAktual[keyAkt]) {
             mapAktual[keyAkt] = {
                 id_sku: id_sku, id_po: id_po, jenis_item: jenis, nama_item: nama, 
@@ -498,11 +495,14 @@ async function saveToSupabase() {
     holdItems.forEach(r => {
         let area = r.querySelector('.area-cell').innerText; 
         let qr = r.querySelector('.qr-val').innerText;
+        
+        // REVISI: Masukkan waktu_langsir saat proses Hold Langsir dieksekusi ke DB
         updatesHold.push({
             qrcode: qr,
             status: 'HOLD LANGSIR',
             posisi: area,
-            pic_input: user.username
+            pic_input: user.username,
+            waktu_langsir: new Date().toISOString() 
         });
     });
 
@@ -511,8 +511,14 @@ async function saveToSupabase() {
             const { error: errInsert } = await db.from('stok_qr').upsert(arrFisik, { onConflict: 'qrcode' });
             if (errInsert) throw new Error("Gagal insert stok_qr: " + errInsert.message);
 
+            // REVISI: Masukkan waktu_langsir saat proses IN GUDANG dieksekusi ke DB
             const { error: errUpdate } = await db.from('hasil_stbj_langsir')
-                .update({ status: 'IN GUDANG', posisi: arrFisik[0].area, pic_input: user.username })
+                .update({ 
+                    status: 'IN GUDANG', 
+                    posisi: arrFisik[0].area, 
+                    pic_input: user.username,
+                    waktu_langsir: new Date().toISOString() 
+                })
                 .in('qrcode', qrsToUpdateValid);
             if (errUpdate) throw new Error("Gagal update hasil_stbj_langsir: " + errUpdate.message);
 
@@ -556,6 +562,7 @@ async function saveToSupabase() {
     }
 }
 
+// REVISI: Fungsi Hold Langsir (Hanya menandai secara LOKAL di UI, tidak langsung ke DB)
 async function holdLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
     if(checkedBoxes.length === 0) return alert("Pilih (centang) item yang ingin ditandai sebagai Hold Langsir!");
