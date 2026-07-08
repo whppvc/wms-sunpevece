@@ -15,6 +15,24 @@ let selectAllState = 0;
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
+// REVISI: Fungsi Helper untuk Konversi & Format WIB (Asia/Jakarta) secara Akurat
+function formatWIB(isoString) {
+    if (!isoString || isoString === '-') return '-';
+    try {
+        const dt = new Date(isoString);
+        if (isNaN(dt.getTime())) return isoString;
+        return new Intl.DateTimeFormat('id-ID', {
+            timeZone: 'Asia/Jakarta',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).format(dt).replace(/\./g, ':');
+    } catch(e) { return isoString; }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'hasil_stbj', title: 'HASIL STBJ', url: 'hasil_stbj.html' });
     
@@ -41,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // FITUR BARU: Navigasi Keyboard ala Excel untuk Filter Menu
     const filterMenuEl = document.getElementById('excel-filter-menu');
     if (filterMenuEl) {
         filterMenuEl.addEventListener('keydown', function(e) {
@@ -55,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const currentIndex = visibleCbs.indexOf(document.activeElement);
-            const jump = 8; // Jumlah lompatan untuk PageDown/PageUp
+            const jump = 8; 
 
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
@@ -277,7 +294,7 @@ async function loadKamusDanJasper() {
 
 async function muatDataDariSupabase() {
     const tbody = document.getElementById('tbody-stbj');
-    tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500 text-sm">Menarik Data...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="23" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500 text-sm">Menarik Data...</p></td></tr>`;
     lucide.createIcons();
     try {
         let filterValues = [];
@@ -303,7 +320,7 @@ async function muatDataDariSupabase() {
         rawDataRaw = data || [];
         renderHeaderDanTabel();
     } catch(err) { 
-        tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="23" class="p-10 text-center text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; 
     }
 }
 
@@ -342,17 +359,14 @@ function setMode(m) {
 function switchStatusFilter(val) { 
     statusSekarang = val; 
     
-    const btnHoldMob = document.getElementById('btn-hold-mob');
-    if(btnHoldMob) {
-        if(statusSekarang === 'STBJ') {
-            btnHoldMob.innerHTML = '<i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Item';
-        } else {
-            btnHoldMob.innerHTML = '<i data-lucide="play-circle" class="w-4 h-4"></i> Unhold Item';
-        }
-        lucide.createIcons();
+    if(val === 'ALL') {
+        delete activeFilters['col-status'];
+    } else {
+        activeFilters['col-status'] = [val];
     }
     
-    muatDataDariSupabase(); 
+    saringTabelExcel();
+    updateFilterIcons();
 }
 
 function sortTable(colIndex, headerEl) {
@@ -636,6 +650,7 @@ function highlightRow(checkbox, skipStateReset = false) {
     if(!skipStateReset) updateSelectedCount();
 }
 
+// REVISI: Menambahkan kolom Waktu Langsir di thead dan memformat waktu ke WIB
 function renderHeaderDanTabel() {
     const thead = document.getElementById('thead-stbj');
     const tbody = document.getElementById('tbody-stbj');
@@ -652,7 +667,8 @@ function renderHeaderDanTabel() {
                 </th>
                 ${thSort('Status Item', 'col-status text-center')}
                 ${thSort('Collect', 'col-status-data text-center')}
-                ${thSort('Waktu Scan', 'col-waktu text-center')}
+                ${thSort('Waktu STBJ', 'col-waktu text-center')}
+                ${thSort('Waktu Langsir', 'col-waktu-langsir text-center')}
                 ${thSort('Troli', 'col-troli text-center')}
                 ${thSort('QRCode', 'col-qr')}
                 ${thSort('Tgl Produksi', 'col-tgl text-center')}
@@ -669,20 +685,13 @@ function renderHeaderDanTabel() {
                 ${thSort('PIC Input', 'col-pic')}
             </tr>`;
         
-        if(rawDataRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="21" class="px-4 py-8 text-center font-bold text-slate-400">Tabel Kosong.</td></tr>`; return; }
+        if(rawDataRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-stbj"><td colspan="22" class="px-4 py-8 text-center font-bold text-slate-400">Tabel Kosong.</td></tr>`; return; }
         
         let h = '';
         rawDataRaw.forEach((r, i) => {
-            let tgl = '-';
-            if (r.created_at) {
-                const dt = new Date(r.created_at);
-                if (!isNaN(dt.getTime())) {
-                    const dd = String(dt.getDate()).padStart(2, '0');
-                    const mm = String(dt.getMonth() + 1).padStart(2, '0');
-                    const yyyy = dt.getFullYear();
-                    tgl = `${dd}/${mm}/${yyyy}`;
-                }
-            }
+            // REVISI: Format waktu ke WIB (Asia/Jakarta) secara akurat
+            const tglSTBJ = formatWIB(r.created_at);
+            const tglLangsir = formatWIB(r.waktu_langsir);
             
             let statData = '-';
             if (r.status_data && r.status_data !== 'BELUM') {
@@ -711,7 +720,8 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" value="${r.qrcode}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 text-center col-status" data-search="${displayStatus}"><span class="font-black ${textColor}">${displayStatus}</span></td>
                     <td class="px-4 py-3 text-center col-status-data" data-search="${r.status_data || '-'}">${statData}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-waktu" data-search="${tgl}">${tgl}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-waktu" data-search="${tglSTBJ}">${tglSTBJ}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-waktu-langsir" data-search="${tglLangsir}">${tglLangsir}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-troli" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
                     <td class="px-4 py-3 text-left font-mono font-bold text-slate-900 col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-tgl" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
@@ -729,7 +739,7 @@ function renderHeaderDanTabel() {
                 </tr>`;
         });
         tbody.innerHTML = h;
-        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="21" class="px-4 py-8 text-center font-bold text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-stbj" style="display:none;"><td colspan="22" class="px-4 py-8 text-center font-bold text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
     } 
     else if(modeSekarang === 'item' || modeSekarang === 'jasper') {
         const isJasper = modeSekarang === 'jasper';
@@ -1150,7 +1160,7 @@ async function aksiMassal(tipe) {
                 } else {
                     let users = currentCollect.split(',').map(u => u.trim());
                     if(!users.includes(currentUser.username)) {
-                        users.push(currentUser.username);
+                        updates.push(currentUser.username);
                         newCollect = users.join(', ');
                     }
                 }
