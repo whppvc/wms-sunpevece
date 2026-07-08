@@ -57,7 +57,6 @@
                         <button onclick="toggleSidebarFilter(); toggleMenuUtama()" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-purple-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data</button>
                         <button onclick="salinDataTabel(); toggleMenuUtama()" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
                         <button onclick="undoDelete(); toggleMenuUtama()" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-rose-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo Hapus</button>
-                        <!-- REVISI: Nama tombol diubah menjadi Hold Langsir -->
                         <button onclick="holdLangsir(); toggleMenuUtama()" class="text-left px-4 py-3 text-xs font-bold text-amber-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Langsir</button>
                     </div>
                 </div>
@@ -122,9 +121,10 @@
             </div>
             <form id="form-scan-area" class="flex flex-col gap-4">
                 <div>
-                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Pilih Area Rak</label>
+                    <!-- REVISI: Teks diubah menjadi Pilih Area -->
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Pilih Area</label>
                     <select id="select-area-putaway" class="w-full p-2.5 border-2 border-blue-200 rounded font-bold outline-none focus:border-blue-600 text-blue-800 cursor-pointer bg-blue-50 text-sm" required>
-                        <option value="">-- Memuat Area --</option>
+                        <option value="">-- Pilih Area --</option>
                     </select>
                 </div>
                 <div>
