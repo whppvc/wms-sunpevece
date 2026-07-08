@@ -69,7 +69,7 @@ document.addEventListener('click', function(e) {
 document.addEventListener('DOMContentLoaded', async () => {
     if(typeof initModernLayout === 'function') initModernLayout({ id: 'langsir', title: 'LANGSIR', url: 'langsir.html' }); 
     
-    // REVISI FIX: Event Delegation untuk Form Scan agar tidak putus saat layout dirender
+    // REVISI FIX: Event Delegation murni tanpa memanggil select-troli (Troli dihapus)
     document.addEventListener('submit', function(e) {
         if (e.target && e.target.id === 'form-scan') {
             e.preventDefault();
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             codes.forEach(code => { 
                 const isLocalDuplicate = existingQRs.includes(code);
-                addRow('?', code, isLocalDuplicate); 
+                addRow('?', code, isLocalDuplicate); // Area diset '?' secara default
                 if(!isLocalDuplicate) existingQRs.push(code); 
             });
             
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const area = document.getElementById('select-area-putaway').value;
             const rawInput = document.getElementById('input-qrcode-area').value.trim();
             
-            if(!area) return alert("Pilih Area terlebih dahulu!");
+            if(!area) return alert("Pilih Area Rak terlebih dahulu!");
             if(!rawInput) return;
 
             const codes = rawInput.split(/[\s;]+/).map(q => q.trim()).filter(q => q);
@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 masterData.area = [...new Set(mDataArea.map(r => (r.nama_area || r.area || '').trim()).filter(Boolean))]; 
                 const selArea = document.getElementById('select-area-putaway');
                 if(selArea) { 
-                    selArea.innerHTML = '<option value="">-- Pilih Area --</option>'; 
+                    selArea.innerHTML = '<option value="">-- Pilih Area Rak --</option>'; 
                     masterData.area.forEach(a => selArea.innerHTML += `<option value="${a}">${a}</option>`); 
                 }
             }
@@ -154,6 +154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 200); 
 });
 
+// REVISI: addRow disederhanakan tanpa parameter troli
 function addRow(area, code, isDuplicate = false) {
     const div = document.createElement('div'); 
     const rowClass = isDuplicate ? 'bg-red-50 hover:bg-red-100' : 'bg-white hover:bg-slate-50';
@@ -314,7 +315,7 @@ async function VerifikasiDanCek() {
     if(rows.length === 0) return alert("Belum ada data untuk diVerifikasi.");
     
     const btn = document.getElementById('btn-Verifikasi'); const ori = btn.innerHTML;
-    btn.innerHTML = '<div class="w-9 bg-slate-900 text-white flex items-center justify-center shrink-0"><i data-lucide="loader-2" class="animate-spin w-4 h-4"></i></div><div class="flex-1 bg-slate-800 text-white font-bold text-[11px] uppercase flex items-center justify-center px-3 tracking-wider">Proses...</div>'; btn.disabled = true;
+    btn.innerHTML = '<div class="w-9 bg-slate-900 text-white flex items-center justify-center shrink-0"><i data-lucide="loader-2" class="animate-spin w-4 h-4"></i></div><div class="flex-1 bg-slate-800 text-white font-black text-[11px] uppercase flex items-center justify-center px-3 tracking-wider">Proses...</div>'; btn.disabled = true;
     
     const qrs = Array.from(rows).map(r => r.querySelector('.qr-val').innerText);
     
@@ -390,8 +391,8 @@ async function VerifikasiDanCek() {
             }
         });
 
-        if(hasError) { alert("PERINGATAN!\nTerdapat data bermasalah (Belum STBJ / Hold / Duplikat). Data tersebut TIDAK BISA disimpan."); } 
-        else { alert("MANTAP!\nSemua data Valid (SUDAH STBJ). Siap disimpan ke Gudang."); }
+        if(hasError) { alert("PERINGATAN!\nTerdapat data bermasalah (Belum STBJ / Duplikat). Data tersebut TIDAK BISA disimpan."); } 
+        else { alert("MANTAP!\nSemua data Valid. Silakan Scan Area Rak untuk menyimpan."); }
     } catch (e) { alert("Koneksi Error: " + e.message); } 
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
