@@ -342,7 +342,6 @@ async function VerifikasiDanCek() {
             let internalStatus = 'invalid';
             let isHoldLangsir = false;
 
-            // REVISI: Cek apakah secara lokal ditandai manual sebagai Hold Langsir
             let isManuallyHeld = r.getAttribute('data-hold-langsir') === 'true';
 
             if (hasilMap[qr]) {
@@ -407,6 +406,7 @@ async function VerifikasiDanCek() {
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
+// REVISI: Validasi Simpan menolak jika ada item yang sudah di-scan area tapi belum diverifikasi
 async function saveToSupabase() {
     const btn = document.getElementById('btn-save'); const original = btn.innerHTML;
     
@@ -415,16 +415,20 @@ async function saveToSupabase() {
 
     if(rowsToProcess.length === 0) return alert("Belum ada item yang di-scan ke Area!");
 
+    let hasUnverified = false; // REVISI: Penanda belum verifikasi
     let hasInvalid = false;
     let validItems = [];
     let holdItems = [];
 
     rowsToProcess.forEach(r => {
         const statusVal = r.querySelector('.status-val');
-        const status = statusVal ? statusVal.getAttribute('data-status') : '';
+        const status = statusVal ? statusVal.getAttribute('data-status') : 'unverified';
         const isManuallyHeld = r.getAttribute('data-hold-langsir') === 'true';
 
-        if (status === 'valid' && !isManuallyHeld) {
+        // REVISI: Jika status masih 'unverified', tolak simpan
+        if (status === 'unverified') {
+            hasUnverified = true;
+        } else if (status === 'valid' && !isManuallyHeld) {
             validItems.push(r);
         } else if (status === 'valid_hold' || isManuallyHeld) {
             holdItems.push(r);
@@ -432,6 +436,11 @@ async function saveToSupabase() {
             hasInvalid = true;
         }
     });
+
+    // REVISI: Alert khusus untuk item belum diverifikasi
+    if(hasUnverified) {
+        return alert("TOLAK PENYIMPANAN!\nTerdapat item yang sudah di-scan ke Area tetapi BELUM DIVERIFIKASI. Silakan klik tombol 'Verifikasi' terlebih dahulu!");
+    }
 
     if(hasInvalid) {
         return alert("TOLAK PENYIMPANAN!\nTerdapat data BELUM STBJ atau DUPLIKAT yang sudah diberi Area. Silakan hapus item merah tersebut dari layar sebelum menyimpan.");
@@ -474,7 +483,7 @@ async function saveToSupabase() {
 
         qrsToUpdateValid.push(qr);
 
-        let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${customer}_${ket}`;
+        let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_area_${customer}_${ket}`;
         if(!mapAktual[keyAkt]) {
             mapAktual[keyAkt] = {
                 id_sku: id_sku, id_po: id_po, jenis_item: jenis, nama_item: nama, 
@@ -547,24 +556,21 @@ async function saveToSupabase() {
     }
 }
 
-// REVISI: Fungsi Hold Langsir (Hanya menandai secara LOKAL di UI, tidak langsung ke DB)
 async function holdLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
     if(checkedBoxes.length === 0) return alert("Pilih (centang) item yang ingin ditandai sebagai Hold Langsir!");
 
     checkedBoxes.forEach(cb => {
         const row = cb.closest('.row-item');
-        row.setAttribute('data-hold-langsir', 'true'); // Set penanda lokal
+        row.setAttribute('data-hold-langsir', 'true'); 
         
         const statusContainer = row.querySelector('.status-container');
         if (statusContainer) {
-            // Ubah badge menjadi kuning HOLD LANGSIR secara lokal
             statusContainer.innerHTML = `
                 <span class="font-bold px-3 py-1 text-[10px] status-val rounded-sm shadow-sm bg-yellow-500 text-white border border-yellow-600" data-status="valid_hold">HOLD LANGSIR</span>
             `;
         }
         
-        // Uncheck & hilangkan highlight biru
         cb.checked = false;
         row.classList.remove('selected-row');
     });
