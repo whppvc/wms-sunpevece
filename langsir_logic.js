@@ -1,6 +1,41 @@
 let masterData = { kamus: [], area: [] }; 
 let deleteStack = []; 
 
+// Helper untuk mendapatkan timestamp ISO 8601 dengan offset WIB (+07:00) yang akurat
+function getWIBTimestamp() {
+    const d = new Date();
+    const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+    const wib = new Date(utc + (3600000 * 7));
+    
+    const pad = (n) => String(n).padStart(2, '0');
+    const yyyy = wib.getFullYear();
+    const mm = pad(wib.getMonth() + 1);
+    const dd = pad(wib.getDate());
+    const hh = pad(wib.getHours());
+    const min = pad(wib.getMinutes());
+    const ss = pad(wib.getSeconds());
+    
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}+07:00`;
+}
+
+// Helper untuk memformat tampilan waktu ke format WIB Indonesia (DD/MM/YYYY HH:mm)
+function formatWIB(isoString) {
+    if (!isoString || isoString === '-') return '-';
+    try {
+        const dt = new Date(isoString);
+        if (isNaN(dt.getTime())) return isoString;
+        return new Intl.DateTimeFormat('id-ID', {
+            timeZone: 'Asia/Jakarta',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).format(dt).replace(/\./g, ':');
+    } catch(e) { return isoString; }
+}
+
 window.toggleMenuUtama = function(e) {
     if(e) e.stopPropagation();
     const menu = document.getElementById('dropdown-menu');
@@ -400,10 +435,18 @@ async function VerifikasiDanCek() {
             }
         });
 
-        if(hasError) { alert("PERINGATAN!\nTerdapat data bermasalah (Belum STBJ / Duplikat). Data tersebut TIDAK BISA disimpan."); } 
-        else { alert("MANTAP!\nSemua data Valid. Silakan Scan Area untuk menyimpan."); }
-    } catch (e) { alert("Koneksi Error: " + e.message); } 
+        renderTable();
+        if(hasError) alert(`Verifikasi Selesai!\nDitemukan data bermasalah (Merah).`);
+        else alert("Verifikasi Selesai!\nSemua data valid dan siap diproses.");
+
+    } catch (err) { alert("Gagal cek database: " + err.message); }
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
+}
+
+function renderTable() {
+    // Fungsi pembantu untuk sinkronisasi render ulang jika diperlukan
+    updateRowNumbers();
+    updateTotalBaris();
 }
 
 async function saveToSupabase() {
@@ -445,12 +488,14 @@ async function saveToSupabase() {
 
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btn.disabled = true;
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
+    const wibNow = getWIBTimestamp();
     
     let arrFisik = []; 
-    let qrsToUpdateValid = []; 
-    let updatesHold = [];
+    let arrGlobal = [];
+    let updatesHasilLangsir = [];
     let mapAktual = {}; 
 
+    // 1. Olah data barang valid (IN GUDANG)
     validItems.forEach(r => {
         let area = r.querySelector('.area-cell').innerText; 
         let qr = r.querySelector('.qr-val').innerText;
@@ -470,6 +515,7 @@ async function saveToSupabase() {
         let id_sku = `${area}_${nama}_${pjg}_${grade}_${dus}_${shading}_${customer}_${ket}`;
         let id_po = `${nama}_${pjg}_${grade}`;
         
+        // Payload untuk stok_qr
         arrFisik.push({ 
             qrcode: qr, area: area, id_sku: id_sku, id_po: id_po, 
             tgl_produksi: tgl_produksi, mesin: mesin, shift: shift,
@@ -478,8 +524,41 @@ async function saveToSupabase() {
             keterangan: ket, pic_input: user.username 
         });
 
-        qrsToUpdateValid.push(qr);
+        // Payload untuk stok_global (JSON format)
+        arrGlobal.push({
+            qrcode: qr,
+            area: area,
+            id_sku: id_sku,
+            id_po: id_po,
+            tgl_produksi: tgl_produksi,
+            mesin: mesin,
+            shift: shift,
+            jenis_item: jenis,
+            nama_item: nama,
+            panjang: pjg,
+            grade: grade,
+            dus: dus,
+            shading: shading,
+            customer_bawaan: customer,
+            customer_aktual: customer,
+            po_aktual: customer,
+            keterangan: ket,
+            pic_input: user.username,
+            qty: 1,
+            jalur_masuk: 'langsir',
+            created_at: wibNow
+        });
 
+        // Payload modifikasi hasil_stbj_langsir (JSON format)
+        updatesHasilLangsir.push({
+            qrcode: qr,
+            status: 'IN GUDANG',
+            posisi: area,
+            waktu_langsir: wibNow,
+            pic_input: user.username
+        });
+
+        // Map akumulasi untuk update stok_aktual secara inkremental
         let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${customer}_${ket}`;
         if(!mapAktual[keyAkt]) {
             mapAktual[keyAkt] = {
@@ -492,60 +571,62 @@ async function saveToSupabase() {
         mapAktual[keyAkt].qty++;
     });
 
+    // 2. Olah data barang hold (HOLD LANGSIR)
     holdItems.forEach(r => {
         let area = r.querySelector('.area-cell').innerText; 
         let qr = r.querySelector('.qr-val').innerText;
         
-        // REVISI: Masukkan waktu_langsir saat proses Hold Langsir dieksekusi ke DB
-        updatesHold.push({
+        updatesHasilLangsir.push({
             qrcode: qr,
             status: 'HOLD LANGSIR',
             posisi: area,
-            pic_input: user.username,
-            waktu_langsir: new Date().toISOString() 
+            waktu_langsir: wibNow,
+            pic_input: user.username
         });
     });
 
     try {
-        if (validItems.length > 0) {
-            const { error: errInsert } = await db.from('stok_qr').upsert(arrFisik, { onConflict: 'qrcode' });
-            if (errInsert) throw new Error("Gagal insert stok_qr: " + errInsert.message);
+        // Eksekusi Tahap 1: Modifikasi tabel hasil_stbj_langsir (Valid & Hold)
+        if (updatesHasilLangsir.length > 0) {
+            console.log("Mengirim JSON Payload ke hasil_stbj_langsir:", JSON.stringify(updatesHasilLangsir));
+            const { error: errHasil } = await db.from('hasil_stbj_langsir').upsert(updatesHasilLangsir, { onConflict: 'qrcode' });
+            if (errHasil) throw new Error("Gagal modifikasi hasil_stbj_langsir: " + errHasil.message);
+        }
 
-            // REVISI: Masukkan waktu_langsir saat proses IN GUDANG dieksekusi ke DB
-            const { error: errUpdate } = await db.from('hasil_stbj_langsir')
-                .update({ 
-                    status: 'IN GUDANG', 
-                    posisi: arrFisik[0].area, 
-                    pic_input: user.username,
-                    waktu_langsir: new Date().toISOString() 
-                })
-                .in('qrcode', qrsToUpdateValid);
-            if (errUpdate) throw new Error("Gagal update hasil_stbj_langsir: " + errUpdate.message);
+        // Eksekusi Tahap 2: Catat barang langsir ke stok_global (Bukan yang hold)
+        if (arrGlobal.length > 0) {
+            console.log("Mengirim JSON Payload ke stok_global:", JSON.stringify(arrGlobal));
+            const { error: errGlobal } = await db.from('stok_global').upsert(arrGlobal, { onConflict: 'qrcode' });
+            if (errGlobal) throw new Error("Gagal mencatatkan ke stok_global: " + errGlobal.message);
+            
+            // Opsional: Tetap upsert ke stok_qr untuk menjaga integritas relasi fisik jika ada
+            const { error: errInsertFisik } = await db.from('stok_qr').upsert(arrFisik, { onConflict: 'qrcode' });
+            if (errInsertFisik) console.warn("Peringatan: Gagal upsert stok_qr:", errInsertFisik.message);
+        }
 
-            for(let key in mapAktual) {
-                let item = mapAktual[key];
-                const { data: existing, error: errCek } = await db.from('stok_aktual').select('id, qty')
-                    .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
-                    .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
-                    .eq('customer_aktual', item.customer_aktual).eq('keterangan', item.keterangan).limit(1);
+        // Eksekusi Tahap 3: Catat penambahan kuantiti ke stok_aktual secara inkremental (+/-)
+        for(let key in mapAktual) {
+            let item = mapAktual[key];
+            const { data: existing, error: errCek } = await db.from('stok_aktual').select('id, qty')
+                .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
+                .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
+                .eq('customer_aktual', item.customer_aktual).eq('keterangan', item.keterangan).limit(1);
 
-                if (errCek) throw new Error("Gagal cek stok_aktual: " + errCek.message);
+            if (errCek) throw new Error("Gagal cek stok_aktual: " + errCek.message);
 
-                if(existing && existing.length > 0) {
-                    await db.from('stok_aktual').update({ qty: existing[0].qty + item.qty }).eq('id', existing[0].id);
-                } else {
-                    await db.from('stok_aktual').insert([item]);
-                }
+            if(existing && existing.length > 0) {
+                const { error: errUpd } = await db.from('stok_aktual').update({ qty: existing[0].qty + item.qty }).eq('id', existing[0].id);
+                if (errUpd) throw new Error("Gagal update stok_aktual: " + errUpd.message);
+            } else {
+                console.log("Mengirim JSON Payload ke stok_aktual:", JSON.stringify(item));
+                const { error: errIns } = await db.from('stok_aktual').insert([item]);
+                if (errIns) throw new Error("Gagal insert stok_aktual: " + errIns.message);
             }
         }
 
-        if (holdItems.length > 0) {
-            const { error: errHold } = await db.from('hasil_stbj_langsir').upsert(updatesHold, { onConflict: 'qrcode' });
-            if (errHold) throw new Error("Gagal update hold langsir: " + errHold.message);
-        }
-
-        alert(`BERHASIL!\n${validItems.length} kardus masuk ke Gudang.\n${holdItems.length} kardus masuk ke Hold Langsir.`);
+        alert(`BERHASIL DISIMPAN!\n\n- ${validItems.length} Kardus masuk ke Gudang (stok_global & stok_aktual)\n- ${holdItems.length} Kardus disimpan sebagai HOLD LANGSIR`);
         
+        // Hapus baris yang berhasil diproses dari layar
         rowsToProcess.forEach(r => {
             deleteStack.push(r); 
             r.classList.add('deleted-row');
@@ -555,14 +636,16 @@ async function saveToSupabase() {
         updateRowNumbers();
         updateTotalBaris();
     } catch (error) { 
-        alert("GAGAL SERVER: " + error.message); 
+        alert("GAGAL MENYIMPAN DATA: " + error.message); 
+        console.error(error);
     } finally {
         btn.innerHTML = original; 
         btn.disabled = false; 
+        lucide.createIcons();
     }
 }
 
-// REVISI: Fungsi Hold Langsir (Hanya menandai secara LOKAL di UI, tidak langsung ke DB)
+// Fungsi Hold Langsir (Hanya menandai secara LOKAL di UI, tidak langsung ke DB)
 async function holdLangsir() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked');
     if(checkedBoxes.length === 0) return alert("Pilih (centang) item yang ingin ditandai sebagai Hold Langsir!");
@@ -583,7 +666,6 @@ async function holdLangsir() {
     });
 
     document.querySelector('#cb-all').checked = false;
-    
     alert(`Berhasil menandai ${checkedBoxes.length} item sebagai HOLD LANGSIR di layar.\n\nSilakan Scan Area untuk item tersebut, lalu klik Simpan ke Gudang.`);
 }
 
@@ -632,13 +714,7 @@ async function bukaModalSTBJ() {
 
         let h = '';
         filteredData.forEach((r, i) => {
-            let tgl = '-';
-            if (r.created_at) {
-                const dt = new Date(r.created_at);
-                const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
-                tgl = `${dt.getDate()} ${months[dt.getMonth()]}, ${String(dt.getHours()).padStart(2,'0')}.${String(dt.getMinutes()).padStart(2,'0')}`;
-            }
-
+            const tgl = formatWIB(r.created_at);
             h += `
                 <div class="row-modal-stbj bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1 mb-3">
                     <div class="flex justify-between items-center mb-1 border-b border-slate-100 pb-2">
@@ -685,9 +761,7 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
     lucide.createIcons();
 
     try {
-        let statusFilter = tabelTarget === 'hold_stbj' ? 'HOLD STBJ' : 'HOLD LANGSIR';
-        const { data, error } = await db.from('hasil_stbj_langsir').select('*').eq('status', statusFilter).order('created_at', {ascending: false}).limit(100);
-        
+        const { data, error } = await db.from(tabelTarget).select('*').order('created_at', {ascending: false}).limit(100);
         if(error) throw error;
         if(!data || data.length === 0) {
             if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Tabel Hold Kosong.</div>';
@@ -696,23 +770,25 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
 
         let h = '';
         data.forEach((r, i) => {
-            let tgl = '-';
-            if (r.created_at) {
-                const dt = new Date(r.created_at);
-                const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
-                tgl = `${dt.getDate()} ${months[dt.getMonth()]}, ${String(dt.getHours()).padStart(2,'0')}.${String(dt.getMinutes()).padStart(2,'0')}`;
-            }
+            const tgl = formatWIB(r.created_at);
 
             let namaItem = r.nama_item || '-';
             let pjg = r.panjang || '-';
             let grade = r.grade || '-';
             let dus = r.dus || '-';
             let shading = r.shading || '-';
-            let customer = r.customer || '-';
+            let customer = r.customer_bawaan || '-';
             let jenis = r.jenis_item || '-';
             let prod = r.tgl_produksi || '-';
             let mesin = r.mesin || '-';
             let shift = r.shift || '-';
+
+            if(tabelTarget === 'hold_langsir' && namaItem === '-') {
+                let td = typeof window.translateBarcode === 'function' ? window.translateBarcode(r.qrcode) : {};
+                namaItem = td.namaItem || '-'; pjg = td.panjang || '-'; grade = td.grade || '-';
+                dus = td.dus || '-'; shading = td.shading || '-'; customer = td.customer || '-';
+                jenis = td.jenisItem || '-'; prod = td.tglProduksi || '-'; mesin = td.mesin || '-'; shift = td.shift || '-';
+            }
 
             h += `
                 <div class="row-modal-hold bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1 mb-3">
