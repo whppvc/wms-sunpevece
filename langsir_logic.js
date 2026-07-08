@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const area = document.getElementById('select-area-putaway').value;
             const rawInput = document.getElementById('input-qrcode-area').value.trim();
             
-            if(!area) return alert("Pilih Area Rak terlebih dahulu!");
+            if(!area) return alert("Pilih Area terlebih dahulu!");
             if(!rawInput) return;
 
             const codes = rawInput.split(/[\s;]+/).map(q => q.trim()).filter(q => q);
@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 masterData.area = [...new Set(mDataArea.map(r => (r.nama_area || r.area || '').trim()).filter(Boolean))]; 
                 const selArea = document.getElementById('select-area-putaway');
                 if(selArea) { 
-                    selArea.innerHTML = '<option value="">-- Pilih Area Rak --</option>'; 
+                    selArea.innerHTML = '<option value="">-- Pilih Area --</option>'; 
                     masterData.area.forEach(a => selArea.innerHTML += `<option value="${a}">${a}</option>`); 
                 }
             }
