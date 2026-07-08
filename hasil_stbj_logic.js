@@ -41,6 +41,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // FITUR BARU: Navigasi Keyboard untuk Scroll Filter Menu
+    const filterSearchInput = document.getElementById('filter-search-input');
+    if (filterSearchInput) {
+        filterSearchInput.addEventListener('keydown', function(e) {
+            const list = document.getElementById('filter-values-list');
+            if (!list) return;
+            
+            const pageScroll = list.clientHeight; // Scroll 1 halaman penuh
+            const stepScroll = 40; // Scroll sedikit demi sedikit untuk panah
+
+            if (e.key === 'PageDown') {
+                e.preventDefault();
+                list.scrollTop += pageScroll;
+            } else if (e.key === 'PageUp') {
+                e.preventDefault();
+                list.scrollTop -= pageScroll;
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                list.scrollTop += stepScroll;
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                list.scrollTop -= stepScroll;
+            }
+        });
+    }
+
     setTimeout(async () => {
         await loadKamusDanJasper();
         loadUserPreferences(); 
