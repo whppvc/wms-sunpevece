@@ -41,28 +41,56 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // FITUR BARU: Navigasi Keyboard untuk Scroll Filter Menu
-    const filterSearchInput = document.getElementById('filter-search-input');
-    if (filterSearchInput) {
-        filterSearchInput.addEventListener('keydown', function(e) {
-            const list = document.getElementById('filter-values-list');
-            if (!list) return;
+    // FITUR BARU: Navigasi Keyboard ala Excel untuk Filter Menu
+    const filterMenuEl = document.getElementById('excel-filter-menu');
+    if (filterMenuEl) {
+        filterMenuEl.addEventListener('keydown', function(e) {
+            const searchInput = document.getElementById('filter-search-input');
+            const visibleLabels = Array.from(document.querySelectorAll('.filter-val-item')).filter(lbl => lbl.style.display !== 'none');
+            const visibleCbs = visibleLabels.map(lbl => lbl.querySelector('input[type="checkbox"]'));
             
-            const pageScroll = list.clientHeight; // Scroll 1 halaman penuh
-            const stepScroll = 40; // Scroll sedikit demi sedikit untuk panah
+            const selectAllCb = document.getElementById('filter-select-all');
+            if(selectAllCb && selectAllCb.closest('label').style.display !== 'none') {
+                visibleCbs.unshift(selectAllCb);
+            }
 
-            if (e.key === 'PageDown') {
+            const currentIndex = visibleCbs.indexOf(document.activeElement);
+            const jump = 8; // Jumlah lompatan untuk PageDown/PageUp
+
+            if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                list.scrollTop += pageScroll;
-            } else if (e.key === 'PageUp') {
+                if (document.activeElement === searchInput) {
+                    if (visibleCbs.length > 0) visibleCbs[0].focus();
+                } else if (currentIndex >= 0 && currentIndex < visibleCbs.length - 1) {
+                    visibleCbs[currentIndex + 1].focus();
+                }
+            } 
+            else if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                list.scrollTop -= pageScroll;
-            } else if (e.key === 'ArrowDown') {
+                if (currentIndex === 0) {
+                    searchInput.focus();
+                } else if (currentIndex > 0) {
+                    visibleCbs[currentIndex - 1].focus();
+                }
+            }
+            else if (e.key === 'PageDown') {
                 e.preventDefault();
-                list.scrollTop += stepScroll;
-            } else if (e.key === 'ArrowUp') {
+                if (document.activeElement === searchInput) {
+                    if (visibleCbs.length > 0) visibleCbs[Math.min(jump, visibleCbs.length - 1)].focus();
+                } else if (currentIndex >= 0) {
+                    visibleCbs[Math.min(currentIndex + jump, visibleCbs.length - 1)].focus();
+                }
+            }
+            else if (e.key === 'PageUp') {
                 e.preventDefault();
-                list.scrollTop -= stepScroll;
+                if (currentIndex >= 0) {
+                    if (currentIndex - jump < 0) searchInput.focus();
+                    else visibleCbs[currentIndex - jump].focus();
+                }
+            }
+            else if (e.key === 'Enter') {
+                e.preventDefault();
+                applyFilterForCurrentCol();
             }
         });
     }
