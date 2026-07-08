@@ -18,8 +18,8 @@
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .selected-row { border-color: #2563eb !important; background-color: #dbeafe !important; }
-        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
-        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
+        .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
+        .tab-inactive { color: #64748b; font-weight: 500; border-bottom: 2px solid transparent; }
     </style>
 </head>
 <body class="font-sans text-slate-800">
@@ -57,6 +57,8 @@
                         <button onclick="toggleSidebarFilter(); toggleMenuUtama()" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-purple-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data</button>
                         <button onclick="salinDataTabel(); toggleMenuUtama()" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
                         <button onclick="undoDelete(); toggleMenuUtama()" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-rose-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo Hapus</button>
+                        <!-- REVISI: Nama tombol diubah menjadi Hold Langsir -->
+                        <button onclick="holdLangsir(); toggleMenuUtama()" class="text-left px-4 py-3 text-xs font-bold text-amber-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Langsir</button>
                     </div>
                 </div>
             </div>
@@ -78,12 +80,11 @@
             </div>
         </div>
 
-        <!-- REVISI: FOOTER ACTION DENGAN TOMBOL PLUS (+) DAN MAP PIN -->
         <div class="shrink-0 w-full bg-slate-50 p-2 flex items-center gap-2 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300 pb-4">
             <button onclick="bukaModalAdd()" class="w-[50px] h-[50px] bg-[#0f172a] hover:bg-black text-white flex justify-center items-center shadow-md active:scale-95 shrink-0 transition rounded border-b-4 border-slate-900" title="Scan Item Baru">
                 <i data-lucide="plus" class="w-7 h-7"></i>
             </button>
-            <button onclick="bukaModalScanArea()" class="w-[50px] h-[50px] bg-blue-600 hover:bg-blue-700 text-white flex justify-center items-center shadow-md active:scale-95 shrink-0 transition rounded border-b-4 border-blue-800" title="Scan ke Area Rak">
+            <button onclick="bukaModalScanArea()" class="w-[50px] h-[50px] bg-blue-600 hover:bg-blue-700 text-white flex justify-center items-center shadow-md active:scale-95 shrink-0 transition rounded border-b-4 border-blue-800" title="Scan ke Area">
                 <i data-lucide="map-pin" class="w-6 h-6"></i>
             </button>
             <button id="btn-save" onclick="saveToSupabase()" class="flex-1 h-[50px] bg-[#058c5e] hover:bg-[#04724d] text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-[#035237]">
@@ -93,7 +94,7 @@
 
     </div>
 
-    <!-- MODAL 1: ADD SCAN (REVISI: HANYA INPUT QRCODE SAJA) -->
+    <!-- MODAL 1: ADD SCAN TROLI (Hanya QR) -->
     <div id="modal-add-scan" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[60] p-4 backdrop-blur-sm transition-opacity">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 p-5">
             <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
@@ -159,7 +160,7 @@
     <!-- MODAL TABEL HOLD -->
     <div id="modal-hold-langsir" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] px-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg border border-slate-200 flex flex-col max-h-[85vh]">
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-xl">
                 <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="archive" class="w-4 h-4 text-amber-600"></i> TABEL HOLD</h3>
                 <button onclick="tutupModalHold()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
