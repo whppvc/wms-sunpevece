@@ -16,8 +16,11 @@ let currentPage = 1;
 let rowsPerPage = 10; 
 let activeFilters = {}; 
 let currentFilterCol = ''; 
-let selectAllState = 0; // 0: none, 1: page, 2: all filtered
-let userColOrder = []; // Urutan kolom kustom
+let selectAllState = 0; 
+let userColOrder = []; 
+
+// State khusus Request Konversi
+let selectedForReq = null;
 
 function safeJSONParse(data, fallback = null) {
     if (!data || data === 'undefined' || data === 'null') return fallback;
@@ -29,15 +32,8 @@ const currentUser = safeJSONParse(localStorage.getItem('user_session'), { userna
 
 function loadUserPreferences() {
     const savedOrder = localStorage.getItem(`col_order_ks_${modeKS}_${currentUser.username}`);
-    if (savedOrder) {
-        try {
-            userColOrder = JSON.parse(savedOrder);
-        } catch(e) {
-            userColOrder = [];
-        }
-    } else {
-        userColOrder = [];
-    }
+    if (savedOrder) { try { userColOrder = JSON.parse(savedOrder); } catch(e) { userColOrder = []; } } 
+    else { userColOrder = []; }
     
     const savedRows = localStorage.getItem('wms_rows_per_page');
     if(savedRows) {
@@ -45,16 +41,11 @@ function loadUserPreferences() {
         const sel = document.getElementById('select-rows-per-page');
         if(sel) {
             let found = false;
-            Array.from(sel.options).forEach(opt => {
-                if(opt.value == rowsPerPage) { opt.selected = true; found = true; }
-            });
+            Array.from(sel.options).forEach(opt => { if(opt.value == rowsPerPage) { opt.selected = true; found = true; } });
             if(!found) {
                 sel.value = 'CUSTOM';
                 const inp = document.getElementById('input-custom-rows');
-                if(inp) {
-                    inp.classList.remove('hidden');
-                    inp.value = rowsPerPage;
-                }
+                if(inp) { inp.classList.remove('hidden'); inp.value = rowsPerPage; }
             }
         }
     }
@@ -66,16 +57,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
-            if (!menu.contains(e.target) && !e.target.closest('button[title^="Filter"]')) {
-                closeFilterMenu();
-            }
+            if (!menu.contains(e.target) && !e.target.closest('button[title^="Filter"]')) { closeFilterMenu(); }
         }
-        
         const actionMenu = document.getElementById('mobile-action-menu');
         if (actionMenu && !actionMenu.classList.contains('hidden')) {
-            if (!actionMenu.contains(e.target) && !actionMenu.closest('button[onclick^="toggleActionMenu"]')) {
-                actionMenu.classList.add('hidden');
-            }
+            if (!actionMenu.contains(e.target) && !actionMenu.closest('button[onclick^="toggleActionMenu"]')) { actionMenu.classList.add('hidden'); }
         }
     });
 
@@ -96,15 +82,47 @@ async function loadMasterData() {
         if (data) {
             masterData.kamus = data; 
             let poSet = new Set(); 
-            data.forEach(d => { if(d.customer) poSet.add(d.customer.trim()); });
-            const sel = document.getElementById('input-new-po'); 
-            let html = '<option value="">-- PILIH CUSTOMER --</option>';
-            Array.from(poSet).sort().forEach(po => { html += `<option value="${po}">${po}</option>`; });
-            if(sel) sel.innerHTML = html;
+            let namaSet = new Set();
+            let gradeSet = new Set();
+            let dusSet = new Set();
+
+            data.forEach(d => { 
+                if(d.customer) poSet.add(d.customer.trim()); 
+                if(d.nama_item) namaSet.add(d.nama_item.trim());
+                if(d.grade) gradeSet.add(d.grade.trim());
+                if(d.dus) dusSet.add(d.dus.trim());
+            });
+
+            // Populate PO
+            const selPO = document.getElementById('input-new-po'); 
+            if(selPO) {
+                let htmlPO = '<option value="">-- PILIH CUSTOMER --</option>';
+                Array.from(poSet).sort().forEach(po => { htmlPO += `<option value="${po}">${po}</option>`; });
+                selPO.innerHTML = htmlPO;
+            }
+
+            // Populate Dropdowns for Request Konversi
+            const selNama = document.getElementById('req-nama-item');
+            if(selNama) {
+                let htmlNama = '<option value="">-- Tetap --</option>';
+                Array.from(namaSet).sort().forEach(n => { htmlNama += `<option value="${n}">${n}</option>`; });
+                selNama.innerHTML = htmlNama;
+            }
+            const selGrade = document.getElementById('req-grade');
+            if(selGrade) {
+                let htmlGrade = '<option value="">-- Tetap --</option>';
+                Array.from(gradeSet).sort().forEach(g => { htmlGrade += `<option value="${g}">${g}</option>`; });
+                selGrade.innerHTML = htmlGrade;
+            }
+            const selDus = document.getElementById('req-dus');
+            if(selDus) {
+                let htmlDus = '<option value="">-- Tetap --</option>';
+                Array.from(dusSet).sort().forEach(d => { htmlDus += `<option value="${d}">${d}</option>`; });
+                selDus.innerHTML = htmlDus;
+            }
+
         }
-    } catch (e) { 
-        if(document.getElementById('input-new-po')) document.getElementById('input-new-po').innerHTML = '<option value="">-- GAGAL MEMUAT CUSTOMER --</option>'; 
-    }
+    } catch (e) { console.error("Gagal memuat master data:", e); }
 }
 
 function translateBarcode(barcode) {
@@ -243,6 +261,7 @@ function setModeKS(m) {
     });
     
     document.getElementById('btn-ganti-po-main').classList.toggle('hidden', m === 'global' || m === 'lembaran');
+    document.getElementById('btn-req-konversi-main').classList.toggle('hidden', m !== 'area'); // Hanya muncul di KS Area
     
     activeFilters = {}; 
     loadUserPreferences(); 
@@ -274,9 +293,7 @@ function thSort(idx, label, cls = "") {
     const noFilter = ['col-cb', 'col-open'].includes(colClass);
     
     if (noFilter) {
-        return `<th class="hdr-std ${cls} select-none text-center">
-            <div class="flex items-center justify-center w-full">${label}</div>
-        </th>`;
+        return `<th class="hdr-std ${cls} select-none text-center"><div class="flex items-center justify-center w-full">${label}</div></th>`;
     }
 
     return `<th class="hdr-std ${cls} select-none group">
@@ -297,8 +314,7 @@ function thSort(idx, label, cls = "") {
 function renderTabel() {
     const thead = document.getElementById('thead-ks');
     const tbody = document.getElementById('tbody-ks');
-    sortState = {}; 
-    selectAllState = 0;
+    sortState = {}; selectAllState = 0;
 
     const rowClassBase = "transition row-ks text-[13px]";
 
@@ -328,15 +344,10 @@ function renderTabel() {
 
         tbody.innerHTML = dataKSQR.map((r) => {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
-            
             let baseSpec = `${r.nama}_${r.pjg}_${r.grade}_${r.dus}_${r.shading}`;
             let poDist = poDistributionMap[baseSpec];
             let poArr = [];
-            if(poDist) {
-                for(let po in poDist) {
-                    poArr.push(`${po} (${poDist[po]} Dus)`);
-                }
-            }
+            if(poDist) { for(let po in poDist) { poArr.push(`${po} (${poDist[po]} Dus)`); } }
             let poString = poArr.length > 0 ? poArr.join(' | ') : 'KOSONG';
             let btnPO = `<button onclick="bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
 
@@ -841,6 +852,7 @@ function tutupSemuaPopups() {
     document.getElementById('modal-lihat-po').classList.add('hidden');
     document.getElementById('modal-breakdown').classList.add('hidden');
     document.getElementById('modal-po').classList.add('hidden');
+    document.getElementById('modal-req-konversi').classList.add('hidden');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
     if(document.getElementById('sidebar-kolom')) {
         document.getElementById('sidebar-kolom').classList.add('translate-x-full');
@@ -1079,6 +1091,8 @@ function updateSelectAllState() {
     else { selectAll.checked = false; selectAll.indeterminate = true; }
 }
 
+document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) updateSelectAllState(); });
+
 function searchFilterList(val) {
     const query = val.toLowerCase().split(' ').filter(x => x); 
     document.querySelectorAll('.filter-val-item').forEach(label => {
@@ -1183,4 +1197,97 @@ function initResizableColumns() {
             resizer.classList.remove('resizing');
         };
     });
+}
+
+// ========================================================
+// LOGIKA REQUEST KONVERSI
+// ========================================================
+function siapkanReqKonversi() {
+    const checkboxes = document.querySelectorAll('.cb-main:checked');
+    if(checkboxes.length !== 1) return alert('Silakan centang TEPAT 1 (satu) baris item yang ingin direquest konversi.');
+
+    const cb = checkboxes[0];
+    selectedForReq = {
+        jenis_item: cb.dataset.jenis || '-',
+        nama_item: cb.dataset.nama || '-',
+        panjang: cb.dataset.pjg || '-',
+        grade: cb.dataset.grade || '-',
+        dus: cb.dataset.dus || '-',
+        shading: cb.dataset.shading || '-',
+        customer_aktual: cb.dataset.po || '-',
+        keterangan: cb.dataset.ket || '-',
+        qty_max: parseInt(cb.dataset.qty) || 0
+    };
+
+    const infoAsal = document.getElementById('req-info-asal');
+    if(infoAsal) {
+        infoAsal.innerHTML = `<span class="text-blue-600">${selectedForReq.nama_item}</span> | ${selectedForReq.panjang} | ${selectedForReq.grade} | ${selectedForReq.dus} | ${selectedForReq.shading} | ${selectedForReq.keterangan} | <span class="text-orange-600">${selectedForReq.customer_aktual}</span>`;
+    }
+
+    // Reset Form Input
+    ['req-nama-item', 'req-panjang', 'req-grade', 'req-dus', 'req-shading', 'req-qty', 'req-qty-hasil'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.value = '';
+    });
+
+    document.getElementById('modal-req-konversi').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+}
+
+function tutupModalReqKonversi() {
+    document.getElementById('modal-req-konversi').classList.add('hidden');
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
+    selectedForReq = null;
+}
+
+async function eksekusiReqKonversi() {
+    if(!selectedForReq) return alert("Data sumber tidak valid!");
+
+    const namaReq = document.getElementById('req-nama-item').value.trim() || selectedForReq.nama_item;
+    const pjgReq = document.getElementById('req-panjang').value.trim() || selectedForReq.panjang;
+    const gradeReq = document.getElementById('req-grade').value.trim() || selectedForReq.grade;
+    const dusReq = document.getElementById('req-dus').value.trim() || selectedForReq.dus;
+    const shadingReq = document.getElementById('req-shading').value.trim() || selectedForReq.shading;
+    
+    const qtyReq = parseInt(document.getElementById('req-qty').value);
+    const qtyHasil = parseInt(document.getElementById('req-qty-hasil').value);
+
+    if(isNaN(qtyReq) || qtyReq <= 0) return alert("Qty Request tidak valid!");
+    if(isNaN(qtyHasil) || qtyHasil <= 0) return alert("Qty Hasil tidak valid!");
+    if(qtyReq > selectedForReq.qty_max) return alert(`Maksimal Qty Request adalah ${selectedForReq.qty_max} dus!`);
+
+    const btn = document.getElementById('btn-save-req-konv'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
+
+    const payload = {
+        jenis_item: selectedForReq.jenis_item,
+        nama_item: selectedForReq.nama_item,
+        panjang: selectedForReq.panjang,
+        grade: selectedForReq.grade,
+        dus: selectedForReq.dus,
+        shading: selectedForReq.shading,
+        keterangan: selectedForReq.keterangan,
+        "customer aktual": selectedForReq.customer_aktual,
+        nama_item_req: namaReq,
+        panjang_req: pjgReq,
+        grade_req: gradeReq,
+        dus_req: dusReq,
+        shading_req: shadingReq,
+        qty_req: qtyReq.toString(),
+        qty_hasil: qtyHasil.toString(),
+        qty_proses: "0",
+        progres_konversi: "PENDING"
+    };
+
+    try {
+        const { error } = await db.from('request_konversi').insert([payload]);
+        if(error) throw error;
+        
+        tutupModalReqKonversi();
+        alert("Berhasil membuat Request Konversi!");
+    } catch(e) {
+        alert("Gagal menyimpan request: " + e.message);
+    } finally {
+        btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
+    }
 }
