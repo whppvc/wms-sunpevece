@@ -1,23 +1,23 @@
-window.modeKS = 'area'; 
-window.stokQRRaw = []; 
-window.stokAktualRaw = []; 
-window.stokLembaranRaw = [];
-window.dataKSQR = []; 
-window.dataKSArea = []; 
-window.dataKSGlobal = [];
-window.selectedForAction = []; 
-window.sourcePOContext = ''; 
-window.currentBreakdownData = [];
-window.sortState = {};
-window.masterData = { kamus: [] };
-window.poDistributionMap = {}; 
+let modeKS = 'area'; 
+let stokQRRaw = []; 
+let stokAktualRaw = []; 
+let stokLembaranRaw = [];
+let dataKSQR = []; 
+let dataKSArea = []; 
+let dataKSGlobal = [];
+let selectedForAction = []; 
+let sourcePOContext = ''; 
+let currentBreakdownData = [];
+let sortState = {};
+let masterData = { kamus: [] };
+let poDistributionMap = {}; 
 
-window.currentPage = 1;
-window.rowsPerPage = 10; 
-window.activeFilters = {}; 
-window.currentFilterCol = ''; 
-window.selectAllState = 0; // 0: none, 1: page, 2: all filtered
-window.userColOrder = []; // Urutan kolom kustom
+let currentPage = 1;
+let rowsPerPage = 10; 
+let activeFilters = {}; 
+let currentFilterCol = ''; 
+let selectAllState = 0; // 0: none, 1: page, 2: all filtered
+let userColOrder = []; // Urutan kolom kustom
 
 function safeJSONParse(data, fallback = null) {
     if (!data || data === 'undefined' || data === 'null') return fallback;
@@ -25,36 +25,35 @@ function safeJSONParse(data, fallback = null) {
     try { return JSON.parse(data); } catch (e) { return fallback; }
 }
 
-window.currentUser = safeJSONParse(localStorage.getItem('user_session'), { username: 'Admin', role: 'admin' });
+const currentUser = safeJSONParse(localStorage.getItem('user_session'), { username: 'Admin', role: 'admin' });
 
-// Fungsi memuat preferensi kolom kustom per tab/mode
-window.loadUserPreferences = function() {
-    const savedOrder = localStorage.getItem(`col_order_ks_${window.modeKS}_${currentUser.username}`);
+function loadUserPreferences() {
+    const savedOrder = localStorage.getItem(`col_order_ks_${modeKS}_${currentUser.username}`);
     if (savedOrder) {
         try {
-            window.userColOrder = JSON.parse(savedOrder);
+            userColOrder = JSON.parse(savedOrder);
         } catch(e) {
-            window.userColOrder = [];
+            userColOrder = [];
         }
     } else {
-        window.userColOrder = [];
+        userColOrder = [];
     }
     
     const savedRows = localStorage.getItem('wms_rows_per_page');
     if(savedRows) {
-        window.rowsPerPage = parseInt(savedRows);
+        rowsPerPage = parseInt(savedRows);
         const sel = document.getElementById('select-rows-per-page');
         if(sel) {
             let found = false;
             Array.from(sel.options).forEach(opt => {
-                if(opt.value == window.rowsPerPage) { opt.selected = true; found = true; }
+                if(opt.value == rowsPerPage) { opt.selected = true; found = true; }
             });
             if(!found) {
                 sel.value = 'CUSTOM';
                 const inp = document.getElementById('input-custom-rows');
                 if(inp) {
                     inp.classList.remove('hidden');
-                    inp.value = window.rowsPerPage;
+                    inp.value = rowsPerPage;
                 }
             }
         }
@@ -68,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
             if (!menu.contains(e.target) && !e.target.closest('button[title^="Filter"]')) {
-                window.closeFilterMenu();
+                closeFilterMenu();
             }
         }
         
@@ -80,22 +79,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    await window.loadMasterData();
-    window.loadUserPreferences(); // Muat preferensi kolom kustom
-    setTimeout(window.muatDataStok, 200);
+    await loadMasterData();
+    loadUserPreferences(); 
+    setTimeout(muatDataStok, 200);
 });
 
-window.toggleActionMenu = function(e) {
+function toggleActionMenu(e) {
     if(e) e.stopPropagation();
     const menu = document.getElementById('mobile-action-menu');
     if(menu) menu.classList.toggle('hidden');
-};
+}
 
-window.loadMasterData = async function() {
+async function loadMasterData() {
     try {
         const {data, error} = await db.from('master_2').select('*');
         if (data) {
-            window.masterData.kamus = data; 
+            masterData.kamus = data; 
             let poSet = new Set(); 
             data.forEach(d => { if(d.customer) poSet.add(d.customer.trim()); });
             const sel = document.getElementById('input-new-po'); 
@@ -106,9 +105,9 @@ window.loadMasterData = async function() {
     } catch (e) { 
         if(document.getElementById('input-new-po')) document.getElementById('input-new-po').innerHTML = '<option value="">-- GAGAL MEMUAT CUSTOMER --</option>'; 
     }
-};
+}
 
-window.translateBarcode = function(barcode) {
+function translateBarcode(barcode) {
     let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customer: '-' };
     if(!barcode) return data;
     const parts = barcode.split('/'); if (parts.length < 1) return data;
@@ -134,13 +133,13 @@ window.translateBarcode = function(barcode) {
         if(match) { data.mesin = match[1]; data.shift = match[2]; data.customer = match[3]; }
     }
     return data;
-};
+}
 
-window.sinkronisasiUlangStokAktual = async function(tampilkanAlert = false) {
+function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
     alert("Fungsi Sinkronisasi Wipe & Rebuild dinonaktifkan untuk menjaga integritas data Customer Aktual hasil editan user.\n\nSistem kini menggunakan metode Incremental Update (+/-) secara otomatis setiap kali ada transaksi.");
-};
+}
 
-window.muatDataStok = async function() {
+async function muatDataStok() {
     const tbody = document.getElementById('tbody-ks');
     tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke Gudang Supabase...</p></td></tr>`;
     lucide.createIcons();
@@ -155,23 +154,23 @@ window.muatDataStok = async function() {
         if(resStok.error) throw resStok.error;
         if(resAktual.error) throw resAktual.error;
         
-        window.stokQRRaw = resStok.data || [];
-        window.stokAktualRaw = resAktual.data || [];
-        window.stokLembaranRaw = resLembaran.data || [];
+        stokQRRaw = resStok.data || [];
+        stokAktualRaw = resAktual.data || [];
+        stokLembaranRaw = resLembaran.data || [];
 
         let aktualMap = {};
-        window.stokAktualRaw.forEach(a => {
+        stokAktualRaw.forEach(a => {
             let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}`;
             if(!aktualMap[key]) aktualMap[key] = {};
             if(!aktualMap[key][a.customer_aktual]) aktualMap[key][a.customer_aktual] = 0;
             aktualMap[key][a.customer_aktual] += a.qty;
         });
-        window.poDistributionMap = aktualMap;
+        poDistributionMap = aktualMap;
 
         let qrMap = {};
-        window.stokQRRaw.forEach(r => {
+        stokQRRaw.forEach(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
-            let t = window.translateBarcode(r.qrcode);
+            let t = translateBarcode(r.qrcode);
             let area = p[0] || r.area || '-';
             let nama = p[1] || r.nama_item || t.namaItem;
             let pjg = p[2] || r.panjang || t.panjang;
@@ -186,9 +185,9 @@ window.muatDataStok = async function() {
             qrMap[key].push(r.qrcode);
         });
 
-        window.dataKSQR = window.stokQRRaw.map(r => {
+        dataKSQR = stokQRRaw.map(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
-            let t = window.translateBarcode(r.qrcode);
+            let t = translateBarcode(r.qrcode);
             return {
                 qrcode: r.qrcode || '-', id_sku: r.id_sku || '-', id_po: r.id_po || '-', area: p[0] || r.area || '-', 
                 tglProduksi: r.tgl_produksi || t.tglProduksi || '-', mesin: r.mesin || t.mesin || '-', shift: r.shift || t.shift || '-', 
@@ -200,7 +199,7 @@ window.muatDataStok = async function() {
             };
         });
 
-        window.dataKSArea = window.stokAktualRaw.map(a => {
+        dataKSArea = stokAktualRaw.map(a => {
             let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_bawaan}_${a.keterangan}`;
             return {
                 ...a,
@@ -217,7 +216,7 @@ window.muatDataStok = async function() {
         });
 
         let globalMap = {};
-        window.dataKSArea.forEach(a => {
+        dataKSArea.forEach(a => {
             let gKey = `${a.jenis}_${a.nama}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.keterangan}`;
             if(!globalMap[gKey]) {
                 globalMap[gKey] = { gKey: gKey, jenis: a.jenis, nama: a.nama, pjg: a.pjg, grade: a.grade, dus: a.dus, shading: a.shading, po: a.po_aktual, ket: a.keterangan, qty: 0, areas: [] };
@@ -225,16 +224,16 @@ window.muatDataStok = async function() {
             globalMap[gKey].qty += a.qty;
             globalMap[gKey].areas.push(a);
         });
-        window.dataKSGlobal = Object.values(globalMap);
+        dataKSGlobal = Object.values(globalMap);
 
-        window.renderTabel();
+        renderTabel();
     } catch(e) { 
         tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-medium">Gagal mengolah data: ${e.message}</td></tr>`; 
     }
-};
+}
 
-window.setModeKS = function(m) {
-    window.modeKS = m;
+function setModeKS(m) {
+    modeKS = m;
     const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     
@@ -245,15 +244,15 @@ window.setModeKS = function(m) {
     
     document.getElementById('btn-ganti-po-main').classList.toggle('hidden', m === 'global' || m === 'lembaran');
     
-    window.activeFilters = {}; 
-    window.loadUserPreferences(); // Muat preferensi kolom kustom untuk mode baru
-    window.renderTabel();
-};
+    activeFilters = {}; 
+    loadUserPreferences(); 
+    renderTabel();
+}
 
-window.sortTable = function(colIndex, headerEl) {
+function sortTable(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-ks');
     const rows = Array.from(tbody.querySelectorAll('tr.row-ks'));
-    let isAsc = window.sortState[colIndex] !== 'asc'; window.sortState[colIndex] = isAsc ? 'asc' : 'desc';
+    let isAsc = sortState[colIndex] !== 'asc'; sortState[colIndex] = isAsc ? 'asc' : 'desc';
     
     rows.sort((a, b) => {
         let valA = a.cells[colIndex].getAttribute('data-search') || a.cells[colIndex].innerText.trim(); 
@@ -267,10 +266,10 @@ window.sortTable = function(colIndex, headerEl) {
     document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-30'); });
     const icon = headerEl.querySelector('.sort-icon');
     if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
-    window.applyPagination();
-};
+    applyPagination();
+}
 
-window.thSort = function(idx, label, cls = "") {
+function thSort(idx, label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-open'].includes(colClass);
     
@@ -282,56 +281,56 @@ window.thSort = function(idx, label, cls = "") {
 
     return `<th class="hdr-std ${cls} select-none group">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
-            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="window.sortTable(this.closest('th').cellIndex, this.closest('th'))" title="Sort ${label}">${label}</span>
+            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable(this.closest('th').cellIndex, this.closest('th'))" title="Sort ${label}">${label}</span>
             <div class="flex items-center gap-1 shrink-0">
-                <button onclick="window.sortTable(this.closest('th').cellIndex, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
+                <button onclick="sortTable(this.closest('th').cellIndex, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 sort-icon opacity-40 group-hover:opacity-100 transition-opacity text-white"></i>
                 </button>
-                <button onclick="window.openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
+                <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
                     <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
                 </button>
             </div>
         </div>
     </th>`;
-};
+}
 
-window.renderTabel = function() {
+function renderTabel() {
     const thead = document.getElementById('thead-ks');
     const tbody = document.getElementById('tbody-ks');
-    window.sortState = {}; 
-    window.selectAllState = 0;
+    sortState = {}; 
+    selectAllState = 0;
 
     const rowClassBase = "transition row-ks text-[13px]";
 
-    if(window.modeKS === 'qr') {
+    if(modeKS === 'qr') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
-                ${window.thSort(1, 'Area', 'col-area')}
-                ${window.thSort(2, 'QRCode', 'col-qr')}
-                ${window.thSort(3, 'Tgl Produksi', 'col-tgl')}
-                ${window.thSort(4, 'Mesin', 'col-mesin')}
-                ${window.thSort(5, 'Shift', 'col-shift')}
-                ${window.thSort(6, 'Jenis Item', 'col-jenis')}
-                ${window.thSort(7, 'Nama Item', 'col-nama')}
-                ${window.thSort(8, 'Panjang', 'col-pjg')}
-                ${window.thSort(9, 'Grade', 'col-grade')}
-                ${window.thSort(10, 'Dus', 'col-dus')}
-                ${window.thSort(11, 'Shading', 'col-shading')}
-                ${window.thSort(12, 'Customer Bawaan', 'col-po-bawaan')}
-                ${window.thSort(13, 'Customer Aktual', 'col-po')}
-                ${window.thSort(14, 'Keterangan', 'col-ket')}
+                ${thSort(1, 'Area', 'col-area')}
+                ${thSort(2, 'QRCode', 'col-qr')}
+                ${thSort(3, 'Tgl Produksi', 'col-tgl')}
+                ${thSort(4, 'Mesin', 'col-mesin')}
+                ${thSort(5, 'Shift', 'col-shift')}
+                ${thSort(6, 'Jenis Item', 'col-jenis')}
+                ${thSort(7, 'Nama Item', 'col-nama')}
+                ${thSort(8, 'Panjang', 'col-pjg')}
+                ${thSort(9, 'Grade', 'col-grade')}
+                ${thSort(10, 'Dus', 'col-dus')}
+                ${thSort(11, 'Shading', 'col-shading')}
+                ${thSort(12, 'Customer Bawaan', 'col-po-bawaan')}
+                ${thSort(13, 'Customer Aktual', 'col-po')}
+                ${thSort(14, 'Keterangan', 'col-ket')}
             </tr>`;
         
-        if(window.dataKSQR.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="15" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSQR.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="15" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
-        tbody.innerHTML = window.dataKSQR.map((r) => {
+        tbody.innerHTML = dataKSQR.map((r) => {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
             
             let baseSpec = `${r.nama}_${r.pjg}_${r.grade}_${r.dus}_${r.shading}`;
-            let poDist = window.poDistributionMap[baseSpec];
+            let poDist = poDistributionMap[baseSpec];
             let poArr = [];
             if(poDist) {
                 for(let po in poDist) {
@@ -339,11 +338,11 @@ window.renderTabel = function() {
                 }
             }
             let poString = poArr.length > 0 ? poArr.join(' | ') : 'KOSONG';
-            let btnPO = `<button onclick="window.bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
+            let btnPO = `<button onclick="bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
 
             return `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-mono font-medium text-slate-800 text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
@@ -362,31 +361,31 @@ window.renderTabel = function() {
         }).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="15" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     }
-    else if(window.modeKS === 'area') {
+    else if(modeKS === 'area') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
-                ${window.thSort(1, 'Area', 'col-area')}
-                ${window.thSort(2, 'Jenis Item', 'col-jenis')}
-                ${window.thSort(3, 'Nama Item', 'col-nama')}
-                ${window.thSort(4, 'Panjang', 'col-pjg')}
-                ${window.thSort(5, 'Grade', 'col-grade')}
-                ${window.thSort(6, 'Dus', 'col-dus')}
-                ${window.thSort(7, 'Shading', 'col-shading')}
-                ${window.thSort(8, 'Customer Aktual', 'col-po')}
-                ${window.thSort(9, 'Keterangan', 'col-ket')}
-                ${window.thSort(10, 'Total Qty (Dus)', 'col-qty')}
+                ${thSort(1, 'Area', 'col-area')}
+                ${thSort(2, 'Jenis Item', 'col-jenis')}
+                ${thSort(3, 'Nama Item', 'col-nama')}
+                ${thSort(4, 'Panjang', 'col-pjg')}
+                ${thSort(5, 'Grade', 'col-grade')}
+                ${thSort(6, 'Dus', 'col-dus')}
+                ${thSort(7, 'Shading', 'col-shading')}
+                ${thSort(8, 'Customer Aktual', 'col-po')}
+                ${thSort(9, 'Keterangan', 'col-ket')}
+                ${thSort(10, 'Total Qty (Dus)', 'col-qty')}
             </tr>`;
         
-        if(window.dataKSArea.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSArea.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
-        tbody.innerHTML = window.dataKSArea.map((r) => {
+        tbody.innerHTML = dataKSArea.map((r) => {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             return `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-qty="${r.qty}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-qty="${r.qty}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                     <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
@@ -401,30 +400,30 @@ window.renderTabel = function() {
         }).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
-    else if (window.modeKS === 'global') {
+    else if (modeKS === 'global') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
                 <th class="hdr-std w-12 col-open text-center">Detail</th>
-                ${window.thSort(2, 'Jenis Item', 'col-jenis')}
-                ${window.thSort(3, 'Nama Item', 'col-nama')}
-                ${window.thSort(4, 'Panjang', 'col-pjg')}
-                ${window.thSort(5, 'Grade', 'col-grade')}
-                ${window.thSort(6, 'Dus', 'col-dus')}
-                ${window.thSort(7, 'Shading', 'col-shading')}
-                ${window.thSort(8, 'Customer Aktual', 'col-po')}
-                ${window.thSort(9, 'Keterangan', 'col-ket')}
-                ${window.thSort(10, 'TOTAL (DUS)', 'col-qty')}
+                ${thSort(2, 'Jenis Item', 'col-jenis')}
+                ${thSort(3, 'Nama Item', 'col-nama')}
+                ${thSort(4, 'Panjang', 'col-pjg')}
+                ${thSort(5, 'Grade', 'col-grade')}
+                ${thSort(6, 'Dus', 'col-dus')}
+                ${thSort(7, 'Shading', 'col-shading')}
+                ${thSort(8, 'Customer Aktual', 'col-po')}
+                ${thSort(9, 'Keterangan', 'col-ket')}
+                ${thSort(10, 'TOTAL (DUS)', 'col-qty')}
             </tr>`;
 
-        if(window.dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
-        tbody.innerHTML = window.dataKSGlobal.map((r) => `
+        tbody.innerHTML = dataKSGlobal.map((r) => `
             <tr class="${rowClassBase}">
-                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 text-center col-open"><button onclick="window.bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 text-center col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
@@ -438,26 +437,26 @@ window.renderTabel = function() {
         `).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
-    else if (window.modeKS === 'lembaran') {
+    else if (modeKS === 'lembaran') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
-                ${window.thSort(1, 'Kode Master', 'col-area')}
-                ${window.thSort(2, 'Nama Item', 'col-nama')}
-                ${window.thSort(3, 'Panjang', 'col-pjg')}
-                ${window.thSort(4, 'Grade', 'col-grade')}
-                ${window.thSort(5, 'Dus', 'col-dus')}
-                ${window.thSort(6, 'Shading', 'col-shading')}
-                ${window.thSort(7, 'Keterangan', 'col-ket')}
+                ${thSort(1, 'Kode Master', 'col-area')}
+                ${thSort(2, 'Nama Item', 'col-nama')}
+                ${thSort(3, 'Panjang', 'col-pjg')}
+                ${thSort(4, 'Grade', 'col-grade')}
+                ${thSort(5, 'Dus', 'col-dus')}
+                ${thSort(6, 'Shading', 'col-shading')}
+                ${thSort(7, 'Keterangan', 'col-ket')}
             </tr>`;
         
-        if(window.stokLembaranRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="8" class="p-8 text-center font-medium text-slate-400">Tidak ada data stok lembaran.</td></tr>`; return; }
+        if(stokLembaranRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="8" class="p-8 text-center font-medium text-slate-400">Tidak ada data stok lembaran.</td></tr>`; return; }
 
-        tbody.innerHTML = window.stokLembaranRaw.map((r) => `
+        tbody.innerHTML = stokLembaranRaw.map((r) => `
             <tr class="${rowClassBase}">
-                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg || '-'}">${r.pjg || '-'}</td>
@@ -470,62 +469,60 @@ window.renderTabel = function() {
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="8" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     }
 
-    // Terapkan urutan kolom kustom jika preferensi tersimpan
-    window.applyColumnOrder(); 
-
+    applyColumnOrder(); 
     lucide.createIcons(); 
-    window.updateSelectAllUI();
-    window.saringTabelExcel(); 
-    window.initResizableColumns(); // Inisialisasi resize kolom
-};
+    updateSelectAllUI();
+    saringTabelExcel(); 
+    initResizableColumns(); 
+}
 
-window.highlightRow = function(checkbox, skipStateReset = false) {
+function highlightRow(checkbox, skipStateReset = false) {
     const tr = checkbox.closest('tr');
     if (tr) {
         if (checkbox.checked) { tr.classList.add('selected-row'); } 
         else { tr.classList.remove('selected-row'); }
     }
     
-    if(!skipStateReset && !checkbox.checked && window.selectAllState !== 0) {
-        window.selectAllState = 0;
-        window.updateSelectAllUI();
+    if(!skipStateReset && !checkbox.checked && selectAllState !== 0) {
+        selectAllState = 0;
+        updateSelectAllUI();
     }
     
-    if(!skipStateReset) window.updateSelectedCount();
-};
+    if(!skipStateReset) updateSelectedCount();
+}
 
-window.changeRowsPerPage = function(val) {
+function changeRowsPerPage(val) {
     const customInput = document.getElementById('input-custom-rows');
     if (val === 'ALL') {
-        window.rowsPerPage = 999999; 
+        rowsPerPage = 999999; 
         if(customInput) customInput.classList.add('hidden');
     } else if (val === 'CUSTOM') {
         if(customInput) {
             customInput.classList.remove('hidden');
             customInput.focus();
             let customVal = parseInt(customInput.value);
-            window.rowsPerPage = (customVal > 0) ? customVal : window.rowsPerPage;
+            rowsPerPage = (customVal > 0) ? customVal : rowsPerPage;
         }
     } else {
-        window.rowsPerPage = parseInt(val);
+        rowsPerPage = parseInt(val);
         if(customInput) customInput.classList.add('hidden');
     }
-    localStorage.setItem('wms_rows_per_page', window.rowsPerPage);
-    window.currentPage = 1; 
-    window.applyPagination();
-};
+    localStorage.setItem('wms_rows_per_page', rowsPerPage);
+    currentPage = 1; 
+    applyPagination();
+}
 
-window.setCustomRowsPerPage = function(val) {
+function setCustomRowsPerPage(val) {
     let parsed = parseInt(val);
     if (!isNaN(parsed) && parsed > 0) {
-        window.rowsPerPage = parsed;
+        rowsPerPage = parsed;
         localStorage.setItem('wms_rows_per_page', rowsPerPage);
-        window.currentPage = 1;
-        window.applyPagination();
+        currentPage = 1;
+        applyPagination();
     }
-};
+}
 
-window.applyPagination = function() {
+function applyPagination() {
     const allRows = Array.from(document.querySelectorAll('#tbody-ks tr.row-ks'));
     
     allRows.forEach(row => {
@@ -537,13 +534,13 @@ window.applyPagination = function() {
     const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
     
     const totalFiltered = visibleRows.length;
-    const totalPages = Math.ceil(totalFiltered / window.rowsPerPage) || 1;
+    const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
     
-    if(window.currentPage > totalPages) window.currentPage = totalPages;
-    if(window.currentPage < 1) window.currentPage = 1;
+    if(currentPage > totalPages) currentPage = totalPages;
+    if(currentPage < 1) currentPage = 1;
 
-    const startIndex = (window.currentPage - 1) * window.rowsPerPage;
-    const endIndex = startIndex + window.rowsPerPage;
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
 
     let sumQty = 0;
     visibleRows.forEach((row, index) => {
@@ -564,38 +561,38 @@ window.applyPagination = function() {
 
     if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
     if(document.getElementById('lbl-total-qty')) document.getElementById('lbl-total-qty').innerText = sumQty;
-    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = window.currentPage;
+    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
     if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
     
-    if (window.selectAllState === 1) {
-        window.selectAllState = 0;
-        window.updateSelectAllUI();
+    if (selectAllState === 1) {
+        selectAllState = 0;
+        updateSelectAllUI();
     }
     
-    window.applySelection();
-    window.updateSelectedCount();
-};
+    applySelection();
+    updateSelectedCount();
+}
 
-window.prevPage = function() { if(window.currentPage > 1) { window.currentPage--; window.applyPagination(); } };
-window.nextPage = function() { 
+function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } }
+function nextPage() { 
     const totalVisible = document.querySelectorAll('#tbody-ks tr.row-ks:not(.filtered-out)').length;
-    if(window.currentPage < Math.ceil(totalVisible / window.rowsPerPage)) { window.currentPage++; window.applyPagination(); } 
-};
+    if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
+}
 
-window.updateSelectedCount = function() {
+function updateSelectedCount() {
     const count = document.querySelectorAll('.cb-main:checked').length;
     const lbl = document.getElementById('lbl-pilih-baris');
     if(lbl) lbl.innerText = count;
-};
+}
 
-window.eksekusiGantiPO = async function() {
+async function eksekusiGantiPO() {
     const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
     if(!newPO) return alert("Silakan Pilih Customer Baru dari daftar dropdown!");
 
     const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
     if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
 
-    let maxDus = window.selectedForAction.reduce((sum, row) => sum + row.qty, 0);
+    let maxDus = selectedForAction.reduce((sum, row) => sum + row.qty, 0);
     if(qtyDiminta > maxDus) return alert(`Maksimal jatah adalah ${maxDus} dus!`);
 
     const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
@@ -604,7 +601,7 @@ window.eksekusiGantiPO = async function() {
     try {
         let qtySisaUntukDiupdate = qtyDiminta; 
         
-        for(let row of window.selectedForAction) {
+        for(let row of selectedForAction) {
             if (qtySisaUntukDiupdate <= 0) break; 
             
             let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
@@ -612,26 +609,26 @@ window.eksekusiGantiPO = async function() {
 
             const { error } = await db.rpc('ganti_customer_aktual_ks_v2', { 
                 p_id_sku: row.id_sku,
-                p_customer_lama: row.customer_aktual,
+                p_customer_lama: row.po_aktual,
                 p_customer_baru: newPO,
                 p_qty: qtyPotong
             });
             if(error) throw error;
         }
         
-        window.tutupModalPO(); 
-        if(window.sourcePOContext === 'breakdown') window.tutupModalBreakdown();
+        tutupModalPO(); 
+        if(sourcePOContext === 'breakdown') tutupModalBreakdown();
         
-        await window.muatDataStok();
+        await muatDataStok();
         alert("Berhasil mengganti Customer Aktual!");
     } catch (error) { 
         alert("GAGAL UPDATE: " + error.message); 
     } finally { 
         btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); 
     }
-};
+}
 
-window.salinData = function() {
+function salinData() {
     const cek = document.querySelectorAll('.cb-main:checked');
     if(cek.length === 0) return alert("Pilih data yang ingin disalin!");
 
@@ -657,9 +654,9 @@ window.salinData = function() {
     navigator.clipboard.writeText(copyString).then(() => {
         alert("Berhasil menyalin!");
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
-};
+}
 
-window.downloadXLS = function() {
+function downloadXLS() {
     if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
     
     let ws_data = [];
@@ -687,10 +684,10 @@ window.downloadXLS = function() {
     let ws = XLSX.utils.aoa_to_sheet(ws_data);
     let wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Kartu_Stok");
-    XLSX.writeFile(wb, `Kartu_Stok_${window.modeKS.toUpperCase()}.xlsx`);
-};
+    XLSX.writeFile(wb, `Kartu_Stok_${modeKS.toUpperCase()}.xlsx`);
+}
 
-window.salinDataBreakdown = function() {
+function salinDataBreakdown() {
     const cek = document.querySelectorAll('.cb-bd:checked');
     if(cek.length === 0) return alert("Pilih data breakdown yang ingin disalin!");
 
@@ -707,32 +704,27 @@ window.salinDataBreakdown = function() {
     navigator.clipboard.writeText(copyString).then(() => {
         alert("Berhasil menyalin detail breakdown!");
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
-};
+}
 
-// ========================================================
-// DRAG & DROP LOGIC UNTUK ATUR KOLOM
-// ========================================================
-window.toggleSidebarKolom = function() {
-    console.log("toggleSidebarKolom clicked!");
+function toggleSidebarKolom() {
     const sidebar = document.getElementById('sidebar-kolom');
     const overlay = document.getElementById('overlay-klik-luar');
     
     if (sidebar.classList.contains('translate-x-full')) {
         sidebar.classList.remove('translate-x-full');
         overlay.classList.remove('hidden');
-        window.renderDragList();
+        renderDragList();
     } else {
         sidebar.classList.add('translate-x-full');
         overlay.classList.add('hidden');
     }
-};
+}
 
-window.renderDragList = function() {
+function renderDragList() {
     const container = document.getElementById('kolom-drag-container');
     if(!container) return;
     container.innerHTML = '';
     
-    // Ambil header kolom kecuali checkbox dan tombol detail
     const headers = Array.from(document.querySelectorAll('#thead-ks th'))
         .filter(th => th && !th.classList.contains('col-cb') && !th.classList.contains('col-open'));
     
@@ -769,7 +761,7 @@ window.renderDragList = function() {
             }
         }
     });
-};
+}
 
 function getDragAfterElement(container, y) {
     const draggableElements = [...container.querySelectorAll('.drag-item:not(.dragging)')];
@@ -784,31 +776,31 @@ function getDragAfterElement(container, y) {
     }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
-window.simpanUrutanKolom = function() {
+function simpanUrutanKolom() {
     const items = document.querySelectorAll('.drag-item');
     let newOrder = [];
     items.forEach(item => newOrder.push(item.getAttribute('data-col')));
     
-    window.userColOrder = newOrder;
-    localStorage.setItem(`col_order_ks_${window.modeKS}_${currentUser.username}`, JSON.stringify(newOrder));
+    userColOrder = newOrder;
+    localStorage.setItem(`col_order_ks_${modeKS}_${currentUser.username}`, JSON.stringify(newOrder));
     
     alert("Urutan kolom berhasil disimpan!");
-    window.toggleSidebarKolom();
-    window.renderTabel(); 
-};
+    toggleSidebarKolom();
+    renderTabel(); 
+}
 
-window.resetUrutanKolom = function() {
+function resetUrutanKolom() {
     if(!confirm("Kembalikan urutan kolom ke default?")) return;
-    window.userColOrder = [];
-    localStorage.removeItem(`col_order_ks_${window.modeKS}_${currentUser.username}`);
+    userColOrder = [];
+    localStorage.removeItem(`col_order_ks_${modeKS}_${currentUser.username}`);
     
     alert("Urutan dikembalikan ke default.");
-    window.toggleSidebarKolom();
-    window.renderTabel();
-};
+    toggleSidebarKolom();
+    renderTabel();
+}
 
-window.applyColumnOrder = function() {
-    if (!window.userColOrder || window.userColOrder.length === 0) return;
+function applyColumnOrder() {
+    if (!userColOrder || userColOrder.length === 0) return;
 
     const table = document.getElementById('main-table');
     const rows = table.querySelectorAll('tr');
@@ -830,7 +822,7 @@ window.applyColumnOrder = function() {
         if (cbCell) row.appendChild(cbCell); 
         if (openCell) row.appendChild(openCell); 
 
-        window.userColOrder.forEach(colId => {
+        userColOrder.forEach(colId => {
             if (cellMap[colId]) {
                 row.appendChild(cellMap[colId]);
             }
@@ -838,28 +830,25 @@ window.applyColumnOrder = function() {
 
         cells.forEach(c => {
             const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
-            if (colClass !== 'col-cb' && colClass !== 'col-open' && !window.userColOrder.includes(colClass)) {
+            if (colClass !== 'col-cb' && colClass !== 'col-open' && !userColOrder.includes(colClass)) {
                 row.appendChild(c);
             }
         });
     });
-};
+}
 
-// ========================================================
-// FILTER EXCEL PRO (SMART FILTERING & POSITIONING)
-// ========================================================
-window.openColumnFilter = function(event, colClass, colName) {
+function openColumnFilter(event, colClass, colName) {
     event.stopPropagation();
-    window.currentFilterCol = colClass;
+    currentFilterCol = colClass;
     document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
 
     let uniqueValues = new Set();
     
     document.querySelectorAll('#tbody-ks tr.row-ks').forEach(row => {
         let showBasedOnOthers = true;
-        for (let otherCol in window.activeFilters) {
+        for (let otherCol in activeFilters) {
             if (otherCol !== colClass) { 
-                const allowed = window.activeFilters[otherCol];
+                const allowed = activeFilters[otherCol];
                 const c = row.querySelector('.' + otherCol);
                 let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
                 if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
@@ -875,11 +864,11 @@ window.openColumnFilter = function(event, colClass, colName) {
     });
 
     let sortedValues = Array.from(uniqueValues).sort();
-    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
+    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
     
     sortedValues.forEach(val => {
         let isChecked = true;
-        if (window.activeFilters[colClass] && !window.activeFilters[colClass].includes(val)) { isChecked = false; }
+        if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
         listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}">
             <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
             <span class="truncate text-slate-600">${val}</span>
@@ -887,7 +876,7 @@ window.openColumnFilter = function(event, colClass, colName) {
     });
 
     document.getElementById('filter-values-list').innerHTML = listHtml;
-    window.updateSelectAllState();
+    updateSelectAllState();
     document.getElementById('filter-search-input').value = '';
     
     const menu = document.getElementById('excel-filter-menu');
@@ -912,14 +901,14 @@ window.openColumnFilter = function(event, colClass, colName) {
     menu.style.left = `${leftPos}px`;
     
     document.getElementById('filter-search-input').focus();
-};
+}
 
-window.toggleAllFilterValues = function(checked) {
+function toggleAllFilterValues(checked) {
     document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
-    window.updateSelectAllState();
-};
+    updateSelectAllState();
+}
 
-window.updateSelectAllState = function() {
+function updateSelectAllState() {
     const allCbs = document.querySelectorAll('.filter-val-cb');
     const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
     const selectAll = document.getElementById('filter-select-all');
@@ -927,45 +916,45 @@ window.updateSelectAllState = function() {
     if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
     else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
     else { selectAll.checked = false; selectAll.indeterminate = true; }
-};
+}
 
-document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) window.updateSelectAllState(); });
+document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) updateSelectAllState(); });
 
-window.searchFilterList = function(val) {
+function searchFilterList(val) {
     const query = val.toLowerCase().split(' ').filter(x => x); 
     document.querySelectorAll('.filter-val-item').forEach(label => {
         const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
         let matches = query.every(term => text.includes(term));
         label.style.display = matches ? '' : 'none';
     });
-};
+}
 
-window.closeFilterMenu = function() { document.getElementById('excel-filter-menu').classList.add('hidden'); };
+function closeFilterMenu() { document.getElementById('excel-filter-menu').classList.add('hidden'); }
 
-window.clearFilterForCurrentCol = function() {
-    delete window.activeFilters[window.currentFilterCol];
-    window.closeFilterMenu(); window.saringTabelExcel(); 
-};
+function clearFilterForCurrentCol() {
+    delete activeFilters[currentFilterCol];
+    closeFilterMenu(); saringTabelExcel(); 
+}
 
-window.applyFilterForCurrentCol = function() {
+function applyFilterForCurrentCol() {
     const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
     const totalBoxes = document.querySelectorAll('.filter-val-cb');
     
     if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') {
-        delete window.activeFilters[window.currentFilterCol];
+        delete activeFilters[currentFilterCol];
     } else {
         let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value));
-        window.activeFilters[window.currentFilterCol] = selectedVals;
+        activeFilters[currentFilterCol] = selectedVals;
     }
     
-    window.closeFilterMenu(); window.saringTabelExcel(); 
-};
+    closeFilterMenu(); saringTabelExcel(); 
+}
 
-window.saringTabelExcel = function() {
+function saringTabelExcel() {
     document.querySelectorAll('.row-ks').forEach(row => {
         let show = true;
-        for (let colClass in window.activeFilters) {
-            const allowedValues = window.activeFilters[colClass];
+        for (let colClass in activeFilters) {
+            const allowedValues = activeFilters[colClass];
             const cell = row.querySelector('.' + colClass);
             if (cell) {
                 let text = cell.getAttribute('data-search') || cell.innerText.trim();
@@ -978,23 +967,23 @@ window.saringTabelExcel = function() {
         } else { 
             row.classList.add('filtered-out'); 
             let cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = false; window.highlightRow(cb, true); } 
+            if(cb) { cb.checked = false; highlightRow(cb, true); } 
         }
     });
     
-    window.selectAllState = 0;
-    window.updateSelectAllUI();
-    window.currentPage = 1; 
-    window.applyPagination(); 
-    window.updateFilterIcons();
-};
+    selectAllState = 0;
+    updateSelectAllUI();
+    currentPage = 1; 
+    applyPagination(); 
+    updateFilterIcons();
+}
 
-window.updateFilterIcons = function() {
+function updateFilterIcons() {
     document.querySelectorAll('.filter-icon').forEach(icon => {
         icon.classList.remove('text-amber-400', 'opacity-100');
         icon.classList.add('text-white', 'opacity-40');
     });
-    for (let colClass in window.activeFilters) {
+    for (let colClass in activeFilters) {
         const th = document.querySelector(`th.${colClass}`);
         if (th) {
             const icon = th.querySelector('.filter-icon');
@@ -1004,12 +993,9 @@ window.updateFilterIcons = function() {
             }
         }
     }
-};
+}
 
-// ========================================================
-// FITUR RESIZABLE COLUMNS (DRAG LEBAR KOLOM)
-// ========================================================
-window.initResizableColumns = function() {
+function initResizableColumns() {
     const cols = document.querySelectorAll('#main-table th');
     cols.forEach(col => {
         const existing = col.querySelector('.resizer');
@@ -1038,4 +1024,157 @@ window.initResizableColumns = function() {
             resizer.classList.remove('resizing');
         };
     });
-};
+}
+
+function tutupSemuaPopups() {
+    document.getElementById('modal-lihat-po').classList.add('hidden');
+    document.getElementById('modal-breakdown').classList.add('hidden');
+    document.getElementById('modal-po').classList.add('hidden');
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
+    if(document.getElementById('sidebar-kolom')) {
+        document.getElementById('sidebar-kolom').classList.add('translate-x-full');
+    }
+}
+
+function bukaBreakdown(gKey) {
+    const item = dataKSGlobal.find(g => g.gKey === gKey); if(!item) return;
+
+    document.getElementById('bd-title-item').innerText = `${item.nama} | ${item.pjg} | ${item.grade} | DUS: ${item.dus} | SHADING: ${item.shading} | KET: ${item.ket}`;
+    currentBreakdownData = item.areas;
+
+    const tbody = document.getElementById('tbody-breakdown');
+    tbody.innerHTML = item.areas.map((a, i) => {
+        const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
+        const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
+        return `
+            <tr class="transition bd-row text-[13px] ${stripeClass}">
+                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-qty="${a.qty}" data-ket="${a.keterangan}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
+                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
+                <td class="px-4 py-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
+                <td class="px-4 py-3 font-black text-emerald-700 text-center">${a.qty}</td>
+            </tr>`;
+    }).join('');
+
+    document.getElementById('modal-breakdown').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+}
+
+function tutupModalBreakdown() { 
+    document.getElementById('modal-breakdown').classList.add('hidden'); 
+    document.getElementById('overlay-klik-luar').classList.add('hidden'); 
+}
+
+function highlightBdRow(cb) {
+    const tr = cb.closest('tr');
+    if(cb.checked) { tr.classList.add('selected-row'); } 
+    else { tr.classList.remove('selected-row'); }
+}
+
+function toggleCentangBreakdown(checked) { 
+    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; highlightBdRow(cb); }); 
+}
+
+function bukaModalLihatPO(encodedPOs) {
+    const poStr = decodeURIComponent(encodedPOs);
+    const poArr = poStr.split('|').map(p => p.trim()).filter(p => p);
+    const ul = document.getElementById('list-po-aktual');
+    if (poArr.length === 0 || poArr[0] === 'KOSONG') {
+        ul.innerHTML = '<li class="text-slate-400 italic font-medium p-3 bg-slate-50 rounded-md text-center border border-slate-200">Tidak ada Customer Aktual tersimpan.</li>';
+    } else {
+        ul.innerHTML = poArr.map(p => {
+            let parts = p.split('(');
+            let namaPo = parts[0].trim();
+            let qtyPo = parts[1] ? parts[1].replace(')', '').trim() : '';
+            return `<li class="p-3 bg-white border border-slate-200 shadow-sm text-slate-700 font-semibold rounded-md flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 text-slate-400"></i> <span>${namaPo}</span></div> 
+                        <span class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded text-xs font-black">${qtyPo}</span>
+                    </li>`;
+        }).join('');
+    }
+    lucide.createIcons();
+    document.getElementById('modal-lihat-po').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+}
+
+function siapkanGantiPO(context) {
+    let checkboxes = [];
+    if(context === 'main') {
+        if(modeKS === 'global' || modeKS === 'lembaran') return;
+        checkboxes = document.querySelectorAll('.cb-main:checked');
+    } else { checkboxes = document.querySelectorAll('.cb-bd:checked'); }
+
+    if(checkboxes.length === 0) return alert('Silakan centang item / area yang ingin diganti Customer-nya.');
+
+    selectedForAction = []; let totalDus = 0;
+    checkboxes.forEach(cb => {
+        selectedForAction.push({ 
+            id_sku: cb.dataset.idsku, 
+            po_aktual: cb.dataset.po,
+            qty: parseInt(cb.dataset.qty)
+        });
+        totalDus += parseInt(cb.dataset.qty);
+    });
+
+    sourcePOContext = context;
+    document.getElementById('input-new-po').value = '';
+    const inputQty = document.getElementById('input-qty-ganti');
+    inputQty.value = totalDus; inputQty.max = totalDus; 
+
+    document.getElementById('modal-po').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+}
+
+function tutupModalPO() { 
+    document.getElementById('modal-po').classList.add('hidden'); 
+    if(document.getElementById('modal-breakdown').classList.contains('hidden')) {
+        document.getElementById('overlay-klik-luar').classList.add('hidden'); 
+    }
+}
+
+// Mengekspos semua deklarasi ke window agar bisa diakses HTML onclick
+window.toggleActionMenu = toggleActionMenu;
+window.loadMasterData = loadMasterData;
+window.setModeKS = setModeKS;
+window.sortTable = sortTable;
+window.thSort = thSort;
+window.renderTabel = renderTabel;
+window.changeRowsPerPage = changeRowsPerPage;
+window.setCustomRowsPerPage = setCustomRowsPerPage;
+window.prevPage = prevPage;
+window.nextPage = nextPage;
+window.eksekusiGantiPO = eksekusiGantiPO;
+window.salinData = salinData;
+window.downloadXLS = downloadXLS;
+window.salinDataBreakdown = salinDataBreakdown;
+window.toggleSidebarKolom = toggleSidebarKolom;
+window.simpanUrutanKolom = simpanUrutanKolom;
+window.resetUrutanKolom = resetUrutanKolom;
+window.tutupSemuaPopups = tutupSemuaPopups;
+window.bukaBreakdown = bukaBreakdown;
+window.tutupModalBreakdown = tutupModalBreakdown;
+window.highlightBdRow = highlightBdRow;
+window.toggleCentangBreakdown = toggleCentangBreakdown;
+window.bukaModalLihatPO = bukaModalLihatPO;
+window.siapkanGantiPO = siapkanGantiPO;
+window.tutupModalPO = tutupModalPO;
+window.cycleSelectAll = cycleSelectAll;
+window.openColumnFilter = openColumnFilter;
+window.toggleAllFilterValues = toggleAllFilterValues;
+window.searchFilterList = searchFilterList;
+window.closeFilterMenu = closeFilterMenu;
+window.clearFilterForCurrentCol = clearFilterForCurrentCol;
+window.applyFilterForCurrentCol = applyFilterForCurrentCol;
+window.highlightRow = highlightRow;
+window.sinkronisasiUlangStokAktual = sinkronisasiUlangStokAktual;
+window.muatDataStok = muatDataStok;
+window.applyPagination = applyPagination;
+window.updateSelectAllUI = updateSelectAllUI;
+window.applySelection = applySelection;
+window.updateSelectedCount = updateSelectedCount;
+window.saringTabelExcel = saringTabelExcel;
+window.updateFilterIcons = updateFilterIcons;
+window.updateSelectAllState = updateSelectAllState;
+window.initResizableColumns = initResizableColumns;
+window.renderDragList = renderDragList;
+window.applyColumnOrder = applyColumnOrder;
