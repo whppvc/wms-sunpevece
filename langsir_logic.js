@@ -512,7 +512,8 @@ async function saveToSupabase() {
         let mesin = r.querySelector('.col-mesin').innerText;
         let shift = r.querySelector('.col-shift').innerText;
         
-        let id_sku = `${area}_${nama}_${pjg}_${grade}_${dus}_${shading}_${customer}_${ket}`;
+        // REVISI FORMAT ID_SKU: area_nama item_panjang_grade_dus_shading_keterangan_customer bawaan
+        let id_sku = `${area}_${nama}_${pjg}_${grade}_${dus}_${shading}_${ket}_${customer}`;
         let id_po = `${nama}_${pjg}_${grade}`;
         
         // JSON untuk hasil_stbj_langsir
@@ -533,10 +534,11 @@ async function saveToSupabase() {
             keterangan: ket, pic_input: user.username 
         });
 
-        // JSON untuk stok_global (REVISI: TANPA id_po, customer_aktual, & id_sku)
+        // JSON untuk stok_global (REVISI: DENGAN id_sku format baru, TANPA qty)
         stokGlobalInserts.push({
             qrcode: qr,
             area: area,
+            id_sku: id_sku,
             tgl_produksi: tgl_produksi,
             mesin: mesin,
             shift: shift,
@@ -549,12 +551,11 @@ async function saveToSupabase() {
             customer_bawaan: customer,
             keterangan: ket,
             pic_input: user.username,
-            qty: 1,
             jalur_masuk: 'langsir',
             created_at: wibNow
         });
 
-        // Akumulasi JSON untuk stok_aktual
+        // Akumulasi JSON untuk stok_aktual (DENGAN id_sku format baru)
         let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${customer}_${ket}`;
         if(!mapAktual[keyAkt]) {
             mapAktual[keyAkt] = {
