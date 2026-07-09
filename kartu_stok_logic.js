@@ -93,7 +93,6 @@ async function loadMasterData() {
                 if(d.dus) dusSet.add(d.dus.trim());
             });
 
-            // Populate PO
             const selPO = document.getElementById('input-new-po'); 
             if(selPO) {
                 let htmlPO = '<option value="">-- PILIH CUSTOMER --</option>';
@@ -101,7 +100,6 @@ async function loadMasterData() {
                 selPO.innerHTML = htmlPO;
             }
 
-            // Populate Dropdowns for Request Konversi
             const selNama = document.getElementById('req-nama-item');
             if(selNama) {
                 let htmlNama = '<option value="">-- Tetap --</option>';
@@ -261,7 +259,7 @@ function setModeKS(m) {
     });
     
     document.getElementById('btn-ganti-po-main').classList.toggle('hidden', m === 'global' || m === 'lembaran');
-    document.getElementById('btn-req-konversi-main').classList.toggle('hidden', m !== 'area'); // Hanya muncul di KS Area
+    document.getElementById('btn-req-konversi-main').classList.toggle('hidden', m !== 'area'); 
     
     activeFilters = {}; 
     loadUserPreferences(); 
@@ -344,10 +342,15 @@ function renderTabel() {
 
         tbody.innerHTML = dataKSQR.map((r) => {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
+            
             let baseSpec = `${r.nama}_${r.pjg}_${r.grade}_${r.dus}_${r.shading}`;
             let poDist = poDistributionMap[baseSpec];
             let poArr = [];
-            if(poDist) { for(let po in poDist) { poArr.push(`${po} (${poDist[po]} Dus)`); } }
+            if(poDist) {
+                for(let po in poDist) {
+                    poArr.push(`${po} (${poDist[po]} Dus)`);
+                }
+            }
             let poString = poArr.length > 0 ? poArr.join(' | ') : 'KOSONG';
             let btnPO = `<button onclick="bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
 
@@ -1216,12 +1219,13 @@ function siapkanReqKonversi() {
         shading: cb.dataset.shading || '-',
         customer_aktual: cb.dataset.po || '-',
         keterangan: cb.dataset.ket || '-',
+        area: cb.dataset.area || '-',
         qty_max: parseInt(cb.dataset.qty) || 0
     };
 
     const infoAsal = document.getElementById('req-info-asal');
     if(infoAsal) {
-        infoAsal.innerHTML = `<span class="text-blue-600">${selectedForReq.nama_item}</span> | ${selectedForReq.panjang} | ${selectedForReq.grade} | ${selectedForReq.dus} | ${selectedForReq.shading} | ${selectedForReq.keterangan} | <span class="text-orange-600">${selectedForReq.customer_aktual}</span>`;
+        infoAsal.innerHTML = `<span class="text-blue-600">${selectedForReq.nama_item}</span> | ${selectedForReq.panjang} | ${selectedForReq.grade} | ${selectedForReq.dus} | ${selectedForReq.shading} | ${selectedForReq.keterangan} | <span class="text-orange-600">${selectedForReq.customer_aktual}</span> | <span class="text-emerald-600 font-bold">Area: ${selectedForReq.area}</span>`;
     }
 
     // Reset Form Input
@@ -1259,27 +1263,36 @@ async function eksekusiReqKonversi() {
     const btn = document.getElementById('btn-save-req-konv'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
 
-    const payload = {
-        jenis_item: selectedForReq.jenis_item,
-        nama_item: selectedForReq.nama_item,
-        panjang: selectedForReq.panjang,
-        grade: selectedForReq.grade,
-        dus: selectedForReq.dus,
-        shading: selectedForReq.shading,
-        keterangan: selectedForReq.keterangan,
-        "customer aktual": selectedForReq.customer_aktual,
-        nama_item_req: namaReq,
-        panjang_req: pjgReq,
-        grade_req: gradeReq,
-        dus_req: dusReq,
-        shading_req: shadingReq,
-        qty_req: qtyReq.toString(),
-        qty_hasil: qtyHasil.toString(),
-        qty_proses: "0",
-        progres_konversi: "PENDING"
-    };
-
     try {
+        // Generate Kode Konversi
+        const { count, error: errCount } = await db.from('request_konversi').select('*', { count: 'exact', head: true });
+        if(errCount) throw errCount;
+        let nextNum = (count || 0) + 1;
+        let kodeKonversi = `K-${String(nextNum).padStart(4, '0')}`;
+
+        const payload = {
+            kode_konversi: kodeKonversi,
+            aktifitas_konversi: 'req',
+            area: selectedForReq.area,
+            jenis_item: selectedForReq.jenis_item,
+            nama_item: selectedForReq.nama_item,
+            panjang: selectedForReq.panjang,
+            grade: selectedForReq.grade,
+            dus: selectedForReq.dus,
+            shading: selectedForReq.shading,
+            keterangan: selectedForReq.keterangan,
+            "customer aktual": selectedForReq.customer_aktual,
+            nama_item_req: namaReq,
+            panjang_req: pjgReq,
+            grade_req: gradeReq,
+            dus_req: dusReq,
+            shading_req: shadingReq,
+            qty_req: qtyReq.toString(),
+            qty_hasil: qtyHasil.toString(),
+            qty_proses: "0",
+            progres_konversi: "PENDING"
+        };
+
         const { error } = await db.from('request_konversi').insert([payload]);
         if(error) throw error;
         
