@@ -11,7 +11,7 @@
     
     <script src="global.js"></script>
     
-    <style>
+   <style>
         html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; touch-action: pan-y; background-color: #f8fafc; }
         .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -36,8 +36,18 @@
         }
 
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
-        tr.row-ks:not(.selected-row):hover td, tr.bd-row:not(.selected-row):hover td { background-color: rgba(var(--tbl-row-hover), 1) !important; color: #4f46e5 !important; }
-        tr.row-ks:not(.selected-row):hover td button, tr.bd-row:not(.selected-row):hover td button { color: #4f46e5 !important; border-color: #4f46e5 !important; }
+        
+        /* REVISI: Tambahkan selektor body:not(.disable-hover) agar tunduk pada pengaturan Table Design */
+        body:not(.disable-hover) tr.row-ks:not(.selected-row):hover td, 
+        body:not(.disable-hover) tr.bd-row:not(.selected-row):hover td { 
+            background-color: rgba(var(--tbl-row-hover), 1) !important; 
+            color: #4f46e5 !important; 
+        }
+        body:not(.disable-hover) tr.row-ks:not(.selected-row):hover td button, 
+        body:not(.disable-hover) tr.bd-row:not(.selected-row):hover td button { 
+            color: #4f46e5 !important; 
+            border-color: #4f46e5 !important; 
+        }
         
         .resizer {
             position: absolute;
