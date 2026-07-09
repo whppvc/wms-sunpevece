@@ -46,7 +46,7 @@ const APP_MENUS = [
     { id: 'riwayat_langsir', title: 'Riwayat Langsir', icon: 'history', url: 'riwayat_langsir.html' },
     { isDivider: true, title: 'INVENTORY' },
     { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers', url: 'kartu_stok.html' },
-    { id: 'req_konversi', title: 'Daftar Req Konversi', icon: 'bi-arrow-repeat', url: 'req_konversi.html' },
+    { id: 'req_konversi', title: 'Daftar Req Konversi', icon: 'refresh-cw', url: 'req_konversi.html' },
     { isDivider: true, title: 'MUTASI' },
     { id: 'scan_pic', title: 'Scan PIC Area', icon: 'user-check', url: 'scan_pic.html' },
     { id: 'riwayat_mutasi', title: 'Riwayat Konversi', icon: 'arrow-right-left', url: 'riwayat_konversi.html' },
