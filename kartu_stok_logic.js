@@ -612,7 +612,7 @@ window.eksekusiGantiPO = async function() {
 
             const { error } = await db.rpc('ganti_customer_aktual_ks_v2', { 
                 p_id_sku: row.id_sku,
-                p_customer_lama: row.po_aktual,
+                p_customer_lama: row.customer_aktual,
                 p_customer_baru: newPO,
                 p_qty: qtyPotong
             });
@@ -713,6 +713,7 @@ window.salinDataBreakdown = function() {
 // DRAG & DROP LOGIC UNTUK ATUR KOLOM
 // ========================================================
 window.toggleSidebarKolom = function() {
+    console.log("toggleSidebarKolom clicked!");
     const sidebar = document.getElementById('sidebar-kolom');
     const overlay = document.getElementById('overlay-klik-luar');
     
@@ -728,14 +729,15 @@ window.toggleSidebarKolom = function() {
 
 window.renderDragList = function() {
     const container = document.getElementById('kolom-drag-container');
+    if(!container) return;
     container.innerHTML = '';
     
     // Ambil header kolom kecuali checkbox dan tombol detail
     const headers = Array.from(document.querySelectorAll('#thead-ks th'))
-        .filter(th => !th.classList.contains('col-cb') && !th.classList.contains('col-open'));
+        .filter(th => th && !th.classList.contains('col-cb') && !th.classList.contains('col-open'));
     
     headers.forEach(th => {
-        const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
+        const colClass = Array.from(th.classList).find(c => c.startsWith('col-')) || '';
         const label = th.innerText.trim() || 'Kolom';
         
         const div = document.createElement('div');
@@ -753,16 +755,18 @@ window.renderDragList = function() {
         container.appendChild(div);
     });
     
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
 
     container.addEventListener('dragover', e => {
         e.preventDefault();
         const afterElement = getDragAfterElement(container, e.clientY);
         const draggable = document.querySelector('.dragging');
-        if (afterElement == null) {
-            container.appendChild(draggable);
-        } else {
-            container.insertBefore(draggable, afterElement);
+        if (draggable) {
+            if (afterElement == null) {
+                container.appendChild(draggable);
+            } else {
+                container.insertBefore(draggable, afterElement);
+            }
         }
     });
 };
@@ -839,167 +843,6 @@ window.applyColumnOrder = function() {
             }
         });
     });
-};
-
-// ========================================================
-// ACTION HANDLERS & MODALS
-// ========================================================
-window.tutupSemuaPopups = function() {
-    document.getElementById('modal-lihat-po').classList.add('hidden');
-    document.getElementById('modal-breakdown').classList.add('hidden');
-    document.getElementById('modal-po').classList.add('hidden');
-    document.getElementById('overlay-klik-luar').classList.add('hidden');
-    if(document.getElementById('sidebar-kolom')) {
-        document.getElementById('sidebar-kolom').classList.add('translate-x-full');
-    }
-};
-
-window.bukaBreakdown = function(gKey) {
-    const item = window.dataKSGlobal.find(g => g.gKey === gKey); if(!item) return;
-
-    document.getElementById('bd-title-item').innerText = `${item.nama} | ${item.pjg} | ${item.grade} | DUS: ${item.dus} | SHADING: ${item.shading} | KET: ${item.ket}`;
-    window.currentBreakdownData = item.areas;
-
-    const tbody = document.getElementById('tbody-breakdown');
-    tbody.innerHTML = item.areas.map((a, i) => {
-        const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
-        const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
-        return `
-            <tr class="transition bd-row text-[13px] ${stripeClass}">
-                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="window.highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-qty="${a.qty}" data-ket="${a.keterangan}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
-                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
-                <td class="px-4 py-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
-                <td class="px-4 py-3 font-black text-emerald-700 text-center">${a.qty}</td>
-            </tr>`;
-    }).join('');
-
-    document.getElementById('modal-breakdown').classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
-};
-
-window.tutupModalBreakdown = function() { document.getElementById('modal-breakdown').classList.add('hidden'); document.getElementById('overlay-klik-luar').classList.add('hidden'); };
-
-window.highlightBdRow = function(cb) {
-    const tr = cb.closest('tr');
-    if(cb.checked) { tr.classList.add('selected-row'); } 
-    else { tr.classList.remove('selected-row'); }
-};
-
-window.toggleCentangBreakdown = function(checked) { 
-    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; window.highlightBdRow(cb); }); 
-};
-
-window.bukaModalLihatPO = function(encodedPOs) {
-    const poStr = decodeURIComponent(encodedPOs);
-    const poArr = poStr.split('|').map(p => p.trim()).filter(p => p);
-    const ul = document.getElementById('list-po-aktual');
-    if (poArr.length === 0 || poArr[0] === 'KOSONG') {
-        ul.innerHTML = '<li class="text-slate-400 italic font-medium p-3 bg-slate-50 rounded-md text-center border border-slate-200">Tidak ada Customer Aktual tersimpan.</li>';
-    } else {
-        ul.innerHTML = poArr.map(p => {
-            let parts = p.split('(');
-            let namaPo = parts[0].trim();
-            let qtyPo = parts[1] ? parts[1].replace(')', '').trim() : '';
-            return `<li class="p-3 bg-white border border-slate-200 shadow-sm text-slate-700 font-semibold rounded-md flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 text-slate-400"></i> <span>${namaPo}</span></div> 
-                        <span class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded text-xs font-black">${qtyPo}</span>
-                    </li>`;
-        }).join('');
-    }
-    lucide.createIcons();
-    document.getElementById('modal-lihat-po').classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
-};
-
-window.siapkanGantiPO = function(context) {
-    let checkboxes = [];
-    if(context === 'main') {
-        if(window.modeKS === 'global' || window.modeKS === 'lembaran') return;
-        checkboxes = document.querySelectorAll('.cb-main:checked');
-    } else { checkboxes = document.querySelectorAll('.cb-bd:checked'); }
-
-    if(checkboxes.length === 0) return alert('Silakan centang item / area yang ingin diganti Customer-nya.');
-
-    window.selectedForAction = []; let totalDus = 0;
-    checkboxes.forEach(cb => {
-        window.selectedForAction.push({ 
-            id_sku: cb.dataset.idsku, 
-            po_aktual: cb.dataset.po,
-            qty: parseInt(cb.dataset.qty)
-        });
-        totalDus += parseInt(cb.dataset.qty);
-    });
-
-    window.sourcePOContext = context;
-    document.getElementById('input-new-po').value = '';
-    const inputQty = document.getElementById('input-qty-ganti');
-    inputQty.value = totalDus; inputQty.max = totalDus; 
-
-    document.getElementById('modal-po').classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
-};
-
-window.tutupModalPO = function() { 
-    document.getElementById('modal-po').classList.add('hidden'); 
-    if(document.getElementById('modal-breakdown').classList.contains('hidden')) {
-        document.getElementById('overlay-klik-luar').classList.add('hidden'); 
-    }
-};
-
-window.cycleSelectAll = function() {
-    window.selectAllState = (window.selectAllState + 1) % 3;
-    window.updateSelectAllUI();
-    window.applySelection();
-};
-
-window.updateSelectAllUI = function() {
-    const btn = document.getElementById('btn-select-all');
-    if(!btn) return;
-    
-    if (window.selectAllState === 0) {
-        btn.innerHTML = '';
-        btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto';
-    } else if (window.selectAllState === 1) {
-        btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
-        btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto';
-    } else if (window.selectAllState === 2) {
-        btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>';
-        btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
-    }
-    lucide.createIcons();
-};
-
-window.applySelection = function() {
-    const allRows = Array.from(document.querySelectorAll('#tbody-ks tr.row-ks'));
-    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
-    
-    const startIndex = (window.currentPage - 1) * window.rowsPerPage;
-    const endIndex = startIndex + window.rowsPerPage;
-
-    if (window.selectAllState === 0) {
-        allRows.forEach(row => {
-            const cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = false; window.highlightRow(cb, true); }
-        });
-    } else if (window.selectAllState === 1) {
-        allRows.forEach(row => {
-            const cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = false; window.highlightRow(cb, true); }
-        });
-        visibleRows.forEach((row, index) => {
-            if(index >= startIndex && index < endIndex) {
-                const cb = row.querySelector('.cb-main');
-                if(cb) { cb.checked = true; window.highlightRow(cb, true); }
-            }
-        });
-    } else if (window.selectAllState === 2) {
-        visibleRows.forEach(row => {
-            const cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = true; window.highlightRow(cb, true); }
-        });
-    }
-    window.updateSelectedCount();
 };
 
 // ========================================================
