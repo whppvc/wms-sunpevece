@@ -533,11 +533,10 @@ async function saveToSupabase() {
             keterangan: ket, pic_input: user.username 
         });
 
-        // JSON untuk stok_global (TANPA id_po & customer_aktual)
+        // JSON untuk stok_global (REVISI: TANPA id_po, customer_aktual, & id_sku)
         stokGlobalInserts.push({
             qrcode: qr,
             area: area,
-            id_sku: id_sku,
             tgl_produksi: tgl_produksi,
             mesin: mesin,
             shift: shift,
