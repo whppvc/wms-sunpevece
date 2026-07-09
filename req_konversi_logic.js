@@ -75,7 +75,6 @@ function toggleActionMenu(e) {
 }
 
 function tutupSemuaPopups() {
-    document.getElementById('modal-form').classList.add('hidden');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
     if(document.getElementById('sidebar-kolom')) document.getElementById('sidebar-kolom').classList.add('translate-x-full');
 }
@@ -148,49 +147,68 @@ function renderTabel() {
             <th class="hdr-std w-10 col-cb text-center sticky-col">
                 <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
             </th>
-            <th class="hdr-std w-10 col-btn text-center">Edit</th>
-            ${thSort(2, 'Tgl Request', 'col-tgl')}
-            ${thSort(3, 'Detail Item Asal', 'col-asal')}
-            ${thSort(4, 'Request Konversi', 'col-req')}
-            ${thSort(5, 'Qty Req', 'col-qty_req')}
+            ${thSort(1, 'Tgl Request', 'col-tgl')}
+            ${thSort(2, 'Detail Item Asal', 'col-asal')}
+            ${thSort(3, 'Request Konversi', 'col-req')}
+            ${thSort(4, 'Qty Req', 'col-qty_req')}
+            ${thSort(5, 'Qty Hasil', 'col-qty_hasil')}
             ${thSort(6, 'Qty Proses', 'col-qty_proses')}
-            ${thSort(7, 'Keterangan', 'col-ket')}
-            ${thSort(8, 'Progres', 'col-progres')}
+            ${thSort(7, 'Progres', 'col-progres')}
         </tr>`;
     
-    if(rawData.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-center font-medium text-slate-400">Tidak ada data request.</td></tr>`; return; }
+    if(rawData.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center font-medium text-slate-400">Tidak ada data request.</td></tr>`; return; }
 
     tbody.innerHTML = rawData.map((r) => {
         const tgl = formatWIB(r.created_at);
         
-        // Detail Item Asal
-        const detailAsal = `<span class="text-blue-600 font-bold">${r.nama_item || '-'}</span> | ${r.panjang || '-'} | ${r.grade || '-'} | ${r.dus || '-'} | ${r.shading || '-'} | <span class="text-orange-600 font-bold">${r.customer_aktual || '-'}</span>`;
-        const searchAsal = `${r.nama_item} ${r.panjang} ${r.grade} ${r.dus} ${r.shading} ${r.customer_aktual}`;
+        // Detail Item Asal (STBJ Style)
+        const detailAsal = `
+            <div class="text-[12px] font-bold text-slate-600 leading-snug">
+                Item: <span class="text-blue-600">${r.jenis_item || '-'}</span> | 
+                <span class="text-slate-800">${r.nama_item || '-'}</span> | 
+                <span class="text-slate-800">${r.panjang || '-'}</span> | 
+                <span class="text-slate-800">${r.grade || '-'}</span> | 
+                <span class="text-slate-800">${r.dus || '-'}</span> | 
+                <span class="text-blue-600">${r.shading || '-'}</span>
+            </div>
+            <div class="text-[12px] font-bold text-slate-600 mt-1">Customer: <span class="text-orange-600">${r['customer aktual'] || '-'}</span></div>
+            <div class="text-[12px] font-bold text-slate-600">Keterangan: <span class="text-slate-800">${r.keterangan || '-'}</span></div>
+        `;
+        const searchAsal = `${r.nama_item} ${r.panjang} ${r.grade} ${r.dus} ${r.shading} ${r['customer aktual']}`;
         
-        // Detail Request
-        const detailReq = `<span class="text-indigo-600 font-bold">${r.nama_item_req || '-'}</span> | ${r.panjang_req || '-'} | ${r.grade_req || '-'} | ${r.dus_req || '-'} | ${r.shading_req || '-'}`;
+        // Request Konversi (Hanya tampilkan yang berubah/target)
+        let reqArr = [];
+        if(r.nama_item_req && r.nama_item_req !== r.nama_item) reqArr.push(`Nama: <span class="text-blue-600">${r.nama_item_req}</span>`);
+        if(r.panjang_req && r.panjang_req !== r.panjang) reqArr.push(`Pjg: <span class="text-slate-800">${r.panjang_req}</span>`);
+        if(r.grade_req && r.grade_req !== r.grade) reqArr.push(`Grade: <span class="text-slate-800">${r.grade_req}</span>`);
+        if(r.dus_req && r.dus_req !== r.dus) reqArr.push(`Dus: <span class="text-slate-800">${r.dus_req}</span>`);
+        if(r.shading_req && r.shading_req !== r.shading) reqArr.push(`Shading: <span class="text-blue-600">${r.shading_req}</span>`);
+        
+        const detailReq = reqArr.length > 0 ? `<div class="text-[12px] font-bold text-slate-600">${reqArr.join(' | ')}</div>` : '<span class="text-slate-400 italic text-xs">Tidak ada perubahan spesifikasi</span>';
         const searchReq = `${r.nama_item_req} ${r.panjang_req} ${r.grade_req} ${r.dus_req} ${r.shading_req}`;
 
-        // Badge Progres
-        let badgeClass = "bg-slate-100 text-slate-600 border-slate-200";
+        // Badge Progres & Tombol Proses
         let prog = (r.progres_konversi || 'PENDING').toUpperCase();
-        if(prog === 'SELESAI') badgeClass = "bg-emerald-100 text-emerald-700 border-emerald-300";
-        else if(prog === 'PROSES') badgeClass = "bg-blue-100 text-blue-700 border-blue-300";
-        else if(prog === 'PENDING') badgeClass = "bg-amber-100 text-amber-700 border-amber-300";
-
-        const rowDataStr = encodeURIComponent(JSON.stringify(r));
+        let btnProses = '';
+        if(prog === 'PENDING' || prog === 'PROSES') {
+            btnProses = `<button onclick="prosesRequest(${r.id})" class="mt-2 w-full px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded shadow-sm text-[10px] uppercase transition active:scale-95">Proses Request</button>`;
+        } else {
+            btnProses = `<span class="mt-2 block w-full px-3 py-1.5 bg-emerald-100 text-emerald-700 font-bold rounded border border-emerald-200 text-[10px] uppercase text-center">Selesai</span>`;
+        }
 
         return `
             <tr class="transition r-row text-[13px] bg-white even:bg-slate-50 border-b border-slate-200">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 text-center col-btn"><button onclick="bukaModalForm('${rowDataStr}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>
                 <td class="px-4 py-3 font-medium text-slate-600 text-center col-tgl" data-search="${tgl}">${tgl}</td>
                 <td class="px-4 py-3 text-left col-asal" data-search="${searchAsal}">${detailAsal}</td>
                 <td class="px-4 py-3 text-left col-req" data-search="${searchReq}">${detailReq}</td>
                 <td class="px-4 py-3 font-black text-slate-700 text-center col-qty_req" data-search="${r.qty_req || 0}">${r.qty_req || 0}</td>
+                <td class="px-4 py-3 font-black text-indigo-600 text-center col-qty_hasil" data-search="${r.qty_hasil || 0}">${r.qty_hasil || 0}</td>
                 <td class="px-4 py-3 font-black text-emerald-600 text-center col-qty_proses" data-search="${r.qty_proses || 0}">${r.qty_proses || 0}</td>
-                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
-                <td class="px-4 py-3 text-center col-progres" data-search="${prog}"><span class="px-2 py-1 text-[10px] font-bold rounded border ${badgeClass}">${prog}</span></td>
+                <td class="px-4 py-3 text-center col-progres" data-search="${prog}">
+                    <span class="font-bold text-slate-500 text-[10px] uppercase">${prog}</span>
+                    ${btnProses}
+                </td>
             </tr>`;
     }).join('');
 
@@ -201,95 +219,8 @@ function renderTabel() {
     initResizableColumns(); 
 }
 
-// ==========================================
-// FORM MODAL (ADD / EDIT)
-// ==========================================
-function bukaModalForm(encodedData = null) {
-    if(encodedData) {
-        const d = JSON.parse(decodeURIComponent(encodedData));
-        document.getElementById('inp-id').value = d.id;
-        document.getElementById('inp-jenis').value = d.jenis_item || '';
-        document.getElementById('inp-nama').value = d.nama_item || '';
-        document.getElementById('inp-pjg').value = d.panjang || '';
-        document.getElementById('inp-grade').value = d.grade || '';
-        document.getElementById('inp-dus').value = d.dus || '';
-        document.getElementById('inp-shading').value = d.shading || '';
-        document.getElementById('inp-cust').value = d.customer_aktual || ''; // Perbaikan spasi
-        
-        document.getElementById('inp-nama-req').value = d.nama_item_req || '';
-        document.getElementById('inp-pjg-req').value = d.panjang_req || '';
-        document.getElementById('inp-grade-req').value = d.grade_req || '';
-        document.getElementById('inp-dus-req').value = d.dus_req || '';
-        document.getElementById('inp-shading-req').value = d.shading_req || '';
-        
-        document.getElementById('inp-ket').value = d.keterangan || '';
-        document.getElementById('inp-qty-req').value = d.qty_req || '';
-        document.getElementById('inp-qty-proses').value = d.qty_proses || '';
-        document.getElementById('inp-progres').value = d.progres_konversi || 'PENDING';
-    } else {
-        ['inp-id','inp-jenis','inp-nama','inp-pjg','inp-grade','inp-dus','inp-shading','inp-cust','inp-nama-req','inp-pjg-req','inp-grade-req','inp-dus-req','inp-shading-req','inp-ket','inp-qty-req','inp-qty-proses'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('inp-progres').value = 'PENDING';
-    }
-    document.getElementById('modal-form').classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
-}
-
-function tutupModalForm() {
-    document.getElementById('modal-form').classList.add('hidden');
-    document.getElementById('overlay-klik-luar').classList.add('hidden');
-}
-
-async function simpanRequest() {
-    const id = document.getElementById('inp-id').value;
-    const payload = {
-        jenis_item: document.getElementById('inp-jenis').value.trim(),
-        nama_item: document.getElementById('inp-nama').value.trim(),
-        panjang: document.getElementById('inp-pjg').value.trim(),
-        grade: document.getElementById('inp-grade').value.trim(),
-        dus: document.getElementById('inp-dus').value.trim(),
-        shading: document.getElementById('inp-shading').value.trim(),
-        "customer aktual": document.getElementById('inp-cust').value.trim(), // Sesuai dengan nama kolom di prompt
-        nama_item_req: document.getElementById('inp-nama-req').value.trim(),
-        panjang_req: document.getElementById('inp-pjg-req').value.trim(),
-        grade_req: document.getElementById('inp-grade-req').value.trim(),
-        dus_req: document.getElementById('inp-dus-req').value.trim(),
-        shading_req: document.getElementById('inp-shading-req').value.trim(),
-        keterangan: document.getElementById('inp-ket').value.trim(),
-        qty_req: document.getElementById('inp-qty-req').value.trim(),
-        qty_proses: document.getElementById('inp-qty-proses').value.trim(),
-        progres_konversi: document.getElementById('inp-progres').value
-    };
-
-    const btn = document.getElementById('btn-save-req'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
-
-    try {
-        if(id) {
-            const { error } = await db.from('request_konversi').update(payload).eq('id', id);
-            if(error) throw error;
-        } else {
-            const { error } = await db.from('request_konversi').insert([payload]);
-            if(error) throw error;
-        }
-        tutupModalForm();
-        alert("Berhasil menyimpan data request!");
-        muatData();
-    } catch(e) { alert("Gagal menyimpan: " + e.message); }
-    finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
-}
-
-async function hapusRequest() {
-    const checked = document.querySelectorAll('.cb-main:checked');
-    if(checked.length === 0) return alert("Pilih baris yang ingin dihapus!");
-    if(!confirm(`Yakin ingin menghapus ${checked.length} data request ini?`)) return;
-
-    const ids = Array.from(checked).map(cb => cb.value);
-    try {
-        const { error } = await db.from('request_konversi').delete().in('id', ids);
-        if(error) throw error;
-        alert("Berhasil menghapus data!");
-        muatData();
-    } catch(e) { alert("Gagal menghapus: " + e.message); }
+function prosesRequest(id) {
+    alert("Fungsi Proses Request untuk ID " + id + " akan diimplementasikan nanti.");
 }
 
 // ==========================================
