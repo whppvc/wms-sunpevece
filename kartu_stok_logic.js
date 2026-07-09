@@ -1205,7 +1205,7 @@ function initResizableColumns() {
 // ========================================================
 // LOGIKA REQUEST KONVERSI
 // ========================================================
-function siapkanReqKonversi() {
+window.siapkanReqKonversi = function() {
     const checkboxes = document.querySelectorAll('.cb-main:checked');
     if(checkboxes.length !== 1) return alert('Silakan centang TEPAT 1 (satu) baris item yang ingin direquest konversi.');
 
@@ -1225,7 +1225,12 @@ function siapkanReqKonversi() {
 
     const infoAsal = document.getElementById('req-info-asal');
     if(infoAsal) {
-        infoAsal.innerHTML = `<span class="text-blue-600">${selectedForReq.nama_item}</span> | ${selectedForReq.panjang} | ${selectedForReq.grade} | ${selectedForReq.dus} | ${selectedForReq.shading} | ${selectedForReq.keterangan} | <span class="text-orange-600">${selectedForReq.customer_aktual}</span> | <span class="text-emerald-600 font-bold">Area: ${selectedForReq.area}</span>`;
+        infoAsal.innerHTML = `
+            <span class="text-blue-600">${selectedForReq.nama_item}</span> | 
+            ${selectedForReq.panjang} | ${selectedForReq.grade} | ${selectedForReq.dus} | ${selectedForReq.shading} | 
+            <span class="text-emerald-600">${selectedForReq.area}</span> | 
+            <span class="text-orange-600">${selectedForReq.customer_aktual}</span>
+        `;
     }
 
     // Reset Form Input
@@ -1236,15 +1241,15 @@ function siapkanReqKonversi() {
 
     document.getElementById('modal-req-konversi').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
-}
+};
 
-function tutupModalReqKonversi() {
+window.tutupModalReqKonversi = function() {
     document.getElementById('modal-req-konversi').classList.add('hidden');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
     selectedForReq = null;
-}
+};
 
-async function eksekusiReqKonversi() {
+window.eksekusiReqKonversi = async function() {
     if(!selectedForReq) return alert("Data sumber tidak valid!");
 
     const namaReq = document.getElementById('req-nama-item').value.trim() || selectedForReq.nama_item;
@@ -1264,11 +1269,10 @@ async function eksekusiReqKonversi() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
 
     try {
-        // Generate Kode Konversi
-        const { count, error: errCount } = await db.from('request_konversi').select('*', { count: 'exact', head: true });
-        if(errCount) throw errCount;
-        let nextNum = (count || 0) + 1;
-        let kodeKonversi = `K-${String(nextNum).padStart(4, '0')}`;
+        // Generate Kode Konversi (K-XXXX)
+        const { count } = await db.from('request_konversi').select('*', { count: 'exact', head: true });
+        const nextNum = (count || 0) + 1;
+        const kodeKonversi = `K-${String(nextNum).padStart(4, '0')}`;
 
         const payload = {
             kode_konversi: kodeKonversi,
@@ -1303,4 +1307,4 @@ async function eksekusiReqKonversi() {
     } finally {
         btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
     }
-}
+};
