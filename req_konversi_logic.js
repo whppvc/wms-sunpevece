@@ -81,7 +81,7 @@ function tutupSemuaPopups() {
 
 async function muatData() {
     const tbody = document.getElementById('tbody-req');
-    tbody.innerHTML = `<tr><td colspan="10" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menarik Data...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menarik Data...</p></td></tr>`;
     lucide.createIcons();
 
     try {
@@ -90,7 +90,7 @@ async function muatData() {
         rawData = data || [];
         renderTabel();
     } catch(e) { 
-        tbody.innerHTML = `<tr><td colspan="10" class="p-10 text-center text-red-500 font-medium">Gagal: ${e.message}</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="11" class="p-10 text-center text-red-500 font-medium">Gagal: ${e.message}</td></tr>`; 
     }
 }
 
@@ -147,16 +147,18 @@ function renderTabel() {
             <th class="hdr-std w-10 col-cb text-center sticky-col">
                 <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
             </th>
-            ${thSort(1, 'Tgl Request', 'col-tgl')}
-            ${thSort(2, 'Detail Item Asal', 'col-asal')}
-            ${thSort(3, 'Request Konversi', 'col-req')}
-            ${thSort(4, 'Qty Req', 'col-qty_req')}
-            ${thSort(5, 'Qty Hasil', 'col-qty_hasil')}
-            ${thSort(6, 'Qty Proses', 'col-qty_proses')}
-            ${thSort(7, 'Progres', 'col-progres')}
+            ${thSort(1, 'Kode Konversi', 'col-kode')}
+            ${thSort(2, 'Tgl Request', 'col-tgl')}
+            ${thSort(3, 'Aktifitas', 'col-aktifitas')}
+            ${thSort(4, 'Detail Item Asal', 'col-asal')}
+            ${thSort(5, 'Request Konversi', 'col-req')}
+            ${thSort(6, 'Qty Req', 'col-qty_req')}
+            ${thSort(7, 'Qty Hasil', 'col-qty_hasil')}
+            ${thSort(8, 'Qty Proses', 'col-qty_proses')}
+            ${thSort(9, 'Progres', 'col-progres')}
         </tr>`;
     
-    if(rawData.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center font-medium text-slate-400">Tidak ada data request.</td></tr>`; return; }
+    if(rawData.length === 0) { tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center font-medium text-slate-400">Tidak ada data request.</td></tr>`; return; }
 
     tbody.innerHTML = rawData.map((r) => {
         const tgl = formatWIB(r.created_at);
@@ -171,15 +173,16 @@ function renderTabel() {
                 <span class="text-slate-800">${r.dus || '-'}</span> | 
                 <span class="text-blue-600">${r.shading || '-'}</span>
             </div>
-            <div class="text-[12px] font-bold text-slate-600 mt-1">Customer: <span class="text-orange-600">${r['customer aktual'] || '-'}</span></div>
+            <div class="text-[12px] font-bold text-slate-600 mt-1">Customer Aktual: <span class="text-orange-600">${r['customer aktual'] || '-'}</span></div>
             <div class="text-[12px] font-bold text-slate-600">Keterangan: <span class="text-slate-800">${r.keterangan || '-'}</span></div>
+            <div class="text-[12px] font-bold text-slate-600">Area: <span class="text-emerald-600">${r.area || '-'}</span></div>
         `;
-        const searchAsal = `${r.nama_item} ${r.panjang} ${r.grade} ${r.dus} ${r.shading} ${r['customer aktual']}`;
+        const searchAsal = `${r.nama_item} ${r.panjang} ${r.grade} ${r.dus} ${r.shading} ${r['customer aktual']} ${r.area}`;
         
         // Request Konversi (Hanya tampilkan yang berubah/target)
         let reqArr = [];
         if(r.nama_item_req && r.nama_item_req !== r.nama_item) reqArr.push(`Nama: <span class="text-blue-600">${r.nama_item_req}</span>`);
-        if(r.panjang_req && r.panjang_req !== r.panjang) reqArr.push(`Pjg: <span class="text-slate-800">${r.panjang_req}</span>`);
+        if(r.panjang_req && r.panjang_req !== r.panjang) reqArr.push(`Panjang: <span class="text-slate-800">${r.panjang_req}</span>`);
         if(r.grade_req && r.grade_req !== r.grade) reqArr.push(`Grade: <span class="text-slate-800">${r.grade_req}</span>`);
         if(r.dus_req && r.dus_req !== r.dus) reqArr.push(`Dus: <span class="text-slate-800">${r.dus_req}</span>`);
         if(r.shading_req && r.shading_req !== r.shading) reqArr.push(`Shading: <span class="text-blue-600">${r.shading_req}</span>`);
@@ -191,22 +194,23 @@ function renderTabel() {
         let prog = (r.progres_konversi || 'PENDING').toUpperCase();
         let btnProses = '';
         if(prog === 'PENDING' || prog === 'PROSES') {
-            btnProses = `<button onclick="prosesRequest(${r.id})" class="mt-2 w-full px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded shadow-sm text-[10px] uppercase transition active:scale-95">Proses Request</button>`;
+            btnProses = `<button onclick="prosesRequest(${r.id})" class="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded shadow-sm text-[10px] uppercase transition active:scale-95">Proses Request</button>`;
         } else {
-            btnProses = `<span class="mt-2 block w-full px-3 py-1.5 bg-emerald-100 text-emerald-700 font-bold rounded border border-emerald-200 text-[10px] uppercase text-center">Selesai</span>`;
+            btnProses = `<span class="block w-full px-3 py-2 bg-emerald-100 text-emerald-700 font-bold rounded border border-emerald-200 text-[10px] uppercase text-center">Selesai</span>`;
         }
 
         return `
             <tr class="transition r-row text-[13px] bg-white even:bg-slate-50 border-b border-slate-200">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 font-black text-slate-800 text-center tracking-wider col-kode" data-search="${r.kode_konversi || '-'}">${r.kode_konversi || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-600 text-center col-tgl" data-search="${tgl}">${tgl}</td>
+                <td class="px-4 py-3 font-bold text-rose-600 text-center uppercase col-aktifitas" data-search="${r.aktifitas_konversi || '-'}">${r.aktifitas_konversi || '-'}</td>
                 <td class="px-4 py-3 text-left col-asal" data-search="${searchAsal}">${detailAsal}</td>
                 <td class="px-4 py-3 text-left col-req" data-search="${searchReq}">${detailReq}</td>
                 <td class="px-4 py-3 font-black text-slate-700 text-center col-qty_req" data-search="${r.qty_req || 0}">${r.qty_req || 0}</td>
                 <td class="px-4 py-3 font-black text-indigo-600 text-center col-qty_hasil" data-search="${r.qty_hasil || 0}">${r.qty_hasil || 0}</td>
                 <td class="px-4 py-3 font-black text-emerald-600 text-center col-qty_proses" data-search="${r.qty_proses || 0}">${r.qty_proses || 0}</td>
                 <td class="px-4 py-3 text-center col-progres" data-search="${prog}">
-                    <span class="font-bold text-slate-500 text-[10px] uppercase">${prog}</span>
                     ${btnProses}
                 </td>
             </tr>`;
