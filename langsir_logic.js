@@ -444,7 +444,6 @@ async function VerifikasiDanCek() {
 }
 
 function renderTable() {
-    // Fungsi pembantu untuk sinkronisasi render ulang jika diperlukan
     updateRowNumbers();
     updateTotalBaris();
 }
@@ -524,7 +523,7 @@ async function saveToSupabase() {
             keterangan: ket, pic_input: user.username 
         });
 
-        // Payload untuk stok_global (JSON format)
+        // Payload untuk stok_global (REVISI: Tidak mencatatkan ke customer_aktual, hanya customer_bawaan)
         arrGlobal.push({
             qrcode: qr,
             area: area,
@@ -539,9 +538,7 @@ async function saveToSupabase() {
             grade: grade,
             dus: dus,
             shading: shading,
-            customer_bawaan: customer,
-            customer_aktual: customer,
-            po_aktual: customer,
+            customer_bawaan: customer, // Hanya ke customer_bawaan
             keterangan: ket,
             pic_input: user.username,
             qty: 1,
@@ -549,7 +546,7 @@ async function saveToSupabase() {
             created_at: wibNow
         });
 
-        // Payload modifikasi hasil_stbj_langsir (JSON format)
+        // Payload modifikasi hasil_stbj_langsir
         updatesHasilLangsir.push({
             qrcode: qr,
             status: 'IN GUDANG',
@@ -558,13 +555,13 @@ async function saveToSupabase() {
             pic_input: user.username
         });
 
-        // Map akumulasi untuk update stok_aktual secara inkremental
+        // Map akumulasi untuk update stok_aktual secara inkremental (REVISI: customer_bawaan = customer_aktual)
         let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${customer}_${ket}`;
         if(!mapAktual[keyAkt]) {
             mapAktual[keyAkt] = {
                 id_sku: id_sku, id_po: id_po, jenis_item: jenis, nama_item: nama, 
                 panjang: pjg, grade: grade, dus: dus, shading: shading, 
-                area: area, customer_bawaan: customer, customer_aktual: customer, 
+                area: area, customer_bawaan: customer, customer_aktual: customer, // customer_bawaan = customer_aktual
                 keterangan: ket, qty: 0
             };
         }
