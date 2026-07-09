@@ -281,9 +281,9 @@ function thSort(idx, label, cls = "") {
 
     return `<th class="hdr-std ${cls} select-none group">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
-            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable(this.closest('th').cellIndex, this.closest('th'))" title="Sort ${label}">${label}</span>
+            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable(${idx}, this.closest('th'))" title="Sort ${label}">${label}</span>
             <div class="flex items-center gap-1 shrink-0">
-                <button onclick="sortTable(this.closest('th').cellIndex, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
+                <button onclick="sortTable(${idx}, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 sort-icon opacity-40 group-hover:opacity-100 transition-opacity text-white"></i>
                 </button>
                 <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
@@ -837,195 +837,6 @@ function applyColumnOrder() {
     });
 }
 
-function openColumnFilter(event, colClass, colName) {
-    event.stopPropagation();
-    currentFilterCol = colClass;
-    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
-
-    let uniqueValues = new Set();
-    
-    document.querySelectorAll('#tbody-ks tr.row-ks').forEach(row => {
-        let showBasedOnOthers = true;
-        for (let otherCol in activeFilters) {
-            if (otherCol !== colClass) { 
-                const allowed = activeFilters[otherCol];
-                const c = row.querySelector('.' + otherCol);
-                let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
-                if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
-            }
-        }
-        if (showBasedOnOthers) {
-            let cell = row.querySelector('.' + colClass);
-            if (cell) {
-                let val = cell.getAttribute('data-search') || cell.innerText.trim();
-                if(val !== '') uniqueValues.add(val);
-            }
-        }
-    });
-
-    let sortedValues = Array.from(uniqueValues).sort();
-    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
-    
-    sortedValues.forEach(val => {
-        let isChecked = true;
-        if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
-        listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}">
-            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
-            <span class="truncate text-slate-600">${val}</span>
-        </label>`;
-    });
-
-    document.getElementById('filter-values-list').innerHTML = listHtml;
-    updateSelectAllState();
-    document.getElementById('filter-search-input').value = '';
-    
-    const menu = document.getElementById('excel-filter-menu');
-    menu.classList.remove('hidden');
-    
-    const btnRect = event.currentTarget.getBoundingClientRect();
-    const menuWidth = 256; 
-    
-    let topPos = btnRect.bottom + 4; 
-    let leftPos = btnRect.left; 
-
-    if (leftPos + menuWidth > window.innerWidth) {
-        leftPos = btnRect.right - menuWidth;
-    }
-    
-    if (leftPos < 10) {
-        leftPos = 10;
-    }
-
-    menu.style.position = 'fixed'; 
-    menu.style.top = `${topPos}px`;
-    menu.style.left = `${leftPos}px`;
-    
-    document.getElementById('filter-search-input').focus();
-}
-
-function toggleAllFilterValues(checked) {
-    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
-    updateSelectAllState();
-}
-
-function updateSelectAllState() {
-    const allCbs = document.querySelectorAll('.filter-val-cb');
-    const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
-    const selectAll = document.getElementById('filter-select-all');
-    if(!selectAll) return;
-    if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
-    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
-    else { selectAll.checked = false; selectAll.indeterminate = true; }
-}
-
-document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) updateSelectAllState(); });
-
-function searchFilterList(val) {
-    const query = val.toLowerCase().split(' ').filter(x => x); 
-    document.querySelectorAll('.filter-val-item').forEach(label => {
-        const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
-        let matches = query.every(term => text.includes(term));
-        label.style.display = matches ? '' : 'none';
-    });
-}
-
-function closeFilterMenu() { document.getElementById('excel-filter-menu').classList.add('hidden'); }
-
-function clearFilterForCurrentCol() {
-    delete activeFilters[currentFilterCol];
-    closeFilterMenu(); saringTabelExcel(); 
-}
-
-function applyFilterForCurrentCol() {
-    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
-    const totalBoxes = document.querySelectorAll('.filter-val-cb');
-    
-    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') {
-        delete activeFilters[currentFilterCol];
-    } else {
-        let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value));
-        activeFilters[currentFilterCol] = selectedVals;
-    }
-    
-    closeFilterMenu(); saringTabelExcel(); 
-}
-
-function saringTabelExcel() {
-    document.querySelectorAll('.row-ks').forEach(row => {
-        let show = true;
-        for (let colClass in activeFilters) {
-            const allowedValues = activeFilters[colClass];
-            const cell = row.querySelector('.' + colClass);
-            if (cell) {
-                let text = cell.getAttribute('data-search') || cell.innerText.trim();
-                if (!allowedValues.includes(text)) { show = false; break; }
-            }
-        }
-        
-        if (show) { 
-            row.classList.remove('filtered-out'); 
-        } else { 
-            row.classList.add('filtered-out'); 
-            let cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = false; highlightRow(cb, true); } 
-        }
-    });
-    
-    selectAllState = 0;
-    updateSelectAllUI();
-    currentPage = 1; 
-    applyPagination(); 
-    updateFilterIcons();
-}
-
-function updateFilterIcons() {
-    document.querySelectorAll('.filter-icon').forEach(icon => {
-        icon.classList.remove('text-amber-400', 'opacity-100');
-        icon.classList.add('text-white', 'opacity-40');
-    });
-    for (let colClass in activeFilters) {
-        const th = document.querySelector(`th.${colClass}`);
-        if (th) {
-            const icon = th.querySelector('.filter-icon');
-            if (icon) { 
-                icon.classList.remove('text-white', 'opacity-40'); 
-                icon.classList.add('text-amber-400', 'opacity-100'); 
-            }
-        }
-    }
-}
-
-function initResizableColumns() {
-    const cols = document.querySelectorAll('#main-table th');
-    cols.forEach(col => {
-        const existing = col.querySelector('.resizer');
-        if(existing) existing.remove();
-
-        const resizer = document.createElement('div');
-        resizer.classList.add('resizer');
-        col.appendChild(resizer);
-        
-        let x = 0; let w = 0;
-        resizer.addEventListener('mousedown', function(e) {
-            x = e.clientX;
-            w = parseInt(window.getComputedStyle(col).width, 10);
-            document.addEventListener('mousemove', mouseMoveHandler);
-            document.addEventListener('mouseup', mouseUpHandler);
-            resizer.classList.add('resizing');
-        });
-        const mouseMoveHandler = function(e) {
-            const dx = e.clientX - x;
-            col.style.width = `${w + dx}px`;
-            col.style.minWidth = `${w + dx}px`;
-        };
-        const mouseUpHandler = function() {
-            document.removeEventListener('mousemove', mouseMoveHandler);
-            document.removeEventListener('mouseup', mouseUpHandler);
-            resizer.classList.remove('resizing');
-        };
-    });
-}
-
 function tutupSemuaPopups() {
     document.getElementById('modal-lihat-po').classList.add('hidden');
     document.getElementById('modal-breakdown').classList.add('hidden');
@@ -1132,49 +943,244 @@ function tutupModalPO() {
     }
 }
 
-// Mengekspos semua deklarasi ke window agar bisa diakses HTML onclick
-window.toggleActionMenu = toggleActionMenu;
-window.loadMasterData = loadMasterData;
-window.setModeKS = setModeKS;
-window.sortTable = sortTable;
-window.thSort = thSort;
-window.renderTabel = renderTabel;
-window.changeRowsPerPage = changeRowsPerPage;
-window.setCustomRowsPerPage = setCustomRowsPerPage;
-window.prevPage = prevPage;
-window.nextPage = nextPage;
-window.eksekusiGantiPO = eksekusiGantiPO;
-window.salinData = salinData;
-window.downloadXLS = downloadXLS;
-window.salinDataBreakdown = salinDataBreakdown;
-window.toggleSidebarKolom = toggleSidebarKolom;
-window.simpanUrutanKolom = simpanUrutanKolom;
-window.resetUrutanKolom = resetUrutanKolom;
-window.tutupSemuaPopups = tutupSemuaPopups;
-window.bukaBreakdown = bukaBreakdown;
-window.tutupModalBreakdown = tutupModalBreakdown;
-window.highlightBdRow = highlightBdRow;
-window.toggleCentangBreakdown = toggleCentangBreakdown;
-window.bukaModalLihatPO = bukaModalLihatPO;
-window.siapkanGantiPO = siapkanGantiPO;
-window.tutupModalPO = tutupModalPO;
-window.cycleSelectAll = cycleSelectAll;
-window.openColumnFilter = openColumnFilter;
-window.toggleAllFilterValues = toggleAllFilterValues;
-window.searchFilterList = searchFilterList;
-window.closeFilterMenu = closeFilterMenu;
-window.clearFilterForCurrentCol = clearFilterForCurrentCol;
-window.applyFilterForCurrentCol = applyFilterForCurrentCol;
-window.highlightRow = highlightRow;
-window.sinkronisasiUlangStokAktual = sinkronisasiUlangStokAktual;
-window.muatDataStok = muatDataStok;
-window.applyPagination = applyPagination;
-window.updateSelectAllUI = updateSelectAllUI;
-window.applySelection = applySelection;
-window.updateSelectedCount = updateSelectedCount;
-window.saringTabelExcel = saringTabelExcel;
-window.updateFilterIcons = updateFilterIcons;
-window.updateSelectAllState = updateSelectAllState;
-window.initResizableColumns = initResizableColumns;
-window.renderDragList = renderDragList;
-window.applyColumnOrder = applyColumnOrder;
+function cycleSelectAll() {
+    selectAllState = (selectAllState + 1) % 3;
+    updateSelectAllUI();
+    applySelection();
+}
+
+function updateSelectAllUI() {
+    const btn = document.getElementById('btn-select-all');
+    if(!btn) return;
+    
+    if (selectAllState === 0) {
+        btn.innerHTML = '';
+        btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto';
+    } else if (selectAllState === 1) {
+        btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
+        btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto';
+    } else if (selectAllState === 2) {
+        btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>';
+        btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
+    }
+    lucide.createIcons();
+}
+
+function applySelection() {
+    const allRows = Array.from(document.querySelectorAll('#tbody-ks tr.row-ks'));
+    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
+    
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+
+    if (selectAllState === 0) {
+        allRows.forEach(row => {
+            const cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = false; highlightRow(cb, true); }
+        });
+    } else if (selectAllState === 1) {
+        allRows.forEach(row => {
+            const cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = false; highlightRow(cb, true); }
+        });
+        visibleRows.forEach((row, index) => {
+            if(index >= startIndex && index < endIndex) {
+                const cb = row.querySelector('.cb-main');
+                if(cb) { cb.checked = true; highlightRow(cb, true); }
+            }
+        });
+    } else if (selectAllState === 2) {
+        visibleRows.forEach(row => {
+            const cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = true; highlightRow(cb, true); }
+        });
+    }
+    updateSelectedCount();
+}
+
+function openColumnFilter(event, colClass, colName) {
+    event.stopPropagation();
+    currentFilterCol = colClass;
+    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
+
+    let uniqueValues = new Set();
+    
+    document.querySelectorAll('#tbody-ks tr.row-ks').forEach(row => {
+        let showBasedOnOthers = true;
+        for (let otherCol in activeFilters) {
+            if (otherCol !== colClass) { 
+                const allowed = activeFilters[otherCol];
+                const c = row.querySelector('.' + otherCol);
+                let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
+                if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
+            }
+        }
+        if (showBasedOnOthers) {
+            let cell = row.querySelector('.' + colClass);
+            if (cell) {
+                let val = cell.getAttribute('data-search') || cell.innerText.trim();
+                if(val !== '') uniqueValues.add(val);
+            }
+        }
+    });
+
+    let sortedValues = Array.from(uniqueValues).sort();
+    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
+    
+    sortedValues.forEach(val => {
+        let isChecked = true;
+        if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
+        listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}">
+            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
+            <span class="truncate text-slate-600">${val}</span>
+        </label>`;
+    });
+
+    document.getElementById('filter-values-list').innerHTML = listHtml;
+    updateSelectAllState();
+    document.getElementById('filter-search-input').value = '';
+    
+    const menu = document.getElementById('excel-filter-menu');
+    menu.classList.remove('hidden');
+    
+    const btnRect = event.currentTarget.getBoundingClientRect();
+    const menuWidth = 256; 
+    
+    let topPos = btnRect.bottom + 4; 
+    let leftPos = btnRect.left; 
+
+    if (leftPos + menuWidth > window.innerWidth) {
+        leftPos = btnRect.right - menuWidth;
+    }
+    
+    if (leftPos < 10) {
+        leftPos = 10;
+    }
+
+    menu.style.position = 'fixed'; 
+    menu.style.top = `${topPos}px`;
+    menu.style.left = `${leftPos}px`;
+    
+    document.getElementById('filter-search-input').focus();
+}
+
+function toggleAllFilterValues(checked) {
+    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
+    updateSelectAllState();
+}
+
+function updateSelectAllState() {
+    const allCbs = document.querySelectorAll('.filter-val-cb');
+    const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
+    const selectAll = document.getElementById('filter-select-all');
+    if(!selectAll) return;
+    if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
+    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
+    else { selectAll.checked = false; selectAll.indeterminate = true; }
+}
+
+function searchFilterList(val) {
+    const query = val.toLowerCase().split(' ').filter(x => x); 
+    document.querySelectorAll('.filter-val-item').forEach(label => {
+        const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
+        let matches = query.every(term => text.includes(term));
+        label.style.display = matches ? '' : 'none';
+    });
+}
+
+function closeFilterMenu() { document.getElementById('excel-filter-menu').classList.add('hidden'); }
+
+function clearFilterForCurrentCol() {
+    delete activeFilters[currentFilterCol];
+    closeFilterMenu(); saringTabelExcel(); 
+}
+
+function applyFilterForCurrentCol() {
+    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
+    const totalBoxes = document.querySelectorAll('.filter-val-cb');
+    
+    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') {
+        delete activeFilters[currentFilterCol];
+    } else {
+        let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value));
+        activeFilters[currentFilterCol] = selectedVals;
+    }
+    
+    closeFilterMenu(); saringTabelExcel(); 
+}
+
+function saringTabelExcel() {
+    document.querySelectorAll('.row-ks').forEach(row => {
+        let show = true;
+        for (let colClass in activeFilters) {
+            const allowedValues = activeFilters[colClass];
+            const cell = row.querySelector('.' + colClass);
+            if (cell) {
+                let text = cell.getAttribute('data-search') || cell.innerText.trim();
+                if (!allowedValues.includes(text)) { show = false; break; }
+            }
+        }
+        
+        if (show) { 
+            row.classList.remove('filtered-out'); 
+        } else { 
+            row.classList.add('filtered-out'); 
+            let cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = false; highlightRow(cb, true); } 
+        }
+    });
+    
+    selectAllState = 0;
+    updateSelectAllUI();
+    currentPage = 1; 
+    applyPagination(); 
+    updateFilterIcons();
+}
+
+function updateFilterIcons() {
+    document.querySelectorAll('.filter-icon').forEach(icon => {
+        icon.classList.remove('text-amber-400', 'opacity-100');
+        icon.classList.add('text-white', 'opacity-40');
+    });
+    for (let colClass in activeFilters) {
+        const th = document.querySelector(`th.${colClass}`);
+        if (th) {
+            const icon = th.querySelector('.filter-icon');
+            if (icon) { 
+                icon.classList.remove('text-white', 'opacity-40'); 
+                icon.classList.add('text-amber-400', 'opacity-100'); 
+            }
+        }
+    }
+}
+
+function initResizableColumns() {
+    const cols = document.querySelectorAll('#main-table th');
+    cols.forEach(col => {
+        const existing = col.querySelector('.resizer');
+        if(existing) existing.remove();
+
+        const resizer = document.createElement('div');
+        resizer.classList.add('resizer');
+        col.appendChild(resizer);
+        
+        let x = 0; let w = 0;
+        resizer.addEventListener('mousedown', function(e) {
+            x = e.clientX;
+            w = parseInt(window.getComputedStyle(col).width, 10);
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+            resizer.classList.add('resizing');
+        });
+        const mouseMoveHandler = function(e) {
+            const dx = e.clientX - x;
+            col.style.width = `${w + dx}px`;
+            col.style.minWidth = `${w + dx}px`;
+        };
+        const mouseUpHandler = function() {
+            document.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
+            resizer.classList.remove('resizing');
+        };
+    });
+}
