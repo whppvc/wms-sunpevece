@@ -489,13 +489,11 @@ async function saveToSupabase() {
     const user = JSON.parse(localStorage.getItem('user_session')) || {username: 'Unknown'};
     const wibNow = getWIBTimestamp();
     
-    // Inisialisasi array penampung JSON Payload
     let updatesHasilLangsir = [];
     let stokQrInserts = [];
     let stokGlobalInserts = [];
     let mapAktual = {}; 
 
-    // 1. Olah data barang valid (IN GUDANG)
     validItems.forEach(r => {
         let area = r.querySelector('.area-cell').innerText; 
         let qr = r.querySelector('.qr-val').innerText;
@@ -512,11 +510,9 @@ async function saveToSupabase() {
         let mesin = r.querySelector('.col-mesin').innerText;
         let shift = r.querySelector('.col-shift').innerText;
         
-        // REVISI FORMAT ID_SKU: area_nama item_panjang_grade_dus_shading_keterangan_customer bawaan
         let id_sku = `${area}_${nama}_${pjg}_${grade}_${dus}_${shading}_${ket}_${customer}`;
         let id_po = `${nama}_${pjg}_${grade}`;
         
-        // JSON untuk hasil_stbj_langsir
         updatesHasilLangsir.push({
             qrcode: qr,
             status: 'IN GUDANG',
@@ -525,7 +521,6 @@ async function saveToSupabase() {
             pic_input: user.username
         });
 
-        // JSON untuk stok_qr
         stokQrInserts.push({ 
             qrcode: qr, area: area, id_sku: id_sku, id_po: id_po, 
             tgl_produksi: tgl_produksi, mesin: mesin, shift: shift,
@@ -534,7 +529,6 @@ async function saveToSupabase() {
             keterangan: ket, pic_input: user.username 
         });
 
-        // JSON untuk stok_global (REVISI: DENGAN id_sku format baru, TANPA qty)
         stokGlobalInserts.push({
             qrcode: qr,
             area: area,
@@ -555,20 +549,20 @@ async function saveToSupabase() {
             created_at: wibNow
         });
 
-        // Akumulasi JSON untuk stok_aktual (DENGAN id_sku format baru)
+        // REVISI: Menambahkan customer_estimasi = customer_bawaan
         let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${customer}_${ket}`;
         if(!mapAktual[keyAkt]) {
             mapAktual[keyAkt] = {
                 id_sku: id_sku, id_po: id_po, jenis_item: jenis, nama_item: nama, 
                 panjang: pjg, grade: grade, dus: dus, shading: shading, 
                 area: area, customer_bawaan: customer, customer_aktual: customer, 
+                customer_estimasi: customer, // REVISI BARU
                 keterangan: ket, qty: 0
             };
         }
         mapAktual[keyAkt].qty++;
     });
 
-    // 2. Olah data barang hold (HOLD LANGSIR)
     holdItems.forEach(r => {
         let area = r.querySelector('.area-cell').innerText; 
         let qr = r.querySelector('.qr-val').innerText;
@@ -582,10 +576,8 @@ async function saveToSupabase() {
         });
     });
 
-    // Konversi mapAktual ke array JSON
     let stokAktualUpdates = Object.values(mapAktual);
 
-    // Bungkus seluruh transaksi ke dalam satu JSON Payload terpadu
     const payloadTransaksi = {
         hasil_updates: updatesHasilLangsir,
         stok_qr_inserts: stokQrInserts,
@@ -594,16 +586,12 @@ async function saveToSupabase() {
     };
 
     try {
-        console.log("Mengirimkan JSON Payload Transaksi Aman:", JSON.stringify(payloadTransaksi, null, 2));
-        
-        // Eksekusi transaksi tunggal via RPC Supabase (All-or-Nothing)
         const { data: rpcResult, error: rpcError } = await db.rpc('eksekusi_langsir_aman', { payload: payloadTransaksi });
         
         if (rpcError) throw rpcError;
 
         alert(`BERHASIL DISIMPAN!\n\n- ${validItems.length} Kardus masuk ke Gudang (stok_global & stok_aktual)\n- ${holdItems.length} Kardus disimpan sebagai HOLD LANGSIR`);
         
-        // Hapus baris yang berhasil diproses dari layar
         rowsToProcess.forEach(r => {
             deleteStack.push(r); 
             r.classList.add('deleted-row');
