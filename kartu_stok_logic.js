@@ -155,9 +155,9 @@ function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
     alert("Fungsi Sinkronisasi Wipe & Rebuild dinonaktifkan untuk menjaga integritas data Customer Aktual hasil editan user.\n\nSistem kini menggunakan metode Incremental Update (+/-) secara otomatis setiap kali ada transaksi.");
 }
 
-async function muatDataStok() {
+window.muatDataStok = async function() {
     const tbody = document.getElementById('tbody-ks');
-    tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke Gudang Supabase...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="16" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke Gudang Supabase...</p></td></tr>`;
     lucide.createIcons();
 
     try {
@@ -170,23 +170,23 @@ async function muatDataStok() {
         if(resStok.error) throw resStok.error;
         if(resAktual.error) throw resAktual.error;
         
-        stokQRRaw = resStok.data || [];
-        stokAktualRaw = resAktual.data || [];
-        stokLembaranRaw = resLembaran.data || [];
+        window.stokQRRaw = resStok.data || [];
+        window.stokAktualRaw = resAktual.data || [];
+        window.stokLembaranRaw = resLembaran.data || [];
 
         let aktualMap = {};
-        stokAktualRaw.forEach(a => {
+        window.stokAktualRaw.forEach(a => {
             let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}`;
             if(!aktualMap[key]) aktualMap[key] = {};
             if(!aktualMap[key][a.customer_aktual]) aktualMap[key][a.customer_aktual] = 0;
             aktualMap[key][a.customer_aktual] += a.qty;
         });
-        poDistributionMap = aktualMap;
+        window.poDistributionMap = aktualMap;
 
         let qrMap = {};
-        stokQRRaw.forEach(r => {
+        window.stokQRRaw.forEach(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
-            let t = translateBarcode(r.qrcode);
+            let t = window.translateBarcode(r.qrcode);
             let area = p[0] || r.area || '-';
             let nama = p[1] || r.nama_item || t.namaItem;
             let pjg = p[2] || r.panjang || t.panjang;
@@ -201,9 +201,9 @@ async function muatDataStok() {
             qrMap[key].push(r.qrcode);
         });
 
-        dataKSQR = stokQRRaw.map(r => {
+        window.dataKSQR = window.stokQRRaw.map(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
-            let t = translateBarcode(r.qrcode);
+            let t = window.translateBarcode(r.qrcode);
             return {
                 qrcode: r.qrcode || '-', id_sku: r.id_sku || '-', id_po: r.id_po || '-', area: p[0] || r.area || '-', 
                 tglProduksi: r.tgl_produksi || t.tglProduksi || '-', mesin: r.mesin || t.mesin || '-', shift: r.shift || t.shift || '-', 
@@ -215,7 +215,7 @@ async function muatDataStok() {
             };
         });
 
-        dataKSArea = stokAktualRaw.map(a => {
+        window.dataKSArea = window.stokAktualRaw.map(a => {
             let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_bawaan}_${a.keterangan}`;
             return {
                 ...a,
@@ -227,26 +227,27 @@ async function muatDataStok() {
                 id_po: a.id_po || '-',
                 po_bawaan: a.customer_bawaan,
                 po_aktual: a.customer_aktual,
+                customer_estimasi: a.customer_estimasi || '-', // REVISI BARU
                 qty: a.qty
             };
         });
 
         let globalMap = {};
-        dataKSArea.forEach(a => {
-            let gKey = `${a.jenis}_${a.nama}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.keterangan}`;
+        window.dataKSArea.forEach(a => {
+            let gKey = `${a.jenis}_${a.nama}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.customer_estimasi}_${a.keterangan}`;
             if(!globalMap[gKey]) {
-                globalMap[gKey] = { gKey: gKey, jenis: a.jenis, nama: a.nama, pjg: a.pjg, grade: a.grade, dus: a.dus, shading: a.shading, po: a.po_aktual, ket: a.keterangan, qty: 0, areas: [] };
+                globalMap[gKey] = { gKey: gKey, jenis: a.jenis, nama: a.nama, pjg: a.pjg, grade: a.grade, dus: a.dus, shading: a.shading, po: a.po_aktual, customer_estimasi: a.customer_estimasi, ket: a.keterangan, qty: 0, areas: [] };
             }
             globalMap[gKey].qty += a.qty;
             globalMap[gKey].areas.push(a);
         });
-        dataKSGlobal = Object.values(globalMap);
+        window.dataKSGlobal = Object.values(globalMap);
 
-        renderTabel();
+        window.renderTabel();
     } catch(e) { 
-        tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-medium">Gagal mengolah data: ${e.message}</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="16" class="p-10 text-center text-red-500 font-medium">Gagal mengolah data: ${e.message}</td></tr>`; 
     }
-}
+};
 
 function setModeKS(m) {
     modeKS = m;
@@ -309,42 +310,43 @@ function thSort(idx, label, cls = "") {
     </th>`;
 }
 
-function renderTabel() {
+window.renderTabel = function() {
     const thead = document.getElementById('thead-ks');
     const tbody = document.getElementById('tbody-ks');
-    sortState = {}; selectAllState = 0;
+    window.sortState = {}; 
+    window.selectAllState = 0;
 
     const rowClassBase = "transition row-ks text-[13px]";
 
-    if(modeKS === 'qr') {
+    if(window.modeKS === 'qr') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
-                ${thSort(1, 'Area', 'col-area')}
-                ${thSort(2, 'QRCode', 'col-qr')}
-                ${thSort(3, 'Tgl Produksi', 'col-tgl')}
-                ${thSort(4, 'Mesin', 'col-mesin')}
-                ${thSort(5, 'Shift', 'col-shift')}
-                ${thSort(6, 'Jenis Item', 'col-jenis')}
-                ${thSort(7, 'Nama Item', 'col-nama')}
-                ${thSort(8, 'Panjang', 'col-pjg')}
-                ${thSort(9, 'Grade', 'col-grade')}
-                ${thSort(10, 'Dus', 'col-dus')}
-                ${thSort(11, 'Shading', 'col-shading')}
-                ${thSort(12, 'Customer Bawaan', 'col-po-bawaan')}
-                ${thSort(13, 'Customer Aktual', 'col-po')}
-                ${thSort(14, 'Keterangan', 'col-ket')}
+                ${window.thSort(1, 'Area', 'col-area')}
+                ${window.thSort(2, 'QRCode', 'col-qr')}
+                ${window.thSort(3, 'Tgl Produksi', 'col-tgl')}
+                ${window.thSort(4, 'Mesin', 'col-mesin')}
+                ${window.thSort(5, 'Shift', 'col-shift')}
+                ${window.thSort(6, 'Jenis Item', 'col-jenis')}
+                ${window.thSort(7, 'Nama Item', 'col-nama')}
+                ${window.thSort(8, 'Panjang', 'col-pjg')}
+                ${window.thSort(9, 'Grade', 'col-grade')}
+                ${window.thSort(10, 'Dus', 'col-dus')}
+                ${window.thSort(11, 'Shading', 'col-shading')}
+                ${window.thSort(12, 'Customer Bawaan', 'col-po-bawaan')}
+                ${window.thSort(13, 'Customer Aktual', 'col-po')}
+                ${window.thSort(14, 'Keterangan', 'col-ket')}
             </tr>`;
         
-        if(dataKSQR.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="15" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(window.dataKSQR.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="15" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
-        tbody.innerHTML = dataKSQR.map((r) => {
+        tbody.innerHTML = window.dataKSQR.map((r) => {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
             
             let baseSpec = `${r.nama}_${r.pjg}_${r.grade}_${r.dus}_${r.shading}`;
-            let poDist = poDistributionMap[baseSpec];
+            let poDist = window.poDistributionMap[baseSpec];
             let poArr = [];
             if(poDist) {
                 for(let po in poDist) {
@@ -352,11 +354,11 @@ function renderTabel() {
                 }
             }
             let poString = poArr.length > 0 ? poArr.join(' | ') : 'KOSONG';
-            let btnPO = `<button onclick="bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
+            let btnPO = `<button onclick="window.bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
 
             return `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-mono font-medium text-slate-800 text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
@@ -375,31 +377,32 @@ function renderTabel() {
         }).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="15" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     }
-    else if(modeKS === 'area') {
+    else if(window.modeKS === 'area') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
-                ${thSort(1, 'Area', 'col-area')}
-                ${thSort(2, 'Jenis Item', 'col-jenis')}
-                ${thSort(3, 'Nama Item', 'col-nama')}
-                ${thSort(4, 'Panjang', 'col-pjg')}
-                ${thSort(5, 'Grade', 'col-grade')}
-                ${thSort(6, 'Dus', 'col-dus')}
-                ${thSort(7, 'Shading', 'col-shading')}
-                ${thSort(8, 'Customer Aktual', 'col-po')}
-                ${thSort(9, 'Keterangan', 'col-ket')}
-                ${thSort(10, 'Total Qty (Dus)', 'col-qty')}
+                ${window.thSort(1, 'Area', 'col-area')}
+                ${window.thSort(2, 'Jenis Item', 'col-jenis')}
+                ${window.thSort(3, 'Nama Item', 'col-nama')}
+                ${window.thSort(4, 'Panjang', 'col-pjg')}
+                ${window.thSort(5, 'Grade', 'col-grade')}
+                ${window.thSort(6, 'Dus', 'col-dus')}
+                ${window.thSort(7, 'Shading', 'col-shading')}
+                ${window.thSort(8, 'Customer Aktual', 'col-po')}
+                ${window.thSort(9, 'Customer Estimasi', 'col-estimasi text-purple-300')}
+                ${window.thSort(10, 'Keterangan', 'col-ket')}
+                ${window.thSort(11, 'Total Qty (Dus)', 'col-qty')}
             </tr>`;
         
-        if(dataKSArea.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(window.dataKSArea.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
-        tbody.innerHTML = dataKSArea.map((r) => {
+        tbody.innerHTML = window.dataKSArea.map((r) => {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             return `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-qty="${r.qty}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-qty="${r.qty}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                     <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
@@ -408,36 +411,38 @@ function renderTabel() {
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
                     <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po" data-search="${r.po_aktual}">${r.po_aktual}</td>
+                    <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
                     <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
                 </tr>`;
         }).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
-    else if (modeKS === 'global') {
+    else if (window.modeKS === 'global') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
                 <th class="hdr-std w-12 col-open text-center">Detail</th>
-                ${thSort(2, 'Jenis Item', 'col-jenis')}
-                ${thSort(3, 'Nama Item', 'col-nama')}
-                ${thSort(4, 'Panjang', 'col-pjg')}
-                ${thSort(5, 'Grade', 'col-grade')}
-                ${thSort(6, 'Dus', 'col-dus')}
-                ${thSort(7, 'Shading', 'col-shading')}
-                ${thSort(8, 'Customer Aktual', 'col-po')}
-                ${thSort(9, 'Keterangan', 'col-ket')}
-                ${thSort(10, 'TOTAL (DUS)', 'col-qty')}
+                ${window.thSort(2, 'Jenis Item', 'col-jenis')}
+                ${window.thSort(3, 'Nama Item', 'col-nama')}
+                ${window.thSort(4, 'Panjang', 'col-pjg')}
+                ${window.thSort(5, 'Grade', 'col-grade')}
+                ${window.thSort(6, 'Dus', 'col-dus')}
+                ${window.thSort(7, 'Shading', 'col-shading')}
+                ${window.thSort(8, 'Customer Aktual', 'col-po')}
+                ${window.thSort(9, 'Customer Estimasi', 'col-estimasi text-purple-300')}
+                ${window.thSort(10, 'Keterangan', 'col-ket')}
+                ${window.thSort(11, 'TOTAL (DUS)', 'col-qty')}
             </tr>`;
 
-        if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(window.dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
-        tbody.innerHTML = dataKSGlobal.map((r) => `
+        tbody.innerHTML = window.dataKSGlobal.map((r) => `
             <tr class="${rowClassBase}">
-                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 text-center col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 text-center col-open"><button onclick="window.bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
@@ -445,32 +450,33 @@ function renderTabel() {
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
                 <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po" data-search="${r.po}">${r.po}</td>
+                <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
                 <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
                 <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
             </tr>
         `).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
-    else if (modeKS === 'lembaran') {
+    else if (window.modeKS === 'lembaran') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
-                ${thSort(1, 'Kode Master', 'col-area')}
-                ${thSort(2, 'Nama Item', 'col-nama')}
-                ${thSort(3, 'Panjang', 'col-pjg')}
-                ${thSort(4, 'Grade', 'col-grade')}
-                ${thSort(5, 'Dus', 'col-dus')}
-                ${thSort(6, 'Shading', 'col-shading')}
-                ${thSort(7, 'Keterangan', 'col-ket')}
+                ${window.thSort(1, 'Kode Master', 'col-area')}
+                ${window.thSort(2, 'Nama Item', 'col-nama')}
+                ${window.thSort(3, 'Panjang', 'col-pjg')}
+                ${window.thSort(4, 'Grade', 'col-grade')}
+                ${window.thSort(5, 'Dus', 'col-dus')}
+                ${window.thSort(6, 'Shading', 'col-shading')}
+                ${window.thSort(7, 'Keterangan', 'col-ket')}
             </tr>`;
         
-        if(stokLembaranRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="8" class="p-8 text-center font-medium text-slate-400">Tidak ada data stok lembaran.</td></tr>`; return; }
+        if(window.stokLembaranRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="8" class="p-8 text-center font-medium text-slate-400">Tidak ada data stok lembaran.</td></tr>`; return; }
 
-        tbody.innerHTML = stokLembaranRaw.map((r) => `
+        tbody.innerHTML = window.stokLembaranRaw.map((r) => `
             <tr class="${rowClassBase}">
-                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg || '-'}">${r.pjg || '-'}</td>
@@ -483,12 +489,12 @@ function renderTabel() {
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="8" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     }
 
-    applyColumnOrder(); 
+    window.applyColumnOrder(); 
     lucide.createIcons(); 
-    updateSelectAllUI();
-    saringTabelExcel(); 
-    initResizableColumns(); 
-}
+    window.updateSelectAllUI();
+    window.saringTabelExcel(); 
+    window.initResizableColumns(); 
+};
 
 function highlightRow(checkbox, skipStateReset = false) {
     const tr = checkbox.closest('tr');
