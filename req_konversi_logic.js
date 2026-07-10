@@ -179,7 +179,6 @@ window.renderTabel = function() {
     tbody.innerHTML = rawData.map((r) => {
         const tgl = formatWIB(r.created_at);
         
-        // Detail Item Asal (STBJ Style)
         const detailAsal = `
             <div class="text-[12px] font-bold text-slate-600 leading-snug">
                 Item: <span class="text-blue-600">${r.jenis_item || '-'}</span> | 
@@ -195,7 +194,6 @@ window.renderTabel = function() {
         `;
         const searchAsal = `${r.nama_item} ${r.panjang} ${r.grade} ${r.dus} ${r.shading} ${r['customer aktual']} ${r.area}`;
         
-        // Request Konversi (Hanya tampilkan yang berubah/target)
         let reqArr = [];
         if(r.nama_item_req && r.nama_item_req !== r.nama_item) reqArr.push(`Nama: <span class="text-blue-600">${r.nama_item_req}</span>`);
         if(r.panjang_req && r.panjang_req !== r.panjang) reqArr.push(`Panjang: <span class="text-slate-800">${r.panjang_req}</span>`);
@@ -206,7 +204,6 @@ window.renderTabel = function() {
         const detailReq = reqArr.length > 0 ? `<div class="text-[12px] font-bold text-slate-600">${reqArr.join(' | ')}</div>` : '<span class="text-slate-400 italic text-xs">Tidak ada perubahan spesifikasi</span>';
         const searchReq = `${r.nama_item_req} ${r.panjang_req} ${r.grade_req} ${r.dus_req} ${r.shading_req}`;
 
-        // Badge Progres & Tombol Proses
         let prog = (r.progres_konversi || 'PENDING').toUpperCase();
         let btnProses = '';
         if(prog === 'PENDING' || prog === 'PROSES') {
@@ -243,9 +240,6 @@ window.prosesRequest = function(id) {
     alert("Fungsi Proses Request untuk ID " + id + " akan diimplementasikan nanti.");
 };
 
-// ==========================================
-// FUNGSI STANDAR (PAGINASI, FILTER, EXCEL)
-// ==========================================
 window.highlightRow = function(checkbox, skipStateReset = false) {
     const tr = checkbox.closest('tr');
     if (checkbox.checked) { tr.classList.add('selected-row'); } 
