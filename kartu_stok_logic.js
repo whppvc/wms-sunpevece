@@ -1,26 +1,24 @@
-let modeKS = 'area'; 
-let stokQRRaw = []; 
-let stokAktualRaw = []; 
-let stokLembaranRaw = [];
-let dataKSQR = []; 
-let dataKSArea = []; 
-let dataKSGlobal = [];
-let selectedForAction = []; 
-let sourcePOContext = ''; 
-let currentBreakdownData = [];
-let sortState = {};
-let masterData = { kamus: [] };
-let poDistributionMap = {}; 
+window.modeKS = 'area'; 
+window.stokQRRaw = []; 
+window.stokAktualRaw = []; 
+window.stokLembaranRaw = [];
+window.dataKSQR = []; 
+window.dataKSArea = []; 
+window.dataKSGlobal = [];
+window.selectedForAction = []; 
+window.sourcePOContext = ''; 
+window.currentBreakdownData = [];
+window.sortState = {};
+window.masterData = { kamus: [] };
+window.poDistributionMap = {}; 
 
-let currentPage = 1;
-let rowsPerPage = 10; 
-let activeFilters = {}; 
-let currentFilterCol = ''; 
-let selectAllState = 0; 
-let userColOrder = []; 
-
-// State khusus Request Konversi
-let selectedForReq = null;
+window.currentPage = 1;
+window.rowsPerPage = 10; 
+window.activeFilters = {}; 
+window.currentFilterCol = ''; 
+window.selectAllState = 0; 
+window.userColOrder = []; 
+window.selectedForReq = null; // State untuk Request Konversi
 
 function safeJSONParse(data, fallback = null) {
     if (!data || data === 'undefined' || data === 'null') return fallback;
@@ -28,59 +26,69 @@ function safeJSONParse(data, fallback = null) {
     try { return JSON.parse(data); } catch (e) { return fallback; }
 }
 
-const currentUser = safeJSONParse(localStorage.getItem('user_session'), { username: 'Admin', role: 'admin' });
+window.currentUser = safeJSONParse(localStorage.getItem('user_session'), { username: 'Admin', role: 'admin' });
 
-function loadUserPreferences() {
-    const savedOrder = localStorage.getItem(`col_order_ks_${modeKS}_${currentUser.username}`);
-    if (savedOrder) { try { userColOrder = JSON.parse(savedOrder); } catch(e) { userColOrder = []; } } 
-    else { userColOrder = []; }
+window.loadUserPreferences = function() {
+    const savedOrder = localStorage.getItem(`col_order_ks_${window.modeKS}_${window.currentUser.username}`);
+    if (savedOrder) {
+        try { window.userColOrder = JSON.parse(savedOrder); } catch(e) { window.userColOrder = []; }
+    } else {
+        window.userColOrder = [];
+    }
     
     const savedRows = localStorage.getItem('wms_rows_per_page');
     if(savedRows) {
-        rowsPerPage = parseInt(savedRows);
+        window.rowsPerPage = parseInt(savedRows);
         const sel = document.getElementById('select-rows-per-page');
         if(sel) {
             let found = false;
-            Array.from(sel.options).forEach(opt => { if(opt.value == rowsPerPage) { opt.selected = true; found = true; } });
+            Array.from(sel.options).forEach(opt => { if(opt.value == window.rowsPerPage) { opt.selected = true; found = true; } });
             if(!found) {
                 sel.value = 'CUSTOM';
                 const inp = document.getElementById('input-custom-rows');
-                if(inp) { inp.classList.remove('hidden'); inp.value = rowsPerPage; }
+                if(inp) { inp.classList.remove('hidden'); inp.value = window.rowsPerPage; }
             }
         }
     }
-}
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
-    initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
+    if(typeof initModernLayout === 'function') {
+        initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
+    }
     
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
-            if (!menu.contains(e.target) && !e.target.closest('button[title^="Filter"]')) { closeFilterMenu(); }
+            if (!menu.contains(e.target) && !e.target.closest('button[title^="Filter"]')) {
+                window.closeFilterMenu();
+            }
         }
+        
         const actionMenu = document.getElementById('mobile-action-menu');
         if (actionMenu && !actionMenu.classList.contains('hidden')) {
-            if (!actionMenu.contains(e.target) && !actionMenu.closest('button[onclick^="toggleActionMenu"]')) { actionMenu.classList.add('hidden'); }
+            if (!actionMenu.contains(e.target) && !actionMenu.closest('button[onclick^="toggleActionMenu"]')) {
+                actionMenu.classList.add('hidden');
+            }
         }
     });
 
-    await loadMasterData();
-    loadUserPreferences(); 
-    setTimeout(muatDataStok, 200);
+    await window.loadMasterData();
+    window.loadUserPreferences(); 
+    window.muatDataStok(); 
 });
 
-function toggleActionMenu(e) {
+window.toggleActionMenu = function(e) {
     if(e) e.stopPropagation();
     const menu = document.getElementById('mobile-action-menu');
     if(menu) menu.classList.toggle('hidden');
-}
+};
 
-async function loadMasterData() {
+window.loadMasterData = async function() {
     try {
         const {data, error} = await db.from('master_2').select('*');
         if (data) {
-            masterData.kamus = data; 
+            window.masterData.kamus = data; 
             let poSet = new Set(); 
             let namaSet = new Set();
             let gradeSet = new Set();
@@ -118,28 +126,30 @@ async function loadMasterData() {
                 Array.from(dusSet).sort().forEach(d => { htmlDus += `<option value="${d}">${d}</option>`; });
                 selDus.innerHTML = htmlDus;
             }
-
         }
     } catch (e) { console.error("Gagal memuat master data:", e); }
-}
+};
 
-function translateBarcode(barcode) {
+window.translateBarcode = function(barcode) {
     let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customer: '-' };
     if(!barcode) return data;
     const parts = barcode.split('/'); if (parts.length < 1) return data;
     const h = barcode.charAt(0).toUpperCase();
     if (h === 'P') data.jenisItem = 'Plafon'; else if (h === 'L') data.jenisItem = 'List'; else if (h === 'W') data.jenisItem = 'WPC'; else data.jenisItem = h;
 
-    let rawItem = parts[0]; data.namaItem = rawItem; data.shading = parts[1] || '-';
-    const p2 = parts[2];
-    if(p2 && p2.length >= 4) {
+    data.namaItem = parts[0] || '-'; 
+    data.shading = parts[1] || '-';
+    
+    if(parts[2] && parts[2].length >= 4) {
+        let p2 = parts[2];
         let digitPjg = (p2.length === 5) ? 2 : 1; let rawPjg = p2.substring(0, digitPjg);
         data.panjang = (digitPjg === 1) ? rawPjg + "M" : rawPjg[0] + "." + rawPjg[1] + "M";
         let rawGrade = p2.substring(digitPjg, digitPjg + 1); data.grade = rawGrade === '1' ? 'BAGUS' : (rawGrade === '2' ? 'A' : rawGrade);
-        let rawDus = p2.substring(p2.length - 2); data.dus = rawDus;
+        data.dus = p2.substring(p2.length - 2);
     }
-    const p3 = parts[3];
-    if(p3 && p3.length >= 5) {
+    
+    if(parts[3] && parts[3].length >= 5) {
+        let p3 = parts[3];
         const dayOfYear = parseInt(p3.substring(0, 3)); const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
         if (!isNaN(dayOfYear) && !isNaN(realYear)) {
             const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
@@ -149,18 +159,20 @@ function translateBarcode(barcode) {
         if(match) { data.mesin = match[1]; data.shift = match[2]; data.customer = match[3]; }
     }
     return data;
-}
+};
 
-function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
+window.sinkronisasiUlangStokAktual = function(tampilkanAlert = false) {
     alert("Fungsi Sinkronisasi Wipe & Rebuild dinonaktifkan untuk menjaga integritas data Customer Aktual hasil editan user.\n\nSistem kini menggunakan metode Incremental Update (+/-) secara otomatis setiap kali ada transaksi.");
-}
+};
 
 window.muatDataStok = async function() {
     const tbody = document.getElementById('tbody-ks');
-    tbody.innerHTML = `<tr><td colspan="16" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke Gudang Supabase...</p></td></tr>`;
-    lucide.createIcons();
+    if(!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke Gudang Supabase...</p></td></tr>`;
+    if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
+        console.log("Memulai penarikan data dari Supabase...");
         const [resStok, resAktual, resLembaran] = await Promise.all([
             db.from('stok_qr').select('*'),
             db.from('stok_aktual').select('*'),
@@ -174,12 +186,15 @@ window.muatDataStok = async function() {
         window.stokAktualRaw = resAktual.data || [];
         window.stokLembaranRaw = resLembaran.data || [];
 
+        console.log(`Data ditarik: ${window.stokQRRaw.length} QR, ${window.stokAktualRaw.length} Aktual`);
+
         let aktualMap = {};
         window.stokAktualRaw.forEach(a => {
             let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}`;
             if(!aktualMap[key]) aktualMap[key] = {};
-            if(!aktualMap[key][a.customer_aktual]) aktualMap[key][a.customer_aktual] = 0;
-            aktualMap[key][a.customer_aktual] += a.qty;
+            let custAktual = a.customer_aktual || '-';
+            if(!aktualMap[key][custAktual]) aktualMap[key][custAktual] = 0;
+            aktualMap[key][custAktual] += (a.qty || 0);
         });
         window.poDistributionMap = aktualMap;
 
@@ -223,12 +238,12 @@ window.muatDataStok = async function() {
                 jenis: a.jenis_item || '-', 
                 nama: a.nama_item || '-',
                 qrcodes: qrMap[key] || [],
-                id_sku_base: a.id_sku,
+                id_sku_base: a.id_sku || '-',
                 id_po: a.id_po || '-',
-                po_bawaan: a.customer_bawaan,
-                po_aktual: a.customer_aktual,
-                customer_estimasi: a.customer_estimasi || '-', // REVISI BARU
-                qty: a.qty
+                po_bawaan: a.customer_bawaan || '-',
+                po_aktual: a.customer_aktual || '-',
+                customer_estimasi: a.customer_estimasi || '-',
+                qty: a.qty || 0
             };
         });
 
@@ -243,14 +258,16 @@ window.muatDataStok = async function() {
         });
         window.dataKSGlobal = Object.values(globalMap);
 
+        console.log("Data berhasil diolah, merender tabel...");
         window.renderTabel();
     } catch(e) { 
-        tbody.innerHTML = `<tr><td colspan="16" class="p-10 text-center text-red-500 font-medium">Gagal mengolah data: ${e.message}</td></tr>`; 
+        console.error("Error muatDataStok:", e);
+        tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-medium">Gagal mengolah data: ${e.message}</td></tr>`; 
     }
 };
 
-function setModeKS(m) {
-    modeKS = m;
+window.setModeKS = function(m) {
+    window.modeKS = m;
     const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     
@@ -259,18 +276,21 @@ function setModeKS(m) {
         if(el) el.className = (m === tab) ? activeClass : inactiveClass;
     });
     
-    document.getElementById('btn-ganti-po-main').classList.toggle('hidden', m === 'global' || m === 'lembaran');
-    document.getElementById('btn-req-konversi-main').classList.toggle('hidden', m !== 'area'); 
+    const btnGantiPO = document.getElementById('btn-ganti-po-main');
+    if(btnGantiPO) btnGantiPO.classList.toggle('hidden', m === 'global' || m === 'lembaran');
     
-    activeFilters = {}; 
-    loadUserPreferences(); 
-    renderTabel();
-}
+    const btnReqKonv = document.getElementById('btn-req-konversi-main');
+    if(btnReqKonv) btnReqKonv.classList.toggle('hidden', m !== 'area');
+    
+    window.activeFilters = {}; 
+    window.loadUserPreferences(); 
+    window.renderTabel();
+};
 
-function sortTable(colIndex, headerEl) {
+window.sortTable = function(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-ks');
     const rows = Array.from(tbody.querySelectorAll('tr.row-ks'));
-    let isAsc = sortState[colIndex] !== 'asc'; sortState[colIndex] = isAsc ? 'asc' : 'desc';
+    let isAsc = window.sortState[colIndex] !== 'asc'; window.sortState[colIndex] = isAsc ? 'asc' : 'desc';
     
     rows.sort((a, b) => {
         let valA = a.cells[colIndex].getAttribute('data-search') || a.cells[colIndex].innerText.trim(); 
@@ -284,10 +304,10 @@ function sortTable(colIndex, headerEl) {
     document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-30'); });
     const icon = headerEl.querySelector('.sort-icon');
     if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
-    applyPagination();
-}
+    window.applyPagination();
+};
 
-function thSort(idx, label, cls = "") {
+window.thSort = function(idx, label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-open'].includes(colClass);
     
@@ -297,22 +317,24 @@ function thSort(idx, label, cls = "") {
 
     return `<th class="hdr-std ${cls} select-none group">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
-            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable(${idx}, this.closest('th'))" title="Sort ${label}">${label}</span>
+            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="window.sortTable(${idx}, this.closest('th'))" title="Sort ${label}">${label}</span>
             <div class="flex items-center gap-1 shrink-0">
-                <button onclick="sortTable(${idx}, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
+                <button onclick="window.sortTable(${idx}, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 sort-icon opacity-40 group-hover:opacity-100 transition-opacity text-white"></i>
                 </button>
-                <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
+                <button onclick="window.openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
                     <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
                 </button>
             </div>
         </div>
     </th>`;
-}
+};
 
 window.renderTabel = function() {
     const thead = document.getElementById('thead-ks');
     const tbody = document.getElementById('tbody-ks');
+    if(!thead || !tbody) return;
+    
     window.sortState = {}; 
     window.selectAllState = 0;
 
@@ -490,59 +512,59 @@ window.renderTabel = function() {
     }
 
     window.applyColumnOrder(); 
-    lucide.createIcons(); 
+    if(typeof lucide !== 'undefined') lucide.createIcons(); 
     window.updateSelectAllUI();
     window.saringTabelExcel(); 
     window.initResizableColumns(); 
 };
 
-function highlightRow(checkbox, skipStateReset = false) {
+window.highlightRow = function(checkbox, skipStateReset = false) {
     const tr = checkbox.closest('tr');
     if (tr) {
         if (checkbox.checked) { tr.classList.add('selected-row'); } 
         else { tr.classList.remove('selected-row'); }
     }
     
-    if(!skipStateReset && !checkbox.checked && selectAllState !== 0) {
-        selectAllState = 0;
-        updateSelectAllUI();
+    if(!skipStateReset && !checkbox.checked && window.selectAllState !== 0) {
+        window.selectAllState = 0;
+        window.updateSelectAllUI();
     }
     
-    if(!skipStateReset) updateSelectedCount();
-}
+    if(!skipStateReset) window.updateSelectedCount();
+};
 
-function changeRowsPerPage(val) {
+window.changeRowsPerPage = function(val) {
     const customInput = document.getElementById('input-custom-rows');
     if (val === 'ALL') {
-        rowsPerPage = 999999; 
+        window.rowsPerPage = 999999; 
         if(customInput) customInput.classList.add('hidden');
     } else if (val === 'CUSTOM') {
         if(customInput) {
             customInput.classList.remove('hidden');
             customInput.focus();
             let customVal = parseInt(customInput.value);
-            rowsPerPage = (customVal > 0) ? customVal : rowsPerPage;
+            window.rowsPerPage = (customVal > 0) ? customVal : window.rowsPerPage;
         }
     } else {
-        rowsPerPage = parseInt(val);
+        window.rowsPerPage = parseInt(val);
         if(customInput) customInput.classList.add('hidden');
     }
-    localStorage.setItem('wms_rows_per_page', rowsPerPage);
-    currentPage = 1; 
-    applyPagination();
-}
+    localStorage.setItem('wms_rows_per_page', window.rowsPerPage);
+    window.currentPage = 1; 
+    window.applyPagination();
+};
 
-function setCustomRowsPerPage(val) {
+window.setCustomRowsPerPage = function(val) {
     let parsed = parseInt(val);
     if (!isNaN(parsed) && parsed > 0) {
-        rowsPerPage = parsed;
-        localStorage.setItem('wms_rows_per_page', rowsPerPage);
-        currentPage = 1;
-        applyPagination();
+        window.rowsPerPage = parsed;
+        localStorage.setItem('wms_rows_per_page', window.rowsPerPage);
+        window.currentPage = 1;
+        window.applyPagination();
     }
-}
+};
 
-function applyPagination() {
+window.applyPagination = function() {
     const allRows = Array.from(document.querySelectorAll('#tbody-ks tr.row-ks'));
     
     allRows.forEach(row => {
@@ -554,13 +576,13 @@ function applyPagination() {
     const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
     
     const totalFiltered = visibleRows.length;
-    const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
+    const totalPages = Math.ceil(totalFiltered / window.rowsPerPage) || 1;
     
-    if(currentPage > totalPages) currentPage = totalPages;
-    if(currentPage < 1) currentPage = 1;
+    if(window.currentPage > totalPages) window.currentPage = totalPages;
+    if(window.currentPage < 1) window.currentPage = 1;
 
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
+    const startIndex = (window.currentPage - 1) * window.rowsPerPage;
+    const endIndex = startIndex + window.rowsPerPage;
 
     let sumQty = 0;
     visibleRows.forEach((row, index) => {
@@ -581,38 +603,38 @@ function applyPagination() {
 
     if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
     if(document.getElementById('lbl-total-qty')) document.getElementById('lbl-total-qty').innerText = sumQty;
-    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
+    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = window.currentPage;
     if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
     
-    if (selectAllState === 1) {
-        selectAllState = 0;
-        updateSelectAllUI();
+    if (window.selectAllState === 1) {
+        window.selectAllState = 0;
+        window.updateSelectAllUI();
     }
     
-    applySelection();
-    updateSelectedCount();
-}
+    window.applySelection();
+    window.updateSelectedCount();
+};
 
-function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } }
-function nextPage() { 
+window.prevPage = function() { if(window.currentPage > 1) { window.currentPage--; window.applyPagination(); } };
+window.nextPage = function() { 
     const totalVisible = document.querySelectorAll('#tbody-ks tr.row-ks:not(.filtered-out)').length;
-    if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
-}
+    if(window.currentPage < Math.ceil(totalVisible / window.rowsPerPage)) { window.currentPage++; window.applyPagination(); } 
+};
 
-function updateSelectedCount() {
+window.updateSelectedCount = function() {
     const count = document.querySelectorAll('.cb-main:checked').length;
     const lbl = document.getElementById('lbl-pilih-baris');
     if(lbl) lbl.innerText = count;
-}
+};
 
-async function eksekusiGantiPO() {
+window.eksekusiGantiPO = async function() {
     const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
     if(!newPO) return alert("Silakan Pilih Customer Baru dari daftar dropdown!");
 
     const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
     if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
 
-    let maxDus = selectedForAction.reduce((sum, row) => sum + row.qty, 0);
+    let maxDus = window.selectedForAction.reduce((sum, row) => sum + row.qty, 0);
     if(qtyDiminta > maxDus) return alert(`Maksimal jatah adalah ${maxDus} dus!`);
 
     const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
@@ -621,7 +643,7 @@ async function eksekusiGantiPO() {
     try {
         let qtySisaUntukDiupdate = qtyDiminta; 
         
-        for(let row of selectedForAction) {
+        for(let row of window.selectedForAction) {
             if (qtySisaUntukDiupdate <= 0) break; 
             
             let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
@@ -636,19 +658,19 @@ async function eksekusiGantiPO() {
             if(error) throw error;
         }
         
-        tutupModalPO(); 
-        if(sourcePOContext === 'breakdown') tutupModalBreakdown();
+        window.tutupModalPO(); 
+        if(window.sourcePOContext === 'breakdown') window.tutupModalBreakdown();
         
-        await muatDataStok();
+        await window.muatDataStok();
         alert("Berhasil mengganti Customer Aktual!");
     } catch (error) { 
         alert("GAGAL UPDATE: " + error.message); 
     } finally { 
-        btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); 
+        btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons(); 
     }
-}
+};
 
-function salinData() {
+window.salinData = function() {
     const cek = document.querySelectorAll('.cb-main:checked');
     if(cek.length === 0) return alert("Pilih data yang ingin disalin!");
 
@@ -674,9 +696,9 @@ function salinData() {
     navigator.clipboard.writeText(copyString).then(() => {
         alert("Berhasil menyalin!");
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
-}
+};
 
-function downloadXLS() {
+window.downloadXLS = function() {
     if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
     
     let ws_data = [];
@@ -704,10 +726,10 @@ function downloadXLS() {
     let ws = XLSX.utils.aoa_to_sheet(ws_data);
     let wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Kartu_Stok");
-    XLSX.writeFile(wb, `Kartu_Stok_${modeKS.toUpperCase()}.xlsx`);
-}
+    XLSX.writeFile(wb, `Kartu_Stok_${window.modeKS.toUpperCase()}.xlsx`);
+};
 
-function salinDataBreakdown() {
+window.salinDataBreakdown = function() {
     const cek = document.querySelectorAll('.cb-bd:checked');
     if(cek.length === 0) return alert("Pilih data breakdown yang ingin disalin!");
 
@@ -724,23 +746,23 @@ function salinDataBreakdown() {
     navigator.clipboard.writeText(copyString).then(() => {
         alert("Berhasil menyalin detail breakdown!");
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
-}
+};
 
-function toggleSidebarKolom() {
+window.toggleSidebarKolom = function() {
     const sidebar = document.getElementById('sidebar-kolom');
     const overlay = document.getElementById('overlay-klik-luar');
     
     if (sidebar.classList.contains('translate-x-full')) {
         sidebar.classList.remove('translate-x-full');
         overlay.classList.remove('hidden');
-        renderDragList();
+        window.renderDragList();
     } else {
         sidebar.classList.add('translate-x-full');
         overlay.classList.add('hidden');
     }
-}
+};
 
-function renderDragList() {
+window.renderDragList = function() {
     const container = document.getElementById('kolom-drag-container');
     if(!container) return;
     container.innerHTML = '';
@@ -771,7 +793,7 @@ function renderDragList() {
 
     container.addEventListener('dragover', e => {
         e.preventDefault();
-        const afterElement = getDragAfterElement(container, e.clientY);
+        const afterElement = window.getDragAfterElement(container, e.clientY);
         const draggable = document.querySelector('.dragging');
         if (draggable) {
             if (afterElement == null) {
@@ -781,9 +803,9 @@ function renderDragList() {
             }
         }
     });
-}
+};
 
-function getDragAfterElement(container, y) {
+window.getDragAfterElement = function(container, y) {
     const draggableElements = [...container.querySelectorAll('.drag-item:not(.dragging)')];
     return draggableElements.reduce((closest, child) => {
         const box = child.getBoundingClientRect();
@@ -794,33 +816,33 @@ function getDragAfterElement(container, y) {
             return closest;
         }
     }, { offset: Number.NEGATIVE_INFINITY }).element;
-}
+};
 
-function simpanUrutanKolom() {
+window.simpanUrutanKolom = function() {
     const items = document.querySelectorAll('.drag-item');
     let newOrder = [];
     items.forEach(item => newOrder.push(item.getAttribute('data-col')));
     
-    userColOrder = newOrder;
-    localStorage.setItem(`col_order_ks_${modeKS}_${currentUser.username}`, JSON.stringify(newOrder));
+    window.userColOrder = newOrder;
+    localStorage.setItem(`col_order_ks_${window.modeKS}_${window.currentUser.username}`, JSON.stringify(newOrder));
     
     alert("Urutan kolom berhasil disimpan!");
-    toggleSidebarKolom();
-    renderTabel(); 
-}
+    window.toggleSidebarKolom();
+    window.renderTabel(); 
+};
 
-function resetUrutanKolom() {
+window.resetUrutanKolom = function() {
     if(!confirm("Kembalikan urutan kolom ke default?")) return;
-    userColOrder = [];
-    localStorage.removeItem(`col_order_ks_${modeKS}_${currentUser.username}`);
+    window.userColOrder = [];
+    localStorage.removeItem(`col_order_ks_${window.modeKS}_${window.currentUser.username}`);
     
     alert("Urutan dikembalikan ke default.");
-    toggleSidebarKolom();
-    renderTabel();
-}
+    window.toggleSidebarKolom();
+    window.renderTabel();
+};
 
-function applyColumnOrder() {
-    if (!userColOrder || userColOrder.length === 0) return;
+window.applyColumnOrder = function() {
+    if (!window.userColOrder || window.userColOrder.length === 0) return;
 
     const table = document.getElementById('main-table');
     const rows = table.querySelectorAll('tr');
@@ -842,7 +864,7 @@ function applyColumnOrder() {
         if (cbCell) row.appendChild(cbCell); 
         if (openCell) row.appendChild(openCell); 
 
-        userColOrder.forEach(colId => {
+        window.userColOrder.forEach(colId => {
             if (cellMap[colId]) {
                 row.appendChild(cellMap[colId]);
             }
@@ -850,14 +872,14 @@ function applyColumnOrder() {
 
         cells.forEach(c => {
             const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
-            if (colClass !== 'col-cb' && colClass !== 'col-open' && !userColOrder.includes(colClass)) {
+            if (colClass !== 'col-cb' && colClass !== 'col-open' && !window.userColOrder.includes(colClass)) {
                 row.appendChild(c);
             }
         });
     });
-}
+};
 
-function tutupSemuaPopups() {
+window.tutupSemuaPopups = function() {
     document.getElementById('modal-lihat-po').classList.add('hidden');
     document.getElementById('modal-breakdown').classList.add('hidden');
     document.getElementById('modal-po').classList.add('hidden');
@@ -866,13 +888,13 @@ function tutupSemuaPopups() {
     if(document.getElementById('sidebar-kolom')) {
         document.getElementById('sidebar-kolom').classList.add('translate-x-full');
     }
-}
+};
 
-function bukaBreakdown(gKey) {
-    const item = dataKSGlobal.find(g => g.gKey === gKey); if(!item) return;
+window.bukaBreakdown = function(gKey) {
+    const item = window.dataKSGlobal.find(g => g.gKey === gKey); if(!item) return;
 
     document.getElementById('bd-title-item').innerText = `${item.nama} | ${item.pjg} | ${item.grade} | DUS: ${item.dus} | SHADING: ${item.shading} | KET: ${item.ket}`;
-    currentBreakdownData = item.areas;
+    window.currentBreakdownData = item.areas;
 
     const tbody = document.getElementById('tbody-breakdown');
     tbody.innerHTML = item.areas.map((a, i) => {
@@ -880,7 +902,7 @@ function bukaBreakdown(gKey) {
         const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
         return `
             <tr class="transition bd-row text-[13px] ${stripeClass}">
-                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-qty="${a.qty}" data-ket="${a.keterangan}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="window.highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-qty="${a.qty}" data-ket="${a.keterangan}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
                 <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
                 <td class="px-4 py-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
@@ -890,24 +912,24 @@ function bukaBreakdown(gKey) {
 
     document.getElementById('modal-breakdown').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
-}
+};
 
-function tutupModalBreakdown() { 
+window.tutupModalBreakdown = function() { 
     document.getElementById('modal-breakdown').classList.add('hidden'); 
     document.getElementById('overlay-klik-luar').classList.add('hidden'); 
-}
+};
 
-function highlightBdRow(cb) {
+window.highlightBdRow = function(cb) {
     const tr = cb.closest('tr');
     if(cb.checked) { tr.classList.add('selected-row'); } 
     else { tr.classList.remove('selected-row'); }
-}
+};
 
-function toggleCentangBreakdown(checked) { 
-    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; highlightBdRow(cb); }); 
-}
+window.toggleCentangBreakdown = function(checked) { 
+    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; window.highlightBdRow(cb); }); 
+};
 
-function bukaModalLihatPO(encodedPOs) {
+window.bukaModalLihatPO = function(encodedPOs) {
     const poStr = decodeURIComponent(encodedPOs);
     const poArr = poStr.split('|').map(p => p.trim()).filter(p => p);
     const ul = document.getElementById('list-po-aktual');
@@ -924,23 +946,23 @@ function bukaModalLihatPO(encodedPOs) {
                     </li>`;
         }).join('');
     }
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
     document.getElementById('modal-lihat-po').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
-}
+};
 
-function siapkanGantiPO(context) {
+window.siapkanGantiPO = function(context) {
     let checkboxes = [];
     if(context === 'main') {
-        if(modeKS === 'global' || modeKS === 'lembaran') return;
+        if(window.modeKS === 'global' || window.modeKS === 'lembaran') return;
         checkboxes = document.querySelectorAll('.cb-main:checked');
     } else { checkboxes = document.querySelectorAll('.cb-bd:checked'); }
 
     if(checkboxes.length === 0) return alert('Silakan centang item / area yang ingin diganti Customer-nya.');
 
-    selectedForAction = []; let totalDus = 0;
+    window.selectedForAction = []; let totalDus = 0;
     checkboxes.forEach(cb => {
-        selectedForAction.push({ 
+        window.selectedForAction.push({ 
             id_sku: cb.dataset.idsku, 
             po_aktual: cb.dataset.po,
             qty: parseInt(cb.dataset.qty)
@@ -948,89 +970,89 @@ function siapkanGantiPO(context) {
         totalDus += parseInt(cb.dataset.qty);
     });
 
-    sourcePOContext = context;
+    window.sourcePOContext = context;
     document.getElementById('input-new-po').value = '';
     const inputQty = document.getElementById('input-qty-ganti');
     inputQty.value = totalDus; inputQty.max = totalDus; 
 
     document.getElementById('modal-po').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
-}
+};
 
-function tutupModalPO() { 
+window.tutupModalPO = function() { 
     document.getElementById('modal-po').classList.add('hidden'); 
     if(document.getElementById('modal-breakdown').classList.contains('hidden')) {
         document.getElementById('overlay-klik-luar').classList.add('hidden'); 
     }
-}
+};
 
-function cycleSelectAll() {
-    selectAllState = (selectAllState + 1) % 3;
-    updateSelectAllUI();
-    applySelection();
-}
+window.cycleSelectAll = function() {
+    window.selectAllState = (window.selectAllState + 1) % 3;
+    window.updateSelectAllUI();
+    window.applySelection();
+};
 
-function updateSelectAllUI() {
+window.updateSelectAllUI = function() {
     const btn = document.getElementById('btn-select-all');
     if(!btn) return;
     
-    if (selectAllState === 0) {
+    if (window.selectAllState === 0) {
         btn.innerHTML = '';
         btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto';
-    } else if (selectAllState === 1) {
+    } else if (window.selectAllState === 1) {
         btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
         btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto';
-    } else if (selectAllState === 2) {
+    } else if (window.selectAllState === 2) {
         btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>';
         btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
     }
-    lucide.createIcons();
-}
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+};
 
-function applySelection() {
+window.applySelection = function() {
     const allRows = Array.from(document.querySelectorAll('#tbody-ks tr.row-ks'));
     const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
     
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
+    const startIndex = (window.currentPage - 1) * window.rowsPerPage;
+    const endIndex = startIndex + window.rowsPerPage;
 
-    if (selectAllState === 0) {
+    if (window.selectAllState === 0) {
         allRows.forEach(row => {
             const cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = false; highlightRow(cb, true); }
+            if(cb) { cb.checked = false; window.highlightRow(cb, true); }
         });
-    } else if (selectAllState === 1) {
+    } else if (window.selectAllState === 1) {
         allRows.forEach(row => {
             const cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = false; highlightRow(cb, true); }
+            if(cb) { cb.checked = false; window.highlightRow(cb, true); }
         });
         visibleRows.forEach((row, index) => {
             if(index >= startIndex && index < endIndex) {
                 const cb = row.querySelector('.cb-main');
-                if(cb) { cb.checked = true; highlightRow(cb, true); }
+                if(cb) { cb.checked = true; window.highlightRow(cb, true); }
             }
         });
-    } else if (selectAllState === 2) {
+    } else if (window.selectAllState === 2) {
         visibleRows.forEach(row => {
             const cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = true; highlightRow(cb, true); }
+            if(cb) { cb.checked = true; window.highlightRow(cb, true); }
         });
     }
-    updateSelectedCount();
-}
+    window.updateSelectedCount();
+};
 
-function openColumnFilter(event, colClass, colName) {
+window.openColumnFilter = function(event, colClass, colName) {
     event.stopPropagation();
-    currentFilterCol = colClass;
+    window.currentFilterCol = colClass;
     document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
 
     let uniqueValues = new Set();
     
     document.querySelectorAll('#tbody-ks tr.row-ks').forEach(row => {
         let showBasedOnOthers = true;
-        for (let otherCol in activeFilters) {
+        for (let otherCol in window.activeFilters) {
             if (otherCol !== colClass) { 
-                const allowed = activeFilters[otherCol];
+                const allowed = window.activeFilters[otherCol];
                 const c = row.querySelector('.' + otherCol);
                 let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
                 if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
@@ -1046,11 +1068,11 @@ function openColumnFilter(event, colClass, colName) {
     });
 
     let sortedValues = Array.from(uniqueValues).sort();
-    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
+    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
     
     sortedValues.forEach(val => {
         let isChecked = true;
-        if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
+        if (window.activeFilters[colClass] && !window.activeFilters[colClass].includes(val)) { isChecked = false; }
         listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}">
             <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
             <span class="truncate text-slate-600">${val}</span>
@@ -1058,7 +1080,7 @@ function openColumnFilter(event, colClass, colName) {
     });
 
     document.getElementById('filter-values-list').innerHTML = listHtml;
-    updateSelectAllState();
+    window.updateSelectAllState();
     document.getElementById('filter-search-input').value = '';
     
     const menu = document.getElementById('excel-filter-menu');
@@ -1083,14 +1105,14 @@ function openColumnFilter(event, colClass, colName) {
     menu.style.left = `${leftPos}px`;
     
     document.getElementById('filter-search-input').focus();
-}
+};
 
-function toggleAllFilterValues(checked) {
+window.toggleAllFilterValues = function(checked) {
     document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
-    updateSelectAllState();
-}
+    window.updateSelectAllState();
+};
 
-function updateSelectAllState() {
+window.updateSelectAllState = function() {
     const allCbs = document.querySelectorAll('.filter-val-cb');
     const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
     const selectAll = document.getElementById('filter-select-all');
@@ -1098,45 +1120,45 @@ function updateSelectAllState() {
     if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
     else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
     else { selectAll.checked = false; selectAll.indeterminate = true; }
-}
+};
 
-document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) updateSelectAllState(); });
+document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) window.updateSelectAllState(); });
 
-function searchFilterList(val) {
+window.searchFilterList = function(val) {
     const query = val.toLowerCase().split(' ').filter(x => x); 
     document.querySelectorAll('.filter-val-item').forEach(label => {
         const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
         let matches = query.every(term => text.includes(term));
         label.style.display = matches ? '' : 'none';
     });
-}
+};
 
-function closeFilterMenu() { document.getElementById('excel-filter-menu').classList.add('hidden'); }
+window.closeFilterMenu = function() { document.getElementById('excel-filter-menu').classList.add('hidden'); };
 
-function clearFilterForCurrentCol() {
-    delete activeFilters[currentFilterCol];
-    closeFilterMenu(); saringTabelExcel(); 
-}
+window.clearFilterForCurrentCol = function() {
+    delete window.activeFilters[window.currentFilterCol];
+    window.closeFilterMenu(); window.saringTabelExcel(); 
+};
 
-function applyFilterForCurrentCol() {
+window.applyFilterForCurrentCol = function() {
     const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
     const totalBoxes = document.querySelectorAll('.filter-val-cb');
     
     if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') {
-        delete activeFilters[currentFilterCol];
+        delete window.activeFilters[window.currentFilterCol];
     } else {
         let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value));
-        activeFilters[currentFilterCol] = selectedVals;
+        window.activeFilters[window.currentFilterCol] = selectedVals;
     }
     
-    closeFilterMenu(); saringTabelExcel(); 
-}
+    window.closeFilterMenu(); window.saringTabelExcel(); 
+};
 
-function saringTabelExcel() {
+window.saringTabelExcel = function() {
     document.querySelectorAll('.row-ks').forEach(row => {
         let show = true;
-        for (let colClass in activeFilters) {
-            const allowedValues = activeFilters[colClass];
+        for (let colClass in window.activeFilters) {
+            const allowedValues = window.activeFilters[colClass];
             const cell = row.querySelector('.' + colClass);
             if (cell) {
                 let text = cell.getAttribute('data-search') || cell.innerText.trim();
@@ -1149,23 +1171,23 @@ function saringTabelExcel() {
         } else { 
             row.classList.add('filtered-out'); 
             let cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = false; highlightRow(cb, true); } 
+            if(cb) { cb.checked = false; window.highlightRow(cb, true); } 
         }
     });
     
-    selectAllState = 0;
-    updateSelectAllUI();
-    currentPage = 1; 
-    applyPagination(); 
-    updateFilterIcons();
-}
+    window.selectAllState = 0;
+    window.updateSelectAllUI();
+    window.currentPage = 1; 
+    window.applyPagination(); 
+    window.updateFilterIcons();
+};
 
-function updateFilterIcons() {
+window.updateFilterIcons = function() {
     document.querySelectorAll('.filter-icon').forEach(icon => {
         icon.classList.remove('text-amber-400', 'opacity-100');
         icon.classList.add('text-white', 'opacity-40');
     });
-    for (let colClass in activeFilters) {
+    for (let colClass in window.activeFilters) {
         const th = document.querySelector(`th.${colClass}`);
         if (th) {
             const icon = th.querySelector('.filter-icon');
@@ -1175,9 +1197,9 @@ function updateFilterIcons() {
             }
         }
     }
-}
+};
 
-function initResizableColumns() {
+window.initResizableColumns = function() {
     const cols = document.querySelectorAll('#main-table th');
     cols.forEach(col => {
         const existing = col.querySelector('.resizer');
@@ -1206,7 +1228,7 @@ function initResizableColumns() {
             resizer.classList.remove('resizing');
         };
     });
-}
+};
 
 // ========================================================
 // LOGIKA REQUEST KONVERSI
@@ -1216,7 +1238,7 @@ window.siapkanReqKonversi = function() {
     if(checkboxes.length !== 1) return alert('Silakan centang TEPAT 1 (satu) baris item yang ingin direquest konversi.');
 
     const cb = checkboxes[0];
-    selectedForReq = {
+    window.selectedForReq = {
         jenis_item: cb.dataset.jenis || '-',
         nama_item: cb.dataset.nama || '-',
         panjang: cb.dataset.pjg || '-',
@@ -1232,10 +1254,10 @@ window.siapkanReqKonversi = function() {
     const infoAsal = document.getElementById('req-info-asal');
     if(infoAsal) {
         infoAsal.innerHTML = `
-            <span class="text-blue-600">${selectedForReq.nama_item}</span> | 
-            ${selectedForReq.panjang} | ${selectedForReq.grade} | ${selectedForReq.dus} | ${selectedForReq.shading} | 
-            <span class="text-emerald-600">${selectedForReq.area}</span> | 
-            <span class="text-orange-600">${selectedForReq.customer_aktual}</span>
+            <span class="text-blue-600">${window.selectedForReq.nama_item}</span> | 
+            ${window.selectedForReq.panjang} | ${window.selectedForReq.grade} | ${window.selectedForReq.dus} | ${window.selectedForReq.shading} | 
+            <span class="text-emerald-600">${window.selectedForReq.area}</span> | 
+            <span class="text-orange-600">${window.selectedForReq.customer_aktual}</span>
         `;
     }
 
@@ -1252,24 +1274,24 @@ window.siapkanReqKonversi = function() {
 window.tutupModalReqKonversi = function() {
     document.getElementById('modal-req-konversi').classList.add('hidden');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
-    selectedForReq = null;
+    window.selectedForReq = null;
 };
 
 window.eksekusiReqKonversi = async function() {
-    if(!selectedForReq) return alert("Data sumber tidak valid!");
+    if(!window.selectedForReq) return alert("Data sumber tidak valid!");
 
-    const namaReq = document.getElementById('req-nama-item').value.trim() || selectedForReq.nama_item;
-    const pjgReq = document.getElementById('req-panjang').value.trim() || selectedForReq.panjang;
-    const gradeReq = document.getElementById('req-grade').value.trim() || selectedForReq.grade;
-    const dusReq = document.getElementById('req-dus').value.trim() || selectedForReq.dus;
-    const shadingReq = document.getElementById('req-shading').value.trim() || selectedForReq.shading;
+    const namaReq = document.getElementById('req-nama-item').value.trim() || window.selectedForReq.nama_item;
+    const pjgReq = document.getElementById('req-panjang').value.trim() || window.selectedForReq.panjang;
+    const gradeReq = document.getElementById('req-grade').value.trim() || window.selectedForReq.grade;
+    const dusReq = document.getElementById('req-dus').value.trim() || window.selectedForReq.dus;
+    const shadingReq = document.getElementById('req-shading').value.trim() || window.selectedForReq.shading;
     
     const qtyReq = parseInt(document.getElementById('req-qty').value);
     const qtyHasil = parseInt(document.getElementById('req-qty-hasil').value);
 
     if(isNaN(qtyReq) || qtyReq <= 0) return alert("Qty Request tidak valid!");
     if(isNaN(qtyHasil) || qtyHasil <= 0) return alert("Qty Hasil tidak valid!");
-    if(qtyReq > selectedForReq.qty_max) return alert(`Maksimal Qty Request adalah ${selectedForReq.qty_max} dus!`);
+    if(qtyReq > window.selectedForReq.qty_max) return alert(`Maksimal Qty Request adalah ${window.selectedForReq.qty_max} dus!`);
 
     const btn = document.getElementById('btn-save-req-konv'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
@@ -1283,15 +1305,15 @@ window.eksekusiReqKonversi = async function() {
         const payload = {
             kode_konversi: kodeKonversi,
             aktifitas_konversi: 'req',
-            area: selectedForReq.area,
-            jenis_item: selectedForReq.jenis_item,
-            nama_item: selectedForReq.nama_item,
-            panjang: selectedForReq.panjang,
-            grade: selectedForReq.grade,
-            dus: selectedForReq.dus,
-            shading: selectedForReq.shading,
-            keterangan: selectedForReq.keterangan,
-            "customer aktual": selectedForReq.customer_aktual,
+            area: window.selectedForReq.area,
+            jenis_item: window.selectedForReq.jenis_item,
+            nama_item: window.selectedForReq.nama_item,
+            panjang: window.selectedForReq.panjang,
+            grade: window.selectedForReq.grade,
+            dus: window.selectedForReq.dus,
+            shading: window.selectedForReq.shading,
+            keterangan: window.selectedForReq.keterangan,
+            "customer aktual": window.selectedForReq.customer_aktual,
             nama_item_req: namaReq,
             panjang_req: pjgReq,
             grade_req: gradeReq,
@@ -1306,11 +1328,11 @@ window.eksekusiReqKonversi = async function() {
         const { error } = await db.from('request_konversi').insert([payload]);
         if(error) throw error;
         
-        tutupModalReqKonversi();
+        window.tutupModalReqKonversi();
         alert("Berhasil membuat Request Konversi!");
     } catch(e) {
         alert("Gagal menyimpan request: " + e.message);
     } finally {
-        btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
+        btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons();
     }
 };
