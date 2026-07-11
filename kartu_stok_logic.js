@@ -20,48 +20,50 @@ window.selectAllState = 0;
 window.userColOrder = []; 
 window.selectedForReq = null; 
 
+// State penampung data request ganti customer yang sudah diproses
+window.processedGantiKeys = new Set();
+window.processedGlobalKeys = new Set();
+
 function safeJSONParse(data, fallback = null) {
     if (!data || data === 'undefined' || data === 'null') return fallback;
     if (typeof data !== 'string') return data; 
     try { return JSON.parse(data); } catch (e) { return fallback; }
 }
 
-window.currentUser = safeJSONParse(localStorage.getItem('user_session'), { username: 'Admin', role: 'admin' });
+const currentUser = safeJSONParse(localStorage.getItem('user_session'), { username: 'Admin', role: 'admin' });
 
-window.loadUserPreferences = function() {
-    const savedOrder = localStorage.getItem(`col_order_ks_${window.modeKS}_${window.currentUser.username}`);
+function loadUserPreferences() {
+    const savedOrder = localStorage.getItem(`col_order_ks_${modeKS}_${currentUser.username}`);
     if (savedOrder) {
-        try { window.userColOrder = JSON.parse(savedOrder); } catch(e) { window.userColOrder = []; }
+        try { userColOrder = JSON.parse(savedOrder); } catch(e) { userColOrder = []; }
     } else {
-        window.userColOrder = [];
+        userColOrder = [];
     }
     
     const savedRows = localStorage.getItem('wms_rows_per_page');
     if(savedRows) {
-        window.rowsPerPage = parseInt(savedRows);
+        rowsPerPage = parseInt(savedRows);
         const sel = document.getElementById('select-rows-per-page');
         if(sel) {
             let found = false;
-            Array.from(sel.options).forEach(opt => { if(opt.value == window.rowsPerPage) { opt.selected = true; found = true; } });
+            Array.from(sel.options).forEach(opt => { if(opt.value == rowsPerPage) { opt.selected = true; found = true; } });
             if(!found) {
                 sel.value = 'CUSTOM';
                 const inp = document.getElementById('input-custom-rows');
-                if(inp) { inp.classList.remove('hidden'); inp.value = window.rowsPerPage; }
+                if(inp) { inp.classList.remove('hidden'); inp.value = rowsPerPage; }
             }
         }
     }
-};
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
-    if(typeof initModernLayout === 'function') {
-        initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
-    }
+    initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
     
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
             if (!menu.contains(e.target) && !e.target.closest('button[title^="Filter"]')) {
-                window.closeFilterMenu();
+                closeFilterMenu();
             }
         }
         
@@ -73,22 +75,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    await window.loadMasterData();
-    window.loadUserPreferences(); 
-    window.muatDataStok(); 
+    await loadMasterData();
+    loadUserPreferences(); 
+    setTimeout(muatDataStok, 200);
 });
 
-window.toggleActionMenu = function(e) {
+function toggleActionMenu(e) {
     if(e) e.stopPropagation();
     const menu = document.getElementById('mobile-action-menu');
     if(menu) menu.classList.toggle('hidden');
-};
+}
 
-window.loadMasterData = async function() {
+async function loadMasterData() {
     try {
         const {data, error} = await db.from('master_2').select('*');
         if (data) {
-            window.masterData.kamus = data; 
+            masterData.kamus = data; 
             let poSet = new Set(); 
             let namaSet = new Set();
             let gradeSet = new Set();
@@ -128,9 +130,9 @@ window.loadMasterData = async function() {
             }
         }
     } catch (e) { console.error("Gagal memuat master data:", e); }
-};
+}
 
-window.translateBarcode = function(barcode) {
+function translateBarcode(barcode) {
     let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customer: '-' };
     if(!barcode) return data;
     const parts = barcode.split('/'); if (parts.length < 1) return data;
@@ -159,23 +161,26 @@ window.translateBarcode = function(barcode) {
         if(match) { data.mesin = match[1]; data.shift = match[2]; data.customer = match[3]; }
     }
     return data;
-};
+}
 
-window.sinkronisasiUlangStokAktual = function(tampilkanAlert = false) {
+function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
     alert("Fungsi Sinkronisasi Wipe & Rebuild dinonaktifkan untuk menjaga integritas data Customer Aktual hasil editan user.\n\nSistem kini menggunakan metode Incremental Update (+/-) secara otomatis setiap kali ada transaksi.");
-};
+}
 
-window.muatDataStok = async function() {
+async function muatDataStok() {
     const tbody = document.getElementById('tbody-ks');
     if(!tbody) return;
-    tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke Gudang Supabase...</p></td></tr>`;
+    
+    // REVISI: Mengubah teks loading menjadi "Menghubungkan ke database..."
+    tbody.innerHTML = `<tr><td colspan="16" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke database...</p></td></tr>`;
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
-        const [resStok, resAktual, resLembaran] = await Promise.all([
+        const [resStok, resAktual, resLembaran, resGanti] = await Promise.all([
             db.from('stok_qr').select('*'),
             db.from('stok_aktual').select('*'),
-            db.from('stok_lembaran').select('*').order('created_at', {ascending: false})
+            db.from('stok_lembaran').select('*').order('created_at', {ascending: false}),
+            db.from('ganti_customer').select('id_sku, customer_aktual_request, area') // Tarik data ganti_customer
         ]);
         
         if(resStok.error) throw resStok.error;
@@ -185,6 +190,22 @@ window.muatDataStok = async function() {
         window.stokAktualRaw = resAktual.data || [];
         window.stokLembaranRaw = resLembaran.data || [];
 
+        // Olah data ganti_customer ke dalam Set pencarian cepat
+        window.processedGantiKeys.clear();
+        window.processedGlobalKeys.clear();
+        if (resGanti && resGanti.data) {
+            resGanti.data.forEach(g => {
+                window.processedGantiKeys.add(`${g.id_sku}_${g.customer_aktual_request}_${g.area}`);
+                
+                // Untuk mode Global (tanpa area)
+                let parts = (g.id_sku || '').split('_');
+                if(parts.length >= 2) {
+                    let globalSku = parts.slice(1).join('_');
+                    window.processedGlobalKeys.add(`${globalSku}_${g.customer_aktual_request}`);
+                }
+            });
+        }
+
         let aktualMap = {};
         window.stokAktualRaw.forEach(a => {
             let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}`;
@@ -193,12 +214,12 @@ window.muatDataStok = async function() {
             if(!aktualMap[key][custAktual]) aktualMap[key][custAktual] = 0;
             aktualMap[key][custAktual] += (a.qty || 0);
         });
-        window.poDistributionMap = aktualMap;
+        poDistributionMap = aktualMap;
 
         let qrMap = {};
         window.stokQRRaw.forEach(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
-            let t = window.translateBarcode(r.qrcode);
+            let t = translateBarcode(r.qrcode);
             let area = p[0] || r.area || '-';
             let nama = p[1] || r.nama_item || t.namaItem;
             let pjg = p[2] || r.panjang || t.panjang;
@@ -215,7 +236,7 @@ window.muatDataStok = async function() {
 
         window.dataKSQR = window.stokQRRaw.map(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
-            let t = window.translateBarcode(r.qrcode);
+            let t = translateBarcode(r.qrcode);
             return {
                 qrcode: r.qrcode || '-', id_sku: r.id_sku || '-', id_po: r.id_po || '-', area: p[0] || r.area || '-', 
                 tglProduksi: r.tgl_produksi || t.tglProduksi || '-', mesin: r.mesin || t.mesin || '-', shift: r.shift || t.shift || '-', 
@@ -261,77 +282,13 @@ window.muatDataStok = async function() {
     }
 };
 
-window.setModeKS = function(m) {
-    window.modeKS = m;
-    const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-    const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-    
-    ['qr', 'global', 'area', 'lembaran'].forEach(tab => {
-        const el = document.getElementById('tab-' + tab);
-        if(el) el.className = (m === tab) ? activeClass : inactiveClass;
-    });
-    
-    const btnGantiPO = document.getElementById('btn-ganti-po-main');
-    if(btnGantiPO) btnGantiPO.classList.toggle('hidden', m === 'global' || m === 'lembaran');
-    
-    const btnReqKonv = document.getElementById('btn-req-konversi-main');
-    if(btnReqKonv) btnReqKonv.classList.toggle('hidden', m !== 'area');
-    
-    window.activeFilters = {}; 
-    window.loadUserPreferences(); 
-    window.renderTabel();
-};
-
-window.sortTable = function(colIndex, headerEl) {
-    const tbody = document.getElementById('tbody-ks');
-    const rows = Array.from(tbody.querySelectorAll('tr.row-ks'));
-    let isAsc = window.sortState[colIndex] !== 'asc'; window.sortState[colIndex] = isAsc ? 'asc' : 'desc';
-    
-    rows.sort((a, b) => {
-        let valA = a.cells[colIndex].getAttribute('data-search') || a.cells[colIndex].innerText.trim(); 
-        let valB = b.cells[colIndex].getAttribute('data-search') || b.cells[colIndex].innerText.trim();
-        let numA = parseFloat(valA); let numB = parseFloat(valB);
-        if(!isNaN(numA) && !isNaN(numB)) { return isAsc ? numA - numB : numB - numA; } 
-        else { return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA); }
-    });
-    
-    rows.forEach(row => tbody.appendChild(row));
-    document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-30'); });
-    const icon = headerEl.querySelector('.sort-icon');
-    if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
-    window.applyPagination();
-};
-
-window.thSort = function(idx, label, cls = "") {
-    const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
-    const noFilter = ['col-cb', 'col-open', 'col-proses'].includes(colClass);
-    
-    if (noFilter) {
-        return `<th class="hdr-std ${cls} select-none text-center"><div class="flex items-center justify-center w-full">${label}</div></th>`;
-    }
-
-    return `<th class="hdr-std ${cls} select-none group">
-        <div class="flex items-center justify-between w-full min-w-max gap-4">
-            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="window.sortTable(${idx}, this.closest('th'))" title="Sort ${label}">${label}</span>
-            <div class="flex items-center gap-1 shrink-0">
-                <button onclick="window.sortTable(${idx}, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
-                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 sort-icon opacity-40 group-hover:opacity-100 transition-opacity text-white"></i>
-                </button>
-                <button onclick="window.openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
-                    <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
-                </button>
-            </div>
-        </div>
-    </th>`;
-};
-
 window.renderTabel = function() {
     const thead = document.getElementById('thead-ks');
     const tbody = document.getElementById('tbody-ks');
     if(!thead || !tbody) return;
     
-    window.sortState = {}; 
-    window.selectAllState = 0;
+    sortState = {}; 
+    selectAllState = 0;
 
     const rowClassBase = "transition row-ks text-[13px]";
 
@@ -365,7 +322,7 @@ window.renderTabel = function() {
             const rowDataStr = encodeURIComponent(JSON.stringify(r));
             
             let baseSpec = `${r.nama}_${r.pjg}_${r.grade}_${r.dus}_${r.shading}`;
-            let poDist = window.poDistributionMap[baseSpec];
+            let poDist = poDistributionMap[baseSpec];
             let poArr = [];
             if(poDist) {
                 for(let po in poDist) {
@@ -374,6 +331,12 @@ window.renderTabel = function() {
             }
             let poString = poArr.length > 0 ? poArr.join(' | ') : 'KOSONG';
             let btnPO = `<button onclick="window.bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
+
+            // Deteksi apakah QR ini bagian dari id_sku yang sudah diproses di ganti_customer
+            let isProcessed = Array.from(window.processedGantiKeys).some(k => k.startsWith(r.id_sku));
+            let actionHtml = isProcessed 
+                ? `<div class="text-emerald-600 flex items-center justify-center" title="Sudah diproses"><i data-lucide="check-circle-2" class="w-5 h-5 mx-auto"></i></div>`
+                : `<button onclick="window.prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button>`;
 
             return `
                 <tr class="${rowClassBase}">
@@ -392,7 +355,7 @@ window.renderTabel = function() {
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-po-bawaan" data-search="${r.po_bawaan}">${r.po_bawaan}</td>
                     <td class="px-4 py-3 text-left col-po" data-search="${poString}">${btnPO}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
-                    <td class="px-4 py-3 text-center col-proses"><button onclick="window.prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button></td>
+                    <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
                 </tr>`;
         }).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="16" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -422,6 +385,14 @@ window.renderTabel = function() {
         tbody.innerHTML = window.dataKSArea.map((r) => {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             const rowDataStr = encodeURIComponent(JSON.stringify(r));
+            
+            // Deteksi apakah baris area ini sudah diproses
+            let checkKey = `${r.id_sku_base}_${r.customer_estimasi}_${r.area}`;
+            let isProcessed = window.processedGantiKeys.has(checkKey);
+            let actionHtml = isProcessed 
+                ? `<div class="text-emerald-600 flex items-center justify-center" title="Sudah diproses"><i data-lucide="check-circle-2" class="w-5 h-5 mx-auto"></i></div>`
+                : `<button onclick="window.prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button>`;
+
             return `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-estimasi="${r.customer_estimasi}" data-qty="${r.qty}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -436,7 +407,7 @@ window.renderTabel = function() {
                     <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
                     <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
-                    <td class="px-4 py-3 text-center col-proses"><button onclick="window.prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button></td>
+                    <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
                 </tr>`;
         }).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -465,6 +436,16 @@ window.renderTabel = function() {
 
         tbody.innerHTML = window.dataKSGlobal.map((r) => {
             const rowDataStr = encodeURIComponent(JSON.stringify(r));
+            
+            // Deteksi apakah baris global ini sudah diproses
+            let parts = (r.areas[0]?.id_sku_base || '').split('_');
+            let globalSku = parts.length >= 2 ? parts.slice(1).join('_') : '';
+            let checkKey = `${globalSku}_${r.customer_estimasi}`;
+            let isProcessed = window.processedGlobalKeys.has(checkKey);
+            let actionHtml = isProcessed 
+                ? `<div class="text-emerald-600 flex items-center justify-center" title="Sudah diproses"><i data-lucide="check-circle-2" class="w-5 h-5 mx-auto"></i></div>`
+                : `<button onclick="window.prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button>`;
+
             return `
             <tr class="${rowClassBase}">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -479,7 +460,7 @@ window.renderTabel = function() {
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
                 <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
                 <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
-                <td class="px-4 py-3 text-center col-proses"><button onclick="window.prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button></td>
+                <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
             </tr>
         `}).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -567,7 +548,7 @@ window.setCustomRowsPerPage = function(val) {
     let parsed = parseInt(val);
     if (!isNaN(parsed) && parsed > 0) {
         window.rowsPerPage = parsed;
-        localStorage.setItem('wms_rows_per_page', window.rowsPerPage);
+        localStorage.setItem('wms_rows_per_page', rowsPerPage);
         window.currentPage = 1;
         window.applyPagination();
     }
@@ -771,7 +752,7 @@ window.downloadXLS = function() {
     let ws = XLSX.utils.aoa_to_sheet(ws_data);
     let wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Kartu_Stok");
-    XLSX.writeFile(wb, `Kartu_Stok_${window.modeKS.toUpperCase()}.xlsx`);
+    XLSX.writeFile(wb, `Kartu_Stok_${modeKS.toUpperCase()}.xlsx`);
 };
 
 window.salinDataBreakdown = function() {
@@ -1232,7 +1213,7 @@ window.saringTabelExcel = function() {
     window.currentPage = 1; 
     window.applyPagination(); 
     window.updateFilterIcons();
-};
+}
 
 window.updateFilterIcons = function() {
     document.querySelectorAll('.filter-icon').forEach(icon => {
@@ -1249,7 +1230,7 @@ window.updateFilterIcons = function() {
             }
         }
     }
-};
+}
 
 window.initResizableColumns = function() {
     const cols = document.querySelectorAll('#main-table th');
@@ -1280,155 +1261,4 @@ window.initResizableColumns = function() {
             resizer.classList.remove('resizing');
         };
     });
-};
-
-// ========================================================
-// LOGIKA REQUEST KONVERSI
-// ========================================================
-window.siapkanReqKonversi = function() {
-    const checkboxes = document.querySelectorAll('.cb-main:checked');
-    if(checkboxes.length !== 1) return alert('Silakan centang TEPAT 1 (satu) baris item yang ingin direquest konversi.');
-
-    const cb = checkboxes[0];
-    window.selectedForReq = {
-        jenis_item: cb.dataset.jenis || '-',
-        nama_item: cb.dataset.nama || '-',
-        panjang: cb.dataset.pjg || '-',
-        grade: cb.dataset.grade || '-',
-        dus: cb.dataset.dus || '-',
-        shading: cb.dataset.shading || '-',
-        customer_aktual: cb.dataset.po || '-',
-        keterangan: cb.dataset.ket || '-',
-        area: cb.dataset.area || '-',
-        qty_max: parseInt(cb.dataset.qty) || 0
-    };
-
-    const infoAsal = document.getElementById('req-info-asal');
-    if(infoAsal) {
-        infoAsal.innerHTML = `
-            <span class="text-blue-600">${window.selectedForReq.nama_item}</span> | 
-            ${window.selectedForReq.panjang} | ${window.selectedForReq.grade} | ${window.selectedForReq.dus} | ${window.selectedForReq.shading} | 
-            <span class="text-emerald-600">${window.selectedForReq.area}</span> | 
-            <span class="text-orange-600">${window.selectedForReq.customer_aktual}</span>
-        `;
-    }
-
-    // Reset Form Input
-    ['req-nama-item', 'req-panjang', 'req-grade', 'req-dus', 'req-shading', 'req-qty', 'req-qty-hasil'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.value = '';
-    });
-
-    document.getElementById('modal-req-konversi').classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
-};
-
-window.tutupModalReqKonversi = function() {
-    document.getElementById('modal-req-konversi').classList.add('hidden');
-    document.getElementById('overlay-klik-luar').classList.add('hidden');
-    window.selectedForReq = null;
-};
-
-window.eksekusiReqKonversi = async function() {
-    if(!window.selectedForReq) return alert("Data sumber tidak valid!");
-
-    const namaReq = document.getElementById('req-nama-item').value.trim() || window.selectedForReq.nama_item;
-    const pjgReq = document.getElementById('req-panjang').value.trim() || window.selectedForReq.panjang;
-    const gradeReq = document.getElementById('req-grade').value.trim() || window.selectedForReq.grade;
-    const dusReq = document.getElementById('req-dus').value.trim() || window.selectedForReq.dus;
-    const shadingReq = document.getElementById('req-shading').value.trim() || window.selectedForReq.shading;
-    
-    const qtyReq = parseInt(document.getElementById('req-qty').value);
-    const qtyHasil = parseInt(document.getElementById('req-qty-hasil').value);
-
-    if(isNaN(qtyReq) || qtyReq <= 0) return alert("Qty Request tidak valid!");
-    if(isNaN(qtyHasil) || qtyHasil <= 0) return alert("Qty Hasil tidak valid!");
-    if(qtyReq > window.selectedForReq.qty_max) return alert(`Maksimal Qty Request adalah ${window.selectedForReq.qty_max} dus!`);
-
-    const btn = document.getElementById('btn-save-req-konv'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
-
-    try {
-        const { count } = await db.from('request_konversi').select('*', { count: 'exact', head: true });
-        const nextNum = (count || 0) + 1;
-        const kodeKonversi = `K-${String(nextNum).padStart(4, '0')}`;
-
-        const payload = {
-            kode_konversi: kodeKonversi,
-            aktifitas_konversi: 'req',
-            area: window.selectedForReq.area,
-            jenis_item: window.selectedForReq.jenis_item,
-            nama_item: window.selectedForReq.nama_item,
-            panjang: window.selectedForReq.panjang,
-            grade: window.selectedForReq.grade,
-            dus: window.selectedForReq.dus,
-            shading: window.selectedForReq.shading,
-            keterangan: window.selectedForReq.keterangan,
-            "customer aktual": window.selectedForReq.customer_aktual,
-            nama_item_req: namaReq,
-            panjang_req: pjgReq,
-            grade_req: gradeReq,
-            dus_req: dusReq,
-            shading_req: shadingReq,
-            qty_req: qtyReq.toString(),
-            qty_hasil: qtyHasil.toString(),
-            qty_proses: "0",
-            progres_konversi: "PENDING"
-        };
-
-        const { error } = await db.from('request_konversi').insert([payload]);
-        if(error) throw error;
-        
-        window.tutupModalReqKonversi();
-        alert("Berhasil membuat Request Konversi!");
-    } catch(e) {
-        alert("Gagal menyimpan request: " + e.message);
-    } finally {
-        btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons();
-    }
-};
-
-// ========================================================
-// FUNGSI PROSES KARTU STOK (GANTI CUSTOMER)
-// ========================================================
-window.prosesKartuStok = async function(encodedDataStr) {
-    const data = JSON.parse(decodeURIComponent(encodedDataStr));
-    
-    // Ambil data yang relevan dari baris yang diklik
-    const area = data.area || '-';
-    const jenis_item = data.jenis_item || data.jenis || '-';
-    const nama_item = data.nama_item || data.nama || '-';
-    const panjang = data.panjang || data.pjg || '-';
-    const grade = data.grade || '-';
-    const dus = data.dus || '-';
-    const shading = data.shading || '-';
-    const customer_aktual_awal = data.po_aktual || data.po || '-';
-    const customer_aktual_request = data.customer_estimasi || '-';
-    const qty_request = (data.qty || 0).toString();
-    const id_sku = data.id_sku_base || data.id_sku || '-';
-
-    if(!confirm(`Ajukan request ganti customer untuk item ini?\n\nItem: ${nama_item}\nCustomer Aktual: ${customer_aktual_awal}\nCustomer Request: ${customer_aktual_request}\nQty: ${qty_request} Dus`)) return;
-
-    const payload = {
-        area: area,
-        jenis_item: jenis_item,
-        nama_item: nama_item,
-        panjang: panjang,
-        grade: grade,
-        dus: dus,
-        shading: shading,
-        customer_aktual_awal: customer_aktual_awal,
-        customer_aktual_request: customer_aktual_request,
-        qty_request: qty_request,
-        qty_proses: "0",
-        id_sku: id_sku
-    };
-
-    try {
-        const { error } = await db.from('ganti_customer').insert([payload]);
-        if(error) throw error;
-        alert("Berhasil mengirim request ke tabel Ganti Customer!");
-    } catch(e) {
-        alert("Gagal mengirim request: " + e.message);
-    }
-};
+}
