@@ -81,7 +81,7 @@ window.tutupSemuaPopups = function() {
 
 window.muatData = async function() {
     const tbody = document.getElementById('tbody-ganti');
-    tbody.innerHTML = `<tr><td colspan="13" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menarik Data...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menarik Data...</p></td></tr>`;
     lucide.createIcons();
 
     try {
@@ -90,7 +90,7 @@ window.muatData = async function() {
         rawData = data || [];
         window.renderTabel();
     } catch(e) { 
-        tbody.innerHTML = `<tr><td colspan="13" class="p-10 text-center text-red-500 font-medium">Gagal: ${e.message}</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="14" class="p-10 text-center text-red-500 font-medium">Gagal: ${e.message}</td></tr>`; 
     }
 };
 
@@ -164,20 +164,21 @@ window.renderTabel = function() {
                 <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
             </th>
             ${window.thSort(1, 'Waktu Request', 'col-tgl')}
-            ${window.thSort(2, 'Jenis Item', 'col-jenis')}
-            ${window.thSort(3, 'Nama Item', 'col-nama')}
-            ${window.thSort(4, 'Panjang', 'col-pjg')}
-            ${window.thSort(5, 'Grade', 'col-grade')}
-            ${window.thSort(6, 'Dus', 'col-dus')}
-            ${window.thSort(7, 'Shading', 'col-shading')}
-            ${window.thSort(8, 'Customer Aktual', 'col-cust_awal')}
-            ${window.thSort(9, 'Customer Request', 'col-cust_req text-purple-300')}
-            ${window.thSort(10, 'Qty Request', 'col-qty_req')}
-            ${window.thSort(11, 'Qty Proses', 'col-qty_proses')}
+            ${window.thSort(2, 'Area', 'col-area')}
+            ${window.thSort(3, 'Jenis Item', 'col-jenis')}
+            ${window.thSort(4, 'Nama Item', 'col-nama')}
+            ${window.thSort(5, 'Panjang', 'col-pjg')}
+            ${window.thSort(6, 'Grade', 'col-grade')}
+            ${window.thSort(7, 'Dus', 'col-dus')}
+            ${window.thSort(8, 'Shading', 'col-shading')}
+            ${window.thSort(9, 'Customer Aktual', 'col-cust_awal')}
+            ${window.thSort(10, 'Customer Request', 'col-cust_req text-purple-300')}
+            ${window.thSort(11, 'Qty Request', 'col-qty_req')}
+            ${window.thSort(12, 'Qty Proses', 'col-qty_proses')}
             <th class="hdr-std w-20 col-btn text-center">Proses</th>
         </tr>`;
     
-    if(rawData.length === 0) { tbody.innerHTML = `<tr><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada data.</td></tr>`; return; }
+    if(rawData.length === 0) { tbody.innerHTML = `<tr><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada data.</td></tr>`; return; }
 
     tbody.innerHTML = rawData.map((r) => {
         const tgl = formatWIB(r.created_at);
@@ -186,6 +187,7 @@ window.renderTabel = function() {
             <tr class="transition r-row text-[13px] bg-white even:bg-slate-50 border-b border-slate-200">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-medium text-slate-600 text-center col-tgl" data-search="${tgl}">${tgl}</td>
+                <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area || '-'}">${r.area || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
                 <td class="px-4 py-3 font-semibold text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
