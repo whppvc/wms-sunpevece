@@ -48,14 +48,21 @@
 
     <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
-        <!-- TOOLBAR ATAS (Refresh di Kiri, Dropdown Aksi di Kanan) -->
+        <!-- TOOLBAR ATAS -->
         <div class="shrink-0 bg-white p-2 sm:p-3 flex items-center justify-between border-b border-slate-200 shadow-sm w-full z-20">
             
-            <!-- KIRI: TOMBOL REFRESH DATA -->
-            <button onclick="muatData()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-teal-700">
-                <div class="bg-teal-800 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="refresh-cw" class="w-4 h-4"></i></div>
-                <div class="bg-teal-700 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-teal-600 transition">Refresh Data</div>
-            </button>
+            <!-- KIRI: TOMBOL REFRESH & PROSES GANTI -->
+            <div class="flex items-center gap-2">
+                <button onclick="muatData()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-teal-700">
+                    <div class="bg-teal-800 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="refresh-cw" class="w-4 h-4"></i></div>
+                    <div class="bg-teal-700 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-teal-600 transition">Refresh Data</div>
+                </button>
+
+                <button onclick="bukaModalProsesGanti()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-indigo-700">
+                    <div class="bg-indigo-800 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="scan-line" class="w-4 h-4"></i></div>
+                    <div class="bg-indigo-700 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-indigo-600 transition">Proses Ganti</div>
+                </button>
+            </div>
 
             <!-- KANAN: DROPDOWN AKSI -->
             <div class="relative">
@@ -110,6 +117,53 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- MODAL SCAN KODE (PROSES GANTI) -->
+    <div id="modal-scan-ganti" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
+            <h3 class="text-lg font-black mb-2 flex items-center gap-2 text-indigo-700"><i data-lucide="scan-line"></i> Scan Dus (Ganti Customer)</h3>
+            <p class="text-xs font-bold text-slate-500 mb-5">Scan atau ketik QRCode kardus yang ingin diganti customernya sesuai request yang dipilih.</p>
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Input QRCode</label>
+                    <textarea id="input-scan-ganti" rows="4" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-600 font-mono font-bold text-sm text-slate-800 bg-slate-50 custom-scroll" placeholder="Scan barcode di sini..."></textarea>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('modal-scan-ganti').classList.add('hidden')" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase cursor-pointer hover:bg-slate-300 transition">Batal</button>
+                <button type="button" onclick="prosesKodeScan()" id="btn-proses-kode" class="w-2/3 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 border-b-4 border-indigo-800 flex justify-center items-center gap-2 cursor-pointer"><i data-lucide="search"></i> Proses Kode</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL KONFIRMASI GANTI CUSTOMER -->
+    <div id="modal-konfirmasi-ganti" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl border border-slate-200 flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="check-circle" class="w-5 h-5 text-emerald-600"></i> Apakah Data Sudah Benar?</h3>
+                <div class="flex gap-2">
+                    <button onclick="document.getElementById('modal-konfirmasi-ganti').classList.add('hidden')" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-bold rounded-lg text-xs uppercase transition hover:bg-slate-100 shadow-sm">Cancel</button>
+                    <button onclick="eksekusiGantiFinal()" id="btn-eksekusi-final" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg text-xs uppercase transition shadow-sm flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Proses Ganti</button>
+                </div>
+            </div>
+            <div class="p-4 bg-blue-50 border-b border-blue-100">
+                <p class="text-xs font-bold text-blue-800">Sistem telah memverifikasi <span id="lbl-jml-valid" class="text-lg font-black text-blue-900 mx-1">0</span> kardus yang spesifikasinya cocok dengan request.</p>
+            </div>
+            <div class="overflow-y-auto flex-1 custom-scroll p-0">
+                <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+                    <thead class="sticky top-0 bg-slate-800 text-white shadow-sm z-10">
+                        <tr>
+                            <th class="p-3 text-xs font-bold uppercase tracking-wider text-center">No</th>
+                            <th class="p-3 text-xs font-bold uppercase tracking-wider">Area</th>
+                            <th class="p-3 text-xs font-bold uppercase tracking-wider">QRCode</th>
+                            <th class="p-3 text-xs font-bold uppercase tracking-wider">Detail Item (Nama | Pjg | Grade | Dus | Shading | Ket)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-konfirmasi-ganti" class="text-slate-700 divide-y divide-slate-200"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- MODAL FILTER EXCEL -->
