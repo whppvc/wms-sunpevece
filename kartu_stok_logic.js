@@ -1,24 +1,24 @@
-let modeKS = 'area'; 
-let stokQRRaw = []; 
-let stokAktualRaw = []; 
-let stokLembaranRaw = [];
-let dataKSQR = []; 
-let dataKSArea = []; 
-let dataKSGlobal = [];
-let selectedForAction = []; 
-let sourcePOContext = ''; 
-let currentBreakdownData = [];
-let sortState = {};
-let masterData = { kamus: [] };
-let poDistributionMap = {}; 
+window.modeKS = 'area'; 
+window.stokQRRaw = []; 
+window.stokAktualRaw = []; 
+window.stokLembaranRaw = [];
+window.dataKSQR = []; 
+window.dataKSArea = []; 
+window.dataKSGlobal = [];
+window.selectedForAction = []; 
+window.sourcePOContext = ''; 
+window.currentBreakdownData = [];
+window.sortState = {};
+window.masterData = { kamus: [] };
+window.poDistributionMap = {}; 
 
-let currentPage = 1;
-let rowsPerPage = 10; 
-let activeFilters = {}; 
-let currentFilterCol = ''; 
-let selectAllState = 0; 
-let userColOrder = []; 
-let selectedForReq = null; 
+window.currentPage = 1;
+window.rowsPerPage = 10; 
+window.activeFilters = {}; 
+window.currentFilterCol = ''; 
+window.selectAllState = 0; 
+window.userColOrder = []; 
+window.selectedForReq = null; 
 
 function safeJSONParse(data, fallback = null) {
     if (!data || data === 'undefined' || data === 'null') return fallback;
@@ -26,40 +26,42 @@ function safeJSONParse(data, fallback = null) {
     try { return JSON.parse(data); } catch (e) { return fallback; }
 }
 
-const currentUser = safeJSONParse(localStorage.getItem('user_session'), { username: 'Admin', role: 'admin' });
+window.currentUser = safeJSONParse(localStorage.getItem('user_session'), { username: 'Admin', role: 'admin' });
 
-function loadUserPreferences() {
-    const savedOrder = localStorage.getItem(`col_order_ks_${modeKS}_${currentUser.username}`);
+window.loadUserPreferences = function() {
+    const savedOrder = localStorage.getItem(`col_order_ks_${window.modeKS}_${window.currentUser.username}`);
     if (savedOrder) {
-        try { userColOrder = JSON.parse(savedOrder); } catch(e) { userColOrder = []; }
+        try { window.userColOrder = JSON.parse(savedOrder); } catch(e) { window.userColOrder = []; }
     } else {
-        userColOrder = [];
+        window.userColOrder = [];
     }
     
     const savedRows = localStorage.getItem('wms_rows_per_page');
     if(savedRows) {
-        rowsPerPage = parseInt(savedRows);
+        window.rowsPerPage = parseInt(savedRows);
         const sel = document.getElementById('select-rows-per-page');
         if(sel) {
             let found = false;
-            Array.from(sel.options).forEach(opt => { if(opt.value == rowsPerPage) { opt.selected = true; found = true; } });
+            Array.from(sel.options).forEach(opt => { if(opt.value == window.rowsPerPage) { opt.selected = true; found = true; } });
             if(!found) {
                 sel.value = 'CUSTOM';
                 const inp = document.getElementById('input-custom-rows');
-                if(inp) { inp.classList.remove('hidden'); inp.value = rowsPerPage; }
+                if(inp) { inp.classList.remove('hidden'); inp.value = window.rowsPerPage; }
             }
         }
     }
-}
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
-    initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
+    if(typeof initModernLayout === 'function') {
+        initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
+    }
     
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
             if (!menu.contains(e.target) && !e.target.closest('button[title^="Filter"]')) {
-                closeFilterMenu();
+                window.closeFilterMenu();
             }
         }
         
@@ -71,22 +73,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    await loadMasterData();
-    loadUserPreferences(); 
-    setTimeout(muatDataStok, 200);
+    await window.loadMasterData();
+    window.loadUserPreferences(); 
+    window.muatDataStok(); 
 });
 
-function toggleActionMenu(e) {
+window.toggleActionMenu = function(e) {
     if(e) e.stopPropagation();
     const menu = document.getElementById('mobile-action-menu');
     if(menu) menu.classList.toggle('hidden');
-}
+};
 
-async function loadMasterData() {
+window.loadMasterData = async function() {
     try {
         const {data, error} = await db.from('master_2').select('*');
         if (data) {
-            masterData.kamus = data; 
+            window.masterData.kamus = data; 
             let poSet = new Set(); 
             let namaSet = new Set();
             let gradeSet = new Set();
@@ -126,9 +128,9 @@ async function loadMasterData() {
             }
         }
     } catch (e) { console.error("Gagal memuat master data:", e); }
-}
+};
 
-function translateBarcode(barcode) {
+window.translateBarcode = function(barcode) {
     let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customer: '-' };
     if(!barcode) return data;
     const parts = barcode.split('/'); if (parts.length < 1) return data;
@@ -157,16 +159,16 @@ function translateBarcode(barcode) {
         if(match) { data.mesin = match[1]; data.shift = match[2]; data.customer = match[3]; }
     }
     return data;
-}
+};
 
-function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
+window.sinkronisasiUlangStokAktual = function(tampilkanAlert = false) {
     alert("Fungsi Sinkronisasi Wipe & Rebuild dinonaktifkan untuk menjaga integritas data Customer Aktual hasil editan user.\n\nSistem kini menggunakan metode Incremental Update (+/-) secara otomatis setiap kali ada transaksi.");
-}
+};
 
-async function muatDataStok() {
+window.muatDataStok = async function() {
     const tbody = document.getElementById('tbody-ks');
     if(!tbody) return;
-    tbody.innerHTML = `<tr><td colspan="16" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke Gudang Supabase...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke Gudang Supabase...</p></td></tr>`;
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
@@ -179,24 +181,24 @@ async function muatDataStok() {
         if(resStok.error) throw resStok.error;
         if(resAktual.error) throw resAktual.error;
         
-        stokQRRaw = resStok.data || [];
-        stokAktualRaw = resAktual.data || [];
-        stokLembaranRaw = resLembaran.data || [];
+        window.stokQRRaw = resStok.data || [];
+        window.stokAktualRaw = resAktual.data || [];
+        window.stokLembaranRaw = resLembaran.data || [];
 
         let aktualMap = {};
-        stokAktualRaw.forEach(a => {
+        window.stokAktualRaw.forEach(a => {
             let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}`;
             if(!aktualMap[key]) aktualMap[key] = {};
             let custAktual = a.customer_aktual || '-';
             if(!aktualMap[key][custAktual]) aktualMap[key][custAktual] = 0;
             aktualMap[key][custAktual] += (a.qty || 0);
         });
-        poDistributionMap = aktualMap;
+        window.poDistributionMap = aktualMap;
 
         let qrMap = {};
-        stokQRRaw.forEach(r => {
+        window.stokQRRaw.forEach(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
-            let t = translateBarcode(r.qrcode);
+            let t = window.translateBarcode(r.qrcode);
             let area = p[0] || r.area || '-';
             let nama = p[1] || r.nama_item || t.namaItem;
             let pjg = p[2] || r.panjang || t.panjang;
@@ -211,9 +213,9 @@ async function muatDataStok() {
             qrMap[key].push(r.qrcode);
         });
 
-        dataKSQR = stokQRRaw.map(r => {
+        window.dataKSQR = window.stokQRRaw.map(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
-            let t = translateBarcode(r.qrcode);
+            let t = window.translateBarcode(r.qrcode);
             return {
                 qrcode: r.qrcode || '-', id_sku: r.id_sku || '-', id_po: r.id_po || '-', area: p[0] || r.area || '-', 
                 tglProduksi: r.tgl_produksi || t.tglProduksi || '-', mesin: r.mesin || t.mesin || '-', shift: r.shift || t.shift || '-', 
@@ -225,7 +227,7 @@ async function muatDataStok() {
             };
         });
 
-        dataKSArea = stokAktualRaw.map(a => {
+        window.dataKSArea = window.stokAktualRaw.map(a => {
             let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_bawaan}_${a.keterangan}`;
             return {
                 ...a,
@@ -243,7 +245,7 @@ async function muatDataStok() {
         });
 
         let globalMap = {};
-        dataKSArea.forEach(a => {
+        window.dataKSArea.forEach(a => {
             let gKey = `${a.jenis}_${a.nama}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.customer_estimasi}_${a.keterangan}`;
             if(!globalMap[gKey]) {
                 globalMap[gKey] = { gKey: gKey, jenis: a.jenis, nama: a.nama, pjg: a.pjg, grade: a.grade, dus: a.dus, shading: a.shading, po: a.po_aktual, customer_estimasi: a.customer_estimasi, ket: a.keterangan, qty: 0, areas: [] };
@@ -251,16 +253,16 @@ async function muatDataStok() {
             globalMap[gKey].qty += a.qty;
             globalMap[gKey].areas.push(a);
         });
-        dataKSGlobal = Object.values(globalMap);
+        window.dataKSGlobal = Object.values(globalMap);
 
-        renderTabel();
+        window.renderTabel();
     } catch(e) { 
         tbody.innerHTML = `<tr><td colspan="16" class="p-10 text-center text-red-500 font-medium">Gagal mengolah data: ${e.message}</td></tr>`; 
     }
-}
+};
 
-function setModeKS(m) {
-    modeKS = m;
+window.setModeKS = function(m) {
+    window.modeKS = m;
     const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     
@@ -275,15 +277,15 @@ function setModeKS(m) {
     const btnReqKonv = document.getElementById('btn-req-konversi-main');
     if(btnReqKonv) btnReqKonv.classList.toggle('hidden', m !== 'area');
     
-    activeFilters = {}; 
-    loadUserPreferences(); 
-    renderTabel();
-}
+    window.activeFilters = {}; 
+    window.loadUserPreferences(); 
+    window.renderTabel();
+};
 
-function sortTable(colIndex, headerEl) {
+window.sortTable = function(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-ks');
     const rows = Array.from(tbody.querySelectorAll('tr.row-ks'));
-    let isAsc = sortState[colIndex] !== 'asc'; sortState[colIndex] = isAsc ? 'asc' : 'desc';
+    let isAsc = window.sortState[colIndex] !== 'asc'; window.sortState[colIndex] = isAsc ? 'asc' : 'desc';
     
     rows.sort((a, b) => {
         let valA = a.cells[colIndex].getAttribute('data-search') || a.cells[colIndex].innerText.trim(); 
@@ -297,10 +299,10 @@ function sortTable(colIndex, headerEl) {
     document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-30'); });
     const icon = headerEl.querySelector('.sort-icon');
     if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
-    applyPagination();
-}
+    window.applyPagination();
+};
 
-function thSort(idx, label, cls = "") {
+window.thSort = function(idx, label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-open', 'col-proses'].includes(colClass);
     
@@ -310,59 +312,60 @@ function thSort(idx, label, cls = "") {
 
     return `<th class="hdr-std ${cls} select-none group">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
-            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable(${idx}, this.closest('th'))" title="Sort ${label}">${label}</span>
+            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="window.sortTable(${idx}, this.closest('th'))" title="Sort ${label}">${label}</span>
             <div class="flex items-center gap-1 shrink-0">
-                <button onclick="sortTable(${idx}, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
+                <button onclick="window.sortTable(${idx}, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 sort-icon opacity-40 group-hover:opacity-100 transition-opacity text-white"></i>
                 </button>
-                <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
+                <button onclick="window.openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
                     <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
                 </button>
             </div>
         </div>
     </th>`;
-}
+};
 
-function renderTabel() {
+window.renderTabel = function() {
     const thead = document.getElementById('thead-ks');
     const tbody = document.getElementById('tbody-ks');
     if(!thead || !tbody) return;
     
-    sortState = {}; 
-    selectAllState = 0;
+    window.sortState = {}; 
+    window.selectAllState = 0;
 
     const rowClassBase = "transition row-ks text-[13px]";
 
-    if(modeKS === 'qr') {
+    if(window.modeKS === 'qr') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
-                ${thSort(1, 'Area', 'col-area')}
-                ${thSort(2, 'QRCode', 'col-qr')}
-                ${thSort(3, 'Tgl Produksi', 'col-tgl')}
-                ${thSort(4, 'Mesin', 'col-mesin')}
-                ${thSort(5, 'Shift', 'col-shift')}
-                ${thSort(6, 'Jenis Item', 'col-jenis')}
-                ${thSort(7, 'Nama Item', 'col-nama')}
-                ${thSort(8, 'Panjang', 'col-pjg')}
-                ${thSort(9, 'Grade', 'col-grade')}
-                ${thSort(10, 'Dus', 'col-dus')}
-                ${thSort(11, 'Shading', 'col-shading')}
-                ${thSort(12, 'Customer Bawaan', 'col-po-bawaan')}
-                ${thSort(13, 'Customer Aktual', 'col-po')}
-                ${thSort(14, 'Keterangan', 'col-ket')}
-                ${thSort(15, 'Proses', 'col-proses w-20')}
+                ${window.thSort(1, 'Area', 'col-area')}
+                ${window.thSort(2, 'QRCode', 'col-qr')}
+                ${window.thSort(3, 'Tgl Produksi', 'col-tgl')}
+                ${window.thSort(4, 'Mesin', 'col-mesin')}
+                ${window.thSort(5, 'Shift', 'col-shift')}
+                ${window.thSort(6, 'Jenis Item', 'col-jenis')}
+                ${window.thSort(7, 'Nama Item', 'col-nama')}
+                ${window.thSort(8, 'Panjang', 'col-pjg')}
+                ${window.thSort(9, 'Grade', 'col-grade')}
+                ${window.thSort(10, 'Dus', 'col-dus')}
+                ${window.thSort(11, 'Shading', 'col-shading')}
+                ${window.thSort(12, 'Customer Bawaan', 'col-po-bawaan')}
+                ${window.thSort(13, 'Customer Aktual', 'col-po')}
+                ${window.thSort(14, 'Keterangan', 'col-ket')}
+                <th class="hdr-std w-20 col-proses text-center">Proses</th>
             </tr>`;
         
-        if(dataKSQR.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="16" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(window.dataKSQR.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="16" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
-        tbody.innerHTML = dataKSQR.map((r) => {
+        tbody.innerHTML = window.dataKSQR.map((r) => {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
+            const rowDataStr = encodeURIComponent(JSON.stringify(r));
             
             let baseSpec = `${r.nama}_${r.pjg}_${r.grade}_${r.dus}_${r.shading}`;
-            let poDist = poDistributionMap[baseSpec];
+            let poDist = window.poDistributionMap[baseSpec];
             let poArr = [];
             if(poDist) {
                 for(let po in poDist) {
@@ -370,11 +373,11 @@ function renderTabel() {
                 }
             }
             let poString = poArr.length > 0 ? poArr.join(' | ') : 'KOSONG';
-            let btnPO = `<button onclick="bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
+            let btnPO = `<button onclick="window.bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
 
             return `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-mono font-medium text-slate-800 text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
@@ -389,38 +392,39 @@ function renderTabel() {
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-po-bawaan" data-search="${r.po_bawaan}">${r.po_bawaan}</td>
                     <td class="px-4 py-3 text-left col-po" data-search="${poString}">${btnPO}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
-                    <td class="px-4 py-3 text-center col-proses"><button onclick="prosesKartuStok('${r.qrcode}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button></td>
+                    <td class="px-4 py-3 text-center col-proses"><button onclick="window.prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button></td>
                 </tr>`;
         }).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="16" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     }
-    else if(modeKS === 'area') {
+    else if(window.modeKS === 'area') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
-                ${thSort(1, 'Area', 'col-area')}
-                ${thSort(2, 'Jenis Item', 'col-jenis')}
-                ${thSort(3, 'Nama Item', 'col-nama')}
-                ${thSort(4, 'Panjang', 'col-pjg')}
-                ${thSort(5, 'Grade', 'col-grade')}
-                ${thSort(6, 'Dus', 'col-dus')}
-                ${thSort(7, 'Shading', 'col-shading')}
-                ${thSort(8, 'Customer Aktual', 'col-po')}
-                ${thSort(9, 'Customer Estimasi', 'col-estimasi text-purple-300')}
-                ${thSort(10, 'Keterangan', 'col-ket')}
-                ${thSort(11, 'Total Qty (Dus)', 'col-qty')}
-                ${thSort(12, 'Proses', 'col-proses w-20')}
+                ${window.thSort(1, 'Area', 'col-area')}
+                ${window.thSort(2, 'Jenis Item', 'col-jenis')}
+                ${window.thSort(3, 'Nama Item', 'col-nama')}
+                ${window.thSort(4, 'Panjang', 'col-pjg')}
+                ${window.thSort(5, 'Grade', 'col-grade')}
+                ${window.thSort(6, 'Dus', 'col-dus')}
+                ${window.thSort(7, 'Shading', 'col-shading')}
+                ${window.thSort(8, 'Customer Aktual', 'col-po')}
+                ${window.thSort(9, 'Customer Estimasi', 'col-estimasi text-purple-300')}
+                ${window.thSort(10, 'Keterangan', 'col-ket')}
+                ${window.thSort(11, 'Total Qty (Dus)', 'col-qty')}
+                <th class="hdr-std w-20 col-proses text-center">Proses</th>
             </tr>`;
         
-        if(dataKSArea.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(window.dataKSArea.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
-        tbody.innerHTML = dataKSArea.map((r) => {
+        tbody.innerHTML = window.dataKSArea.map((r) => {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
+            const rowDataStr = encodeURIComponent(JSON.stringify(r));
             return `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-estimasi="${r.customer_estimasi}" data-qty="${r.qty}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-estimasi="${r.customer_estimasi}" data-qty="${r.qty}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                     <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
@@ -432,37 +436,39 @@ function renderTabel() {
                     <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
                     <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
-                    <td class="px-4 py-3 text-center col-proses"><button onclick="prosesKartuStok('${r.id_sku_base}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button></td>
+                    <td class="px-4 py-3 text-center col-proses"><button onclick="window.prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button></td>
                 </tr>`;
         }).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
-    else if (modeKS === 'global') {
+    else if (window.modeKS === 'global') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
                 <th class="hdr-std w-12 col-open text-center">Detail</th>
-                ${thSort(2, 'Jenis Item', 'col-jenis')}
-                ${thSort(3, 'Nama Item', 'col-nama')}
-                ${thSort(4, 'Panjang', 'col-pjg')}
-                ${thSort(5, 'Grade', 'col-grade')}
-                ${thSort(6, 'Dus', 'col-dus')}
-                ${thSort(7, 'Shading', 'col-shading')}
-                ${thSort(8, 'Customer Aktual', 'col-po')}
-                ${thSort(9, 'Customer Estimasi', 'col-estimasi text-purple-300')}
-                ${thSort(10, 'Keterangan', 'col-ket')}
-                ${thSort(11, 'TOTAL (DUS)', 'col-qty')}
-                ${thSort(12, 'Proses', 'col-proses w-20')}
+                ${window.thSort(2, 'Jenis Item', 'col-jenis')}
+                ${window.thSort(3, 'Nama Item', 'col-nama')}
+                ${window.thSort(4, 'Panjang', 'col-pjg')}
+                ${window.thSort(5, 'Grade', 'col-grade')}
+                ${window.thSort(6, 'Dus', 'col-dus')}
+                ${window.thSort(7, 'Shading', 'col-shading')}
+                ${window.thSort(8, 'Customer Aktual', 'col-po')}
+                ${window.thSort(9, 'Customer Estimasi', 'col-estimasi text-purple-300')}
+                ${window.thSort(10, 'Keterangan', 'col-ket')}
+                ${window.thSort(11, 'TOTAL (DUS)', 'col-qty')}
+                <th class="hdr-std w-20 col-proses text-center">Proses</th>
             </tr>`;
 
-        if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(window.dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
-        tbody.innerHTML = dataKSGlobal.map((r) => `
+        tbody.innerHTML = window.dataKSGlobal.map((r) => {
+            const rowDataStr = encodeURIComponent(JSON.stringify(r));
+            return `
             <tr class="${rowClassBase}">
-                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 text-center col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 text-center col-open"><button onclick="window.bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
@@ -473,32 +479,34 @@ function renderTabel() {
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
                 <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
                 <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
-                <td class="px-4 py-3 text-center col-proses"><button onclick="prosesKartuStok('${r.gKey}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button></td>
+                <td class="px-4 py-3 text-center col-proses"><button onclick="window.prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button></td>
             </tr>
-        `).join('');
+        `}).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
-    else if (modeKS === 'lembaran') {
+    else if (window.modeKS === 'lembaran') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                    <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
-                ${thSort(1, 'Kode Master', 'col-area')}
-                ${thSort(2, 'Nama Item', 'col-nama')}
-                ${thSort(3, 'Panjang', 'col-pjg')}
-                ${thSort(4, 'Grade', 'col-grade')}
-                ${thSort(5, 'Dus', 'col-dus')}
-                ${thSort(6, 'Shading', 'col-shading')}
-                ${thSort(7, 'Keterangan', 'col-ket')}
-                ${thSort(8, 'Proses', 'col-proses w-20')}
+                ${window.thSort(1, 'Kode Master', 'col-area')}
+                ${window.thSort(2, 'Nama Item', 'col-nama')}
+                ${window.thSort(3, 'Panjang', 'col-pjg')}
+                ${window.thSort(4, 'Grade', 'col-grade')}
+                ${window.thSort(5, 'Dus', 'col-dus')}
+                ${window.thSort(6, 'Shading', 'col-shading')}
+                ${window.thSort(7, 'Keterangan', 'col-ket')}
+                <th class="hdr-std w-20 col-proses text-center">Proses</th>
             </tr>`;
         
-        if(stokLembaranRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="9" class="p-8 text-center font-medium text-slate-400">Tidak ada data stok lembaran.</td></tr>`; return; }
+        if(window.stokLembaranRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="9" class="p-8 text-center font-medium text-slate-400">Tidak ada data stok lembaran.</td></tr>`; return; }
 
-        tbody.innerHTML = stokLembaranRaw.map((r) => `
+        tbody.innerHTML = window.stokLembaranRaw.map((r) => {
+            const rowDataStr = encodeURIComponent(JSON.stringify(r));
+            return `
             <tr class="${rowClassBase}">
-                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg || '-'}">${r.pjg || '-'}</td>
@@ -506,66 +514,66 @@ function renderTabel() {
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
-                <td class="px-4 py-3 text-center col-proses"><button onclick="prosesKartuStok('${r.id}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button></td>
+                <td class="px-4 py-3 text-center col-proses"><button onclick="window.prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button></td>
             </tr>
-        `).join('');
+        `}).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="9" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     }
 
-    applyColumnOrder(); 
+    window.applyColumnOrder(); 
     if(typeof lucide !== 'undefined') lucide.createIcons(); 
-    updateSelectAllUI();
-    saringTabelExcel(); 
-    initResizableColumns(); 
-}
+    window.updateSelectAllUI();
+    window.saringTabelExcel(); 
+    window.initResizableColumns(); 
+};
 
-function highlightRow(checkbox, skipStateReset = false) {
+window.highlightRow = function(checkbox, skipStateReset = false) {
     const tr = checkbox.closest('tr');
     if (tr) {
         if (checkbox.checked) { tr.classList.add('selected-row'); } 
         else { tr.classList.remove('selected-row'); }
     }
     
-    if(!skipStateReset && !checkbox.checked && selectAllState !== 0) {
-        selectAllState = 0;
-        updateSelectAllUI();
+    if(!skipStateReset && !checkbox.checked && window.selectAllState !== 0) {
+        window.selectAllState = 0;
+        window.updateSelectAllUI();
     }
     
-    if(!skipStateReset) updateSelectedCount();
-}
+    if(!skipStateReset) window.updateSelectedCount();
+};
 
-function changeRowsPerPage(val) {
+window.changeRowsPerPage = function(val) {
     const customInput = document.getElementById('input-custom-rows');
     if (val === 'ALL') {
-        rowsPerPage = 999999; 
+        window.rowsPerPage = 999999; 
         if(customInput) customInput.classList.add('hidden');
     } else if (val === 'CUSTOM') {
         if(customInput) {
             customInput.classList.remove('hidden');
             customInput.focus();
             let customVal = parseInt(customInput.value);
-            rowsPerPage = (customVal > 0) ? customVal : rowsPerPage;
+            window.rowsPerPage = (customVal > 0) ? customVal : window.rowsPerPage;
         }
     } else {
-        rowsPerPage = parseInt(val);
+        window.rowsPerPage = parseInt(val);
         if(customInput) customInput.classList.add('hidden');
     }
-    localStorage.setItem('wms_rows_per_page', rowsPerPage);
-    currentPage = 1; 
-    applyPagination();
-}
+    localStorage.setItem('wms_rows_per_page', window.rowsPerPage);
+    window.currentPage = 1; 
+    window.applyPagination();
+};
 
-function setCustomRowsPerPage(val) {
+window.setCustomRowsPerPage = function(val) {
     let parsed = parseInt(val);
     if (!isNaN(parsed) && parsed > 0) {
-        rowsPerPage = parsed;
-        localStorage.setItem('wms_rows_per_page', rowsPerPage);
-        currentPage = 1;
-        applyPagination();
+        window.rowsPerPage = parsed;
+        localStorage.setItem('wms_rows_per_page', window.rowsPerPage);
+        window.currentPage = 1;
+        window.applyPagination();
     }
-}
+};
 
-function applyPagination() {
+window.applyPagination = function() {
     const allRows = Array.from(document.querySelectorAll('#tbody-ks tr.row-ks'));
     
     allRows.forEach(row => {
@@ -577,13 +585,13 @@ function applyPagination() {
     const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
     
     const totalFiltered = visibleRows.length;
-    const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
+    const totalPages = Math.ceil(totalFiltered / window.rowsPerPage) || 1;
     
-    if(currentPage > totalPages) currentPage = totalPages;
-    if(currentPage < 1) currentPage = 1;
+    if(window.currentPage > totalPages) window.currentPage = totalPages;
+    if(window.currentPage < 1) window.currentPage = 1;
 
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
+    const startIndex = (window.currentPage - 1) * window.rowsPerPage;
+    const endIndex = startIndex + window.rowsPerPage;
 
     let sumQty = 0;
     visibleRows.forEach((row, index) => {
@@ -604,38 +612,38 @@ function applyPagination() {
 
     if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
     if(document.getElementById('lbl-total-qty')) document.getElementById('lbl-total-qty').innerText = sumQty;
-    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
+    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = window.currentPage;
     if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
     
-    if (selectAllState === 1) {
-        selectAllState = 0;
-        updateSelectAllUI();
+    if (window.selectAllState === 1) {
+        window.selectAllState = 0;
+        window.updateSelectAllUI();
     }
     
-    applySelection();
-    updateSelectedCount();
-}
+    window.applySelection();
+    window.updateSelectedCount();
+};
 
-function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } }
-function nextPage() { 
+window.prevPage = function() { if(window.currentPage > 1) { window.currentPage--; window.applyPagination(); } };
+window.nextPage = function() { 
     const totalVisible = document.querySelectorAll('#tbody-ks tr.row-ks:not(.filtered-out)').length;
-    if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
-}
+    if(window.currentPage < Math.ceil(totalVisible / window.rowsPerPage)) { window.currentPage++; window.applyPagination(); } 
+};
 
-function updateSelectedCount() {
+window.updateSelectedCount = function() {
     const count = document.querySelectorAll('.cb-main:checked').length;
     const lbl = document.getElementById('lbl-pilih-baris');
     if(lbl) lbl.innerText = count;
-}
+};
 
-async function eksekusiGantiPO() {
+window.eksekusiGantiPO = async function() {
     const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
     if(!newPO) return alert("Silakan Pilih Customer Baru dari daftar dropdown!");
 
     const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
     if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
 
-    let maxDus = selectedForAction.reduce((sum, row) => sum + row.qty, 0);
+    let maxDus = window.selectedForAction.reduce((sum, row) => sum + row.qty, 0);
     if(qtyDiminta > maxDus) return alert(`Maksimal jatah adalah ${maxDus} dus!`);
 
     const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
@@ -644,7 +652,7 @@ async function eksekusiGantiPO() {
     try {
         let qtySisaUntukDiupdate = qtyDiminta; 
         
-        for(let row of selectedForAction) {
+        for(let row of window.selectedForAction) {
             if (qtySisaUntukDiupdate <= 0) break; 
             
             let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
@@ -695,19 +703,19 @@ async function eksekusiGantiPO() {
             }
         }
         
-        tutupModalPO(); 
-        if(sourcePOContext === 'breakdown') tutupModalBreakdown();
+        window.tutupModalPO(); 
+        if(window.sourcePOContext === 'breakdown') window.tutupModalBreakdown();
         
-        await muatDataStok();
+        await window.muatDataStok();
         alert("Berhasil mengganti Customer Estimasi!");
     } catch (error) { 
         alert("GAGAL UPDATE: " + error.message); 
     } finally { 
         btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons(); 
     }
-}
+};
 
-function salinData() {
+window.salinData = function() {
     const cek = document.querySelectorAll('.cb-main:checked');
     if(cek.length === 0) return alert("Pilih data yang ingin disalin!");
 
@@ -733,9 +741,9 @@ function salinData() {
     navigator.clipboard.writeText(copyString).then(() => {
         alert("Berhasil menyalin!");
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
-}
+};
 
-function downloadXLS() {
+window.downloadXLS = function() {
     if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
     
     let ws_data = [];
@@ -763,10 +771,10 @@ function downloadXLS() {
     let ws = XLSX.utils.aoa_to_sheet(ws_data);
     let wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Kartu_Stok");
-    XLSX.writeFile(wb, `Kartu_Stok_${modeKS.toUpperCase()}.xlsx`);
-}
+    XLSX.writeFile(wb, `Kartu_Stok_${window.modeKS.toUpperCase()}.xlsx`);
+};
 
-function salinDataBreakdown() {
+window.salinDataBreakdown = function() {
     const cek = document.querySelectorAll('.cb-bd:checked');
     if(cek.length === 0) return alert("Pilih data breakdown yang ingin disalin!");
 
@@ -784,23 +792,23 @@ function salinDataBreakdown() {
     navigator.clipboard.writeText(copyString).then(() => {
         alert("Berhasil menyalin detail breakdown!");
     }).catch(err => { alert("Browser menolak akses Clipboard. Silakan salin manual."); });
-}
+};
 
-function toggleSidebarKolom() {
+window.toggleSidebarKolom = function() {
     const sidebar = document.getElementById('sidebar-kolom');
     const overlay = document.getElementById('overlay-klik-luar');
     
     if (sidebar.classList.contains('translate-x-full')) {
         sidebar.classList.remove('translate-x-full');
         overlay.classList.remove('hidden');
-        renderDragList();
+        window.renderDragList();
     } else {
         sidebar.classList.add('translate-x-full');
         overlay.classList.add('hidden');
     }
-}
+};
 
-function renderDragList() {
+window.renderDragList = function() {
     const container = document.getElementById('kolom-drag-container');
     if(!container) return;
     container.innerHTML = '';
@@ -831,7 +839,7 @@ function renderDragList() {
 
     container.addEventListener('dragover', e => {
         e.preventDefault();
-        const afterElement = getDragAfterElement(container, e.clientY);
+        const afterElement = window.getDragAfterElement(container, e.clientY);
         const draggable = document.querySelector('.dragging');
         if (draggable) {
             if (afterElement == null) {
@@ -841,9 +849,9 @@ function renderDragList() {
             }
         }
     });
-}
+};
 
-function getDragAfterElement(container, y) {
+window.getDragAfterElement = function(container, y) {
     const draggableElements = [...container.querySelectorAll('.drag-item:not(.dragging)')];
     return draggableElements.reduce((closest, child) => {
         const box = child.getBoundingClientRect();
@@ -854,33 +862,33 @@ function getDragAfterElement(container, y) {
             return closest;
         }
     }, { offset: Number.NEGATIVE_INFINITY }).element;
-}
+};
 
-function simpanUrutanKolom() {
+window.simpanUrutanKolom = function() {
     const items = document.querySelectorAll('.drag-item');
     let newOrder = [];
     items.forEach(item => newOrder.push(item.getAttribute('data-col')));
     
-    userColOrder = newOrder;
-    localStorage.setItem(`col_order_ks_${modeKS}_${currentUser.username}`, JSON.stringify(newOrder));
+    window.userColOrder = newOrder;
+    localStorage.setItem(`col_order_ks_${window.modeKS}_${window.currentUser.username}`, JSON.stringify(newOrder));
     
     alert("Urutan kolom berhasil disimpan!");
-    toggleSidebarKolom();
-    renderTabel(); 
-}
+    window.toggleSidebarKolom();
+    window.renderTabel(); 
+};
 
-function resetUrutanKolom() {
+window.resetUrutanKolom = function() {
     if(!confirm("Kembalikan urutan kolom ke default?")) return;
-    userColOrder = [];
-    localStorage.removeItem(`col_order_ks_${modeKS}_${currentUser.username}`);
+    window.userColOrder = [];
+    localStorage.removeItem(`col_order_ks_${window.modeKS}_${window.currentUser.username}`);
     
     alert("Urutan dikembalikan ke default.");
-    toggleSidebarKolom();
-    renderTabel();
-}
+    window.toggleSidebarKolom();
+    window.renderTabel();
+};
 
-function applyColumnOrder() {
-    if (!userColOrder || userColOrder.length === 0) return;
+window.applyColumnOrder = function() {
+    if (!window.userColOrder || window.userColOrder.length === 0) return;
 
     const table = document.getElementById('main-table');
     const rows = table.querySelectorAll('tr');
@@ -903,7 +911,7 @@ function applyColumnOrder() {
         if (cbCell) row.appendChild(cbCell); 
         if (openCell) row.appendChild(openCell); 
 
-        userColOrder.forEach(colId => {
+        window.userColOrder.forEach(colId => {
             if (cellMap[colId]) {
                 row.appendChild(cellMap[colId]);
             }
@@ -911,16 +919,16 @@ function applyColumnOrder() {
 
         cells.forEach(c => {
             const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
-            if (colClass !== 'col-cb' && colClass !== 'col-open' && colClass !== 'col-proses' && !userColOrder.includes(colClass)) {
+            if (colClass !== 'col-cb' && colClass !== 'col-open' && colClass !== 'col-proses' && !window.userColOrder.includes(colClass)) {
                 row.appendChild(c);
             }
         });
         
         if (prosesCell) row.appendChild(prosesCell);
     });
-}
+};
 
-function tutupSemuaPopups() {
+window.tutupSemuaPopups = function() {
     document.getElementById('modal-lihat-po').classList.add('hidden');
     document.getElementById('modal-breakdown').classList.add('hidden');
     document.getElementById('modal-po').classList.add('hidden');
@@ -929,13 +937,13 @@ function tutupSemuaPopups() {
     if(document.getElementById('sidebar-kolom')) {
         document.getElementById('sidebar-kolom').classList.add('translate-x-full');
     }
-}
+};
 
-function bukaBreakdown(gKey) {
-    const item = dataKSGlobal.find(g => g.gKey === gKey); if(!item) return;
+window.bukaBreakdown = function(gKey) {
+    const item = window.dataKSGlobal.find(g => g.gKey === gKey); if(!item) return;
 
     document.getElementById('bd-title-item').innerText = `${item.nama} | ${item.pjg} | ${item.grade} | DUS: ${item.dus} | SHADING: ${item.shading} | KET: ${item.ket}`;
-    currentBreakdownData = item.areas;
+    window.currentBreakdownData = item.areas;
 
     const tbody = document.getElementById('tbody-breakdown');
     tbody.innerHTML = item.areas.map((a, i) => {
@@ -943,7 +951,7 @@ function bukaBreakdown(gKey) {
         const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
         return `
             <tr class="transition bd-row text-[13px] ${stripeClass}">
-                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="window.highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
                 <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi">${a.customer_estimasi}</td>
@@ -954,24 +962,24 @@ function bukaBreakdown(gKey) {
 
     document.getElementById('modal-breakdown').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
-}
+};
 
-function tutupModalBreakdown() { 
+window.tutupModalBreakdown = function() { 
     document.getElementById('modal-breakdown').classList.add('hidden'); 
     document.getElementById('overlay-klik-luar').classList.add('hidden'); 
-}
+};
 
-function highlightBdRow(cb) {
+window.highlightBdRow = function(cb) {
     const tr = cb.closest('tr');
     if(cb.checked) { tr.classList.add('selected-row'); } 
     else { tr.classList.remove('selected-row'); }
-}
+};
 
-function toggleCentangBreakdown(checked) { 
-    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; highlightBdRow(cb); }); 
-}
+window.toggleCentangBreakdown = function(checked) { 
+    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; window.highlightBdRow(cb); }); 
+};
 
-function bukaModalLihatPO(encodedPOs) {
+window.bukaModalLihatPO = function(encodedPOs) {
     const poStr = decodeURIComponent(encodedPOs);
     const poArr = poStr.split('|').map(p => p.trim()).filter(p => p);
     const ul = document.getElementById('list-po-aktual');
@@ -991,20 +999,20 @@ function bukaModalLihatPO(encodedPOs) {
     if(typeof lucide !== 'undefined') lucide.createIcons();
     document.getElementById('modal-lihat-po').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
-}
+};
 
-function siapkanGantiPO(context) {
+window.siapkanGantiPO = function(context) {
     let checkboxes = [];
     if(context === 'main') {
-        if(modeKS === 'global' || modeKS === 'lembaran') return;
+        if(window.modeKS === 'global' || window.modeKS === 'lembaran') return;
         checkboxes = document.querySelectorAll('.cb-main:checked');
     } else { checkboxes = document.querySelectorAll('.cb-bd:checked'); }
 
-    if(checkboxes.length === 0) return alert('Silakan centang item / area yang ingin diganti Customer-nya.');
+    if(checkboxes.length === 0) return alert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya.');
 
-    selectedForAction = []; let totalDus = 0;
+    window.selectedForAction = []; let totalDus = 0;
     checkboxes.forEach(cb => {
-        selectedForAction.push({ 
+        window.selectedForAction.push({ 
             id_sku: cb.dataset.idsku, 
             po_aktual: cb.dataset.po,
             customer_estimasi: cb.dataset.estimasi,
@@ -1014,89 +1022,89 @@ function siapkanGantiPO(context) {
         totalDus += parseInt(cb.dataset.qty) || 1;
     });
 
-    sourcePOContext = context;
+    window.sourcePOContext = context;
     document.getElementById('input-new-po').value = '';
     const inputQty = document.getElementById('input-qty-ganti');
     inputQty.value = totalDus; inputQty.max = totalDus; 
 
     document.getElementById('modal-po').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
-}
+};
 
-function tutupModalPO() { 
+window.tutupModalPO = function() { 
     document.getElementById('modal-po').classList.add('hidden'); 
     if(document.getElementById('modal-breakdown').classList.contains('hidden')) {
         document.getElementById('overlay-klik-luar').classList.add('hidden'); 
     }
-}
+};
 
-function cycleSelectAll() {
-    selectAllState = (selectAllState + 1) % 3;
-    updateSelectAllUI();
-    applySelection();
-}
+window.cycleSelectAll = function() {
+    window.selectAllState = (window.selectAllState + 1) % 3;
+    window.updateSelectAllUI();
+    window.applySelection();
+};
 
-function updateSelectAllUI() {
+window.updateSelectAllUI = function() {
     const btn = document.getElementById('btn-select-all');
     if(!btn) return;
     
-    if (selectAllState === 0) {
+    if (window.selectAllState === 0) {
         btn.innerHTML = '';
         btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto';
-    } else if (selectAllState === 1) {
+    } else if (window.selectAllState === 1) {
         btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
         btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto';
-    } else if (selectAllState === 2) {
+    } else if (window.selectAllState === 2) {
         btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>';
         btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
     }
     if(typeof lucide !== 'undefined') lucide.createIcons();
-}
+};
 
-function applySelection() {
+window.applySelection = function() {
     const allRows = Array.from(document.querySelectorAll('#tbody-ks tr.row-ks'));
     const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
     
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
+    const startIndex = (window.currentPage - 1) * window.rowsPerPage;
+    const endIndex = startIndex + window.rowsPerPage;
 
-    if (selectAllState === 0) {
+    if (window.selectAllState === 0) {
         allRows.forEach(row => {
             const cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = false; highlightRow(cb, true); }
+            if(cb) { cb.checked = false; window.highlightRow(cb, true); }
         });
-    } else if (selectAllState === 1) {
+    } else if (window.selectAllState === 1) {
         allRows.forEach(row => {
             const cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = false; highlightRow(cb, true); }
+            if(cb) { cb.checked = false; window.highlightRow(cb, true); }
         });
         visibleRows.forEach((row, index) => {
             if(index >= startIndex && index < endIndex) {
                 const cb = row.querySelector('.cb-main');
-                if(cb) { cb.checked = true; highlightRow(cb, true); }
+                if(cb) { cb.checked = true; window.highlightRow(cb, true); }
             }
         });
-    } else if (selectAllState === 2) {
+    } else if (window.selectAllState === 2) {
         visibleRows.forEach(row => {
             const cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = true; highlightRow(cb, true); }
+            if(cb) { cb.checked = true; window.highlightRow(cb, true); }
         });
     }
-    updateSelectedCount();
-}
+    window.updateSelectedCount();
+};
 
-function openColumnFilter(event, colClass, colName) {
+window.openColumnFilter = function(event, colClass, colName) {
     event.stopPropagation();
-    currentFilterCol = colClass;
+    window.currentFilterCol = colClass;
     document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
 
     let uniqueValues = new Set();
     
     document.querySelectorAll('#tbody-ks tr.row-ks').forEach(row => {
         let showBasedOnOthers = true;
-        for (let otherCol in activeFilters) {
+        for (let otherCol in window.activeFilters) {
             if (otherCol !== colClass) { 
-                const allowed = activeFilters[otherCol];
+                const allowed = window.activeFilters[otherCol];
                 const c = row.querySelector('.' + otherCol);
                 let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
                 if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
@@ -1112,11 +1120,11 @@ function openColumnFilter(event, colClass, colName) {
     });
 
     let sortedValues = Array.from(uniqueValues).sort();
-    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
+    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
     
     sortedValues.forEach(val => {
         let isChecked = true;
-        if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
+        if (window.activeFilters[colClass] && !window.activeFilters[colClass].includes(val)) { isChecked = false; }
         listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}">
             <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
             <span class="truncate text-slate-600">${val}</span>
@@ -1124,7 +1132,7 @@ function openColumnFilter(event, colClass, colName) {
     });
 
     document.getElementById('filter-values-list').innerHTML = listHtml;
-    updateSelectAllState();
+    window.updateSelectAllState();
     document.getElementById('filter-search-input').value = '';
     
     const menu = document.getElementById('excel-filter-menu');
@@ -1149,14 +1157,14 @@ function openColumnFilter(event, colClass, colName) {
     menu.style.left = `${leftPos}px`;
     
     document.getElementById('filter-search-input').focus();
-}
+};
 
-function toggleAllFilterValues(checked) {
+window.toggleAllFilterValues = function(checked) {
     document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
-    updateSelectAllState();
-}
+    window.updateSelectAllState();
+};
 
-function updateSelectAllState() {
+window.updateSelectAllState = function() {
     const allCbs = document.querySelectorAll('.filter-val-cb');
     const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
     const selectAll = document.getElementById('filter-select-all');
@@ -1164,45 +1172,45 @@ function updateSelectAllState() {
     if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
     else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
     else { selectAll.checked = false; selectAll.indeterminate = true; }
-}
+};
 
-document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) updateSelectAllState(); });
+document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) window.updateSelectAllState(); });
 
-function searchFilterList(val) {
+window.searchFilterList = function(val) {
     const query = val.toLowerCase().split(' ').filter(x => x); 
     document.querySelectorAll('.filter-val-item').forEach(label => {
         const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
         let matches = query.every(term => text.includes(term));
         label.style.display = matches ? '' : 'none';
     });
-}
+};
 
-function closeFilterMenu() { document.getElementById('excel-filter-menu').classList.add('hidden'); }
+window.closeFilterMenu = function() { document.getElementById('excel-filter-menu').classList.add('hidden'); };
 
-function clearFilterForCurrentCol() {
-    delete activeFilters[currentFilterCol];
-    closeFilterMenu(); saringTabelExcel(); 
-}
+window.clearFilterForCurrentCol = function() {
+    delete window.activeFilters[window.currentFilterCol];
+    window.closeFilterMenu(); window.saringTabelExcel(); 
+};
 
-function applyFilterForCurrentCol() {
+window.applyFilterForCurrentCol = function() {
     const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
     const totalBoxes = document.querySelectorAll('.filter-val-cb');
     
     if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') {
-        delete activeFilters[currentFilterCol];
+        delete window.activeFilters[window.currentFilterCol];
     } else {
         let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value));
-        activeFilters[currentFilterCol] = selectedVals;
+        window.activeFilters[window.currentFilterCol] = selectedVals;
     }
     
-    closeFilterMenu(); saringTabelExcel(); 
-}
+    window.closeFilterMenu(); window.saringTabelExcel(); 
+};
 
-function saringTabelExcel() {
+window.saringTabelExcel = function() {
     document.querySelectorAll('.row-ks').forEach(row => {
         let show = true;
-        for (let colClass in activeFilters) {
-            const allowedValues = activeFilters[colClass];
+        for (let colClass in window.activeFilters) {
+            const allowedValues = window.activeFilters[colClass];
             const cell = row.querySelector('.' + colClass);
             if (cell) {
                 let text = cell.getAttribute('data-search') || cell.innerText.trim();
@@ -1215,23 +1223,23 @@ function saringTabelExcel() {
         } else { 
             row.classList.add('filtered-out'); 
             let cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = false; highlightRow(cb, true); } 
+            if(cb) { cb.checked = false; window.highlightRow(cb, true); } 
         }
     });
     
-    selectAllState = 0;
-    updateSelectAllUI();
-    currentPage = 1; 
-    applyPagination(); 
-    updateFilterIcons();
-}
+    window.selectAllState = 0;
+    window.updateSelectAllUI();
+    window.currentPage = 1; 
+    window.applyPagination(); 
+    window.updateFilterIcons();
+};
 
-function updateFilterIcons() {
+window.updateFilterIcons = function() {
     document.querySelectorAll('.filter-icon').forEach(icon => {
         icon.classList.remove('text-amber-400', 'opacity-100');
         icon.classList.add('text-white', 'opacity-40');
     });
-    for (let colClass in activeFilters) {
+    for (let colClass in window.activeFilters) {
         const th = document.querySelector(`th.${colClass}`);
         if (th) {
             const icon = th.querySelector('.filter-icon');
@@ -1241,9 +1249,9 @@ function updateFilterIcons() {
             }
         }
     }
-}
+};
 
-function initResizableColumns() {
+window.initResizableColumns = function() {
     const cols = document.querySelectorAll('#main-table th');
     cols.forEach(col => {
         const existing = col.querySelector('.resizer');
@@ -1272,17 +1280,17 @@ function initResizableColumns() {
             resizer.classList.remove('resizing');
         };
     });
-}
+};
 
 // ========================================================
 // LOGIKA REQUEST KONVERSI
 // ========================================================
-function siapkanReqKonversi() {
+window.siapkanReqKonversi = function() {
     const checkboxes = document.querySelectorAll('.cb-main:checked');
     if(checkboxes.length !== 1) return alert('Silakan centang TEPAT 1 (satu) baris item yang ingin direquest konversi.');
 
     const cb = checkboxes[0];
-    selectedForReq = {
+    window.selectedForReq = {
         jenis_item: cb.dataset.jenis || '-',
         nama_item: cb.dataset.nama || '-',
         panjang: cb.dataset.pjg || '-',
@@ -1298,10 +1306,10 @@ function siapkanReqKonversi() {
     const infoAsal = document.getElementById('req-info-asal');
     if(infoAsal) {
         infoAsal.innerHTML = `
-            <span class="text-blue-600">${selectedForReq.nama_item}</span> | 
-            ${selectedForReq.panjang} | ${selectedForReq.grade} | ${selectedForReq.dus} | ${selectedForReq.shading} | 
-            <span class="text-emerald-600">${selectedForReq.area}</span> | 
-            <span class="text-orange-600">${selectedForReq.customer_aktual}</span>
+            <span class="text-blue-600">${window.selectedForReq.nama_item}</span> | 
+            ${window.selectedForReq.panjang} | ${window.selectedForReq.grade} | ${window.selectedForReq.dus} | ${window.selectedForReq.shading} | 
+            <span class="text-emerald-600">${window.selectedForReq.area}</span> | 
+            <span class="text-orange-600">${window.selectedForReq.customer_aktual}</span>
         `;
     }
 
@@ -1313,35 +1321,34 @@ function siapkanReqKonversi() {
 
     document.getElementById('modal-req-konversi').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
-}
+};
 
-function tutupModalReqKonversi() {
+window.tutupModalReqKonversi = function() {
     document.getElementById('modal-req-konversi').classList.add('hidden');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
-    selectedForReq = null;
-}
+    window.selectedForReq = null;
+};
 
-async function eksekusiReqKonversi() {
-    if(!selectedForReq) return alert("Data sumber tidak valid!");
+window.eksekusiReqKonversi = async function() {
+    if(!window.selectedForReq) return alert("Data sumber tidak valid!");
 
-    const namaReq = document.getElementById('req-nama-item').value.trim() || selectedForReq.nama_item;
-    const pjgReq = document.getElementById('req-panjang').value.trim() || selectedForReq.panjang;
-    const gradeReq = document.getElementById('req-grade').value.trim() || selectedForReq.grade;
-    const dusReq = document.getElementById('req-dus').value.trim() || selectedForReq.dus;
-    const shadingReq = document.getElementById('req-shading').value.trim() || selectedForReq.shading;
+    const namaReq = document.getElementById('req-nama-item').value.trim() || window.selectedForReq.nama_item;
+    const pjgReq = document.getElementById('req-panjang').value.trim() || window.selectedForReq.panjang;
+    const gradeReq = document.getElementById('req-grade').value.trim() || window.selectedForReq.grade;
+    const dusReq = document.getElementById('req-dus').value.trim() || window.selectedForReq.dus;
+    const shadingReq = document.getElementById('req-shading').value.trim() || window.selectedForReq.shading;
     
     const qtyReq = parseInt(document.getElementById('req-qty').value);
     const qtyHasil = parseInt(document.getElementById('req-qty-hasil').value);
 
     if(isNaN(qtyReq) || qtyReq <= 0) return alert("Qty Request tidak valid!");
     if(isNaN(qtyHasil) || qtyHasil <= 0) return alert("Qty Hasil tidak valid!");
-    if(qtyReq > selectedForReq.qty_max) return alert(`Maksimal Qty Request adalah ${selectedForReq.qty_max} dus!`);
+    if(qtyReq > window.selectedForReq.qty_max) return alert(`Maksimal Qty Request adalah ${window.selectedForReq.qty_max} dus!`);
 
     const btn = document.getElementById('btn-save-req-konv'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
 
     try {
-        // Generate Kode Konversi (K-XXXX)
         const { count } = await db.from('request_konversi').select('*', { count: 'exact', head: true });
         const nextNum = (count || 0) + 1;
         const kodeKonversi = `K-${String(nextNum).padStart(4, '0')}`;
@@ -1349,15 +1356,15 @@ async function eksekusiReqKonversi() {
         const payload = {
             kode_konversi: kodeKonversi,
             aktifitas_konversi: 'req',
-            area: selectedForReq.area,
-            jenis_item: selectedForReq.jenis_item,
-            nama_item: selectedForReq.nama_item,
-            panjang: selectedForReq.panjang,
-            grade: selectedForReq.grade,
-            dus: selectedForReq.dus,
-            shading: selectedForReq.shading,
-            keterangan: selectedForReq.keterangan,
-            "customer aktual": selectedForReq.customer_aktual,
+            area: window.selectedForReq.area,
+            jenis_item: window.selectedForReq.jenis_item,
+            nama_item: window.selectedForReq.nama_item,
+            panjang: window.selectedForReq.panjang,
+            grade: window.selectedForReq.grade,
+            dus: window.selectedForReq.dus,
+            shading: window.selectedForReq.shading,
+            keterangan: window.selectedForReq.keterangan,
+            "customer aktual": window.selectedForReq.customer_aktual,
             nama_item_req: namaReq,
             panjang_req: pjgReq,
             grade_req: gradeReq,
@@ -1372,69 +1379,56 @@ async function eksekusiReqKonversi() {
         const { error } = await db.from('request_konversi').insert([payload]);
         if(error) throw error;
         
-        tutupModalReqKonversi();
+        window.tutupModalReqKonversi();
         alert("Berhasil membuat Request Konversi!");
     } catch(e) {
         alert("Gagal menyimpan request: " + e.message);
     } finally {
         btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons();
     }
-}
+};
 
 // ========================================================
-// FUNGSI PROSES KARTU STOK
+// FUNGSI PROSES KARTU STOK (GANTI CUSTOMER)
 // ========================================================
-function prosesKartuStok(id) {
-    alert("Fungsi proses untuk ID: " + id + " akan dijelaskan nanti.");
-}
+window.prosesKartuStok = async function(encodedDataStr) {
+    const data = JSON.parse(decodeURIComponent(encodedDataStr));
+    
+    // Ambil data yang relevan dari baris yang diklik
+    const area = data.area || '-';
+    const jenis_item = data.jenis_item || data.jenis || '-';
+    const nama_item = data.nama_item || data.nama || '-';
+    const panjang = data.panjang || data.pjg || '-';
+    const grade = data.grade || '-';
+    const dus = data.dus || '-';
+    const shading = data.shading || '-';
+    const customer_aktual_awal = data.po_aktual || data.po || '-';
+    const customer_aktual_request = data.customer_estimasi || '-';
+    const qty_request = (data.qty || 0).toString();
+    const id_sku = data.id_sku_base || data.id_sku || '-';
 
-// Mengekspos semua deklarasi ke window agar bisa diakses HTML onclick
-window.toggleActionMenu = toggleActionMenu;
-window.loadMasterData = loadMasterData;
-window.setModeKS = setModeKS;
-window.sortTable = sortTable;
-window.thSort = thSort;
-window.renderTabel = renderTabel;
-window.changeRowsPerPage = changeRowsPerPage;
-window.setCustomRowsPerPage = setCustomRowsPerPage;
-window.prevPage = prevPage;
-window.nextPage = nextPage;
-window.eksekusiGantiPO = eksekusiGantiPO;
-window.salinData = salinData;
-window.downloadXLS = downloadXLS;
-window.salinDataBreakdown = salinDataBreakdown;
-window.toggleSidebarKolom = toggleSidebarKolom;
-window.simpanUrutanKolom = simpanUrutanKolom;
-window.resetUrutanKolom = resetUrutanKolom;
-window.tutupSemuaPopups = tutupSemuaPopups;
-window.bukaBreakdown = bukaBreakdown;
-window.tutupModalBreakdown = tutupModalBreakdown;
-window.highlightBdRow = highlightBdRow;
-window.toggleCentangBreakdown = toggleCentangBreakdown;
-window.bukaModalLihatPO = bukaModalLihatPO;
-window.siapkanGantiPO = siapkanGantiPO;
-window.tutupModalPO = tutupModalPO;
-window.cycleSelectAll = cycleSelectAll;
-window.openColumnFilter = openColumnFilter;
-window.toggleAllFilterValues = toggleAllFilterValues;
-window.searchFilterList = searchFilterList;
-window.closeFilterMenu = closeFilterMenu;
-window.clearFilterForCurrentCol = clearFilterForCurrentCol;
-window.applyFilterForCurrentCol = applyFilterForCurrentCol;
-window.highlightRow = highlightRow;
-window.sinkronisasiUlangStokAktual = sinkronisasiUlangStokAktual;
-window.muatDataStok = muatDataStok;
-window.applyPagination = applyPagination;
-window.updateSelectAllUI = updateSelectAllUI;
-window.applySelection = applySelection;
-window.updateSelectedCount = updateSelectedCount;
-window.saringTabelExcel = saringTabelExcel;
-window.updateFilterIcons = updateFilterIcons;
-window.updateSelectAllState = updateSelectAllState;
-window.initResizableColumns = initResizableColumns;
-window.renderDragList = renderDragList;
-window.applyColumnOrder = applyColumnOrder;
-window.siapkanReqKonversi = siapkanReqKonversi;
-window.tutupModalReqKonversi = tutupModalReqKonversi;
-window.eksekusiReqKonversi = eksekusiReqKonversi;
-window.prosesKartuStok = prosesKartuStok;
+    if(!confirm(`Ajukan request ganti customer untuk item ini?\n\nItem: ${nama_item}\nCustomer Aktual: ${customer_aktual_awal}\nCustomer Request: ${customer_aktual_request}\nQty: ${qty_request} Dus`)) return;
+
+    const payload = {
+        area: area,
+        jenis_item: jenis_item,
+        nama_item: nama_item,
+        panjang: panjang,
+        grade: grade,
+        dus: dus,
+        shading: shading,
+        customer_aktual_awal: customer_aktual_awal,
+        customer_aktual_request: customer_aktual_request,
+        qty_request: qty_request,
+        qty_proses: "0",
+        id_sku: id_sku
+    };
+
+    try {
+        const { error } = await db.from('ganti_customer').insert([payload]);
+        if(error) throw error;
+        alert("Berhasil mengirim request ke tabel Ganti Customer!");
+    } catch(e) {
+        alert("Gagal mengirim request: " + e.message);
+    }
+};
