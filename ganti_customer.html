@@ -48,21 +48,22 @@
 
     <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
-        <!-- TOOLBAR ATAS -->
-        <div class="shrink-0 bg-white p-2 sm:p-3 flex items-center justify-end border-b border-slate-200 shadow-sm w-full z-20">
+        <!-- TOOLBAR ATAS (Refresh di Kiri, Dropdown Aksi di Kanan) -->
+        <div class="shrink-0 bg-white p-2 sm:p-3 flex items-center justify-between border-b border-slate-200 shadow-sm w-full z-20">
             
-            <!-- TOMBOL REFRESH DATA (Dikeluarkan dari Dropdown) -->
-            <button onclick="muatData()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-teal-700 mr-2">
+            <!-- KIRI: TOMBOL REFRESH DATA -->
+            <button onclick="muatData()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-teal-700">
                 <div class="bg-teal-800 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="refresh-cw" class="w-4 h-4"></i></div>
                 <div class="bg-teal-700 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-teal-600 transition">Refresh Data</div>
             </button>
 
-            <!-- DROPDOWN AKSI -->
+            <!-- KANAN: DROPDOWN AKSI -->
             <div class="relative">
                 <button onclick="toggleActionMenu(event)" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition" title="Menu Aksi">
                     <i data-lucide="menu" class="w-5 h-5"></i>
                 </button>
                 <div id="mobile-action-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
+                    <button onclick="cancelRequest(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-amber-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="x-circle" class="w-4 h-4 text-amber-500"></i> Cancel Request</button>
                     <button onclick="hapusRequest(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-rose-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Request</button>
                     <button onclick="salinData(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
                     <button onclick="downloadXLS(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
