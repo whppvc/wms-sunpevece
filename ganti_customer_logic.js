@@ -110,6 +110,22 @@ window.hapusRequest = async function() {
     }
 };
 
+window.cancelRequest = async function() {
+    const checked = document.querySelectorAll('.cb-main:checked');
+    if(checked.length === 0) return alert("Pilih baris request yang ingin di-cancel terlebih dahulu!");
+    if(!confirm(`Yakin ingin membatalkan (Cancel) ${checked.length} request ganti customer ini?\n(Status di Kartu Stok akan otomatis kembali menjadi tombol 'Proses')`)) return;
+
+    const ids = Array.from(checked).map(cb => cb.value);
+    try {
+        const { error } = await db.from('ganti_customer').delete().in('id', ids);
+        if(error) throw error;
+        alert("Request berhasil dibatalkan!");
+        window.muatData();
+    } catch(e) { 
+        alert("Gagal membatalkan request: " + e.message); 
+    }
+};
+
 window.sortTable = function(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-ganti');
     const rows = Array.from(tbody.querySelectorAll('tr.r-row'));
