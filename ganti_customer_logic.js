@@ -8,6 +8,10 @@ let currentFilterCol = '';
 let selectAllState = 0; 
 let userColOrder = []; 
 
+// State untuk Proses Ganti Customer
+let activeRequestRow = null;
+let scannedValidItems = [];
+
 function safeJSONParse(data, fallback = null) {
     if (!data || data === 'undefined' || data === 'null') return fallback;
     if (typeof data !== 'string') return data; 
@@ -148,7 +152,7 @@ window.sortTable = function(colIndex, headerEl) {
 
 window.thSort = function(idx, label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
-    const noFilter = ['col-cb', 'col-btn'].includes(colClass);
+    const noFilter = ['col-cb', 'col-progres'].includes(colClass);
     
     if (noFilter) {
         return `<th class="hdr-std ${cls} select-none text-center"><div class="flex items-center justify-center w-full">${label}</div></th>`;
@@ -174,6 +178,7 @@ window.renderTabel = function() {
     const tbody = document.getElementById('tbody-ganti');
     sortState = {}; selectAllState = 0;
 
+    // REVISI: Kolom Proses dihapus, diganti Progres
     thead.innerHTML = `
         <tr>
             <th class="hdr-std w-10 col-cb text-center sticky-col">
@@ -191,13 +196,20 @@ window.renderTabel = function() {
             ${window.thSort(10, 'Customer Request', 'col-cust_req text-purple-300')}
             ${window.thSort(11, 'Qty Request', 'col-qty_req')}
             ${window.thSort(12, 'Qty Proses', 'col-qty_proses')}
-            <th class="hdr-std w-20 col-btn text-center">Proses</th>
+            <th class="hdr-std w-24 col-progres text-center">Progres</th>
         </tr>`;
     
     if(rawData.length === 0) { tbody.innerHTML = `<tr><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada data.</td></tr>`; return; }
 
     tbody.innerHTML = rawData.map((r) => {
         const tgl = formatWIB(r.created_at);
+        
+        let badgeProgres = `<span class="bg-slate-100 text-slate-500 px-2 py-1 rounded font-bold text-[10px] border border-slate-200">PENDING</span>`;
+        if(r.progres === 'DONE') {
+            badgeProgres = `<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold text-[10px] border border-emerald-200 flex items-center justify-center gap-1 w-max mx-auto"><i data-lucide="check-circle-2" class="w-3 h-3"></i> DONE</span>`;
+        } else if(r.progres === 'PROSES') {
+            badgeProgres = `<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold text-[10px] border border-amber-200">PROSES</span>`;
+        }
         
         return `
             <tr class="transition r-row text-[13px] bg-white even:bg-slate-50 border-b border-slate-200">
@@ -214,8 +226,8 @@ window.renderTabel = function() {
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-cust_req" data-search="${r.customer_aktual_request || '-'}">${r.customer_aktual_request || '-'}</td>
                 <td class="px-4 py-3 font-black text-slate-700 text-center col-qty_req" data-search="${r.qty_request || 0}">${r.qty_request || 0}</td>
                 <td class="px-4 py-3 font-black text-emerald-600 text-center col-qty_proses" data-search="${r.qty_proses || 0}">${r.qty_proses || 0}</td>
-                <td class="px-4 py-3 text-center col-btn">
-                    <button onclick="window.prosesScanGantiCustomer(${r.id})" class="w-full px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded shadow-sm text-[10px] uppercase transition active:scale-95 whitespace-nowrap">Proses Scan</button>
+                <td class="px-4 py-3 text-center col-progres" data-search="${r.progres || 'PENDING'}">
+                    ${badgeProgres}
                 </td>
             </tr>`;
     }).join('');
@@ -227,8 +239,186 @@ window.renderTabel = function() {
     window.initResizableColumns(); 
 };
 
-window.prosesScanGantiCustomer = function(id) {
-    alert("Fungsi Proses Scan untuk ID " + id + " akan diimplementasikan nanti.");
+// ==========================================
+// LOGIKA PROSES GANTI CUSTOMER (SCAN FISIK)
+// ==========================================
+window.bukaModalProsesGanti = function() {
+    const checked = document.querySelectorAll('.cb-main:checked');
+    if(checked.length !== 1) return alert("Pilih TEPAT 1 baris request yang ingin diproses!");
+    
+    const idReq = checked[0].value;
+    activeRequestRow = rawData.find(r => r.id == idReq);
+    
+    if(activeRequestRow.progres === 'DONE') return alert("Request ini sudah selesai (DONE)!");
+
+    document.getElementById('input-scan-ganti').value = '';
+    document.getElementById('modal-scan-ganti').classList.remove('hidden');
+    setTimeout(() => document.getElementById('input-scan-ganti').focus(), 100);
+};
+
+window.prosesKodeScan = async function() {
+    const rawInput = document.getElementById('input-scan-ganti').value.trim();
+    if(!rawInput) return alert("Masukkan kode QR!");
+    
+    const btn = document.getElementById('btn-proses-kode'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Memproses...'; btn.disabled = true;
+
+    const qrs = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
+    
+    try {
+        // Ambil data dari stok_global berdasarkan QR yang di-scan
+        const { data, error } = await db.from('stok_global').select('*').in('qrcode', qrs);
+        if(error) throw error;
+        
+        if(!data || data.length === 0) {
+            alert("QR Code tidak ditemukan di gudang (stok_global)!");
+            btn.innerHTML = ori; btn.disabled = false; return;
+        }
+
+        let invalidQrs = [];
+        scannedValidItems = [];
+
+        data.forEach(item => {
+            // Ekstrak customer aktual dari id_sku (Format: Area_Nama_Pjg_Grade_Dus_Shading_Customer_Ket)
+            let parts = (item.id_sku || '').split('_');
+            let custAktual = parts.length >= 7 ? parts[6] : item.customer_bawaan;
+
+            // Validasi kecocokan spesifikasi dengan request
+            if (
+                item.nama_item === activeRequestRow.nama_item &&
+                item.panjang === activeRequestRow.panjang &&
+                item.grade === activeRequestRow.grade &&
+                item.dus === activeRequestRow.dus &&
+                item.shading === activeRequestRow.shading &&
+                custAktual === activeRequestRow.customer_aktual_awal
+            ) {
+                scannedValidItems.push(item);
+            } else {
+                invalidQrs.push(item.qrcode);
+            }
+        });
+
+        if(invalidQrs.length > 0) {
+            alert(`Terdapat ${invalidQrs.length} QR Code yang spesifikasinya TIDAK SAMA dengan request!\n\nQR: ${invalidQrs.join(', ')}`);
+            btn.innerHTML = ori; btn.disabled = false; return;
+        }
+
+        // Render tabel konfirmasi
+        let html = '';
+        scannedValidItems.forEach((item, idx) => {
+            let detail = `${item.nama_item} | ${item.panjang} | ${item.grade} | ${item.dus} | ${item.shading} | ${item.keterangan || '-'}`;
+            html += `<tr class="hover:bg-slate-50 transition">
+                <td class="p-3 text-center font-bold text-slate-400">${idx + 1}</td>
+                <td class="p-3 font-semibold text-emerald-700">${item.area}</td>
+                <td class="p-3 font-mono font-bold text-slate-800">${item.qrcode}</td>
+                <td class="p-3 font-medium text-slate-600">${detail}</td>
+            </tr>`;
+        });
+        
+        document.getElementById('lbl-jml-valid').innerText = scannedValidItems.length;
+        document.getElementById('tbody-konfirmasi-ganti').innerHTML = html;
+        
+        document.getElementById('modal-scan-ganti').classList.add('hidden');
+        document.getElementById('modal-konfirmasi-ganti').classList.remove('hidden');
+
+    } catch(e) {
+        alert("Gagal memproses kode: " + e.message);
+    } finally {
+        btn.innerHTML = ori; btn.disabled = false;
+    }
+};
+
+window.eksekusiGantiFinal = async function() {
+    const btn = document.getElementById('btn-eksekusi-final'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Memproses...'; btn.disabled = true;
+
+    let qtyToProcess = scannedValidItems.length;
+    let oldCust = activeRequestRow.customer_aktual_awal;
+    let newCust = activeRequestRow.customer_aktual_request;
+
+    try {
+        // 1. Update stok_qr & stok_global (Ganti id_sku)
+        for(let item of scannedValidItems) {
+            let parts = item.id_sku.split('_');
+            if(parts.length >= 7) parts[6] = newCust;
+            let new_id_sku = parts.join('_');
+
+            await db.from('stok_qr').update({ id_sku: new_id_sku }).eq('qrcode', item.qrcode);
+            await db.from('stok_global').update({ id_sku: new_id_sku }).eq('qrcode', item.qrcode);
+        }
+
+        // 2. Siapkan Map untuk Incremental Update stok_aktual
+        let deductMap = {};
+        let addMap = {};
+
+        scannedValidItems.forEach(item => {
+            let ket = item.keterangan || '-';
+            let keyOld = `${item.nama_item}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.area}_${oldCust}_${ket}`;
+            let keyNew = `${item.nama_item}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.area}_${newCust}_${ket}`;
+
+            if(!deductMap[keyOld]) deductMap[keyOld] = { ...item, customer_aktual: oldCust, qty: 0 };
+            deductMap[keyOld].qty++;
+
+            if(!addMap[keyNew]) {
+                let parts = item.id_sku.split('_');
+                if(parts.length >= 7) parts[6] = newCust;
+                addMap[keyNew] = { ...item, id_sku: parts.join('_'), customer_aktual: newCust, qty: 0 };
+            }
+            addMap[keyNew].qty++;
+        });
+
+        // 3. Eksekusi Pengurangan (Deduct)
+        for(let k in deductMap) {
+            let u = deductMap[k];
+            const { data: ext } = await db.from('stok_aktual').select('id, qty')
+                .eq('nama_item', u.nama_item).eq('panjang', u.panjang).eq('grade', u.grade)
+                .eq('dus', u.dus).eq('shading', u.shading).eq('area', u.area)
+                .eq('customer_aktual', u.customer_aktual).eq('keterangan', u.keterangan || '-')
+                .limit(1);
+            
+            if(ext && ext.length > 0) {
+                let newQty = ext[0].qty - u.qty;
+                if(newQty <= 0) await db.from('stok_aktual').delete().eq('id', ext[0].id);
+                else await db.from('stok_aktual').update({qty: newQty}).eq('id', ext[0].id);
+            }
+        }
+
+        // 4. Eksekusi Penambahan (Add)
+        for(let k in addMap) {
+            let a = addMap[k];
+            const { data: ext } = await db.from('stok_aktual').select('id, qty')
+                .eq('nama_item', a.nama_item).eq('panjang', a.panjang).eq('grade', a.grade)
+                .eq('dus', a.dus).eq('shading', a.shading).eq('area', a.area)
+                .eq('customer_aktual', a.customer_aktual).eq('keterangan', a.keterangan || '-')
+                .limit(1);
+            
+            if(ext && ext.length > 0) {
+                await db.from('stok_aktual').update({qty: ext[0].qty + a.qty}).eq('id', ext[0].id);
+            } else {
+                await db.from('stok_aktual').insert([{
+                    id_sku: a.id_sku, jenis_item: a.jenis_item, nama_item: a.nama_item, panjang: a.panjang, 
+                    grade: a.grade, dus: a.dus, shading: a.shading, area: a.area, 
+                    customer_aktual: a.customer_aktual, keterangan: a.keterangan || '-', qty: a.qty
+                }]);
+            }
+        }
+
+        // 5. Update Progres di tabel ganti_customer
+        let newQtyProses = (parseInt(activeRequestRow.qty_proses) || 0) + qtyToProcess;
+        let newProgres = newQtyProses >= parseInt(activeRequestRow.qty_request) ? 'DONE' : 'PROSES';
+        
+        await db.from('ganti_customer').update({ qty_proses: newQtyProses, progres: newProgres }).eq('id', activeRequestRow.id);
+
+        alert(`✅ SUKSES!\n${qtyToProcess} dus berhasil diganti customernya menjadi ${newCust}.`);
+        
+        document.getElementById('modal-konfirmasi-ganti').classList.add('hidden');
+        window.muatData(); // Refresh tabel utama
+        
+    } catch(e) {
+        alert("Gagal memproses ganti customer: " + e.message);
+    } finally {
+        btn.innerHTML = ori; btn.disabled = false;
+    }
 };
 
 // ==========================================
