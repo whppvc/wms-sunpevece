@@ -86,7 +86,7 @@ window.tutupSemuaPopups = function() {
 
 window.muatData = async function() {
     const tbody = document.getElementById('tbody-ganti');
-    tbody.innerHTML = `<tr><td colspan="14" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menarik Data...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menarik Data...</p></td></tr>`;
     lucide.createIcons();
 
     try {
@@ -95,7 +95,7 @@ window.muatData = async function() {
         rawData = data || [];
         window.renderTabel();
     } catch(e) { 
-        tbody.innerHTML = `<tr><td colspan="14" class="p-10 text-center text-red-500 font-medium">Gagal: ${e.message}</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-medium">Gagal: ${e.message}</td></tr>`; 
     }
 };
 
@@ -192,14 +192,15 @@ window.renderTabel = function() {
             ${window.thSort(6, 'Grade', 'col-grade')}
             ${window.thSort(7, 'Dus', 'col-dus')}
             ${window.thSort(8, 'Shading', 'col-shading')}
-            ${window.thSort(9, 'Customer Aktual', 'col-cust_awal')}
-            ${window.thSort(10, 'Customer Request', 'col-cust_req text-purple-300')}
-            ${window.thSort(11, 'Qty Request', 'col-qty_req')}
-            ${window.thSort(12, 'Qty Proses', 'col-qty_proses')}
+            ${window.thSort(9, 'Keterangan', 'col-ket')}
+            ${window.thSort(10, 'Customer Aktual', 'col-cust_awal')}
+            ${window.thSort(11, 'Customer Request', 'col-cust_req text-purple-300')}
+            ${window.thSort(12, 'Qty Request', 'col-qty_req')}
+            ${window.thSort(13, 'Qty Proses', 'col-qty_proses')}
             <th class="hdr-std w-24 col-progres text-center">Progres</th>
         </tr>`;
     
-    if(rawData.length === 0) { tbody.innerHTML = `<tr><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada data.</td></tr>`; return; }
+    if(rawData.length === 0) { tbody.innerHTML = `<tr><td colspan="15" class="p-8 text-center font-medium text-slate-400">Tidak ada data.</td></tr>`; return; }
 
     tbody.innerHTML = rawData.map((r) => {
         const tgl = formatWIB(r.created_at);
@@ -222,6 +223,7 @@ window.renderTabel = function() {
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
                 <td class="px-4 py-3 font-semibold text-slate-900 text-left col-cust_awal" data-search="${r.customer_aktual_awal || '-'}">${r.customer_aktual_awal || '-'}</td>
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-cust_req" data-search="${r.customer_aktual_request || '-'}">${r.customer_aktual_request || '-'}</td>
                 <td class="px-4 py-3 font-black text-slate-700 text-center col-qty_req" data-search="${r.qty_request || 0}">${r.qty_request || 0}</td>
