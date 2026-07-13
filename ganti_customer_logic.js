@@ -256,6 +256,14 @@ window.bukaModalProsesGanti = function() {
     setTimeout(() => document.getElementById('input-scan-ganti').focus(), 100);
 };
 
+// Fungsi Helper untuk Normalisasi String (Mencegah bug spasi/huruf besar kecil/null)
+function normalizeVal(val) {
+    if (val === null || val === undefined) return '-';
+    let str = String(val).trim().toUpperCase();
+    if (str === '') return '-';
+    return str;
+}
+
 window.prosesKodeScan = async function() {
     const rawInput = document.getElementById('input-scan-ganti').value.trim();
     if(!rawInput) return alert("Masukkan kode QR!");
@@ -279,40 +287,61 @@ window.prosesKodeScan = async function() {
         scannedValidItems = [];
 
         data.forEach(item => {
-            // NORMALISASI STRING UNTUK MENCEGAH BUG SPASI/HURUF BESAR KECIL
-            let dbArea = (item.area || '').trim().toUpperCase();
-            let reqArea = (activeRequestRow.area || '').trim().toUpperCase();
+            // NORMALISASI STRING UNTUK MENCEGAH BUG SPASI/HURUF BESAR KECIL/NULL
+            let dbArea = normalizeVal(item.area);
+            let reqArea = normalizeVal(activeRequestRow.area);
 
-            let dbNama = (item.nama_item || '').trim().toUpperCase();
-            let reqNama = (activeRequestRow.nama_item || '').trim().toUpperCase();
+            let dbNama = normalizeVal(item.nama_item);
+            let reqNama = normalizeVal(activeRequestRow.nama_item);
             
-            let dbPjg = (item.panjang || '').trim().toUpperCase();
-            let reqPjg = (activeRequestRow.panjang || '').trim().toUpperCase();
+            let dbPjg = normalizeVal(item.panjang);
+            let reqPjg = normalizeVal(activeRequestRow.panjang);
             
-            let dbGrade = (item.grade || '').trim().toUpperCase();
-            let reqGrade = (activeRequestRow.grade || '').trim().toUpperCase();
+            let dbGrade = normalizeVal(item.grade);
+            let reqGrade = normalizeVal(activeRequestRow.grade);
             
-            let dbDus = (item.dus || '').trim().toUpperCase();
-            let reqDus = (activeRequestRow.dus || '').trim().toUpperCase();
+            let dbDus = normalizeVal(item.dus);
+            let reqDus = normalizeVal(activeRequestRow.dus);
             
-            let dbShading = (item.shading || '').trim().toUpperCase();
-            let reqShading = (activeRequestRow.shading || '').trim().toUpperCase();
+            let dbShading = normalizeVal(item.shading);
+            let reqShading = normalizeVal(activeRequestRow.shading);
 
-            let dbKet = (item.keterangan || '').trim().toUpperCase();
-            let reqKet = (activeRequestRow.keterangan || '').trim().toUpperCase();
+            let dbKet = normalizeVal(item.keterangan);
+            let reqKet = normalizeVal(activeRequestRow.keterangan);
+
+            // Kumpulkan error jika ada yang tidak cocok
+            let errors = [];
+            if (dbArea !== reqArea) errors.push(`Area (${dbArea} vs ${reqArea})`);
+            if (dbNama !== reqNama) errors.push(`Nama (${dbNama} vs ${reqNama})`);
+            if (dbPjg !== reqPjg) errors.push(`Pjg (${dbPjg} vs ${reqPjg})`);
+            if (dbGrade !== reqGrade) errors.push(`Grade (${dbGrade} vs ${reqGrade})`);
+            if (dbDus !== reqDus) errors.push(`Dus (${dbDus} vs ${reqDus})`);
+            if (dbShading !== reqShading) errors.push(`Shading (${dbShading} vs ${reqShading})`);
+            if (dbKet !== reqKet) errors.push(`Ket (${dbKet} vs ${reqKet})`);
 
             // Validasi kecocokan spesifikasi dengan request (TIDAK MENGECEK CUSTOMER)
-            if (dbArea === reqArea && dbNama === reqNama && dbPjg === reqPjg && dbGrade === reqGrade && dbDus === reqDus && dbShading === reqShading && dbKet === reqKet) {
+            if (errors.length === 0) {
                 scannedValidItems.push(item);
             } else {
-                invalidQrs.push(item.qrcode);
+                invalidQrs.push({
+                    qr: item.qrcode,
+                    reasons: errors.join(', ')
+                });
             }
         });
 
         if(invalidQrs.length > 0) {
-            // TAMPILKAN POP UP ERROR BUKAN ALERT
+            // TAMPILKAN POP UP ERROR DENGAN DETAIL ALASAN
             document.getElementById('lbl-error-count').innerText = invalidQrs.length;
-            document.getElementById('list-error-qr').innerHTML = invalidQrs.map(q => `<li>• ${q}</li>`).join('');
+            
+            let errorHtml = invalidQrs.map(err => `
+                <li class="border-b border-rose-200/50 pb-2 mb-2 last:border-0 last:mb-0 last:pb-0">
+                    <span class="block text-slate-800 font-black mb-1">${err.qr}</span>
+                    <span class="block text-[10px] text-rose-600 font-medium leading-tight">Beda: ${err.reasons}</span>
+                </li>
+            `).join('');
+            
+            document.getElementById('list-error-qr').innerHTML = errorHtml;
             document.getElementById('modal-error-scan').classList.remove('hidden');
             
             btn.innerHTML = ori; btn.disabled = false; return;
