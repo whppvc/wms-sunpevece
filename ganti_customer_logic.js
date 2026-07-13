@@ -80,6 +80,7 @@ window.toggleActionMenu = function(e) {
 
 window.tutupSemuaPopups = function() {
     document.getElementById('overlay-klik-luar').classList.add('hidden');
+    document.getElementById('modal-error-scan').classList.add('hidden');
     if(document.getElementById('sidebar-kolom')) document.getElementById('sidebar-kolom').classList.add('translate-x-full');
 };
 
@@ -178,7 +179,6 @@ window.renderTabel = function() {
     const tbody = document.getElementById('tbody-ganti');
     sortState = {}; selectAllState = 0;
 
-    // REVISI: Kolom Proses dihapus, diganti Progres
     thead.innerHTML = `
         <tr>
             <th class="hdr-std w-10 col-cb text-center sticky-col">
@@ -283,15 +283,27 @@ window.prosesKodeScan = async function() {
             let parts = (item.id_sku || '').split('_');
             let custAktual = parts.length >= 7 ? parts[6] : item.customer_bawaan;
 
+            // NORMALISASI STRING UNTUK MENCEGAH BUG SPASI/HURUF BESAR KECIL
+            let dbNama = (item.nama_item || '').trim().toUpperCase();
+            let reqNama = (activeRequestRow.nama_item || '').trim().toUpperCase();
+            
+            let dbPjg = (item.panjang || '').trim().toUpperCase();
+            let reqPjg = (activeRequestRow.panjang || '').trim().toUpperCase();
+            
+            let dbGrade = (item.grade || '').trim().toUpperCase();
+            let reqGrade = (activeRequestRow.grade || '').trim().toUpperCase();
+            
+            let dbDus = (item.dus || '').trim().toUpperCase();
+            let reqDus = (activeRequestRow.dus || '').trim().toUpperCase();
+            
+            let dbShading = (item.shading || '').trim().toUpperCase();
+            let reqShading = (activeRequestRow.shading || '').trim().toUpperCase();
+            
+            let dbCust = (custAktual || '').trim().toUpperCase();
+            let reqCust = (activeRequestRow.customer_aktual_awal || '').trim().toUpperCase();
+
             // Validasi kecocokan spesifikasi dengan request
-            if (
-                item.nama_item === activeRequestRow.nama_item &&
-                item.panjang === activeRequestRow.panjang &&
-                item.grade === activeRequestRow.grade &&
-                item.dus === activeRequestRow.dus &&
-                item.shading === activeRequestRow.shading &&
-                custAktual === activeRequestRow.customer_aktual_awal
-            ) {
+            if (dbNama === reqNama && dbPjg === reqPjg && dbGrade === reqGrade && dbDus === reqDus && dbShading === reqShading && dbCust === reqCust) {
                 scannedValidItems.push(item);
             } else {
                 invalidQrs.push(item.qrcode);
@@ -299,7 +311,11 @@ window.prosesKodeScan = async function() {
         });
 
         if(invalidQrs.length > 0) {
-            alert(`Terdapat ${invalidQrs.length} QR Code yang spesifikasinya TIDAK SAMA dengan request!\n\nQR: ${invalidQrs.join(', ')}`);
+            // TAMPILKAN POP UP ERROR BUKAN ALERT
+            document.getElementById('lbl-error-count').innerText = invalidQrs.length;
+            document.getElementById('list-error-qr').innerHTML = invalidQrs.map(q => `<li>• ${q}</li>`).join('');
+            document.getElementById('modal-error-scan').classList.remove('hidden');
+            
             btn.innerHTML = ori; btn.disabled = false; return;
         }
 
