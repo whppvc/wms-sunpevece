@@ -389,15 +389,20 @@ window.eksekusiGantiFinal = async function() {
 
         scannedValidItems.forEach(item => {
             let ket = item.keterangan || '-';
-            let keyOld = `${item.nama_item}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.area}_${oldCust}_${ket}`;
-            let keyNew = `${item.nama_item}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.area}_${newCust}_${ket}`;
+            
+            // KEY PENGURANGAN: Harus mencari baris yang memiliki customer_aktual = oldCust DAN customer_estimasi = newCust
+            // Karena di Kartu Stok, user sudah mengubah customer_estimasi menjadi newCust sebelum request ini dibuat.
+            let keyOld = `${item.nama_item}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.area}_${oldCust}_${newCust}_${ket}`;
+            
+            // KEY PENAMBAHAN: Baris baru akan memiliki customer_aktual = newCust DAN customer_estimasi = newCust
+            let keyNew = `${item.nama_item}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.area}_${newCust}_${newCust}_${ket}`;
 
-            if(!deductMap[keyOld]) deductMap[keyOld] = { ...item, customer_aktual: oldCust, qty: 0 };
+            if(!deductMap[keyOld]) deductMap[keyOld] = { ...item, customer_aktual: oldCust, customer_estimasi: newCust, qty: 0 };
             deductMap[keyOld].qty++;
 
             if(!addMap[keyNew]) {
                 // JANGAN UBAH id_sku, biarkan aslinya
-                addMap[keyNew] = { ...item, customer_aktual: newCust, qty: 0 };
+                addMap[keyNew] = { ...item, customer_aktual: newCust, customer_estimasi: newCust, qty: 0 };
             }
             addMap[keyNew].qty++;
         });
@@ -408,7 +413,9 @@ window.eksekusiGantiFinal = async function() {
             const { data: ext } = await db.from('stok_aktual').select('id, qty')
                 .eq('nama_item', u.nama_item).eq('panjang', u.panjang).eq('grade', u.grade)
                 .eq('dus', u.dus).eq('shading', u.shading).eq('area', u.area)
-                .eq('customer_aktual', u.customer_aktual).eq('keterangan', u.keterangan || '-')
+                .eq('customer_aktual', u.customer_aktual)
+                .eq('customer_estimasi', u.customer_estimasi) // PENTING: Cari yang estimasinya sudah diubah
+                .eq('keterangan', u.keterangan || '-')
                 .limit(1);
             
             if(ext && ext.length > 0) {
@@ -424,7 +431,9 @@ window.eksekusiGantiFinal = async function() {
             const { data: ext } = await db.from('stok_aktual').select('id, qty')
                 .eq('nama_item', a.nama_item).eq('panjang', a.panjang).eq('grade', a.grade)
                 .eq('dus', a.dus).eq('shading', a.shading).eq('area', a.area)
-                .eq('customer_aktual', a.customer_aktual).eq('keterangan', a.keterangan || '-')
+                .eq('customer_aktual', a.customer_aktual)
+                .eq('customer_estimasi', a.customer_estimasi) // PENTING: Tambahkan ke yang estimasinya sama
+                .eq('keterangan', a.keterangan || '-')
                 .limit(1);
             
             if(ext && ext.length > 0) {
@@ -433,7 +442,9 @@ window.eksekusiGantiFinal = async function() {
                 await db.from('stok_aktual').insert([{
                     id_sku: a.id_sku, jenis_item: a.jenis_item, nama_item: a.nama_item, panjang: a.panjang, 
                     grade: a.grade, dus: a.dus, shading: a.shading, area: a.area, 
-                    customer_aktual: a.customer_aktual, keterangan: a.keterangan || '-', qty: a.qty
+                    customer_aktual: a.customer_aktual, 
+                    customer_estimasi: a.customer_estimasi, // PENTING: Simpan estimasi baru
+                    keterangan: a.keterangan || '-', qty: a.qty
                 }]);
             }
         }
