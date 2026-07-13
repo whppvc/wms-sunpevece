@@ -700,12 +700,18 @@ async function eksekusiGantiPO() {
             let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
             qtySisaUntukDiupdate -= qtyPotong;
 
-            // Cari baris lama di stok_aktual
+            // Cari baris lama di stok_aktual menggunakan spesifikasi lengkap
             const { data: oldRows, error: errOld } = await db.from('stok_aktual')
                 .select('*')
-                .eq('id_sku', row.id_sku)
-                .eq('customer_estimasi', row.customer_estimasi)
+                .eq('nama_item', row.nama_item)
+                .eq('panjang', row.pjg)
+                .eq('grade', row.grade)
+                .eq('dus', row.dus)
+                .eq('shading', row.shading)
                 .eq('area', row.area)
+                .eq('customer_aktual', row.po_aktual)
+                .eq('customer_estimasi', row.customer_estimasi)
+                .eq('keterangan', row.keterangan)
                 .limit(1);
             
             if (errOld) throw errOld;
@@ -724,10 +730,15 @@ async function eksekusiGantiPO() {
                 // 2. Tambah Qty ke Baris Baru (dengan customer_estimasi baru)
                 const { data: newRows, error: errNew } = await db.from('stok_aktual')
                     .select('id, qty')
-                    .eq('id_sku', oldRow.id_sku)
-                    .eq('customer_estimasi', newPO)
-                    .eq('customer_aktual', oldRow.customer_aktual) // Pastikan aktual sama
+                    .eq('nama_item', oldRow.nama_item)
+                    .eq('panjang', oldRow.panjang)
+                    .eq('grade', oldRow.grade)
+                    .eq('dus', oldRow.dus)
+                    .eq('shading', oldRow.shading)
                     .eq('area', oldRow.area)
+                    .eq('customer_aktual', oldRow.customer_aktual)
+                    .eq('customer_estimasi', newPO)
+                    .eq('keterangan', oldRow.keterangan)
                     .limit(1);
 
                 if (errNew) throw errNew;
@@ -1056,9 +1067,15 @@ function siapkanGantiPO(context) {
     checkboxes.forEach(cb => {
         selectedForAction.push({ 
             id_sku: cb.dataset.idsku, 
+            nama_item: cb.dataset.nama,
+            pjg: cb.dataset.pjg,
+            grade: cb.dataset.grade,
+            dus: cb.dataset.dus,
+            shading: cb.dataset.shading,
             po_aktual: cb.dataset.po,
             customer_estimasi: cb.dataset.estimasi,
             area: cb.dataset.area,
+            keterangan: cb.dataset.ket,
             qty: parseInt(cb.dataset.qty) || 1
         });
         totalDus += parseInt(cb.dataset.qty) || 1;
@@ -1433,7 +1450,7 @@ async function eksekusiReqKonversi() {
 
 // ========================================================
 // FUNGSI PROSES KARTU STOK (GANTI CUSTOMER)
-// ========================================================
+// ==========================================
 function prosesKartuStok(encodedDataStr) {
     const data = JSON.parse(decodeURIComponent(encodedDataStr));
     
@@ -1447,6 +1464,7 @@ function prosesKartuStok(encodedDataStr) {
     const shading = data.shading || '-';
     const customer_aktual_awal = data.po_aktual || data.po || '-';
     const customer_aktual_request = data.customer_estimasi || '-';
+    const keterangan = data.keterangan || data.ket || '-';
     const qty_request = (data.qty || 0).toString();
     const id_sku = data.id_sku_base || data.id_sku || '-';
 
@@ -1460,6 +1478,7 @@ function prosesKartuStok(encodedDataStr) {
         grade: grade,
         dus: dus,
         shading: shading,
+        keterangan: keterangan,
         customer_aktual_awal: customer_aktual_awal,
         customer_aktual_request: customer_aktual_request,
         qty_request: qty_request,
