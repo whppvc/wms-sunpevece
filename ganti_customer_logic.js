@@ -381,17 +381,7 @@ window.eksekusiGantiFinal = async function() {
     let newCust = activeRequestRow.customer_aktual_request;
 
     try {
-        // 1. Update stok_qr & stok_global (Ganti id_sku)
-        for(let item of scannedValidItems) {
-            let parts = item.id_sku.split('_');
-            if(parts.length >= 7) parts[6] = newCust;
-            let new_id_sku = parts.join('_');
-
-            await db.from('stok_qr').update({ id_sku: new_id_sku }).eq('qrcode', item.qrcode);
-            await db.from('stok_global').update({ id_sku: new_id_sku }).eq('qrcode', item.qrcode);
-        }
-
-        // 2. Siapkan Map untuk Incremental Update stok_aktual
+        // 1. Siapkan Map untuk Incremental Update stok_aktual
         let deductMap = {};
         let addMap = {};
 
@@ -404,14 +394,13 @@ window.eksekusiGantiFinal = async function() {
             deductMap[keyOld].qty++;
 
             if(!addMap[keyNew]) {
-                let parts = item.id_sku.split('_');
-                if(parts.length >= 7) parts[6] = newCust;
-                addMap[keyNew] = { ...item, id_sku: parts.join('_'), customer_aktual: newCust, qty: 0 };
+                // JANGAN UBAH id_sku, biarkan aslinya
+                addMap[keyNew] = { ...item, customer_aktual: newCust, qty: 0 };
             }
             addMap[keyNew].qty++;
         });
 
-        // 3. Eksekusi Pengurangan (Deduct)
+        // 2. Eksekusi Pengurangan (Deduct)
         for(let k in deductMap) {
             let u = deductMap[k];
             const { data: ext } = await db.from('stok_aktual').select('id, qty')
@@ -427,7 +416,7 @@ window.eksekusiGantiFinal = async function() {
             }
         }
 
-        // 4. Eksekusi Penambahan (Add)
+        // 3. Eksekusi Penambahan (Add)
         for(let k in addMap) {
             let a = addMap[k];
             const { data: ext } = await db.from('stok_aktual').select('id, qty')
@@ -447,7 +436,7 @@ window.eksekusiGantiFinal = async function() {
             }
         }
 
-        // 5. Update Progres di tabel ganti_customer
+        // 4. Update Progres di tabel ganti_customer
         let newQtyProses = (parseInt(activeRequestRow.qty_proses) || 0) + qtyToProcess;
         let newProgres = newQtyProses >= parseInt(activeRequestRow.qty_request) ? 'DONE' : 'PROSES';
         
