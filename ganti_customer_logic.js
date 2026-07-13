@@ -279,11 +279,10 @@ window.prosesKodeScan = async function() {
         scannedValidItems = [];
 
         data.forEach(item => {
-            // Ekstrak customer aktual dari id_sku (Format: Area_Nama_Pjg_Grade_Dus_Shading_Customer_Ket)
-            let parts = (item.id_sku || '').split('_');
-            let custAktual = parts.length >= 7 ? parts[6] : item.customer_bawaan;
-
             // NORMALISASI STRING UNTUK MENCEGAH BUG SPASI/HURUF BESAR KECIL
+            let dbArea = (item.area || '').trim().toUpperCase();
+            let reqArea = (activeRequestRow.area || '').trim().toUpperCase();
+
             let dbNama = (item.nama_item || '').trim().toUpperCase();
             let reqNama = (activeRequestRow.nama_item || '').trim().toUpperCase();
             
@@ -298,12 +297,12 @@ window.prosesKodeScan = async function() {
             
             let dbShading = (item.shading || '').trim().toUpperCase();
             let reqShading = (activeRequestRow.shading || '').trim().toUpperCase();
-            
-            let dbCust = (custAktual || '').trim().toUpperCase();
-            let reqCust = (activeRequestRow.customer_aktual_awal || '').trim().toUpperCase();
 
-            // Validasi kecocokan spesifikasi dengan request
-            if (dbNama === reqNama && dbPjg === reqPjg && dbGrade === reqGrade && dbDus === reqDus && dbShading === reqShading && dbCust === reqCust) {
+            let dbKet = (item.keterangan || '').trim().toUpperCase();
+            let reqKet = (activeRequestRow.keterangan || '').trim().toUpperCase();
+
+            // Validasi kecocokan spesifikasi dengan request (TIDAK MENGECEK CUSTOMER)
+            if (dbArea === reqArea && dbNama === reqNama && dbPjg === reqPjg && dbGrade === reqGrade && dbDus === reqDus && dbShading === reqShading && dbKet === reqKet) {
                 scannedValidItems.push(item);
             } else {
                 invalidQrs.push(item.qrcode);
