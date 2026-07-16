@@ -171,7 +171,7 @@ async function muatDataStok() {
     const tbody = document.getElementById('tbody-ks');
     if(!tbody) return;
     
-    tbody.innerHTML = `<tr><td colspan="16" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke database...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke database...</p></td></tr>`;
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
@@ -223,7 +223,7 @@ async function muatDataStok() {
             let grade = p[3] || r.grade || t.grade;
             let dus = p[4] || r.dus || t.dus;
             let shading = p[5] || r.shading || t.shading;
-            let po = p[6] || r.customer_bawaan || t.customer || '-';
+            let po = p[6] || r.customer_aktual || t.customer || '-'; // REVISI
             let ket = p.length >= 8 ? p.slice(7).join('_') : (r.keterangan || '-');
 
             let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
@@ -240,13 +240,13 @@ async function muatDataStok() {
                 jenis: r.jenis_item || t.jenisItem || '-', nama: p[1] || r.nama_item || t.namaItem || '-',
                 pjg: p[2] || r.panjang || t.panjang || '-', grade: p[3] || r.grade || t.grade || '-', 
                 dus: p[4] || r.dus || t.dus || '-', shading: p[5] || r.shading || t.shading || '-',
-                po_bawaan: r.customer_bawaan || t.customer || '-', po_aktual: p[6] || r.customer_bawaan || t.customer || '-', 
+                po_aktual: p[6] || r.customer_aktual || t.customer || '-', // REVISI
                 ket: p.length >= 8 ? p.slice(7).join('_') : (r.keterangan || '-'), id: r.id 
             };
         });
 
         dataKSArea = stokAktualRaw.map(a => {
-            let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_bawaan}_${a.keterangan}`;
+            let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_aktual}_${a.keterangan}`; // REVISI
             return {
                 ...a,
                 pjg: a.panjang || '-', 
@@ -255,7 +255,6 @@ async function muatDataStok() {
                 qrcodes: qrMap[key] || [],
                 id_sku_base: a.id_sku || '-',
                 id_po: a.id_po || '-',
-                po_bawaan: a.customer_bawaan || '-',
                 po_aktual: a.customer_aktual || '-',
                 customer_estimasi: a.customer_estimasi || '-',
                 qty: a.qty || 0
@@ -275,7 +274,7 @@ async function muatDataStok() {
 
         renderTabel();
     } catch(e) { 
-        tbody.innerHTML = `<tr><td colspan="16" class="p-10 text-center text-red-500 font-medium">Gagal mengolah data: ${e.message}</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-medium">Gagal mengolah data: ${e.message}</td></tr>`; 
     }
 }
 
@@ -370,13 +369,12 @@ function renderTabel() {
                 ${thSort(9, 'Grade', 'col-grade')}
                 ${thSort(10, 'Dus', 'col-dus')}
                 ${thSort(11, 'Shading', 'col-shading')}
-                ${thSort(12, 'Customer Bawaan', 'col-po-bawaan')}
-                ${thSort(13, 'Customer Aktual', 'col-po')}
-                ${thSort(14, 'Keterangan', 'col-ket')}
+                ${thSort(12, 'Customer Aktual', 'col-po')}
+                ${thSort(13, 'Keterangan', 'col-ket')}
                 <th class="hdr-std w-20 col-proses text-center">Proses</th>
             </tr>`;
         
-        if(dataKSQR.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="16" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSQR.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="15" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = dataKSQR.map((r) => {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
@@ -413,13 +411,12 @@ function renderTabel() {
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-po-bawaan" data-search="${r.po_bawaan}">${r.po_bawaan}</td>
                     <td class="px-4 py-3 text-left col-po" data-search="${poString}">${btnPO}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
                     <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
                 </tr>`;
         }).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="16" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="15" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     }
     else if(modeKS === 'area') {
         thead.innerHTML = `
@@ -1450,7 +1447,7 @@ async function eksekusiReqKonversi() {
 
 // ========================================================
 // FUNGSI PROSES KARTU STOK (GANTI CUSTOMER)
-// ==========================================
+// ========================================================
 function prosesKartuStok(encodedDataStr) {
     const data = JSON.parse(decodeURIComponent(encodedDataStr));
     
