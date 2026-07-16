@@ -525,7 +525,7 @@ async function saveToSupabase() {
             qrcode: qr, area: area, id_sku: id_sku, id_po: id_po, 
             tgl_produksi: tgl_produksi, mesin: mesin, shift: shift,
             jenis_item: jenis, nama_item: nama, panjang: pjg, grade: grade,
-            dus: dus, shading: shading, customer_bawaan: customer,
+            dus: dus, shading: shading, customer_aktual: customer, // REVISI: customer_bawaan -> customer_aktual
             keterangan: ket, pic_input: user.username 
         });
 
@@ -542,21 +542,20 @@ async function saveToSupabase() {
             grade: grade,
             dus: dus,
             shading: shading,
-            customer_bawaan: customer,
+            customer_aktual: customer, // REVISI: customer_bawaan -> customer_aktual
             keterangan: ket,
             pic_input: user.username,
             jalur_masuk: 'langsir',
             created_at: wibNow
         });
 
-        // REVISI: Menambahkan customer_estimasi = customer_bawaan
         let keyAkt = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${customer}_${ket}`;
         if(!mapAktual[keyAkt]) {
             mapAktual[keyAkt] = {
                 id_sku: id_sku, id_po: id_po, jenis_item: jenis, nama_item: nama, 
                 panjang: pjg, grade: grade, dus: dus, shading: shading, 
-                area: area, customer_bawaan: customer, customer_aktual: customer, 
-                customer_estimasi: customer, // REVISI BARU
+                area: area, customer_aktual: customer, // REVISI: Hapus customer_bawaan
+                customer_estimasi: customer, 
                 keterangan: ket, qty: 0
             };
         }
@@ -692,7 +691,7 @@ async function bukaModalSTBJ() {
                     <div class="text-[12px] font-bold text-slate-600 leading-snug">
                         Item: <span class="text-blue-600">${r.jenis_item || '-'}</span> | <span class="text-slate-800">${r.nama_item || '-'}</span> | <span class="text-slate-800">${r.panjang || '-'}</span> | <span class="text-slate-800">${r.grade || '-'}</span> | <span class="text-slate-800">${r.dus || '-'}</span> | <span class="text-blue-600">${r.shading || '-'}</span>
                     </div>
-                    <div class="text-[12px] font-bold text-slate-600">Customer: <span class="text-orange-600">${r.customer_bawaan || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Customer: <span class="text-orange-600">${r.customer_aktual || '-'}</span></div>
                     <div class="text-[12px] font-bold text-slate-600">Keterangan: <span class="text-slate-800">${r.keterangan || '-'}</span></div>
                 </div>`;
         });
@@ -742,7 +741,7 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
             let grade = r.grade || '-';
             let dus = r.dus || '-';
             let shading = r.shading || '-';
-            let customer = r.customer_bawaan || '-';
+            let customer = r.customer_aktual || r.customer_bawaan || '-'; // REVISI
             let jenis = r.jenis_item || '-';
             let prod = r.tgl_produksi || '-';
             let mesin = r.mesin || '-';
