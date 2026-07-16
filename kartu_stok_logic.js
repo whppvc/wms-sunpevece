@@ -175,8 +175,9 @@ async function muatDataStok() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
+        // REVISI: Mengubah db.from('stok_qr') menjadi db.from('stok_global')
         const [resStok, resAktual, resLembaran, resGanti] = await Promise.all([
-            db.from('stok_qr').select('*'),
+            db.from('stok_global').select('*'), 
             db.from('stok_aktual').select('*'),
             db.from('stok_lembaran').select('*').order('created_at', {ascending: false}),
             db.from('ganti_customer').select('id_sku, customer_aktual_request, area') 
@@ -185,7 +186,7 @@ async function muatDataStok() {
         if(resStok.error) throw resStok.error;
         if(resAktual.error) throw resAktual.error;
         
-        stokQRRaw = resStok.data || [];
+        stokQRRaw = resStok.data || []; // Variabel internal tetap stokQRRaw agar tidak merusak kode lain, tapi isinya data stok_global
         stokAktualRaw = resAktual.data || [];
         stokLembaranRaw = resLembaran.data || [];
 
@@ -407,7 +408,7 @@ function renderTabel() {
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-shift" data-search="${r.shift}">${r.shift}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                     <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.panjang}">${r.panjang}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
@@ -1046,7 +1047,7 @@ function bukaModalLihatPO(encodedPOs) {
                     </li>`;
         }).join('');
     }
-    if(typeof lucide !== 'undefined') lucide.createIcons();
+    lucide.createIcons();
     document.getElementById('modal-lihat-po').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
 }
