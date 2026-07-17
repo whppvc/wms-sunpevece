@@ -490,7 +490,6 @@ async function saveToSupabase() {
     const wibNow = getWIBTimestamp();
     
     let updatesHasilLangsir = [];
-    let stokQrInserts = [];
     let stokGlobalInserts = [];
     let mapAktual = {}; 
 
@@ -521,13 +520,7 @@ async function saveToSupabase() {
             pic_input: user.username
         });
 
-        stokQrInserts.push({ 
-            qrcode: qr, area: area, id_sku: id_sku, id_po: id_po, 
-            tgl_produksi: tgl_produksi, mesin: mesin, shift: shift,
-            jenis_item: jenis, nama_item: nama, panjang: pjg, grade: grade,
-            dus: dus, shading: shading, customer_aktual: customer, // REVISI: customer_bawaan -> customer_aktual
-            keterangan: ket, pic_input: user.username 
-        });
+        // REVISI: Hapus stokQrInserts karena tabel stok_qr tidak digunakan lagi
 
         stokGlobalInserts.push({
             qrcode: qr,
@@ -577,9 +570,9 @@ async function saveToSupabase() {
 
     let stokAktualUpdates = Object.values(mapAktual);
 
+    // REVISI: Hapus stok_qr_inserts dari payload transaksi
     const payloadTransaksi = {
         hasil_updates: updatesHasilLangsir,
-        stok_qr_inserts: stokQrInserts,
         stok_global_inserts: stokGlobalInserts,
         stok_aktual_updates: stokAktualUpdates
     };
@@ -664,20 +657,24 @@ async function bukaModalSTBJ() {
             return;
         }
 
-        const qrs = globalData.map(d => d.qrcode);
-        const { data: qrData, error: errQr } = await db.from('stok_qr').select('qrcode').in('qrcode', qrs);
-        if(errQr) throw errQr;
+        // REVISI: Filter data STBJ yang belum masuk gudang (tidak ada di stok_global dengan status IN GUDANG)
+        // Karena stok_qr dihapus, kita cukup menampilkan data dari stok_global yang statusnya bukan IN GUDANG.
+        // Namun, karena stok_global hanya menyimpan barang yang SUDAH masuk gudang, data STBJ murni diambil dari hasil_stbj_langsir yang statusnya 'STBJ'
+        const { data: stbjData, error: errStbj } = await db.from('hasil_stbj_langsir')
+            .select('*')
+            .eq('status', 'STBJ')
+            .order('created_at', { ascending: false })
+            .limit(100);
 
-        const qrSet = new Set(qrData.map(d => d.qrcode));
-        const filteredData = globalData.filter(d => !qrSet.has(d.qrcode));
+        if(errStbj) throw errStbj;
 
-        if(filteredData.length === 0) {
+        if(!stbjData || stbjData.length === 0) {
             if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Semua data STBJ sudah masuk gudang.</div>';
             return;
         }
 
         let h = '';
-        filteredData.forEach((r, i) => {
+        stbjData.forEach((r, i) => {
             const tgl = formatWIB(r.created_at);
             h += `
                 <div class="row-modal-stbj bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1 mb-3">
@@ -691,7 +688,7 @@ async function bukaModalSTBJ() {
                     <div class="text-[12px] font-bold text-slate-600 leading-snug">
                         Item: <span class="text-blue-600">${r.jenis_item || '-'}</span> | <span class="text-slate-800">${r.nama_item || '-'}</span> | <span class="text-slate-800">${r.panjang || '-'}</span> | <span class="text-slate-800">${r.grade || '-'}</span> | <span class="text-slate-800">${r.dus || '-'}</span> | <span class="text-blue-600">${r.shading || '-'}</span>
                     </div>
-                    <div class="text-[12px] font-bold text-slate-600">Customer: <span class="text-orange-600">${r.customer_aktual || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Customer: <span class="text-orange-600">${r.customer || '-'}</span></div>
                     <div class="text-[12px] font-bold text-slate-600">Keterangan: <span class="text-slate-800">${r.keterangan || '-'}</span></div>
                 </div>`;
         });
@@ -741,7 +738,7 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
             let grade = r.grade || '-';
             let dus = r.dus || '-';
             let shading = r.shading || '-';
-            let customer = r.customer_aktual || r.customer_bawaan || '-'; // REVISI
+            let customer = r.customer_aktual || r.customer_bawaan || '-'; 
             let jenis = r.jenis_item || '-';
             let prod = r.tgl_produksi || '-';
             let mesin = r.mesin || '-';
