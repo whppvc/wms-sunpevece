@@ -145,6 +145,21 @@ function updateCell(index, key, value) {
     tableData[index][key] = value.trim().toUpperCase();
 }
 
+// REVISI: Mengembalikan fungsi tambah baris kosong langsung di tabel
+window.tambahBarisKosong = function() {
+    let newRow = {};
+    CONFIG[currentCategory].cols.forEach(c => newRow[c.key] = '');
+    tableData.push(newRow);
+    
+    document.getElementById('input-search').value = '';
+    searchQuery = '';
+    
+    renderTableBody();
+    
+    const container = document.querySelector('.table-container');
+    if(container) container.scrollTop = container.scrollHeight;
+};
+
 // ==========================================
 // LOGIKA TAMBAH ITEM (MODAL INPUT)
 // ==========================================
