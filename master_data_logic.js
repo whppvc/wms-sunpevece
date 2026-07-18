@@ -21,8 +21,8 @@ const CONFIG = {
             { key: 'kode_nama_item', label: 'Kode Item' },
             { key: 'grade', label: 'Grade Asli' },
             { key: 'kode_grade', label: 'Kode Grade' },
-            { key: 'customer', label: 'PO Asli' },       // REVISI: po -> customer
-            { key: 'kode_customer', label: 'Kode PO' },  // REVISI: kode_po -> kode_customer
+            { key: 'customer', label: 'PO Asli' },       
+            { key: 'kode_customer', label: 'Kode PO' },  
             { key: 'dus', label: 'Dus Asli' },
             { key: 'kode_dus', label: 'Kode Dus' }
         ]
@@ -145,20 +145,6 @@ function updateCell(index, key, value) {
     tableData[index][key] = value.trim().toUpperCase();
 }
 
-function tambahBarisKosong() {
-    let newRow = {};
-    CONFIG[currentCategory].cols.forEach(c => newRow[c.key] = '');
-    tableData.push(newRow);
-    
-    document.getElementById('input-search').value = '';
-    searchQuery = '';
-    
-    renderTableBody();
-    
-    const container = document.querySelector('.table-container');
-    if(container) container.scrollTop = container.scrollHeight;
-}
-
 // ==========================================
 // LOGIKA TAMBAH ITEM (MODAL INPUT)
 // ==========================================
@@ -270,7 +256,7 @@ async function simpanKeSupabase() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...';
     btn.disabled = true;
 
-    // REVISI: Jalankan Auto-Collapse sebelum simpan ke database
+    // Jalankan Auto-Collapse sebelum simpan ke database
     collapseColumns();
 
     try {
@@ -383,7 +369,7 @@ function openColumnFilter(event, colClass, colName) {
     });
 
     let sortedValues = Array.from(uniqueValues).sort();
-    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
+    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
     sortedValues.forEach(val => {
         let isChecked = true; if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
         listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}"><input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> <span class="truncate text-slate-600">${val}</span></label>`;
@@ -407,7 +393,7 @@ function updateSelectAllState() {
     else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
     else { selectAll.checked = false; selectAll.indeterminate = true; }
 }
-document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) updateSelectAllState(); });
+document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) window.updateSelectAllState(); });
 window.searchFilterList = function(val) {
     const query = val.toLowerCase().split(' ').filter(x => x); 
     document.querySelectorAll('.filter-val-item').forEach(label => {
