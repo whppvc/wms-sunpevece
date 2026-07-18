@@ -46,7 +46,7 @@ async function loadInitialSTBJData() {
             window.masterData.kamus = mData2; 
         }
 
-        // 3. Muat Katalog Nama Jasper dari Supabase (Perbaikan Baru)
+        // 3. Muat Katalog Nama Jasper dari Supabase
         const { data: mJasper, error: errJasper } = await db.from('nama_jasper').select('*');
         if(!errJasper && mJasper) {
             if(!window.masterData) window.masterData = {};
@@ -357,18 +357,21 @@ window.cekGudangSTBJ = async function() {
         dataStbj.forEach(d => {
             if(d.status === 'HOLD' && d.keterangan === 'Dihold Manual') return; 
             
-            let isRetur = false;
-            if (globalMap[d.qrcode] && (globalMap[d.qrcode].jalur_masuk || '').toLowerCase() === 'retur') {
-                isRetur = true;
-            }
+            let existsInGlobal = !!globalMap[d.qrcode];
+            let isRetur = existsInGlobal && (globalMap[d.qrcode].jalur_masuk || '').toLowerCase() === 'retur';
 
             if (isRetur) {
                 d.status = 'RETUR';
                 d.keterangan = 'BARANG RETUR DARI GLOBAL';
                 infoDuplikat++;
+            } else if (existsInGlobal) {
+                // REVISI: Jika sudah ada di stok_global, tandai sebagai IN GUDANG (Duplikat Fisik)
+                d.status = 'IN GUDANG';
+                d.keterangan = 'BARANG SUDAH ADA DI GUDANG (STOK GLOBAL)';
+                infoDuplikat++;
             } else if (hasilMap[d.qrcode]) {
                 let statDB = hasilMap[d.qrcode].status;
-                if (statDB === 'STBJ') {
+                if (statDB === 'STBJ' || statDB === 'SUDAH STBJ') {
                     d.status = 'SUDAH STBJ';
                     d.keterangan = 'SUDAH ADA DI DATABASE (STBJ)';
                 } else {
@@ -403,7 +406,6 @@ window.saveToDatabaseSTBJ = async function() {
     const dupes = dataStbj.filter(d => d.status !== 'BELUM STBJ' && d.status !== 'BELUM CEK');
 
     const mapToDB = (d, finalStatus) => {
-        // Cari nama jasper dari window.masterData.jasper yang sudah di-load (Perbaikan Baru)
         let jName = `JAS-${d.namaItem}`;
         if (window.masterData && window.masterData.jasper) {
             const cJasper = window.masterData.jasper.find(j => 
