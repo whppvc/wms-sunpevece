@@ -1,11 +1,11 @@
 let modeKS = 'area'; 
 let stokQRRaw = []; 
 let stokAktualRaw = []; 
-let stokNonaktifRaw = []; // REVISI: Tambah state untuk stok nonaktif
+let stokLembaranRaw = [];
 let dataKSQR = []; 
 let dataKSArea = []; 
 let dataKSGlobal = [];
-let dataKSNonaktif = []; // REVISI: Data untuk tab nonaktif
+let dataKSNonaktif = []; 
 let selectedForAction = []; 
 let sourcePOContext = ''; 
 let currentBreakdownData = [];
@@ -175,8 +175,7 @@ async function muatDataStok() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
-        // REVISI: Ambil data stok_nonaktif juga
-        const [resStok, resAktual, resNonaktif, resGanti] = await Promise.all([
+        const [resStok, resAktual, resLembaran, resGanti] = await Promise.all([
             db.from('stok_global').select('*'), 
             db.from('stok_aktual').select('*'),
             db.from('stok_nonaktif').select('*').order('created_at', {ascending: false}),
@@ -188,7 +187,7 @@ async function muatDataStok() {
         
         stokQRRaw = resStok.data || []; 
         stokAktualRaw = resAktual.data || [];
-        stokNonaktifRaw = resNonaktif.data || []; // REVISI
+        stokLembaranRaw = resLembaran.data || [];
 
         processedGantiKeys.clear();
         processedGlobalKeys.clear();
@@ -233,8 +232,7 @@ async function muatDataStok() {
             qrMap[key].push(r.qrcode);
         });
 
-        // REVISI: Filter dataKSQR dan dataKSArea agar tidak menampilkan yang NONAKTIF
-        dataKSQR = stokQRRaw.filter(r => r.kondisi !== 'NONAKTIF').map(r => {
+        dataKSQR = stokQRRaw.map(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
             let t = translateBarcode(r.qrcode);
             return {
@@ -250,7 +248,7 @@ async function muatDataStok() {
             };
         });
 
-        dataKSArea = stokAktualRaw.filter(a => a.kondisi !== 'NONAKTIF').map(a => {
+        dataKSArea = stokAktualRaw.map(a => {
             let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_aktual}_${a.keterangan}_${a.kondisi}`; 
             return {
                 ...a,
@@ -278,8 +276,7 @@ async function muatDataStok() {
         });
         dataKSGlobal = Object.values(globalMap);
 
-        // REVISI: Siapkan data untuk tab Nonaktif
-        dataKSNonaktif = stokNonaktifRaw;
+        dataKSNonaktif = stokLembaranRaw; // Menggunakan data dari stok_nonaktif (yang di-query sebagai resLembaran)
 
         renderTabel();
     } catch(e) { 
@@ -302,6 +299,9 @@ function setModeKS(m) {
     
     const btnReqKonv = document.getElementById('btn-req-konversi-main');
     if(btnReqKonv) btnReqKonv.classList.toggle('hidden', m !== 'area');
+    
+    const btnProsesGanti = document.getElementById('btn-proses-ganti-main');
+    if(btnProsesGanti) btnProsesGanti.classList.toggle('hidden', m === 'nonaktif');
     
     activeFilters = {}; 
     loadUserPreferences(); 
@@ -330,7 +330,7 @@ function sortTable(colIndex, headerEl) {
 
 function thSort(idx, label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
-    const noFilter = ['col-cb', 'col-open', 'col-proses'].includes(colClass);
+    const noFilter = ['col-cb', 'col-open'].includes(colClass);
     
     if (noFilter) {
         return `<th class="hdr-std ${cls} select-none text-center"><div class="flex items-center justify-center w-full">${label}</div></th>`;
@@ -359,8 +359,6 @@ function renderTabel() {
     sortState = {}; 
     selectAllState = 0;
 
-    const rowClassBase = "transition row-ks text-[13px]";
-
     if(modeKS === 'qr') {
         thead.innerHTML = `
             <tr>
@@ -380,11 +378,9 @@ function renderTabel() {
                 ${thSort(11, 'Shading', 'col-shading')}
                 ${thSort(12, 'Customer Aktual', 'col-po')}
                 ${thSort(13, 'Keterangan', 'col-ket')}
-                ${thSort(14, 'Kondisi', 'col-kondisi')} 
-                <th class="hdr-std w-20 col-proses text-center">Proses</th>
             </tr>`;
         
-        if(dataKSQR.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="16" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSQR.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = dataKSQR.map((r) => {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
@@ -401,37 +397,27 @@ function renderTabel() {
             let poString = poArr.length > 0 ? poArr.join(' | ') : 'KOSONG';
             let btnPO = `<button onclick="bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
 
-            let isProcessed = Array.from(processedGantiKeys).some(k => k.startsWith(r.id_sku));
-            let actionHtml = isProcessed 
-                ? `<div class="text-emerald-600 flex items-center justify-center" title="Sudah diproses"><i data-lucide="check-circle-2" class="w-5 h-5 mx-auto"></i></div>`
-                : `<button onclick="prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button>`;
-
-            // REVISI: LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF (Menggunakan !important via class is-nonaktif)
-            let isNonaktif = r.kondisi === 'NONAKTIF';
-            let customRowClass = isNonaktif ? "transition row-ks text-[13px] !bg-red-100 !text-red-900 font-bold is-nonaktif" : "transition row-ks text-[13px]";
-            let kondisiHtml = isNonaktif ? `<span class="text-red-700 font-black">${r.kondisi}</span>` : r.kondisi;
+            let customRowClass = "transition row-ks text-[13px]";
 
             return `
                 <tr class="${customRowClass}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 font-semibold text-left col-area" data-search="${r.area}">${r.area}</td>
-                    <td class="px-4 py-3 font-mono font-medium text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
-                    <td class="px-4 py-3 font-medium text-left col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
-                    <td class="px-4 py-3 font-medium text-left col-mesin" data-search="${r.mesin}">${r.mesin}</td>
-                    <td class="px-4 py-3 font-medium text-left col-shift" data-search="${r.shift}">${r.shift}</td>
-                    <td class="px-4 py-3 font-medium text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                    <td class="px-4 py-3 font-medium text-left col-nama" data-search="${r.nama}">${r.nama}</td>
-                    <td class="px-4 py-3 font-medium text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
-                    <td class="px-4 py-3 font-medium text-left col-grade" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-3 font-medium text-left col-dus" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-3 font-medium text-left col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
+                    <td class="px-4 py-3 font-mono font-medium text-slate-800 text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-mesin" data-search="${r.mesin}">${r.mesin}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shift" data-search="${r.shift}">${r.shift}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
+                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
                     <td class="px-4 py-3 text-left col-po" data-search="${poString}">${btnPO}</td>
-                    <td class="px-4 py-3 font-medium text-left col-ket" data-search="${r.ket}">${r.ket}</td>
-                    <td class="px-4 py-3 font-bold text-center col-kondisi" data-search="${r.kondisi}">${kondisiHtml}</td>
-                    <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
+                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
                 </tr>`;
         }).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="16" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     }
     else if(modeKS === 'area') {
         thead.innerHTML = `
@@ -449,47 +435,34 @@ function renderTabel() {
                 ${thSort(8, 'Customer Aktual', 'col-po')}
                 ${thSort(9, 'Customer Estimasi', 'col-estimasi text-purple-300')}
                 ${thSort(10, 'Keterangan', 'col-ket')}
-                ${thSort(11, 'Kondisi', 'col-kondisi')} 
-                ${thSort(12, 'Total Qty (Dus)', 'col-qty')}
-                <th class="hdr-std w-20 col-proses text-center">Proses</th>
+                ${thSort(11, 'Total Qty (Dus)', 'col-qty')}
             </tr>`;
         
-        if(dataKSArea.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSArea.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = dataKSArea.map((r) => {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             const rowDataStr = encodeURIComponent(JSON.stringify(r));
             
-            let checkKey = `${r.id_sku_base}_${r.customer_estimasi}_${r.area}`;
-            let isProcessed = processedGantiKeys.has(checkKey);
-            let actionHtml = isProcessed 
-                ? `<div class="text-emerald-600 flex items-center justify-center" title="Sudah diproses"><i data-lucide="check-circle-2" class="w-5 h-5 mx-auto"></i></div>`
-                : `<button onclick="prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button>`;
-
-            // REVISI: LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF
-            let isNonaktif = r.kondisi === 'NONAKTIF';
-            let customRowClass = isNonaktif ? "transition row-ks text-[13px] !bg-red-100 !text-red-900 font-bold is-nonaktif" : "transition row-ks text-[13px]";
-            let kondisiHtml = isNonaktif ? `<span class="text-red-700 font-black">${r.kondisi}</span>` : r.kondisi;
+            let customRowClass = "transition row-ks text-[13px]";
 
             return `
                 <tr class="${customRowClass}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-estimasi="${r.customer_estimasi}" data-qty="${r.qty}" data-ket="${r.keterangan}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 font-semibold text-left col-area" data-search="${r.area}">${r.area}</td>
-                    <td class="px-4 py-3 font-medium text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                    <td class="px-4 py-3 font-medium text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
-                    <td class="px-4 py-3 font-medium text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
-                    <td class="px-4 py-3 font-medium text-left col-grade" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-3 font-medium text-left col-dus" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-3 font-medium text-left col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-3 font-semibold text-left col-po" data-search="${r.po_aktual}">${r.po_aktual}</td>
-                    <td class="px-4 py-3 font-semibold text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
-                    <td class="px-4 py-3 font-medium text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
-                    <td class="px-4 py-3 font-bold text-center col-kondisi" data-search="${r.kondisi}">${kondisiHtml}</td>
-                    <td class="px-4 py-3 font-black text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
-                    <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
+                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po" data-search="${r.po_aktual}">${r.po_aktual}</td>
+                    <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
+                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
+                    <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
                 </tr>`;
         }).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
     else if (modeKS === 'global') {
         thead.innerHTML = `
@@ -507,51 +480,34 @@ function renderTabel() {
                 ${thSort(8, 'Customer Aktual', 'col-po')}
                 ${thSort(9, 'Customer Estimasi', 'col-estimasi text-purple-300')}
                 ${thSort(10, 'Keterangan', 'col-ket')}
-                ${thSort(11, 'Kondisi', 'col-kondisi')} 
-                ${thSort(12, 'TOTAL (DUS)', 'col-qty')}
-                <th class="hdr-std w-20 col-proses text-center">Proses</th>
+                ${thSort(11, 'TOTAL (DUS)', 'col-qty')}
             </tr>`;
 
-        if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = dataKSGlobal.map((r) => {
             const rowDataStr = encodeURIComponent(JSON.stringify(r));
-            
-            let parts = (r.areas[0]?.id_sku_base || '').split('_');
-            let globalSku = parts.length >= 2 ? parts.slice(1).join('_') : '';
-            let checkKey = `${globalSku}_${r.customer_estimasi}`;
-            let isProcessed = processedGlobalKeys.has(checkKey);
-            let actionHtml = isProcessed 
-                ? `<div class="text-emerald-600 flex items-center justify-center" title="Sudah diproses"><i data-lucide="check-circle-2" class="w-5 h-5 mx-auto"></i></div>`
-                : `<button onclick="prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button>`;
-
-            // REVISI: LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF
-            let isNonaktif = r.kondisi === 'NONAKTIF';
-            let customRowClass = isNonaktif ? "transition row-ks text-[13px] !bg-red-100 !text-red-900 font-bold is-nonaktif" : "transition row-ks text-[13px]";
-            let kondisiHtml = isNonaktif ? `<span class="text-red-700 font-black">${r.kondisi}</span>` : r.kondisi;
+            let customRowClass = "transition row-ks text-[13px]";
 
             return `
             <tr class="${customRowClass}">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 text-center col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
-                <td class="px-4 py-3 font-medium text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                <td class="px-4 py-3 font-medium text-left col-nama" data-search="${r.nama}">${r.nama}</td>
-                <td class="px-4 py-3 font-medium text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
-                <td class="px-4 py-3 font-medium text-left col-grade" data-search="${r.grade}">${r.grade}</td>
-                <td class="px-4 py-3 font-medium text-left col-dus" data-search="${r.dus}">${r.dus}</td>
-                <td class="px-4 py-3 font-medium text-left col-shading" data-search="${r.shading}">${r.shading}</td>
-                <td class="px-4 py-3 font-semibold text-left col-po" data-search="${r.po}">${r.po}</td>
-                <td class="px-4 py-3 font-semibold text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
-                <td class="px-4 py-3 font-medium text-left col-ket" data-search="${r.ket}">${r.ket}</td>
-                <td class="px-4 py-3 font-bold text-center col-kondisi" data-search="${r.kondisi}">${kondisiHtml}</td>
-                <td class="px-4 py-3 font-black text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
-                <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
+                <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
+                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po" data-search="${r.po}">${r.po}</td>
+                <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
+                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
+                <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
             </tr>
         `}).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
     else if (modeKS === 'nonaktif') {
-        // REVISI: Render Tabel Nonaktif
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
@@ -668,7 +624,6 @@ function applyPagination() {
 
     let sumQty = 0;
     visibleRows.forEach((row, index) => {
-        // REVISI: Jangan timpa warna merah (is-nonaktif) dengan zebra striping
         row.classList.remove('stripe-1', 'stripe-2');
         if (!row.classList.contains('is-nonaktif')) {
             if (index % 2 === 0) row.classList.add('stripe-1');
@@ -711,6 +666,70 @@ function updateSelectedCount() {
     const lbl = document.getElementById('lbl-pilih-baris');
     if(lbl) lbl.innerText = count;
 }
+
+window.prosesGantiCustomerMassal = async function() {
+    const checkboxes = document.querySelectorAll('.cb-main:checked');
+    if(checkboxes.length === 0) return alert("Pilih (centang) minimal 1 baris item yang ingin diproses ganti customer!");
+
+    let payload = [];
+    let invalidCount = 0;
+
+    checkboxes.forEach(cb => {
+        let id_sku = cb.dataset.idsku;
+        let checkKey = `${id_sku}_${cb.dataset.estimasi}_${cb.dataset.area}`;
+        
+        if (processedGantiKeys.has(checkKey)) {
+            invalidCount++;
+            return;
+        }
+
+        if (cb.dataset.po === cb.dataset.estimasi) {
+            return; 
+        }
+
+        payload.push({
+            area: cb.dataset.area || '-',
+            jenis_item: cb.dataset.jenis || '-',
+            nama_item: cb.dataset.nama || '-',
+            panjang: cb.dataset.pjg || '-',
+            grade: cb.dataset.grade || '-',
+            dus: cb.dataset.dus || '-',
+            shading: cb.dataset.shading || '-',
+            keterangan: cb.dataset.ket || '-',
+            customer_aktual_awal: cb.dataset.po || '-',
+            customer_aktual_request: cb.dataset.estimasi || '-',
+            qty_request: (cb.dataset.qty || 0).toString(),
+            qty_proses: "0",
+            id_sku: id_sku
+        });
+    });
+
+    if (payload.length === 0) {
+        if (invalidCount > 0) return alert("Item yang dipilih sudah pernah diproses atau tidak ada perubahan customer.");
+        return alert("Tidak ada item valid yang bisa diproses.");
+    }
+
+    if(!confirm(`Ajukan request ganti customer untuk ${payload.length} item terpilih?`)) return;
+
+    const btn = document.getElementById('btn-proses-ganti-main');
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<div class="bg-emerald-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-emerald-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide">Memproses...</div>';
+    btn.disabled = true;
+
+    try {
+        const { error } = await db.from('ganti_customer').insert(payload);
+        if (error) throw error;
+        
+        alert("Berhasil mengirim request ke tabel Ganti Customer!");
+        muatDataStok();
+    } catch (e) {
+        alert("Gagal mengirim request: " + e.message);
+    } finally {
+        btn.innerHTML = ori;
+        btn.disabled = false;
+        lucide.createIcons();
+    }
+};
 
 async function eksekusiGantiPO() {
     const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
@@ -1037,7 +1056,6 @@ function bukaBreakdown(gKey) {
         const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
         const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
         
-        // REVISI: LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF DI BREAKDOWN
         let isNonaktif = a.kondisi === 'NONAKTIF';
         let customRowClass = isNonaktif ? `transition bd-row text-[13px] !bg-red-100 !text-red-900 font-bold is-nonaktif` : `transition bd-row text-[13px] ${stripeClass}`;
         let kondisiHtml = isNonaktif ? `<span class="text-red-700 font-black">${a.kondisi}</span>` : a.kondisi;
@@ -1046,7 +1064,7 @@ function bukaBreakdown(gKey) {
             <tr class="${customRowClass}">
                 <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-left">${a.area}</td>
-                <td class="px-4 py-3 font-semibold text-left col-po">${a.po_aktual}</td>
+                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi">${a.customer_estimasi}</td>
                 <td class="px-4 py-3 font-medium text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
                 <td class="px-4 py-3 font-bold text-center">${kondisiHtml}</td>
@@ -1493,47 +1511,66 @@ async function eksekusiReqKonversi() {
 // ========================================================
 // FUNGSI PROSES KARTU STOK (GANTI CUSTOMER)
 // ========================================================
-function prosesKartuStok(encodedDataStr) {
-    const data = JSON.parse(decodeURIComponent(encodedDataStr));
-    
-    // Ambil data yang relevan dari baris yang diklik
-    const area = data.area || '-';
-    const jenis_item = data.jenis_item || data.jenis || '-';
-    const nama_item = data.nama_item || data.nama || '-';
-    const panjang = data.panjang || data.pjg || '-';
-    const grade = data.grade || '-';
-    const dus = data.dus || '-';
-    const shading = data.shading || '-';
-    const customer_aktual_awal = data.po_aktual || data.po || '-';
-    const customer_aktual_request = data.customer_estimasi || '-';
-    const keterangan = data.keterangan || data.ket || '-';
-    const qty_request = (data.qty || 0).toString();
-    const id_sku = data.id_sku_base || data.id_sku || '-';
+window.prosesGantiCustomerMassal = async function() {
+    const checkboxes = document.querySelectorAll('.cb-main:checked');
+    if(checkboxes.length === 0) return alert("Pilih (centang) minimal 1 baris item yang ingin diproses ganti customer!");
 
-    if(!confirm(`Ajukan request ganti customer untuk item ini?\n\nItem: ${nama_item}\nCustomer Aktual: ${customer_aktual_awal}\nCustomer Request: ${customer_aktual_request}\nQty: ${qty_request} Dus`)) return;
+    let payload = [];
+    let invalidCount = 0;
 
-    const payload = {
-        area: area,
-        jenis_item: jenis_item,
-        nama_item: nama_item,
-        panjang: panjang,
-        grade: grade,
-        dus: dus,
-        shading: shading,
-        keterangan: keterangan,
-        customer_aktual_awal: customer_aktual_awal,
-        customer_aktual_request: customer_aktual_request,
-        qty_request: qty_request,
-        qty_proses: "0",
-        id_sku: id_sku
-    };
-
-    db.from('ganti_customer').insert([payload]).then(({ error }) => {
-        if(error) {
-            alert("Gagal mengirim request: " + error.message);
-        } else {
-            alert("Berhasil mengirim request ke tabel Ganti Customer!");
-            muatDataStok(); // Refresh tabel agar tombol berubah menjadi centang hijau
+    checkboxes.forEach(cb => {
+        let id_sku = cb.dataset.idsku;
+        let checkKey = `${id_sku}_${cb.dataset.estimasi}_${cb.dataset.area}`;
+        
+        if (processedGantiKeys.has(checkKey)) {
+            invalidCount++;
+            return;
         }
+
+        if (cb.dataset.po === cb.dataset.estimasi) {
+            return; 
+        }
+
+        payload.push({
+            area: cb.dataset.area || '-',
+            jenis_item: cb.dataset.jenis || '-',
+            nama_item: cb.dataset.nama || '-',
+            panjang: cb.dataset.pjg || '-',
+            grade: cb.dataset.grade || '-',
+            dus: cb.dataset.dus || '-',
+            shading: cb.dataset.shading || '-',
+            keterangan: cb.dataset.ket || '-',
+            customer_aktual_awal: cb.dataset.po || '-',
+            customer_aktual_request: cb.dataset.estimasi || '-',
+            qty_request: (cb.dataset.qty || 0).toString(),
+            qty_proses: "0",
+            id_sku: id_sku
+        });
     });
-}
+
+    if (payload.length === 0) {
+        if (invalidCount > 0) return alert("Item yang dipilih sudah pernah diproses atau tidak ada perubahan customer.");
+        return alert("Tidak ada item valid yang bisa diproses.");
+    }
+
+    if(!confirm(`Ajukan request ganti customer untuk ${payload.length} item terpilih?`)) return;
+
+    const btn = document.getElementById('btn-proses-ganti-main');
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<div class="bg-emerald-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-emerald-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide">Memproses...</div>';
+    btn.disabled = true;
+
+    try {
+        const { error } = await db.from('ganti_customer').insert(payload);
+        if (error) throw error;
+        
+        alert("Berhasil mengirim request ke tabel Ganti Customer!");
+        muatDataStok();
+    } catch (e) {
+        alert("Gagal mengirim request: " + e.message);
+    } finally {
+        btn.innerHTML = ori;
+        btn.disabled = false;
+        lucide.createIcons();
+    }
+};
