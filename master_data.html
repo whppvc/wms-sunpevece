@@ -7,8 +7,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Library SheetJS untuk Export Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script src="global.js"></script>
+    
     <style>
         html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; touch-action: pan-y; background-color: #f8fafc; }
         .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -18,11 +20,9 @@
         .table-container { position: relative; will-change: transform; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* TAB STYLING */
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
 
-        /* HEADER TABEL */
         .hdr-std { 
             background-color: #1e293b !important; 
             color: #ffffff !important; 
@@ -40,7 +40,6 @@
             background-clip: padding-box !important; 
         }
         
-        /* INPUT EXCEL-LIKE (Sangat Ringan) */
         .excel-input {
             width: 100%;
             min-width: 100px;
@@ -61,20 +60,16 @@
             z-index: 20;
         }
 
-        /* RESIZABLE COLUMN HANDLE */
         .resizer {
             position: absolute;
-            top: 0;
-            right: 0;
-            width: 5px;
-            cursor: col-resize;
-            user-select: none;
-            height: 100%;
-            z-index: 50;
+            top: 0; right: 0; width: 5px;
+            cursor: col-resize; user-select: none;
+            height: 100%; z-index: 50;
         }
-        .resizer:hover, .resizing {
-            background-color: rgba(59, 130, 246, 0.5); /* Warna biru transparan saat di-hover/drag */
-        }
+        .resizer:hover, .resizing { background-color: rgba(59, 130, 246, 0.5); }
+        
+        tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
+        body:not(.disable-hover) tr.r-row:not(.selected-row):hover td { background-color: rgba(var(--tbl-row-hover), 1) !important; color: #4f46e5 !important; }
     </style>
 </head>
 <body class="font-sans text-slate-800">
@@ -123,6 +118,9 @@
                 <button onclick="tambahBarisKosong()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-md text-xs uppercase transition flex items-center gap-2 border border-slate-300 shadow-sm active:scale-95">
                     <i data-lucide="plus" class="w-4 h-4"></i> Tambah Baris Baru
                 </button>
+                <button onclick="bukaModalTambahItem()" class="px-4 py-2.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold rounded-md text-xs uppercase transition flex items-center gap-2 border border-indigo-300 shadow-sm active:scale-95">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Tambah Item
+                </button>
                 <span class="text-xs font-bold text-slate-400 ml-2">Tampil: <span id="lbl-total-baris" class="text-slate-700">0</span> Baris</span>
             </div>
             
@@ -133,7 +131,44 @@
 
     </div>
 
-    <script src="global.js"></script>
+    <!-- MODAL FILTER EXCEL -->
+    <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm overflow-hidden">
+        <div class="p-3 border-b border-slate-100 flex justify-between items-center rounded-t-lg">
+            <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
+            <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-rose-500 bg-white border border-slate-200 p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+        </div>
+        <div class="p-2 border-b border-slate-200 bg-white">
+            <div class="relative">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2"></i>
+                <input type="text" id="filter-search-input" oninput="searchFilterList(this.value)" class="w-full pl-8 p-1.5 text-xs font-bold border border-slate-300 bg-slate-50 rounded focus:border-blue-500 focus:bg-white outline-none transition" placeholder="Cari Spesifik...">
+            </div>
+        </div>
+        <div class="p-2 max-h-48 overflow-y-auto flex flex-col gap-1 text-xs bg-white custom-scroll" id="filter-values-list"></div>
+        <div class="p-2 border-t border-slate-200 bg-slate-50 flex justify-between gap-2 rounded-b-lg">
+            <button onclick="clearFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100 transition shadow-sm">Reset</button>
+            <button onclick="applyFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-700 transition shadow-sm">Terapkan</button>
+        </div>
+    </div>
+
+    <!-- MODAL TAMBAH ITEM (DINAMIS) -->
+    <div id="modal-tambah-item" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[90] px-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
+            <h3 class="text-lg font-black mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="plus-circle" class="text-indigo-600"></i> Tambah Item Baru</h3>
+            <p class="text-xs font-bold text-slate-400 mb-5">Masukkan nilai data baru untuk kategori yang sedang aktif.</p>
+            
+            <div id="form-tambah-container" class="space-y-4 mb-6 max-h-60 overflow-y-auto custom-scroll pr-1">
+                <!-- Input dinamis akan di-render di sini -->
+            </div>
+            
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('modal-tambah-item').classList.add('hidden')" class="w-1/3 py-2.5 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase cursor-pointer hover:bg-slate-300 transition">Batal</button>
+                <button type="button" onclick="simpanTambahItem()" class="w-2/3 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 border-b-2 border-indigo-900 flex justify-center items-center gap-1 cursor-pointer"><i data-lucide="check"></i> Tambahkan</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="overlay-klik-luar" onclick="tutupSemuaPopups()" class="hidden fixed inset-0 z-[40] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
+
     <script src="master_data_logic.js"></script>
 </body>
 </html>
