@@ -223,9 +223,9 @@ async function muatDataStok() {
             let grade = p[3] || r.grade || t.grade;
             let dus = p[4] || r.dus || t.dus;
             let shading = p[5] || r.shading || t.shading;
-            let ket = p[6] || r.keterangan || '-'; // REVISI: ket di p[6]
-            let po = p[7] || r.customer_aktual || t.customer || '-'; // REVISI: po di p[7]
-            let kondisi = p[8] || r.kondisi || 'Aman'; // REVISI: kondisi di p[8]
+            let ket = p[6] || r.keterangan || '-'; 
+            let po = p[7] || r.customer_aktual || t.customer || '-'; 
+            let kondisi = p[8] || r.kondisi || 'Aman'; 
 
             let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}_${kondisi}`;
             if(!qrMap[key]) qrMap[key] = [];
@@ -243,13 +243,13 @@ async function muatDataStok() {
                 dus: p[4] || r.dus || t.dus || '-', shading: p[5] || r.shading || t.shading || '-',
                 po_aktual: p[7] || r.customer_aktual || t.customer || '-', 
                 ket: p[6] || r.keterangan || '-', 
-                kondisi: p[8] || r.kondisi || 'Aman', // REVISI: Tambah kondisi
+                kondisi: p[8] || r.kondisi || 'Aman', 
                 id: r.id 
             };
         });
 
         dataKSArea = stokAktualRaw.map(a => {
-            let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_aktual}_${a.keterangan}_${a.kondisi}`; // REVISI
+            let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_aktual}_${a.keterangan}_${a.kondisi}`; 
             return {
                 ...a,
                 pjg: a.panjang || '-', 
@@ -260,7 +260,7 @@ async function muatDataStok() {
                 id_po: a.id_po || '-',
                 po_aktual: a.customer_aktual || '-',
                 customer_estimasi: a.customer_estimasi || '-',
-                kondisi: a.kondisi || 'Aman', // REVISI: Tambah kondisi
+                kondisi: a.kondisi || 'Aman', 
                 qty: a.qty || 0
             };
         });
@@ -354,8 +354,6 @@ function renderTabel() {
     sortState = {}; 
     selectAllState = 0;
 
-    const rowClassBase = "transition row-ks text-[13px]";
-
     if(modeKS === 'qr') {
         thead.innerHTML = `
             <tr>
@@ -375,7 +373,7 @@ function renderTabel() {
                 ${thSort(11, 'Shading', 'col-shading')}
                 ${thSort(12, 'Customer Aktual', 'col-po')}
                 ${thSort(13, 'Keterangan', 'col-ket')}
-                ${thSort(14, 'Kondisi', 'col-kondisi')} <!-- REVISI: Tambah kolom Kondisi -->
+                ${thSort(14, 'Kondisi', 'col-kondisi')} 
                 <th class="hdr-std w-20 col-proses text-center">Proses</th>
             </tr>`;
         
@@ -396,14 +394,18 @@ function renderTabel() {
             let poString = poArr.length > 0 ? poArr.join(' | ') : 'KOSONG';
             let btnPO = `<button onclick="bukaModalLihatPO('${encodeURIComponent(poString)}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
 
-            // Deteksi apakah QR ini bagian dari id_sku yang sudah diproses di ganti_customer
             let isProcessed = Array.from(processedGantiKeys).some(k => k.startsWith(r.id_sku));
             let actionHtml = isProcessed 
                 ? `<div class="text-emerald-600 flex items-center justify-center" title="Sudah diproses"><i data-lucide="check-circle-2" class="w-5 h-5 mx-auto"></i></div>`
                 : `<button onclick="prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button>`;
 
+            // LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF
+            let isNonaktif = r.kondisi === 'NONAKTIF';
+            let customRowClass = isNonaktif ? "transition row-ks text-[13px] bg-red-50 hover:bg-red-100 text-red-900" : "transition row-ks text-[13px] bg-white even:bg-slate-50 hover:bg-slate-100";
+            let kondisiHtml = isNonaktif ? `<span class="text-red-700 font-black">${r.kondisi}</span>` : r.kondisi;
+
             return `
-                <tr class="${rowClassBase}">
+                <tr class="${customRowClass}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-mono font-medium text-slate-800 text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
@@ -418,11 +420,11 @@ function renderTabel() {
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
                     <td class="px-4 py-3 text-left col-po" data-search="${poString}">${btnPO}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
-                    <td class="px-4 py-3 font-bold text-slate-700 text-center col-kondisi" data-search="${r.kondisi}">${r.kondisi}</td> <!-- REVISI -->
+                    <td class="px-4 py-3 font-bold text-center col-kondisi" data-search="${r.kondisi}">${kondisiHtml}</td>
                     <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
                 </tr>`;
         }).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="15" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="16" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     }
     else if(modeKS === 'area') {
         thead.innerHTML = `
@@ -440,26 +442,30 @@ function renderTabel() {
                 ${thSort(8, 'Customer Aktual', 'col-po')}
                 ${thSort(9, 'Customer Estimasi', 'col-estimasi text-purple-300')}
                 ${thSort(10, 'Keterangan', 'col-ket')}
-                ${thSort(11, 'Kondisi', 'col-kondisi')} <!-- REVISI: Tambah kolom Kondisi -->
+                ${thSort(11, 'Kondisi', 'col-kondisi')} 
                 ${thSort(12, 'Total Qty (Dus)', 'col-qty')}
                 <th class="hdr-std w-20 col-proses text-center">Proses</th>
             </tr>`;
         
-        if(dataKSArea.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSArea.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = dataKSArea.map((r) => {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
             const rowDataStr = encodeURIComponent(JSON.stringify(r));
             
-            // Deteksi apakah baris area ini sudah diproses
             let checkKey = `${r.id_sku_base}_${r.customer_estimasi}_${r.area}`;
             let isProcessed = processedGantiKeys.has(checkKey);
             let actionHtml = isProcessed 
                 ? `<div class="text-emerald-600 flex items-center justify-center" title="Sudah diproses"><i data-lucide="check-circle-2" class="w-5 h-5 mx-auto"></i></div>`
                 : `<button onclick="prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button>`;
 
+            // LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF
+            let isNonaktif = r.kondisi === 'NONAKTIF';
+            let customRowClass = isNonaktif ? "transition row-ks text-[13px] bg-red-50 hover:bg-red-100 text-red-900" : "transition row-ks text-[13px] bg-white even:bg-slate-50 hover:bg-slate-100";
+            let kondisiHtml = isNonaktif ? `<span class="text-red-700 font-black">${r.kondisi}</span>` : r.kondisi;
+
             return `
-                <tr class="${rowClassBase}">
+                <tr class="${customRowClass}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-estimasi="${r.customer_estimasi}" data-qty="${r.qty}" data-ket="${r.keterangan}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
@@ -471,12 +477,12 @@ function renderTabel() {
                     <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po" data-search="${r.po_aktual}">${r.po_aktual}</td>
                     <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
-                    <td class="px-4 py-3 font-bold text-slate-700 text-center col-kondisi" data-search="${r.kondisi}">${r.kondisi}</td> <!-- REVISI -->
+                    <td class="px-4 py-3 font-bold text-center col-kondisi" data-search="${r.kondisi}">${kondisiHtml}</td>
                     <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
                     <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
                 </tr>`;
         }).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
     else if (modeKS === 'global') {
         thead.innerHTML = `
@@ -494,17 +500,16 @@ function renderTabel() {
                 ${thSort(8, 'Customer Aktual', 'col-po')}
                 ${thSort(9, 'Customer Estimasi', 'col-estimasi text-purple-300')}
                 ${thSort(10, 'Keterangan', 'col-ket')}
-                ${thSort(11, 'Kondisi', 'col-kondisi')} <!-- REVISI: Tambah kolom Kondisi -->
+                ${thSort(11, 'Kondisi', 'col-kondisi')} 
                 ${thSort(12, 'TOTAL (DUS)', 'col-qty')}
                 <th class="hdr-std w-20 col-proses text-center">Proses</th>
             </tr>`;
 
-        if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = dataKSGlobal.map((r) => {
             const rowDataStr = encodeURIComponent(JSON.stringify(r));
             
-            // Deteksi apakah baris global ini sudah diproses
             let parts = (r.areas[0]?.id_sku_base || '').split('_');
             let globalSku = parts.length >= 2 ? parts.slice(1).join('_') : '';
             let checkKey = `${globalSku}_${r.customer_estimasi}`;
@@ -513,8 +518,13 @@ function renderTabel() {
                 ? `<div class="text-emerald-600 flex items-center justify-center" title="Sudah diproses"><i data-lucide="check-circle-2" class="w-5 h-5 mx-auto"></i></div>`
                 : `<button onclick="prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button>`;
 
+            // LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF
+            let isNonaktif = r.kondisi === 'NONAKTIF';
+            let customRowClass = isNonaktif ? "transition row-ks text-[13px] bg-red-50 hover:bg-red-100 text-red-900" : "transition row-ks text-[13px] bg-white even:bg-slate-50 hover:bg-slate-100";
+            let kondisiHtml = isNonaktif ? `<span class="text-red-700 font-black">${r.kondisi}</span>` : r.kondisi;
+
             return `
-            <tr class="${rowClassBase}">
+            <tr class="${customRowClass}">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 text-center col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
@@ -526,12 +536,12 @@ function renderTabel() {
                 <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po" data-search="${r.po}">${r.po}</td>
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
                 <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
-                <td class="px-4 py-3 font-bold text-slate-700 text-center col-kondisi" data-search="${r.kondisi}">${r.kondisi}</td> <!-- REVISI -->
+                <td class="px-4 py-3 font-bold text-center col-kondisi" data-search="${r.kondisi}">${kondisiHtml}</td>
                 <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
                 <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
             </tr>
         `}).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
     else if (modeKS === 'lembaran') {
         thead.innerHTML = `
@@ -554,7 +564,7 @@ function renderTabel() {
         tbody.innerHTML = stokLembaranRaw.map((r) => {
             const rowDataStr = encodeURIComponent(JSON.stringify(r));
             return `
-            <tr class="${rowClassBase}">
+            <tr class="transition row-ks text-[13px] bg-white even:bg-slate-50 hover:bg-slate-100">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
@@ -704,10 +714,9 @@ async function eksekusiGantiPO() {
         for(let row of selectedForAction) {
             if (qtySisaUntukDiupdate <= 0) break; 
             
-            let qtyPotong = Math.min(row.qty, qtySisaUntilDiupdate);
+            let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
             qtySisaUntukDiupdate -= qtyPotong;
 
-            // Cari baris lama di stok_aktual menggunakan spesifikasi lengkap
             const { data: oldRows, error: errOld } = await db.from('stok_aktual')
                 .select('*')
                 .eq('nama_item', row.nama_item)
@@ -719,7 +728,7 @@ async function eksekusiGantiPO() {
                 .eq('customer_aktual', row.po_aktual)
                 .eq('customer_estimasi', row.customer_estimasi)
                 .eq('keterangan', row.keterangan)
-                .eq('kondisi', row.kondisi) // REVISI: Validasi kondisi
+                .eq('kondisi', row.kondisi) 
                 .limit(1);
             
             if (errOld) throw errOld;
@@ -727,7 +736,6 @@ async function eksekusiGantiPO() {
             if (oldRows && oldRows.length > 0) {
                 let oldRow = oldRows[0];
                 
-                // 1. Kurangi Qty Baris Lama
                 let sisaQty = oldRow.qty - qtyPotong;
                 if (sisaQty <= 0) {
                     await db.from('stok_aktual').delete().eq('id', oldRow.id);
@@ -735,7 +743,6 @@ async function eksekusiGantiPO() {
                     await db.from('stok_aktual').update({qty: sisaQty}).eq('id', oldRow.id);
                 }
 
-                // 2. Tambah Qty ke Baris Baru (dengan customer_estimasi baru)
                 const { data: newRows, error: errNew } = await db.from('stok_aktual')
                     .select('id, qty')
                     .eq('nama_item', oldRow.nama_item)
@@ -747,7 +754,7 @@ async function eksekusiGantiPO() {
                     .eq('customer_aktual', oldRow.customer_aktual)
                     .eq('customer_estimasi', newPO)
                     .eq('keterangan', oldRow.keterangan)
-                    .eq('kondisi', oldRow.kondisi) // REVISI: Validasi kondisi
+                    .eq('kondisi', oldRow.kondisi) 
                     .limit(1);
 
                 if (errNew) throw errNew;
@@ -840,15 +847,15 @@ function salinDataBreakdown() {
     const cek = document.querySelectorAll('.cb-bd:checked');
     if(cek.length === 0) return alert("Pilih data breakdown yang ingin disalin!");
 
-    let copyString = "Area\tCustomer Aktual\tCustomer Estimasi\tKeterangan\tKondisi\tTotal Dus\n"; // REVISI
+    let copyString = "Area\tCustomer Aktual\tCustomer Estimasi\tKeterangan\tKondisi\tTotal Dus\n"; 
     cek.forEach(cb => {
         const tr = cb.closest('tr');
         const area = tr.children[1].innerText.trim();
         const po = tr.children[2].innerText.trim();
         const est = tr.children[3].innerText.trim();
         const ket = tr.children[4].innerText.trim();
-        const kondisi = tr.children[5].innerText.trim(); // REVISI
-        const qty = tr.children[6].innerText.trim();     // REVISI
+        const kondisi = tr.children[5].innerText.trim(); 
+        const qty = tr.children[6].innerText.trim();     
         copyString += `${area}\t${po}\t${est}\t${ket}\t${kondisi}\t${qty}\n`;
     });
 
@@ -1012,14 +1019,20 @@ function bukaBreakdown(gKey) {
     tbody.innerHTML = item.areas.map((a, i) => {
         const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
         const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
+        
+        // LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF DI BREAKDOWN
+        let isNonaktif = a.kondisi === 'NONAKTIF';
+        let customRowClass = isNonaktif ? `transition bd-row text-[13px] bg-red-50 hover:bg-red-100 text-red-900` : `transition bd-row text-[13px] ${stripeClass}`;
+        let kondisiHtml = isNonaktif ? `<span class="text-red-700 font-black">${a.kondisi}</span>` : a.kondisi;
+
         return `
-            <tr class="transition bd-row text-[13px] ${stripeClass}">
+            <tr class="${customRowClass}">
                 <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
                 <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi">${a.customer_estimasi}</td>
                 <td class="px-4 py-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
-                <td class="px-4 py-3 font-bold text-slate-700 text-left">${a.kondisi}</td> <!-- REVISI -->
+                <td class="px-4 py-3 font-bold text-slate-700 text-left">${kondisiHtml}</td>
                 <td class="px-4 py-3 font-black text-emerald-700 text-center">${a.qty}</td>
             </tr>`;
     }).join('');
@@ -1060,7 +1073,7 @@ function bukaModalLihatPO(encodedPOs) {
                     </li>`;
         }).join('');
     }
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
     document.getElementById('modal-lihat-po').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
 }
@@ -1087,7 +1100,7 @@ function siapkanGantiPO(context) {
             customer_estimasi: cb.dataset.estimasi,
             area: cb.dataset.area,
             keterangan: cb.dataset.ket,
-            kondisi: cb.dataset.kondisi, // REVISI: Ambil kondisi
+            kondisi: cb.dataset.kondisi, 
             qty: parseInt(cb.dataset.qty) || 1
         });
         totalDus += parseInt(cb.dataset.qty) || 1;
@@ -1462,7 +1475,7 @@ async function eksekusiReqKonversi() {
 
 // ========================================================
 // FUNGSI PROSES KARTU STOK (GANTI CUSTOMER)
-// ==========================================
+// ========================================================
 function prosesKartuStok(encodedDataStr) {
     const data = JSON.parse(decodeURIComponent(encodedDataStr));
     
