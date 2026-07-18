@@ -4,6 +4,10 @@ let currentFilterCol = '';
 let sortState = {};
 let tempScannedQR = '';
 
+let currentPage = 1;
+let rowsPerPage = 10; 
+let selectAllState = 0; 
+
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
 function formatWIB(isoString) {
@@ -36,8 +40,12 @@ window.muatData = async function() {
 };
 
 window.thSort = function(idx, label, cls = "") {
-    const noFilter = ['col-cb', 'col-no'].includes(cls);
+    const noFilter = ['col-cb'].includes(cls);
     const filterBtn = noFilter ? '' : `<button onclick="openColumnFilter(event, '${cls}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition"><i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 text-white"></i></button>`;
+
+    if (noFilter) {
+        return `<th class="hdr-std ${cls} select-none text-center"><div class="flex items-center justify-center w-full">${label}</div></th>`;
+    }
 
     return `<th class="hdr-std ${cls} select-none group">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
@@ -53,36 +61,34 @@ window.thSort = function(idx, label, cls = "") {
 window.renderTabel = function() {
     const thead = document.getElementById('thead-nonaktif');
     const tbody = document.getElementById('tbody-nonaktif');
-    sortState = {};
+    sortState = {}; selectAllState = 0;
 
     thead.innerHTML = `
         <tr>
             <th class="hdr-std w-10 col-cb text-center sticky-col">
-                <input type="checkbox" id="cb-all" onchange="toggleAll(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-0 cursor-pointer">
+                <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
             </th>
-            <th class="hdr-std w-12 text-center col-no">No</th>
-            ${thSort(2, 'Waktu', 'col-waktu')}
-            ${thSort(3, 'Area', 'col-area')}
-            ${thSort(4, 'QRCode', 'col-qr')}
-            ${thSort(5, 'Jenis Item', 'col-jenis')}
-            ${thSort(6, 'Nama Item', 'col-nama')}
-            ${thSort(7, 'Panjang', 'col-pjg')}
-            ${thSort(8, 'Grade', 'col-grade')}
-            ${thSort(9, 'Dus', 'col-dus')}
-            ${thSort(10, 'Shading', 'col-shading')}
-            ${thSort(11, 'Customer Aktual', 'col-cust')}
-            ${thSort(12, 'Customer Estimasi', 'col-est')}
-            ${thSort(13, 'Keterangan', 'col-ket')}
+            ${thSort(1, 'Waktu', 'col-waktu')}
+            ${thSort(2, 'Area', 'col-area')}
+            ${thSort(3, 'QRCode', 'col-qr')}
+            ${thSort(4, 'Jenis Item', 'col-jenis')}
+            ${thSort(5, 'Nama Item', 'col-nama')}
+            ${thSort(6, 'Panjang', 'col-pjg')}
+            ${thSort(7, 'Grade', 'col-grade')}
+            ${thSort(8, 'Dus', 'col-dus')}
+            ${thSort(9, 'Shading', 'col-shading')}
+            ${thSort(10, 'Customer Aktual', 'col-cust')}
+            ${thSort(11, 'Customer Estimasi', 'col-est')}
+            ${thSort(12, 'Keterangan', 'col-ket')}
         </tr>`;
     
-    if(rawData.length === 0) { tbody.innerHTML = `<tr><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada data.</td></tr>`; document.getElementById('lbl-total').innerText = 0; return; }
+    if(rawData.length === 0) { tbody.innerHTML = `<tr><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada data.</td></tr>`; return; }
 
     tbody.innerHTML = rawData.map((r, i) => {
         const rowDataStr = encodeURIComponent(JSON.stringify(r));
         return `
             <tr class="transition r-row text-[13px] bg-white even:bg-slate-50 border-b border-slate-200">
-                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" value="${r.id}" data-row="${rowDataStr}" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 text-center font-bold text-slate-400 col-no">${i+1}</td>
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" data-row="${rowDataStr}" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-medium text-slate-600 col-waktu" data-search="${formatWIB(r.created_at)}">${formatWIB(r.created_at)}</td>
                 <td class="px-4 py-3 font-semibold text-slate-800 col-area" data-search="${r.posisi || '-'}">${r.posisi || '-'}</td>
                 <td class="px-4 py-3 font-mono font-bold text-rose-600 col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
@@ -98,23 +104,7 @@ window.renderTabel = function() {
             </tr>`;
     }).join('');
 
-    document.getElementById('lbl-total').innerText = rawData.length;
     lucide.createIcons(); saringTabelExcel();
-};
-
-window.highlightRow = function(cb) {
-    const tr = cb.closest('tr');
-    if (cb.checked) tr.classList.add('selected-row');
-    else tr.classList.remove('selected-row');
-};
-
-window.toggleAll = function(checked) {
-    document.querySelectorAll('.cb-main').forEach(cb => {
-        if(cb.closest('tr').style.display !== 'none') {
-            cb.checked = checked;
-            highlightRow(cb);
-        }
-    });
 };
 
 window.bukaModalScan = function() {
@@ -138,15 +128,18 @@ window.prosesScan = async function() {
         tempScannedQR = qr;
         const idSkuBase = globalData.id_sku;
 
+        // Cek stok aktual untuk melihat distribusi customer_estimasi
         const { data: aktualData, error: errAktual } = await db.from('stok_aktual').select('customer_estimasi, qty').eq('id_sku', idSkuBase).gt('qty', 0);
         if(errAktual) throw errAktual;
 
         if(aktualData && aktualData.length > 1) {
+            // Jika ada lebih dari 1 estimasi, minta user memilih
             const sel = document.getElementById('select-estimasi');
             sel.innerHTML = aktualData.map(a => `<option value="${a.customer_estimasi}">${a.customer_estimasi} (Tersedia: ${a.qty} Dus)</option>`).join('');
             document.getElementById('modal-scan').classList.add('hidden');
             document.getElementById('modal-estimasi').classList.remove('hidden');
         } else {
+            // Jika hanya 1 estimasi, langsung eksekusi
             let custEst = aktualData && aktualData.length === 1 ? aktualData[0].customer_estimasi : globalData.customer_aktual;
             await jalankanRPC(qr, custEst);
         }
@@ -238,22 +231,78 @@ window.prosesBSMassal = async function() {
     }
 };
 
-// --- FUNGSI FILTER EXCEL STANDAR ---
-window.sortTable = function(colIndex, headerEl) {
-    const tbody = document.getElementById('tbody-nonaktif');
-    const rows = Array.from(tbody.querySelectorAll('tr.r-row'));
-    let isAsc = sortState[colIndex] !== 'asc'; sortState[colIndex] = isAsc ? 'asc' : 'desc';
-    rows.sort((a, b) => {
-        let valA = a.cells[colIndex].getAttribute('data-search') || a.cells[colIndex].innerText.trim(); 
-        let valB = b.cells[colIndex].getAttribute('data-search') || b.cells[colIndex].innerText.trim();
-        let numA = parseFloat(valA); let numB = parseFloat(valB);
-        if(!isNaN(numA) && !isNaN(numB)) return isAsc ? numA - numB : numB - numA;
-        return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+// ==========================================
+// FUNGSI STANDAR (PAGINASI, FILTER, EXCEL)
+// ==========================================
+window.highlightRow = function(checkbox, skipStateReset = false) {
+    const tr = checkbox.closest('tr');
+    if (checkbox.checked) { tr.classList.add('selected-row'); } 
+    else { tr.classList.remove('selected-row'); }
+    
+    if(!skipStateReset && !checkbox.checked && selectAllState !== 0) { selectAllState = 0; window.updateSelectAllUI(); }
+    if(!skipStateReset) window.updateSelectedCount();
+};
+
+window.changeRowsPerPage = function(val) {
+    if (val === 'ALL') { rowsPerPage = 999999; } 
+    else { rowsPerPage = parseInt(val); }
+    currentPage = 1; window.applyPagination();
+};
+
+window.applyPagination = function() {
+    const allRows = Array.from(document.querySelectorAll('#tbody-nonaktif tr.r-row'));
+    allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
+
+    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
+    const totalFiltered = visibleRows.length;
+    const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
+    
+    if(currentPage > totalPages) currentPage = totalPages;
+    if(currentPage < 1) currentPage = 1;
+
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+
+    visibleRows.forEach((row, index) => {
+        row.classList.remove('stripe-1', 'stripe-2');
+        if (index % 2 === 0) row.classList.add('stripe-1'); else row.classList.add('stripe-2');
+
+        if(index >= startIndex && index < endIndex) { row.style.display = ''; } else { row.style.display = 'none'; }
     });
-    rows.forEach(row => tbody.appendChild(row));
-    document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-30'); });
-    const icon = headerEl.querySelector('.sort-icon');
-    if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
+
+    if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
+    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
+    if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
+    
+    if (selectAllState === 1) { selectAllState = 0; window.updateSelectAllUI(); }
+    window.applySelection(); window.updateSelectedCount();
+};
+
+window.prevPage = function() { if(currentPage > 1) { currentPage--; window.applyPagination(); } };
+window.nextPage = function() { const totalVisible = document.querySelectorAll('#tbody-nonaktif tr.r-row:not(.filtered-out)').length; if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; window.applyPagination(); } };
+window.updateSelectedCount = function() { const count = document.querySelectorAll('.cb-main:checked').length; if(document.getElementById('lbl-pilih-baris')) document.getElementById('lbl-pilih-baris').innerText = count; };
+
+window.cycleSelectAll = function() { selectAllState = (selectAllState + 1) % 3; window.updateSelectAllUI(); window.applySelection(); };
+window.updateSelectAllUI = function() {
+    const btn = document.getElementById('btn-select-all'); if(!btn) return;
+    if (selectAllState === 0) { btn.innerHTML = ''; btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto'; } 
+    else if (selectAllState === 1) { btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>'; btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto'; } 
+    else if (selectAllState === 2) { btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>'; btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto'; }
+    lucide.createIcons();
+};
+window.applySelection = function() {
+    const allRows = Array.from(document.querySelectorAll('#tbody-nonaktif tr.r-row'));
+    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
+    const startIndex = (currentPage - 1) * rowsPerPage; const endIndex = startIndex + rowsPerPage;
+
+    if (selectAllState === 0) { allRows.forEach(row => { const cb = row.querySelector('.cb-main'); if(cb) { cb.checked = false; window.highlightRow(cb, true); } }); } 
+    else if (selectAllState === 1) {
+        allRows.forEach(row => { const cb = row.querySelector('.cb-main'); if(cb) { cb.checked = false; window.highlightRow(cb, true); } });
+        visibleRows.forEach((row, index) => { if(index >= startIndex && index < endIndex) { const cb = row.querySelector('.cb-main'); if(cb) { cb.checked = true; window.highlightRow(cb, true); } } });
+    } else if (selectAllState === 2) {
+        visibleRows.forEach(row => { const cb = row.querySelector('.cb-main'); if(cb) { cb.checked = true; window.highlightRow(cb, true); } });
+    }
+    window.updateSelectedCount();
 };
 
 window.openColumnFilter = function(event, colClass, colName) {
@@ -275,13 +324,13 @@ window.openColumnFilter = function(event, colClass, colName) {
     });
 
     let sortedValues = Array.from(uniqueValues).sort();
-    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
+    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
     sortedValues.forEach(val => {
         let isChecked = true; if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
         listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}"><input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> <span class="truncate text-slate-600">${val}</span></label>`;
     });
 
-    document.getElementById('filter-values-list').innerHTML = listHtml; updateSelectAllState(); document.getElementById('filter-search-input').value = '';
+    document.getElementById('filter-values-list').innerHTML = listHtml; window.updateSelectAllState(); document.getElementById('filter-search-input').value = '';
     const menu = document.getElementById('excel-filter-menu'); menu.classList.remove('hidden');
     const btnRect = event.currentTarget.getBoundingClientRect(); const menuWidth = 256; 
     let topPos = btnRect.bottom + 4; let leftPos = btnRect.left; 
@@ -291,7 +340,7 @@ window.openColumnFilter = function(event, colClass, colName) {
     document.getElementById('filter-search-input').focus();
 };
 
-window.toggleAllFilterValues = function(checked) { document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; }); updateSelectAllState(); };
+window.toggleAllFilterValues = function(checked) { document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; }); window.updateSelectAllState(); };
 window.updateSelectAllState = function() {
     const allCbs = document.querySelectorAll('.filter-val-cb'); const checkedCbs = document.querySelectorAll('.filter-val-cb:checked'); const selectAll = document.getElementById('filter-select-all');
     if(!selectAll) return;
@@ -299,7 +348,7 @@ window.updateSelectAllState = function() {
     else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
     else { selectAll.checked = false; selectAll.indeterminate = true; }
 };
-document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) updateSelectAllState(); });
+document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) window.updateSelectAllState(); });
 window.searchFilterList = function(val) {
     const query = val.toLowerCase().split(' ').filter(x => x); 
     document.querySelectorAll('.filter-val-item').forEach(label => {
@@ -316,20 +365,39 @@ window.applyFilterForCurrentCol = function() {
     window.closeFilterMenu(); window.saringTabelExcel(); 
 };
 window.saringTabelExcel = function() {
-    let visibleCount = 0;
     document.querySelectorAll('.r-row').forEach(row => {
         let show = true;
         for (let colClass in activeFilters) {
             const allowedValues = activeFilters[colClass]; const cell = row.querySelector('.' + colClass);
             if (cell) { let text = cell.getAttribute('data-search') || cell.innerText.trim(); if (!allowedValues.includes(text)) { show = false; break; } }
         }
-        if (show) { row.style.display = ''; visibleCount++; } 
-        else { row.style.display = 'none'; }
+        if (show) { row.classList.remove('filtered-out'); } 
+        else { row.classList.add('filtered-out'); let cb = row.querySelector('.cb-main'); if(cb) { cb.checked = false; window.highlightRow(cb, true); } }
     });
-    document.getElementById('lbl-total').innerText = visibleCount;
+    selectAllState = 0; window.updateSelectAllUI(); currentPage = 1; window.applyPagination(); window.updateFilterIcons();
+};
+window.updateFilterIcons = function() {
     document.querySelectorAll('.filter-icon').forEach(icon => { icon.classList.remove('text-amber-400', 'opacity-100'); icon.classList.add('text-white', 'opacity-40'); });
     for (let colClass in activeFilters) {
         const th = document.querySelector(`th.${colClass}`);
         if (th) { const icon = th.querySelector('.filter-icon'); if (icon) { icon.classList.remove('text-white', 'opacity-40'); icon.classList.add('text-amber-400', 'opacity-100'); } }
     }
+};
+
+window.sortTable = function(colIndex, headerEl) {
+    const tbody = document.getElementById('tbody-nonaktif');
+    const rows = Array.from(tbody.querySelectorAll('tr.r-row'));
+    let isAsc = sortState[colIndex] !== 'asc'; sortState[colIndex] = isAsc ? 'asc' : 'desc';
+    rows.sort((a, b) => {
+        let valA = a.cells[colIndex].getAttribute('data-search') || a.cells[colIndex].innerText.trim(); 
+        let valB = b.cells[colIndex].getAttribute('data-search') || b.cells[colIndex].innerText.trim();
+        let numA = parseFloat(valA); let numB = parseFloat(valB);
+        if(!isNaN(numA) && !isNaN(numB)) return isAsc ? numA - numB : numB - numA;
+        return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    });
+    rows.forEach(row => tbody.appendChild(row));
+    document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-30'); });
+    const icon = headerEl.querySelector('.sort-icon');
+    if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
+    window.applyPagination();
 };
