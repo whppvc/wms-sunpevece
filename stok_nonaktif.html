@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WMS - Stok Nonaktif</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="global.js"></script>
+    <style>
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; background-color: #f8fafc; }
+        .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .table-container { position: relative; }
+        .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; padding: 0.75rem 1rem !important; font-size: 0.75rem !important; font-weight: 600 !important; text-transform: uppercase !important; white-space: nowrap !important; position: sticky !important; top: 0 !important; z-index: 20 !important; }
+    </style>
+</head>
+<body class="font-sans text-slate-800">
+    <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
+        
+        <div class="shrink-0 bg-white p-3 flex items-center justify-between border-b border-slate-200 shadow-sm w-full z-20">
+            <div class="flex items-center gap-2">
+                <button onclick="bukaModalScan()" class="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-md shadow-sm text-xs uppercase transition flex items-center gap-2 active:scale-95"><i data-lucide="scan-line" class="w-4 h-4"></i> Tambahkan Item</button>
+                <button onclick="muatData()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-md shadow-sm text-xs uppercase transition flex items-center gap-2 active:scale-95 border border-slate-300"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh</button>
+            </div>
+            <span class="text-xs font-bold text-slate-500">Total: <span id="lbl-total" class="text-slate-800">0</span> Item</span>
+        </div>
+
+        <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
+            <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-xl shadow-sm border border-slate-300">
+                <table class="w-full text-left whitespace-nowrap" id="main-table">
+                    <thead class="sticky top-0 z-50 shadow-sm" id="thead-nonaktif"></thead>
+                    <tbody id="tbody-nonaktif" class="text-slate-800"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SCAN -->
+    <div id="modal-scan" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
+            <h3 class="text-lg font-black mb-2 flex items-center gap-2 text-rose-600"><i data-lucide="package-x"></i> Nonaktifkan Item</h3>
+            <p class="text-xs font-bold text-slate-500 mb-5">Scan QRCode fisik barang yang rusak/bermasalah.</p>
+            <div class="space-y-4 mb-6">
+                <input type="text" id="input-qr" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-rose-600 font-mono font-bold text-sm bg-slate-50" placeholder="Scan barcode di sini..." autocomplete="off">
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('modal-scan').classList.add('hidden')" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase hover:bg-slate-300 transition">Batal</button>
+                <button type="button" onclick="prosesScan()" id="btn-proses-scan" class="w-2/3 py-3 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 flex justify-center items-center gap-2"><i data-lucide="search"></i> Cek Item</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PILIH ESTIMASI -->
+    <div id="modal-estimasi" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
+            <h3 class="text-lg font-black mb-2 flex items-center gap-2 text-indigo-600"><i data-lucide="users"></i> Pilih Customer Estimasi</h3>
+            <p class="text-xs font-bold text-slate-500 mb-5">Item ini dialokasikan ke beberapa customer. Pilih customer mana yang stoknya akan dikurangi.</p>
+            <div class="space-y-4 mb-6">
+                <select id="select-estimasi" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-600 font-bold text-sm bg-slate-50 cursor-pointer"></select>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('modal-estimasi').classList.add('hidden')" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase hover:bg-slate-300 transition">Batal</button>
+                <button type="button" onclick="eksekusiNonaktif()" id="btn-eksekusi" class="w-2/3 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 flex justify-center items-center gap-2"><i data-lucide="save"></i> Simpan Nonaktif</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL FILTER EXCEL -->
+    <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[120] flex flex-col font-sans text-sm overflow-hidden">
+        <div class="p-3 border-b border-slate-100 flex justify-between items-center rounded-t-lg">
+            <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
+            <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-rose-500 bg-white border border-slate-200 p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+        </div>
+        <div class="p-2 border-b border-slate-200 bg-white">
+            <div class="relative">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2"></i>
+                <input type="text" id="filter-search-input" oninput="searchFilterList(this.value)" class="w-full pl-8 p-1.5 text-xs font-bold border border-slate-300 bg-slate-50 rounded focus:border-blue-500 outline-none transition" placeholder="Cari Spesifik...">
+            </div>
+        </div>
+        <div class="p-2 max-h-48 overflow-y-auto flex flex-col gap-1 text-xs bg-white custom-scroll" id="filter-values-list"></div>
+        <div class="p-2 border-t border-slate-200 bg-slate-50 flex justify-between gap-2 rounded-b-lg">
+            <button onclick="clearFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100 transition shadow-sm">Reset</button>
+            <button onclick="applyFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-700 transition shadow-sm">Terapkan</button>
+        </div>
+    </div>
+
+    <script src="stok_nonaktif_logic.js"></script>
+</body>
+</html>
