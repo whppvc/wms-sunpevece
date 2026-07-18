@@ -379,7 +379,14 @@ async function VerifikasiDanCek() {
 
             let isManuallyHeld = r.getAttribute('data-hold-langsir') === 'true';
 
-            if (hasilMap[qr]) {
+            // REVISI: Cek stok_global terlebih dahulu (Kebenaran Fisik Gudang)
+            if (globalSet.has(qr)) {
+                statusText = 'DUPLIKAT GUDANG';
+                statusClass = 'bg-red-600 text-white border-red-800';
+                hasError = true;
+            }
+            // Cek hasil_stbj_langsir jika tidak ada di stok_global
+            else if (hasilMap[qr]) {
                 let statDB = hasilMap[qr].status;
                 if(troliCell.innerText === '-' && hasilMap[qr].troli) troliCell.innerText = hasilMap[qr].troli;
                 if(!ketCell.classList.contains('text-slate-800')) ketCell.innerText = hasilMap[qr].keterangan || '-';
@@ -408,10 +415,6 @@ async function VerifikasiDanCek() {
                     isHoldLangsir = true; 
                     hasError = true;
                 }
-            } else if (globalSet.has(qr)) {
-                statusText = 'DUPLIKAT DATA';
-                statusClass = 'bg-red-600 text-white border-red-800';
-                hasError = true;
             } else {
                 statusText = 'BELUM STBJ';
                 statusClass = 'bg-red-600 text-white border-red-800';
@@ -688,7 +691,7 @@ async function bukaModalSTBJ() {
                     <div class="text-[12px] font-bold text-slate-600 leading-snug">
                         Item: <span class="text-blue-600">${r.jenis_item || '-'}</span> | <span class="text-slate-800">${r.nama_item || '-'}</span> | <span class="text-slate-800">${r.panjang || '-'}</span> | <span class="text-slate-800">${r.grade || '-'}</span> | <span class="text-slate-800">${r.dus || '-'}</span> | <span class="text-blue-600">${r.shading || '-'}</span>
                     </div>
-                    <div class="text-[12px] font-bold text-slate-600">Customer: <span class="text-orange-600">${r.customer || '-'}</span></div>
+                    <div class="text-[12px] font-bold text-slate-600">Customer: <span class="text-orange-600">${r.customer_aktual || '-'}</span></div>
                     <div class="text-[12px] font-bold text-slate-600">Keterangan: <span class="text-slate-800">${r.keterangan || '-'}</span></div>
                 </div>`;
         });
