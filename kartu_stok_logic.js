@@ -1,10 +1,11 @@
 let modeKS = 'area'; 
 let stokQRRaw = []; 
 let stokAktualRaw = []; 
-let stokLembaranRaw = [];
+let stokNonaktifRaw = []; // REVISI: Tambah state untuk stok nonaktif
 let dataKSQR = []; 
 let dataKSArea = []; 
 let dataKSGlobal = [];
+let dataKSNonaktif = []; // REVISI: Data untuk tab nonaktif
 let selectedForAction = []; 
 let sourcePOContext = ''; 
 let currentBreakdownData = [];
@@ -174,10 +175,11 @@ async function muatDataStok() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
-        const [resStok, resAktual, resLembaran, resGanti] = await Promise.all([
+        // REVISI: Ambil data stok_nonaktif juga
+        const [resStok, resAktual, resNonaktif, resGanti] = await Promise.all([
             db.from('stok_global').select('*'), 
             db.from('stok_aktual').select('*'),
-            db.from('stok_lembaran').select('*').order('created_at', {ascending: false}),
+            db.from('stok_nonaktif').select('*').order('created_at', {ascending: false}),
             db.from('ganti_customer').select('id_sku, customer_aktual_request, area') 
         ]);
         
@@ -186,7 +188,7 @@ async function muatDataStok() {
         
         stokQRRaw = resStok.data || []; 
         stokAktualRaw = resAktual.data || [];
-        stokLembaranRaw = resLembaran.data || [];
+        stokNonaktifRaw = resNonaktif.data || []; // REVISI
 
         processedGantiKeys.clear();
         processedGlobalKeys.clear();
@@ -231,7 +233,8 @@ async function muatDataStok() {
             qrMap[key].push(r.qrcode);
         });
 
-        dataKSQR = stokQRRaw.map(r => {
+        // REVISI: Filter dataKSQR dan dataKSArea agar tidak menampilkan yang NONAKTIF
+        dataKSQR = stokQRRaw.filter(r => r.kondisi !== 'NONAKTIF').map(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
             let t = translateBarcode(r.qrcode);
             return {
@@ -247,7 +250,7 @@ async function muatDataStok() {
             };
         });
 
-        dataKSArea = stokAktualRaw.map(a => {
+        dataKSArea = stokAktualRaw.filter(a => a.kondisi !== 'NONAKTIF').map(a => {
             let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_aktual}_${a.keterangan}_${a.kondisi}`; 
             return {
                 ...a,
@@ -275,6 +278,9 @@ async function muatDataStok() {
         });
         dataKSGlobal = Object.values(globalMap);
 
+        // REVISI: Siapkan data untuk tab Nonaktif
+        dataKSNonaktif = stokNonaktifRaw;
+
         renderTabel();
     } catch(e) { 
         tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-medium">Gagal mengolah data: ${e.message}</td></tr>`; 
@@ -286,13 +292,13 @@ function setModeKS(m) {
     const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     
-    ['qr', 'global', 'area', 'lembaran'].forEach(tab => {
+    ['qr', 'global', 'area', 'nonaktif'].forEach(tab => {
         const el = document.getElementById('tab-' + tab);
         if(el) el.className = (m === tab) ? activeClass : inactiveClass;
     });
     
     const btnGantiPO = document.getElementById('btn-ganti-po-main');
-    if(btnGantiPO) btnGantiPO.classList.toggle('hidden', m === 'global' || m === 'lembaran');
+    if(btnGantiPO) btnGantiPO.classList.toggle('hidden', m === 'global' || m === 'nonaktif');
     
     const btnReqKonv = document.getElementById('btn-req-konversi-main');
     if(btnReqKonv) btnReqKonv.classList.toggle('hidden', m !== 'area');
@@ -352,6 +358,8 @@ function renderTabel() {
     
     sortState = {}; 
     selectAllState = 0;
+
+    const rowClassBase = "transition row-ks text-[13px]";
 
     if(modeKS === 'qr') {
         thead.innerHTML = `
@@ -542,40 +550,47 @@ function renderTabel() {
         `}).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
-    else if (modeKS === 'lembaran') {
+    else if (modeKS === 'nonaktif') {
+        // REVISI: Render Tabel Nonaktif
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
                     <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
-                ${thSort(1, 'Kode Master', 'col-area')}
-                ${thSort(2, 'Nama Item', 'col-nama')}
-                ${thSort(3, 'Panjang', 'col-pjg')}
-                ${thSort(4, 'Grade', 'col-grade')}
-                ${thSort(5, 'Dus', 'col-dus')}
-                ${thSort(6, 'Shading', 'col-shading')}
-                ${thSort(7, 'Keterangan', 'col-ket')}
-                <th class="hdr-std w-20 col-proses text-center">Proses</th>
+                ${thSort(1, 'Area', 'col-area')}
+                ${thSort(2, 'QRCode', 'col-qr')}
+                ${thSort(3, 'Jenis Item', 'col-jenis')}
+                ${thSort(4, 'Nama Item', 'col-nama')}
+                ${thSort(5, 'Panjang', 'col-pjg')}
+                ${thSort(6, 'Grade', 'col-grade')}
+                ${thSort(7, 'Dus', 'col-dus')}
+                ${thSort(8, 'Shading', 'col-shading')}
+                ${thSort(9, 'Customer Aktual', 'col-po')}
+                ${thSort(10, 'Customer Estimasi', 'col-estimasi')}
+                ${thSort(11, 'Keterangan', 'col-ket')}
             </tr>`;
         
-        if(stokLembaranRaw.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="9" class="p-8 text-center font-medium text-slate-400">Tidak ada data stok lembaran.</td></tr>`; return; }
+        if(dataKSNonaktif.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada data stok nonaktif.</td></tr>`; return; }
 
-        tbody.innerHTML = stokLembaranRaw.map((r) => {
+        tbody.innerHTML = dataKSNonaktif.map((r) => {
             const rowDataStr = encodeURIComponent(JSON.stringify(r));
             return `
-            <tr class="transition row-ks text-[13px] bg-white even:bg-slate-50 hover:bg-slate-100">
+            <tr class="transition row-ks text-[13px] !bg-red-100 !text-red-900 font-bold is-nonaktif">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.kode_master || '-'}">${r.kode_master || '-'}</td>
-                <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg || '-'}">${r.pjg || '-'}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
-                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
-                <td class="px-4 py-3 text-center col-proses"><button onclick="prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button></td>
+                <td class="px-4 py-3 font-semibold text-left col-area" data-search="${r.posisi || '-'}">${r.posisi || '-'}</td>
+                <td class="px-4 py-3 font-mono font-bold text-left col-qr" data-search="${r.qrcode || '-'}">${r.qrcode || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-jenis" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-pjg" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-po" data-search="${r.customer_aktual || '-'}">${r.customer_aktual || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-estimasi" data-search="${r.customer_estimasi || '-'}">${r.customer_estimasi || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
             </tr>
         `}).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="9" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     }
 
     applyColumnOrder(); 
@@ -1032,7 +1047,7 @@ function bukaBreakdown(gKey) {
                 <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-left">${a.area}</td>
                 <td class="px-4 py-3 font-semibold text-left col-po">${a.po_aktual}</td>
-                <td class="px-4 py-3 font-semibold text-left col-estimasi">${a.customer_estimasi}</td>
+                <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi">${a.customer_estimasi}</td>
                 <td class="px-4 py-3 font-medium text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
                 <td class="px-4 py-3 font-bold text-center">${kondisiHtml}</td>
                 <td class="px-4 py-3 font-black text-center">${a.qty}</td>
@@ -1083,7 +1098,7 @@ function bukaModalLihatPO(encodedPOs) {
 function siapkanGantiPO(context) {
     let checkboxes = [];
     if(context === 'main') {
-        if(modeKS === 'global' || modeKS === 'lembaran') return;
+        if(modeKS === 'global' || modeKS === 'nonaktif') return;
         checkboxes = document.querySelectorAll('.cb-main:checked');
     } else { checkboxes = document.querySelectorAll('.cb-bd:checked'); }
 
