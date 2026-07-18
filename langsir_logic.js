@@ -379,7 +379,7 @@ async function VerifikasiDanCek() {
 
             let isManuallyHeld = r.getAttribute('data-hold-langsir') === 'true';
 
-            // REVISI: Cek stok_global terlebih dahulu (Kebenaran Fisik Gudang)
+            // Cek stok_global terlebih dahulu (Kebenaran Fisik Gudang)
             if (globalSet.has(qr)) {
                 statusText = 'DUPLIKAT GUDANG';
                 statusClass = 'bg-red-600 text-white border-red-800';
@@ -512,7 +512,8 @@ async function saveToSupabase() {
         let mesin = r.querySelector('.col-mesin').innerText;
         let shift = r.querySelector('.col-shift').innerText;
         
-        let id_sku = `${area}_${nama}_${pjg}_${grade}_${dus}_${shading}_${ket}_${customer}`;
+        // REVISI: id_sku ditambahkan _Aman di belakangnya (9 segmen)
+        let id_sku = `${area}_${nama}_${pjg}_${grade}_${dus}_${shading}_${ket}_${customer}_Aman`;
         let id_po = `${nama}_${pjg}_${grade}`;
         
         updatesHasilLangsir.push({
@@ -522,8 +523,6 @@ async function saveToSupabase() {
             waktu_langsir: wibNow,
             pic_input: user.username
         });
-
-        // REVISI: Hapus stokQrInserts karena tabel stok_qr tidak digunakan lagi
 
         stokGlobalInserts.push({
             qrcode: qr,
@@ -538,8 +537,9 @@ async function saveToSupabase() {
             grade: grade,
             dus: dus,
             shading: shading,
-            customer_aktual: customer, // REVISI: customer_bawaan -> customer_aktual
+            customer_aktual: customer, 
             keterangan: ket,
+            kondisi: 'Aman', // REVISI: Tambah kondisi Aman
             pic_input: user.username,
             jalur_masuk: 'langsir',
             created_at: wibNow
@@ -550,9 +550,11 @@ async function saveToSupabase() {
             mapAktual[keyAkt] = {
                 id_sku: id_sku, id_po: id_po, jenis_item: jenis, nama_item: nama, 
                 panjang: pjg, grade: grade, dus: dus, shading: shading, 
-                area: area, customer_aktual: customer, // REVISI: Hapus customer_bawaan
+                area: area, customer_aktual: customer, 
                 customer_estimasi: customer, 
-                keterangan: ket, qty: 0
+                keterangan: ket,
+                kondisi: 'Aman', // REVISI: Tambah kondisi Aman
+                qty: 0
             };
         }
         mapAktual[keyAkt].qty++;
@@ -573,7 +575,6 @@ async function saveToSupabase() {
 
     let stokAktualUpdates = Object.values(mapAktual);
 
-    // REVISI: Hapus stok_qr_inserts dari payload transaksi
     const payloadTransaksi = {
         hasil_updates: updatesHasilLangsir,
         stok_global_inserts: stokGlobalInserts,
@@ -652,17 +653,6 @@ async function bukaModalSTBJ() {
     lucide.createIcons();
 
     try {
-        const { data: globalData, error: errGlobal } = await db.from('stok_global').select('*').order('created_at', {ascending: false}).limit(200);
-        if(errGlobal) throw errGlobal;
-        
-        if(!globalData || globalData.length === 0) {
-            if(tbody) tbody.innerHTML = '<div class="p-6 text-center font-bold text-slate-400">Data STBJ Kosong.</div>';
-            return;
-        }
-
-        // REVISI: Filter data STBJ yang belum masuk gudang (tidak ada di stok_global dengan status IN GUDANG)
-        // Karena stok_qr dihapus, kita cukup menampilkan data dari stok_global yang statusnya bukan IN GUDANG.
-        // Namun, karena stok_global hanya menyimpan barang yang SUDAH masuk gudang, data STBJ murni diambil dari hasil_stbj_langsir yang statusnya 'STBJ'
         const { data: stbjData, error: errStbj } = await db.from('hasil_stbj_langsir')
             .select('*')
             .eq('status', 'STBJ')
