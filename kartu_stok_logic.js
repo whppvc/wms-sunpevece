@@ -175,7 +175,6 @@ async function muatDataStok() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
-        // REVISI: Mengubah db.from('stok_qr') menjadi db.from('stok_global')
         const [resStok, resAktual, resLembaran, resGanti] = await Promise.all([
             db.from('stok_global').select('*'), 
             db.from('stok_aktual').select('*'),
@@ -186,7 +185,7 @@ async function muatDataStok() {
         if(resStok.error) throw resStok.error;
         if(resAktual.error) throw resAktual.error;
         
-        stokQRRaw = resStok.data || []; // Variabel internal tetap stokQRRaw agar tidak merusak kode lain, tapi isinya data stok_global
+        stokQRRaw = resStok.data || []; 
         stokAktualRaw = resAktual.data || [];
         stokLembaranRaw = resLembaran.data || [];
 
@@ -224,10 +223,11 @@ async function muatDataStok() {
             let grade = p[3] || r.grade || t.grade;
             let dus = p[4] || r.dus || t.dus;
             let shading = p[5] || r.shading || t.shading;
-            let po = p[6] || r.customer_aktual || t.customer || '-'; // REVISI
-            let ket = p.length >= 8 ? p.slice(7).join('_') : (r.keterangan || '-');
+            let ket = p[6] || r.keterangan || '-'; // REVISI: ket di p[6]
+            let po = p[7] || r.customer_aktual || t.customer || '-'; // REVISI: po di p[7]
+            let kondisi = p[8] || r.kondisi || 'Aman'; // REVISI: kondisi di p[8]
 
-            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}`;
+            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}_${kondisi}`;
             if(!qrMap[key]) qrMap[key] = [];
             qrMap[key].push(r.qrcode);
         });
@@ -241,13 +241,15 @@ async function muatDataStok() {
                 jenis: r.jenis_item || t.jenisItem || '-', nama: p[1] || r.nama_item || t.namaItem || '-',
                 pjg: p[2] || r.panjang || t.panjang || '-', grade: p[3] || r.grade || t.grade || '-', 
                 dus: p[4] || r.dus || t.dus || '-', shading: p[5] || r.shading || t.shading || '-',
-                po_aktual: p[6] || r.customer_aktual || t.customer || '-', // REVISI
-                ket: p.length >= 8 ? p.slice(7).join('_') : (r.keterangan || '-'), id: r.id 
+                po_aktual: p[7] || r.customer_aktual || t.customer || '-', 
+                ket: p[6] || r.keterangan || '-', 
+                kondisi: p[8] || r.kondisi || 'Aman', // REVISI: Tambah kondisi
+                id: r.id 
             };
         });
 
         dataKSArea = stokAktualRaw.map(a => {
-            let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_aktual}_${a.keterangan}`; // REVISI
+            let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_aktual}_${a.keterangan}_${a.kondisi}`; // REVISI
             return {
                 ...a,
                 pjg: a.panjang || '-', 
@@ -258,15 +260,16 @@ async function muatDataStok() {
                 id_po: a.id_po || '-',
                 po_aktual: a.customer_aktual || '-',
                 customer_estimasi: a.customer_estimasi || '-',
+                kondisi: a.kondisi || 'Aman', // REVISI: Tambah kondisi
                 qty: a.qty || 0
             };
         });
 
         let globalMap = {};
         dataKSArea.forEach(a => {
-            let gKey = `${a.jenis}_${a.nama}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.customer_estimasi}_${a.keterangan}`;
+            let gKey = `${a.jenis}_${a.nama}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.customer_estimasi}_${a.keterangan}_${a.kondisi}`;
             if(!globalMap[gKey]) {
-                globalMap[gKey] = { gKey: gKey, jenis: a.jenis, nama: a.nama, pjg: a.pjg, grade: a.grade, dus: a.dus, shading: a.shading, po: a.po_aktual, customer_estimasi: a.customer_estimasi, ket: a.keterangan, qty: 0, areas: [] };
+                globalMap[gKey] = { gKey: gKey, jenis: a.jenis, nama: a.nama, pjg: a.pjg, grade: a.grade, dus: a.dus, shading: a.shading, po: a.po_aktual, customer_estimasi: a.customer_estimasi, ket: a.keterangan, kondisi: a.kondisi, qty: 0, areas: [] };
             }
             globalMap[gKey].qty += a.qty;
             globalMap[gKey].areas.push(a);
@@ -372,10 +375,11 @@ function renderTabel() {
                 ${thSort(11, 'Shading', 'col-shading')}
                 ${thSort(12, 'Customer Aktual', 'col-po')}
                 ${thSort(13, 'Keterangan', 'col-ket')}
+                ${thSort(14, 'Kondisi', 'col-kondisi')} <!-- REVISI: Tambah kolom Kondisi -->
                 <th class="hdr-std w-20 col-proses text-center">Proses</th>
             </tr>`;
         
-        if(dataKSQR.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="15" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSQR.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="16" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = dataKSQR.map((r) => {
             const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
@@ -400,7 +404,7 @@ function renderTabel() {
 
             return `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-mono font-medium text-slate-800 text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
@@ -408,12 +412,13 @@ function renderTabel() {
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-shift" data-search="${r.shift}">${r.shift}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                     <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.panjang}">${r.panjang}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
                     <td class="px-4 py-3 text-left col-po" data-search="${poString}">${btnPO}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
+                    <td class="px-4 py-3 font-bold text-slate-700 text-center col-kondisi" data-search="${r.kondisi}">${r.kondisi}</td> <!-- REVISI -->
                     <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
                 </tr>`;
         }).join('');
@@ -435,7 +440,8 @@ function renderTabel() {
                 ${thSort(8, 'Customer Aktual', 'col-po')}
                 ${thSort(9, 'Customer Estimasi', 'col-estimasi text-purple-300')}
                 ${thSort(10, 'Keterangan', 'col-ket')}
-                ${thSort(11, 'Total Qty (Dus)', 'col-qty')}
+                ${thSort(11, 'Kondisi', 'col-kondisi')} <!-- REVISI: Tambah kolom Kondisi -->
+                ${thSort(12, 'Total Qty (Dus)', 'col-qty')}
                 <th class="hdr-std w-20 col-proses text-center">Proses</th>
             </tr>`;
         
@@ -454,7 +460,7 @@ function renderTabel() {
 
             return `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-estimasi="${r.customer_estimasi}" data-qty="${r.qty}" data-ket="${r.keterangan}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-estimasi="${r.customer_estimasi}" data-qty="${r.qty}" data-ket="${r.keterangan}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                     <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
@@ -465,6 +471,7 @@ function renderTabel() {
                     <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po" data-search="${r.po_aktual}">${r.po_aktual}</td>
                     <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
+                    <td class="px-4 py-3 font-bold text-slate-700 text-center col-kondisi" data-search="${r.kondisi}">${r.kondisi}</td> <!-- REVISI -->
                     <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
                     <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
                 </tr>`;
@@ -487,7 +494,8 @@ function renderTabel() {
                 ${thSort(8, 'Customer Aktual', 'col-po')}
                 ${thSort(9, 'Customer Estimasi', 'col-estimasi text-purple-300')}
                 ${thSort(10, 'Keterangan', 'col-ket')}
-                ${thSort(11, 'TOTAL (DUS)', 'col-qty')}
+                ${thSort(11, 'Kondisi', 'col-kondisi')} <!-- REVISI: Tambah kolom Kondisi -->
+                ${thSort(12, 'TOTAL (DUS)', 'col-qty')}
                 <th class="hdr-std w-20 col-proses text-center">Proses</th>
             </tr>`;
 
@@ -518,6 +526,7 @@ function renderTabel() {
                 <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po" data-search="${r.po}">${r.po}</td>
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
                 <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
+                <td class="px-4 py-3 font-bold text-slate-700 text-center col-kondisi" data-search="${r.kondisi}">${r.kondisi}</td> <!-- REVISI -->
                 <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
                 <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
             </tr>
@@ -695,7 +704,7 @@ async function eksekusiGantiPO() {
         for(let row of selectedForAction) {
             if (qtySisaUntukDiupdate <= 0) break; 
             
-            let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
+            let qtyPotong = Math.min(row.qty, qtySisaUntilDiupdate);
             qtySisaUntukDiupdate -= qtyPotong;
 
             // Cari baris lama di stok_aktual menggunakan spesifikasi lengkap
@@ -710,6 +719,7 @@ async function eksekusiGantiPO() {
                 .eq('customer_aktual', row.po_aktual)
                 .eq('customer_estimasi', row.customer_estimasi)
                 .eq('keterangan', row.keterangan)
+                .eq('kondisi', row.kondisi) // REVISI: Validasi kondisi
                 .limit(1);
             
             if (errOld) throw errOld;
@@ -737,6 +747,7 @@ async function eksekusiGantiPO() {
                     .eq('customer_aktual', oldRow.customer_aktual)
                     .eq('customer_estimasi', newPO)
                     .eq('keterangan', oldRow.keterangan)
+                    .eq('kondisi', oldRow.kondisi) // REVISI: Validasi kondisi
                     .limit(1);
 
                 if (errNew) throw errNew;
@@ -829,15 +840,16 @@ function salinDataBreakdown() {
     const cek = document.querySelectorAll('.cb-bd:checked');
     if(cek.length === 0) return alert("Pilih data breakdown yang ingin disalin!");
 
-    let copyString = "Area\tCustomer Aktual\tCustomer Estimasi\tKeterangan\tTotal Dus\n";
+    let copyString = "Area\tCustomer Aktual\tCustomer Estimasi\tKeterangan\tKondisi\tTotal Dus\n"; // REVISI
     cek.forEach(cb => {
         const tr = cb.closest('tr');
         const area = tr.children[1].innerText.trim();
         const po = tr.children[2].innerText.trim();
         const est = tr.children[3].innerText.trim();
         const ket = tr.children[4].innerText.trim();
-        const qty = tr.children[5].innerText.trim();
-        copyString += `${area}\t${po}\t${est}\t${ket}\t${qty}\n`;
+        const kondisi = tr.children[5].innerText.trim(); // REVISI
+        const qty = tr.children[6].innerText.trim();     // REVISI
+        copyString += `${area}\t${po}\t${est}\t${ket}\t${kondisi}\t${qty}\n`;
     });
 
     navigator.clipboard.writeText(copyString).then(() => {
@@ -1002,11 +1014,12 @@ function bukaBreakdown(gKey) {
         const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
         return `
             <tr class="transition bd-row text-[13px] ${stripeClass}">
-                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
                 <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi">${a.customer_estimasi}</td>
                 <td class="px-4 py-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
+                <td class="px-4 py-3 font-bold text-slate-700 text-left">${a.kondisi}</td> <!-- REVISI -->
                 <td class="px-4 py-3 font-black text-emerald-700 text-center">${a.qty}</td>
             </tr>`;
     }).join('');
@@ -1074,6 +1087,7 @@ function siapkanGantiPO(context) {
             customer_estimasi: cb.dataset.estimasi,
             area: cb.dataset.area,
             keterangan: cb.dataset.ket,
+            kondisi: cb.dataset.kondisi, // REVISI: Ambil kondisi
             qty: parseInt(cb.dataset.qty) || 1
         });
         totalDus += parseInt(cb.dataset.qty) || 1;
@@ -1448,7 +1462,7 @@ async function eksekusiReqKonversi() {
 
 // ========================================================
 // FUNGSI PROSES KARTU STOK (GANTI CUSTOMER)
-// ========================================================
+// ==========================================
 function prosesKartuStok(encodedDataStr) {
     const data = JSON.parse(decodeURIComponent(encodedDataStr));
     
