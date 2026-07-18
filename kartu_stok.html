@@ -35,11 +35,11 @@
             background-clip: padding-box !important; 
         }
 
-        /* REVISI: Perbaikan Sticky Column agar tidak transparan */
+        /* PERBAIKAN STICKY COLUMN (FREEZE PANE) */
         .sticky-col { position: sticky !important; left: 0 !important; z-index: 30 !important; }
         th.sticky-col { z-index: 40 !important; background-color: #1e293b !important; }
         
-        /* Memastikan background sticky column mengikuti warna baris */
+        /* Memastikan background sticky column mengikuti warna baris secara solid */
         tr.bg-white td.sticky-col { background-color: #ffffff !important; }
         tr.bg-slate-50 td.sticky-col { background-color: #f8fafc !important; }
         tr.bg-red-50 td.sticky-col { background-color: #fef2f2 !important; }
@@ -83,7 +83,8 @@
                 <button onclick="setModeKS('area')" id="tab-area" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="map" class="w-4 h-4"></i> KS Area</button>
                 <button onclick="setModeKS('global')" id="tab-global" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="globe-2" class="w-4 h-4"></i> KS Global</button>
                 <button onclick="setModeKS('qr')" id="tab-qr" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="qr-code" class="w-4 h-4"></i> KS QR (Detail)</button>
-                <button onclick="setModeKS('lembaran')" id="tab-lembaran" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="file" class="w-4 h-4"></i> KS Lembaran</button>
+                <!-- REVISI: Tab Lembaran diganti menjadi KS Nonaktif -->
+                <button onclick="setModeKS('nonaktif')" id="tab-nonaktif" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="package-x" class="w-4 h-4"></i> KS Nonaktif</button>
             </div>
 
             <!-- Toolbar Layout PC & Mobile -->
