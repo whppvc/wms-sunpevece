@@ -20,7 +20,6 @@ let selectAllState = 0;
 let userColOrder = []; 
 let selectedForReq = null; 
 
-// State penampung data request ganti customer yang sudah diproses
 let processedGantiKeys = new Set();
 let processedGlobalKeys = new Set();
 
@@ -399,27 +398,27 @@ function renderTabel() {
                 ? `<div class="text-emerald-600 flex items-center justify-center" title="Sudah diproses"><i data-lucide="check-circle-2" class="w-5 h-5 mx-auto"></i></div>`
                 : `<button onclick="prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button>`;
 
-            // LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF
+            // REVISI: LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF (Menggunakan !important via class is-nonaktif)
             let isNonaktif = r.kondisi === 'NONAKTIF';
-            let customRowClass = isNonaktif ? "transition row-ks text-[13px] bg-red-50 hover:bg-red-100 text-red-900" : "transition row-ks text-[13px] bg-white even:bg-slate-50 hover:bg-slate-100";
+            let customRowClass = isNonaktif ? "transition row-ks text-[13px] !bg-red-100 !text-red-900 font-bold is-nonaktif" : "transition row-ks text-[13px]";
             let kondisiHtml = isNonaktif ? `<span class="text-red-700 font-black">${r.kondisi}</span>` : r.kondisi;
 
             return `
                 <tr class="${customRowClass}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
-                    <td class="px-4 py-3 font-mono font-medium text-slate-800 text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-mesin" data-search="${r.mesin}">${r.mesin}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shift" data-search="${r.shift}">${r.shift}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-3 font-semibold text-left col-area" data-search="${r.area}">${r.area}</td>
+                    <td class="px-4 py-3 font-mono font-medium text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
+                    <td class="px-4 py-3 font-medium text-left col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
+                    <td class="px-4 py-3 font-medium text-left col-mesin" data-search="${r.mesin}">${r.mesin}</td>
+                    <td class="px-4 py-3 font-medium text-left col-shift" data-search="${r.shift}">${r.shift}</td>
+                    <td class="px-4 py-3 font-medium text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
+                    <td class="px-4 py-3 font-medium text-left col-nama" data-search="${r.nama}">${r.nama}</td>
+                    <td class="px-4 py-3 font-medium text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                    <td class="px-4 py-3 font-medium text-left col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-3 font-medium text-left col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-3 font-medium text-left col-shading" data-search="${r.shading}">${r.shading}</td>
                     <td class="px-4 py-3 text-left col-po" data-search="${poString}">${btnPO}</td>
-                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
+                    <td class="px-4 py-3 font-medium text-left col-ket" data-search="${r.ket}">${r.ket}</td>
                     <td class="px-4 py-3 font-bold text-center col-kondisi" data-search="${r.kondisi}">${kondisiHtml}</td>
                     <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
                 </tr>`;
@@ -459,26 +458,26 @@ function renderTabel() {
                 ? `<div class="text-emerald-600 flex items-center justify-center" title="Sudah diproses"><i data-lucide="check-circle-2" class="w-5 h-5 mx-auto"></i></div>`
                 : `<button onclick="prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button>`;
 
-            // LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF
+            // REVISI: LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF
             let isNonaktif = r.kondisi === 'NONAKTIF';
-            let customRowClass = isNonaktif ? "transition row-ks text-[13px] bg-red-50 hover:bg-red-100 text-red-900" : "transition row-ks text-[13px] bg-white even:bg-slate-50 hover:bg-slate-100";
+            let customRowClass = isNonaktif ? "transition row-ks text-[13px] !bg-red-100 !text-red-900 font-bold is-nonaktif" : "transition row-ks text-[13px]";
             let kondisiHtml = isNonaktif ? `<span class="text-red-700 font-black">${r.kondisi}</span>` : r.kondisi;
 
             return `
                 <tr class="${customRowClass}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-estimasi="${r.customer_estimasi}" data-qty="${r.qty}" data-ket="${r.keterangan}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po" data-search="${r.po_aktual}">${r.po_aktual}</td>
-                    <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
-                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
+                    <td class="px-4 py-3 font-semibold text-left col-area" data-search="${r.area}">${r.area}</td>
+                    <td class="px-4 py-3 font-medium text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
+                    <td class="px-4 py-3 font-medium text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
+                    <td class="px-4 py-3 font-medium text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                    <td class="px-4 py-3 font-medium text-left col-grade" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-3 font-medium text-left col-dus" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-3 font-medium text-left col-shading" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-3 font-semibold text-left col-po" data-search="${r.po_aktual}">${r.po_aktual}</td>
+                    <td class="px-4 py-3 font-semibold text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
+                    <td class="px-4 py-3 font-medium text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
                     <td class="px-4 py-3 font-bold text-center col-kondisi" data-search="${r.kondisi}">${kondisiHtml}</td>
-                    <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
+                    <td class="px-4 py-3 font-black text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
                     <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
                 </tr>`;
         }).join('');
@@ -518,26 +517,26 @@ function renderTabel() {
                 ? `<div class="text-emerald-600 flex items-center justify-center" title="Sudah diproses"><i data-lucide="check-circle-2" class="w-5 h-5 mx-auto"></i></div>`
                 : `<button onclick="prosesKartuStok('${rowDataStr}')" class="btn-proses bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-[10px] uppercase shadow-sm transition active:scale-95">Proses</button>`;
 
-            // LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF
+            // REVISI: LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF
             let isNonaktif = r.kondisi === 'NONAKTIF';
-            let customRowClass = isNonaktif ? "transition row-ks text-[13px] bg-red-50 hover:bg-red-100 text-red-900" : "transition row-ks text-[13px] bg-white even:bg-slate-50 hover:bg-slate-100";
+            let customRowClass = isNonaktif ? "transition row-ks text-[13px] !bg-red-100 !text-red-900 font-bold is-nonaktif" : "transition row-ks text-[13px]";
             let kondisiHtml = isNonaktif ? `<span class="text-red-700 font-black">${r.kondisi}</span>` : r.kondisi;
 
             return `
             <tr class="${customRowClass}">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 text-center col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
-                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po" data-search="${r.po}">${r.po}</td>
-                <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
-                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
+                <td class="px-4 py-3 font-medium text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
+                <td class="px-4 py-3 font-medium text-left col-nama" data-search="${r.nama}">${r.nama}</td>
+                <td class="px-4 py-3 font-medium text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                <td class="px-4 py-3 font-medium text-left col-grade" data-search="${r.grade}">${r.grade}</td>
+                <td class="px-4 py-3 font-medium text-left col-dus" data-search="${r.dus}">${r.dus}</td>
+                <td class="px-4 py-3 font-medium text-left col-shading" data-search="${r.shading}">${r.shading}</td>
+                <td class="px-4 py-3 font-semibold text-left col-po" data-search="${r.po}">${r.po}</td>
+                <td class="px-4 py-3 font-semibold text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
+                <td class="px-4 py-3 font-medium text-left col-ket" data-search="${r.ket}">${r.ket}</td>
                 <td class="px-4 py-3 font-bold text-center col-kondisi" data-search="${r.kondisi}">${kondisiHtml}</td>
-                <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
+                <td class="px-4 py-3 font-black text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
                 <td class="px-4 py-3 text-center col-proses">${actionHtml}</td>
             </tr>
         `}).join('');
@@ -654,9 +653,12 @@ function applyPagination() {
 
     let sumQty = 0;
     visibleRows.forEach((row, index) => {
+        // REVISI: Jangan timpa warna merah (is-nonaktif) dengan zebra striping
         row.classList.remove('stripe-1', 'stripe-2');
-        if (index % 2 === 0) row.classList.add('stripe-1');
-        else row.classList.add('stripe-2');
+        if (!row.classList.contains('is-nonaktif')) {
+            if (index % 2 === 0) row.classList.add('stripe-1');
+            else row.classList.add('stripe-2');
+        }
 
         const qtyCell = row.querySelector('.col-qty');
         if(qtyCell) { sumQty += parseInt(qtyCell.getAttribute('data-search') || qtyCell.innerText) || 0; } 
@@ -1020,20 +1022,20 @@ function bukaBreakdown(gKey) {
         const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
         const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
         
-        // LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF DI BREAKDOWN
+        // REVISI: LOGIKA PEWARNAAN MERAH UNTUK NONAKTIF DI BREAKDOWN
         let isNonaktif = a.kondisi === 'NONAKTIF';
-        let customRowClass = isNonaktif ? `transition bd-row text-[13px] bg-red-50 hover:bg-red-100 text-red-900` : `transition bd-row text-[13px] ${stripeClass}`;
+        let customRowClass = isNonaktif ? `transition bd-row text-[13px] !bg-red-100 !text-red-900 font-bold is-nonaktif` : `transition bd-row text-[13px] ${stripeClass}`;
         let kondisiHtml = isNonaktif ? `<span class="text-red-700 font-black">${a.kondisi}</span>` : a.kondisi;
 
         return `
             <tr class="${customRowClass}">
                 <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
-                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
-                <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi">${a.customer_estimasi}</td>
-                <td class="px-4 py-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
-                <td class="px-4 py-3 font-bold text-slate-700 text-left">${kondisiHtml}</td>
-                <td class="px-4 py-3 font-black text-emerald-700 text-center">${a.qty}</td>
+                <td class="px-4 py-3 font-semibold text-left">${a.area}</td>
+                <td class="px-4 py-3 font-semibold text-left col-po">${a.po_aktual}</td>
+                <td class="px-4 py-3 font-semibold text-left col-estimasi">${a.customer_estimasi}</td>
+                <td class="px-4 py-3 font-medium text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
+                <td class="px-4 py-3 font-bold text-center">${kondisiHtml}</td>
+                <td class="px-4 py-3 font-black text-center">${a.qty}</td>
             </tr>`;
     }).join('');
 
