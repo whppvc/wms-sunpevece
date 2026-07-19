@@ -179,7 +179,6 @@ window.muatDataStok = async function() {
             db.from('stok_global').select('*'), 
             db.from('stok_aktual').select('*'),
             db.from('stok_nonaktif').select('*').order('created_at', {ascending: false}),
-            // REVISI: Hanya ambil yang progresnya bukan DONE agar icon hilang setelah selesai
             db.from('ganti_customer').select('id_sku, customer_aktual_request, area').neq('progres', 'DONE') 
         ]);
         
