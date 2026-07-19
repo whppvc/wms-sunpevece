@@ -189,6 +189,7 @@ async function muatDataStok() {
         stokAktualRaw = resAktual.data || [];
         stokLembaranRaw = resLembaran.data || [];
 
+        // REVISI: Parsing id_sku untuk mendapatkan globalSku yang akurat
         processedGantiKeys.clear();
         processedGlobalKeys.clear();
         if (resGanti && resGanti.data) {
@@ -196,8 +197,9 @@ async function muatDataStok() {
                 processedGantiKeys.add(`${g.id_sku}_${g.customer_aktual_request}_${g.area}`);
                 
                 let parts = (g.id_sku || '').split('_');
-                if(parts.length >= 2) {
-                    let globalSku = parts.slice(1).join('_');
+                // Format id_sku: 0:area, 1:nama, 2:pjg, 3:grade, 4:dus, 5:shading, 6:ket, 7:poAktual, 8:kondisi
+                if(parts.length >= 8) {
+                    let globalSku = `${parts[1]}_${parts[2]}_${parts[3]}_${parts[4]}_${parts[5]}_${parts[6]}_${parts[7]}`;
                     processedGlobalKeys.add(`${globalSku}_${g.customer_aktual_request}`);
                 }
             });
@@ -232,7 +234,6 @@ async function muatDataStok() {
             qrMap[key].push(r.qrcode);
         });
 
-        // REVISI: Filter dataKSQR dan dataKSArea agar tidak menampilkan yang NONAKTIF
         dataKSQR = stokQRRaw.filter(r => r.kondisi !== 'NONAKTIF').map(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
             let t = translateBarcode(r.qrcode);
@@ -277,7 +278,6 @@ async function muatDataStok() {
         });
         dataKSGlobal = Object.values(globalMap);
 
-        // Siapkan data untuk tab Nonaktif
         dataKSNonaktif = stokLembaranRaw; 
 
         renderTabel();
@@ -302,8 +302,9 @@ function setModeKS(m) {
     const btnReqKonv = document.getElementById('btn-req-konversi-main');
     if(btnReqKonv) btnReqKonv.classList.toggle('hidden', m !== 'area');
     
+    // REVISI: Tombol Proses Label Customer hanya muncul di mode Area
     const btnProsesGanti = document.getElementById('btn-proses-ganti-main');
-    if(btnProsesGanti) btnProsesGanti.classList.toggle('hidden', m === 'nonaktif');
+    if(btnProsesGanti) btnProsesGanti.classList.toggle('hidden', m !== 'area');
     
     activeFilters = {}; 
     loadUserPreferences(); 
@@ -450,6 +451,10 @@ function renderTabel() {
             
             let customRowClass = "transition row-ks text-[13px]";
 
+            // REVISI: Cek apakah baris ini sedang diproses label customernya
+            let isProcessing = processedGantiKeys.has(`${r.id_sku_base}_${r.customer_estimasi}_${r.area}`);
+            let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
+
             return `
                 <tr class="${customRowClass}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-estimasi="${r.customer_estimasi}" data-qty="${r.qty}" data-ket="${r.keterangan}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -460,7 +465,10 @@ function renderTabel() {
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po" data-search="${r.po_aktual}">${r.po_aktual}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po relative" data-search="${r.po_aktual}">
+                        ${r.po_aktual}
+                        ${iconGanti}
+                    </td>
                     <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
                     <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
@@ -493,6 +501,11 @@ function renderTabel() {
             const rowDataStr = encodeURIComponent(JSON.stringify(r));
             let customRowClass = "transition row-ks text-[13px]";
 
+            // REVISI: Cek apakah baris ini sedang diproses label customernya
+            let checkKey = `${r.nama}_${r.pjg}_${r.grade}_${r.dus}_${r.shading}_${r.ket}_${r.po}`;
+            let isProcessing = processedGlobalKeys.has(`${checkKey}_${r.customer_estimasi}`);
+            let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
+
             return `
             <tr class="${customRowClass}">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -503,7 +516,10 @@ function renderTabel() {
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
-                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po" data-search="${r.po}">${r.po}</td>
+                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po relative" data-search="${r.po}">
+                    ${r.po}
+                    ${iconGanti}
+                </td>
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
                 <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
                 <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
@@ -759,6 +775,66 @@ async function eksekusiGantiPO() {
         btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons(); 
     }
 }
+
+// REVISI: Fungsi Proses Label Customer Massal
+window.prosesLabelCustomerMassal = async function() {
+    const checked = document.querySelectorAll('.cb-main:checked');
+    if(checked.length === 0) return alert("Pilih baris yang ingin diproses label customernya!");
+
+    let payload = [];
+    let invalidCount = 0;
+
+    checked.forEach(cb => {
+        let poAktual = cb.dataset.po;
+        let poEstimasi = cb.dataset.estimasi;
+        
+        if(poAktual !== poEstimasi) {
+            payload.push({
+                id_sku: cb.dataset.idsku,
+                area: cb.dataset.area,
+                jenis_item: cb.dataset.jenis,
+                nama_item: cb.dataset.nama,
+                panjang: cb.dataset.pjg,
+                grade: cb.dataset.grade,
+                dus: cb.dataset.dus,
+                shading: cb.dataset.shading,
+                keterangan: cb.dataset.ket,
+                customer_aktual_awal: poAktual,
+                customer_aktual_request: poEstimasi,
+                qty_request: parseInt(cb.dataset.qty) || 0,
+                qty_proses: 0,
+                progres: 'PENDING'
+            });
+        } else {
+            invalidCount++;
+        }
+    });
+
+    if(payload.length === 0) {
+        return alert("Tidak ada baris valid untuk diproses.\nPastikan Anda memilih baris yang Customer Aktual dan Customer Estimasinya BERBEDA.");
+    }
+
+    if(!confirm(`Akan memproses ${payload.length} item ke tabel Ganti Customer.\nLanjutkan?`)) return;
+
+    const btn = document.getElementById('btn-proses-ganti-main');
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<div class="bg-emerald-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="animate-spin w-4 h-4"></i></div><div class="bg-emerald-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-emerald-700 transition">Memproses...</div>';
+    btn.disabled = true;
+
+    try {
+        const { error } = await db.from('ganti_customer').insert(payload);
+        if(error) throw error;
+
+        alert(`✅ BERHASIL!\n${payload.length} item telah dikirim ke antrean Ganti Customer.`);
+        await muatDataStok(); 
+    } catch(e) {
+        alert("Gagal memproses: " + e.message);
+    } finally {
+        btn.innerHTML = ori;
+        btn.disabled = false;
+        lucide.createIcons();
+    }
+};
 
 function salinData() {
     const cek = document.querySelectorAll('.cb-main:checked');
