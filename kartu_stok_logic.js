@@ -232,7 +232,8 @@ async function muatDataStok() {
             qrMap[key].push(r.qrcode);
         });
 
-        dataKSQR = stokQRRaw.map(r => {
+        // REVISI: Filter dataKSQR dan dataKSArea agar tidak menampilkan yang NONAKTIF
+        dataKSQR = stokQRRaw.filter(r => r.kondisi !== 'NONAKTIF').map(r => {
             let p = r.id_sku ? r.id_sku.split('_') : [];
             let t = translateBarcode(r.qrcode);
             return {
@@ -248,7 +249,7 @@ async function muatDataStok() {
             };
         });
 
-        dataKSArea = stokAktualRaw.map(a => {
+        dataKSArea = stokAktualRaw.filter(a => a.kondisi !== 'NONAKTIF').map(a => {
             let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_aktual}_${a.keterangan}_${a.kondisi}`; 
             return {
                 ...a,
@@ -276,7 +277,8 @@ async function muatDataStok() {
         });
         dataKSGlobal = Object.values(globalMap);
 
-        dataKSNonaktif = stokLembaranRaw; // Menggunakan data dari stok_nonaktif (yang di-query sebagai resLembaran)
+        // Siapkan data untuk tab Nonaktif
+        dataKSNonaktif = stokLembaranRaw; 
 
         renderTabel();
     } catch(e) { 
@@ -330,7 +332,7 @@ function sortTable(colIndex, headerEl) {
 
 function thSort(idx, label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
-    const noFilter = ['col-cb', 'col-open'].includes(colClass);
+    const noFilter = ['col-cb', 'col-open', 'col-proses'].includes(colClass);
     
     if (noFilter) {
         return `<th class="hdr-std ${cls} select-none text-center"><div class="flex items-center justify-center w-full">${label}</div></th>`;
@@ -358,6 +360,8 @@ function renderTabel() {
     
     sortState = {}; 
     selectAllState = 0;
+
+    const rowClassBase = "transition row-ks text-[13px]";
 
     if(modeKS === 'qr') {
         thead.innerHTML = `
@@ -667,70 +671,6 @@ function updateSelectedCount() {
     if(lbl) lbl.innerText = count;
 }
 
-window.prosesGantiCustomerMassal = async function() {
-    const checkboxes = document.querySelectorAll('.cb-main:checked');
-    if(checkboxes.length === 0) return alert("Pilih (centang) minimal 1 baris item yang ingin diproses ganti customer!");
-
-    let payload = [];
-    let invalidCount = 0;
-
-    checkboxes.forEach(cb => {
-        let id_sku = cb.dataset.idsku;
-        let checkKey = `${id_sku}_${cb.dataset.estimasi}_${cb.dataset.area}`;
-        
-        if (processedGantiKeys.has(checkKey)) {
-            invalidCount++;
-            return;
-        }
-
-        if (cb.dataset.po === cb.dataset.estimasi) {
-            return; 
-        }
-
-        payload.push({
-            area: cb.dataset.area || '-',
-            jenis_item: cb.dataset.jenis || '-',
-            nama_item: cb.dataset.nama || '-',
-            panjang: cb.dataset.pjg || '-',
-            grade: cb.dataset.grade || '-',
-            dus: cb.dataset.dus || '-',
-            shading: cb.dataset.shading || '-',
-            keterangan: cb.dataset.ket || '-',
-            customer_aktual_awal: cb.dataset.po || '-',
-            customer_aktual_request: cb.dataset.estimasi || '-',
-            qty_request: (cb.dataset.qty || 0).toString(),
-            qty_proses: "0",
-            id_sku: id_sku
-        });
-    });
-
-    if (payload.length === 0) {
-        if (invalidCount > 0) return alert("Item yang dipilih sudah pernah diproses atau tidak ada perubahan customer.");
-        return alert("Tidak ada item valid yang bisa diproses.");
-    }
-
-    if(!confirm(`Ajukan request ganti customer untuk ${payload.length} item terpilih?`)) return;
-
-    const btn = document.getElementById('btn-proses-ganti-main');
-    const ori = btn.innerHTML;
-    btn.innerHTML = '<div class="bg-emerald-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-emerald-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide">Memproses...</div>';
-    btn.disabled = true;
-
-    try {
-        const { error } = await db.from('ganti_customer').insert(payload);
-        if (error) throw error;
-        
-        alert("Berhasil mengirim request ke tabel Ganti Customer!");
-        muatDataStok();
-    } catch (e) {
-        alert("Gagal mengirim request: " + e.message);
-    } finally {
-        btn.innerHTML = ori;
-        btn.disabled = false;
-        lucide.createIcons();
-    }
-};
-
 async function eksekusiGantiPO() {
     const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
     if(!newPO) return alert("Silakan Pilih Customer Baru dari daftar dropdown!");
@@ -883,16 +823,15 @@ function salinDataBreakdown() {
     const cek = document.querySelectorAll('.cb-bd:checked');
     if(cek.length === 0) return alert("Pilih data breakdown yang ingin disalin!");
 
-    let copyString = "Area\tCustomer Aktual\tCustomer Estimasi\tKeterangan\tKondisi\tTotal Dus\n"; 
+    let copyString = "Area\tCustomer Aktual\tCustomer Estimasi\tKeterangan\tTotal Dus\n"; 
     cek.forEach(cb => {
         const tr = cb.closest('tr');
         const area = tr.children[1].innerText.trim();
         const po = tr.children[2].innerText.trim();
         const est = tr.children[3].innerText.trim();
         const ket = tr.children[4].innerText.trim();
-        const kondisi = tr.children[5].innerText.trim(); 
         const qty = tr.children[6].innerText.trim();     
-        copyString += `${area}\t${po}\t${est}\t${ket}\t${kondisi}\t${qty}\n`;
+        copyString += `${area}\t${po}\t${est}\t${ket}\t${qty}\n`;
     });
 
     navigator.clipboard.writeText(copyString).then(() => {
@@ -1056,19 +995,14 @@ function bukaBreakdown(gKey) {
         const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
         const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
         
-        let isNonaktif = a.kondisi === 'NONAKTIF';
-        let customRowClass = isNonaktif ? `transition bd-row text-[13px] !bg-red-100 !text-red-900 font-bold is-nonaktif` : `transition bd-row text-[13px] ${stripeClass}`;
-        let kondisiHtml = isNonaktif ? `<span class="text-red-700 font-black">${a.kondisi}</span>` : a.kondisi;
-
         return `
-            <tr class="${customRowClass}">
+            <tr class="transition bd-row text-[13px] ${stripeClass}">
                 <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 font-semibold text-left">${a.area}</td>
+                <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
                 <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi">${a.customer_estimasi}</td>
-                <td class="px-4 py-3 font-medium text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
-                <td class="px-4 py-3 font-bold text-center">${kondisiHtml}</td>
-                <td class="px-4 py-3 font-black text-center">${a.qty}</td>
+                <td class="px-4 py-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
+                <td class="px-4 py-3 font-black text-emerald-700 text-center">${a.qty}</td>
             </tr>`;
     }).join('');
 
@@ -1507,70 +1441,3 @@ async function eksekusiReqKonversi() {
         btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
-
-// ========================================================
-// FUNGSI PROSES KARTU STOK (GANTI CUSTOMER)
-// ========================================================
-window.prosesGantiCustomerMassal = async function() {
-    const checkboxes = document.querySelectorAll('.cb-main:checked');
-    if(checkboxes.length === 0) return alert("Pilih (centang) minimal 1 baris item yang ingin diproses ganti customer!");
-
-    let payload = [];
-    let invalidCount = 0;
-
-    checkboxes.forEach(cb => {
-        let id_sku = cb.dataset.idsku;
-        let checkKey = `${id_sku}_${cb.dataset.estimasi}_${cb.dataset.area}`;
-        
-        if (processedGantiKeys.has(checkKey)) {
-            invalidCount++;
-            return;
-        }
-
-        if (cb.dataset.po === cb.dataset.estimasi) {
-            return; 
-        }
-
-        payload.push({
-            area: cb.dataset.area || '-',
-            jenis_item: cb.dataset.jenis || '-',
-            nama_item: cb.dataset.nama || '-',
-            panjang: cb.dataset.pjg || '-',
-            grade: cb.dataset.grade || '-',
-            dus: cb.dataset.dus || '-',
-            shading: cb.dataset.shading || '-',
-            keterangan: cb.dataset.ket || '-',
-            customer_aktual_awal: cb.dataset.po || '-',
-            customer_aktual_request: cb.dataset.estimasi || '-',
-            qty_request: (cb.dataset.qty || 0).toString(),
-            qty_proses: "0",
-            id_sku: id_sku
-        });
-    });
-
-    if (payload.length === 0) {
-        if (invalidCount > 0) return alert("Item yang dipilih sudah pernah diproses atau tidak ada perubahan customer.");
-        return alert("Tidak ada item valid yang bisa diproses.");
-    }
-
-    if(!confirm(`Ajukan request ganti customer untuk ${payload.length} item terpilih?`)) return;
-
-    const btn = document.getElementById('btn-proses-ganti-main');
-    const ori = btn.innerHTML;
-    btn.innerHTML = '<div class="bg-emerald-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i></div><div class="bg-emerald-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide">Memproses...</div>';
-    btn.disabled = true;
-
-    try {
-        const { error } = await db.from('ganti_customer').insert(payload);
-        if (error) throw error;
-        
-        alert("Berhasil mengirim request ke tabel Ganti Customer!");
-        muatDataStok();
-    } catch (e) {
-        alert("Gagal mengirim request: " + e.message);
-    } finally {
-        btn.innerHTML = ori;
-        btn.disabled = false;
-        lucide.createIcons();
-    }
-};
