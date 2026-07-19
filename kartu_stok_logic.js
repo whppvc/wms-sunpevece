@@ -189,7 +189,6 @@ async function muatDataStok() {
         stokAktualRaw = resAktual.data || [];
         stokLembaranRaw = resLembaran.data || [];
 
-        // REVISI: Parsing id_sku untuk mendapatkan globalSku yang akurat
         processedGantiKeys.clear();
         processedGlobalKeys.clear();
         if (resGanti && resGanti.data) {
@@ -197,7 +196,6 @@ async function muatDataStok() {
                 processedGantiKeys.add(`${g.id_sku}_${g.customer_aktual_request}_${g.area}`);
                 
                 let parts = (g.id_sku || '').split('_');
-                // Format id_sku: 0:area, 1:nama, 2:pjg, 3:grade, 4:dus, 5:shading, 6:ket, 7:poAktual, 8:kondisi
                 if(parts.length >= 8) {
                     let globalSku = `${parts[1]}_${parts[2]}_${parts[3]}_${parts[4]}_${parts[5]}_${parts[6]}_${parts[7]}`;
                     processedGlobalKeys.add(`${globalSku}_${g.customer_aktual_request}`);
@@ -302,7 +300,6 @@ function setModeKS(m) {
     const btnReqKonv = document.getElementById('btn-req-konversi-main');
     if(btnReqKonv) btnReqKonv.classList.toggle('hidden', m !== 'area');
     
-    // REVISI: Tombol Proses Label Customer hanya muncul di mode Area
     const btnProsesGanti = document.getElementById('btn-proses-ganti-main');
     if(btnProsesGanti) btnProsesGanti.classList.toggle('hidden', m !== 'area');
     
@@ -451,7 +448,6 @@ function renderTabel() {
             
             let customRowClass = "transition row-ks text-[13px]";
 
-            // REVISI: Cek apakah baris ini sedang diproses label customernya
             let isProcessing = processedGantiKeys.has(`${r.id_sku_base}_${r.customer_estimasi}_${r.area}`);
             let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
 
@@ -501,7 +497,6 @@ function renderTabel() {
             const rowDataStr = encodeURIComponent(JSON.stringify(r));
             let customRowClass = "transition row-ks text-[13px]";
 
-            // REVISI: Cek apakah baris ini sedang diproses label customernya
             let checkKey = `${r.nama}_${r.pjg}_${r.grade}_${r.dus}_${r.shading}_${r.ket}_${r.po}`;
             let isProcessing = processedGlobalKeys.has(`${checkKey}_${r.customer_estimasi}`);
             let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
@@ -776,7 +771,6 @@ async function eksekusiGantiPO() {
     }
 }
 
-// REVISI: Fungsi Proses Label Customer Massal
 window.prosesLabelCustomerMassal = async function() {
     const checked = document.querySelectorAll('.cb-main:checked');
     if(checked.length === 0) return alert("Pilih baris yang ingin diproses label customernya!");
@@ -1146,9 +1140,9 @@ function siapkanGantiPO(context) {
             area: cb.dataset.area,
             keterangan: cb.dataset.ket,
             kondisi: cb.dataset.kondisi, 
-            qty: parseInt(cb.dataset.qty) || 1
+            qty: parseInt(cb.dataset.qty) || 0
         });
-        totalDus += parseInt(cb.dataset.qty) || 1;
+        totalDus += parseInt(cb.dataset.qty) || 0;
     });
 
     sourcePOContext = context;
@@ -1167,253 +1161,6 @@ function tutupModalPO() {
     }
 }
 
-function cycleSelectAll() {
-    selectAllState = (selectAllState + 1) % 3;
-    updateSelectAllUI();
-    applySelection();
-}
-
-function updateSelectAllUI() {
-    const btn = document.getElementById('btn-select-all');
-    if(!btn) return;
-    
-    if (selectAllState === 0) {
-        btn.innerHTML = '';
-        btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto';
-    } else if (selectAllState === 1) {
-        btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
-        btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto';
-    } else if (selectAllState === 2) {
-        btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>';
-        btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
-    }
-    if(typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function applySelection() {
-    const allRows = Array.from(document.querySelectorAll('#tbody-ks tr.row-ks'));
-    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
-    
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-
-    if (selectAllState === 0) {
-        allRows.forEach(row => {
-            const cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = false; highlightRow(cb, true); }
-        });
-    } else if (selectAllState === 1) {
-        allRows.forEach(row => {
-            const cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = false; highlightRow(cb, true); }
-        });
-        visibleRows.forEach((row, index) => {
-            if(index >= startIndex && index < endIndex) {
-                const cb = row.querySelector('.cb-main');
-                if(cb) { cb.checked = true; highlightRow(cb, true); }
-            }
-        });
-    } else if (selectAllState === 2) {
-        visibleRows.forEach(row => {
-            const cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = true; highlightRow(cb, true); }
-        });
-    }
-    updateSelectedCount();
-}
-
-function openColumnFilter(event, colClass, colName) {
-    event.stopPropagation();
-    currentFilterCol = colClass;
-    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
-
-    let uniqueValues = new Set();
-    
-    document.querySelectorAll('#tbody-ks tr.row-ks').forEach(row => {
-        let showBasedOnOthers = true;
-        for (let otherCol in activeFilters) {
-            if (otherCol !== colClass) { 
-                const allowed = activeFilters[otherCol];
-                const c = row.querySelector('.' + otherCol);
-                let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
-                if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
-            }
-        }
-        if (showBasedOnOthers) {
-            let cell = row.querySelector('.' + colClass);
-            if (cell) {
-                let val = cell.getAttribute('data-search') || cell.innerText.trim();
-                if(val !== '') uniqueValues.add(val);
-            }
-        }
-    });
-
-    let sortedValues = Array.from(uniqueValues).sort();
-    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
-    
-    sortedValues.forEach(val => {
-        let isChecked = true;
-        if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
-        listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}">
-            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
-            <span class="truncate text-slate-600">${val}</span>
-        </label>`;
-    });
-
-    document.getElementById('filter-values-list').innerHTML = listHtml;
-    updateSelectAllState();
-    document.getElementById('filter-search-input').value = '';
-    
-    const menu = document.getElementById('excel-filter-menu');
-    menu.classList.remove('hidden');
-    
-    const btnRect = event.currentTarget.getBoundingClientRect();
-    const menuWidth = 256; 
-    
-    let topPos = btnRect.bottom + 4; 
-    let leftPos = btnRect.left; 
-
-    if (leftPos + menuWidth > window.innerWidth) {
-        leftPos = btnRect.right - menuWidth;
-    }
-    
-    if (leftPos < 10) {
-        leftPos = 10;
-    }
-
-    menu.style.position = 'fixed'; 
-    menu.style.top = `${topPos}px`;
-    menu.style.left = `${leftPos}px`;
-    
-    document.getElementById('filter-search-input').focus();
-}
-
-function toggleAllFilterValues(checked) {
-    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
-    updateSelectAllState();
-}
-
-function updateSelectAllState() {
-    const allCbs = document.querySelectorAll('.filter-val-cb');
-    const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
-    const selectAll = document.getElementById('filter-select-all');
-    if(!selectAll) return;
-    if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
-    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
-    else { selectAll.checked = false; selectAll.indeterminate = true; }
-}
-
-document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) updateSelectAllState(); });
-
-function searchFilterList(val) {
-    const query = val.toLowerCase().split(' ').filter(x => x); 
-    document.querySelectorAll('.filter-val-item').forEach(label => {
-        const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
-        let matches = query.every(term => text.includes(term));
-        label.style.display = matches ? '' : 'none';
-    });
-}
-
-function closeFilterMenu() { document.getElementById('excel-filter-menu').classList.add('hidden'); }
-
-function clearFilterForCurrentCol() {
-    delete activeFilters[currentFilterCol];
-    closeFilterMenu(); saringTabelExcel(); 
-}
-
-function applyFilterForCurrentCol() {
-    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
-    const totalBoxes = document.querySelectorAll('.filter-val-cb');
-    
-    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') {
-        delete activeFilters[currentFilterCol];
-    } else {
-        let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value));
-        activeFilters[currentFilterCol] = selectedVals;
-    }
-    
-    closeFilterMenu(); saringTabelExcel(); 
-}
-
-function saringTabelExcel() {
-    document.querySelectorAll('.row-ks').forEach(row => {
-        let show = true;
-        for (let colClass in activeFilters) {
-            const allowedValues = activeFilters[colClass];
-            const cell = row.querySelector('.' + colClass);
-            if (cell) {
-                let text = cell.getAttribute('data-search') || cell.innerText.trim();
-                if (!allowedValues.includes(text)) { show = false; break; }
-            }
-        }
-        
-        if (show) { 
-            row.classList.remove('filtered-out'); 
-        } else { 
-            row.classList.add('filtered-out'); 
-            let cb = row.querySelector('.cb-main');
-            if(cb) { cb.checked = false; highlightRow(cb, true); } 
-        }
-    });
-    
-    selectAllState = 0;
-    updateSelectAllUI();
-    currentPage = 1; 
-    applyPagination(); 
-    updateFilterIcons();
-}
-
-function updateFilterIcons() {
-    document.querySelectorAll('.filter-icon').forEach(icon => {
-        icon.classList.remove('text-amber-400', 'opacity-100');
-        icon.classList.add('text-white', 'opacity-40');
-    });
-    for (let colClass in activeFilters) {
-        const th = document.querySelector(`th.${colClass}`);
-        if (th) {
-            const icon = th.querySelector('.filter-icon');
-            if (icon) { 
-                icon.classList.remove('text-white', 'opacity-40'); 
-                icon.classList.add('text-amber-400', 'opacity-100'); 
-            }
-        }
-    }
-}
-
-function initResizableColumns() {
-    const cols = document.querySelectorAll('#main-table th');
-    cols.forEach(col => {
-        const existing = col.querySelector('.resizer');
-        if(existing) existing.remove();
-
-        const resizer = document.createElement('div');
-        resizer.classList.add('resizer');
-        col.appendChild(resizer);
-        
-        let x = 0; let w = 0;
-        resizer.addEventListener('mousedown', function(e) {
-            x = e.clientX;
-            w = parseInt(window.getComputedStyle(col).width, 10);
-            document.addEventListener('mousemove', mouseMoveHandler);
-            document.addEventListener('mouseup', mouseUpHandler);
-            resizer.classList.add('resizing');
-        });
-        const mouseMoveHandler = function(e) {
-            const dx = e.clientX - x;
-            col.style.width = `${w + dx}px`;
-            col.style.minWidth = `${w + dx}px`;
-        };
-        const mouseUpHandler = function() {
-            document.removeEventListener('mousemove', mouseMoveHandler);
-            document.removeEventListener('mouseup', mouseUpHandler);
-            resizer.classList.remove('resizing');
-        };
-    });
-}
-
-// ========================================================
-// LOGIKA REQUEST KONVERSI
-// ========================================================
 function siapkanReqKonversi() {
     const checkboxes = document.querySelectorAll('.cb-main:checked');
     if(checkboxes.length !== 1) return alert('Silakan centang TEPAT 1 (satu) baris item yang ingin direquest konversi.');
@@ -1452,12 +1199,6 @@ function siapkanReqKonversi() {
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
 }
 
-function tutupModalReqKonversi() {
-    document.getElementById('modal-req-konversi').classList.add('hidden');
-    document.getElementById('overlay-klik-luar').classList.add('hidden');
-    selectedForReq = null;
-}
-
 async function eksekusiReqKonversi() {
     if(!selectedForReq) return alert("Data sumber tidak valid!");
 
@@ -1478,7 +1219,6 @@ async function eksekusiReqKonversi() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
 
     try {
-        // Generate Kode Konversi (K-XXXX)
         const { count } = await db.from('request_konversi').select('*', { count: 'exact', head: true });
         const nextNum = (count || 0) + 1;
         const kodeKonversi = `K-${String(nextNum).padStart(4, '0')}`;
