@@ -89,6 +89,13 @@
                 
                 <!-- KIRI: Aksi Utama -->
                 <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar">
+                    
+                    <!-- TOMBOL REFRESH DATA (Dikeluarkan dari Dropdown) -->
+                    <button id="btn-refresh-main" onclick="muatDataStok()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-teal-700">
+                        <div class="bg-teal-800 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="refresh-cw" class="w-4 h-4"></i></div>
+                        <div class="bg-teal-700 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-teal-600 transition">Refresh Data</div>
+                    </button>
+
                     <button id="btn-ganti-po-main" onclick="siapkanGantiPO('main')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-indigo-800">
                         <div class="bg-indigo-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="tags" class="w-4 h-4"></i></div>
                         <div class="bg-indigo-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-indigo-700 transition">Ganti Customer Estimasi</div>
@@ -99,10 +106,10 @@
                         <div class="bg-rose-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-rose-700 transition">Request Konversi</div>
                     </button>
 
-                    <!-- TOMBOL BARU: PROSES GANTI CUSTOMER -->
-                    <button id="btn-proses-ganti-main" onclick="prosesGantiCustomerMassal()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-emerald-800">
+                    <!-- TOMBOL PROSES LABEL CUSTOMER -->
+                    <button id="btn-proses-ganti-main" onclick="prosesLabelCustomerMassal()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-emerald-800">
                         <div class="bg-emerald-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="check-circle" class="w-4 h-4"></i></div>
-                        <div class="bg-emerald-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-emerald-700 transition">Proses Ganti Customer</div>
+                        <div class="bg-emerald-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-emerald-700 transition">Proses Label Customer</div>
                     </button>
                 </div>
 
@@ -113,7 +120,6 @@
                     </button>
                     
                     <div id="mobile-action-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
-                        <button onclick="muatDataStok(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-teal-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="refresh-cw" class="w-4 h-4 text-teal-600"></i> Refresh Data</button>
                         <button onclick="salinData(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
                         <button onclick="downloadXLS(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
                         <button onclick="sinkronisasiUlangStokAktual(true); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="database-backup" class="w-4 h-4 text-teal-600"></i> Sinkron DB</button>
@@ -336,5 +342,6 @@
     <div id="overlay-klik-luar" onclick="tutupSemuaPopups()" class="hidden fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="kartu_stok_logic.js"></script>
+    <script src="kartu_stok_modals.js"></script>
 </body>
 </html>
