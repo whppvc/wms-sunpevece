@@ -1,26 +1,27 @@
-let rawData = []; 
-let sortState = {}; 
+window.rawData = []; 
+window.sortState = {}; 
 
-let currentPage = 1;
-let rowsPerPage = 10; 
-let activeFilters = {}; 
-let currentFilterCol = ''; 
-let selectAllState = 0; 
-let userColOrder = []; 
+window.currentTab = 'REQUEST'; // Default Tab
+window.currentPage = 1;
+window.rowsPerPage = 10; 
+window.activeFilters = {}; 
+window.currentFilterCol = ''; 
+window.selectAllState = 0; 
+window.userColOrder = []; 
 
 // State untuk Proses Ganti Customer
-let activeRequestRow = null;
-let scannedValidItems = [];
+window.activeRequestRow = null;
+window.scannedValidItems = [];
 
-function safeJSONParse(data, fallback = null) {
+window.safeJSONParse = function(data, fallback = null) {
     if (!data || data === 'undefined' || data === 'null') return fallback;
     if (typeof data !== 'string') return data; 
     try { return JSON.parse(data); } catch (e) { return fallback; }
-}
+};
 
-const currentUser = safeJSONParse(localStorage.getItem('user_session'), {username: 'Admin', role: 'admin'});
+window.currentUser = window.safeJSONParse(localStorage.getItem('user_session'), {username: 'Admin', role: 'admin'});
 
-function formatWIB(isoString) {
+window.formatWIB = function(isoString) {
     if (!isoString || isoString === '-') return '-';
     try {
         const dt = new Date(isoString);
@@ -31,24 +32,24 @@ function formatWIB(isoString) {
             hour: '2-digit', minute: '2-digit', hour12: false
         }).format(dt).replace(/\./g, ':');
     } catch(e) { return isoString; }
-}
+};
 
 window.loadUserPreferences = function() {
-    const savedOrder = localStorage.getItem(`col_order_ganti_${currentUser.username}`);
-    if (savedOrder) { try { userColOrder = JSON.parse(savedOrder); } catch(e) { userColOrder = []; } } 
-    else { userColOrder = []; }
+    const savedOrder = localStorage.getItem(`col_order_ganti_${window.currentUser.username}`);
+    if (savedOrder) { try { window.userColOrder = JSON.parse(savedOrder); } catch(e) { window.userColOrder = []; } } 
+    else { window.userColOrder = []; }
     
     const savedRows = localStorage.getItem('wms_rows_per_page');
     if(savedRows) {
-        rowsPerPage = parseInt(savedRows);
+        window.rowsPerPage = parseInt(savedRows);
         const sel = document.getElementById('select-rows-per-page');
         if(sel) {
             let found = false;
-            Array.from(sel.options).forEach(opt => { if(opt.value == rowsPerPage) { opt.selected = true; found = true; } });
+            Array.from(sel.options).forEach(opt => { if(opt.value == window.rowsPerPage) { opt.selected = true; found = true; } });
             if(!found) {
                 sel.value = 'CUSTOM';
                 const inp = document.getElementById('input-custom-rows');
-                if(inp) { inp.classList.remove('hidden'); inp.value = rowsPerPage; }
+                if(inp) { inp.classList.remove('hidden'); inp.value = window.rowsPerPage; }
             }
         }
     }
@@ -84,6 +85,20 @@ window.tutupSemuaPopups = function() {
     if(document.getElementById('sidebar-kolom')) document.getElementById('sidebar-kolom').classList.add('translate-x-full');
 };
 
+window.setModeGanti = function(mode) {
+    window.currentTab = mode;
+    const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    
+    document.getElementById('tab-req').className = mode === 'REQUEST' ? activeClass : inactiveClass;
+    document.getElementById('tab-done').className = mode === 'DONE' ? activeClass : inactiveClass;
+    
+    document.getElementById('btn-proses-ganti').classList.toggle('hidden', mode === 'DONE');
+    
+    window.activeFilters = {};
+    window.renderTabel();
+};
+
 window.muatData = async function() {
     const tbody = document.getElementById('tbody-ganti');
     tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menarik Data...</p></td></tr>`;
@@ -92,8 +107,8 @@ window.muatData = async function() {
     try {
         const { data, error } = await db.from('ganti_customer').select('*').order('created_at', { ascending: false });
         if(error) throw error;
-        rawData = data || [];
-        window.renderTabel();
+        window.rawData = data || [];
+        window.setModeGanti(window.currentTab); // Render sesuai tab aktif
     } catch(e) { 
         tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-medium">Gagal: ${e.message}</td></tr>`; 
     }
@@ -134,7 +149,7 @@ window.cancelRequest = async function() {
 window.sortTable = function(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-ganti');
     const rows = Array.from(tbody.querySelectorAll('tr.r-row'));
-    let isAsc = sortState[colIndex] !== 'asc'; sortState[colIndex] = isAsc ? 'asc' : 'desc';
+    let isAsc = window.sortState[colIndex] !== 'asc'; window.sortState[colIndex] = isAsc ? 'asc' : 'desc';
     
     rows.sort((a, b) => {
         let valA = a.cells[colIndex].getAttribute('data-search') || a.cells[colIndex].innerText.trim(); 
@@ -177,7 +192,7 @@ window.thSort = function(idx, label, cls = "") {
 window.renderTabel = function() {
     const thead = document.getElementById('thead-ganti');
     const tbody = document.getElementById('tbody-ganti');
-    sortState = {}; selectAllState = 0;
+    window.sortState = {}; window.selectAllState = 0;
 
     thead.innerHTML = `
         <tr>
@@ -200,10 +215,17 @@ window.renderTabel = function() {
             <th class="hdr-std w-24 col-progres text-center">Progres</th>
         </tr>`;
     
-    if(rawData.length === 0) { tbody.innerHTML = `<tr><td colspan="15" class="p-8 text-center font-medium text-slate-400">Tidak ada data.</td></tr>`; return; }
+    // Filter data berdasarkan Tab Aktif
+    let filteredData = window.rawData.filter(r => {
+        if (window.currentTab === 'REQUEST') return r.progres === 'PENDING' || r.progres === 'PROSES';
+        if (window.currentTab === 'DONE') return r.progres === 'DONE';
+        return true;
+    });
 
-    tbody.innerHTML = rawData.map((r) => {
-        const tgl = formatWIB(r.created_at);
+    if(filteredData.length === 0) { tbody.innerHTML = `<tr><td colspan="15" class="p-8 text-center font-medium text-slate-400">Tidak ada data di tab ini.</td></tr>`; return; }
+
+    tbody.innerHTML = filteredData.map((r) => {
+        const tgl = window.formatWIB(r.created_at);
         
         let badgeProgres = `<span class="bg-slate-100 text-slate-500 px-2 py-1 rounded font-bold text-[10px] border border-slate-200">PENDING</span>`;
         if(r.progres === 'DONE') {
@@ -249,22 +271,21 @@ window.bukaModalProsesGanti = function() {
     if(checked.length !== 1) return alert("Pilih TEPAT 1 baris request yang ingin diproses!");
     
     const idReq = checked[0].value;
-    activeRequestRow = rawData.find(r => r.id == idReq);
+    window.activeRequestRow = window.rawData.find(r => r.id == idReq);
     
-    if(activeRequestRow.progres === 'DONE') return alert("Request ini sudah selesai (DONE)!");
+    if(window.activeRequestRow.progres === 'DONE') return alert("Request ini sudah selesai (DONE)!");
 
     document.getElementById('input-scan-ganti').value = '';
     document.getElementById('modal-scan-ganti').classList.remove('hidden');
     setTimeout(() => document.getElementById('input-scan-ganti').focus(), 100);
 };
 
-// Fungsi Helper untuk Normalisasi String (Mencegah bug spasi/huruf besar kecil/null)
-function normalizeVal(val) {
+window.normalizeVal = function(val) {
     if (val === null || val === undefined) return '-';
     let str = String(val).trim().toUpperCase();
     if (str === '') return '-';
     return str;
-}
+};
 
 window.prosesKodeScan = async function() {
     const rawInput = document.getElementById('input-scan-ganti').value.trim();
@@ -276,7 +297,6 @@ window.prosesKodeScan = async function() {
     const qrs = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
     
     try {
-        // Ambil data dari stok_global berdasarkan QR yang di-scan
         const { data, error } = await db.from('stok_global').select('*').in('qrcode', qrs);
         if(error) throw error;
         
@@ -286,32 +306,30 @@ window.prosesKodeScan = async function() {
         }
 
         let invalidQrs = [];
-        scannedValidItems = [];
+        window.scannedValidItems = [];
 
         data.forEach(item => {
-            // NORMALISASI STRING UNTUK MENCEGAH BUG SPASI/HURUF BESAR KECIL/NULL
-            let dbArea = normalizeVal(item.area);
-            let reqArea = normalizeVal(activeRequestRow.area);
+            let dbArea = window.normalizeVal(item.area);
+            let reqArea = window.normalizeVal(window.activeRequestRow.area);
 
-            let dbNama = normalizeVal(item.nama_item);
-            let reqNama = normalizeVal(activeRequestRow.nama_item);
+            let dbNama = window.normalizeVal(item.nama_item);
+            let reqNama = window.normalizeVal(window.activeRequestRow.nama_item);
             
-            let dbPjg = normalizeVal(item.panjang);
-            let reqPjg = normalizeVal(activeRequestRow.panjang);
+            let dbPjg = window.normalizeVal(item.panjang);
+            let reqPjg = window.normalizeVal(window.activeRequestRow.panjang);
             
-            let dbGrade = normalizeVal(item.grade);
-            let reqGrade = normalizeVal(activeRequestRow.grade);
+            let dbGrade = window.normalizeVal(item.grade);
+            let reqGrade = window.normalizeVal(window.activeRequestRow.grade);
             
-            let dbDus = normalizeVal(item.dus);
-            let reqDus = normalizeVal(activeRequestRow.dus);
+            let dbDus = window.normalizeVal(item.dus);
+            let reqDus = window.normalizeVal(window.activeRequestRow.dus);
             
-            let dbShading = normalizeVal(item.shading);
-            let reqShading = normalizeVal(activeRequestRow.shading);
+            let dbShading = window.normalizeVal(item.shading);
+            let reqShading = window.normalizeVal(window.activeRequestRow.shading);
 
-            let dbKet = normalizeVal(item.keterangan);
-            let reqKet = normalizeVal(activeRequestRow.keterangan);
+            let dbKet = window.normalizeVal(item.keterangan);
+            let reqKet = window.normalizeVal(window.activeRequestRow.keterangan);
 
-            // Kumpulkan error jika ada yang tidak cocok
             let errors = [];
             if (dbArea !== reqArea) errors.push(`Area (${dbArea} vs ${reqArea})`);
             if (dbNama !== reqNama) errors.push(`Nama (${dbNama} vs ${reqNama})`);
@@ -321,9 +339,8 @@ window.prosesKodeScan = async function() {
             if (dbShading !== reqShading) errors.push(`Shading (${dbShading} vs ${reqShading})`);
             if (dbKet !== reqKet) errors.push(`Ket (${dbKet} vs ${reqKet})`);
 
-            // Validasi kecocokan spesifikasi dengan request (TIDAK MENGECEK CUSTOMER)
             if (errors.length === 0) {
-                scannedValidItems.push(item);
+                window.scannedValidItems.push(item);
             } else {
                 invalidQrs.push({
                     qr: item.qrcode,
@@ -333,7 +350,6 @@ window.prosesKodeScan = async function() {
         });
 
         if(invalidQrs.length > 0) {
-            // TAMPILKAN POP UP ERROR DENGAN DETAIL ALASAN
             document.getElementById('lbl-error-count').innerText = invalidQrs.length;
             
             let errorHtml = invalidQrs.map(err => `
@@ -349,9 +365,8 @@ window.prosesKodeScan = async function() {
             btn.innerHTML = ori; btn.disabled = false; return;
         }
 
-        // Render tabel konfirmasi
         let html = '';
-        scannedValidItems.forEach((item, idx) => {
+        window.scannedValidItems.forEach((item, idx) => {
             let detail = `${item.nama_item} | ${item.panjang} | ${item.grade} | ${item.dus} | ${item.shading} | ${item.keterangan || '-'}`;
             html += `<tr class="hover:bg-slate-50 transition">
                 <td class="p-3 text-center font-bold text-slate-400">${idx + 1}</td>
@@ -361,7 +376,7 @@ window.prosesKodeScan = async function() {
             </tr>`;
         });
         
-        document.getElementById('lbl-jml-valid').innerText = scannedValidItems.length;
+        document.getElementById('lbl-jml-valid').innerText = window.scannedValidItems.length;
         document.getElementById('tbody-konfirmasi-ganti').innerHTML = html;
         
         document.getElementById('modal-scan-ganti').classList.add('hidden');
@@ -378,43 +393,56 @@ window.eksekusiGantiFinal = async function() {
     const btn = document.getElementById('btn-eksekusi-final'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Memproses...'; btn.disabled = true;
 
-    let qtyToProcess = scannedValidItems.length;
-    let oldCust = activeRequestRow.customer_aktual_awal;
-    let newCust = activeRequestRow.customer_aktual_request;
+    let qtyToProcess = window.scannedValidItems.length;
+    let oldCust = window.activeRequestRow.customer_aktual_awal;
+    let newCust = window.activeRequestRow.customer_aktual_request;
 
     try {
-        // 1. Siapkan Map untuk Incremental Update stok_aktual
         let deductMap = {};
         let addMap = {};
+        let qrUpdates = {}; // Untuk update fisik (stok_global & stok_qr)
 
-        scannedValidItems.forEach(item => {
+        window.scannedValidItems.forEach(item => {
             let ket = item.keterangan || '-';
             
-            // KEY PENGURANGAN: Harus mencari baris yang memiliki customer_aktual = oldCust DAN customer_estimasi = newCust
-            // Karena di Kartu Stok, user sudah mengubah customer_estimasi menjadi newCust sebelum request ini dibuat.
-            let keyOld = `${item.nama_item}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.area}_${oldCust}_${newCust}_${ket}`;
+            // Siapkan ID SKU Baru untuk Fisik
+            let parts = item.id_sku.split('_');
+            if(parts.length >= 8) {
+                parts[7] = newCust; // Ganti segmen customer_aktual
+            }
+            let newSku = parts.join('_');
             
-            // KEY PENAMBAHAN: Baris baru akan memiliki customer_aktual = newCust DAN customer_estimasi = newCust
+            if(!qrUpdates[newSku]) qrUpdates[newSku] = [];
+            qrUpdates[newSku].push(item.qrcode);
+
+            // Logika Incremental stok_aktual
+            let keyOld = `${item.nama_item}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.area}_${oldCust}_${newCust}_${ket}`;
             let keyNew = `${item.nama_item}_${item.panjang}_${item.grade}_${item.dus}_${item.shading}_${item.area}_${newCust}_${newCust}_${ket}`;
 
             if(!deductMap[keyOld]) deductMap[keyOld] = { ...item, customer_aktual: oldCust, customer_estimasi: newCust, qty: 0 };
             deductMap[keyOld].qty++;
 
             if(!addMap[keyNew]) {
-                // JANGAN UBAH id_sku, biarkan aslinya
-                addMap[keyNew] = { ...item, customer_aktual: newCust, customer_estimasi: newCust, qty: 0 };
+                addMap[keyNew] = { ...item, id_sku: newSku, customer_aktual: newCust, customer_estimasi: newCust, qty: 0 };
             }
             addMap[keyNew].qty++;
         });
 
-        // 2. Eksekusi Pengurangan (Deduct)
+        // 1. UPDATE FISIK (stok_global & stok_qr)
+        for(let newSku in qrUpdates) {
+            let qrs = qrUpdates[newSku];
+            await db.from('stok_global').update({ customer_aktual: newCust, id_sku: newSku }).in('qrcode', qrs);
+            await db.from('stok_qr').update({ id_sku: newSku }).in('qrcode', qrs);
+        }
+
+        // 2. Eksekusi Pengurangan (Deduct) stok_aktual
         for(let k in deductMap) {
             let u = deductMap[k];
             const { data: ext } = await db.from('stok_aktual').select('id, qty')
                 .eq('nama_item', u.nama_item).eq('panjang', u.panjang).eq('grade', u.grade)
                 .eq('dus', u.dus).eq('shading', u.shading).eq('area', u.area)
                 .eq('customer_aktual', u.customer_aktual)
-                .eq('customer_estimasi', u.customer_estimasi) // PENTING: Cari yang estimasinya sudah diubah
+                .eq('customer_estimasi', u.customer_estimasi)
                 .eq('keterangan', u.keterangan || '-')
                 .limit(1);
             
@@ -425,14 +453,14 @@ window.eksekusiGantiFinal = async function() {
             }
         }
 
-        // 3. Eksekusi Penambahan (Add)
+        // 3. Eksekusi Penambahan (Add) stok_aktual
         for(let k in addMap) {
             let a = addMap[k];
             const { data: ext } = await db.from('stok_aktual').select('id, qty')
                 .eq('nama_item', a.nama_item).eq('panjang', a.panjang).eq('grade', a.grade)
                 .eq('dus', a.dus).eq('shading', a.shading).eq('area', a.area)
                 .eq('customer_aktual', a.customer_aktual)
-                .eq('customer_estimasi', a.customer_estimasi) // PENTING: Tambahkan ke yang estimasinya sama
+                .eq('customer_estimasi', a.customer_estimasi)
                 .eq('keterangan', a.keterangan || '-')
                 .limit(1);
             
@@ -443,22 +471,22 @@ window.eksekusiGantiFinal = async function() {
                     id_sku: a.id_sku, jenis_item: a.jenis_item, nama_item: a.nama_item, panjang: a.panjang, 
                     grade: a.grade, dus: a.dus, shading: a.shading, area: a.area, 
                     customer_aktual: a.customer_aktual, 
-                    customer_estimasi: a.customer_estimasi, // PENTING: Simpan estimasi baru
+                    customer_estimasi: a.customer_estimasi,
                     keterangan: a.keterangan || '-', qty: a.qty
                 }]);
             }
         }
 
         // 4. Update Progres di tabel ganti_customer
-        let newQtyProses = (parseInt(activeRequestRow.qty_proses) || 0) + qtyToProcess;
-        let newProgres = newQtyProses >= parseInt(activeRequestRow.qty_request) ? 'DONE' : 'PROSES';
+        let newQtyProses = (parseInt(window.activeRequestRow.qty_proses) || 0) + qtyToProcess;
+        let newProgres = newQtyProses >= parseInt(window.activeRequestRow.qty_request) ? 'DONE' : 'PROSES';
         
-        await db.from('ganti_customer').update({ qty_proses: newQtyProses, progres: newProgres }).eq('id', activeRequestRow.id);
+        await db.from('ganti_customer').update({ qty_proses: newQtyProses, progres: newProgres }).eq('id', window.activeRequestRow.id);
 
         alert(`✅ SUKSES!\n${qtyToProcess} dus berhasil diganti customernya menjadi ${newCust}.`);
         
         document.getElementById('modal-konfirmasi-ganti').classList.add('hidden');
-        window.muatData(); // Refresh tabel utama
+        window.muatData(); 
         
     } catch(e) {
         alert("Gagal memproses ganti customer: " + e.message);
@@ -475,22 +503,22 @@ window.highlightRow = function(checkbox, skipStateReset = false) {
     if (checkbox.checked) { tr.classList.add('selected-row'); } 
     else { tr.classList.remove('selected-row'); }
     
-    if(!skipStateReset && !checkbox.checked && selectAllState !== 0) { selectAllState = 0; window.updateSelectAllUI(); }
+    if(!skipStateReset && !checkbox.checked && window.selectAllState !== 0) { window.selectAllState = 0; window.updateSelectAllUI(); }
     if(!skipStateReset) window.updateSelectedCount();
 };
 
 window.changeRowsPerPage = function(val) {
     const customInput = document.getElementById('input-custom-rows');
-    if (val === 'ALL') { rowsPerPage = 999999; if(customInput) customInput.classList.add('hidden'); } 
+    if (val === 'ALL') { window.rowsPerPage = 999999; if(customInput) customInput.classList.add('hidden'); } 
     else if (val === 'CUSTOM') {
-        if(customInput) { customInput.classList.remove('hidden'); customInput.focus(); rowsPerPage = parseInt(customInput.value) || rowsPerPage; }
-    } else { rowsPerPage = parseInt(val); if(customInput) customInput.classList.add('hidden'); }
-    localStorage.setItem('wms_rows_per_page', rowsPerPage); currentPage = 1; window.applyPagination();
+        if(customInput) { customInput.classList.remove('hidden'); customInput.focus(); window.rowsPerPage = parseInt(customInput.value) || window.rowsPerPage; }
+    } else { window.rowsPerPage = parseInt(val); if(customInput) customInput.classList.add('hidden'); }
+    localStorage.setItem('wms_rows_per_page', window.rowsPerPage); window.currentPage = 1; window.applyPagination();
 };
 
 window.setCustomRowsPerPage = function(val) {
     let parsed = parseInt(val);
-    if (!isNaN(parsed) && parsed > 0) { rowsPerPage = parsed; localStorage.setItem('wms_rows_per_page', rowsPerPage); currentPage = 1; window.applyPagination(); }
+    if (!isNaN(parsed) && parsed > 0) { window.rowsPerPage = parsed; localStorage.setItem('wms_rows_per_page', window.rowsPerPage); window.currentPage = 1; window.applyPagination(); }
 };
 
 window.applyPagination = function() {
@@ -499,13 +527,13 @@ window.applyPagination = function() {
 
     const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
     const totalFiltered = visibleRows.length;
-    const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
+    const totalPages = Math.ceil(totalFiltered / window.rowsPerPage) || 1;
     
-    if(currentPage > totalPages) currentPage = totalPages;
-    if(currentPage < 1) currentPage = 1;
+    if(window.currentPage > totalPages) window.currentPage = totalPages;
+    if(window.currentPage < 1) window.currentPage = 1;
 
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
+    const startIndex = (window.currentPage - 1) * window.rowsPerPage;
+    const endIndex = startIndex + window.rowsPerPage;
 
     visibleRows.forEach((row, index) => {
         row.classList.remove('stripe-1', 'stripe-2');
@@ -515,48 +543,48 @@ window.applyPagination = function() {
     });
 
     if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
-    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
+    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = window.currentPage;
     if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
     
-    if (selectAllState === 1) { selectAllState = 0; window.updateSelectAllUI(); }
+    if (window.selectAllState === 1) { window.selectAllState = 0; window.updateSelectAllUI(); }
     window.applySelection(); window.updateSelectedCount();
 };
 
-window.prevPage = function() { if(currentPage > 1) { currentPage--; window.applyPagination(); } };
-window.nextPage = function() { const totalVisible = document.querySelectorAll('#tbody-ganti tr.r-row:not(.filtered-out)').length; if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; window.applyPagination(); } };
+window.prevPage = function() { if(window.currentPage > 1) { window.currentPage--; window.applyPagination(); } };
+window.nextPage = function() { const totalVisible = document.querySelectorAll('#tbody-ganti tr.r-row:not(.filtered-out)').length; if(window.currentPage < Math.ceil(totalVisible / window.rowsPerPage)) { window.currentPage++; window.applyPagination(); } };
 window.updateSelectedCount = function() { const count = document.querySelectorAll('.cb-main:checked').length; if(document.getElementById('lbl-pilih-baris')) document.getElementById('lbl-pilih-baris').innerText = count; };
 
-window.cycleSelectAll = function() { selectAllState = (selectAllState + 1) % 3; window.updateSelectAllUI(); window.applySelection(); };
+window.cycleSelectAll = function() { window.selectAllState = (window.selectAllState + 1) % 3; window.updateSelectAllUI(); window.applySelection(); };
 window.updateSelectAllUI = function() {
     const btn = document.getElementById('btn-select-all'); if(!btn) return;
-    if (selectAllState === 0) { btn.innerHTML = ''; btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto'; } 
-    else if (selectAllState === 1) { btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>'; btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto'; } 
-    else if (selectAllState === 2) { btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>'; btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto'; }
+    if (window.selectAllState === 0) { btn.innerHTML = ''; btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto'; } 
+    else if (window.selectAllState === 1) { btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>'; btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto'; } 
+    else if (window.selectAllState === 2) { btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>'; btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto'; }
     lucide.createIcons();
 };
 window.applySelection = function() {
     const allRows = Array.from(document.querySelectorAll('#tbody-ganti tr.r-row'));
     const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
-    const startIndex = (currentPage - 1) * rowsPerPage; const endIndex = startIndex + rowsPerPage;
+    const startIndex = (window.currentPage - 1) * window.rowsPerPage; const endIndex = startIndex + window.rowsPerPage;
 
-    if (selectAllState === 0) { allRows.forEach(row => { const cb = row.querySelector('.cb-main'); if(cb) { cb.checked = false; window.highlightRow(cb, true); } }); } 
-    else if (selectAllState === 1) {
+    if (window.selectAllState === 0) { allRows.forEach(row => { const cb = row.querySelector('.cb-main'); if(cb) { cb.checked = false; window.highlightRow(cb, true); } }); } 
+    else if (window.selectAllState === 1) {
         allRows.forEach(row => { const cb = row.querySelector('.cb-main'); if(cb) { cb.checked = false; window.highlightRow(cb, true); } });
         visibleRows.forEach((row, index) => { if(index >= startIndex && index < endIndex) { const cb = row.querySelector('.cb-main'); if(cb) { cb.checked = true; window.highlightRow(cb, true); } } });
-    } else if (selectAllState === 2) {
+    } else if (window.selectAllState === 2) {
         visibleRows.forEach(row => { const cb = row.querySelector('.cb-main'); if(cb) { cb.checked = true; window.highlightRow(cb, true); } });
     }
     window.updateSelectedCount();
 };
 
 window.openColumnFilter = function(event, colClass, colName) {
-    event.stopPropagation(); currentFilterCol = colClass; document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
+    event.stopPropagation(); window.currentFilterCol = colClass; document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
     let uniqueValues = new Set();
     document.querySelectorAll('#tbody-ganti tr.r-row').forEach(row => {
         let showBasedOnOthers = true;
-        for (let otherCol in activeFilters) {
+        for (let otherCol in window.activeFilters) {
             if (otherCol !== colClass) { 
-                const allowed = activeFilters[otherCol]; const c = row.querySelector('.' + otherCol);
+                const allowed = window.activeFilters[otherCol]; const c = row.querySelector('.' + otherCol);
                 let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
                 if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
             }
@@ -570,7 +598,7 @@ window.openColumnFilter = function(event, colClass, colName) {
     let sortedValues = Array.from(uniqueValues).sort();
     let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
     sortedValues.forEach(val => {
-        let isChecked = true; if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
+        let isChecked = true; if (window.activeFilters[colClass] && !window.activeFilters[colClass].includes(val)) { isChecked = false; }
         listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}"><input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> <span class="truncate text-slate-600">${val}</span></label>`;
     });
 
@@ -601,28 +629,28 @@ window.searchFilterList = function(val) {
     });
 };
 window.closeFilterMenu = function() { document.getElementById('excel-filter-menu').classList.add('hidden'); };
-window.clearFilterForCurrentCol = function() { delete activeFilters[currentFilterCol]; window.closeFilterMenu(); window.saringTabelExcel(); };
+window.clearFilterForCurrentCol = function() { delete window.activeFilters[window.currentFilterCol]; window.closeFilterMenu(); window.saringTabelExcel(); };
 window.applyFilterForCurrentCol = function() {
     const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked'); const totalBoxes = document.querySelectorAll('.filter-val-cb');
-    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') { delete activeFilters[currentFilterCol]; } 
-    else { let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value)); activeFilters[currentFilterCol] = selectedVals; }
+    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') { delete window.activeFilters[window.currentFilterCol]; } 
+    else { let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value)); window.activeFilters[window.currentFilterCol] = selectedVals; }
     window.closeFilterMenu(); window.saringTabelExcel(); 
 };
 window.saringTabelExcel = function() {
     document.querySelectorAll('.r-row').forEach(row => {
         let show = true;
-        for (let colClass in activeFilters) {
-            const allowedValues = activeFilters[colClass]; const cell = row.querySelector('.' + colClass);
+        for (let colClass in window.activeFilters) {
+            const allowedValues = window.activeFilters[colClass]; const cell = row.querySelector('.' + colClass);
             if (cell) { let text = cell.getAttribute('data-search') || cell.innerText.trim(); if (!allowedValues.includes(text)) { show = false; break; } }
         }
         if (show) { row.classList.remove('filtered-out'); } 
         else { row.classList.add('filtered-out'); let cb = row.querySelector('.cb-main'); if(cb) { cb.checked = false; window.highlightRow(cb, true); } }
     });
-    selectAllState = 0; window.updateSelectAllUI(); currentPage = 1; window.applyPagination(); window.updateFilterIcons();
+    window.selectAllState = 0; window.updateSelectAllUI(); window.currentPage = 1; window.applyPagination(); window.updateFilterIcons();
 };
 window.updateFilterIcons = function() {
     document.querySelectorAll('.filter-icon').forEach(icon => { icon.classList.remove('text-amber-400', 'opacity-100'); icon.classList.add('text-white', 'opacity-40'); });
-    for (let colClass in activeFilters) {
+    for (let colClass in window.activeFilters) {
         const th = document.querySelector(`th.${colClass}`);
         if (th) { const icon = th.querySelector('.filter-icon'); if (icon) { icon.classList.remove('text-white', 'opacity-40'); icon.classList.add('text-amber-400', 'opacity-100'); } }
     }
@@ -697,26 +725,26 @@ window.getDragAfterElement = function(container, y) {
 
 window.simpanUrutanKolom = function() {
     const items = document.querySelectorAll('.drag-item'); let newOrder = []; items.forEach(item => newOrder.push(item.getAttribute('data-col')));
-    userColOrder = newOrder; localStorage.setItem(`col_order_ganti_${currentUser.username}`, JSON.stringify(newOrder));
+    window.userColOrder = newOrder; localStorage.setItem(`col_order_ganti_${window.currentUser.username}`, JSON.stringify(newOrder));
     alert("Urutan kolom berhasil disimpan!"); window.toggleSidebarKolom(); window.renderTabel(); 
 };
 
 window.resetUrutanKolom = function() {
     if(!confirm("Kembalikan urutan kolom ke default?")) return;
-    userColOrder = []; localStorage.removeItem(`col_order_ganti_${currentUser.username}`);
+    window.userColOrder = []; localStorage.removeItem(`col_order_ganti_${window.currentUser.username}`);
     alert("Urutan dikembalikan ke default."); window.toggleSidebarKolom(); window.renderTabel();
 };
 
 window.applyColumnOrder = function() {
-    if (!userColOrder || userColOrder.length === 0) return;
+    if (!window.userColOrder || window.userColOrder.length === 0) return;
     const table = document.getElementById('main-table'); const rows = table.querySelectorAll('tr');
     rows.forEach(row => {
         const cells = Array.from(row.children); if (cells.length <= 1) return; 
         const cbCell = cells.find(c => c.classList.contains('col-cb')); const btnCell = cells.find(c => c.classList.contains('col-btn'));
         const cellMap = {}; cells.forEach(c => { const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-')); if (colClass) cellMap[colClass] = c; });
         row.innerHTML = ''; if (cbCell) row.appendChild(cbCell); if (btnCell) row.appendChild(btnCell); 
-        userColOrder.forEach(colId => { if (cellMap[colId]) { row.appendChild(cellMap[colId]); } });
-        cells.forEach(c => { const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-')); if (colClass !== 'col-cb' && colClass !== 'col-btn' && !userColOrder.includes(colClass)) { row.appendChild(c); } });
+        window.userColOrder.forEach(colId => { if (cellMap[colId]) { row.appendChild(cellMap[colId]); } });
+        cells.forEach(c => { const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-')); if (colClass !== 'col-cb' && colClass !== 'col-btn' && !window.userColOrder.includes(colClass)) { row.appendChild(c); } });
     });
 };
 
