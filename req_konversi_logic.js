@@ -134,6 +134,7 @@ window.muatData = async function() {
     }
 };
 
+// DEKLARASI FUNGSI STANDAR (Mencegah Hoisting Error)
 function thSort(idx, label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-progres'].includes(colClass);
@@ -313,10 +314,10 @@ window.pilihJenisProses = function(jenis) {
     
     if(jenis === 'OUT') {
         title.innerHTML = '<i data-lucide="log-out" class="text-rose-600"></i> PROSES KONVERSI OUT';
-        saveBtn.className = "w-1/4 py-3 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95";
+        saveBtn.className = "px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-lg shadow-md text-xs uppercase transition active:scale-95";
     } else {
         title.innerHTML = '<i data-lucide="log-in" class="text-emerald-600"></i> PROSES KONVERSI IN';
-        saveBtn.className = "w-1/4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95";
+        saveBtn.className = "px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-md text-xs uppercase transition active:scale-95";
     }
     
     document.getElementById('input-scan-konv').value = '';
@@ -693,12 +694,12 @@ window.cancelKonversiMassal = async function() {
             await db.from('stok_qr').insert(insertsStokQr);
         }
 
-        // REVISI: Gabungkan kembali baris 'konversi' ke baris normal di stok_aktual
+        // REVISI: Gabungkan kembali baris 'konversi' ke baris normal di stok_aktual (Memperbaiki Bug Typo r.shading)
         for(let req of selectedRequests) {
             // Cari baris konversi
             const { data: rowKonv } = await db.from('stok_aktual').select('*')
                 .eq('nama_item', req.nama_item).eq('panjang', req.panjang).eq('grade', req.grade)
-                .eq('dus', req.dus).eq('shading', r.shading).eq('area', req.area)
+                .eq('dus', req.dus).eq('shading', req.shading).eq('area', req.area) // PERBAIKAN: req.shading
                 .eq('customer_aktual', req['customer aktual'])
                 .eq('konversi', 'konversi')
                 .limit(1);
@@ -993,7 +994,7 @@ window.applyColumnOrder = function() {
         const cbCell = cells.find(c => c.classList.contains('col-cb')); const btnCell = cells.find(c => c.classList.contains('col-btn'));
         const cellMap = {}; cells.forEach(c => { const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-')); if (colClass) cellMap[colClass] = c; });
         row.innerHTML = ''; if (cbCell) row.appendChild(cbCell); if (btnCell) row.appendChild(btnCell); 
-        window.userColOrder.forEach(colId => { if (cellMap[colId]) { row.appendChild(colId); } });
+        window.userColOrder.forEach(colId => { if (cellMap[colId]) { row.appendChild(cellMap[colId]); } });
         cells.forEach(c => { const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-')); if (colClass !== 'col-cb' && colClass !== 'col-btn' && !window.userColOrder.includes(colClass)) { row.appendChild(c); } });
     });
 };
