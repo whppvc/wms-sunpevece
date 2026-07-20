@@ -454,11 +454,11 @@ function renderTabel() {
             return `
                 <tr class="${customRowClass}">
                     <!-- REVISI: Tambahkan data-id agar pencarian request konversi langsung menembak ID database -->
-                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-id="${r.id}" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-estimasi="${r.customer_estimasi}" data-qty="${r.qty}" data-ket="${r.keterangan}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-id="${r.id}" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.panjang}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-estimasi="${r.customer_estimasi}" data-qty="${r.qty}" data-ket="${r.keterangan}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                     <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.panjang}">${r.panjang}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
@@ -555,7 +555,7 @@ function renderTabel() {
                 <td class="px-4 py-3 font-medium text-left col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
                 <td class="px-4 py-3 font-medium text-left col-po" data-search="${r.customer_aktual || '-'}">${r.customer_aktual || '-'}</td>
                 <td class="px-4 py-3 font-medium text-left col-estimasi" data-search="${r.customer_estimasi || '-'}">${r.customer_estimasi || '-'}</td>
-                <td class="px-4 py-3 font-medium text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
+                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
             </tr>
         `}).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -706,7 +706,7 @@ function applySelection() {
     const allRows = Array.from(document.querySelectorAll('#tbody-ks tr.row-ks'));
     const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
     
-    const startIndex = (window.currentPage - 1) * rowsPerPage;
+    const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
 
     if (selectAllState === 0) {
@@ -916,8 +916,8 @@ function initResizableColumns() {
             col.style.minWidth = `${w + dx}px`;
         };
         const mouseUpHandler = function() {
-            document.addEventListener('mousemove', mouseMoveHandler);
-            document.addEventListener('mouseup', mouseUpHandler);
+            document.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
             resizer.classList.remove('resizing');
         };
     });
@@ -1060,8 +1060,8 @@ async function eksekusiGantiPO() {
         for(let row of selectedForAction) {
             if (qtySisaUntukDiupdate <= 0) break; 
             
-            let qtyPotong = Math.min(row.qty, qtySisaUntilDiupdate);
-            qtySisaUntukDiupdate -= qtyPotong;
+            let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
+            qtySisaUntilDiupdate -= qtyPotong;
 
             const { data: oldRows, error: errOld } = await db.from('stok_aktual')
                 .select('*')
@@ -1322,7 +1322,6 @@ async function eksekusiReqKonversi() {
             shading_req: shadingReq,
             qty_req: qtyReq.toString(),
             qty_hasil: qtyHasil.toString(),
-            qty_proses: "0",
             qty_out: "0",
             qty_in: "0",
             progres_konversi: "PENDING",
