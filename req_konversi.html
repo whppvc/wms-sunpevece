@@ -55,19 +55,42 @@
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-sm w-full">
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
                 <button onclick="setModeReq('REQUEST')" id="tab-req" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="clock" class="w-4 h-4"></i> Request Konversi</button>
-                <button onclick="setModeReq('KONVERSI')" id="tab-konv" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="arrow-right-left" class="w-4 h-4"></i> Tabel Stok Konversi</button>
+                <button onclick="setModeReq('KONVERSI')" id="tab-konv" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="arrow-right-left" class="w-4 h-4"></i> Tabel Konversi</button>
             </div>
 
-            <!-- TOOLBAR UTAMA -->
-            <div class="p-2 sm:p-3 flex items-center justify-between bg-slate-50/50 border-t border-slate-100 w-full">
+            <!-- TOOLBAR UTAMA (DESAIN PREMIUM) -->
+            <div class="p-3 sm:p-4 flex items-center justify-between bg-slate-50/50 border-t border-slate-100 w-full">
                 <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar">
-                    <button onclick="muatData()" class="shrink-0 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-black rounded-md shadow-sm text-xs uppercase transition flex items-center gap-2 active:scale-95"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh Data</button>
                     
-                    <!-- Tombol Khusus Tab Request -->
-                    <button id="btn-proses-konv" onclick="bukaModalProsesKonv()" class="shrink-0 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-md shadow-sm text-xs uppercase transition flex items-center gap-2 active:scale-95"><i data-lucide="settings" class="w-4 h-4"></i> Proses Konversi</button>
-                    <button id="btn-done-konv" onclick="doneKonversiMassal()" class="shrink-0 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-md shadow-sm text-xs uppercase transition flex items-center gap-2 active:scale-95"><i data-lucide="check-circle" class="w-4 h-4"></i> Done Konversi</button>
-                    <button id="btn-undone-konv" onclick="undoneKonversiMassal()" class="shrink-0 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-md shadow-sm text-xs uppercase transition flex items-center gap-2 active:scale-95"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undone</button>
-                    <button id="btn-cancel-konv" onclick="cancelKonversiMassal()" class="shrink-0 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-md shadow-sm text-xs uppercase transition flex items-center gap-2 active:scale-95"><i data-lucide="x-circle" class="w-4 h-4"></i> Cancel Konversi</button>
+                    <!-- REFRESH DATA -->
+                    <button onclick="muatData()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-teal-700">
+                        <div class="bg-teal-800 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="refresh-cw" class="w-4 h-4"></i></div>
+                        <div class="bg-teal-700 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-teal-600 transition">Refresh Data</div>
+                    </button>
+                    
+                    <!-- PROSES KONVERSI -->
+                    <button id="btn-proses-konv" onclick="bukaModalProsesKonv()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-indigo-700">
+                        <div class="bg-indigo-800 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="settings" class="w-4 h-4"></i></div>
+                        <div class="bg-indigo-700 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-indigo-600 transition">Proses Konversi</div>
+                    </button>
+
+                    <!-- DONE KONVERSI -->
+                    <button id="btn-done-konv" onclick="doneKonversiMassal()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-emerald-700">
+                        <div class="bg-emerald-800 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="check-circle" class="w-4 h-4"></i></div>
+                        <div class="bg-emerald-700 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-emerald-600 transition">Done Konversi</div>
+                    </button>
+
+                    <!-- UNDONE -->
+                    <button id="btn-undone-konv" onclick="undoneKonversiMassal()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-amber-600">
+                        <div class="bg-amber-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
+                        <div class="bg-amber-50 text-amber-700 font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-amber-100 transition">Undone</div>
+                    </button>
+
+                    <!-- CANCEL KONVERSI -->
+                    <button id="btn-cancel-konv" onclick="cancelKonversiMassal()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-rose-700">
+                        <div class="bg-rose-800 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="x-circle" class="w-4 h-4"></i></div>
+                        <div class="bg-rose-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-rose-500 transition">Cancel Konversi</div>
+                    </button>
                 </div>
 
                 <!-- KANAN: DROPDOWN AKSI -->
@@ -201,7 +224,7 @@
 
     <!-- MODAL FILTER EXCEL -->
     <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm overflow-hidden">
-        <div class="p-3 border-b border-slate-100 flex justify-between items-center rounded-t-lg">
+        <div class="p-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center rounded-t-lg">
             <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
             <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-rose-500 bg-white border border-slate-200 p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
         </div>
