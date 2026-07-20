@@ -445,8 +445,14 @@ function renderTabel() {
             let isProcessing = processedGantiKeys.has(`${r.id_sku_base}_${r.customer_estimasi}_${r.area}`);
             let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
 
+            // REVISI: Highlight baris konversi dengan warna oren muda
+            let isKonversi = r.konversi === 'konversi';
+            let customRowClass = isKonversi 
+                ? "transition row-ks text-[13px] !bg-orange-100 !text-orange-900 font-bold is-konversi" 
+                : "transition row-ks text-[13px]";
+
             return `
-                <tr class="${rowClassBase}">
+                <tr class="${customRowClass}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-estimasi="${r.customer_estimasi}" data-qty="${r.qty}" data-ket="${r.keterangan}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
@@ -493,7 +499,7 @@ function renderTabel() {
             let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
 
             return `
-            <tr class="${rowClassBase}">
+            <tr class="${customRowClass}">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 text-center col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
@@ -542,7 +548,7 @@ function renderTabel() {
                 <td class="px-4 py-3 font-mono font-bold text-left col-qr" data-search="${r.qrcode || '-'}">${r.qrcode || '-'}</td>
                 <td class="px-4 py-3 font-medium text-left col-jenis" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
                 <td class="px-4 py-3 font-medium text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
-                <td class="px-4 py-3 font-medium text-left col-pjg" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-panjang" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
                 <td class="px-4 py-3 font-medium text-left col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
                 <td class="px-4 py-3 font-medium text-left col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
                 <td class="px-4 py-3 font-medium text-left col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
@@ -630,7 +636,7 @@ function applyPagination() {
     let sumQty = 0;
     visibleRows.forEach((row, index) => {
         row.classList.remove('stripe-1', 'stripe-2');
-        if (!row.classList.contains('is-nonaktif')) {
+        if (!row.classList.contains('is-nonaktif') && !row.classList.contains('is-konversi')) {
             if (index % 2 === 0) row.classList.add('stripe-1');
             else row.classList.add('stripe-2');
         }
@@ -754,7 +760,7 @@ function openColumnFilter(event, colClass, colName) {
     });
 
     let sortedValues = Array.from(uniqueValues).sort();
-    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
+    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
     
     sortedValues.forEach(val => {
         let isChecked = true;
@@ -1182,6 +1188,165 @@ async function prosesLabelCustomerMassal() {
     }
 }
 
+function siapkanReqKonversi() {
+    const checkboxes = document.querySelectorAll('.cb-main:checked');
+    if(checkboxes.length !== 1) return alert('Silakan centang TEPAT 1 (satu) baris item yang ingin direquest konversi.');
+
+    const cb = checkboxes[0];
+    selectedForReq = {
+        jenis_item: cb.dataset.jenis || '-',
+        nama_item: cb.dataset.nama || '-',
+        panjang: cb.dataset.pjg || '-',
+        grade: cb.dataset.grade || '-',
+        dus: cb.dataset.dus || '-',
+        shading: cb.dataset.shading || '-',
+        customer_aktual: cb.dataset.po || '-',
+        customer_estimasi: cb.dataset.estimasi || '-', // REVISI: Ambil customer_estimasi
+        keterangan: cb.dataset.ket || '-',
+        area: cb.dataset.area || '-',
+        qty_max: parseInt(cb.dataset.qty) || 0
+    };
+
+    const infoAsal = document.getElementById('req-info-asal');
+    if(infoAsal) {
+        infoAsal.innerHTML = `
+            <span class="text-blue-600">${selectedForReq.nama_item}</span> | 
+            ${selectedForReq.panjang} | ${selectedForReq.grade} | ${selectedForReq.dus} | ${selectedForReq.shading} | 
+            <span class="text-emerald-600">${selectedForReq.area}</span> | 
+            <span class="text-orange-600">${selectedForReq.customer_aktual}</span>
+        `;
+    }
+
+    // Reset Form Input
+    ['req-nama-item', 'req-panjang', 'req-grade', 'req-dus', 'req-shading', 'req-qty', 'req-qty-hasil'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.value = '';
+    });
+
+    document.getElementById('modal-req-konversi').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+}
+
+function tutupModalReqKonversi() {
+    document.getElementById('modal-req-konversi').classList.add('hidden');
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
+    selectedForReq = null;
+}
+
+async function eksekusiReqKonversi() {
+    if(!selectedForReq) return alert("Data sumber tidak valid!");
+
+    const namaReq = document.getElementById('req-nama-item').value.trim() || selectedForReq.nama_item;
+    const pjgReq = document.getElementById('req-panjang').value.trim() || selectedForReq.panjang;
+    const gradeReq = document.getElementById('req-grade').value.trim() || selectedForReq.grade;
+    const dusReq = document.getElementById('req-dus').value.trim() || selectedForReq.dus;
+    const shadingReq = document.getElementById('req-shading').value.trim() || selectedForReq.shading;
+    
+    const qtyReq = parseInt(document.getElementById('req-qty').value);
+    const qtyHasil = parseInt(document.getElementById('req-qty-hasil').value);
+
+    if(isNaN(qtyReq) || qtyReq <= 0) return alert("Qty Request tidak valid!");
+    if(isNaN(qtyHasil) || qtyHasil <= 0) return alert("Qty Hasil tidak valid!");
+    if(qtyReq > selectedForReq.qty_max) return alert(`Maksimal Qty Request adalah ${selectedForReq.qty_max} dus!`);
+
+    const btn = document.getElementById('btn-save-req-konv'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
+
+    try {
+        // REVISI: Kurangi saldo baris normal di stok_aktual
+        const { data: origRow, error: errOrig } = await db.from('stok_aktual')
+            .select('*')
+            .eq('nama_item', selectedForReq.nama_item)
+            .eq('panjang', selectedForReq.panjang)
+            .eq('grade', selectedForReq.grade)
+            .eq('dus', selectedForReq.dus)
+            .eq('shading', selectedForReq.shading)
+            .eq('area', selectedForReq.area)
+            .eq('customer_aktual', selectedForReq.customer_aktual)
+            .is('konversi', null) // Target baris normal
+            .single();
+
+        if (errOrig || !origRow) throw new Error("Gagal menemukan baris stok asal di database.");
+
+        let newOrigQty = origRow.qty - qtyReq;
+        if(newOrigQty <= 0) {
+            await db.from('stok_aktual').delete().eq('id', origRow.id);
+        } else {
+            await db.from('stok_aktual').update({ qty: newOrigQty }).eq('id', origRow.id);
+        }
+
+        // REVISI: Masukkan baris pecahan baru bertanda 'konversi'
+        let splitRow = { ...origRow };
+        delete splitRow.id;
+        delete splitRow.created_at;
+        splitRow.qty = qtyReq;
+        splitRow.konversi = 'konversi';
+        await db.from('stok_aktual').insert([splitRow]);
+
+        // Generate Kode Konversi: K-DDMMYYXX
+        const now = new Date();
+        const yy = String(now.getFullYear()).slice(-2);
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const prefix = `K-${dd}${mm}${yy}`;
+
+        const { data: existingCodes, error: errCodes } = await db
+            .from('request_konversi')
+            .select('kode_konversi')
+            .like('kode_konversi', `${prefix}%`);
+        
+        if(errCodes) throw errCodes;
+
+        let seq = 1;
+        if(existingCodes && existingCodes.length > 0) {
+            let seqs = existingCodes.map(c => {
+                let s = c.kode_konversi.replace(prefix, '');
+                return parseInt(s) || 0;
+            });
+            seq = Math.max(...seqs) + 1;
+        }
+        const kodeKonversi = `${prefix}${String(seq).padStart(2, '0')}`;
+
+        const payload = {
+            kode_konversi: kodeKonversi,
+            aktifitas_konversi: 'req',
+            area: selectedForReq.area,
+            jenis_item: selectedForReq.jenis_item,
+            nama_item: selectedForReq.nama_item,
+            panjang: selectedForReq.panjang,
+            grade: selectedForReq.grade,
+            dus: selectedForReq.dus,
+            shading: selectedForReq.shading,
+            keterangan: selectedForReq.keterangan,
+            "customer aktual": selectedForReq.customer_aktual,
+            customer_estimasi: selectedForReq.customer_estimasi, // REVISI: Catat customer_estimasi
+            nama_item_req: namaReq,
+            panjang_req: pjgReq,
+            grade_req: gradeReq,
+            dus_req: dusReq,
+            shading_req: shadingReq,
+            qty_req: qtyReq.toString(),
+            qty_hasil: qtyHasil.toString(),
+            qty_proses: "0",
+            qty_out: "0",
+            qty_in: "0",
+            progres_konversi: "PENDING",
+            pic_request: currentUser.username
+        };
+
+        const { error } = await db.from('request_konversi').insert([payload]);
+        if(error) throw error;
+        
+        tutupModalReqKonversi();
+        alert(`Berhasil membuat Request Konversi dengan Kode: ${kodeKonversi}`);
+        await muatDataStok();
+    } catch(e) {
+        alert("Gagal menyimpan request: " + e.message);
+    } finally {
+        btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
 function salinData() {
     const cek = document.querySelectorAll('.cb-main:checked');
     if(cek.length === 0) return alert("Pilih data yang ingin disalin!");
@@ -1461,7 +1626,7 @@ function bukaModalLihatPO(encodedPOs) {
             let qtyPo = parts[1] ? parts[1].replace(')', '').trim() : '';
             return `<li class="p-3 bg-white border border-slate-200 shadow-sm text-slate-700 font-semibold rounded-md flex items-center justify-between gap-3">
                         <div class="flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 text-slate-400"></i> <span>${namaPo}</span></div> 
-                        <span class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded text-xs font-black">${qtyPo}</span>
+                        <span class="bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-0.5 rounded text-xs font-black">${qtyPo}</span>
                     </li>`;
         }).join('');
     }
@@ -1514,6 +1679,154 @@ function tutupModalPO() {
     }
 }
 
+async function eksekusiGantiPO() {
+    const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
+    if(!newPO) return alert("Silakan Pilih Customer Baru dari daftar dropdown!");
+
+    const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
+    if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
+
+    let maxDus = selectedForAction.reduce((sum, row) => sum + row.qty, 0);
+    if(qtyDiminta > maxDus) return alert(`Maksimal jatah adalah ${maxDus} dus!`);
+
+    const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
+
+    try {
+        let qtySisaUntukDiupdate = qtyDiminta; 
+        
+        for(let row of selectedForAction) {
+            if (qtySisaUntukDiupdate <= 0) break; 
+            
+            let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
+            qtySisaUntukDiupdate -= qtyPotong;
+
+            const { data: oldRows, error: errOld } = await db.from('stok_aktual')
+                .select('*')
+                .eq('nama_item', row.nama_item)
+                .eq('panjang', row.pjg)
+                .eq('grade', row.grade)
+                .eq('dus', row.dus)
+                .eq('shading', row.shading)
+                .eq('area', row.area)
+                .eq('customer_aktual', row.po_aktual)
+                .eq('customer_estimasi', row.customer_estimasi)
+                .eq('keterangan', row.keterangan)
+                .eq('kondisi', row.kondisi) 
+                .limit(1);
+            
+            if (errOld) throw errOld;
+
+            if (oldRows && oldRows.length > 0) {
+                let oldRow = oldRows[0];
+                
+                let sisaQty = oldRow.qty - qtyPotong;
+                if (sisaQty <= 0) {
+                    await db.from('stok_aktual').delete().eq('id', oldRow.id);
+                } else {
+                    await db.from('stok_aktual').update({qty: sisaQty}).eq('id', oldRow.id);
+                }
+
+                const { data: newRows, error: errNew } = await db.from('stok_aktual')
+                    .select('id, qty')
+                    .eq('nama_item', oldRow.nama_item)
+                    .eq('panjang', oldRow.panjang)
+                    .eq('grade', oldRow.grade)
+                    .eq('dus', oldRow.dus)
+                    .eq('shading', oldRow.shading)
+                    .eq('area', oldRow.area)
+                    .eq('customer_aktual', oldRow.customer_aktual)
+                    .eq('customer_estimasi', newPO)
+                    .eq('keterangan', oldRow.keterangan)
+                    .eq('kondisi', oldRow.kondisi) 
+                    .limit(1);
+
+                if (errNew) throw errNew;
+
+                if (newRows && newRows.length > 0) {
+                    await db.from('stok_aktual').update({qty: newRows[0].qty + qtyPotong}).eq('id', newRows[0].id);
+                } else {
+                    let insertData = { ...oldRow };
+                    delete insertData.id; 
+                    delete insertData.created_at; 
+                    insertData.customer_estimasi = newPO;
+                    insertData.qty = qtyPotong;
+                    await db.from('stok_aktual').insert([insertData]);
+                }
+            }
+        }
+        
+        tutupModalPO(); 
+        if(sourcePOContext === 'breakdown') tutupModalBreakdown();
+        
+        await muatDataStok();
+        alert("Berhasil mengganti Customer Estimasi!");
+    } catch (error) { 
+        alert("GAGAL UPDATE: " + error.message); 
+    } finally { 
+        btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons(); 
+    }
+}
+
+async function prosesLabelCustomerMassal() {
+    const checked = document.querySelectorAll('.cb-main:checked');
+    if(checked.length === 0) return alert("Pilih baris yang ingin diproses label customernya!");
+
+    let payload = [];
+    let invalidCount = 0;
+
+    checked.forEach(cb => {
+        let poAktual = cb.dataset.po;
+        let poEstimasi = cb.dataset.estimasi;
+        
+        if(poAktual !== poEstimasi) {
+            payload.push({
+                id_sku: cb.dataset.idsku,
+                area: cb.dataset.area,
+                jenis_item: cb.dataset.jenis,
+                nama_item: cb.dataset.nama,
+                panjang: cb.dataset.pjg,
+                grade: cb.dataset.grade,
+                dus: cb.dataset.dus,
+                shading: cb.dataset.shading,
+                keterangan: cb.dataset.ket,
+                customer_aktual_awal: poAktual,
+                customer_aktual_request: poEstimasi,
+                qty_request: parseInt(cb.dataset.qty) || 0,
+                qty_proses: 0,
+                progres: 'PENDING'
+            });
+        } else {
+            invalidCount++;
+        }
+    });
+
+    if(payload.length === 0) {
+        return alert("Tidak ada baris valid untuk diproses.\nPastikan Anda memilih baris yang Customer Aktual dan Customer Estimasinya BERBEDA.");
+    }
+
+    if(!confirm(`Akan memproses ${payload.length} item ke tabel Ganti Customer.\nLanjutkan?`)) return;
+
+    const btn = document.getElementById('btn-proses-ganti-main');
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<div class="bg-emerald-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="animate-spin w-4 h-4"></i></div><div class="bg-emerald-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-emerald-700 transition">Memproses...</div>';
+    btn.disabled = true;
+
+    try {
+        const { error } = await db.from('ganti_customer').insert(payload);
+        if(error) throw error;
+
+        alert(`✅ BERHASIL!\n${payload.length} item telah dikirim ke antrean Ganti Customer.`);
+        await muatDataStok(); 
+    } catch(e) {
+        alert("Gagal memproses: " + e.message);
+    } finally {
+        btn.innerHTML = ori;
+        btn.disabled = false;
+        lucide.createIcons();
+    }
+}
+
 function siapkanReqKonversi() {
     const checkboxes = document.querySelectorAll('.cb-main:checked');
     if(checkboxes.length !== 1) return alert('Silakan centang TEPAT 1 (satu) baris item yang ingin direquest konversi.');
@@ -1527,6 +1840,7 @@ function siapkanReqKonversi() {
         dus: cb.dataset.dus || '-',
         shading: cb.dataset.shading || '-',
         customer_aktual: cb.dataset.po || '-',
+        customer_estimasi: cb.dataset.estimasi || '-', 
         keterangan: cb.dataset.ket || '-',
         area: cb.dataset.area || '-',
         qty_max: parseInt(cb.dataset.qty) || 0
@@ -1578,9 +1892,59 @@ async function eksekusiReqKonversi() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
 
     try {
-        const { count } = await db.from('request_konversi').select('*', { count: 'exact', head: true });
-        const nextNum = (count || 0) + 1;
-        const kodeKonversi = `K-${String(nextNum).padStart(4, '0')}`;
+        // 1. Kurangi saldo baris normal di stok_aktual
+        const { data: origRow, error: errOrig } = await db.from('stok_aktual')
+            .select('*')
+            .eq('nama_item', selectedForReq.nama_item)
+            .eq('panjang', selectedForReq.panjang)
+            .eq('grade', selectedForReq.grade)
+            .eq('dus', selectedForReq.dus)
+            .eq('shading', selectedForReq.shading)
+            .eq('area', selectedForReq.area)
+            .eq('customer_aktual', selectedForReq.customer_aktual)
+            .is('konversi', null) // Target baris normal
+            .single();
+
+        if (errOrig || !origRow) throw new Error("Gagal menemukan baris stok asal di database.");
+
+        let newOrigQty = origRow.qty - qtyReq;
+        if(newOrigQty <= 0) {
+            await db.from('stok_aktual').delete().eq('id', origRow.id);
+        } else {
+            await db.from('stok_aktual').update({ qty: newOrigQty }).eq('id', origRow.id);
+        }
+
+        // 2. Masukkan baris pecahan baru bertanda 'konversi'
+        let splitRow = { ...origRow };
+        delete splitRow.id;
+        delete splitRow.created_at;
+        splitRow.qty = qtyReq;
+        splitRow.konversi = 'konversi';
+        await db.from('stok_aktual').insert([splitRow]);
+
+        // Generate Kode Konversi: K-DDMMYYXX
+        const now = new Date();
+        const yy = String(now.getFullYear()).slice(-2);
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const prefix = `K-${dd}${mm}${yy}`;
+
+        const { data: existingCodes, error: errCodes } = await db
+            .from('request_konversi')
+            .select('kode_konversi')
+            .like('kode_konversi', `${prefix}%`);
+        
+        if(errCodes) throw errCodes;
+
+        let seq = 1;
+        if(existingCodes && existingCodes.length > 0) {
+            let seqs = existingCodes.map(c => {
+                let s = c.kode_konversi.replace(prefix, '');
+                return parseInt(s) || 0;
+            });
+            seq = Math.max(...seqs) + 1;
+        }
+        const kodeKonversi = `${prefix}${String(seq).padStart(2, '0')}`;
 
         const payload = {
             kode_konversi: kodeKonversi,
@@ -1594,6 +1958,7 @@ async function eksekusiReqKonversi() {
             shading: selectedForReq.shading,
             keterangan: selectedForReq.keterangan,
             "customer aktual": selectedForReq.customer_aktual,
+            customer_estimasi: selectedForReq.customer_estimasi, // Catat customer_estimasi
             nama_item_req: namaReq,
             panjang_req: pjgReq,
             grade_req: gradeReq,
@@ -1602,17 +1967,763 @@ async function eksekusiReqKonversi() {
             qty_req: qtyReq.toString(),
             qty_hasil: qtyHasil.toString(),
             qty_proses: "0",
-            progres_konversi: "PENDING"
+            qty_out: "0",
+            qty_in: "0",
+            progres_konversi: "PENDING",
+            pic_request: currentUser.username
         };
 
         const { error } = await db.from('request_konversi').insert([payload]);
         if(error) throw error;
         
         tutupModalReqKonversi();
-        alert("Berhasil membuat Request Konversi!");
+        alert(`Berhasil membuat Request Konversi dengan Kode: ${kodeKonversi}`);
+        await muatDataStok();
     } catch(e) {
         alert("Gagal menyimpan request: " + e.message);
     } finally {
         btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons();
     }
+}
+
+function cycleSelectAll() {
+    selectAllState = (selectAllState + 1) % 3;
+    updateSelectAllUI();
+    applySelection();
+}
+
+function updateSelectAllUI() {
+    const btn = document.getElementById('btn-select-all');
+    if(!btn) return;
+    
+    if (selectAllState === 0) {
+        btn.innerHTML = '';
+        btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto';
+    } else if (selectAllState === 1) {
+        btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
+        btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto';
+    } else if (selectAllState === 2) {
+        btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>';
+        btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
+    }
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function applySelection() {
+    const allRows = Array.from(document.querySelectorAll('#tbody-ks tr.row-ks'));
+    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
+    
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+
+    if (selectAllState === 0) {
+        allRows.forEach(row => {
+            const cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = false; highlightRow(cb, true); }
+        });
+    } else if (selectAllState === 1) {
+        allRows.forEach(row => {
+            const cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = false; highlightRow(cb, true); }
+        });
+        visibleRows.forEach((row, index) => {
+            if(index >= startIndex && index < endIndex) {
+                const cb = row.querySelector('.cb-main');
+                if(cb) { cb.checked = true; highlightRow(cb, true); }
+            }
+        });
+    } else if (selectAllState === 2) {
+        visibleRows.forEach(row => {
+            const cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = true; highlightRow(cb, true); }
+        });
+    }
+    updateSelectedCount();
+}
+
+function openColumnFilter(event, colClass, colName) {
+    event.stopPropagation();
+    currentFilterCol = colClass;
+    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
+
+    let uniqueValues = new Set();
+    
+    document.querySelectorAll('#tbody-ks tr.row-ks').forEach(row => {
+        let showBasedOnOthers = true;
+        for (let otherCol in activeFilters) {
+            if (otherCol !== colClass) { 
+                const allowed = activeFilters[otherCol];
+                const c = row.querySelector('.' + otherCol);
+                let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
+                if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
+            }
+        }
+        if (showBasedOnOthers) {
+            let cell = row.querySelector('.' + colClass);
+            if (cell) {
+                let val = cell.getAttribute('data-search') || cell.innerText.trim();
+                if(val !== '') uniqueValues.add(val);
+            }
+        }
+    });
+
+    let sortedValues = Array.from(uniqueValues).sort();
+    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
+    
+    sortedValues.forEach(val => {
+        let isChecked = true;
+        if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
+        listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}">
+            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
+            <span class="truncate text-slate-600">${val}</span>
+        </label>`;
+    });
+
+    document.getElementById('filter-values-list').innerHTML = listHtml;
+    updateSelectAllState();
+    document.getElementById('filter-search-input').value = '';
+    
+    const menu = document.getElementById('excel-filter-menu');
+    menu.classList.remove('hidden');
+    
+    const btnRect = event.currentTarget.getBoundingClientRect();
+    const menuWidth = 256; 
+    
+    let topPos = btnRect.bottom + 4; 
+    let leftPos = btnRect.left; 
+
+    if (leftPos + menuWidth > window.innerWidth) {
+        leftPos = btnRect.right - menuWidth;
+    }
+    
+    if (leftPos < 10) {
+        leftPos = 10;
+    }
+
+    menu.style.position = 'fixed'; 
+    menu.style.top = `${topPos}px`;
+    menu.style.left = `${leftPos}px`;
+    
+    document.getElementById('filter-search-input').focus();
+}
+
+function toggleAllFilterValues(checked) {
+    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
+    updateSelectAllState();
+}
+
+function updateSelectAllState() {
+    const allCbs = document.querySelectorAll('.filter-val-cb');
+    const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
+    const selectAll = document.getElementById('filter-select-all');
+    if(!selectAll) return;
+    if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
+    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
+    else { selectAll.checked = false; selectAll.indeterminate = true; }
+}
+
+document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) updateSelectAllState(); });
+
+function searchFilterList(val) {
+    const query = val.toLowerCase().split(' ').filter(x => x); 
+    document.querySelectorAll('.filter-val-item').forEach(label => {
+        const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
+        let matches = query.every(term => text.includes(term));
+        label.style.display = matches ? '' : 'none';
+    });
+}
+
+function closeFilterMenu() { document.getElementById('excel-filter-menu').classList.add('hidden'); }
+
+function clearFilterForCurrentCol() {
+    delete activeFilters[currentFilterCol];
+    closeFilterMenu(); saringTabelExcel(); 
+}
+
+function applyFilterForCurrentCol() {
+    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
+    const totalBoxes = document.querySelectorAll('.filter-val-cb');
+    
+    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') {
+        delete activeFilters[currentFilterCol];
+    } else {
+        let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value));
+        activeFilters[currentFilterCol] = selectedVals;
+    }
+    
+    closeFilterMenu(); saringTabelExcel(); 
+}
+
+function saringTabelExcel() {
+    document.querySelectorAll('.row-ks').forEach(row => {
+        let show = true;
+        for (let colClass in activeFilters) {
+            const allowedValues = activeFilters[colClass];
+            const cell = row.querySelector('.' + colClass);
+            if (cell) {
+                let text = cell.getAttribute('data-search') || cell.innerText.trim();
+                if (!allowedValues.includes(text)) { show = false; break; }
+            }
+        }
+        
+        if (show) { 
+            row.classList.remove('filtered-out'); 
+        } else { 
+            row.classList.add('filtered-out'); 
+            let cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = false; highlightRow(cb, true); } 
+        }
+    });
+    
+    selectAllState = 0;
+    updateSelectAllUI();
+    currentPage = 1; 
+    applyPagination(); 
+    updateFilterIcons();
+}
+
+function updateFilterIcons() {
+    document.querySelectorAll('.filter-icon').forEach(icon => {
+        icon.classList.remove('text-amber-400', 'opacity-100');
+        icon.classList.add('text-white', 'opacity-40');
+    });
+    for (let colClass in activeFilters) {
+        const th = document.querySelector(`th.${colClass}`);
+        if (th) {
+            const icon = th.querySelector('.filter-icon');
+            if (icon) { 
+                icon.classList.remove('text-white', 'opacity-40'); 
+                icon.classList.add('text-amber-400', 'opacity-100'); 
+            }
+        }
+    }
+}
+
+function initResizableColumns() {
+    const cols = document.querySelectorAll('#main-table th');
+    cols.forEach(col => {
+        const existing = col.querySelector('.resizer');
+        if(existing) existing.remove();
+
+        const resizer = document.createElement('div');
+        resizer.classList.add('resizer');
+        col.appendChild(resizer);
+        
+        let x = 0; let w = 0;
+        resizer.addEventListener('mousedown', function(e) {
+            x = e.clientX;
+            w = parseInt(window.getComputedStyle(col).width, 10);
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+            resizer.classList.add('resizing');
+        });
+        const mouseMoveHandler = function(e) {
+            const dx = e.clientX - x;
+            col.style.width = `${w + dx}px`;
+            col.style.minWidth = `${w + dx}px`;
+        };
+        const mouseUpHandler = function() {
+            document.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
+            resizer.classList.remove('resizing');
+        };
+    });
+}
+
+function tutupSemuaPopups() {
+    document.getElementById('modal-lihat-po').classList.add('hidden');
+    document.getElementById('modal-breakdown').classList.add('hidden');
+    document.getElementById('modal-po').classList.add('hidden');
+    document.getElementById('modal-req-konversi').classList.add('hidden');
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
+    if(document.getElementById('sidebar-kolom')) {
+        document.getElementById('sidebar-kolom').classList.add('translate-x-full');
+    }
+}
+
+function bukaBreakdown(gKey) {
+    const item = dataKSGlobal.find(g => g.gKey === gKey); if(!item) return;
+
+    document.getElementById('bd-title-item').innerText = `${item.nama} | ${item.pjg} | ${item.grade} | DUS: ${item.dus} | SHADING: ${item.shading} | KET: ${item.ket}`;
+    currentBreakdownData = item.areas;
+
+    const tbody = document.getElementById('tbody-breakdown');
+    tbody.innerHTML = item.areas.map((a, i) => {
+        const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
+        const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
+        
+        return `
+            <tr class="transition bd-row text-[13px] ${stripeClass}">
+                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
+                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
+                <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi">${a.customer_estimasi}</td>
+                <td class="px-4 py-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
+                <td class="px-4 py-3 font-black text-emerald-700 text-center">${a.qty}</td>
+            </tr>`;
+    }).join('');
+
+    document.getElementById('modal-breakdown').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+}
+
+function tutupModalBreakdown() { 
+    document.getElementById('modal-breakdown').classList.add('hidden'); 
+    document.getElementById('overlay-klik-luar').classList.add('hidden'); 
+}
+
+function highlightBdRow(cb) {
+    const tr = cb.closest('tr');
+    if(cb.checked) { tr.classList.add('selected-row'); } 
+    else { tr.classList.remove('selected-row'); }
+}
+
+function toggleCentangBreakdown(checked) { 
+    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; highlightBdRow(cb); }); 
+}
+
+function bukaModalLihatPO(encodedPOs) {
+    const poStr = decodeURIComponent(encodedPOs);
+    const poArr = poStr.split('|').map(p => p.trim()).filter(p => p);
+    const ul = document.getElementById('list-po-aktual');
+    if (poArr.length === 0 || poArr[0] === 'KOSONG') {
+        ul.innerHTML = '<li class="text-slate-400 italic font-medium p-3 bg-slate-50 rounded-md text-center border border-slate-200">Tidak ada Customer Aktual tersimpan.</li>';
+    } else {
+        ul.innerHTML = poArr.map(p => {
+            let parts = p.split('(');
+            let namaPo = parts[0].trim();
+            let qtyPo = parts[1] ? parts[1].replace(')', '').trim() : '';
+            return `<li class="p-3 bg-white border border-slate-200 shadow-sm text-slate-700 font-semibold rounded-md flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 text-slate-400"></i> <span>${namaPo}</span></div> 
+                        <span class="bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-0.5 rounded text-xs font-black">${qtyPo}</span>
+                    </li>`;
+        }).join('');
+    }
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+    document.getElementById('modal-lihat-po').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+}
+
+function siapkanGantiPO(context) {
+    let checkboxes = [];
+    if(context === 'main') {
+        if(modeKS === 'global' || modeKS === 'nonaktif') return;
+        checkboxes = document.querySelectorAll('.cb-main:checked');
+    } else { checkboxes = document.querySelectorAll('.cb-bd:checked'); }
+
+    if(checkboxes.length === 0) return alert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya.');
+
+    selectedForAction = []; let totalDus = 0;
+    checkboxes.forEach(cb => {
+        selectedForAction.push({ 
+            id_sku: cb.dataset.idsku, 
+            nama_item: cb.dataset.nama,
+            pjg: cb.dataset.pjg,
+            grade: cb.dataset.grade,
+            dus: cb.dataset.dus,
+            shading: cb.dataset.shading,
+            po_aktual: cb.dataset.po,
+            customer_estimasi: cb.dataset.estimasi,
+            area: cb.dataset.area,
+            keterangan: cb.dataset.ket,
+            kondisi: cb.dataset.kondisi, 
+            qty: parseInt(cb.dataset.qty) || 0
+        });
+        totalDus += parseInt(cb.dataset.qty) || 0;
+    });
+
+    sourcePOContext = context;
+    document.getElementById('input-new-po').value = '';
+    const inputQty = document.getElementById('input-qty-ganti');
+    inputQty.value = totalDus; inputQty.max = totalDus; 
+
+    document.getElementById('modal-po').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+}
+
+function tutupModalPO() { 
+    document.getElementById('modal-po').classList.add('hidden'); 
+    if(document.getElementById('modal-breakdown').classList.contains('hidden')) {
+        document.getElementById('overlay-klik-luar').classList.add('hidden'); 
+    }
+}
+
+async function eksekusiGantiPO() {
+    const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
+    if(!newPO) return alert("Silakan Pilih Customer Baru dari daftar dropdown!");
+
+    const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
+    if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
+
+    let maxDus = selectedForAction.reduce((sum, row) => sum + row.qty, 0);
+    if(qtyDiminta > maxDus) return alert(`Maksimal jatah adalah ${maxDus} dus!`);
+
+    const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
+
+    try {
+        let qtySisaUntukDiupdate = qtyDiminta; 
+        
+        for(let row of selectedForAction) {
+            if (qtySisaUntukDiupdate <= 0) break; 
+            
+            let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
+            qtySisaUntukDiupdate -= qtyPotong;
+
+            const { data: oldRows, error: errOld } = await db.from('stok_aktual')
+                .select('*')
+                .eq('nama_item', row.nama_item)
+                .eq('panjang', row.pjg)
+                .eq('grade', row.grade)
+                .eq('dus', row.dus)
+                .eq('shading', row.shading)
+                .eq('area', row.area)
+                .eq('customer_aktual', row.po_aktual)
+                .eq('customer_estimasi', row.customer_estimasi)
+                .eq('keterangan', row.keterangan)
+                .eq('kondisi', row.kondisi) 
+                .limit(1);
+            
+            if (errOld) throw errOld;
+
+            if (oldRows && oldRows.length > 0) {
+                let oldRow = oldRows[0];
+                
+                let sisaQty = oldRow.qty - qtyPotong;
+                if (sisaQty <= 0) {
+                    await db.from('stok_aktual').delete().eq('id', oldRow.id);
+                } else {
+                    await db.from('stok_aktual').update({qty: sisaQty}).eq('id', oldRow.id);
+                }
+
+                const { data: newRows, error: errNew } = await db.from('stok_aktual')
+                    .select('id, qty')
+                    .eq('nama_item', oldRow.nama_item)
+                    .eq('panjang', oldRow.panjang)
+                    .eq('grade', oldRow.grade)
+                    .eq('dus', oldRow.dus)
+                    .eq('shading', oldRow.shading)
+                    .eq('area', oldRow.area)
+                    .eq('customer_aktual', oldRow.customer_aktual)
+                    .eq('customer_estimasi', newPO)
+                    .eq('keterangan', oldRow.keterangan)
+                    .eq('kondisi', oldRow.kondisi) 
+                    .limit(1);
+
+                if (errNew) throw errNew;
+
+                if (newRows && newRows.length > 0) {
+                    await db.from('stok_aktual').update({qty: newRows[0].qty + qtyPotong}).eq('id', newRows[0].id);
+                } else {
+                    let insertData = { ...oldRow };
+                    delete insertData.id; 
+                    delete insertData.created_at; 
+                    insertData.customer_estimasi = newPO;
+                    insertData.qty = qtyPotong;
+                    await db.from('stok_aktual').insert([insertData]);
+                }
+            }
+        }
+        
+        tutupModalPO(); 
+        if(sourcePOContext === 'breakdown') tutupModalBreakdown();
+        
+        await muatDataStok();
+        alert("Berhasil mengganti Customer Estimasi!");
+    } catch (error) { 
+        alert("GAGAL UPDATE: " + error.message); 
+    } finally { 
+        btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons(); 
+    }
+}
+
+async function prosesLabelCustomerMassal() {
+    const checked = document.querySelectorAll('.cb-main:checked');
+    if(checked.length === 0) return alert("Pilih baris yang ingin diproses label customernya!");
+
+    let payload = [];
+    let invalidCount = 0;
+
+    checked.forEach(cb => {
+        let poAktual = cb.dataset.po;
+        let poEstimasi = cb.dataset.estimasi;
+        
+        if(poAktual !== poEstimasi) {
+            payload.push({
+                id_sku: cb.dataset.idsku,
+                area: cb.dataset.area,
+                jenis_item: cb.dataset.jenis,
+                nama_item: cb.dataset.nama,
+                panjang: cb.dataset.pjg,
+                grade: cb.dataset.grade,
+                dus: cb.dataset.dus,
+                shading: cb.dataset.shading,
+                keterangan: cb.dataset.ket,
+                customer_aktual_awal: poAktual,
+                customer_aktual_request: poEstimasi,
+                qty_request: parseInt(cb.dataset.qty) || 0,
+                qty_proses: 0,
+                progres: 'PENDING'
+            });
+        } else {
+            invalidCount++;
+        }
+    });
+
+    if(payload.length === 0) {
+        return alert("Tidak ada baris valid untuk diproses.\nPastikan Anda memilih baris yang Customer Aktual dan Customer Estimasinya BERBEDA.");
+    }
+
+    if(!confirm(`Akan memproses ${payload.length} item ke tabel Ganti Customer.\nLanjutkan?`)) return;
+
+    const btn = document.getElementById('btn-proses-ganti-main');
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<div class="bg-emerald-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="animate-spin w-4 h-4"></i></div><div class="bg-emerald-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-emerald-700 transition">Memproses...</div>';
+    btn.disabled = true;
+
+    try {
+        const { error } = await db.from('ganti_customer').insert(payload);
+        if(error) throw error;
+
+        alert(`✅ BERHASIL!\n${payload.length} item telah dikirim ke antrean Ganti Customer.`);
+        await muatDataStok(); 
+    } catch(e) {
+        alert("Gagal memproses: " + e.message);
+    } finally {
+        btn.innerHTML = ori;
+        btn.disabled = false;
+        lucide.createIcons();
+    }
+}
+
+function siapkanReqKonversi() {
+    const checkboxes = document.querySelectorAll('.cb-main:checked');
+    if(checkboxes.length !== 1) return alert('Silakan centang TEPAT 1 (satu) baris item yang ingin direquest konversi.');
+
+    const cb = checkboxes[0];
+    selectedForReq = {
+        jenis_item: cb.dataset.jenis || '-',
+        nama_item: cb.dataset.nama || '-',
+        panjang: cb.dataset.pjg || '-',
+        grade: cb.dataset.grade || '-',
+        dus: cb.dataset.dus || '-',
+        shading: cb.dataset.shading || '-',
+        customer_aktual: cb.dataset.po || '-',
+        customer_estimasi: cb.dataset.estimasi || '-', 
+        keterangan: cb.dataset.ket || '-',
+        area: cb.dataset.area || '-',
+        qty_max: parseInt(cb.dataset.qty) || 0
+    };
+
+    const infoAsal = document.getElementById('req-info-asal');
+    if(infoAsal) {
+        infoAsal.innerHTML = `
+            <span class="text-blue-600">${selectedForReq.nama_item}</span> | 
+            ${selectedForReq.panjang} | ${selectedForReq.grade} | ${selectedForReq.dus} | ${selectedForReq.shading} | 
+            <span class="text-emerald-600">${selectedForReq.area}</span> | 
+            <span class="text-orange-600">${selectedForReq.customer_aktual}</span>
+        `;
+    }
+
+    // Reset Form Input
+    ['req-nama-item', 'req-panjang', 'req-grade', 'req-dus', 'req-shading', 'req-qty', 'req-qty-hasil'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.value = '';
+    });
+
+    document.getElementById('modal-req-konversi').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+}
+
+function tutupModalReqKonversi() {
+    document.getElementById('modal-req-konversi').classList.add('hidden');
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
+    selectedForReq = null;
+}
+
+async function eksekusiReqKonversi() {
+    if(!selectedForReq) return alert("Data sumber tidak valid!");
+
+    const namaReq = document.getElementById('req-nama-item').value.trim() || selectedForReq.nama_item;
+    const pjgReq = document.getElementById('req-panjang').value.trim() || selectedForReq.panjang;
+    const gradeReq = document.getElementById('req-grade').value.trim() || selectedForReq.grade;
+    const dusReq = document.getElementById('req-dus').value.trim() || selectedForReq.dus;
+    const shadingReq = document.getElementById('req-shading').value.trim() || selectedForReq.shading;
+    
+    const qtyReq = parseInt(document.getElementById('req-qty').value);
+    const qtyHasil = parseInt(document.getElementById('req-qty-hasil').value);
+
+    if(isNaN(qtyReq) || qtyReq <= 0) return alert("Qty Request tidak valid!");
+    if(isNaN(qtyHasil) || qtyHasil <= 0) return alert("Qty Hasil tidak valid!");
+    if(qtyReq > selectedForReq.qty_max) return alert(`Maksimal Qty Request adalah ${selectedForReq.qty_max} dus!`);
+
+    const btn = document.getElementById('btn-save-req-konv'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
+
+    try {
+        // 1. Kurangi saldo baris normal di stok_aktual
+        const { data: origRow, error: errOrig } = await db.from('stok_aktual')
+            .select('*')
+            .eq('nama_item', selectedForReq.nama_item)
+            .eq('panjang', selectedForReq.panjang)
+            .eq('grade', selectedForReq.grade)
+            .eq('dus', selectedForReq.dus)
+            .eq('shading', selectedForReq.shading)
+            .eq('area', selectedForReq.area)
+            .eq('customer_aktual', selectedForReq.customer_aktual)
+            .is('konversi', null) // Target baris normal
+            .single();
+
+        if (errOrig || !origRow) throw new Error("Gagal menemukan baris stok asal di database.");
+
+        let newOrigQty = origRow.qty - qtyReq;
+        if(newOrigQty <= 0) {
+            await db.from('stok_aktual').delete().eq('id', origRow.id);
+        } else {
+            await db.from('stok_aktual').update({ qty: newOrigQty }).eq('id', origRow.id);
+        }
+
+        // 2. Masukkan baris pecahan baru bertanda 'konversi'
+        let splitRow = { ...origRow };
+        delete splitRow.id;
+        delete splitRow.created_at;
+        splitRow.qty = qtyReq;
+        splitRow.konversi = 'konversi';
+        await db.from('stok_aktual').insert([splitRow]);
+
+        // Generate Kode Konversi: K-DDMMYYXX
+        const now = new Date();
+        const yy = String(now.getFullYear()).slice(-2);
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const prefix = `K-${dd}${mm}${yy}`;
+
+        const { data: existingCodes, error: errCodes } = await db
+            .from('request_konversi')
+            .select('kode_konversi')
+            .like('kode_konversi', `${prefix}%`);
+        
+        if(errCodes) throw errCodes;
+
+        let seq = 1;
+        if(existingCodes && existingCodes.length > 0) {
+            let seqs = existingCodes.map(c => {
+                let s = c.kode_konversi.replace(prefix, '');
+                return parseInt(s) || 0;
+            });
+            seq = Math.max(...seqs) + 1;
+        }
+        const kodeKonversi = `${prefix}${String(seq).padStart(2, '0')}`;
+
+        const payload = {
+            kode_konversi: kodeKonversi,
+            aktifitas_konversi: 'req',
+            area: selectedForReq.area,
+            jenis_item: selectedForReq.jenis_item,
+            nama_item: selectedForReq.nama_item,
+            panjang: selectedForReq.panjang,
+            grade: selectedForReq.grade,
+            dus: selectedForReq.dus,
+            shading: selectedForReq.shading,
+            keterangan: selectedForReq.keterangan,
+            "customer aktual": selectedForReq.customer_aktual,
+            customer_estimasi: selectedForReq.customer_estimasi, // Catat customer_estimasi
+            nama_item_req: namaReq,
+            panjang_req: pjgReq,
+            grade_req: gradeReq,
+            dus_req: dusReq,
+            shading_req: shadingReq,
+            qty_req: qtyReq.toString(),
+            qty_hasil: qtyHasil.toString(),
+            qty_proses: "0",
+            qty_out: "0",
+            qty_in: "0",
+            progres_konversi: "PENDING",
+            pic_request: currentUser.username
+        };
+
+        const { error } = await db.from('request_konversi').insert([payload]);
+        if(error) throw error;
+        
+        tutupModalReqKonversi();
+        alert(`Berhasil membuat Request Konversi dengan Kode: ${kodeKonversi}`);
+        await muatDataStok();
+    } catch(e) {
+        alert("Gagal menyimpan request: " + e.message);
+    } finally {
+        btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+function applyColumnOrder() {
+    if (!userColOrder || userColOrder.length === 0) return;
+
+    const table = document.getElementById('main-table');
+    if(!table) return;
+    const rows = table.querySelectorAll('tr');
+
+    rows.forEach(row => {
+        const cells = Array.from(row.children);
+        if (cells.length <= 1) return; 
+
+        const cbCell = cells.find(c => c.classList.contains('col-cb'));
+        const openCell = cells.find(c => c.classList.contains('col-open'));
+        const prosesCell = cells.find(c => c.classList.contains('col-proses'));
+        
+        const cellMap = {};
+        cells.forEach(c => {
+            const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
+            if (colClass) cellMap[colClass] = c;
+        });
+
+        row.innerHTML = ''; 
+        if (cbCell) row.appendChild(cbCell); 
+        if (openCell) row.appendChild(openCell); 
+
+        userColOrder.forEach(colId => {
+            if (cellMap[colId]) {
+                row.appendChild(cellMap[colId]);
+            }
+        });
+
+        cells.forEach(c => {
+            const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
+            if (colClass !== 'col-cb' && colClass !== 'col-open' && colClass !== 'col-proses' && !userColOrder.includes(colClass)) {
+                row.appendChild(c);
+            }
+        });
+        
+        if (prosesCell) row.appendChild(prosesCell);
+    });
+}
+
+function initResizableColumns() {
+    const cols = document.querySelectorAll('#main-table th');
+    cols.forEach(col => {
+        const existing = col.querySelector('.resizer');
+        if(existing) existing.remove();
+
+        const resizer = document.createElement('div');
+        resizer.classList.add('resizer');
+        col.appendChild(resizer);
+        
+        let x = 0; let w = 0;
+        resizer.addEventListener('mousedown', function(e) {
+            x = e.clientX;
+            w = parseInt(window.getComputedStyle(col).width, 10);
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+            resizer.classList.add('resizing');
+        });
+        const mouseMoveHandler = function(e) {
+            const dx = e.clientX - x;
+            col.style.width = `${w + dx}px`;
+            col.style.minWidth = `${w + dx}px`;
+        };
+        const mouseUpHandler = function() {
+            document.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
+            resizer.classList.remove('resizing');
+        };
+    });
 }
