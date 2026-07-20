@@ -134,7 +134,6 @@ window.muatData = async function() {
     }
 };
 
-// DEKLARASI FUNGSI STANDAR (Mencegah Hoisting Error)
 function thSort(idx, label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-progres'].includes(colClass);
@@ -157,7 +156,7 @@ function thSort(idx, label, cls = "") {
         </div>
     </th>`;
 }
-window.thSort = thSort; // Ekspos ke global
+window.thSort = thSort; 
 
 window.renderTabel = function() {
     const thead = document.getElementById('thead-req');
@@ -454,11 +453,12 @@ window.eksekusiSaveKonv = async function() {
                     id_sku: item.id_sku
                 });
 
+                // REVISI: Kurangi stok_aktual khusus pada baris bertanda 'konversi'
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
                     .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
                     .eq('customer_aktual', item.customer_aktual)
-                    .eq('keterangan', item.keterangan || '-')
+                    .eq('konversi', 'konversi') // Target baris konversi
                     .limit(1);
                 
                 if(ext && ext.length > 0) {
@@ -542,6 +542,7 @@ window.eksekusiSaveKonv = async function() {
                     keterangan: ket
                 });
 
+                // Tambah ke stok_aktual secara incremental
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', nama).eq('panjang', pjg).eq('grade', grade)
                     .eq('dus', dus).eq('shading', shading).eq('area', area)
@@ -627,6 +628,7 @@ window.cancelKonversiMassal = async function() {
     const kodes = selectedRequests.map(r => r.kode_konversi);
 
     try {
+        // 1. Ambil semua item Konversi Out yang terkait dengan kode_konversi tersebut
         const { data: itemsKonv, error: errKonv } = await db.from('stok_konversi')
             .select('*')
             .in('kode_konversi', kodes)
@@ -667,11 +669,12 @@ window.cancelKonversiMassal = async function() {
                     keterangan: item.keterangan || '-'
                 });
 
+                // REVISI: Tambah kembali ke stok_aktual pada baris bertanda 'konversi'
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
                     .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
                     .eq('customer_aktual', item.customer_aktual)
-                    .eq('keterangan', item.keterangan || '-')
+                    .eq('konversi', 'konversi')
                     .limit(1);
                 
                 if(ext && ext.length > 0) {
@@ -680,15 +683,49 @@ window.cancelKonversiMassal = async function() {
                     await db.from('stok_aktual').insert([{
                         id_sku: item.id_sku, jenis_item: item.jenis_item, nama_item: item.nama_item, panjang: item.panjang, 
                         grade: item.grade, dus: item.dus, shading: item.shading, area: item.area, 
-                        customer_aktual: item.customer_aktual, customer_estimasi: item.customer_aktual, keterangan: item.keterangan || '-', qty: 1
+                        customer_aktual: item.customer_aktual, customer_estimasi: item.customer_aktual, keterangan: item.keterangan || '-', qty: 1, konversi: 'konversi'
                     }]);
                 }
             }
 
+            // Kembalikan ke stok_global & stok_qr
             await db.from('stok_global').insert(insertsGlobal);
             await db.from('stok_qr').insert(insertsStokQr);
         }
 
+        // REVISI: Gabungkan kembali baris 'konversi' ke baris normal di stok_aktual
+        for(let req of selectedRequests) {
+            // Cari baris konversi
+            const { data: rowKonv } = await db.from('stok_aktual').select('*')
+                .eq('nama_item', req.nama_item).eq('panjang', req.panjang).eq('grade', req.grade)
+                .eq('dus', req.dus).eq('shading', r.shading).eq('area', req.area)
+                .eq('customer_aktual', req['customer aktual'])
+                .eq('konversi', 'konversi')
+                .limit(1);
+            
+            if(rowKonv && rowKonv.length > 0) {
+                let qtyRevert = rowKonv[0].qty;
+                
+                // Cari baris normal
+                const { data: rowNormal } = await db.from('stok_aktual').select('id, qty')
+                    .eq('nama_item', req.nama_item).eq('panjang', req.panjang).eq('grade', req.grade)
+                    .eq('dus', req.dus).eq('shading', req.shading).eq('area', req.area)
+                    .eq('customer_aktual', req['customer aktual'])
+                    .is('konversi', null)
+                    .limit(1);
+                
+                if(rowNormal && rowNormal.length > 0) {
+                    // Tambahkan qty ke baris normal, lalu hapus baris konversi
+                    await db.from('stok_aktual').update({ qty: rowNormal[0].qty + qtyRevert }).eq('id', rowNormal[0].id);
+                    await db.from('stok_aktual').delete().eq('id', rowKonv[0].id);
+                } else {
+                    // Jika baris normal sudah tidak ada, ubah baris konversi menjadi normal
+                    await db.from('stok_aktual').update({ konversi: null }).eq('id', rowKonv[0].id);
+                }
+            }
+        }
+
+        // Hapus data dari stok_konversi & request_konversi
         await db.from('stok_konversi').delete().in('kode_konversi', kodes);
         await db.from('request_konversi').delete().in('kode_konversi', kodes);
 
@@ -956,7 +993,7 @@ window.applyColumnOrder = function() {
         const cbCell = cells.find(c => c.classList.contains('col-cb')); const btnCell = cells.find(c => c.classList.contains('col-btn'));
         const cellMap = {}; cells.forEach(c => { const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-')); if (colClass) cellMap[colClass] = c; });
         row.innerHTML = ''; if (cbCell) row.appendChild(cbCell); if (btnCell) row.appendChild(btnCell); 
-        window.userColOrder.forEach(colId => { if (cellMap[colId]) { row.appendChild(cellMap[colId]); } });
+        window.userColOrder.forEach(colId => { if (cellMap[colId]) { row.appendChild(colId); } });
         cells.forEach(c => { const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-')); if (colClass !== 'col-cb' && colClass !== 'col-btn' && !window.userColOrder.includes(colClass)) { row.appendChild(c); } });
     });
 };
