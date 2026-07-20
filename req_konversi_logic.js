@@ -98,7 +98,6 @@ window.setModeReq = function(mode) {
     document.getElementById('tab-req').className = mode === 'REQUEST' ? activeClass : inactiveClass;
     document.getElementById('tab-konv').className = mode === 'KONVERSI' ? activeClass : inactiveClass;
     
-    // Sembunyikan tombol khusus Request jika di tab Konversi
     const isReq = mode === 'REQUEST';
     document.getElementById('btn-proses-konv').classList.toggle('hidden', !isReq);
     document.getElementById('btn-done-konv').classList.toggle('hidden', !isReq);
@@ -134,6 +133,31 @@ window.muatData = async function() {
         tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-medium">Gagal: ${e.message}</td></tr>`; 
     }
 };
+
+// DEKLARASI FUNGSI STANDAR (Mencegah Hoisting Error)
+function thSort(idx, label, cls = "") {
+    const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
+    const noFilter = ['col-cb', 'col-progres'].includes(colClass);
+    
+    if (noFilter) {
+        return `<th class="hdr-std ${cls} select-none text-center"><div class="flex items-center justify-center w-full">${label}</div></th>`;
+    }
+
+    return `<th class="hdr-std ${cls} select-none group">
+        <div class="flex items-center justify-between w-full min-w-max gap-4">
+            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="window.sortTable(${idx}, this.closest('th'))" title="Sort ${label}">${label}</span>
+            <div class="flex items-center gap-1 shrink-0">
+                <button onclick="window.sortTable(${idx}, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
+                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 sort-icon opacity-40 group-hover:opacity-100 transition-opacity text-white"></i>
+                </button>
+                <button onclick="window.openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
+                    <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
+                </button>
+            </div>
+        </div>
+    </th>`;
+}
+window.thSort = thSort; // Ekspos ke global
 
 window.renderTabel = function() {
     const thead = document.getElementById('thead-req');
@@ -334,13 +358,9 @@ window.verifikasiKodeKonv = async function() {
             const itemKonv = konvData.find(k => k.qrcode === qr);
 
             if(window.jenisProsesKonv === 'OUT') {
-                // Aturan Verifikasi OUT:
-                // 1. Harus ada di stok_global
-                // 2. Tidak boleh ada di stok_konversi (jika ada, berarti sudah OUT)
                 if(!itemGlobal && itemKonv) {
                     invalidQrs.push({ qr: qr, reason: "Item sudah dikonversi OUT sebelumnya!" });
                 } else if(itemGlobal && !itemKonv) {
-                    // Validasi spesifikasi harus cocok dengan request asal
                     if(itemGlobal.nama_item !== window.activeRequestRow.nama_item || 
                        itemGlobal.panjang !== window.activeRequestRow.panjang || 
                        itemGlobal.grade !== window.activeRequestRow.grade) {
@@ -354,15 +374,11 @@ window.verifikasiKodeKonv = async function() {
                     invalidQrs.push({ qr: qr, reason: "Duplikat data di gudang & konversi!" });
                 }
             } else {
-                // Aturan Verifikasi IN:
-                // 1. Tidak boleh ada di stok_global (jika ada, berarti sudah di gudang)
-                // 2. Jika ada di stok_konversi, statusnya tidak boleh DONE atau IN
                 if(itemGlobal) {
                     invalidQrs.push({ qr: qr, reason: "Item sudah ada di gudang (stok_global)!" });
                 } else if(itemKonv && (itemKonv.aktifitas === 'Konversi In' || itemKonv.status === 'DONE')) {
                     invalidQrs.push({ qr: qr, reason: "Item sudah dikonversi IN sebelumnya!" });
                 } else {
-                    // Valid untuk dikonversi IN (menggunakan translasi barcode)
                     const td = window.translateBarcode(qr);
                     window.scannedValidItems.push({ qrcode: qr, ...td });
                 }
@@ -381,11 +397,9 @@ window.verifikasiKodeKonv = async function() {
             btn.innerHTML = ori; btn.disabled = false; return;
         }
 
-        // Jika berhasil verifikasi
         document.getElementById('btn-save-konv').disabled = false;
         document.getElementById('btn-save-konv').classList.remove('opacity-50', 'cursor-not-allowed');
         
-        // Tampilkan konfirmasi
         let html = '';
         window.scannedValidItems.forEach((item, idx) => {
             let detail = `${item.nama_item || item.namaItem} | ${item.panjang || item.panjang} | ${item.grade || item.grade}`;
@@ -440,7 +454,6 @@ window.eksekusiSaveKonv = async function() {
                     id_sku: item.id_sku
                 });
 
-                // Kurangi stok_aktual secara incremental
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
                     .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
@@ -455,25 +468,19 @@ window.eksekusiSaveKonv = async function() {
                 }
             }
 
-            // Hapus dari stok_global & stok_qr
             await db.from('stok_global').delete().in('qrcode', qrs);
             await db.from('stok_qr').delete().in('qrcode', qrs);
-
-            // Simpan ke stok_konversi
             await db.from('stok_konversi').insert(insertsKonv);
 
-            // Update qty_out di request_konversi
             let newQtyOut = (parseInt(window.activeRequestRow.qty_out) || 0) + qrs.length;
             await db.from('request_konversi').update({ qty_out: newQtyOut.toString() }).eq('id', window.activeRequestRow.id);
 
         } else {
-            // PROSES IN
             let insertsKonv = [];
             let insertsGlobal = [];
             let insertsStokQr = [];
             let qrs = window.scannedValidItems.map(item => item.qrcode);
 
-            // Gunakan spesifikasi target (request)
             let nama = window.activeRequestRow.nama_item_req || window.activeRequestRow.nama_item;
             let pjg = window.activeRequestRow.panjang_req || window.activeRequestRow.panjang;
             let grade = window.activeRequestRow.grade_req || window.activeRequestRow.grade;
@@ -535,7 +542,6 @@ window.eksekusiSaveKonv = async function() {
                     keterangan: ket
                 });
 
-                // Tambah ke stok_aktual secara incremental
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', nama).eq('panjang', pjg).eq('grade', grade)
                     .eq('dus', dus).eq('shading', shading).eq('area', area)
@@ -554,12 +560,10 @@ window.eksekusiSaveKonv = async function() {
                 }
             }
 
-            // Simpan ke stok_global, stok_qr, dan stok_konversi
             await db.from('stok_global').insert(insertsGlobal);
             await db.from('stok_qr').insert(insertsStokQr);
             await db.from('stok_konversi').insert(insertsKonv);
 
-            // Update qty_in di request_konversi
             let newQtyIn = (parseInt(window.activeRequestRow.qty_in) || 0) + qrs.length;
             await db.from('request_konversi').update({ qty_in: newQtyIn.toString() }).eq('id', window.activeRequestRow.id);
         }
@@ -610,10 +614,8 @@ window.cancelKonversiMassal = async function() {
     const checked = document.querySelectorAll('.cb-main:checked');
     if(checked.length === 0) return alert("Pilih baris request yang ingin di-Cancel!");
     
-    // Ambil data lengkap baris yang dicentang
     const selectedRequests = window.rawData.filter(r => Array.from(checked).map(cb => cb.value).includes(r.id.toString()));
     
-    // Validasi: Tidak boleh cancel jika status sudah DONE
     const hasDone = selectedRequests.some(r => r.progres_konversi === 'DONE');
     if(hasDone) return alert("Gagal! Request yang sudah berstatus DONE tidak bisa di-cancel.");
 
@@ -625,7 +627,6 @@ window.cancelKonversiMassal = async function() {
     const kodes = selectedRequests.map(r => r.kode_konversi);
 
     try {
-        // 1. Ambil semua item Konversi Out yang terkait dengan kode_konversi tersebut
         const { data: itemsKonv, error: errKonv } = await db.from('stok_konversi')
             .select('*')
             .in('kode_konversi', kodes)
@@ -666,7 +667,6 @@ window.cancelKonversiMassal = async function() {
                     keterangan: item.keterangan || '-'
                 });
 
-                // Tambah kembali ke stok_aktual secara incremental
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
                     .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
@@ -685,12 +685,10 @@ window.cancelKonversiMassal = async function() {
                 }
             }
 
-            // Kembalikan ke stok_global & stok_qr
             await db.from('stok_global').insert(insertsGlobal);
             await db.from('stok_qr').insert(insertsStokQr);
         }
 
-        // 2. Hapus data dari stok_konversi & request_konversi
         await db.from('stok_konversi').delete().in('kode_konversi', kodes);
         await db.from('request_konversi').delete().in('kode_konversi', kodes);
 
@@ -731,7 +729,7 @@ window.setCustomRowsPerPage = function(val) {
 };
 
 window.applyPagination = function() {
-    let tbodyId = window.currentTab === 'REQUEST' ? 'tbody-req' : 'tbody-req'; // Keduanya menggunakan tbody-req di HTML
+    let tbodyId = 'tbody-req'; 
     const allRows = Array.from(document.querySelectorAll(`#${tbodyId} tr.r-row`));
     allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
 
