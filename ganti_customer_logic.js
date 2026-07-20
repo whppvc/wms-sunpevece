@@ -439,7 +439,7 @@ window.eksekusiGantiFinal = async function() {
         for(let k in deductMap) {
             let u = deductMap[k];
             const { data: ext } = await db.from('stok_aktual').select('id, qty')
-                .eq('nama_item', u.nama_item).eq('panjang', u.panjang).eq('grade', u.grade)
+                .eq('nama_item', u.nama_item).eq('panjang', u.pjg).eq('grade', u.grade)
                 .eq('dus', u.dus).eq('shading', u.shading).eq('area', u.area)
                 .eq('customer_aktual', u.customer_aktual)
                 .eq('customer_estimasi', u.customer_estimasi)
@@ -551,7 +551,7 @@ window.applyPagination = function() {
 };
 
 window.prevPage = function() { if(window.currentPage > 1) { window.currentPage--; window.applyPagination(); } };
-window.nextPage = function() { const totalVisible = document.querySelectorAll('#tbody-ganti tr.r-row:not(.filtered-out)').length; if(window.currentPage < Math.ceil(totalVisible / window.rowsPerPage)) { window.currentPage++; window.applyPagination(); } };
+window.nextPage = function() { const totalVisible = document.querySelectorAll('#tbody-ganti tr.r-row:not(.filtered-out)').length; if(window.currentPage < Math.ceil(window.rowsPerPage)) { window.currentPage++; window.applyPagination(); } };
 window.updateSelectedCount = function() { const count = document.querySelectorAll('.cb-main:checked').length; if(document.getElementById('lbl-pilih-baris')) document.getElementById('lbl-pilih-baris').innerText = count; };
 
 window.cycleSelectAll = function() { window.selectAllState = (window.selectAllState + 1) % 3; window.updateSelectAllUI(); window.applySelection(); };
