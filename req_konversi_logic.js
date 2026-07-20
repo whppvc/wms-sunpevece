@@ -358,9 +358,9 @@ window.verifikasiKodeKonv = async function() {
             const itemKonv = konvData.find(k => k.qrcode === qr);
 
             if(window.jenisProsesKonv === 'OUT') {
-                if(!itemGlobal && itemKonv) {
-                    invalidQrs.push({ qr: qr, reason: "Item sudah dikonversi OUT sebelumnya!" });
-                } else if(itemGlobal && !itemKonv) {
+                // REVISI: Konversi OUT
+                if(itemGlobal && !itemKonv) {
+                    // Berhasil jika ada di stok_global dan tidak ada di stok_konversi
                     if(itemGlobal.nama_item !== window.activeRequestRow.nama_item || 
                        itemGlobal.panjang !== window.activeRequestRow.panjang || 
                        itemGlobal.grade !== window.activeRequestRow.grade) {
@@ -368,17 +368,21 @@ window.verifikasiKodeKonv = async function() {
                     } else {
                         window.scannedValidItems.push(itemGlobal);
                     }
+                } else if(!itemGlobal && itemKonv) {
+                    invalidQrs.push({ qr: qr, reason: "Gagal! Item sudah dikonversi OUT sebelumnya." });
                 } else if(!itemGlobal && !itemKonv) {
-                    invalidQrs.push({ qr: qr, reason: "Item tidak ditemukan di stok gudang!" });
+                    invalidQrs.push({ qr: qr, reason: "Gagal! Item tidak ditemukan di stok_global." });
                 } else {
-                    invalidQrs.push({ qr: qr, reason: "Duplikat data di gudang & konversi!" });
+                    invalidQrs.push({ qr: qr, reason: "Gagal! Duplikat data." });
                 }
             } else {
+                // REVISI: Konversi IN
                 if(itemGlobal) {
-                    invalidQrs.push({ qr: qr, reason: "Item sudah ada di gudang (stok_global)!" });
-                } else if(itemKonv && (itemKonv.aktifitas === 'Konversi In' || itemKonv.status === 'DONE')) {
-                    invalidQrs.push({ qr: qr, reason: "Item sudah dikonversi IN sebelumnya!" });
+                    invalidQrs.push({ qr: qr, reason: "Gagal! Item sudah ada di stok_global (gudang)." });
+                } else if(itemKonv) {
+                    invalidQrs.push({ qr: qr, reason: "Gagal! Item sudah tercatat di stok_konversi." });
                 } else {
+                    // Berhasil jika tidak ada di stok_global dan tidak ada di stok_konversi
                     const td = window.translateBarcode(qr);
                     window.scannedValidItems.push({ qrcode: qr, ...td });
                 }
