@@ -261,7 +261,7 @@ async function muatDataStok() {
                 po_aktual: a.customer_aktual || '-',
                 customer_estimasi: a.customer_estimasi || '-',
                 kondisi: a.kondisi || 'Aman', 
-                konversi: a.konversi || null, // Tangkap nilai kolom konversi
+                konversi: a.konversi || null,
                 qty: a.qty || 0
             };
         });
@@ -447,7 +447,7 @@ function renderTabel() {
             let isProcessing = processedGantiKeys.has(`${r.id_sku_base}_${r.customer_estimasi}_${r.area}`);
             let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
 
-            // REVISI: Highlight MERAH jika ada nilai di kolom konversi
+            // Highlight MERAH jika ada nilai di kolom konversi
             let isKonversi = r.konversi && r.konversi !== '-' && r.konversi !== '';
             let customRowClass = isKonversi 
                 ? "transition row-ks text-[13px] !bg-rose-100 !text-rose-900 font-bold is-konversi" 
@@ -469,7 +469,6 @@ function renderTabel() {
                     </td>
                     <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
-                    <!-- REVISI: Tampilkan Kode Konversi di Kolom Konversi Baru -->
                     <td class="px-4 py-3 font-bold text-rose-600 text-center col-konversi" data-search="${r.konversi || '-'}">${r.konversi || '-'}</td>
                     <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
                 </tr>`;
@@ -503,7 +502,7 @@ function renderTabel() {
             let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
 
             return `
-            <tr class="${rowClassBase}">
+            <tr class="${customRowClass}">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 text-center col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
@@ -1242,7 +1241,15 @@ async function eksekusiReqKonversi() {
     if(!selectedForReq) return alert("Data sumber tidak valid!");
 
     const namaReq = document.getElementById('req-nama-item').value.trim() || selectedForReq.nama_item;
-    const pjgReq = document.getElementById('req-panjang').value.trim() || selectedForReq.panjang;
+    
+    // REVISI: Paksa penambahan 'M' jika belum ada pada input panjang request
+    const rawPjgReq = document.getElementById('req-panjang').value.trim();
+    let pjgReq = selectedForReq.panjang;
+    if (rawPjgReq) {
+        let pUpper = rawPjgReq.toUpperCase();
+        pjgReq = pUpper.endsWith('M') ? pUpper : pUpper + 'M';
+    }
+
     const gradeReq = document.getElementById('req-grade').value.trim() || selectedForReq.grade;
     const dusReq = document.getElementById('req-dus').value.trim() || selectedForReq.dus;
     const shadingReq = document.getElementById('req-shading').value.trim() || selectedForReq.shading;
@@ -1258,7 +1265,7 @@ async function eksekusiReqKonversi() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
 
     try {
-        // 1. Generate Kode Konversi: K-DDMMYYXX terlebih dahulu
+        // 1. Generate Kode Konversi: K-DDMMYYXX
         const now = new Date();
         const yy = String(now.getFullYear()).slice(-2);
         const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -1303,7 +1310,7 @@ async function eksekusiReqKonversi() {
         delete splitRow.id;
         delete splitRow.created_at;
         splitRow.qty = qtyReq;
-        splitRow.konversi = kodeKonversi; // REVISI: Isi dengan Kode Konversi
+        splitRow.konversi = kodeKonversi; 
         await db.from('stok_aktual').insert([splitRow]);
 
         // 5. Masukkan data ke request_konversi
@@ -1321,7 +1328,7 @@ async function eksekusiReqKonversi() {
             "customer aktual": selectedForReq.customer_aktual,
             customer_estimasi: selectedForReq.customer_estimasi, 
             nama_item_req: namaReq,
-            panjang_req: pjgReq,
+            panjang_req: pjgReq, // REVISI: 'M' dipastikan terpasang
             grade_req: gradeReq,
             dus_req: dusReq,
             shading_req: shadingReq,
