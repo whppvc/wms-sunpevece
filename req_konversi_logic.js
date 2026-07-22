@@ -166,6 +166,7 @@ window.renderTabel = function() {
     const rowClassBase = "transition r-row text-[13px]";
 
     if(window.currentTab === 'REQUEST') {
+        // REVISI: Menghilangkan kolom Aktifitas dari Header
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
@@ -173,18 +174,17 @@ window.renderTabel = function() {
                 </th>
                 ${window.thSort(1, 'Kode Konversi', 'col-kode')}
                 ${window.thSort(2, 'Tgl Request', 'col-tgl')}
-                ${window.thSort(3, 'Aktifitas', 'col-aktifitas')}
-                ${window.thSort(4, 'Detail Item Asal', 'col-asal')}
-                ${window.thSort(5, 'Request Konversi', 'col-req')}
-                ${window.thSort(6, 'Qty Req', 'col-qty_req')}
-                ${window.thSort(7, 'Qty Hasil', 'col-qty_hasil')}
-                ${window.thSort(8, 'Qty Out', 'col-qty_out')}
-                ${window.thSort(9, 'Qty In', 'col-qty_in')}
-                ${window.thSort(10, 'Progres', 'col-progres')}
-                ${window.thSort(11, 'PIC Request', 'col-pic')}
+                ${window.thSort(3, 'Detail Item Asal', 'col-asal')}
+                ${window.thSort(4, 'Request Konversi', 'col-req')}
+                ${window.thSort(5, 'Qty Req', 'col-qty_req')}
+                ${window.thSort(6, 'Qty Hasil', 'col-qty_hasil')}
+                ${window.thSort(7, 'Qty Out', 'col-qty_out')}
+                ${window.thSort(8, 'Qty In', 'col-qty_in')}
+                ${window.thSort(9, 'Progres', 'col-progres')}
+                ${window.thSort(10, 'PIC Request', 'col-pic')}
             </tr>`;
         
-        if(window.rawData.length === 0) { tbody.innerHTML = `<tr><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada data request.</td></tr>`; return; }
+        if(window.rawData.length === 0) { tbody.innerHTML = `<tr><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada data request.</td></tr>`; return; }
 
         tbody.innerHTML = window.rawData.map((r) => {
             const tgl = window.formatWIB(r.created_at);
@@ -214,10 +214,20 @@ window.renderTabel = function() {
             const detailReq = reqArr.length > 0 ? `<div class="text-[12px] font-bold text-slate-600">${reqArr.join(' | ')}</div>` : '<span class="text-slate-400 italic text-xs">Tidak ada perubahan spesifikasi</span>';
             const searchReq = `${r.nama_item_req} ${r.panjang_req} ${r.grade_req} ${r.dus_req} ${r.shading_req}`;
 
-            let prog = (r.progres_konversi || 'PENDING').toUpperCase();
-            let badgeProgres = `<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold text-[10px] border border-amber-200">PROSES</span>`;
-            if(prog === 'DONE') {
+            // REVISI: Logika Progres Dinamis (REQUEST vs PROSES vs DONE)
+            let qtyOutNum = parseInt(r.qty_out) || 0;
+            let qtyInNum = parseInt(r.qty_in) || 0;
+            let rawProg = (r.progres_konversi || 'PENDING').toUpperCase();
+
+            let displayProg = 'REQUEST';
+            let badgeProgres = `<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold text-[10px] border border-blue-200">REQUEST</span>`;
+
+            if (rawProg === 'DONE') {
+                displayProg = 'DONE';
                 badgeProgres = `<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold text-[10px] border border-emerald-200">DONE</span>`;
+            } else if (qtyOutNum > 0 || qtyInNum > 0 || rawProg === 'PROSES') {
+                displayProg = 'PROSES';
+                badgeProgres = `<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold text-[10px] border border-amber-200">PROSES</span>`;
             }
 
             return `
@@ -225,14 +235,13 @@ window.renderTabel = function() {
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-black text-slate-800 text-center tracking-wider col-kode" data-search="${r.kode_konversi || '-'}">${r.kode_konversi || '-'}</td>
                     <td class="px-4 py-3 font-medium text-slate-600 text-center col-tgl" data-search="${tgl}">${tgl}</td>
-                    <td class="px-4 py-3 font-bold text-rose-600 text-center uppercase col-aktifitas" data-search="${r.aktifitas_konversi || '-'}">${r.aktifitas_konversi || '-'}</td>
                     <td class="px-4 py-3 text-left col-asal" data-search="${searchAsal}">${detailAsal}</td>
                     <td class="px-4 py-3 text-left col-req" data-search="${searchReq}">${detailReq}</td>
                     <td class="px-4 py-3 font-black text-slate-700 text-center col-qty_req" data-search="${r.qty_req || 0}">${r.qty_req || 0}</td>
                     <td class="px-4 py-3 font-black text-indigo-600 text-center col-qty_hasil" data-search="${r.qty_hasil || 0}">${r.qty_hasil || 0}</td>
                     <td class="px-4 py-3 font-black text-rose-600 text-center col-qty_out" data-search="${r.qty_out || 0}">${r.qty_out || 0}</td>
                     <td class="px-4 py-3 font-black text-emerald-600 text-center col-qty_in" data-search="${r.qty_in || 0}">${r.qty_in || 0}</td>
-                    <td class="px-4 py-3 text-center col-progres" data-search="${prog}">${badgeProgres}</td>
+                    <td class="px-4 py-3 text-center col-progres" data-search="${displayProg}">${badgeProgres}</td>
                     <td class="px-4 py-3 font-bold uppercase text-xs text-slate-400 text-center col-pic" data-search="${r.pic_request || '-'}">${r.pic_request || '-'}</td>
                 </tr>`;
         }).join('');
@@ -453,12 +462,11 @@ window.eksekusiSaveKonv = async function() {
                     id_sku: item.id_sku
                 });
 
-                // REVISI: Kurangi stok_aktual khusus pada baris yang memiliki nilai konversi = Kode Konversi
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
                     .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
                     .eq('customer_aktual', item.customer_aktual)
-                    .eq('konversi', window.activeRequestRow.kode_konversi) // Tembak berdasarkan Kode Konversi
+                    .eq('konversi', window.activeRequestRow.kode_konversi) 
                     .limit(1);
                 
                 if(ext && ext.length > 0) {
@@ -473,7 +481,7 @@ window.eksekusiSaveKonv = async function() {
             await db.from('stok_konversi').insert(insertsKonv);
 
             let newQtyOut = (parseInt(window.activeRequestRow.qty_out) || 0) + qrs.length;
-            await db.from('request_konversi').update({ qty_out: newQtyOut.toString() }).eq('id', window.activeRequestRow.id);
+            await db.from('request_konversi').update({ qty_out: newQtyOut.toString(), progres_konversi: 'PROSES' }).eq('id', window.activeRequestRow.id);
 
         } else {
             let insertsKonv = [];
@@ -565,7 +573,7 @@ window.eksekusiSaveKonv = async function() {
             await db.from('stok_konversi').insert(insertsKonv);
 
             let newQtyIn = (parseInt(window.activeRequestRow.qty_in) || 0) + qrs.length;
-            await db.from('request_konversi').update({ qty_in: newQtyIn.toString() }).eq('id', window.activeRequestRow.id);
+            await db.from('request_konversi').update({ qty_in: newQtyIn.toString(), progres_konversi: 'PROSES' }).eq('id', window.activeRequestRow.id);
         }
 
         alert("✅ BERHASIL MEMPROSES KONVERSI!");
@@ -627,7 +635,6 @@ window.cancelKonversiMassal = async function() {
     const kodes = selectedRequests.map(r => r.kode_konversi);
 
     try {
-        // 1. Ambil semua item Konversi Out yang terkait dengan kode_konversi tersebut
         const { data: itemsKonv, error: errKonv } = await db.from('stok_konversi')
             .select('*')
             .in('kode_konversi', kodes)
@@ -667,7 +674,6 @@ window.cancelKonversiMassal = async function() {
                     keterangan: item.keterangan || '-'
                 });
 
-                // REVISI: Tambah kembali ke stok_aktual pada baris bertanda kode konversi
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
                     .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
@@ -690,7 +696,7 @@ window.cancelKonversiMassal = async function() {
             await db.from('stok_qr').insert(insertsStokQr);
         }
 
-        // 2. REVISI: Gabungkan kembali baris pecahan konversi ke baris normal di stok_aktual
+        // Gabungkan kembali baris pecahan konversi ke baris normal di stok_aktual
         for(let req of selectedRequests) {
             const { data: rowKonv } = await db.from('stok_aktual').select('*')
                 .eq('konversi', req.kode_konversi)
@@ -699,7 +705,6 @@ window.cancelKonversiMassal = async function() {
             if(rowKonv && rowKonv.length > 0) {
                 let qtyRevert = rowKonv[0].qty;
                 
-                // Cari baris normal
                 const { data: rowNormal } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', req.nama_item).eq('panjang', req.panjang).eq('grade', req.grade)
                     .eq('dus', req.dus).eq('shading', req.shading).eq('area', req.area)
@@ -716,7 +721,6 @@ window.cancelKonversiMassal = async function() {
             }
         }
 
-        // 3. Hapus data dari stok_konversi & request_konversi
         await db.from('stok_konversi').delete().in('kode_konversi', kodes);
         await db.from('request_konversi').delete().in('kode_konversi', kodes);
 
@@ -1003,4 +1007,3 @@ window.initResizableColumns = function() {
         const mouseUpHandler = function() { document.removeEventListener('mousemove', mouseMoveHandler); document.removeEventListener('mouseup', mouseUpHandler); resizer.classList.remove('resizing'); };
     });
 };
-
