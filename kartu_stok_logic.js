@@ -261,6 +261,7 @@ async function muatDataStok() {
                 po_aktual: a.customer_aktual || '-',
                 customer_estimasi: a.customer_estimasi || '-',
                 kondisi: a.kondisi || 'Aman', 
+                konversi: a.konversi || null, // Tangkap nilai kolom konversi
                 qty: a.qty || 0
             };
         });
@@ -434,10 +435,11 @@ function renderTabel() {
                 ${thSort(8, 'Customer Aktual', 'col-po')}
                 ${thSort(9, 'Customer Estimasi', 'col-estimasi text-purple-300')}
                 ${thSort(10, 'Keterangan', 'col-ket')}
-                ${thSort(11, 'Total Qty (Dus)', 'col-qty')}
+                ${thSort(11, 'Konversi', 'col-konversi text-rose-300')}
+                ${thSort(12, 'Total Qty (Dus)', 'col-qty')}
             </tr>`;
         
-        if(dataKSArea.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSArea.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = dataKSArea.map((r) => {
             const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
@@ -445,15 +447,14 @@ function renderTabel() {
             let isProcessing = processedGantiKeys.has(`${r.id_sku_base}_${r.customer_estimasi}_${r.area}`);
             let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
 
-            // REVISI: Highlight baris konversi dengan warna oren muda
-            let isKonversi = r.konversi === 'konversi';
+            // REVISI: Highlight MERAH jika ada nilai di kolom konversi
+            let isKonversi = r.konversi && r.konversi !== '-' && r.konversi !== '';
             let customRowClass = isKonversi 
-                ? "transition row-ks text-[13px] !bg-orange-100 !text-orange-900 font-bold is-konversi" 
+                ? "transition row-ks text-[13px] !bg-rose-100 !text-rose-900 font-bold is-konversi" 
                 : "transition row-ks text-[13px]";
 
             return `
                 <tr class="${customRowClass}">
-                    <!-- REVISI: Tambahkan data-id agar pencarian request konversi langsung menembak ID database -->
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-id="${r.id}" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.panjang}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-estimasi="${r.customer_estimasi}" data-qty="${r.qty}" data-ket="${r.keterangan}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
@@ -468,10 +469,12 @@ function renderTabel() {
                     </td>
                     <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
+                    <!-- REVISI: Tampilkan Kode Konversi di Kolom Konversi Baru -->
+                    <td class="px-4 py-3 font-bold text-rose-600 text-center col-konversi" data-search="${r.konversi || '-'}">${r.konversi || '-'}</td>
                     <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
                 </tr>`;
         }).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
     else if (modeKS === 'global') {
         thead.innerHTML = `
@@ -500,7 +503,7 @@ function renderTabel() {
             let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
 
             return `
-            <tr class="${customRowClass}">
+            <tr class="${rowClassBase}">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 text-center col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
@@ -761,7 +764,7 @@ function openColumnFilter(event, colClass, colName) {
     });
 
     let sortedValues = Array.from(uniqueValues).sort();
-    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
+    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
     
     sortedValues.forEach(val => {
         let isChecked = true;
@@ -1061,7 +1064,7 @@ async function eksekusiGantiPO() {
             if (qtySisaUntukDiupdate <= 0) break; 
             
             let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
-            qtySisaUntilDiupdate -= qtyPotong;
+            qtySisaUntukDiupdate -= qtyPotong;
 
             const { data: oldRows, error: errOld } = await db.from('stok_aktual')
                 .select('*')
@@ -1195,7 +1198,7 @@ function siapkanReqKonversi() {
 
     const cb = checkboxes[0];
     selectedForReq = {
-        id: cb.dataset.id, // REVISI: Tangkap ID database baris stok_aktual
+        id: cb.dataset.id, 
         jenis_item: cb.dataset.jenis || '-',
         nama_item: cb.dataset.nama || '-',
         panjang: cb.dataset.pjg || '-',
@@ -1255,30 +1258,7 @@ async function eksekusiReqKonversi() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
 
     try {
-        // REVISI: Cari baris normal di stok_aktual langsung menembak ID database (100% Akurat)
-        const { data: origRow, error: errOrig } = await db.from('stok_aktual')
-            .select('*')
-            .eq('id', selectedForReq.id)
-            .single();
-
-        if (errOrig || !origRow) throw new Error("Gagal menemukan baris stok asal di database.");
-
-        let newOrigQty = origRow.qty - qtyReq;
-        if(newOrigQty <= 0) {
-            await db.from('stok_aktual').delete().eq('id', origRow.id);
-        } else {
-            await db.from('stok_aktual').update({ qty: newOrigQty }).eq('id', origRow.id);
-        }
-
-        // REVISI: Masukkan baris pecahan baru bertanda 'konversi'
-        let splitRow = { ...origRow };
-        delete splitRow.id;
-        delete splitRow.created_at;
-        splitRow.qty = qtyReq;
-        splitRow.konversi = 'konversi';
-        await db.from('stok_aktual').insert([splitRow]);
-
-        // Generate Kode Konversi: K-DDMMYYXX
+        // 1. Generate Kode Konversi: K-DDMMYYXX terlebih dahulu
         const now = new Date();
         const yy = String(now.getFullYear()).slice(-2);
         const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -1302,6 +1282,31 @@ async function eksekusiReqKonversi() {
         }
         const kodeKonversi = `${prefix}${String(seq).padStart(2, '0')}`;
 
+        // 2. Cari baris normal di stok_aktual berdasarkan ID
+        const { data: origRow, error: errOrig } = await db.from('stok_aktual')
+            .select('*')
+            .eq('id', selectedForReq.id)
+            .single();
+
+        if (errOrig || !origRow) throw new Error("Gagal menemukan baris stok asal di database.");
+
+        // 3. Potong saldo asal
+        let newOrigQty = origRow.qty - qtyReq;
+        if(newOrigQty <= 0) {
+            await db.from('stok_aktual').delete().eq('id', origRow.id);
+        } else {
+            await db.from('stok_aktual').update({ qty: newOrigQty }).eq('id', origRow.id);
+        }
+
+        // 4. Masukkan baris pecahan baru bertanda konversi = KODE KONVERSI
+        let splitRow = { ...origRow };
+        delete splitRow.id;
+        delete splitRow.created_at;
+        splitRow.qty = qtyReq;
+        splitRow.konversi = kodeKonversi; // REVISI: Isi dengan Kode Konversi
+        await db.from('stok_aktual').insert([splitRow]);
+
+        // 5. Masukkan data ke request_konversi
         const payload = {
             kode_konversi: kodeKonversi,
             aktifitas_konversi: 'req',
@@ -1314,7 +1319,7 @@ async function eksekusiReqKonversi() {
             shading: selectedForReq.shading,
             keterangan: selectedForReq.keterangan,
             "customer aktual": selectedForReq.customer_aktual,
-            customer_estimasi: selectedForReq.customer_estimasi, // Catat customer_estimasi
+            customer_estimasi: selectedForReq.customer_estimasi, 
             nama_item_req: namaReq,
             panjang_req: pjgReq,
             grade_req: gradeReq,
