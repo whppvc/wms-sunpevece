@@ -36,7 +36,7 @@ window.formatWIB = function(isoString) {
     } catch(e) { return isoString; }
 };
 
-// HELPER: Format Panjang Wajib Mengandung 'M'
+// REVISI: HELPER FORMAT PANJANG DENGAN AKHIRAN 'M'
 function formatPanjang(pjg) {
     if (!pjg || pjg === '-') return '-';
     let str = String(pjg).trim().toUpperCase();
@@ -288,7 +288,7 @@ window.renderTabel = function() {
 
         tbody.innerHTML = window.stokKonvRaw.map((r) => {
             const tgl = window.formatWIB(r.created_at);
-            const pjgFormatted = formatPanjang(r.panjang);
+            const pjgFormatted = formatPanjang(r.panjang); // REVISI: Pastikan akhiran 'M' selalu ada
             
             let aktText = r.aktifitas || '-';
             let aktClass = "text-slate-600 font-bold";
@@ -298,7 +298,7 @@ window.renderTabel = function() {
                 aktClass = "text-rose-600 font-bold";
             }
 
-            // REVISI: Status bertumpu pada indikator Request (PROSES vs DONE)
+            // REVISI: Status murni mengikuti apakah kode konversi induknya sudah DONE di request_konversi
             let isDone = doneKodes.has(r.kode_konversi);
             let displayStatus = isDone ? 'DONE' : 'PROSES';
             let badgeStatus = isDone 
@@ -486,16 +486,15 @@ window.eksekusiSaveKonv = async function() {
                     keterangan: item.keterangan || '-',
                     pic: window.currentUser.username,
                     area: item.area,
-                    status: 'PENDING', // REVISI: Status tetap PENDING sampai user klik Done Konversi
+                    status: 'PENDING', // REVISI: Status tetap PENDING
                     id_sku: item.id_sku
                 });
 
-                // Kurangi stok_aktual khusus pada baris bertanda kode konversi
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
                     .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
                     .eq('customer_aktual', item.customer_aktual)
-                    .eq('konversi', window.activeRequestRow.kode_konversi)
+                    .eq('konversi', window.activeRequestRow.kode_konversi) 
                     .limit(1);
                 
                 if(ext && ext.length > 0) {
@@ -521,7 +520,7 @@ window.eksekusiSaveKonv = async function() {
 
             let nama = window.activeRequestRow.nama_item_req || window.activeRequestRow.nama_item;
             let rawPjg = window.activeRequestRow.panjang_req || window.activeRequestRow.panjang;
-            let pjg = formatPanjang(rawPjg); // REVISI: Pastikan Panjang Konversi IN berakhiran 'M'
+            let pjg = formatPanjang(rawPjg); // REVISI: Dipastikan berakhiran 'M'
             
             let grade = window.activeRequestRow.grade_req || window.activeRequestRow.grade;
             let dus = window.activeRequestRow.dus_req || window.activeRequestRow.dus;
@@ -551,7 +550,7 @@ window.eksekusiSaveKonv = async function() {
                     keterangan: ket,
                     pic: window.currentUser.username,
                     area: area,
-                    status: 'PENDING', // REVISI: Status PENDING (Bukan langsung DONE)
+                    status: 'PENDING', // REVISI: Disimpan sebagai PENDING (Bukan DONE)
                     id_sku: new_id_sku
                 });
 
@@ -679,6 +678,8 @@ window.cancelKonversiMassal = async function() {
             let insertsStokQr = [];
 
             for(let item of itemsKonv) {
+                let pjgFormatted = formatPanjang(item.panjang);
+
                 insertsGlobal.push({
                     qrcode: item.qrcode,
                     area: item.area,
@@ -688,7 +689,7 @@ window.cancelKonversiMassal = async function() {
                     shift: item.shift,
                     jenis_item: item.jenis_item,
                     nama_item: item.nama_item,
-                    panjang: item.panjang,
+                    panjang: pjgFormatted,
                     grade: item.grade,
                     dus: item.dus,
                     shading: item.shading,
@@ -707,7 +708,7 @@ window.cancelKonversiMassal = async function() {
                 });
 
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
-                    .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
+                    .eq('nama_item', item.nama_item).eq('panjang', pjgFormatted).eq('grade', item.grade)
                     .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
                     .eq('customer_aktual', item.customer_aktual)
                     .eq('konversi', item.kode_konversi)
@@ -717,7 +718,7 @@ window.cancelKonversiMassal = async function() {
                     await db.from('stok_aktual').update({qty: ext[0].qty + 1}).eq('id', ext[0].id);
                 } else {
                     await db.from('stok_aktual').insert([{
-                        id_sku: item.id_sku, jenis_item: item.jenis_item, nama_item: item.nama_item, panjang: item.panjang, 
+                        id_sku: item.id_sku, jenis_item: item.jenis_item, nama_item: item.nama_item, panjang: pjgFormatted, 
                         grade: item.grade, dus: item.dus, shading: item.shading, area: item.area, 
                         customer_aktual: item.customer_aktual, customer_estimasi: item.customer_aktual, keterangan: item.keterangan || '-', qty: 1, konversi: item.kode_konversi
                     }]);
@@ -737,7 +738,7 @@ window.cancelKonversiMassal = async function() {
                 let qtyRevert = rowKonv[0].qty;
                 
                 const { data: rowNormal } = await db.from('stok_aktual').select('id, qty')
-                    .eq('nama_item', req.nama_item).eq('panjang', req.panjang).eq('grade', req.grade)
+                    .eq('nama_item', req.nama_item).eq('panjang', formatPanjang(req.panjang)).eq('grade', req.grade)
                     .eq('dus', req.dus).eq('shading', req.shading).eq('area', req.area)
                     .eq('customer_aktual', req['customer aktual'])
                     .is('konversi', null)
