@@ -36,6 +36,16 @@ window.formatWIB = function(isoString) {
     } catch(e) { return isoString; }
 };
 
+// HELPER: Format Panjang Wajib Mengandung 'M'
+function formatPanjang(pjg) {
+    if (!pjg || pjg === '-') return '-';
+    let str = String(pjg).trim().toUpperCase();
+    if (!str.endsWith('M')) {
+        str += 'M';
+    }
+    return str;
+}
+
 window.loadUserPreferences = function() {
     const savedOrder = localStorage.getItem(`col_order_req_${window.currentUser.username}`);
     if (savedOrder) { try { window.userColOrder = JSON.parse(savedOrder); } catch(e) { window.userColOrder = []; } } 
@@ -187,12 +197,14 @@ window.renderTabel = function() {
 
         tbody.innerHTML = window.rawData.map((r) => {
             const tgl = window.formatWIB(r.created_at);
+            const pjgAsal = formatPanjang(r.panjang);
+            const pjgReqStr = formatPanjang(r.panjang_req);
             
             const detailAsal = `
                 <div class="text-[12px] font-bold text-slate-600 leading-snug">
                     Item: <span class="text-blue-600">${r.jenis_item || '-'}</span> | 
                     <span class="text-slate-800">${r.nama_item || '-'}</span> | 
-                    <span class="text-slate-800">${r.panjang || '-'}</span> | 
+                    <span class="text-slate-800">${pjgAsal}</span> | 
                     <span class="text-slate-800">${r.grade || '-'}</span> | 
                     <span class="text-slate-800">${r.dus || '-'}</span> | 
                     <span class="text-blue-600">${r.shading || '-'}</span>
@@ -201,17 +213,17 @@ window.renderTabel = function() {
                 <div class="text-[12px] font-bold text-slate-600">Keterangan: <span class="text-slate-800">${r.keterangan || '-'}</span></div>
                 <div class="text-[12px] font-bold text-slate-600">Area: <span class="text-emerald-600">${r.area || '-'}</span></div>
             `;
-            const searchAsal = `${r.nama_item} ${r.panjang} ${r.grade} ${r.dus} ${r.shading} ${r['customer aktual']} ${r.area}`;
+            const searchAsal = `${r.nama_item} ${pjgAsal} ${r.grade} ${r.dus} ${r.shading} ${r['customer aktual']} ${r.area}`;
             
             let reqArr = [];
             if(r.nama_item_req && r.nama_item_req !== r.nama_item) reqArr.push(`Nama: <span class="text-blue-600">${r.nama_item_req}</span>`);
-            if(r.panjang_req && r.panjang_req !== r.panjang) reqArr.push(`Panjang: <span class="text-slate-800">${r.panjang_req}</span>`);
+            if(r.panjang_req && pjgReqStr !== pjgAsal) reqArr.push(`Panjang: <span class="text-slate-800">${pjgReqStr}</span>`);
             if(r.grade_req && r.grade_req !== r.grade) reqArr.push(`Grade: <span class="text-slate-800">${r.grade_req}</span>`);
             if(r.dus_req && r.dus_req !== r.dus) reqArr.push(`Dus: <span class="text-slate-800">${r.dus_req}</span>`);
             if(r.shading_req && r.shading_req !== r.shading) reqArr.push(`Shading: <span class="text-blue-600">${r.shading_req}</span>`);
             
             const detailReq = reqArr.length > 0 ? `<div class="text-[12px] font-bold text-slate-600">${reqArr.join(' | ')}</div>` : '<span class="text-slate-400 italic text-xs">Tidak ada perubahan spesifikasi</span>';
-            const searchReq = `${r.nama_item_req} ${r.panjang_req} ${r.grade_req} ${r.dus_req} ${r.shading_req}`;
+            const searchReq = `${r.nama_item_req} ${pjgReqStr} ${r.grade_req} ${r.dus_req} ${r.shading_req}`;
 
             let qtyOutNum = parseInt(r.qty_out) || 0;
             let qtyInNum = parseInt(r.qty_in) || 0;
@@ -267,7 +279,6 @@ window.renderTabel = function() {
         
         if(window.stokKonvRaw.length === 0) { tbody.innerHTML = `<tr><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada data stok konversi.</td></tr>`; return; }
 
-        // Pemetaan KODE KONVERSI yang sudah DONE dari request_konversi
         let doneKodes = new Set();
         window.rawData.forEach(rq => {
             if((rq.progres_konversi || '').toUpperCase() === 'DONE') {
@@ -277,8 +288,8 @@ window.renderTabel = function() {
 
         tbody.innerHTML = window.stokKonvRaw.map((r) => {
             const tgl = window.formatWIB(r.created_at);
+            const pjgFormatted = formatPanjang(r.panjang);
             
-            // REVISI 1: Pewarnaan Teks Aktifitas (HIJAU utk IN, MERAH utk OUT)
             let aktText = r.aktifitas || '-';
             let aktClass = "text-slate-600 font-bold";
             if (aktText.toLowerCase().includes('in')) {
@@ -287,8 +298,8 @@ window.renderTabel = function() {
                 aktClass = "text-rose-600 font-bold";
             }
 
-            // REVISI 2: Status Otomatis (PROSES vs DONE)
-            let isDone = doneKodes.has(r.kode_konversi) || (r.status || '').toUpperCase() === 'DONE';
+            // REVISI: Status bertumpu pada indikator Request (PROSES vs DONE)
+            let isDone = doneKodes.has(r.kode_konversi);
             let displayStatus = isDone ? 'DONE' : 'PROSES';
             let badgeStatus = isDone 
                 ? `<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold text-[10px] border border-emerald-200">DONE</span>`
@@ -302,7 +313,7 @@ window.renderTabel = function() {
                     <td class="px-4 py-3 text-center uppercase col-aktifitas ${aktClass}" data-search="${aktText}">${aktText}</td>
                     <td class="px-4 py-3 font-mono font-bold text-slate-900 text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-center col-pjg" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-center col-pjg" data-search="${pjgFormatted}">${pjgFormatted}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-center col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-center col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-center col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
@@ -349,7 +360,6 @@ window.pilihJenisProses = function(jenis) {
     }
     
     document.getElementById('input-scan-konv').value = '';
-    
     document.getElementById('modal-scan-konv').classList.remove('hidden');
     setTimeout(() => document.getElementById('input-scan-konv').focus(), 100);
     lucide.createIcons();
@@ -386,7 +396,7 @@ window.verifikasiKodeKonv = async function() {
             if(window.jenisProsesKonv === 'OUT') {
                 if(itemGlobal && !itemKonv) {
                     if(itemGlobal.nama_item !== window.activeRequestRow.nama_item || 
-                       itemGlobal.panjang !== window.activeRequestRow.panjang || 
+                       formatPanjang(itemGlobal.panjang) !== formatPanjang(window.activeRequestRow.panjang) || 
                        itemGlobal.grade !== window.activeRequestRow.grade) {
                         invalidQrs.push({ qr: qr, reason: "Spesifikasi tidak cocok dengan request asal!" });
                     } else {
@@ -425,7 +435,8 @@ window.verifikasiKodeKonv = async function() {
 
         let html = '';
         window.scannedValidItems.forEach((item, idx) => {
-            let detail = `${item.nama_item || item.namaItem} | ${item.panjang || item.panjang} | ${item.grade || item.grade}`;
+            let pjgStr = formatPanjang(item.panjang || item.panjang);
+            let detail = `${item.nama_item || item.namaItem} | ${pjgStr} | ${item.grade || item.grade}`;
             html += `<tr class="hover:bg-slate-50 transition">
                 <td class="p-3 text-center font-bold text-slate-400">${idx + 1}</td>
                 <td class="p-3 font-mono font-bold text-slate-800">${item.qrcode}</td>
@@ -456,6 +467,8 @@ window.eksekusiSaveKonv = async function() {
             let qrs = window.scannedValidItems.map(item => item.qrcode);
 
             for(let item of window.scannedValidItems) {
+                let pjgFormatted = formatPanjang(item.panjang);
+
                 insertsKonv.push({
                     kode_konversi: window.activeRequestRow.kode_konversi,
                     aktifitas: 'Konversi Out',
@@ -465,7 +478,7 @@ window.eksekusiSaveKonv = async function() {
                     shift: item.shift,
                     jenis_item: item.jenis_item,
                     nama_item: item.nama_item,
-                    panjang: item.panjang,
+                    panjang: pjgFormatted, // REVISI: Selalu simpan Panjang bertanda 'M'
                     grade: item.grade,
                     dus: item.dus,
                     shading: item.shading,
@@ -473,15 +486,16 @@ window.eksekusiSaveKonv = async function() {
                     keterangan: item.keterangan || '-',
                     pic: window.currentUser.username,
                     area: item.area,
-                    status: 'PENDING',
+                    status: 'PENDING', // REVISI: Status tetap PENDING sampai user klik Done Konversi
                     id_sku: item.id_sku
                 });
 
+                // Kurangi stok_aktual khusus pada baris bertanda kode konversi
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
                     .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
                     .eq('customer_aktual', item.customer_aktual)
-                    .eq('konversi', window.activeRequestRow.kode_konversi) 
+                    .eq('konversi', window.activeRequestRow.kode_konversi)
                     .limit(1);
                 
                 if(ext && ext.length > 0) {
@@ -499,13 +513,16 @@ window.eksekusiSaveKonv = async function() {
             await db.from('request_konversi').update({ qty_out: newQtyOut.toString(), progres_konversi: 'PROSES' }).eq('id', window.activeRequestRow.id);
 
         } else {
+            // PROSES IN
             let insertsKonv = [];
             let insertsGlobal = [];
             let insertsStokQr = [];
             let qrs = window.scannedValidItems.map(item => item.qrcode);
 
             let nama = window.activeRequestRow.nama_item_req || window.activeRequestRow.nama_item;
-            let pjg = window.activeRequestRow.panjang_req || window.activeRequestRow.panjang;
+            let rawPjg = window.activeRequestRow.panjang_req || window.activeRequestRow.panjang;
+            let pjg = formatPanjang(rawPjg); // REVISI: Pastikan Panjang Konversi IN berakhiran 'M'
+            
             let grade = window.activeRequestRow.grade_req || window.activeRequestRow.grade;
             let dus = window.activeRequestRow.dus_req || window.activeRequestRow.dus;
             let shading = window.activeRequestRow.shading_req || window.activeRequestRow.shading;
@@ -526,7 +543,7 @@ window.eksekusiSaveKonv = async function() {
                     shift: item.shift,
                     jenis_item: item.jenisItem,
                     nama_item: nama,
-                    panjang: pjg,
+                    panjang: pjg, // REVISI: 'M' dipastikan ada
                     grade: grade,
                     dus: dus,
                     shading: shading,
@@ -534,7 +551,7 @@ window.eksekusiSaveKonv = async function() {
                     keterangan: ket,
                     pic: window.currentUser.username,
                     area: area,
-                    status: 'DONE',
+                    status: 'PENDING', // REVISI: Status PENDING (Bukan langsung DONE)
                     id_sku: new_id_sku
                 });
 
@@ -547,7 +564,7 @@ window.eksekusiSaveKonv = async function() {
                     shift: item.shift,
                     jenis_item: item.jenisItem,
                     nama_item: nama,
-                    panjang: pjg,
+                    panjang: pjg, // REVISI: 'M' dipastikan ada
                     grade: grade,
                     dus: dus,
                     shading: shading,
