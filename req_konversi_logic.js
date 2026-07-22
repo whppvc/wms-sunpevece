@@ -2,7 +2,7 @@ window.rawData = [];
 window.stokKonvRaw = [];
 window.sortState = {}; 
 
-window.currentTab = 'REQUEST'; // Default Tab
+window.currentTab = 'REQUEST'; 
 window.currentPage = 1;
 window.rowsPerPage = 10; 
 window.activeFilters = {}; 
@@ -134,7 +134,6 @@ window.muatData = async function() {
     }
 };
 
-// DEKLARASI FUNGSI STANDAR (Mencegah Hoisting Error)
 function thSort(idx, label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-progres'].includes(colClass);
@@ -358,9 +357,7 @@ window.verifikasiKodeKonv = async function() {
             const itemKonv = konvData.find(k => k.qrcode === qr);
 
             if(window.jenisProsesKonv === 'OUT') {
-                // REVISI: Konversi OUT
                 if(itemGlobal && !itemKonv) {
-                    // Berhasil jika ada di stok_global dan tidak ada di stok_konversi
                     if(itemGlobal.nama_item !== window.activeRequestRow.nama_item || 
                        itemGlobal.panjang !== window.activeRequestRow.panjang || 
                        itemGlobal.grade !== window.activeRequestRow.grade) {
@@ -376,13 +373,11 @@ window.verifikasiKodeKonv = async function() {
                     invalidQrs.push({ qr: qr, reason: "Gagal! Duplikat data." });
                 }
             } else {
-                // REVISI: Konversi IN
                 if(itemGlobal) {
                     invalidQrs.push({ qr: qr, reason: "Gagal! Item sudah ada di stok_global (gudang)." });
                 } else if(itemKonv) {
                     invalidQrs.push({ qr: qr, reason: "Gagal! Item sudah tercatat di stok_konversi." });
                 } else {
-                    // Berhasil jika tidak ada di stok_global dan tidak ada di stok_konversi
                     const td = window.translateBarcode(qr);
                     window.scannedValidItems.push({ qrcode: qr, ...td });
                 }
@@ -458,12 +453,12 @@ window.eksekusiSaveKonv = async function() {
                     id_sku: item.id_sku
                 });
 
-                // REVISI: Kurangi stok_aktual khusus pada baris bertanda 'konversi'
+                // REVISI: Kurangi stok_aktual khusus pada baris yang memiliki nilai konversi = Kode Konversi
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
                     .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
                     .eq('customer_aktual', item.customer_aktual)
-                    .eq('konversi', 'konversi') // Target baris konversi
+                    .eq('konversi', window.activeRequestRow.kode_konversi) // Tembak berdasarkan Kode Konversi
                     .limit(1);
                 
                 if(ext && ext.length > 0) {
@@ -547,7 +542,6 @@ window.eksekusiSaveKonv = async function() {
                     keterangan: ket
                 });
 
-                // Tambah ke stok_aktual secara incremental
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', nama).eq('panjang', pjg).eq('grade', grade)
                     .eq('dus', dus).eq('shading', shading).eq('area', area)
@@ -644,7 +638,6 @@ window.cancelKonversiMassal = async function() {
         if(itemsKonv && itemsKonv.length > 0) {
             let insertsGlobal = [];
             let insertsStokQr = [];
-            let qrs = itemsKonv.map(item => item.qrcode);
 
             for(let item of itemsKonv) {
                 insertsGlobal.push({
@@ -674,12 +667,12 @@ window.cancelKonversiMassal = async function() {
                     keterangan: item.keterangan || '-'
                 });
 
-                // REVISI: Tambah kembali ke stok_aktual pada baris bertanda 'konversi'
+                // REVISI: Tambah kembali ke stok_aktual pada baris bertanda kode konversi
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
                     .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
                     .eq('customer_aktual', item.customer_aktual)
-                    .eq('konversi', 'konversi')
+                    .eq('konversi', item.kode_konversi)
                     .limit(1);
                 
                 if(ext && ext.length > 0) {
@@ -688,24 +681,19 @@ window.cancelKonversiMassal = async function() {
                     await db.from('stok_aktual').insert([{
                         id_sku: item.id_sku, jenis_item: item.jenis_item, nama_item: item.nama_item, panjang: item.panjang, 
                         grade: item.grade, dus: item.dus, shading: item.shading, area: item.area, 
-                        customer_aktual: item.customer_aktual, customer_estimasi: item.customer_aktual, keterangan: item.keterangan || '-', qty: 1, konversi: 'konversi'
+                        customer_aktual: item.customer_aktual, customer_estimasi: item.customer_aktual, keterangan: item.keterangan || '-', qty: 1, konversi: item.kode_konversi
                     }]);
                 }
             }
 
-            // Kembalikan ke stok_global & stok_qr
             await db.from('stok_global').insert(insertsGlobal);
             await db.from('stok_qr').insert(insertsStokQr);
         }
 
-        // REVISI: Gabungkan kembali baris 'konversi' ke baris normal di stok_aktual (Memperbaiki Bug Typo r.shading)
+        // 2. REVISI: Gabungkan kembali baris pecahan konversi ke baris normal di stok_aktual
         for(let req of selectedRequests) {
-            // Cari baris konversi
             const { data: rowKonv } = await db.from('stok_aktual').select('*')
-                .eq('nama_item', req.nama_item).eq('panjang', req.panjang).eq('grade', req.grade)
-                .eq('dus', req.dus).eq('shading', req.shading).eq('area', req.area) // PERBAIKAN: req.shading
-                .eq('customer_aktual', req['customer aktual'])
-                .eq('konversi', 'konversi')
+                .eq('konversi', req.kode_konversi)
                 .limit(1);
             
             if(rowKonv && rowKonv.length > 0) {
@@ -720,21 +708,19 @@ window.cancelKonversiMassal = async function() {
                     .limit(1);
                 
                 if(rowNormal && rowNormal.length > 0) {
-                    // Tambahkan qty ke baris normal, lalu hapus baris konversi
                     await db.from('stok_aktual').update({ qty: rowNormal[0].qty + qtyRevert }).eq('id', rowNormal[0].id);
                     await db.from('stok_aktual').delete().eq('id', rowKonv[0].id);
                 } else {
-                    // Jika baris normal sudah tidak ada, ubah baris konversi menjadi normal
                     await db.from('stok_aktual').update({ konversi: null }).eq('id', rowKonv[0].id);
                 }
             }
         }
 
-        // Hapus data dari stok_konversi & request_konversi
+        // 3. Hapus data dari stok_konversi & request_konversi
         await db.from('stok_konversi').delete().in('kode_konversi', kodes);
         await db.from('request_konversi').delete().in('kode_konversi', kodes);
 
-        alert(`✅ BERHASIL!\nRequest konversi dibatalkan dan ${itemsKonv.length} kardus telah dikembalikan ke Gudang.`);
+        alert(`✅ BERHASIL!\nRequest konversi dibatalkan dan barang telah dikembalikan ke Gudang secara utuh.`);
         window.muatData();
 
     } catch(e) {
@@ -1017,3 +1003,4 @@ window.initResizableColumns = function() {
         const mouseUpHandler = function() { document.removeEventListener('mousemove', mouseMoveHandler); document.removeEventListener('mouseup', mouseUpHandler); resizer.classList.remove('resizing'); };
     });
 };
+
