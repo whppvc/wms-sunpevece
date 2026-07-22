@@ -139,7 +139,6 @@ function sortTable(colIndex, headerEl) {
     applyPagination();
 }
 
-// REVISI: thSort sekarang otomatis mendeteksi cellIndex, tidak perlu parameter angka lagi
 const thSort = (label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-btn'].includes(colClass);
@@ -435,13 +434,14 @@ function renderHeaderDanTabel() {
                 ${thSort('Grade', 'col-grade')}
                 ${thSort('Dus', 'col-dus')}
                 ${thSort('Shading', 'col-shading')}
-                ${thSort('Customer Bawaan', 'col-customer')}
+                ${thSort('Customer Aktual', 'col-customer')}
+                ${thSort('Customer Estimasi', 'col-estimasi text-purple-300')}
                 ${thSort('Customer Keluar', 'col-tujuan text-amber-300')}
                 ${thSort('Keterangan', 'col-ket')}
                 ${thSort('PIC Keluar', 'col-pic')}
             </tr>`;
         
-        if(targetData.length === 0) { tbody.innerHTML = '<tr><td colspan="16" class="p-10 text-center font-medium text-slate-400">Tidak ada data.</td></tr>'; applyPagination(); return; }
+        if(targetData.length === 0) { tbody.innerHTML = '<tr><td colspan="17" class="p-10 text-center font-medium text-slate-400">Tidak ada data.</td></tr>'; applyPagination(); return; }
         
         let h = '';
         targetData.forEach((r, i) => {
@@ -465,6 +465,7 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${td.dus}">${td.dus}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${td.shading}">${td.shading}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-customer" data-search="${td.customer}">${td.customer}</td>
+                    <td class="px-4 py-3 font-medium text-purple-600 text-left col-estimasi" data-search="${r.customer_estimasi || '-'}">${r.customer_estimasi || '-'}</td>
                     <td class="px-4 py-3 font-black text-amber-600 text-left col-tujuan" data-search="${customerKeluar}">${customerKeluar}</td>
                     <td class="px-4 py-3 text-slate-500 font-medium text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
                     <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 text-left col-pic" data-search="${r.pic_keluar || '-'}">${r.pic_keluar || '-'}</td>
@@ -488,7 +489,8 @@ function renderHeaderDanTabel() {
                 ${thSort('Grade', 'col-grade')}
                 ${thSort('Dus', 'col-dus')}
                 ${thSort('Shading', 'col-shading')}
-                ${thSort('Customer Bawaan', 'col-customer')}
+                ${thSort('Customer Aktual', 'col-customer')}
+                ${thSort('Customer Estimasi', 'col-estimasi text-purple-300')}
                 ${thSort('Customer Keluar', 'col-tujuan text-amber-300')}
                 ${thSort('QTY KELUAR (DUS)', 'col-qty text-emerald-300')}
                 ${thSort('Keterangan', 'col-ket')}
@@ -501,18 +503,19 @@ function renderHeaderDanTabel() {
             
             let ket = r.keterangan || 'TANPA_KETERANGAN';
             let customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku);
+            let customerEstimasi = r.customer_estimasi || '-';
             
-            let key = `${t.jenisItem}_${n}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${t.customer}_${customerKeluar}_${t.tglProduksi}_${t.mesin}_${t.shift}_${ket}`;
+            let key = `${t.jenisItem}_${n}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${t.customer}_${customerEstimasi}_${customerKeluar}_${t.tglProduksi}_${t.mesin}_${t.shift}_${ket}`;
             
             if(!groups[key]) {
-                groups[key] = { ...t, displayNama: n, qty: 0, qrcodes: [], tj: customerKeluar, ket: ket };
+                groups[key] = { ...t, displayNama: n, qty: 0, qrcodes: [], tj: customerKeluar, ket: ket, estimasi: customerEstimasi };
             }
             groups[key].qty++; 
             groups[key].qrcodes.push(r.qrcode);
         });
 
         let arr = Object.values(groups);
-        if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="14" class="p-10 text-center font-medium text-slate-400">Kosong.</td></tr>'; applyPagination(); return; }
+        if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="15" class="p-10 text-center font-medium text-slate-400">Kosong.</td></tr>'; applyPagination(); return; }
 
         let h = '';
         arr.forEach((r, i) => {
@@ -530,6 +533,7 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-customer" data-search="${r.customer}">${r.customer}</td>
+                    <td class="px-4 py-3 font-medium text-purple-600 text-left col-estimasi" data-search="${r.estimasi}">${r.estimasi}</td>
                     <td class="px-4 py-3 font-black text-amber-600 text-left col-tujuan" data-search="${r.tj}">${r.tj}</td>
                     <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty" data-search="${r.qty}">${r.qty}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${displayKet}">${displayKet}</td>
@@ -596,6 +600,7 @@ async function aksiMassal(tipe) {
 
         const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({
             qrcode: r.qrcode, id_sku: r.id_sku, customer_keluar: r.customer_keluar, 
+            customer_estimasi: r.customer_estimasi, // ADDED
             keterangan: 'DI-HOLD dari Riwayat', pic_input: r.pic_input
         }));
 
@@ -645,8 +650,9 @@ async function eksekusiCancelHold() {
             customer = parts[7];
             
             let [a, jenis, nama, pjg, grade, dus, shading] = parts;
-            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${customer}`;
-            if(!aktualUpdates[key]) aktualUpdates[key] = { nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, customer_aktual: customer, qty: 0 };
+            let custEstimasi = item.customer_estimasi || customer;
+            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${customer}_${custEstimasi}`;
+            if(!aktualUpdates[key]) aktualUpdates[key] = { nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, customer_aktual: customer, customer_estimasi: custEstimasi, qty: 0 };
             aktualUpdates[key].qty++;
         }
 
@@ -664,7 +670,7 @@ async function eksekusiCancelHold() {
 
         for(let key in aktualUpdates) {
             let u = aktualUpdates[key];
-            const {data: curData} = await db.from('stok_aktual').select('id, qty').eq('nama_item', u.nama_item).eq('pjg', u.pjg).eq('grade', u.grade).eq('dus', u.dus).eq('shading', u.shading).eq('customer_aktual', u.customer_aktual).single();
+            const {data: curData} = await db.from('stok_aktual').select('id, qty').eq('nama_item', u.nama_item).eq('pjg', u.pjg).eq('grade', u.grade).eq('dus', u.dus).eq('shading', u.shading).eq('customer_aktual', u.customer_aktual).eq('customer_estimasi', u.customer_estimasi).single();
             if(curData) {
                 await db.from('stok_aktual').update({qty: curData.qty + u.qty}).eq('id', curData.id);
             } else {
