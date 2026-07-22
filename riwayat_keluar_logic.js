@@ -448,6 +448,9 @@ function renderHeaderDanTabel() {
             const dt = new Date(r.created_at);
             const tglKeluar = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
             const td = window.translateBarcode(r.qrcode);
+            
+            const custAktual = r.customer_aktual || td.customer || '-';
+            const custEstimasi = r.customer_estimasi || '-';
             const customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku); 
 
             h += `
@@ -464,11 +467,11 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${td.grade}">${td.grade}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${td.dus}">${td.dus}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${td.shading}">${td.shading}</td>
-                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-customer" data-search="${td.customer}">${td.customer}</td>
-                    <td class="px-4 py-3 font-medium text-purple-600 text-left col-estimasi" data-search="${r.customer_estimasi || '-'}">${r.customer_estimasi || '-'}</td>
+                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-customer" data-search="${custAktual}">${custAktual}</td>
+                    <td class="px-4 py-3 font-medium text-purple-600 text-left col-estimasi" data-search="${custEstimasi}">${custEstimasi}</td>
                     <td class="px-4 py-3 font-black text-amber-600 text-left col-tujuan" data-search="${customerKeluar}">${customerKeluar}</td>
                     <td class="px-4 py-3 text-slate-500 font-medium text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
-                    <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 text-left col-pic" data-search="${r.pic_keluar || '-'}">${r.pic_keluar || '-'}</td>
+                    <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 text-left col-pic" data-search="${r.pic_keluar || r.pic_input || '-'}">${r.pic_keluar || r.pic_input || '-'}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
@@ -502,13 +505,14 @@ function renderHeaderDanTabel() {
             let n = isJasper ? t.jasper : t.namaItem;
             
             let ket = r.keterangan || 'TANPA_KETERANGAN';
+            let custAktual = r.customer_aktual || t.customer || '-';
+            let custEstimasi = r.customer_estimasi || '-';
             let customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku);
-            let customerEstimasi = r.customer_estimasi || '-';
             
-            let key = `${t.jenisItem}_${n}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${t.customer}_${customerEstimasi}_${customerKeluar}_${t.tglProduksi}_${t.mesin}_${t.shift}_${ket}`;
+            let key = `${t.jenisItem}_${n}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${custAktual}_${custEstimasi}_${customerKeluar}_${t.tglProduksi}_${t.mesin}_${t.shift}_${ket}`;
             
             if(!groups[key]) {
-                groups[key] = { ...t, displayNama: n, qty: 0, qrcodes: [], tj: customerKeluar, ket: ket, estimasi: customerEstimasi };
+                groups[key] = { ...t, displayNama: n, qty: 0, qrcodes: [], tj: customerKeluar, ket: ket, custAktual: custAktual, custEstimasi: custEstimasi };
             }
             groups[key].qty++; 
             groups[key].qrcodes.push(r.qrcode);
@@ -532,8 +536,8 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-customer" data-search="${r.customer}">${r.customer}</td>
-                    <td class="px-4 py-3 font-medium text-purple-600 text-left col-estimasi" data-search="${r.estimasi}">${r.estimasi}</td>
+                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-customer" data-search="${r.custAktual}">${r.custAktual}</td>
+                    <td class="px-4 py-3 font-medium text-purple-600 text-left col-estimasi" data-search="${r.custEstimasi}">${r.custEstimasi}</td>
                     <td class="px-4 py-3 font-black text-amber-600 text-left col-tujuan" data-search="${r.tj}">${r.tj}</td>
                     <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty" data-search="${r.qty}">${r.qty}</td>
                     <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${displayKet}">${displayKet}</td>
@@ -553,10 +557,11 @@ async function aksiMassal(tipe) {
 
     if(tipe === 'salin') {
         let textSalin = "";
-        const headers = Array.from(document.querySelectorAll('#thead-keluar th'))
-            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb'))
-            .map(th => th.innerText.trim().replace(/\n/g, ' '));
-        textSalin += headers.join('\t') + '\n';
+        if (modeSekarang === 'item' || modeSekarang === 'jasper') {
+            textSalin = "Tgl Produksi\tMesin\tShift\tJenis Item\tNama Item\tPjg\tGrade\tDus\tShading\tCustomer Aktual\tCustomer Estimasi\tCustomer Keluar\tQTY KELUAR\tKeterangan\n";
+        } else {
+            textSalin = "Waktu Keluar\tQRCode\tTgl Produksi\tMesin\tShift\tJenis Item\tNama Item\tPjg\tGrade\tDus\tShading\tCustomer Aktual\tCustomer Estimasi\tCustomer Keluar\tKeterangan\tPIC Keluar\n";
+        }
 
         document.querySelectorAll('.row-cb:checked').forEach(cb => {
             const tr = cb.closest('tr'); const rowData = [];
@@ -600,8 +605,8 @@ async function aksiMassal(tipe) {
 
         const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({
             qrcode: r.qrcode, id_sku: r.id_sku, customer_keluar: r.customer_keluar, 
-            customer_estimasi: r.customer_estimasi, // ADDED
-            keterangan: 'DI-HOLD dari Riwayat', pic_input: r.pic_input
+            customer_aktual: r.customer_aktual, customer_estimasi: r.customer_estimasi,
+            keterangan: 'DI-HOLD dari Riwayat', pic_input: r.pic_keluar || r.pic_input
         }));
 
         try {
@@ -643,16 +648,16 @@ async function eksekusiCancelHold() {
 
     dataReturn.forEach(item => {
         let parts = item.id_sku.split('_');
-        let customer = '-';
+        let customerAktual = item.customer_aktual || '-';
+        let customerEstimasi = item.customer_estimasi || '-';
+        
         if(parts.length >= 8) {
             parts[0] = areaCancel; 
             item.id_sku = parts.join('_');
-            customer = parts[7];
             
             let [a, jenis, nama, pjg, grade, dus, shading] = parts;
-            let custEstimasi = item.customer_estimasi || customer;
-            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${customer}_${custEstimasi}`;
-            if(!aktualUpdates[key]) aktualUpdates[key] = { nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, customer_aktual: customer, customer_estimasi: custEstimasi, qty: 0 };
+            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${customerAktual}_${customerEstimasi}`;
+            if(!aktualUpdates[key]) aktualUpdates[key] = { nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, customer_aktual: customerAktual, customer_estimasi: customerEstimasi, qty: 0 };
             aktualUpdates[key].qty++;
         }
 
