@@ -29,7 +29,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 window.bukaModalAdd = function() {
     document.getElementById('input-qrcode').value = '';
     document.getElementById('modal-add-scan').classList.remove('hidden');
-    // Autofocus dimatikan agar keyboard HP tidak otomatis muncul
 };
 
 window.tutupModalAdd = function() {
@@ -72,7 +71,7 @@ document.addEventListener('submit', function(e) {
                 id: ++globalRowId, 
                 qrcode: code, 
                 customer_keluar: customerKeluar,
-                keterangan: '-', // Keterangan default '-'
+                keterangan: '-', 
                 status_verif: isLocalDuplicate ? 'DUPLIKAT SCAN' : 'BELUM CEK', 
                 area: '-',
                 customer_aktual_db: '-',
@@ -91,7 +90,7 @@ document.addEventListener('submit', function(e) {
         renderTable();
         
         inputEl.value = ''; 
-        tutupModalAdd(); // Langsung tutup modal setelah klik Add
+        tutupModalAdd(); 
         
         const scrollContainer = document.getElementById('scroll-container');
         if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
@@ -129,7 +128,11 @@ function renderTable() {
         if (d.status_verif === 'VERIFIED') {
             if (d.need_pinjam_aktual) {
                 if (d.is_pinjam_aktual) {
-                    pinjamHtml = `<button onclick="togglePinjamAktual(${d.id})" class="mt-2 w-full py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-[10px] rounded border border-slate-300 transition uppercase">Cancel Pinjam Aktual</button>`;
+                    pinjamHtml = `
+                        <div class="mt-2 flex items-center justify-between bg-orange-50 border border-orange-200 p-1.5 rounded">
+                            <span class="text-[10px] font-bold text-orange-800">Pinjam Aktual (Potong Est: ${d.pinjam_estimasi_selected})</span>
+                            <button onclick="togglePinjamAktual(${d.id})" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-[9px] rounded transition uppercase">Cancel</button>
+                        </div>`;
                 } else {
                     pinjamHtml = `
                         <div class="mt-2 p-2 bg-orange-50 border border-orange-200 rounded">
@@ -141,14 +144,14 @@ function renderTable() {
                 if (d.pinjam_estimasi_selected) {
                     pinjamHtml = `
                         <div class="mt-2 flex items-center justify-between bg-indigo-50 border border-indigo-200 p-1.5 rounded">
-                            <span class="text-[10px] font-bold text-indigo-800">Dipinjam dari: ${d.pinjam_estimasi_selected}</span>
-                            <button onclick="bukaModalPinjamEstimasi(${d.id})" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[9px] rounded transition uppercase">Ubah</button>
+                            <span class="text-[10px] font-bold text-indigo-800">Dipinjam dari Est: ${d.pinjam_estimasi_selected}</span>
+                            <button onclick="bukaModalPinjamEstimasi(${d.id}, false)" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[9px] rounded transition uppercase">Ubah</button>
                         </div>`;
                 } else {
                     pinjamHtml = `
                         <div class="mt-2 p-2 bg-indigo-50 border border-indigo-200 rounded">
                             <p class="text-[10px] text-indigo-800 font-bold mb-1">Customer Estimasi berbeda!</p>
-                            <button onclick="bukaModalPinjamEstimasi(${d.id})" class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] rounded shadow-sm transition uppercase">Pilih Pinjam Customer</button>
+                            <button onclick="bukaModalPinjamEstimasi(${d.id}, false)" class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] rounded shadow-sm transition uppercase">Pilih Pinjam Customer</button>
                         </div>`;
                 }
             }
@@ -386,6 +389,8 @@ window.verifikasiKeluar = async function() {
                 if (d.customer_keluar !== d.customer_aktual_db) {
                     d.need_pinjam_aktual = true;
                     d.need_pinjam_estimasi = false;
+                    // REVISI: Tambahkan ke specsToCheck agar kita tahu estimasi apa saja yang tersedia untuk aktual ini
+                    specsToCheck.add(`${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${d.customer_aktual_db}`);
                 } else {
                     d.need_pinjam_aktual = false;
                     d.need_pinjam_estimasi = true; // Flag to check estimasi later
@@ -422,6 +427,7 @@ window.verifikasiKeluar = async function() {
                 if (d.status_verif === 'VERIFIED') {
                     let spec = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${d.customer_aktual_db}`;
                     let availableEst = estimasiMap[spec] || [];
+                    d.available_estimasi = availableEst;
                     
                     // Format for UI
                     let estArr = availableEst.map(a => `${a.customer_estimasi} (${a.qty})`);
@@ -431,8 +437,7 @@ window.verifikasiKeluar = async function() {
                         let isMatch = availableEst.some(a => a.customer_estimasi === d.customer_keluar);
                         if (isMatch) {
                             d.need_pinjam_estimasi = false; // All good
-                        } else {
-                            d.available_estimasi = availableEst;
+                            d.pinjam_estimasi_selected = d.customer_keluar; // Auto select
                         }
                     }
                 }
@@ -448,17 +453,36 @@ window.verifikasiKeluar = async function() {
 
 window.togglePinjamAktual = function(id) {
     const item = dataKeluar.find(d => d.id === id);
-    if(item) {
-        item.is_pinjam_aktual = !item.is_pinjam_aktual;
+    if(!item) return;
+
+    if (item.is_pinjam_aktual) {
+        // Batal Pinjam
+        item.is_pinjam_aktual = false;
+        item.pinjam_estimasi_selected = '';
         renderTable();
+    } else {
+        // Mau Pinjam Aktual
+        if (item.available_estimasi.length === 0) {
+            alert("Stok tidak ditemukan di Kartu Stok!");
+            return;
+        } else if (item.available_estimasi.length === 1) {
+            // Auto select jika hanya 1
+            item.is_pinjam_aktual = true;
+            item.pinjam_estimasi_selected = item.available_estimasi[0].customer_estimasi;
+            renderTable();
+        } else {
+            // Munculkan popup jika lebih dari 1
+            bukaModalPinjamEstimasi(id, true);
+        }
     }
 }
 
-window.bukaModalPinjamEstimasi = function(id) {
+window.bukaModalPinjamEstimasi = function(id, isPinjamAktual = false) {
     const item = dataKeluar.find(d => d.id === id);
     if(!item) return;
 
     document.getElementById('pinjam-id-item').value = id;
+    document.getElementById('pinjam-is-aktual').value = isPinjamAktual ? 'true' : 'false';
     const sel = document.getElementById('select-pinjam-estimasi');
     
     if (item.available_estimasi.length === 0) {
@@ -479,6 +503,7 @@ window.tutupModalPinjamEstimasi = function() {
 
 window.simpanPinjamEstimasi = function() {
     const id = parseInt(document.getElementById('pinjam-id-item').value);
+    const isPinjamAktual = document.getElementById('pinjam-is-aktual').value === 'true';
     const selectedEst = document.getElementById('select-pinjam-estimasi').value;
     
     if(!selectedEst) return alert("Pilih Customer Estimasi!");
@@ -486,6 +511,9 @@ window.simpanPinjamEstimasi = function() {
     const item = dataKeluar.find(d => d.id === id);
     if(item) {
         item.pinjam_estimasi_selected = selectedEst;
+        if (isPinjamAktual) {
+            item.is_pinjam_aktual = true;
+        }
         renderTable();
         tutupModalPinjamEstimasi();
     }
@@ -522,8 +550,10 @@ window.simpanKeluar = async function() {
     dataKeluar.forEach(d => {
         qrsToDelete.push(d.qrcode);
 
-        let targetEstimasiDeduct = d.pinjam_estimasi_selected ? d.pinjam_estimasi_selected : d.customer_keluar;
-        if (d.is_pinjam_aktual) targetEstimasiDeduct = d.customer_aktual_db; // If borrowing aktual, we deduct from its own estimasi pool
+        let targetEstimasiDeduct = d.pinjam_estimasi_selected;
+        if (!targetEstimasiDeduct) {
+            targetEstimasiDeduct = d.customer_keluar; // Fallback
+        }
 
         payloadKeluar.push({
             qrcode: d.qrcode,
@@ -545,7 +575,7 @@ window.simpanKeluar = async function() {
             customer_keluar: d.customer_keluar
         });
 
-        if (d.is_pinjam_aktual || d.pinjam_estimasi_selected) {
+        if (d.is_pinjam_aktual || (d.need_pinjam_estimasi && d.pinjam_estimasi_selected !== d.customer_keluar)) {
             payloadPinjam.push({
                 id_sku: d.id_sku,
                 qrcode: d.qrcode,
