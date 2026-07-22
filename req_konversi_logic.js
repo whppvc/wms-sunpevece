@@ -166,7 +166,6 @@ window.renderTabel = function() {
     const rowClassBase = "transition r-row text-[13px]";
 
     if(window.currentTab === 'REQUEST') {
-        // REVISI: Menghilangkan kolom Aktifitas dari Header
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
@@ -214,7 +213,6 @@ window.renderTabel = function() {
             const detailReq = reqArr.length > 0 ? `<div class="text-[12px] font-bold text-slate-600">${reqArr.join(' | ')}</div>` : '<span class="text-slate-400 italic text-xs">Tidak ada perubahan spesifikasi</span>';
             const searchReq = `${r.nama_item_req} ${r.panjang_req} ${r.grade_req} ${r.dus_req} ${r.shading_req}`;
 
-            // REVISI: Logika Progres Dinamis (REQUEST vs PROSES vs DONE)
             let qtyOutNum = parseInt(r.qty_out) || 0;
             let qtyInNum = parseInt(r.qty_in) || 0;
             let rawProg = (r.progres_konversi || 'PENDING').toUpperCase();
@@ -269,14 +267,39 @@ window.renderTabel = function() {
         
         if(window.stokKonvRaw.length === 0) { tbody.innerHTML = `<tr><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada data stok konversi.</td></tr>`; return; }
 
+        // Pemetaan KODE KONVERSI yang sudah DONE dari request_konversi
+        let doneKodes = new Set();
+        window.rawData.forEach(rq => {
+            if((rq.progres_konversi || '').toUpperCase() === 'DONE') {
+                doneKodes.add(rq.kode_konversi);
+            }
+        });
+
         tbody.innerHTML = window.stokKonvRaw.map((r) => {
             const tgl = window.formatWIB(r.created_at);
+            
+            // REVISI 1: Pewarnaan Teks Aktifitas (HIJAU utk IN, MERAH utk OUT)
+            let aktText = r.aktifitas || '-';
+            let aktClass = "text-slate-600 font-bold";
+            if (aktText.toLowerCase().includes('in')) {
+                aktClass = "text-emerald-600 font-bold";
+            } else if (aktText.toLowerCase().includes('out')) {
+                aktClass = "text-rose-600 font-bold";
+            }
+
+            // REVISI 2: Status Otomatis (PROSES vs DONE)
+            let isDone = doneKodes.has(r.kode_konversi) || (r.status || '').toUpperCase() === 'DONE';
+            let displayStatus = isDone ? 'DONE' : 'PROSES';
+            let badgeStatus = isDone 
+                ? `<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold text-[10px] border border-emerald-200">DONE</span>`
+                : `<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold text-[10px] border border-amber-200">PROSES</span>`;
+
             return `
                 <tr class="transition r-row text-[13px] bg-white even:bg-slate-50 border-b border-slate-200">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-medium text-slate-600 text-center col-waktu" data-search="${tgl}">${tgl}</td>
                     <td class="px-4 py-3 font-black text-slate-800 text-center tracking-wider col-kode" data-search="${r.kode_konversi || '-'}">${r.kode_konversi || '-'}</td>
-                    <td class="px-4 py-3 font-bold text-rose-600 text-center uppercase col-aktifitas" data-search="${r.aktifitas || '-'}">${r.aktifitas || '-'}</td>
+                    <td class="px-4 py-3 text-center uppercase col-aktifitas ${aktClass}" data-search="${aktText}">${aktText}</td>
                     <td class="px-4 py-3 font-mono font-bold text-slate-900 text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-center col-pjg" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
@@ -286,7 +309,7 @@ window.renderTabel = function() {
                     <td class="px-4 py-3 font-semibold text-slate-900 text-left col-cust" data-search="${r.customer_aktual || '-'}">${r.customer_aktual || '-'}</td>
                     <td class="px-4 py-3 font-semibold text-emerald-600 text-center col-area" data-search="${r.area || '-'}">${r.area || '-'}</td>
                     <td class="px-4 py-3 font-bold uppercase text-xs text-slate-400 text-center col-pic" data-search="${r.pic || '-'}">${r.pic || '-'}</td>
-                    <td class="px-4 py-3 text-center col-status" data-search="${r.status || '-'}">${r.status || '-'}</td>
+                    <td class="px-4 py-3 text-center col-status" data-search="${displayStatus}">${badgeStatus}</td>
                 </tr>`;
         }).join('');
     }
@@ -318,19 +341,14 @@ window.pilihJenisProses = function(jenis) {
     document.getElementById('modal-proses-pilih').classList.add('hidden');
     
     const title = document.getElementById('title-scan-konv');
-    const saveBtn = document.getElementById('btn-save-konv');
     
     if(jenis === 'OUT') {
         title.innerHTML = '<i data-lucide="log-out" class="text-rose-600"></i> PROSES KONVERSI OUT';
-        saveBtn.className = "px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-lg shadow-md text-xs uppercase transition active:scale-95";
     } else {
         title.innerHTML = '<i data-lucide="log-in" class="text-emerald-600"></i> PROSES KONVERSI IN';
-        saveBtn.className = "px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-md text-xs uppercase transition active:scale-95";
     }
     
     document.getElementById('input-scan-konv').value = '';
-    document.getElementById('btn-save-konv').disabled = true;
-    document.getElementById('btn-save-konv').classList.add('opacity-50', 'cursor-not-allowed');
     
     document.getElementById('modal-scan-konv').classList.remove('hidden');
     setTimeout(() => document.getElementById('input-scan-konv').focus(), 100);
@@ -405,9 +423,6 @@ window.verifikasiKodeKonv = async function() {
             btn.innerHTML = ori; btn.disabled = false; return;
         }
 
-        document.getElementById('btn-save-konv').disabled = false;
-        document.getElementById('btn-save-konv').classList.remove('opacity-50', 'cursor-not-allowed');
-        
         let html = '';
         window.scannedValidItems.forEach((item, idx) => {
             let detail = `${item.nama_item || item.namaItem} | ${item.panjang || item.panjang} | ${item.grade || item.grade}`;
@@ -696,7 +711,6 @@ window.cancelKonversiMassal = async function() {
             await db.from('stok_qr').insert(insertsStokQr);
         }
 
-        // Gabungkan kembali baris pecahan konversi ke baris normal di stok_aktual
         for(let req of selectedRequests) {
             const { data: rowKonv } = await db.from('stok_aktual').select('*')
                 .eq('konversi', req.kode_konversi)
