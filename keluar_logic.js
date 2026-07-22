@@ -337,7 +337,8 @@ window.verifikasiKeluar = async function() {
     try {
         const [resGlobal, resHasil] = await Promise.all([
             db.from('stok_global').select('qrcode, area, customer_aktual, id_sku').in('qrcode', allQRs),
-            db.from('hasil_stbj_langsir').select('qrcode, posisi, customer_aktual').in('qrcode', allQRs)
+            // REVISI: Perbaikan nama kolom 'customer' pada hasil_stbj_langsir
+            db.from('hasil_stbj_langsir').select('qrcode, posisi, customer').in('qrcode', allQRs)
         ]);
 
         if(resGlobal.error) throw resGlobal.error;
@@ -357,7 +358,8 @@ window.verifikasiKeluar = async function() {
             if (foundInGlobal || foundInHasil) {
                 d.status_verif = 'VERIFIED';
                 d.area = foundInGlobal ? foundInGlobal.area : foundInHasil.posisi;
-                d.customer_aktual_db = foundInGlobal ? foundInGlobal.customer_aktual : foundInHasil.customer_aktual;
+                // REVISI: Menggunakan foundInHasil.customer
+                d.customer_aktual_db = foundInGlobal ? foundInGlobal.customer_aktual : foundInHasil.customer;
                 d.id_sku = foundInGlobal ? foundInGlobal.id_sku : '-';
                 
                 // Format Panjang
