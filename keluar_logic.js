@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 window.bukaModalAdd = function() {
     document.getElementById('input-qrcode').value = '';
     document.getElementById('modal-add-scan').classList.remove('hidden');
-    setTimeout(() => document.getElementById('input-qrcode').focus(), 100);
+    // Autofocus dimatikan agar keyboard HP tidak otomatis muncul
 };
 
 window.tutupModalAdd = function() {
@@ -56,7 +56,6 @@ document.addEventListener('submit', function(e) {
     if (e.target && e.target.id === 'form-scan') {
         e.preventDefault();
         const customerKeluar = document.getElementById('select-customer-keluar').value;
-        const keterangan = document.getElementById('input-keterangan').value.trim();
         const inputEl = document.getElementById('input-qrcode');
         const rawInput = inputEl.value.trim();
         
@@ -73,7 +72,7 @@ document.addEventListener('submit', function(e) {
                 id: ++globalRowId, 
                 qrcode: code, 
                 customer_keluar: customerKeluar,
-                keterangan: keterangan || '-',
+                keterangan: '-', // Keterangan default '-'
                 status_verif: isLocalDuplicate ? 'DUPLIKAT SCAN' : 'BELUM CEK', 
                 area: '-',
                 customer_aktual_db: '-',
@@ -92,7 +91,7 @@ document.addEventListener('submit', function(e) {
         renderTable();
         
         inputEl.value = ''; 
-        inputEl.focus();
+        tutupModalAdd(); // Langsung tutup modal setelah klik Add
         
         const scrollContainer = document.getElementById('scroll-container');
         if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
@@ -184,7 +183,6 @@ function renderTable() {
                     <div class="mt-1 flex flex-col gap-0.5">
                         <div class="text-[11px] font-bold text-slate-500">Cust Aktual: <span class="text-orange-600 col-cust-aktual">${d.customer_aktual_db !== '-' ? d.customer_aktual_db : d.customerBawaan}</span></div>
                         <div class="text-[11px] font-bold text-slate-500">Cust Estimasi: <span class="text-purple-600 col-cust-estimasi">${d.customer_estimasi_db}</span></div>
-                        <div class="text-[11px] font-bold text-slate-500">Keterangan: ${d.keterangan}</div>
                     </div>
                     
                     <div class="flex flex-row flex-wrap items-center gap-1.5 mt-1.5">
@@ -405,7 +403,6 @@ window.verifikasiKeluar = async function() {
             let estimasiMap = {};
             for (let spec of specsToCheck) {
                 let parts = spec.split('_');
-                // REVISI: Cek langsung ke tabel stok_aktual berdasarkan spesifikasi dan customer_aktual
                 const { data: actData } = await db.from('stok_aktual').select('customer_estimasi, qty')
                     .eq('nama_item', parts[0]).eq('panjang', parts[1]).eq('grade', parts[2])
                     .eq('dus', parts[3]).eq('shading', parts[4]).eq('area', parts[5])
@@ -422,7 +419,7 @@ window.verifikasiKeluar = async function() {
             }
 
             dataKeluar.forEach(d => {
-                if (d.status_verif === 'VERIFIED' && d.need_pinjam_estimasi) {
+                if (d.status_verif === 'VERIFIED') {
                     let spec = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${d.customer_aktual_db}`;
                     let availableEst = estimasiMap[spec] || [];
                     
@@ -430,11 +427,13 @@ window.verifikasiKeluar = async function() {
                     let estArr = availableEst.map(a => `${a.customer_estimasi} (${a.qty})`);
                     d.customer_estimasi_db = estArr.length > 0 ? estArr.join(' | ') : 'KOSONG';
 
-                    let isMatch = availableEst.some(a => a.customer_estimasi === d.customer_keluar);
-                    if (isMatch) {
-                        d.need_pinjam_estimasi = false; // All good
-                    } else {
-                        d.available_estimasi = availableEst;
+                    if (d.need_pinjam_estimasi) {
+                        let isMatch = availableEst.some(a => a.customer_estimasi === d.customer_keluar);
+                        if (isMatch) {
+                            d.need_pinjam_estimasi = false; // All good
+                        } else {
+                            d.available_estimasi = availableEst;
+                        }
                     }
                 }
             });
