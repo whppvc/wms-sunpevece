@@ -77,6 +77,7 @@ document.addEventListener('submit', function(e) {
                 status_verif: isLocalDuplicate ? 'DUPLIKAT SCAN' : 'BELUM CEK', 
                 area: '-',
                 customer_aktual_db: '-',
+                customer_estimasi_db: '-',
                 id_sku: '-',
                 need_pinjam_aktual: false,
                 is_pinjam_aktual: false,
@@ -117,11 +118,11 @@ function renderTable() {
         if(d.status_verif === 'VERIFIED') {
             badgeClass = "bg-emerald-600 text-white border-emerald-700"; 
         } 
-        else if(d.status_verif === 'TIDAK DITEMUKAN' || d.status_verif === 'DUPLIKAT SCAN') {
+        else if(d.status_verif === 'TIDAK DITEMUKAN' || d.status_verif === 'DUPLIKAT SCAN' || d.status_verif === 'DUPLIKAT KELUAR') {
             badgeClass = "bg-red-600 text-white border-red-800"; 
         }
 
-        const isRedHighlight = d.status_verif === 'TIDAK DITEMUKAN' || d.status_verif === 'DUPLIKAT SCAN';
+        const isRedHighlight = d.status_verif === 'TIDAK DITEMUKAN' || d.status_verif === 'DUPLIKAT SCAN' || d.status_verif === 'DUPLIKAT KELUAR';
         const rowClass = isRedHighlight ? 'bg-red-50 hover:bg-red-100' : 'bg-white hover:bg-slate-50';
 
         // Logika Tombol Pinjam
@@ -133,7 +134,7 @@ function renderTable() {
                 } else {
                     pinjamHtml = `
                         <div class="mt-2 p-2 bg-orange-50 border border-orange-200 rounded">
-                            <p class="text-[10px] text-orange-800 font-bold mb-1">Customer tidak sesuai! (Aktual: ${d.customer_aktual_db})</p>
+                            <p class="text-[10px] text-orange-800 font-bold mb-1">Customer Aktual tidak sesuai! (Fisik: ${d.customer_aktual_db})</p>
                             <button onclick="togglePinjamAktual(${d.id})" class="w-full py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-[10px] rounded shadow-sm transition uppercase">Pinjam Customer Aktual</button>
                         </div>`;
                 }
@@ -179,7 +180,12 @@ function renderTable() {
                     </div>
                     
                     <div class="text-[12px] font-bold text-blue-600 col-shading">${d.shading}</div>
-                    <div class="text-[12px] font-bold text-slate-500">Keterangan: ${d.keterangan}</div>
+                    
+                    <div class="mt-1 flex flex-col gap-0.5">
+                        <div class="text-[11px] font-bold text-slate-500">Cust Aktual: <span class="text-orange-600 col-cust-aktual">${d.customer_aktual_db !== '-' ? d.customer_aktual_db : d.customerBawaan}</span></div>
+                        <div class="text-[11px] font-bold text-slate-500">Cust Estimasi: <span class="text-purple-600 col-cust-estimasi">${d.customer_estimasi_db}</span></div>
+                        <div class="text-[11px] font-bold text-slate-500">Keterangan: ${d.keterangan}</div>
+                    </div>
                     
                     <div class="flex flex-row flex-wrap items-center gap-1.5 mt-1.5">
                         <span class="font-bold px-3 py-1 text-[10px] rounded-sm border col-status ${badgeClass}">${displayStatus}</span>
@@ -202,6 +208,8 @@ function updateFilterDropdowns() {
     const fields = {
         'fs-status': 'status_verif', 
         'fs-cust-keluar': 'customer_keluar',
+        'fs-cust-aktual': 'customer_aktual_db',
+        'fs-cust-estimasi': 'customer_estimasi_db',
         'fs-jenis': 'jenisItem',
         'fs-nama': 'namaItem',
         'fs-pjg': 'panjang',
@@ -278,7 +286,7 @@ window.tutupPopups = function() {
 }
 
 window.resetFilterKeluar = function() {
-    const ids = ['fs-status','fs-cust-keluar','fs-qr','fs-jenis','fs-nama','fs-pjg','fs-grade','fs-dus','fs-shading'];
+    const ids = ['fs-status','fs-cust-keluar','fs-cust-aktual','fs-cust-estimasi','fs-qr','fs-jenis','fs-nama','fs-pjg','fs-grade','fs-dus','fs-shading'];
     ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; });
     window.saringTabelKeluar(); window.toggleSidebarFilter();
 }
@@ -287,6 +295,8 @@ window.saringTabelKeluar = function() {
     const f = {
         status: document.getElementById('fs-status')?.value || '',
         cust: document.getElementById('fs-cust-keluar')?.value || '',
+        custAktual: document.getElementById('fs-cust-aktual')?.value || '',
+        custEstimasi: document.getElementById('fs-cust-estimasi')?.value || '',
         qr: document.getElementById('fs-qr')?.value.toLowerCase() || '',
         jenis: document.getElementById('fs-jenis')?.value || '',
         nama: document.getElementById('fs-nama')?.value || '',
@@ -300,8 +310,8 @@ window.saringTabelKeluar = function() {
     document.querySelectorAll('.row-keluar').forEach(row => {
         let show = true;
         
-        const exactFields = ['status', 'cust', 'jenis', 'nama', 'pjg', 'grade', 'dus', 'shading'];
-        const classMap = { status: 'col-status', cust: 'col-cust-keluar', jenis: 'col-jenis', nama: 'col-nama', pjg: 'col-pjg', grade: 'col-grade', dus: 'col-dus', shading: 'col-shading' };
+        const exactFields = ['status', 'cust', 'custAktual', 'custEstimasi', 'jenis', 'nama', 'pjg', 'grade', 'dus', 'shading'];
+        const classMap = { status: 'col-status', cust: 'col-cust-keluar', custAktual: 'col-cust-aktual', custEstimasi: 'col-cust-estimasi', jenis: 'col-jenis', nama: 'col-nama', pjg: 'col-pjg', grade: 'col-grade', dus: 'col-dus', shading: 'col-shading' };
         
         for(let key of exactFields) {
             if(f[key]) {
@@ -335,22 +345,32 @@ window.verifikasiKeluar = async function() {
 
     const allQRs = dataKeluar.map(d => d.qrcode);
     try {
-        const [resGlobal, resHasil] = await Promise.all([
+        const [resGlobal, resHasil, resKeluar] = await Promise.all([
             db.from('stok_global').select('qrcode, area, customer_aktual, id_sku').in('qrcode', allQRs),
-            // REVISI: Perbaikan nama kolom 'customer' pada hasil_stbj_langsir
-            db.from('hasil_stbj_langsir').select('qrcode, posisi, customer').in('qrcode', allQRs)
+            db.from('hasil_stbj_langsir').select('qrcode, posisi, customer').in('qrcode', allQRs),
+            db.from('stok_keluar').select('qrcode').in('qrcode', allQRs)
         ]);
 
         if(resGlobal.error) throw resGlobal.error;
         if(resHasil.error) throw resHasil.error;
+        if(resKeluar.error) throw resKeluar.error;
 
         const globalMap = {}; resGlobal.data.forEach(d => globalMap[d.qrcode] = d);
         const hasilMap = {}; resHasil.data.forEach(d => hasilMap[d.qrcode] = d);
+        const keluarMap = {}; resKeluar.data.forEach(d => keluarMap[d.qrcode] = true);
 
         let specsToCheck = new Set();
 
         dataKeluar.forEach(d => {
             if (d.isLocalDuplicate) return;
+
+            if (keluarMap[d.qrcode]) {
+                d.status_verif = 'DUPLIKAT KELUAR';
+                d.area = '-';
+                d.customer_aktual_db = '-';
+                d.customer_estimasi_db = '-';
+                return;
+            }
 
             let foundInGlobal = globalMap[d.qrcode];
             let foundInHasil = hasilMap[d.qrcode];
@@ -358,7 +378,6 @@ window.verifikasiKeluar = async function() {
             if (foundInGlobal || foundInHasil) {
                 d.status_verif = 'VERIFIED';
                 d.area = foundInGlobal ? foundInGlobal.area : foundInHasil.posisi;
-                // REVISI: Menggunakan foundInHasil.customer
                 d.customer_aktual_db = foundInGlobal ? foundInGlobal.customer_aktual : foundInHasil.customer;
                 d.id_sku = foundInGlobal ? foundInGlobal.id_sku : '-';
                 
@@ -376,6 +395,8 @@ window.verifikasiKeluar = async function() {
                 }
             } else {
                 d.status_verif = 'TIDAK DITEMUKAN';
+                d.customer_aktual_db = '-';
+                d.customer_estimasi_db = '-';
             }
         });
 
@@ -393,15 +414,21 @@ window.verifikasiKeluar = async function() {
             }
 
             dataKeluar.forEach(d => {
-                if (d.status_verif === 'VERIFIED' && d.need_pinjam_estimasi) {
+                if (d.status_verif === 'VERIFIED') {
                     let spec = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${d.customer_aktual_db}`;
                     let availableEst = estimasiMap[spec] || [];
                     
-                    let isMatch = availableEst.some(a => a.customer_estimasi === d.customer_keluar);
-                    if (isMatch) {
-                        d.need_pinjam_estimasi = false; // All good
-                    } else {
-                        d.available_estimasi = availableEst;
+                    // Format for UI
+                    let estArr = availableEst.map(a => `${a.customer_estimasi} (${a.qty})`);
+                    d.customer_estimasi_db = estArr.length > 0 ? estArr.join(' | ') : 'KOSONG';
+
+                    if (d.need_pinjam_estimasi) {
+                        let isMatch = availableEst.some(a => a.customer_estimasi === d.customer_keluar);
+                        if (isMatch) {
+                            d.need_pinjam_estimasi = false; // All good
+                        } else {
+                            d.available_estimasi = availableEst;
+                        }
                     }
                 }
             });
@@ -474,7 +501,7 @@ window.simpanKeluar = async function() {
         if (d.need_pinjam_estimasi && !d.pinjam_estimasi_selected) hasUnresolvedPinjam = true;
     });
 
-    if(hasUnverified) return alert('Terdapat item yang belum diverifikasi atau tidak ditemukan. Hapus baris merah sebelum menyimpan.');
+    if(hasUnverified) return alert('Terdapat item yang belum diverifikasi, tidak ditemukan, atau duplikat keluar. Hapus baris merah sebelum menyimpan.');
     if(hasUnresolvedPinjam) return alert('Terdapat item yang customernya tidak sesuai dan belum dipinjam. Selesaikan peminjaman customer terlebih dahulu.');
 
     if(!confirm(`Lanjutkan memproses ${dataKeluar.length} item keluar?`)) return;
@@ -489,6 +516,9 @@ window.simpanKeluar = async function() {
 
     dataKeluar.forEach(d => {
         qrsToDelete.push(d.qrcode);
+
+        let targetEstimasiDeduct = d.pinjam_estimasi_selected ? d.pinjam_estimasi_selected : d.customer_keluar;
+        if (d.is_pinjam_aktual) targetEstimasiDeduct = d.customer_aktual_db; // If borrowing aktual, we deduct from its own estimasi pool
 
         payloadKeluar.push({
             qrcode: d.qrcode,
@@ -505,6 +535,7 @@ window.simpanKeluar = async function() {
             dus: d.dus,
             shading: d.shading,
             customer_aktual: d.customer_aktual_db,
+            customer_estimasi: targetEstimasiDeduct, // REVISI: Menyimpan customer_estimasi
             keterangan: d.keterangan,
             customer_keluar: d.customer_keluar
         });
@@ -523,16 +554,13 @@ window.simpanKeluar = async function() {
                 dus: d.dus,
                 shading: d.shading,
                 customer_aktual: d.customer_aktual_db,
-                customer_estimasi: d.pinjam_estimasi_selected || d.customer_aktual_db, // If aktual borrowed, estimasi is usually same as aktual
+                customer_estimasi: targetEstimasiDeduct, 
                 customer_keluar: d.customer_keluar,
                 area: d.area,
                 keterangan: d.keterangan,
                 pic: currentUser.username
             });
         }
-
-        let targetEstimasiDeduct = d.pinjam_estimasi_selected ? d.pinjam_estimasi_selected : d.customer_keluar;
-        if (d.is_pinjam_aktual) targetEstimasiDeduct = d.customer_aktual_db; // If borrowing aktual, we deduct from its own estimasi pool
 
         let keyAkt = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${d.customer_aktual_db}_${targetEstimasiDeduct}`;
         if(!mapDeductAktual[keyAkt]) {
