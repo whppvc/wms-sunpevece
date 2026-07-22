@@ -405,16 +405,24 @@ window.verifikasiKeluar = async function() {
             let estimasiMap = {};
             for (let spec of specsToCheck) {
                 let parts = spec.split('_');
+                // REVISI: Cek langsung ke tabel stok_aktual berdasarkan spesifikasi dan customer_aktual
                 const { data: actData } = await db.from('stok_aktual').select('customer_estimasi, qty')
                     .eq('nama_item', parts[0]).eq('panjang', parts[1]).eq('grade', parts[2])
                     .eq('dus', parts[3]).eq('shading', parts[4]).eq('area', parts[5])
                     .eq('customer_aktual', parts[6]).gt('qty', 0);
                 
-                if (actData) estimasiMap[spec] = actData;
+                if (actData) {
+                    // Grouping by customer_estimasi to sum qty
+                    let grouped = {};
+                    actData.forEach(a => {
+                        grouped[a.customer_estimasi] = (grouped[a.customer_estimasi] || 0) + a.qty;
+                    });
+                    estimasiMap[spec] = Object.keys(grouped).map(k => ({ customer_estimasi: k, qty: grouped[k] }));
+                }
             }
 
             dataKeluar.forEach(d => {
-                if (d.status_verif === 'VERIFIED') {
+                if (d.status_verif === 'VERIFIED' && d.need_pinjam_estimasi) {
                     let spec = `${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${d.customer_aktual_db}`;
                     let availableEst = estimasiMap[spec] || [];
                     
@@ -422,13 +430,11 @@ window.verifikasiKeluar = async function() {
                     let estArr = availableEst.map(a => `${a.customer_estimasi} (${a.qty})`);
                     d.customer_estimasi_db = estArr.length > 0 ? estArr.join(' | ') : 'KOSONG';
 
-                    if (d.need_pinjam_estimasi) {
-                        let isMatch = availableEst.some(a => a.customer_estimasi === d.customer_keluar);
-                        if (isMatch) {
-                            d.need_pinjam_estimasi = false; // All good
-                        } else {
-                            d.available_estimasi = availableEst;
-                        }
+                    let isMatch = availableEst.some(a => a.customer_estimasi === d.customer_keluar);
+                    if (isMatch) {
+                        d.need_pinjam_estimasi = false; // All good
+                    } else {
+                        d.available_estimasi = availableEst;
                     }
                 }
             });
@@ -487,7 +493,7 @@ window.simpanPinjamEstimasi = function() {
 }
 
 // ==========================================
-// SIMPAN KELUAR (DEDUCT INCREMENTAL)
+// SIMPAN KELUAR (DEDUCT INCREMENTAL JSON RPC)
 // ==========================================
 window.simpanKeluar = async function() {
     if(dataKeluar.length === 0) return alert('Data kosong!');
@@ -535,7 +541,7 @@ window.simpanKeluar = async function() {
             dus: d.dus,
             shading: d.shading,
             customer_aktual: d.customer_aktual_db,
-            customer_estimasi: targetEstimasiDeduct, // REVISI: Menyimpan customer_estimasi
+            customer_estimasi: targetEstimasiDeduct, 
             keterangan: d.keterangan,
             customer_keluar: d.customer_keluar
         });
@@ -572,39 +578,16 @@ window.simpanKeluar = async function() {
         mapDeductAktual[keyAkt].qty++;
     });
 
+    const payloadData = {
+        qrs_to_delete: qrsToDelete,
+        stok_keluar_inserts: payloadKeluar,
+        pinjam_inserts: payloadPinjam,
+        aktual_deducts: Object.values(mapDeductAktual)
+    };
+
     try {
-        // 1. Delete dari stok_global, stok_qr, hasil_stbj_langsir
-        await db.from('stok_global').delete().in('qrcode', qrsToDelete);
-        await db.from('stok_qr').delete().in('qrcode', qrsToDelete);
-        await db.from('hasil_stbj_langsir').delete().in('qrcode', qrsToDelete);
-
-        // 2. Insert ke stok_keluar & pinjam_customer
-        const { error: errKeluar } = await db.from('stok_keluar').insert(payloadKeluar);
-        if(errKeluar) throw errKeluar;
-
-        if (payloadPinjam.length > 0) {
-            const { error: errPinjam } = await db.from('pinjam_customer').insert(payloadPinjam);
-            if(errPinjam) throw errPinjam;
-        }
-
-        // 3. Deduct stok_aktual (Incremental)
-        for(let key in mapDeductAktual) {
-            let item = mapDeductAktual[key];
-            const { data: existing } = await db.from('stok_aktual').select('id, qty')
-                .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
-                .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
-                .eq('customer_aktual', item.customer_aktual).eq('customer_estimasi', item.customer_estimasi)
-                .limit(1);
-            
-            if(existing && existing.length > 0) {
-                let newQty = existing[0].qty - item.qty;
-                if (newQty <= 0) {
-                    await db.from('stok_aktual').delete().eq('id', existing[0].id);
-                } else {
-                    await db.from('stok_aktual').update({ qty: newQty }).eq('id', existing[0].id);
-                }
-            }
-        }
+        const { data, error } = await db.rpc('proses_keluar_transaksi', { payload: payloadData });
+        if (error) throw error;
 
         alert(`BERHASIL DISIMPAN!\n${payloadKeluar.length} Barang telah diproses keluar.`);
         dataKeluar = []; renderTable();
