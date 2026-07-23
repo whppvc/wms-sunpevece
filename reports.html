@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WMS - Reports</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script src="global.js"></script>
+    
+    <style>
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; touch-action: pan-y; background-color: #f8fafc; }
+        .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .table-container { position: relative; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
+        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
+
+        .hdr-std { 
+            text-align: center !important; 
+            padding: 0.5rem 0.75rem !important; 
+            font-size: 0.75rem !important; 
+            font-weight: 600 !important; 
+            text-transform: uppercase !important; 
+            letter-spacing: 0.05em !important; 
+            white-space: nowrap !important; 
+            border-bottom: 1px solid #e2e8f0 !important; 
+            background-clip: padding-box !important; 
+        }
+
+        tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
+        .col-hidden { display: none !important; }
+    </style>
+</head>
+<body class="font-sans text-slate-800">
+
+    <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
+        
+        <!-- HEADER SECTION -->
+        <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
+            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
+                <button onclick="switchTab('stbj')" id="tab-stbj" class="px-5 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="shield-check" class="w-4 h-4"></i> STBJ</button>
+                <button onclick="switchTab('langsir')" id="tab-langsir" class="px-5 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="log-in" class="w-4 h-4"></i> Langsir</button>
+                <button onclick="switchTab('stok')" id="tab-stok" class="px-5 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="layers" class="w-4 h-4"></i> Stock</button>
+                <button onclick="switchTab('customer')" id="tab-customer" class="px-5 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="users" class="w-4 h-4"></i> Customer & Free Stock</button>
+                <button onclick="switchTab('konversi')" id="tab-konversi" class="px-5 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="arrow-right-left" class="w-4 h-4"></i> Konversi</button>
+                <button onclick="switchTab('moving')" id="tab-moving" class="px-5 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="activity" class="w-4 h-4"></i> Moving</button>
+            </div>
+
+            <!-- TOOLBAR -->
+            <div class="p-3 sm:p-4 flex flex-wrap items-center justify-between bg-slate-50/50 border-t border-slate-100 w-full gap-3">
+                
+                <!-- KIRI: Filter Waktu / Mode -->
+                <div class="flex items-center gap-3" id="toolbar-left">
+                    <!-- Date Range (STBJ & Langsir) -->
+                    <div id="filter-date-container" class="flex items-center gap-2 bg-white border border-slate-300 rounded-md p-1 shadow-sm">
+                        <input type="date" id="date-start" class="p-1.5 text-xs font-bold text-slate-700 outline-none cursor-pointer bg-transparent">
+                        <span class="text-xs font-bold text-slate-400">-</span>
+                        <input type="date" id="date-end" class="p-1.5 text-xs font-bold text-slate-700 outline-none cursor-pointer bg-transparent">
+                        <button onclick="loadData()" class="bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded transition"><i data-lucide="search" class="w-4 h-4"></i></button>
+                    </div>
+
+                    <!-- Mode Dropdown (Stok) -->
+                    <div id="filter-mode-container" class="hidden items-center gap-2">
+                        <select id="select-mode-stok" onchange="renderTable()" class="p-2 bg-white border border-slate-300 rounded-md font-bold text-xs text-slate-800 outline-none cursor-pointer uppercase focus:border-blue-500 transition shadow-sm">
+                            <option value="area">Kartu Stok Area</option>
+                            <option value="global">Kartu Stok Global</option>
+                            <option value="qr">Kartu Stok QR Code</option>
+                            <option value="nonaktif">Stok Nonaktif</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- KANAN: Aksi -->
+                <div class="flex items-center gap-2 ml-auto">
+                    <button onclick="loadData()" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition" title="Refresh Data">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="exportExcel()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md shadow-sm text-xs uppercase transition flex items-center gap-2 active:scale-95">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Export Excel
+                    </button>
+                    <div class="relative">
+                        <button onclick="toggleActionMenu(event)" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition" title="Menu Aksi">
+                            <i data-lucide="menu" class="w-4 h-4"></i>
+                        </button>
+                        <div id="mobile-action-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
+                            <button onclick="toggleSidebarKolom(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-blue-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</button>
+                            <button onclick="bukaModalTableDesign(); toggleActionMenu(event)" class="text-left px-4 py-3 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="palette" class="w-4 h-4 text-purple-600"></i> Table Design</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AREA TABEL -->
+        <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
+            <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-xl shadow-sm border border-slate-300">
+                <table class="w-full text-left whitespace-nowrap" id="main-table">
+                    <thead class="sticky top-0 z-50 shadow-sm" id="thead-report"></thead>
+                    <tbody id="tbody-report" class="text-slate-800"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- FOOTER PAGINASI -->
+        <div class="shrink-0 w-full bg-white p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
+            <div class="flex items-center gap-2 flex-wrap justify-center">
+                <span class="bg-blue-50 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-medium ml-1">0</span></span>
+                <span class="bg-amber-50 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty: <span id="lbl-total-qty" class="text-amber-900 font-medium ml-1">0</span></span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1 bg-white border border-slate-300 p-1 rounded shadow-sm">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase px-1">Baris:</span>
+                    <select id="select-rows-per-page" onchange="changeRowsPerPage(this.value)" class="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 rounded outline-none cursor-pointer px-1 py-0.5 transition">
+                        <option value="10" selected>10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="ALL">Semua</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2 bg-white border border-slate-300 p-1 rounded shadow-sm">
+                    <button onclick="prevPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                    <span class="px-2 font-black text-xs text-slate-600 tracking-wide uppercase">Hal <span id="lbl-halaman" class="text-blue-600">1</span> / <span id="lbl-total-halaman">1</span></span>
+                    <button onclick="nextPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODAL EXPORT STOK -->
+    <div id="modal-export-stok" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200">
+            <h3 class="text-lg font-black mb-2 flex items-center gap-2 text-emerald-600"><i data-lucide="file-spreadsheet"></i> Export Laporan Stok</h3>
+            <p class="text-xs font-bold text-slate-500 mb-5">Pilih sheet data yang ingin Anda sertakan dalam file Excel.</p>
+            
+            <div class="space-y-3 mb-6">
+                <label class="flex items-center gap-3 p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition">
+                    <input type="checkbox" id="exp-area" checked class="w-5 h-5 accent-emerald-600 rounded">
+                    <span class="text-sm font-bold text-slate-700">Kartu Stok Area</span>
+                </label>
+                <label class="flex items-center gap-3 p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition">
+                    <input type="checkbox" id="exp-global" checked class="w-5 h-5 accent-emerald-600 rounded">
+                    <span class="text-sm font-bold text-slate-700">Kartu Stok Global</span>
+                </label>
+                <label class="flex items-center gap-3 p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition">
+                    <input type="checkbox" id="exp-qr" checked class="w-5 h-5 accent-emerald-600 rounded">
+                    <span class="text-sm font-bold text-slate-700">Kartu Stok QR Code</span>
+                </label>
+                <label class="flex items-center gap-3 p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition">
+                    <input type="checkbox" id="exp-nonaktif" class="w-5 h-5 accent-emerald-600 rounded">
+                    <span class="text-sm font-bold text-slate-700">Stok Nonaktif</span>
+                </label>
+                <label class="flex items-center gap-3 p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition">
+                    <input type="checkbox" id="exp-cust" class="w-5 h-5 accent-emerald-600 rounded">
+                    <span class="text-sm font-bold text-slate-700">Sertakan Customer & Freestock</span>
+                </label>
+            </div>
+
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('modal-export-stok').classList.add('hidden')" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase cursor-pointer hover:bg-slate-300 transition">Batal</button>
+                <button type="button" onclick="eksekusiExportStok()" id="btn-proses-export" class="w-2/3 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 border-b-4 border-emerald-800 flex justify-center items-center gap-2 cursor-pointer"><i data-lucide="download"></i> Download</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR ATUR KOLOM -->
+    <div id="sidebar-kolom" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
+        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</h3>
+            <button onclick="toggleSidebarKolom()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="p-3 bg-blue-50 border-b border-blue-100 text-xs text-blue-800 font-medium leading-relaxed">
+            Geser kotak untuk mengatur urutan. Klik ikon mata untuk menyembunyikan kolom.
+        </div>
+        <div class="p-3 flex flex-col gap-2 overflow-y-auto custom-scroll flex-1" id="kolom-drag-container"></div>
+        <div class="p-4 border-t border-slate-200 bg-slate-50 flex gap-2">
+            <button onclick="resetUrutanKolom()" class="w-1/3 py-2.5 bg-white border border-slate-300 text-slate-600 font-bold rounded-md text-xs uppercase transition hover:bg-slate-100 shadow-sm">Reset</button>
+            <button onclick="simpanUrutanKolom()" class="w-2/3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-md text-xs uppercase transition shadow-sm flex justify-center items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Simpan</button>
+        </div>
+    </div>
+
+    <!-- MODAL FILTER EXCEL -->
+    <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm overflow-hidden">
+        <div class="p-3 border-b border-slate-100 flex justify-between items-center rounded-t-lg">
+            <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
+            <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-rose-500 bg-white border border-slate-200 p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+        </div>
+        <div class="p-2 border-b border-slate-200 bg-white">
+            <div class="relative">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2"></i>
+                <input type="text" id="filter-search-input" oninput="searchFilterList(this.value)" class="w-full pl-8 p-1.5 text-xs font-bold border border-slate-300 bg-slate-50 rounded focus:border-blue-500 focus:bg-white outline-none transition" placeholder="Cari Spesifik...">
+            </div>
+        </div>
+        <div class="p-2 max-h-48 overflow-y-auto flex flex-col gap-1 text-xs bg-white custom-scroll" id="filter-values-list"></div>
+        <div class="p-2 border-t border-slate-200 bg-slate-50 flex justify-between gap-2 rounded-b-lg">
+            <button onclick="clearFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100 transition shadow-sm">Reset</button>
+            <button onclick="applyFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-700 transition shadow-sm">Terapkan</button>
+        </div>
+    </div>
+
+    <div id="overlay-klik-luar" onclick="tutupSemuaPopups()" class="hidden fixed inset-0 z-[40] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
+
+    <script src="reports_logic.js"></script>
+</body>
+</html>
