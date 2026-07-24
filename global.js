@@ -47,7 +47,7 @@ const APP_MENUS = [
     { isDivider: true, title: 'INVENTORY' },
     { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers', url: 'kartu_stok.html' },
     { id: 'reports', title: 'Laporan & Rekap', icon: 'bar-chart-3', url: 'reports.html' },
-    { isDivider: true, title: 'MUTASI' },
+    { isDivider: true, title: 'KONVERSI' },
     { id: 'stok_nonaktif', title: 'Stok Nonaktif', icon: 'package-x', url: 'stok_nonaktif.html' },
     { id: 'ganti_customer', title: 'Table Ganti Customer', icon: 'user-cog', url: 'ganti_customer.html' },
     { id: 'req_konversi', title: 'Tabel Request Konversi', icon: 'replace', url: 'req_konversi.html' },
