@@ -4,7 +4,6 @@
 
 let currentMode = 'plafon'; // plafon (Plafon & Lis), khusus
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [] };
-let pinAkses = "12345"; // PIN Default untuk akses Khusus & Tambah Master
 
 // State Global untuk Canvas (Posisi, Font, Visibilitas)
 const createBasePos = () => ({ x: 0, y: 0 });
@@ -14,7 +13,6 @@ const baseVisBack = { nama: true, shading: true, ukuran: true, mesin: false, shi
 let stateGlobal = {};
 const modes = ['plafon', 'khusus'];
 modes.forEach(m => {
-    // REVISI: Default Kertas 85 x 50 mm
     stateGlobal[m] = { zoom: 4.0, pos: { qr: { x: 0, y: 0, s: 1 }, barcode: createBasePos(), nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { barcode: 5, nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: 'custom', w: 85, h: 50 }, wrap: { nama: 33, barcode: 45, nama_cb: true, barcode_cb: true }, barcodeData: "", linkFont: true, vis: JSON.parse(JSON.stringify(baseVis)) };
     stateGlobal[m + '_back'] = { pos: { nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, wrap: { nama: 45, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) };
 });
@@ -27,8 +25,10 @@ let isDragging = false, dragStartX = 0, dragStartY = 0, dragInitialPos = {};
 let pendingAction = null;
 
 // State Modal Search
-let currentSearchType = ''; // 'item', 'mesin', 'customer'
+let currentSearchType = ''; 
 let selectedSearchData = { nama: '', kode: '' };
+
+const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', password: ''};
 
 // ==========================================
 // 1. INISIALISASI & SUPABASE FETCH
@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initModernLayout({ id: 'cetak_label', title: 'CETAK LABEL BARCODE', url: 'cetak_label.html' });
     initKeyboardGlobal();
     await loadMasterData();
-    switchMode('plafon'); // Default tab
+    switchMode('plafon'); 
 });
 
 async function loadMasterData() {
@@ -265,6 +265,7 @@ function renderCanvas() {
         let w = stateGlobal[currentMode].kertas.w + 'mm';
         let h = stateGlobal[currentMode].kertas.h + 'mm';
 
+        // REVISI: Tambahkan text-black pada el-barcode agar teks tidak transparan/putih
         return `
         <div class="flex flex-col items-center gap-1">
             <span class="text-[8px] font-black text-white ${isBack ? 'bg-slate-500' : 'bg-blue-700'} px-2 py-0.5 rounded uppercase">Label ${isBack ? 'Belakang' : 'Depan'}</span>
@@ -272,15 +273,15 @@ function renderCanvas() {
                 ${!isBack ? `
                 <div class="w-[30%] h-full flex flex-col justify-center items-center">
                     <div id="qr-wrapper" class="click-edit" onmousedown="startDrag('qr', event, ${isBack})"><div id="qrcode" style="width:45px; height:45px;"></div></div>
-                    <div id="el-barcode${idSfx}" class="click-edit mt-[2px] font-bold text-center leading-[1.1]" style="font-size: 5px; max-width: 45px;" onmousedown="startDrag('barcode', event, ${isBack})"></div>
+                    <div id="el-barcode${idSfx}" class="click-edit mt-[2px] font-bold text-center leading-[1.1] text-black" style="font-size: 5px; max-width: 45px;" onmousedown="startDrag('barcode', event, ${isBack})">BARCODE/0001</div>
                 </div>
                 ` : ''}
                 <div class="${isBack ? 'w-full' : 'w-[70%] pl-1'} h-full flex flex-col">
                     <div class="flex-[3] flex flex-col justify-center items-center">
-                        <div id="el-nama${idSfx}" class="click-edit font-black leading-none text-center" style="font-size: 16px; max-width: ${isBack ? '45mm' : '33mm'};" onmousedown="startDrag('nama', event, ${isBack})">NAMA ITEM</div>
-                        <div id="el-shading${idSfx}" class="click-edit font-bold text-center whitespace-nowrap" style="font-size: 14px;" onmousedown="startDrag('shading', event, ${isBack})">SHADING</div>
+                        <div id="el-nama${idSfx}" class="click-edit font-black leading-none text-center text-black" style="font-size: 16px; max-width: ${isBack ? '45mm' : '33mm'};" onmousedown="startDrag('nama', event, ${isBack})">NAMA ITEM</div>
+                        <div id="el-shading${idSfx}" class="click-edit font-bold text-center whitespace-nowrap text-black" style="font-size: 14px;" onmousedown="startDrag('shading', event, ${isBack})">SHADING</div>
                     </div>
-                    <div id="el-info-group${idSfx}" class="flex-[1] flex justify-center items-end font-bold gap-[5px]" style="font-size: 6px;">
+                    <div id="el-info-group${idSfx}" class="flex-[1] flex justify-center items-end font-bold gap-[5px] text-black" style="font-size: 6px;">
                         <div id="el-ukuran${idSfx}" class="click-edit whitespace-nowrap" onmousedown="startDrag('ukuran', event, ${isBack})">Uk 20 x 400</div>
                         <div id="el-mesin${idSfx}" class="click-edit whitespace-nowrap" onmousedown="startDrag('mesin', event, ${isBack})">M1</div>
                         <div id="el-shift${idSfx}" class="click-edit whitespace-nowrap" onmousedown="startDrag('shift', event, ${isBack})">S1</div>
@@ -737,7 +738,9 @@ window.simpanDataMasterBaru = async function() {
     const pin = document.getElementById('input-tambah-pin').value;
 
     if(!nama || !kode || !pin) return alert("Semua kolom wajib diisi!");
-    if(pin !== pinAkses) return alert("⛔ PIN SALAH! Anda tidak memiliki izin.");
+    
+    // REVISI: PIN Otoritas menggunakan Password Akun User
+    if(pin !== currentUser.password) return alert("⛔ PIN SALAH! Masukkan password akun Anda.");
 
     const btn = document.getElementById('btn-simpan-master'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
@@ -921,6 +924,7 @@ window.generateLabel = function() {
     let isRevisi = document.getElementById(`${m}-cb-revisi`)?.checked;
     let suffixRevisi = isRevisi ? " N" : "";
 
+    // REVISI: Pastikan teks barcode terisi
     setTxt('el-barcode', bText + "/0001" + suffixRevisi);
     
     let qrEl = document.getElementById('qrcode');
@@ -1065,12 +1069,13 @@ function mintaPin(title, callback) {
 
 window.eksekusiPinGlobal = function() {
     let pin = document.getElementById('input-pin-global').value;
-    if(pin === pinAkses) {
+    // REVISI: PIN menggunakan password user saat ini
+    if(pin === currentUser.password) {
         document.getElementById('modal-pin-global').classList.add('hidden');
         document.getElementById('overlay-klik-luar').classList.add('hidden');
         if(pendingAction) pendingAction();
     } else {
-        alert("⛔ PIN SALAH!");
+        alert("⛔ PIN SALAH! Masukkan password akun Anda.");
     }
 };
 
@@ -1094,3 +1099,7 @@ function penangananKeyboardEvent(e) {
         if(stateGlobal[m].pos[k]) { stateGlobal[m].pos[k].x += x; stateGlobal[m].pos[k].y += y; updateTransform(k, activeSelection.isBack); } 
     }); 
 }
+
+Silakan timpa ketiga file tersebut dan uji coba. Jika Route Guard masih
+bermasalah, pastikan Anda menekan Ctrl + F5 (Hard Refresh) di browser agar cache
+JS lama terhapus.
