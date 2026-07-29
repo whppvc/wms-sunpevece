@@ -16,6 +16,7 @@
         .tab-active { border-bottom: 3px solid #b45309; color: #b45309; font-weight: 900; background-color: #fffbeb; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
         .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; padding: 0.75rem 1rem !important; font-size: 0.75rem !important; font-weight: 600 !important; text-transform: uppercase !important; white-space: nowrap !important; position: sticky !important; top: 0 !important; z-index: 20 !important; }
+        tr.selected-row td { background-color: #fef3c7 !important; color: #92400e !important; }
     </style>
 </head>
 <body class="font-sans text-slate-800">
@@ -31,130 +32,192 @@
                 </div>
                 <div class="flex items-center gap-3 pr-4">
                     <span class="text-xs font-black text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200" id="lbl-pic-aktif">PIC: -</span>
-                    <button onclick="logoutOpname()" class="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-lg text-xs transition flex items-center gap-1"><i data-lucide="log-out" class="w-3.5 h-3.5"></i> Keluar</button>
+                </div>
+            </div>
+            
+            <!-- TOOLBAR -->
+            <div class="p-3 sm:p-4 flex items-center justify-between bg-slate-50/50 border-t border-slate-100 w-full">
+                <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar">
+                    <button onclick="bukaModalForm()" class="shrink-0 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-md shadow-sm text-xs uppercase transition flex items-center gap-2 active:scale-95"><i data-lucide="plus-circle" class="w-4 h-4"></i> Tambah Data</button>
+                    <button onclick="loadDataOpname()" class="shrink-0 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-md shadow-sm text-xs uppercase transition flex items-center gap-2 active:scale-95 border border-slate-300"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh</button>
+                    <button onclick="hapusDataOpname()" class="shrink-0 px-4 py-2.5 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-md shadow-sm text-xs uppercase transition flex items-center gap-2 active:scale-95 border border-rose-300"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus</button>
+                </div>
+                <div class="flex items-center gap-2 ml-auto">
+                    <button onclick="toggleSidebarFilter()" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition" title="Filter Data"><i data-lucide="filter" class="w-4 h-4"></i></button>
                 </div>
             </div>
         </div>
 
-        <!-- MAIN WORKSPACE -->
-        <div class="flex-1 flex flex-col md:flex-row min-h-0 bg-slate-100">
-            
-            <!-- PANEL KIRI (FORM INPUT) -->
-            <div class="w-full md:w-1/3 lg:w-1/4 bg-white border-r border-slate-300 flex flex-col min-h-0 shadow-md z-10">
-                <div class="p-3 bg-amber-50 border-b border-amber-200 shrink-0">
-                    <h3 class="font-black text-amber-800 text-xs uppercase flex items-center gap-2"><i data-lucide="edit-3" class="w-4 h-4"></i> Form Input Opname</h3>
+        <!-- MAIN TABLE AREA -->
+        <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
+            <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-xl shadow-sm border border-slate-300">
+                <table class="w-full text-left whitespace-nowrap" id="main-table">
+                    <thead class="sticky top-0 z-50 shadow-sm" id="thead-opname"></thead>
+                    <tbody id="tbody-opname" class="text-slate-800"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- FOOTER PAGINATION -->
+        <div class="shrink-0 w-full bg-white p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
+            <div class="flex items-center gap-2 flex-wrap justify-center">
+                <span class="bg-blue-50 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-medium ml-1">0</span></span>
+                <span class="bg-amber-50 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty: <span id="lbl-total-qty" class="text-amber-900 font-medium ml-1">0</span></span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1 bg-white border border-slate-300 p-1 rounded shadow-sm">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase px-1">Baris:</span>
+                    <select id="select-rows-per-page" onchange="changeRowsPerPage(this.value)" class="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 rounded outline-none cursor-pointer px-1 py-0.5 transition">
+                        <option value="10" selected>10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="ALL">Semua</option>
+                    </select>
                 </div>
-                <div class="flex-1 overflow-y-auto custom-scroll p-4 space-y-4">
-                    <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="date" id="o-tgl" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50"></div>
+                <div class="flex items-center gap-2 bg-white border border-slate-300 p-1 rounded shadow-sm">
+                    <button onclick="prevPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                    <span class="px-2 font-black text-xs text-slate-600 tracking-wide uppercase">Hal <span id="lbl-halaman" class="text-blue-600">1</span> / <span id="lbl-total-halaman">1</span></span>
+                    <button onclick="nextPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL FORM INPUT OPNAME -->
+    <div id="modal-form-opname" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[60] px-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-slate-200 flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-amber-50 rounded-t-2xl">
+                <h3 class="text-base font-black flex items-center gap-2 text-amber-800"><i data-lucide="edit-3" class="w-5 h-5"></i> Form Input Opname</h3>
+                <button type="button" onclick="document.getElementById('modal-form-opname').classList.add('hidden')" class="text-amber-600 hover:text-red-600 bg-white p-1.5 rounded-md transition shadow-sm"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto custom-scroll p-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="date" id="o-tgl" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50"></div>
+                    
+                    <!-- Searchable Inputs -->
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label>
-                        <input type="text" id="o-area" list="dl-area" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50 uppercase" placeholder="Ketik/Pilih Area..." autocomplete="off">
-                        <datalist id="dl-area"></datalist>
+                        <div class="flex gap-2">
+                            <input type="text" id="o-area" readonly class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-100 text-slate-600 cursor-not-allowed" placeholder="Pilih Area...">
+                            <button onclick="bukaModalSearch('area')" class="px-3 bg-amber-100 text-amber-700 font-bold rounded-lg hover:bg-amber-200 transition text-xs shadow-sm"><i data-lucide="search" class="w-4 h-4"></i></button>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label>
-                        <input type="text" id="o-mesin" list="dl-mesin" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50 uppercase" placeholder="Ketik/Pilih Mesin..." autocomplete="off">
-                        <datalist id="dl-mesin"></datalist>
+                        <div class="flex gap-2">
+                            <input type="text" id="o-mesin" readonly class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-100 text-slate-600 cursor-not-allowed" placeholder="Pilih Mesin...">
+                            <button onclick="bukaModalSearch('mesin')" class="px-3 bg-amber-100 text-amber-700 font-bold rounded-lg hover:bg-amber-200 transition text-xs shadow-sm"><i data-lucide="search" class="w-4 h-4"></i></button>
+                        </div>
                     </div>
+                    
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label>
-                        <input type="text" id="o-shift" list="dl-shift" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50 uppercase" placeholder="Ketik/Pilih Shift..." autocomplete="off">
-                        <datalist id="dl-shift"></datalist>
+                        <select id="o-shift" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 cursor-pointer"></select>
                     </div>
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label>
-                        <select id="o-jenis" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50 cursor-pointer">
+                        <select id="o-jenis" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 cursor-pointer">
                             <option value="Plafon">Plafon</option>
                             <option value="Lis">Lis</option>
                         </select>
                     </div>
+                    
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
-                        <input type="text" id="o-item" list="dl-item" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50 uppercase" placeholder="Ketik/Pilih Item..." autocomplete="off">
-                        <datalist id="dl-item"></datalist>
+                        <div class="flex gap-2">
+                            <input type="text" id="o-item" readonly class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-100 text-slate-600 cursor-not-allowed" placeholder="Pilih Item...">
+                            <button onclick="bukaModalSearch('item')" class="px-3 bg-amber-100 text-amber-700 font-bold rounded-lg hover:bg-amber-200 transition text-xs shadow-sm"><i data-lucide="search" class="w-4 h-4"></i></button>
+                        </div>
                     </div>
-                    <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang (M)</label><input type="text" id="o-panjang" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50 uppercase" placeholder="Cth: 4 atau 5.95"></div>
+                    
+                    <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang (M)</label><input type="text" id="o-panjang" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase" placeholder="Cth: 4 atau 5.95"></div>
+                    
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
-                        <input type="text" id="o-grade" list="dl-grade" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50 uppercase" placeholder="Ketik/Pilih Grade..." autocomplete="off">
-                        <datalist id="dl-grade"></datalist>
+                        <select id="o-grade" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 cursor-pointer"></select>
                     </div>
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus / Merk</label>
-                        <input type="text" id="o-dus" list="dl-dus" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50 uppercase" placeholder="Ketik/Pilih Dus..." autocomplete="off">
-                        <datalist id="dl-dus"></datalist>
+                        <select id="o-dus" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 cursor-pointer"></select>
                     </div>
-                    <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="o-shading" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50 uppercase" placeholder="Cth: WT-1"></div>
+                    
+                    <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="o-shading" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase" placeholder="Cth: WT-1"></div>
+                    
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer (PO)</label>
-                        <input type="text" id="o-po" list="dl-po" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50 uppercase" placeholder="Ketik/Pilih PO..." autocomplete="off">
-                        <datalist id="dl-po"></datalist>
+                        <div class="flex gap-2">
+                            <input type="text" id="o-po" readonly class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-100 text-slate-600 cursor-not-allowed" placeholder="Pilih Customer...">
+                            <button onclick="bukaModalSearch('customer')" class="px-3 bg-amber-100 text-amber-700 font-bold rounded-lg hover:bg-amber-200 transition text-xs shadow-sm"><i data-lucide="search" class="w-4 h-4"></i></button>
+                        </div>
                     </div>
+                    
                     <div>
                         <label class="block text-[10px] font-black uppercase text-amber-600 mb-1">QTY (DUS)</label>
-                        <input type="number" id="o-qty" value="1" min="1" class="w-full p-3 text-lg border-2 border-amber-300 rounded outline-none focus:border-amber-600 font-black text-center bg-amber-50 text-amber-800">
+                        <input type="number" id="o-qty" value="1" min="1" class="w-full p-3 text-lg border-2 border-amber-300 rounded-xl outline-none focus:border-amber-600 font-black text-center bg-amber-50 text-amber-800">
                     </div>
-                </div>
-                <div class="p-3 bg-white border-t border-slate-200 shrink-0">
-                    <button onclick="simpanOpname()" id="btn-simpan-opname" class="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-lg shadow-md text-xs uppercase transition active:scale-95 flex justify-center items-center gap-2 border-b-4 border-amber-800"><i data-lucide="save" class="w-4 h-4"></i> Simpan Data</button>
                 </div>
             </div>
 
-            <!-- PANEL KANAN (TABEL DATA) -->
-            <div class="flex-1 flex flex-col min-w-0 bg-slate-200 relative p-4">
-                <div class="flex-1 bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden flex flex-col">
-                    <div class="p-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center shrink-0">
-                        <h3 class="font-black text-slate-700 text-xs uppercase flex items-center gap-2"><i data-lucide="table" class="w-4 h-4 text-blue-600"></i> Data Tersimpan</h3>
-                        <button onclick="loadDataOpname()" class="p-1.5 bg-white border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition shadow-sm active:scale-95"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
-                    </div>
-                    <div class="flex-1 overflow-y-auto custom-scroll">
-                        <table class="w-full text-center border-collapse text-sm whitespace-nowrap">
-                            <thead class="sticky top-0 z-10">
-                                <tr>
-                                    <th class="hdr-std w-12">No</th>
-                                    <th class="hdr-std">Tgl Produksi</th>
-                                    <th class="hdr-std">Area</th>
-                                    <th class="hdr-std">Mesin</th>
-                                    <th class="hdr-std">Shift</th>
-                                    <th class="hdr-std">Jenis Item</th>
-                                    <th class="hdr-std">Nama Item</th>
-                                    <th class="hdr-std">Panjang</th>
-                                    <th class="hdr-std">Grade</th>
-                                    <th class="hdr-std">Dus</th>
-                                    <th class="hdr-std">Shading</th>
-                                    <th class="hdr-std">PO</th>
-                                    <th class="hdr-std text-amber-300">QTY</th>
-                                    <th class="hdr-std">PIC</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbody-opname" class="text-slate-700">
-                                <tr><td colspan="14" class="p-10 text-slate-400 font-bold"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i> Memuat data...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <div class="p-4 border-t border-slate-100 bg-white flex gap-2 rounded-b-2xl">
+                <button type="button" onclick="document.getElementById('modal-form-opname').classList.add('hidden')" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase hover:bg-slate-300 transition">Batal</button>
+                <button type="button" onclick="simpanOpname()" id="btn-simpan-opname" class="w-2/3 py-3 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 flex justify-center items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Simpan Data</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL LOGIN OPNAME -->
-    <div id="modal-login-opname" class="fixed inset-0 flex items-center justify-center bg-slate-900/80 z-[100] px-4 backdrop-blur-sm">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 text-center">
-            <h3 class="text-lg font-black mb-1 text-slate-800 flex items-center justify-center gap-2"><i data-lucide="user-check" class="text-amber-600"></i> Login Stok Opname</h3>
-            <p class="text-xs font-bold text-slate-500 mb-5">Masukkan identitas Anda untuk mencatat data.</p>
-            <div class="space-y-4 mb-6 text-left">
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama PIC</label>
-                    <input type="text" id="input-opname-pic" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-amber-500 font-black text-slate-800 bg-slate-50 uppercase" placeholder="Nama Anda..." autocomplete="off">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Password / PIN</label>
-                    <input type="password" id="input-opname-pass" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-amber-500 font-black text-center text-lg tracking-[0.5em] text-slate-800 bg-slate-50" placeholder="••••">
+    <!-- MODAL PENCARIAN (AREA, ITEM, MESIN, CUSTOMER) -->
+    <div id="modal-search" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 flex flex-col max-h-[85vh] overflow-hidden">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="text-base font-black flex items-center gap-2 text-slate-800"><i data-lucide="search" class="text-blue-600 w-5 h-5"></i> <span id="title-modal-search">Cari Data</span></h3>
+                <button type="button" onclick="document.getElementById('modal-search').classList.add('hidden')" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-md transition shadow-sm"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            
+            <div class="p-4 border-b border-slate-100 bg-white">
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                    <input type="text" id="input-search-list" onkeyup="filterSearchList()" class="w-full pl-9 p-2.5 border border-slate-300 rounded-lg outline-none focus:border-blue-500 font-bold text-sm bg-slate-50" placeholder="Ketik untuk mencari..." autocomplete="off">
                 </div>
             </div>
-            <button type="button" onclick="loginOpname()" class="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 border-b-4 border-amber-800">Masuk</button>
+
+            <div class="flex-1 overflow-y-auto custom-scroll p-2 bg-slate-50">
+                <ul id="list-search-result" class="space-y-1"></ul>
+            </div>
+
+            <div class="p-4 border-t border-slate-100 bg-white">
+                <button type="button" onclick="pilihDataSearch()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-sm text-sm uppercase transition active:scale-95 flex justify-center items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4"></i> Pilih Data</button>
+            </div>
         </div>
     </div>
+
+    <!-- SIDEBAR FILTER LENGKAP -->
+    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
+        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data</h3>
+            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="p-3 flex flex-col gap-3 overflow-y-auto custom-scroll flex-1">
+            <div class="grid grid-cols-2 gap-2">
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label><input type="text" id="fs-area" oninput="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="text" id="fs-tgl" oninput="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label><input type="text" id="fs-mesin" oninput="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label><input type="text" id="fs-shift" oninput="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><input type="text" id="fs-jenis" oninput="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50"></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><input type="text" id="fs-nama" oninput="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><input type="text" id="fs-pjg" oninput="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><input type="text" id="fs-grade" oninput="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><input type="text" id="fs-dus" oninput="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50"></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="fs-shading" oninput="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50"></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer</label><input type="text" id="fs-customer" oninput="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50"></div>
+            </div>
+            <button onclick="resetFilter()" class="mt-2 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black rounded text-xs uppercase transition shrink-0">RESET FILTER</button>
+        </div>
+    </div>
+
+    <!-- OVERLAY -->
+    <div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-[40] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="input_opname_logic.js"></script>
 </body>
