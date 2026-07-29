@@ -39,6 +39,9 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // ==========================================
 const APP_MENUS = [
     { id: 'dashboard', title: 'Dashboard Utama', icon: 'layout-dashboard', url: 'menu.html' },
+    { isDivider: true, title: 'PRINT & OPNAME' },
+    { id: 'input_opname', title: 'Input Stok Opname', icon: 'clipboard-check', url: 'input_opname.html' },
+    { id: 'cetak_label', title: 'Cetak Label Barcode', icon: 'printer', url: 'cetak_label.html' },
     { isDivider: true, title: 'INBOUND' },
     { id: 'stbj', title: 'Scan STBJ', icon: 'shield-check', url: 'stbj.html' },
     { id: 'hasil_stbj', title: 'Hasil STBJ', icon: 'clipboard-list', url: 'hasil_stbj.html' },
