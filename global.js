@@ -1,972 +1,1180 @@
-// ==========================================
-// 0. ROUTE GUARD (PENJAGA KEAMANAN HALAMAN)
-// ==========================================
-(function checkSecurity() {
-    const path = window.location.pathname;
-    const isLoginPage = path.endsWith('index.html') || path === '/';
-    const isSettingPage = path.endsWith('setting.html');
-    const sessionString = localStorage.getItem('user_session');
+<script>
+  let dataPlafon = {}; let dataLis = {};
+  let isPlafonInit = false; let isLisInit = false; let isKhususInit = false; let isGudangInit = false; let currentMenu = 'p';
+  let activeSelection = { m: null, elements: [] }; let isDragging = false; let dragStartX = 0, dragStartY = 0; let dragInitialPos = {};
+  
+  let historyStack = { p: { undo: [], redo: [] }, l: { undo: [], redo: [] }, k: { undo: [], redo: [] }, g: { undo: [], redo: [] } };
+  
+  let selectedPlafonItem = ""; let selectedPlafonItemKode = ""; 
+  let selectedPlafonPO = ""; let selectedPlafonPOKode = ""; 
+  let selectedPlafonDus = ""; let selectedPlafonDusKode = "";
+  
+  let selectedLisItem = ""; let selectedLisItemKode = "";
+  let selectedLisDus = ""; let selectedLisDusKode = "";
 
-    if (!sessionString && !isLoginPage) {
-        window.location.replace('index.html');
-    } 
-    else if (sessionString && isLoginPage) {
-        window.location.replace('menu.html');
-    }
+  function createBasePos() { return {x:0, y:0}; }
+  
+  let baseVis = { qr: true, barcode: true, nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
+  let baseVisBack = { nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
 
-    if (sessionString && isSettingPage) {
-        try {
-            const user = JSON.parse(sessionString);
-            if (!user.role || user.role.toLowerCase() !== 'creator') {
-                window.location.replace('menu.html'); 
-            }
-        } catch(e) {
-            localStorage.removeItem('user_session');
-            window.location.replace('index.html');
-        }
-    }
-})();
+  // REVISI: Default font barcode dinaikkan menjadi 8 agar tidak hilang
+  let stateGlobal = { 
+      p: { zoom: 4.0, pos: { qr:{x:0,y:0,s:1}, barcode:createBasePos(), nama:createBasePos(), shading:createBasePos(), ukuran:createBasePos(), mesin:createBasePos(), shift:createBasePos(), tanggal:createBasePos(), po:createBasePos(), dus:createBasePos(), isi:createBasePos() }, font: { barcode: 8, nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: '100x50', w: 100, h: 50 }, wrap: { nama: 33, barcode: 100, nama_cb: true, barcode_cb: true }, barcodeData:"", linkFont: true, vis: JSON.parse(JSON.stringify(baseVis)) },
+      p_back: { pos: { nama:createBasePos(), shading:createBasePos(), ukuran:createBasePos(), mesin:createBasePos(), shift:createBasePos(), tanggal:createBasePos(), po:createBasePos(), dus:createBasePos(), isi:createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, wrap: { nama: 45, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) },
+      
+      l: { zoom: 4.0, pos: { qr:{x:0,y:0,s:1}, barcode:createBasePos(), nama:createBasePos(), shading:createBasePos(), ukuran:createBasePos(), mesin:createBasePos(), shift:createBasePos(), tanggal:createBasePos(), dus:createBasePos(), isi:createBasePos() }, font: { barcode: 8, nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: '100x50', w: 100, h: 50 }, wrap: { nama: 33, barcode: 100, nama_cb: true, barcode_cb: true }, barcodeData:"", linkFont: true, vis: JSON.parse(JSON.stringify(baseVis)) },
+      l_back: { pos: { nama:createBasePos(), shading:createBasePos(), ukuran:createBasePos(), mesin:createBasePos(), shift:createBasePos(), tanggal:createBasePos(), dus:createBasePos(), isi:createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, wrap: { nama: 45, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) },
+      
+      k: { zoom: 4.0, pos: { qr:{x:0,y:0,s:1}, barcode:createBasePos(), nama:createBasePos(), shading:createBasePos(), ukuran:createBasePos(), mesin:createBasePos(), shift:createBasePos(), tanggal:createBasePos(), po:createBasePos(), dus:createBasePos(), isi:createBasePos() }, font: { barcode: 8, nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: '100x50', w: 100, h: 50 }, wrap: { nama: 33, barcode: 100, nama_cb: true, barcode_cb: true }, barcodeData:"", linkFont: true, vis: JSON.parse(JSON.stringify(baseVis)) },
+      k_back: { pos: { nama:createBasePos(), shading:createBasePos(), ukuran:createBasePos(), mesin:createBasePos(), shift:createBasePos(), tanggal:createBasePos(), po:createBasePos(), dus:createBasePos(), isi:createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, wrap: { nama: 45, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) },
+      
+      g: { zoom: 4.0, pos: { qr:{x:0,y:0,s:1}, barcode:createBasePos(), nama:createBasePos(), shading:createBasePos(), ukuran:createBasePos(), mesin:createBasePos(), shift:createBasePos(), tanggal:createBasePos(), po:createBasePos(), dus:createBasePos(), isi:createBasePos() }, font: { barcode: 8, nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: '100x50', w: 100, h: 50 }, wrap: { nama: 33, barcode: 100, nama_cb: true, barcode_cb: true }, barcodeData:"", linkFont: true, vis: JSON.parse(JSON.stringify(baseVis)) },
+      g_back: { pos: { nama:createBasePos(), shading:createBasePos(), ukuran:createBasePos(), mesin:createBasePos(), shift:createBasePos(), tanggal:createBasePos(), po:createBasePos(), dus:createBasePos(), isi:createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, wrap: { nama: 45, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) }
+  };
 
-// ==========================================
-// KREDENSIAL SUPABASE
-// ==========================================
-const SUPABASE_URL = 'https://mjpqzftwbyrbvbvmarol.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcHF6ZnR3YnlyYnZidm1hcm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA0MTgsImV4cCI6MjA5NDE1NjQxOH0.0VT56HA-cGB4CP3u89PShcddt9jARh85KKMgnwCkse4';
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  let pendingAction = null;
+  function mintaPin(title, callback) {
+      document.getElementById('pin-global-title').innerText = title;
+      document.getElementById('input-pin-global').placeholder = 'Password Akun Anda...';
+      document.getElementById('input-pin-global').value = '';
+      pendingAction = callback;
+      bukaModal('modal-pin-global');
+  }
+  
+  // REVISI: Otoritas menggunakan Password (Simulasi untuk GAS)
+  function eksekusiPinGlobal() {
+      let pass = document.getElementById('input-pin-global').value;
+      if(pass !== "") {
+          tutupModal('modal-pin-global');
+          if(pendingAction) pendingAction();
+      } else {
+          alert("⛔ Password tidak boleh kosong!");
+      }
+  }
 
-// ==========================================
-// 10 MENU LENGKAP WMS
-// ==========================================
-const APP_MENUS = [
-    { id: 'dashboard', title: 'Dashboard Utama', icon: 'layout-dashboard', url: 'menu.html' },
-    { isDivider: true, title: 'INBOUND' },
-    { id: 'stbj', title: 'Scan STBJ', icon: 'shield-check', url: 'stbj.html' },
-    { id: 'hasil_stbj', title: 'Hasil STBJ', icon: 'clipboard-list', url: 'hasil_stbj.html' },
-    { id: 'langsir', title: 'Langsir Gudang', icon: 'log-in', url: 'langsir.html' },
-    { id: 'riwayat_langsir', title: 'Riwayat Langsir', icon: 'history', url: 'riwayat_langsir.html' },
-    { isDivider: true, title: 'INVENTORY' },
-    { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers', url: 'kartu_stok.html' },
-    { id: 'ganti_customer', title: 'Table Ganti Customer', icon: 'user-cog', url: 'ganti_customer.html' },
-    { id: 'req_konversi', title: 'Tabel Request Konversi', icon: 'replace', url: 'req_konversi.html' },
-    { isDivider: true, title: 'MUTASI' },
-    { id: 'stok_nonaktif', title: 'Stok Nonaktif', icon: 'package-x', url: 'stok_nonaktif.html' },
-    { id: 'scan_pic', title: 'Scan PIC Area', icon: 'user-check', url: 'scan_pic.html' },
-    { id: 'riwayat_mutasi', title: 'Riwayat Konversi', icon: 'arrow-right-left', url: 'riwayat_konversi.html' },
-    { isDivider: true, title: 'OUTBOUND' },
-    { id: 'po', title: 'PO & Estimasi', icon: 'clipboard-check', url: 'po.html' },
-    { id: 'picking_list', title: 'Picking List', icon: 'clipboard-pen', url: 'picking_list.html' },
-    { id: 'keluar', title: 'Kirim / Keluar', icon: 'truck', url: 'keluar.html' },
-    { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' },
-    { isDivider: true, title: 'REPORTS' },
-    { id: 'reports', title: 'Laporan & Rekap', icon: 'bar-chart-3', url: 'reports.html' },
-    { isDivider: true, title: 'PRINT & OPNAME' },
-    { id: 'input_opname', title: 'Input Stok Opname', icon: 'clipboard-check', url: 'input_opname.html' },
-    { id: 'cetak_label', title: 'Cetak Label Barcode', icon: 'printer', url: 'cetak_label.html' },
-    { isDivider: true, title: 'CONFIG' },
-    { id: 'master_data', title: 'Master Data', icon: 'database', url: 'master_data.html' }
-];
+  function mulaiAplikasi() { document.getElementById('start-view').style.display = 'none'; document.getElementById('app-view').style.display = 'block'; pindahMenu('plafon'); }
+  function validasiPassword() { let pass = document.getElementById('input-admin-pass').value; if(pass === "12345") { tutupModal('modal-password'); document.getElementById('app-view').style.display = 'none'; document.getElementById('app-settings').style.display = 'flex'; document.getElementById('input-admin-pass').value = ''; } else { alert("Password Salah!"); } }
+  function tutupSettings() { document.getElementById('app-settings').style.display = 'none'; document.getElementById('app-view').style.display = 'block'; pindahMenu(currentMenu === 'p' ? 'plafon' : (currentMenu === 'l' ? 'lis' : 'wpc')); }
 
-// ==========================================
-// GLOBAL CSS & TABLE DESIGN SYSTEM
-// ==========================================
-const style = document.createElement('style');
-style.innerHTML = `
-    :root {
-        --tbl-hdr-bg: #0f172a;
-        --tbl-hdr-text: #ffffff;
-        --tbl-row-1: 255, 255, 255;
-        --tbl-row-2: 248, 250, 252;
-        --tbl-row-hover: 241, 245, 249;
-        --tbl-opacity: 1;
-        --tbl-border: #e2e8f0;
-    }
+  function pindahMenu(menu) {
+      if (menu === 'khusus' || menu === 'gudang') {
+          mintaPin("Akses Print " + (menu==='khusus'?"Khusus":"Gudang"), function() { jalankanPindahMenu(menu); });
+      } else {
+          jalankanPindahMenu(menu);
+      }
+  }
 
-    .hide-scrollbar::-webkit-scrollbar { display: none; } 
-    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    body > div.absolute.inset-0 { padding-top: 0 !important; position: relative !important; height: 100% !important; }
-    #app-sidebar { transition: width 0.3s ease, transform 0.3s ease; }
+  function jalankanPindahMenu(menu) {
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active')); 
+    document.getElementById('nav-' + menu).classList.add('active');
+    document.getElementById('template-plafon').style.display = 'none'; 
+    document.getElementById('template-lis').style.display = 'none'; 
+    document.getElementById('template-wpc').style.display = 'none'; 
+    document.getElementById('template-khusus').style.display = 'none'; 
+    document.getElementById('template-gudang').style.display = 'none'; 
+    document.getElementById('template-' + menu).style.display = 'block';
     
-    @media (min-width: 640px) {
-        #app-sidebar:not(.expanded) { width: 4.5rem !important; }
-        #app-sidebar:not(.expanded) .sidebar-text { display: none !important; }
-        #app-sidebar:not(.expanded) .sidebar-logo-text { display: none !important; }
-        #app-sidebar:not(.expanded) .sidebar-item { justify-content: center !important; padding: 0 !important; width: 3rem !important; margin: 0 auto !important; }
-        #app-sidebar:not(.expanded) .sidebar-divider { width: 2rem !important; margin: 0.5rem auto !important; }
-        
-        #app-sidebar.expanded { width: 16rem !important; }
-        #app-sidebar.expanded .sidebar-text { display: block !important; }
-        #app-sidebar.expanded .sidebar-logo-text { display: block !important; }
-        #app-sidebar.expanded .sidebar-item { justify-content: flex-start !important; padding: 0 1rem !important; width: 100% !important; }
-        #app-sidebar.expanded .sidebar-divider { width: 100% !important; padding: 0 1rem !important; text-align: left !important; background: transparent !important; height: auto !important; margin-top: 1rem !important; }
-        #app-sidebar.expanded #btn-expand-container { justify-content: flex-end !important; padding-right: 1rem !important; }
-    }
+    currentMenu = menu === 'plafon' ? 'p' : (menu === 'lis' ? 'l' : (menu === 'khusus' ? 'k' : (menu === 'gudang' ? 'g' : 'w')));
     
-    @media (max-width: 639px) {
-        #app-sidebar { width: 16rem !important; }
-        .sidebar-text { display: block !important; }
-        .sidebar-logo-text { display: block !important; }
-        .sidebar-item { justify-content: flex-start !important; padding: 0 1rem !important; width: 100% !important; }
-        .sidebar-divider { width: 100% !important; padding: 0 1rem !important; text-align: left !important; background: transparent !important; height: auto !important; margin-top: 1rem !important; }
-    }
+    if(menu === 'plafon' && !isPlafonInit) { initPlafon(); isPlafonInit = true; } 
+    else if(menu === 'lis' && !isLisInit) { initLis(); isLisInit = true; }
+    else if(menu === 'khusus' && !isKhususInit) { initKhusus(); isKhususInit = true; }
+    else if(menu === 'gudang' && !isGudangInit) { initGudang(); isGudangInit = true; }
+  }
 
-    .sidebar-item { position: relative; }
-    .sidebar-tooltip {
-        visibility: hidden; opacity: 0; position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
-        margin-left: 10px; background-color: #1e293b; color: white; padding: 6px 12px; border-radius: 6px;
-        font-size: 12px; font-weight: bold; white-space: nowrap; z-index: 100; transition: all 0.2s ease;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); pointer-events: none;
-    }
-    #app-sidebar:not(.expanded) .sidebar-item:hover .sidebar-tooltip { visibility: visible; opacity: 1; margin-left: 15px; }
+  window.initGudang = function() {
+      let tglEl = document.getElementById('g-tgl');
+      if(tglEl) tglEl.valueAsDate = new Date();
+      
+      if(dataPlafon && dataPlafon.mesin) {
+          let selM = document.getElementById('g-mesin');
+          if(selM) {
+              selM.innerHTML = '<option value="">Pilih...</option>';
+              dataPlafon.mesin.forEach(x => selM.add(new Option(x.nama, x.nama)));
+          }
+          let selS = document.getElementById('g-shift');
+          if(selS) {
+              selS.innerHTML = '<option value="">Pilih...</option>';
+              dataPlafon.shift.forEach(x => selS.add(new Option(x.nama, x.nama)));
+          }
+      }
+      if(window.loadSetDefault) window.loadSetDefault('g');
+      if(window.initKeyboardGlobal) window.initKeyboardGlobal();
+  };
 
-    /* GLOBAL TABLE DESIGN CLASSES */
-    .hdr-std { 
-        background-color: var(--tbl-hdr-bg) !important; 
-        color: var(--tbl-hdr-text) !important; 
-        padding: 0.875rem 1rem !important; 
-        font-size: 0.75rem !important; 
-        font-weight: 600 !important; 
-        text-transform: uppercase !important; 
-        letter-spacing: 0.05em !important; 
-        white-space: nowrap !important; 
-        position: sticky !important; 
-        top: 0 !important; 
-        z-index: 20 !important; 
-        border-bottom: 2px solid rgba(0,0,0,0.2) !important; 
-        border-right: 1px solid rgba(255,255,255,0.1) !important; 
-    }
-    .hdr-std:last-child { border-right: none !important; }
-    
-    table { border-collapse: separate; border-spacing: 0; }
-    td { border-right: 1px solid var(--tbl-border) !important; border-bottom: 1px solid var(--tbl-border) !important; }
-    td:last-child { border-right: none !important; } 
+  window.filterList = function(iId, uId) {
+      let el = document.getElementById(iId);
+      if(!el) return;
+      let f = el.value.toUpperCase(); 
+      let li = document.getElementById(uId).getElementsByTagName('li'); 
+      for(let i=0; i<li.length; i++){ 
+          li[i].style.display = ((li[i].textContent||li[i].innerText).toUpperCase().indexOf(f) > -1) ? "" : "none"; 
+      } 
+  };
 
-    .stripe-1 td { background-color: rgba(var(--tbl-row-1), var(--tbl-opacity)) !important; transition: background-color 0.2s ease; }
-    .stripe-2 td { background-color: rgba(var(--tbl-row-2), var(--tbl-opacity)) !important; transition: background-color 0.2s ease; }
-    
-    body:not(.disable-hover) .stripe-1:hover td, 
-    body:not(.disable-hover) .stripe-2:hover td, 
-    body:not(.disable-hover) tr.text-row:hover td,
-    body:not(.disable-hover) tr.r-row:hover td { background-color: rgba(var(--tbl-row-hover), 1) !important; }
-    
-    tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
+  function saveSetDefault(baseM) { 
+      let configFront = { pos: stateGlobal[baseM].pos, font: stateGlobal[baseM].font, gap: stateGlobal[baseM].gap, zoom: stateGlobal[baseM].zoom, vis: stateGlobal[baseM].vis, kertas: stateGlobal[baseM].kertas, wrap: stateGlobal[baseM].wrap, linkFont: stateGlobal[baseM].linkFont }; 
+      let configBack = { pos: stateGlobal[baseM+'_back'].pos, font: stateGlobal[baseM+'_back'].font, gap: stateGlobal[baseM+'_back'].gap, vis: stateGlobal[baseM+'_back'].vis, wrap: stateGlobal[baseM+'_back'].wrap, linkFont: stateGlobal[baseM+'_back'].linkFont };
+      
+      localStorage.setItem('defaultLabel_' + baseM, JSON.stringify({front: configFront, back: configBack})); 
+      alert("✅ Pengaturan (Posisi, Lebar Teks, Hide/Unhide, & Ukuran Kertas) berhasil disimpan sebagai Default Baru!"); 
+  }
+  
+  function loadSetDefault(baseM) { 
+      let saved = localStorage.getItem('defaultLabel_' + baseM); 
+      if(saved) { 
+          try { 
+              let parsed = JSON.parse(saved); 
+              let configFront = parsed.front || parsed;
+              let configBack = parsed.back || null;
+              
+              if(configFront.wrap) stateGlobal[baseM].wrap = configFront.wrap;
+              if(configFront.vis) stateGlobal[baseM].vis = configFront.vis;
+              if(configFront.linkFont !== undefined) stateGlobal[baseM].linkFont = configFront.linkFont;
+              
+              if(configFront.kertas) {
+                  stateGlobal[baseM].kertas = configFront.kertas;
+                  let cv = document.getElementById(baseM+'-label-canvas');
+                  let cvBack = document.getElementById(baseM+'-label-canvas-back');
+                  let sel = document.getElementById(baseM+'-kertas-select');
+                  let cf = document.getElementById(baseM+'-custom-kertas-form');
+                  if(cv) { cv.style.width = configFront.kertas.w + 'mm'; cv.style.height = configFront.kertas.h + 'mm'; }
+                  if(cvBack) { cvBack.style.width = configFront.kertas.w + 'mm'; cvBack.style.height = configFront.kertas.h + 'mm'; }
+                  if(sel) {
+                      let optExist = Array.from(sel.options).some(o => o.value === configFront.kertas.tipe);
+                      if(!optExist && configFront.kertas.tipe === '100x50') sel.add(new Option("100 x 50 mm", "100x50"), sel.options[0]);
+                      sel.value = configFront.kertas.tipe;
+                  }
+                  if(configFront.kertas.tipe === 'custom' && cf) {
+                      cf.style.display = 'flex';
+                      let cw = document.getElementById(baseM+'-custom-w'); if(cw) cw.value = configFront.kertas.w;
+                      let ch = document.getElementById(baseM+'-custom-h'); if(ch) ch.value = configFront.kertas.h;
+                  } else if(cf) {
+                      cf.style.display = 'none';
+                  }
+              }
 
-    /* FREEZE PANE (STICKY COLUMN) CSS */
-    .sticky-col { position: sticky !important; left: 0 !important; z-index: 30 !important; }
-    th.sticky-col { z-index: 40 !important; background-color: var(--tbl-hdr-bg) !important; }
-    
-    .stripe-1 td.sticky-col { background-color: rgb(var(--tbl-row-1)) !important; }
-    .stripe-2 td.sticky-col { background-color: rgb(var(--tbl-row-2)) !important; }
-    body:not(.disable-hover) tr.text-row:hover td.sticky-col,
-    body:not(.disable-hover) tr.r-row:hover td.sticky-col { background-color: rgb(var(--tbl-row-hover)) !important; }
-    tr.selected-row td.sticky-col { background-color: #ccfbf1 !important; }
-    
-    /* Custom Range Slider */
-    input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #4f46e5; cursor: pointer; margin-top: -6px; }
-    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #cbd5e1; border-radius: 2px; }
-`;
-document.head.appendChild(style);
+              stateGlobal[baseM].pos = configFront.pos; 
+              stateGlobal[baseM].gap = configFront.gap; 
+              
+              if(configFront.font) {
+                  if(configFront.font.nama_shading !== undefined) {
+                      stateGlobal[baseM].font.nama = configFront.font.nama_shading;
+                      stateGlobal[baseM].font.shading = configFront.font.nama_shading;
+                  } else {
+                      stateGlobal[baseM].font.nama = configFront.font.nama || 16;
+                      stateGlobal[baseM].font.shading = configFront.font.shading || 16;
+                  }
+                  stateGlobal[baseM].font.barcode = configFront.font.barcode || 8;
+                  stateGlobal[baseM].font.info = configFront.font.info || 6;
+              }
 
-// LOAD PREFERENCES
-const THEMES = {
-    row: {
-        gray: { r1: '255, 255, 255', r2: '248, 250, 252' },
-        blue: { r1: '255, 255, 255', r2: '239, 246, 255' },
-        green: { r1: '255, 255, 255', r2: '240, 253, 244' },
-        amber: { r1: '255, 255, 255', r2: '255, 251, 235' },
-        pink: { r1: '255, 255, 255', r2: '253, 242, 248' }
-    },
-    hover: {
-        gray: '241, 245, 249',
-        blue: '219, 234, 254',
-        green: '220, 252, 231',
-        amber: '254, 243, 199',
-        pink: '252, 231, 243'
-    }
-};
+              Object.keys(configFront.pos).forEach(key => window.updateTransform(baseM, key)); 
+              let fBarcode = document.getElementById(baseM+'-l-barcode-text'); if(fBarcode) fBarcode.style.fontSize = stateGlobal[baseM].font.barcode + "px"; 
+              let fNama = document.getElementById(baseM+'-l-nama-item'); if(fNama) fNama.style.fontSize = stateGlobal[baseM].font.nama + "px"; 
+              let fShade = document.getElementById(baseM+'-l-shading'); if(fShade) fShade.style.fontSize = stateGlobal[baseM].font.shading + "px"; 
+              let fInfo = document.getElementById(baseM+'-l-info-bawah'); if(fInfo) fInfo.style.fontSize = stateGlobal[baseM].font.info + "px"; 
+              let gInfo = document.getElementById(baseM+'-l-info-bawah'); if(gInfo) gInfo.style.gap = configFront.gap.info + "px"; 
+              
+              if(configBack && stateGlobal[baseM+'_back']) {
+                  stateGlobal[baseM+'_back'].pos = configBack.pos;
+                  stateGlobal[baseM+'_back'].gap = configBack.gap;
+                  stateGlobal[baseM+'_back'].font = configBack.font;
+                  stateGlobal[baseM+'_back'].wrap = configBack.wrap;
+                  if(configBack.vis) stateGlobal[baseM+'_back'].vis = configBack.vis;
+                  if(configBack.linkFont !== undefined) stateGlobal[baseM+'_back'].linkFont = configBack.linkFont;
+                  
+                  Object.keys(configBack.pos).forEach(key => window.updateTransform(baseM+'_back', key)); 
+                  let fNamaB = document.getElementById(baseM+'-l-nama-item-back'); if(fNamaB) fNamaB.style.fontSize = stateGlobal[baseM+'_back'].font.nama + "px"; 
+                  let fShadeB = document.getElementById(baseM+'-l-shading-back'); if(fShadeB) fShadeB.style.fontSize = stateGlobal[baseM+'_back'].font.shading + "px"; 
+                  let fInfoB = document.getElementById(baseM+'-l-info-bawah-back'); if(fInfoB) fInfoB.style.fontSize = stateGlobal[baseM+'_back'].font.info + "px"; 
+                  let gInfoB = document.getElementById(baseM+'-l-info-bawah-back'); if(gInfoB) gInfoB.style.gap = configBack.gap.info + "px"; 
+              }
+              
+              if(configFront.vis) { 
+                  Object.keys(configFront.vis).forEach(k => { 
+                      let cb = document.getElementById(baseM+'-cb-'+k); 
+                      if(cb) { 
+                          cb.checked = configFront.vis[k]; 
+                          if(k === 'wrap-barcode') toggleWrap(baseM, 'barcode-text', configFront.vis[k]); 
+                          else if(k === 'wrap-nama') toggleWrap(baseM, 'nama-item', configFront.vis[k]); 
+                          else if(k === 'link-font') stateGlobal[baseM].linkFont = configFront.vis[k];
+                          else { 
+                              if (baseM === 'g') {
+                                  window.toggleVisGudang(k, configFront.vis[k]);
+                              } else {
+                                  let tId = (k === 'qr') ? baseM+'-qr-container' : (k === 'barcode') ? baseM+'-l-barcode-text' : (k === 'nama') ? baseM+'-l-nama-item' : (k === 'grade') ? baseM+'-l-grade-disp' : (k === 'isi') ? baseM+'-l-isi' : baseM+'-l-'+k; 
+                                  toggleVis(tId, configFront.vis[k]); 
+                                  let tIdBack = tId + '-back';
+                                  if(document.getElementById(tIdBack)) toggleVis(tIdBack, configFront.vis[k]);
+                              }
+                          } 
+                      } 
+                  }); 
+              } 
+              if(configFront.zoom) { 
+                  stateGlobal[baseM].zoom = configFront.zoom; 
+                  let wrapper = document.getElementById(baseM + '-labels-wrapper');
+                  if(wrapper) wrapper.style.transform = `scale(${configFront.zoom})`;
+                  document.getElementById(baseM+'-zoom-text').innerText = Math.round(configFront.zoom * 100) + "%"; 
+              } 
+              
+              window.switchSideSettings(baseM);
+          } catch(e) {} 
+      } 
+  }
 
-let tempDesign = JSON.parse(localStorage.getItem('wms_table_design')) || {
-    hdrBg: '#0f172a', hdrText: '#ffffff', rowTheme: 'gray', hoverTheme: 'gray', opacity: 100, isZebra: true, isHover: true
-};
+  function simpanSnapshotHistory(baseM) { 
+      let snap = {
+          front: { pos: JSON.parse(JSON.stringify(stateGlobal[baseM].pos)), gap: JSON.parse(JSON.stringify(stateGlobal[baseM].gap)) }
+      };
+      if(stateGlobal[baseM+'_back']) {
+          snap.back = { pos: JSON.parse(JSON.stringify(stateGlobal[baseM+'_back'].pos)), gap: JSON.parse(JSON.stringify(stateGlobal[baseM+'_back'].gap)) };
+      }
+      historyStack[baseM].undo.push(snap); 
+      historyStack[baseM].redo = []; 
+  }
+  function eksekusiUndo(baseM) { 
+      if (historyStack[baseM].undo.length === 0) return; 
+      
+      let currentSnap = {
+          front: { pos: JSON.parse(JSON.stringify(stateGlobal[baseM].pos)), gap: JSON.parse(JSON.stringify(stateGlobal[baseM].gap)) }
+      };
+      if(stateGlobal[baseM+'_back']) {
+          currentSnap.back = { pos: JSON.parse(JSON.stringify(stateGlobal[baseM+'_back'].pos)), gap: JSON.parse(JSON.stringify(stateGlobal[baseM+'_back'].gap)) };
+      }
+      historyStack[baseM].redo.push(currentSnap); 
+      
+      let previous = historyStack[baseM].undo.pop(); 
+      stateGlobal[baseM].pos = previous.front.pos; 
+      stateGlobal[baseM].gap = previous.front.gap; 
+      Object.keys(stateGlobal[baseM].pos).forEach(key => window.updateTransform(baseM, key)); 
+      
+      if(previous.back && stateGlobal[baseM+'_back']) {
+          stateGlobal[baseM+'_back'].pos = previous.back.pos; 
+          stateGlobal[baseM+'_back'].gap = previous.back.gap; 
+          Object.keys(stateGlobal[baseM+'_back'].pos).forEach(key => window.updateTransform(baseM+'_back', key)); 
+      }
+  }
+  function eksekusiRedo(baseM) { 
+      if (historyStack[baseM].redo.length === 0) return; 
+      
+      let currentSnap = {
+          front: { pos: JSON.parse(JSON.stringify(stateGlobal[baseM].pos)), gap: JSON.parse(JSON.stringify(stateGlobal[baseM].gap)) }
+      };
+      if(stateGlobal[baseM+'_back']) {
+          currentSnap.back = { pos: JSON.parse(JSON.stringify(stateGlobal[baseM+'_back'].pos)), gap: JSON.parse(JSON.stringify(stateGlobal[baseM+'_back'].gap)) };
+      }
+      historyStack[baseM].undo.push(currentSnap); 
+      
+      let next = historyStack[baseM].redo.pop(); 
+      stateGlobal[baseM].pos = next.front.pos; 
+      stateGlobal[baseM].gap = next.front.gap; 
+      Object.keys(stateGlobal[baseM].pos).forEach(key => window.updateTransform(baseM, key)); 
+      
+      if(next.back && stateGlobal[baseM+'_back']) {
+          stateGlobal[baseM+'_back'].pos = next.back.pos; 
+          stateGlobal[baseM+'_back'].gap = next.back.gap; 
+          Object.keys(stateGlobal[baseM+'_back'].pos).forEach(key => window.updateTransform(baseM+'_back', key)); 
+      }
+  }
+  
+  function ubahTipeKertas(m) { 
+      let select = document.getElementById(m + '-kertas-select'); 
+      let customForm = document.getElementById(m + '-custom-kertas-form'); 
+      let w = 50.8, h = 27.9;
+      
+      if (select.value === 'custom') { 
+          customForm.style.display = 'flex'; 
+          w = parseFloat(document.getElementById(m + '-custom-w').value) || 50.8;
+          h = parseFloat(document.getElementById(m + '-custom-h').value) || 27.9;
+          stateGlobal[m].kertas.tipe = 'custom'; 
+      } else if (select.value === '100x50') { 
+          customForm.style.display = 'none'; 
+          stateGlobal[m].kertas.tipe = '100x50'; w = 100; h = 50; 
+      } else { 
+          customForm.style.display = 'none'; 
+          stateGlobal[m].kertas.tipe = '50.8x27.9'; w = 50.8; h = 27.9; 
+      } 
+      
+      stateGlobal[m].kertas.w = w; stateGlobal[m].kertas.h = h;
+      
+      if (m === 'g') {
+          document.querySelectorAll('.g-el-canvas').forEach(c => { c.style.width = w + 'mm'; c.style.height = h + 'mm'; });
+      } else {
+          let canvas = document.getElementById(m + '-label-canvas'); 
+          let canvasBack = document.getElementById(m + '-label-canvas-back'); 
+          if(canvas) { canvas.style.width = w + 'mm'; canvas.style.height = h + 'mm'; }
+          if(canvasBack) { canvasBack.style.width = w + 'mm'; canvasBack.style.height = h + 'mm'; }
+      }
+  }
+  
+  function updateKertasCustomDimensi(m) { 
+      let wVal = parseFloat(document.getElementById(m + '-custom-w').value) || 50.8; 
+      let hVal = parseFloat(document.getElementById(m + '-custom-h').value) || 27.9; 
+      stateGlobal[m].kertas.tipe = 'custom'; stateGlobal[m].kertas.w = wVal; stateGlobal[m].kertas.h = hVal; 
+      
+      if (m === 'g') {
+          document.querySelectorAll('.g-el-canvas').forEach(c => { c.style.width = wVal + 'mm'; c.style.height = hVal + 'mm'; });
+      } else {
+          let canvas = document.getElementById(m + '-label-canvas'); 
+          let canvasBack = document.getElementById(m + '-label-canvas-back'); 
+          if(canvas) { canvas.style.width = wVal + 'mm'; canvas.style.height = hVal + 'mm'; } 
+          if(canvasBack) { canvasBack.style.width = wVal + 'mm'; canvasBack.style.height = hVal + 'mm'; } 
+      }
+  }
 
-function applyTableDesign() {
-    document.documentElement.style.setProperty('--tbl-hdr-bg', tempDesign.hdrBg);
-    document.documentElement.style.setProperty('--tbl-hdr-text', tempDesign.hdrText);
-    
-    const rTheme = THEMES.row[tempDesign.rowTheme] || THEMES.row.gray;
-    document.documentElement.style.setProperty('--tbl-row-1', rTheme.r1);
-    document.documentElement.style.setProperty('--tbl-row-2', tempDesign.isZebra ? rTheme.r2 : rTheme.r1);
-    
-    const hTheme = THEMES.hover[tempDesign.hoverTheme] || THEMES.hover.gray;
-    document.documentElement.style.setProperty('--tbl-row-hover', hTheme);
-    
-    document.documentElement.style.setProperty('--tbl-opacity', tempDesign.opacity / 100);
+  function bukaModal(id) { document.getElementById(id).style.display = 'block'; }
+  function tutupModal(id) { document.getElementById(id).style.display = 'none'; }
+  function toggleVis(id, vis) { let el = document.getElementById(id); if(el) { if(vis) el.classList.remove('hidden-element'); else el.classList.add('hidden-element'); } }
+  function togglePanelBody(bodyId, iconId) { let body = document.getElementById(bodyId); let icon = document.getElementById(iconId); if(body.style.display === 'none') { body.style.display = 'block'; icon.innerText = '▼'; } else { body.style.display = 'none'; icon.innerText = '◀'; } }
+  
+  window.switchSideSettings = function(baseM) {
+      let side = document.getElementById(baseM + '-side-select').value;
+      let m = side === 'back' ? baseM + '_back' : baseM;
+      
+      let qrRow = document.getElementById(baseM + '-row-qr');
+      let bcRow = document.getElementById(baseM + '-row-barcode');
+      let bcWrapRow = document.getElementById(baseM + '-row-wrap-barcode');
+      
+      if(side === 'back') {
+          if(qrRow) qrRow.style.display = 'none';
+          if(bcRow) bcRow.style.display = 'none';
+          if(bcWrapRow) bcWrapRow.style.display = 'none';
+      } else {
+          if(qrRow) qrRow.style.display = 'inline-flex';
+          if(bcRow) bcRow.style.display = 'inline-flex';
+          if(bcWrapRow) bcWrapRow.style.display = 'inline-flex';
+      }
 
-    const runToggle = () => {
-        if(tempDesign.isHover === false) {
-            document.body.classList.add('disable-hover');
-        } else {
-            document.body.classList.remove('disable-hover');
-        }
-    };
+      let keys = ['nama', 'shading', 'ukuran', 'mesin', 'shift', 'tanggal', 'po', 'dus', 'isi'];
+      if(side === 'front') keys.push('qr', 'barcode');
+      
+      keys.forEach(k => {
+          let cb = document.getElementById(baseM + '-cb-' + k);
+          if(cb && stateGlobal[m].vis) cb.checked = stateGlobal[m].vis[k];
+      });
 
-    if(document.body) {
-        runToggle();
-    } else {
-        document.addEventListener('DOMContentLoaded', runToggle);
-    }
-}
-applyTableDesign();
+      let cbWrapNama = document.getElementById(baseM + '-cb-wrap-nama');
+      if(cbWrapNama) cbWrapNama.checked = stateGlobal[m].wrap.nama_cb !== false; 
+      
+      if(side === 'front') {
+          let cbWrapBc = document.getElementById(baseM + '-cb-wrap-barcode');
+          if(cbWrapBc) cbWrapBc.checked = stateGlobal[m].wrap.barcode_cb !== false;
+      }
 
-async function initModernLayout(pageMeta) {
-    const sessionString = localStorage.getItem('user_session');
-    if (!sessionString) return; 
-    
-    const user = JSON.parse(sessionString);
-    const initial = user.username.charAt(0).toUpperCase();
-    
-    const isExpanded = localStorage.getItem('sidebar_expanded') === 'true';
-    const expandedClass = isExpanded ? 'expanded' : '';
-    const expandIcon = isExpanded ? 'chevron-left' : 'chevron-right';
+      let cbLink = document.getElementById(baseM + '-cb-link-font');
+      if(cbLink) cbLink.checked = stateGlobal[m].linkFont;
+  };
 
-    let allowedMenus = [];
-    try {
-        const { data } = await db.from('menu_access').select('*');
-        if(data) allowedMenus = data;
-    } catch(e) { console.error("Gagal load menu access", e); }
+  window.handleVisChange = function(baseM, key, isChecked, forceSide) {
+      let side = forceSide || document.getElementById(baseM + '-side-select').value;
+      let m = side === 'back' ? baseM + '_back' : baseM;
+      let sfx = side === 'back' ? '-back' : '';
+      
+      if(stateGlobal[m] && stateGlobal[m].vis) stateGlobal[m].vis[key] = isChecked;
+      
+      if (baseM === 'g') {
+          let els = document.querySelectorAll('.g-el-' + key + sfx);
+          els.forEach(el => {
+              if(isChecked) el.classList.remove('hidden-element');
+              else el.classList.add('hidden-element');
+          });
+      } else {
+          let tId = (key === 'qr') ? baseM+'-qr-container'+sfx : (key === 'barcode') ? baseM+'-l-barcode-text'+sfx : (key === 'nama') ? baseM+'-l-nama-item'+sfx : (key === 'grade') ? baseM+'-l-grade-disp'+sfx : (key === 'isi') ? baseM+'-l-isi'+sfx : baseM+'-l-'+key+sfx; 
+          let el = document.getElementById(tId);
+          if(el) {
+              if(isChecked) el.classList.remove('hidden-element');
+              else el.classList.add('hidden-element');
+          }
+      }
+  };
 
-    const filteredMenus = APP_MENUS.filter(menu => {
-        if(menu.isDivider) return true; 
-        const rule = allowedMenus.find(r => r.menu_id === menu.id);
-        if(!rule) return true; 
-        const allowedUsers = rule.allowed_users ? rule.allowed_users.split(',') : [];
-        return allowedUsers.includes(user.username);
-    });
+  window.handleWrapChange = function(baseM, key, isChecked, forceSide) {
+      let side = forceSide || document.getElementById(baseM + '-side-select').value;
+      let m = side === 'back' ? baseM + '_back' : baseM;
+      let sfx = side === 'back' ? '-back' : '';
+      
+      stateGlobal[m].wrap[key + '_cb'] = isChecked;
+      let val = stateGlobal[m].wrap[key];
+      let elId = key === 'nama' ? 'nama-item' : 'barcode-text';
+      
+      if (baseM === 'g') {
+          let els = document.querySelectorAll('.g-el-' + key + sfx);
+          els.forEach(el => {
+              if(isChecked) { el.style.whiteSpace = 'normal'; el.style.wordWrap = 'break-word'; el.style.maxWidth = val + (key==='nama'?'mm':'px'); } 
+              else { el.style.whiteSpace = 'nowrap'; el.style.maxWidth = 'none'; } 
+          });
+      } else {
+          let el = document.getElementById(baseM + '-l-' + elId + sfx); 
+          if(el) { 
+              if(isChecked) { el.style.whiteSpace = 'normal'; el.style.wordWrap = 'break-word'; el.style.maxWidth = val + (key==='nama'?'mm':'px'); } 
+              else { el.style.whiteSpace = 'nowrap'; el.style.maxWidth = 'none'; } 
+          } 
+      }
+  };
 
-    const finalMenus = [];
-    for(let i=0; i<filteredMenus.length; i++) {
-        const curr = filteredMenus[i];
-        if(curr.isDivider) {
-            if(i === filteredMenus.length - 1) continue; 
-            if(filteredMenus[i+1].isDivider) continue; 
-        }
-        finalMenus.push(curr);
-    }
+  window.handleLinkFontChange = function(baseM, isChecked) {
+      let side = document.getElementById(baseM + '-side-select').value;
+      let m = side === 'back' ? baseM + '_back' : baseM;
+      stateGlobal[m].linkFont = isChecked;
+  };
 
-    const originalNodes = Array.from(document.body.childNodes);
-    document.body.innerHTML = ''; 
+  window.resetDefaultVisibility = function(baseM) { 
+      let defaultVisFront = { qr: true, barcode: true, nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
+      let defaultVisBack = { nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
+      
+      stateGlobal[baseM].vis = JSON.parse(JSON.stringify(defaultVisFront));
+      if(stateGlobal[baseM+'_back']) stateGlobal[baseM+'_back'].vis = JSON.parse(JSON.stringify(defaultVisBack));
+      
+      stateGlobal[baseM].wrap = { nama: 33, barcode: 100, nama_cb: true, barcode_cb: true };
+      if(stateGlobal[baseM+'_back']) stateGlobal[baseM+'_back'].wrap = { nama: 45, nama_cb: true };
+      
+      stateGlobal[baseM].linkFont = true;
+      if(stateGlobal[baseM+'_back']) stateGlobal[baseM+'_back'].linkFont = true;
+      
+      Object.keys(defaultVisFront).forEach(k => window.handleVisChange(baseM, k, defaultVisFront[k], 'front'));
+      Object.keys(defaultVisBack).forEach(k => window.handleVisChange(baseM, k, defaultVisBack[k], 'back'));
+      
+      window.handleWrapChange(baseM, 'nama', true, 'front');
+      window.handleWrapChange(baseM, 'barcode', true, 'front');
+      window.handleWrapChange(baseM, 'nama', true, 'back');
+      
+      window.switchSideSettings(baseM);
+  };
+  
+  function ubahZoom(m, step) { 
+      stateGlobal[m].zoom += step; 
+      if(stateGlobal[m].zoom < 0.5) stateGlobal[m].zoom = 0.5; 
+      if(stateGlobal[m].zoom > 6.0) stateGlobal[m].zoom = 6.0; 
+      
+      let wrapper = document.getElementById(m + '-labels-wrapper');
+      if(wrapper) wrapper.style.transform = `scale(${stateGlobal[m].zoom})`;
+      
+      document.getElementById(m+'-zoom-text').innerText = Math.round(stateGlobal[m].zoom * 100) + "%"; 
+  }
+  
+  function toggleAccordion(id) { let c = document.getElementById(id); c.style.display = (c.style.display === "block") ? "none" : "block"; }
+  
+  window.startDrag = function(m, b, event) { 
+      event.preventDefault(); 
+      
+      let els = [];
+      if (m === 'g' || m === 'g_back') {
+          let sfx = m === 'g_back' ? '-back' : '';
+          els = Array.from(document.querySelectorAll('.g-el-' + b + sfx));
+      } else {
+          let map = window.getElMap(m); 
+          els = [document.getElementById(map[b])];
+      }
+      
+      if(event.ctrlKey) { 
+          if(activeSelection.elements.includes(b)) { 
+              activeSelection.elements = activeSelection.elements.filter(e => e !== b); 
+              els.forEach(el => el.classList.remove('active-edit')); 
+          } else { 
+              activeSelection.elements.push(b); 
+              els.forEach(el => el.classList.add('active-edit')); 
+              activeSelection.m = m; 
+          } 
+      } else { 
+          if(!activeSelection.elements.includes(b)) { 
+              document.querySelectorAll('.click-edit').forEach(e => e.classList.remove('active-edit')); 
+              activeSelection.elements = [b]; 
+              activeSelection.m = m; 
+              els.forEach(el => el.classList.add('active-edit')); 
+          } 
+      } 
+      
+      let baseM = m.split('_')[0];
+      let side = m.endsWith('_back') ? 'back' : 'front';
+      let selectEl = document.getElementById(baseM + '-side-select');
+      if(selectEl && selectEl.value !== side) {
+          selectEl.value = side;
+          window.switchSideSettings(baseM);
+      }
 
-    const layoutWrapper = document.createElement('div');
-    layoutWrapper.className = 'flex h-[100dvh] bg-slate-100 overflow-hidden font-sans w-full';
+      showContextPanel(baseM); 
+      simpanSnapshotHistory(baseM); 
+      isDragging = true; dragStartX = event.clientX; dragStartY = event.clientY; dragInitialPos = {}; 
+      
+      activeSelection.elements.forEach(elKey => { dragInitialPos[elKey] = { x: stateGlobal[m].pos[elKey].x, y: stateGlobal[m].pos[elKey].y }; }); 
+      event.stopPropagation(); 
+  }
+  
+  document.addEventListener('mousemove', function(e) { if(!isDragging || activeSelection.elements.length === 0) return; let m = activeSelection.m; let baseM = m.split('_')[0]; let zoom = stateGlobal[baseM].zoom; let dx = (e.clientX - dragStartX) / zoom; let dy = (e.clientY - dragStartY) / zoom; if (e.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) dy = 0; else dx = 0; } activeSelection.elements.forEach(elKey => { if(stateGlobal[m].pos[elKey]) { stateGlobal[m].pos[elKey].x = dragInitialPos[elKey].x + dx; stateGlobal[m].pos[elKey].y = dragInitialPos[elKey].y + dy; window.updateTransform(m, elKey); } }); });
+  document.addEventListener('mouseup', function() { isDragging = false; });
+  document.addEventListener('mousedown', function(e) { if(e.target.closest('.click-edit') || e.target.closest('#p-context-panel') || e.target.closest('#l-context-panel') || e.target.closest('#k-context-panel') || e.target.closest('#g-context-panel') || e.target.closest('.zoom-controls') || e.target.closest('.btn-secondary') || e.target.closest('.checkbox-panel') || e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return; document.querySelectorAll('.click-edit').forEach(el => el.classList.remove('active-edit')); activeSelection = { m: null, elements: [] }; let pCtx = document.getElementById('p-context-panel'); if(pCtx) pCtx.style.display = 'none'; let lCtx = document.getElementById('l-context-panel'); if(lCtx) lCtx.style.display = 'none'; let kCtx = document.getElementById('k-context-panel'); if(kCtx) kCtx.style.display = 'none'; let gCtx = document.getElementById('g-context-panel'); if(gCtx) gCtx.style.display = 'none'; });
 
-    let sidebarHTML = `
-        <aside id="app-sidebar" class="fixed sm:relative inset-y-0 left-0 z-[70] sm:z-40 bg-[#0f172a] flex flex-col py-4 transform -translate-x-full sm:translate-x-0 shadow-2xl sm:shadow-none border-r border-slate-800 shrink-0 ${expandedClass}">
-            <a href="menu.html" class="mb-6 flex items-center justify-center gap-3 px-4 h-10 transition cursor-pointer overflow-hidden shrink-0">
-                <div class="bg-white p-1 rounded-lg shrink-0 flex items-center justify-center w-10 h-10 shadow-md">
-                    <img src="sunpevece.png" alt="Logo" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
-                </div>
-                <span class="sidebar-logo-text text-white font-black text-lg tracking-wider whitespace-nowrap">SUNPEVECE</span>
-            </a>
-            <div class="flex flex-col gap-2 w-full px-3 overflow-y-auto hide-scrollbar flex-1">
-    `;
-    
-    finalMenus.forEach(menu => {
-        if (menu.isDivider) { 
-            sidebarHTML += `<div class="sidebar-divider h-px bg-slate-700 my-1 text-[10px] font-black text-slate-400 uppercase tracking-widest overflow-hidden whitespace-nowrap"><span class="sidebar-text">${menu.title}</span></div>`; 
-        } else {
-            const isActive = pageMeta && menu.id === pageMeta.id;
-            const bgClass = isActive ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-white';
-            sidebarHTML += `
-                <a href="${menu.url}" data-title="${menu.title}" class="sidebar-item flex items-center h-10 rounded-xl transition-all cursor-pointer ${bgClass}">
-                    <i data-lucide="${menu.icon}" class="w-5 h-5 shrink-0 pointer-events-none"></i>
-                    <span class="sidebar-text ml-3 text-sm font-bold whitespace-nowrap pointer-events-none">${menu.title}</span>
-                </a>
-            `;
-        }
-    });
-    
-    sidebarHTML += `
-            </div>
-            <div id="btn-expand-container" class="mt-auto pt-4 px-3 w-full border-t border-slate-800 hidden sm:flex justify-center transition-all">
-                <button onclick="toggleSidebarExpand()" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition cursor-pointer bg-slate-900 border border-slate-700 shadow-sm">
-                    <i data-lucide="${expandIcon}" id="icon-expand-sidebar" class="w-5 h-5"></i>
-                </button>
-            </div>
-        </aside>
-        <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/60 z-[60] hidden backdrop-blur-sm transition-opacity sm:hidden"></div>
-    `;
+  function showContextPanel(baseM) { 
+      let m = activeSelection.m || baseM;
+      let ctxPanel = document.getElementById(baseM+'-context-panel'); if(!ctxPanel) return; 
+      let b = activeSelection.elements[activeSelection.elements.length - 1]; 
+      if(!b) { ctxPanel.style.display = 'none'; return; } 
+      ctxPanel.style.display = 'flex'; 
+      
+      let boxQr = document.getElementById(baseM+'-ctx-qr-box'); 
+      let boxFont = document.getElementById(baseM+'-ctx-font-box'); 
+      let boxGap = document.getElementById(baseM+'-ctx-gap-box'); 
+      let boxWrap = document.getElementById(baseM+'-ctx-wrap-box');
+      
+      if(boxQr) boxQr.style.display = 'none'; 
+      if(boxFont) boxFont.style.display = 'none'; 
+      if(boxGap) boxGap.style.display = 'none'; 
+      if(boxWrap) boxWrap.style.display = 'none'; 
+      
+      if (b === 'qr') { 
+          if(boxQr) {
+              boxQr.style.display = 'flex'; 
+              document.getElementById(baseM+'-ctx-skala-qr').value = Math.round(stateGlobal[m].pos.qr.s * 100); 
+              document.getElementById(baseM+'-ctx-val-qr').value = Math.round(stateGlobal[m].pos.qr.s * 100); 
+          }
+      } else if (b === 'barcode') { 
+          if(boxFont) {
+              boxFont.style.display = 'flex'; 
+              let f = document.getElementById(baseM+'-ctx-font'); f.min = 3; f.max = 80; f.value = stateGlobal[m].font.barcode; 
+              document.getElementById(baseM+'-ctx-val-font').value = stateGlobal[m].font.barcode; 
+          }
+          if(boxWrap) {
+              boxWrap.style.display = 'flex'; 
+              let w = document.getElementById(baseM+'-ctx-wrap'); w.min = 10; w.max = 150; w.value = stateGlobal[m].wrap.barcode; 
+              document.getElementById(baseM+'-ctx-val-wrap').value = stateGlobal[m].wrap.barcode;
+          }
+      } else if (['nama', 'shading'].includes(b)) { 
+          if(boxFont) {
+              boxFont.style.display = 'flex'; 
+              let currentFont = stateGlobal[m].font[b];
+              let f = document.getElementById(baseM+'-ctx-font'); f.min = 8; f.max = 80; f.value = currentFont; 
+              document.getElementById(baseM+'-ctx-val-font').value = currentFont; 
+          }
+          if (b === 'nama' && boxWrap) {
+              boxWrap.style.display = 'flex'; 
+              let w = document.getElementById(baseM+'-ctx-wrap'); w.min = 10; w.max = 150; w.value = stateGlobal[m].wrap.nama; 
+              document.getElementById(baseM+'-ctx-val-wrap').value = stateGlobal[m].wrap.nama;
+          }
+      } else { 
+          if(boxFont) {
+              boxFont.style.display = 'flex'; 
+              let f = document.getElementById(baseM+'-ctx-font'); f.min = 3; f.max = 80; f.value = stateGlobal[m].font.info; 
+              document.getElementById(baseM+'-ctx-val-font').value = stateGlobal[m].font.info; 
+          }
+          if(boxGap) {
+              boxGap.style.display = 'flex'; 
+              let g = document.getElementById(baseM+'-ctx-gap'); g.min = 0; g.max = 20; g.value = stateGlobal[m].gap.info; 
+              document.getElementById(baseM+'-ctx-val-gap').value = stateGlobal[m].gap.info; 
+          }
+      } 
+  }
+  
+  function inputManualContext(baseM, type, val) { 
+      let m = activeSelection.m || baseM;
+      simpanSnapshotHistory(baseM); 
+      let nVal = parseInt(val); 
+      let sliderId = `${baseM}-ctx-${type==='qr'?'skala-qr':type}`;
+      let slider = document.getElementById(sliderId); 
+      if(slider) { 
+          if(isNaN(nVal)) nVal = parseInt(slider.value); 
+          if(nVal < parseInt(slider.min)) nVal = parseInt(slider.min); 
+          if(nVal > parseInt(slider.max)) nVal = parseInt(slider.max); 
+          slider.value = nVal; 
+          document.getElementById(`${baseM}-ctx-val-${type}`).value = nVal; 
+          syncContext(baseM, type, nVal); 
+      } 
+  }
+  
+  function stepContextSlider(baseM, type, step) { 
+      let m = activeSelection.m || baseM;
+      if(type==='gap' || type==='wrap') simpanSnapshotHistory(baseM); 
+      let sliderId = `${baseM}-ctx-${type==='qr'?'skala-qr':type}`;
+      let slider = document.getElementById(sliderId); 
+      if(slider) { 
+          let nVal = parseInt(slider.value) + step; 
+          if(nVal >= slider.min && nVal <= slider.max) { 
+              slider.value = nVal; 
+              syncContext(baseM, type, nVal); 
+              document.getElementById(`${baseM}-ctx-val-${type}`).value = nVal; 
+          } 
+      } 
+  }
+  
+  function syncContext(baseM, type, value) { 
+      if(activeSelection.elements.length === 0) return; 
+      let m = activeSelection.m || baseM;
+      document.getElementById(`${baseM}-ctx-val-${type}`).value = value; 
+      
+      if (type === 'qr') { 
+          stateGlobal[m].pos.qr.s = value / 100; window.updateTransform(m, 'qr'); 
+      } else if (type === 'font') { 
+          activeSelection.elements.forEach(b => { 
+              if (b === 'barcode') { 
+                  stateGlobal[m].font.barcode = value; 
+                  if (m === 'g' || m === 'g_back') {
+                      let sfx = m === 'g_back' ? '-back' : '';
+                      document.querySelectorAll('.g-el-barcode' + sfx).forEach(el => el.style.fontSize = value + "px");
+                  } else {
+                      let sfx = m.endsWith('_back') ? '-back' : '';
+                      document.getElementById(baseM+'-l-barcode-text'+sfx).style.fontSize = value + "px"; 
+                  }
+              } 
+              else if (['nama', 'shading'].includes(b)) { 
+                  if (stateGlobal[m].linkFont) {
+                      stateGlobal[m].font.nama = value;
+                      stateGlobal[m].font.shading = value;
+                      if (m === 'g' || m === 'g_back') {
+                          let sfx = m === 'g_back' ? '-back' : '';
+                          document.querySelectorAll('.g-el-nama' + sfx).forEach(el => el.style.fontSize = value + "px");
+                          document.querySelectorAll('.g-el-shading' + sfx).forEach(el => el.style.fontSize = value + "px");
+                      } else {
+                          let sfx = m.endsWith('_back') ? '-back' : '';
+                          document.getElementById(baseM+'-l-nama-item'+sfx).style.fontSize = value + "px";
+                          document.getElementById(baseM+'-l-shading'+sfx).style.fontSize = value + "px";
+                      }
+                  } else {
+                      stateGlobal[m].font[b] = value;
+                      if (m === 'g' || m === 'g_back') {
+                          let sfx = m === 'g_back' ? '-back' : '';
+                          document.querySelectorAll('.g-el-' + b + sfx).forEach(el => el.style.fontSize = value + "px");
+                      } else {
+                          let sfx = m.endsWith('_back') ? '-back' : '';
+                          let elId = b === 'nama' ? baseM+'-l-nama-item'+sfx : baseM+'-l-shading'+sfx;
+                          document.getElementById(elId).style.fontSize = value + "px";
+                      }
+                  }
+              } 
+              else { 
+                  stateGlobal[m].font.info = value; 
+                  if (m === 'g' || m === 'g_back') {
+                      let sfx = m === 'g_back' ? '-back' : '';
+                      document.querySelectorAll('.g-el-' + b + sfx).forEach(el => el.style.fontSize = value + "px");
+                  } else {
+                      let sfx = m.endsWith('_back') ? '-back' : '';
+                      let map = window.getElMap(m); 
+                      let el = document.getElementById(map[b]); 
+                      if(el) el.style.fontSize = value + "px"; 
+                  }
+              } 
+          }); 
+      } else if (type === 'gap') { 
+          activeSelection.elements.forEach(b => { 
+              if (['ukuran','mesin','shift','tanggal','po','dus','isi'].includes(b)) { 
+                  stateGlobal[m].gap.info = value; 
+                  if (m === 'g' || m === 'g_back') {
+                      let sfx = m === 'g_back' ? '-back' : '';
+                      document.querySelectorAll('.g-el-gap-info' + sfx).forEach(el => el.style.gap = value + "px");
+                  } else {
+                      let sfx = m.endsWith('_back') ? '-back' : '';
+                      document.getElementById(baseM+'-l-info-bawah'+sfx).style.gap = value + "px"; 
+                  }
+              } 
+          }); 
+      } else if (type === 'wrap') {
+          activeSelection.elements.forEach(b => {
+              if (b === 'nama') {
+                  stateGlobal[m].wrap.nama = value;
+                  if (m === 'g' || m === 'g_back') {
+                      let sfx = m === 'g_back' ? '-back' : '';
+                      document.querySelectorAll('.g-el-nama' + sfx).forEach(el => { if(el.style.whiteSpace === 'normal') el.style.maxWidth = value + 'mm'; });
+                  } else {
+                      let sfx = m.endsWith('_back') ? '-back' : '';
+                      let el = document.getElementById(baseM+'-l-nama-item'+sfx);
+                      if(el && el.style.whiteSpace === 'normal') el.style.maxWidth = value + 'mm';
+                  }
+              } else if (b === 'barcode') {
+                  stateGlobal[m].wrap.barcode = value;
+                  if (m === 'g' || m === 'g_back') {
+                      let sfx = m === 'g_back' ? '-back' : '';
+                      document.querySelectorAll('.g-el-barcode' + sfx).forEach(el => { if(el.style.whiteSpace === 'normal') el.style.maxWidth = value + 'px'; });
+                  } else {
+                      let sfx = m.endsWith('_back') ? '-back' : '';
+                      let el = document.getElementById(baseM+'-l-barcode-text'+sfx);
+                      if(el && el.style.whiteSpace === 'normal') el.style.maxWidth = value + 'px';
+                  }
+              }
+          });
+      }
+  }
 
-    let rightArea = document.createElement('div');
-    rightArea.className = 'flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden bg-slate-100';
-    
-    let headerHTML = `
-        <header class="bg-white text-slate-800 flex items-center justify-between h-16 px-4 sm:px-6 border-b border-slate-200 z-30 shrink-0 shadow-sm">
-            <div class="flex items-center gap-4">
-                <button onclick="toggleSidebar()" class="sm:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition cursor-pointer">
-                    <i data-lucide="menu" class="w-6 h-6"></i>
-                </button>
-                <div class="flex items-center gap-3">
-                    <h1 class="text-base sm:text-lg font-black tracking-wide uppercase text-slate-800">${pageMeta ? pageMeta.title : 'WMS PORTAL'}</h1>
-                </div>
-            </div>
-            <div class="flex items-center gap-3 sm:gap-5">
-                <button onclick="bukaModalInbox()" class="relative p-2 rounded-full hover:bg-slate-100 text-slate-500 transition cursor-pointer" title="Pesan & Notifikasi">
-                    <i data-lucide="mail" class="w-5 h-5"></i>
-                    <span id="inbox-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-                </button>
-                <div class="relative">
-                    <button onclick="toggleProfileMenu()" class="flex items-center gap-2 p-1 hover:bg-slate-50 rounded-full transition pr-3 cursor-pointer border border-transparent hover:border-slate-200">
-                        <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black shadow-inner text-sm">${initial}</div>
-                        <span class="text-xs font-black uppercase text-slate-700 hidden sm:block">${user.username}</span>
-                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 hidden sm:block"></i>
-                    </button>
-                    <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-50 text-slate-800">
-                        <div class="px-4 py-2 border-b border-slate-100 mb-1">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase">Login sebagai</p>
-                            <p class="text-sm font-black text-slate-800 truncate">${user.username}</p>
-                        </div>
-                        <a href="#" onclick="bukaModal('modal-password')" class="flex items-center gap-3 px-4 py-2.5 text-sm font-bold hover:bg-slate-50 transition cursor-pointer"><i data-lucide="key-round" class="w-4 h-4 text-slate-500"></i> Ganti Password</a>
-                        <hr class="my-1 border-slate-100">
-                        <a href="#" onclick="logout()" class="flex items-center gap-3 px-4 py-2.5 text-sm font-black text-red-600 hover:bg-red-50 transition cursor-pointer"><i data-lucide="log-out" class="w-4 h-4"></i> Logout</a>
-                    </div>
-                </div>
-            </div>
-        </header>
-    `;
+  function initKeyboardGlobal() { document.removeEventListener('keydown', penangananKeyboardEvent); document.addEventListener('keydown', penangananKeyboardEvent); }
+  function penangananKeyboardEvent(e) { let m = activeSelection.m || currentMenu; let baseM = m.split('_')[0]; if(e.ctrlKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); eksekusiUndo(baseM); return; } if(e.ctrlKey && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); eksekusiRedo(baseM); return; } if(activeSelection.elements.length === 0) return; if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName.toUpperCase())) return; let x=0, y=0, s=(e.shiftKey)?5:1; switch(e.key){ case 'ArrowUp': y=-s; break; case 'ArrowDown': y=s; break; case 'ArrowLeft': x=-s; break; case 'ArrowRight': x=s; break; default: return; } e.preventDefault(); simpanSnapshotHistory(baseM); activeSelection.elements.forEach(elKey => { if(stateGlobal[m].pos[elKey]) { stateGlobal[m].pos[elKey].x += x; stateGlobal[m].pos[elKey].y += y; window.updateTransform(m, elKey); } }); }
 
-    rightArea.innerHTML = headerHTML;
-    
-    let mainContent = document.createElement('main');
-    mainContent.className = 'flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-100 relative';
-    
-    originalNodes.forEach(node => {
-        if(node.nodeType === 1 && node.classList.contains('pt-[104px]')) {
-            node.classList.remove('pt-[104px]');
-            node.classList.remove('absolute');
-            node.classList.remove('inset-0');
-            node.classList.add('flex-1');
-        }
-        mainContent.appendChild(node);
-    });
-    
-    rightArea.appendChild(mainContent);
-    layoutWrapper.innerHTML = sidebarHTML;
-    layoutWrapper.appendChild(rightArea);
+  setTimeout(() => {
+      let pBtnCetak = document.getElementById("p-btn-cetak-label"); if(pBtnCetak) pBtnCetak.style.display = "flex";
+      let lBtnCetak = document.getElementById("l-btn-cetak-label"); if(lBtnCetak) lBtnCetak.style.display = "flex";
+      let pBtnSimpan = document.getElementById("p-btn-simpan-settings"); if(pBtnSimpan) pBtnSimpan.remove();
+      let lBtnSimpan = document.getElementById("l-btn-simpan-settings"); if(lBtnSimpan) lBtnSimpan.remove();
+      
+      let lSearch = document.getElementById('l-input-search-item'); if(lSearch) lSearch.removeAttribute('readonly');
+      let pSearch = document.getElementById('p-input-search-item'); if(pSearch) pSearch.removeAttribute('readonly');
+      
+      ['p', 'l', 'k', 'g'].forEach(m => {
+          let selKertas = document.getElementById(m+'-kertas-select');
+          if(selKertas) {
+              let optExist = Array.from(selKertas.options).some(o => o.value === '100x50');
+              if(!optExist) { selKertas.add(new Option("100 x 50 mm", "100x50"), selKertas.options[0]); }
+              selKertas.value = '100x50';
+          }
+      });
 
-    // ==========================================
-    // 3. MODALS (PASSWORD, INBOX, TABLE DESIGN)
-    // ==========================================
-    const modalsHTML = `
-        <div id="modal-password" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[90] px-4 backdrop-blur-sm">
-            <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm border border-slate-200 text-slate-800">
-                <h3 class="text-lg font-black mb-4 flex items-center gap-2"><i data-lucide="key-round" class="text-blue-600"></i> Ganti Password</h3>
-                <input type="password" placeholder="Password Baru" class="w-full p-3 border border-slate-300 rounded-lg mb-5 font-bold outline-none focus:border-blue-600 bg-slate-50">
-                <div class="flex gap-2">
-                    <button onclick="tutupModal('modal-password')" class="w-1/2 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200 transition">Batal</button>
-                    <button onclick="tutupModal('modal-password'); alert('Fungsi ini akan segera disambungkan ke DB');" class="w-1/2 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-sm">Simpan</button>
-                </div>
-            </div>
-        </div>
+      window.updateShading = function(m) {
+          let v1 = document.getElementById(m+'-shading-1').value.trim().toUpperCase();
+          let v2 = document.getElementById(m+'-shading-2').value.trim().toUpperCase();
+          let v3 = document.getElementById(m+'-shading-3').value.trim().toUpperCase();
+          
+          let arr = [];
+          if(v1) arr.push(v1);
+          if(v2) arr.push(v2);
+          if(v3) arr.push(v3);
+          
+          let hiddenInput = document.getElementById(m+'-shading');
+          if(hiddenInput) hiddenInput.value = arr.join('-');
+      };
 
-        <!-- MODAL TABLE DESIGN CUSTOMIZER -->
-        <div id="modal-table-design" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
-            <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 text-slate-800">
-                <h3 class="text-lg font-black mb-1 flex items-center gap-2"><i data-lucide="palette" class="text-indigo-600"></i> Desain Tabel WMS</h3>
-                <p class="text-xs font-medium text-slate-500 mb-5">Pengaturan ini akan diterapkan ke seluruh tabel di WMS.</p>
-                
-                <div class="space-y-5 mb-6">
-                    <label class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition">
-                        <span class="text-sm font-bold text-slate-700">Aktifkan Zebra Striping</span>
-                        <input type="checkbox" id="td-zebra" class="w-5 h-5 accent-indigo-600 cursor-pointer">
-                    </label>
+      window.toggleAturLabel = function(m) { 
+          let pf = document.getElementById(m+'-panel-form'); 
+          let ps = document.getElementById(m+'-panel-settings'); 
+          if(pf.style.display === 'none') { pf.style.display = 'block'; ps.style.display = 'none'; window.switchSideSettings(m); } 
+          else { pf.style.display = 'none'; ps.style.display = 'block'; } 
+      };
 
-                    <label class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition">
-                        <span class="text-sm font-bold text-slate-700">Aktifkan Efek Hover Baris</span>
-                        <input type="checkbox" id="td-hover" class="w-5 h-5 accent-indigo-600 cursor-pointer">
-                    </label>
+      window.getElMap = function(m) {
+          let isBack = m.endsWith('_back');
+          let baseM = m.split('_')[0];
+          let sfx = isBack ? '-back' : '';
+          
+          let map = { 
+              'qr': baseM+'-qrcode-wrapper'+sfx, 
+              'barcode': baseM+'-l-barcode-text'+sfx, 
+              'nama': baseM+'-l-nama-item'+sfx, 
+              'shading': baseM+'-l-shading'+sfx, 
+              'ukuran': baseM+'-l-ukuran'+sfx, 
+              'mesin': baseM+'-l-mesin'+sfx, 
+              'shift': baseM+'-l-shift'+sfx, 
+              'tanggal': baseM+'-l-tanggal'+sfx, 
+              'dus': baseM+'-l-dus'+sfx 
+          };
+          if(baseM === 'p' || baseM === 'k') { map['po'] = baseM+'-l-po'+sfx; map['isi'] = baseM+'-l-isi'+sfx; }
+          if(baseM === 'l') { map['isi'] = baseM+'-l-isi'+sfx; }
+          return map;
+      };
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Warna Header</label>
-                        <div class="flex gap-3">
-                            <button onclick="setTdColor('hdr', '#0f172a', '#ffffff')" id="btn-hdr-#0f172a" class="w-8 h-8 rounded-full bg-[#0f172a] flex items-center justify-center text-white transition hover:scale-110"></button>
-                            <button onclick="setTdColor('hdr', '#1e3a8a', '#ffffff')" id="btn-hdr-#1e3a8a" class="w-8 h-8 rounded-full bg-[#1e3a8a] flex items-center justify-center text-white transition hover:scale-110"></button>
-                            <button onclick="setTdColor('hdr', '#064e3b', '#ffffff')" id="btn-hdr-#064e3b" class="w-8 h-8 rounded-full bg-[#064e3b] flex items-center justify-center text-white transition hover:scale-110"></button>
-                            <button onclick="setTdColor('hdr', '#475569', '#ffffff')" id="btn-hdr-#475569" class="w-8 h-8 rounded-full bg-[#475569] flex items-center justify-center text-white transition hover:scale-110"></button>
-                        </div>
-                    </div>
+      window.updateTransform = function(m, b) {
+          if (m === 'g' || m === 'g_back') {
+              let sfx = m === 'g_back' ? '-back' : '';
+              let els = document.querySelectorAll('.g-el-' + b + sfx);
+              els.forEach(el => {
+                  if(b === 'qr') el.style.transform = `translate(${stateGlobal[m].pos.qr.x}px, ${stateGlobal[m].pos.qr.y}px) scale(${stateGlobal[m].pos.qr.s})`; 
+                  else el.style.transform = `translate(${stateGlobal[m].pos[b].x}px, ${stateGlobal[m].pos[b].y}px)`;
+              });
+          } else {
+              let map = window.getElMap(m); let el = document.getElementById(map[b]); if(!el) return;
+              if(b === 'qr') el.style.transform = `translate(${stateGlobal[m].pos.qr.x}px, ${stateGlobal[m].pos.qr.y}px) scale(${stateGlobal[m].pos.qr.s})`; 
+              else el.style.transform = `translate(${stateGlobal[m].pos[b].x}px, ${stateGlobal[m].pos[b].y}px)`;
+          }
+      };
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Tema Belang (Row)</label>
-                            <div class="flex flex-wrap gap-2">
-                                <button onclick="setTdColor('rowTheme', 'gray')" id="btn-row-gray" class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('rowTheme', 'blue')" id="btn-row-blue" class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('rowTheme', 'green')" id="btn-row-green" class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('rowTheme', 'amber')" id="btn-row-amber" class="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('rowTheme', 'pink')" id="btn-row-pink" class="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 transition hover:scale-110"></button>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Tema Hover</label>
-                            <div class="flex flex-wrap gap-2">
-                                <button onclick="setTdColor('hoverTheme', 'gray')" id="btn-hov-gray" class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('hoverTheme', 'blue')" id="btn-hov-blue" class="w-6 h-6 rounded-full bg-blue-200 flex items-center justify-center text-blue-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('hoverTheme', 'green')" id="btn-hov-green" class="w-6 h-6 rounded-full bg-green-200 flex items-center justify-center text-green-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('hoverTheme', 'amber')" id="btn-hov-amber" class="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center text-amber-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('hoverTheme', 'pink')" id="btn-hov-pink" class="w-6 h-6 rounded-full bg-pink-200 flex items-center justify-center text-pink-600 transition hover:scale-110"></button>
-                            </div>
-                        </div>
-                    </div>
+      window.isiDropdown = function(m, data) {
+          if(!data) return;
+          let isiSelect = function(id, arr) {
+              let sel = document.getElementById(id); 
+              if(!sel || sel.tagName.toUpperCase() !== 'SELECT') return;
+              sel.innerHTML = '<option value="">Pilih...</option>';
+              if(arr) { arr.forEach(x => { let opt = new Option(x.nama, x.nama); opt.setAttribute("data-kode", x.kode || ""); sel.add(opt); }); }
+          };
+          
+          isiSelect(m+'-mesin', data.mesin);
+          let sM = document.getElementById(m+'-mesin'); 
+          if(sM && sM.tagName.toUpperCase() === 'SELECT') { 
+              sM.add(new Option("+ Tambah Mesin Baru", "ADD_NEW")); 
+              sM.options[sM.options.length-1].style.fontWeight = "bold"; 
+              sM.options[sM.options.length-1].style.color = "blue"; 
+          }
+          
+          isiSelect(m+'-shift', data.shift);
+          
+          if(m === 'p'){
+              isiSelect('p-grade', data.grade);
+              if(data.po) window.isiListModal('p-po-list', data.po, 'po', 'p');
+          } else {
+              isiSelect('l-grade', data.grade);
+          }
+          
+          if(data.items) window.isiListModal(m+'-item-list', data.items, 'item', m); 
+          if(data.dus) window.isiListModal(m+'-dus-list', data.dus, 'dus', m); 
+      };
 
-                    <div>
-                        <label class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-2">
-                            <span>Opacity Warna Belang</span>
-                            <span id="lbl-opacity" class="text-indigo-600">100%</span>
-                        </label>
-                        <input type="range" id="td-opacity" min="10" max="100" value="100" class="w-full" oninput="document.getElementById('lbl-opacity').innerText = this.value + '%'">
-                    </div>
-                </div>
+      window.isiListModal = function(uId, arr, type, m) {
+          let ul = document.getElementById(uId); if(!ul) return;
+          ul.innerHTML = '';
+          arr.forEach(val => {
+              let li = document.createElement('li');
+              li.textContent = val.nama;
+              li.setAttribute("data-kode", val.kode || "");
+              
+              li.onclick = function() {
+                  document.querySelectorAll(`#${uId} li`).forEach(el => el.classList.remove('selected'));
+                  li.classList.add('selected');
+                  if(m === 'p'){
+                      if(type === 'item') { selectedPlafonItem = val.nama; selectedPlafonItemKode = val.kode; }
+                      if(type === 'po') { selectedPlafonPO = val.nama; selectedPlafonPOKode = val.kode; }
+                      if(type === 'dus') { selectedPlafonDus = val.nama; selectedPlafonDusKode = val.kode; }
+                  } else {
+                      if(type === 'item') { selectedLisItem = val.nama; selectedLisItemKode = val.kode; }
+                      if(type === 'dus') { selectedLisDus = val.nama; selectedLisDusKode = val.kode; }
+                  }
+              };
+              ul.appendChild(li);
+          });
+      };
 
-                <div class="flex gap-2">
-                    <button onclick="tutupModal('modal-table-design')" class="w-1/2 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition">Batal</button>
-                    <button onclick="saveTableDesign()" class="w-1/2 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-sm">Simpan</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- MODAL INBOX BARU -->
-        <div id="modal-inbox" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-2 sm:px-4 backdrop-blur-sm">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl border border-slate-200 text-slate-800 h-[85vh] flex flex-col overflow-hidden">
-                <div class="p-4 sm:p-5 flex justify-between items-center border-b border-slate-200 bg-slate-50 shrink-0">
-                    <h3 class="text-base font-black flex items-center gap-2 text-slate-800"><i data-lucide="mail" class="text-blue-600"></i> KOTAK PESAN (INBOX)</h3>
-                    <button onclick="tutupModal('modal-inbox')" class="text-slate-400 hover:text-red-500 transition bg-white p-1.5 rounded-md border border-slate-200"><i data-lucide="x" class="w-4 h-4"></i></button>
-                </div>
-                <div id="inbox-view-list" class="flex-1 flex flex-col overflow-hidden">
-                    <div class="p-3 bg-white border-b border-slate-200 flex justify-between items-center shrink-0">
-                        <button onclick="hapusPesanMassal()" class="px-4 py-2 bg-white border border-slate-300 text-rose-600 hover:bg-rose-50 font-bold rounded-md text-xs transition flex items-center gap-2 shadow-sm"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus</button>
-                        <button onclick="bukaBuatPesan()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md text-xs transition flex items-center gap-2 shadow-sm"><i data-lucide="pen-square" class="w-4 h-4"></i> Buat Pesan</button>
-                    </div>
-                    <div class="flex-1 overflow-x-auto overflow-y-auto hide-scrollbar bg-slate-50">
-                        <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
-                            <thead class="sticky top-0 z-10 bg-[#0f172a] text-white shadow-sm">
-                                <tr>
-                                    <th class="p-3 w-10 text-center"><input type="checkbox" onchange="toggleAllInbox(this.checked)" class="rounded text-blue-500 focus:ring-0 cursor-pointer"></th>
-                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700 text-center">Tgl Pesan</th>
-                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700 text-center">Pengirim</th>
-                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700 w-1/2 text-center">Perihal</th>
-                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700 text-center">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbody-inbox" class="text-slate-700 bg-white">
-                                <tr><td colspan="5" class="p-10 text-center text-slate-400 font-bold">Sedang memuat pesan...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                
-                <!-- VIEW 2: BACA PESAN -->
-                <div id="inbox-view-read" class="hidden flex-1 flex flex-col overflow-hidden bg-slate-50">
-                    <div class="p-3 bg-white border-b border-slate-200 flex items-center gap-3 shrink-0">
-                        <button onclick="kembaliKeListInbox()" class="p-2 hover:bg-slate-100 text-slate-600 rounded-md transition"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
-                        <h4 class="font-black text-slate-800 text-sm truncate" id="read-subject">Subjek Pesan</h4>
-                    </div>
-                    <div class="p-4 sm:p-6 overflow-y-auto custom-scroll flex-1">
-                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                            <div class="flex justify-between items-start mb-6 pb-4 border-b border-slate-100">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-black text-lg"><i data-lucide="user" class="w-5 h-5"></i></div>
-                                    <div>
-                                        <p class="font-bold text-slate-800 text-sm" id="read-sender">Pengirim</p>
-                                        <p class="text-xs font-medium text-slate-500" id="read-date">Tanggal</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-medium" id="read-body">Isi pesan...</div>
-                            <div id="read-action-container" class="mt-6 pt-4 border-t border-slate-100 hidden">
-                                <!-- Tombol aksi khusus (seperti Approve Request) akan di-inject ke sini -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
+      window.hapusDataTerpilih = function(m, type) {
+          let val = "";
+          if(m === 'p') {
+              if(type === 'item') val = selectedPlafonItem;
+              if(type === 'po') val = selectedPlafonPO;
+              if(type === 'dus') val = selectedPlafonDus;
+          } else {
+              if(type === 'item') val = selectedLisItem;
+              if(type === 'dus') val = selectedLisDus;
+          }
 
-                <!-- VIEW 3: BUAT PESAN -->
-                <div id="inbox-view-compose" class="hidden flex-1 flex flex-col overflow-hidden bg-slate-50">
-                    <div class="p-3 bg-white border-b border-slate-200 flex items-center gap-3 shrink-0">
-                        <button onclick="kembaliKeListInbox()" class="p-2 hover:bg-slate-100 text-slate-600 rounded-md transition"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
-                        <h4 class="font-black text-slate-800 text-sm">Tulis Pesan Baru</h4>
-                    </div>
-                    <div class="p-4 sm:p-6 overflow-y-auto custom-scroll flex-1">
-                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kepada</label>
-                                <select id="compose-recipient" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:border-blue-500 font-semibold text-sm bg-slate-50 cursor-pointer"></select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Perihal</label>
-                                <input type="text" id="compose-subject" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:border-blue-500 font-bold text-sm bg-slate-50" placeholder="Judul pesan...">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Isi Pesan</label>
-                                <textarea id="compose-body" rows="8" class="w-full p-3 border border-slate-300 rounded-lg outline-none focus:border-blue-500 font-medium text-sm bg-slate-50 custom-scroll" placeholder="Tulis pesan Anda di sini..."></textarea>
-                            </div>
-                            <div class="flex justify-end pt-2">
-                                <button onclick="kirimPesan()" id="btn-kirim-pesan" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2 text-sm"><i data-lucide="send" class="w-4 h-4"></i> Kirim Pesan</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    layoutWrapper.insertAdjacentHTML('beforeend', modalsHTML);
-    document.body.appendChild(layoutWrapper);
+          if(!val) { alert("Pilih data dari daftar terlebih dahulu!"); return; }
 
-    // Global Tooltip Logic
-    const globalTooltip = document.createElement('div');
-    globalTooltip.id = 'global-sidebar-tooltip';
-    globalTooltip.className = 'fixed hidden bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-md shadow-xl z-[9999] pointer-events-none whitespace-nowrap transition-opacity duration-200 opacity-0 border border-slate-700';
-    document.body.appendChild(globalTooltip);
+          mintaPin(`Hapus '${val}'`, function() {
+              let sheetName = m === 'p' ? 'MASTER PLAFON' : 'MASTER LIS';
+              let btn = document.getElementById(`${m}-btn-hapus-${type}`);
+              let oldText = btn.innerText;
+              btn.innerText = '⏳ Menghapus...'; btn.disabled = true;
 
-    document.body.addEventListener('mouseover', (e) => {
-        const item = e.target.closest('.sidebar-item');
-        if (item) {
-            const sidebar = document.getElementById('app-sidebar');
-            if (window.innerWidth >= 640 && sidebar && !sidebar.classList.contains('expanded')) {
-                const rect = item.getBoundingClientRect();
-                globalTooltip.innerText = item.getAttribute('data-title');
-                globalTooltip.style.top = (rect.top + (rect.height / 2) - 16) + 'px';
-                globalTooltip.style.left = (rect.right + 15) + 'px';
-                
-                globalTooltip.classList.remove('hidden');
-                void globalTooltip.offsetWidth; 
-                globalTooltip.classList.remove('opacity-0');
-            }
-        }
-    });
+              google.script.run.withSuccessHandler(function(res) {
+                  btn.innerText = oldText; btn.disabled = false;
+                  if(res === 'SUCCESS') {
+                      let dt = m === 'p' ? dataPlafon : dataLis;
+                      let dataKey = type === 'item' ? 'items' : type;
+                      dt[dataKey] = dt[dataKey].filter(x => x.nama !== val);
+                      window.isiListModal(`${m}-${type}-list`, dt[dataKey], type, m);
+                      
+                      if(m === 'p') {
+                          if(type === 'item') { selectedPlafonItem = ""; selectedPlafonItemKode = ""; }
+                          if(type === 'po') { selectedPlafonPO = ""; selectedPlafonPOKode = ""; }
+                          if(type === 'dus') { selectedPlafonDus = ""; selectedPlafonDusKode = ""; }
+                      } else {
+                          if(type === 'item') { selectedLisItem = ""; selectedLisItemKode = ""; }
+                          if(type === 'dus') { selectedLisDus = ""; selectedLisDusKode = ""; }
+                      }
+                      alert("Data berhasil dihapus!");
+                  } else {
+                      alert(res);
+                  }
+              }).hapusDataMaster(sheetName, type, val);
+          });
+      };
 
-    document.body.addEventListener('mouseout', (e) => {
-        const item = e.target.closest('.sidebar-item');
-        if (item) {
-            globalTooltip.classList.add('opacity-0');
-            setTimeout(() => {
-                if(globalTooltip.classList.contains('opacity-0')) {
-                    globalTooltip.classList.add('hidden');
-                }
-            }, 200);
-        }
-    });
+      window.pilihItem = function(m) {
+          let val = m === 'p' ? selectedPlafonItem : selectedLisItem;
+          let kode = m === 'p' ? selectedPlafonItemKode : selectedLisItemKode;
+          if(val){
+              let inputEl = document.getElementById(m+'-item');
+              inputEl.value = val; inputEl.setAttribute('data-kode', kode || "");
+              tutupModal(m+'-modal-cari-item');
+          } else alert("Pilih item!");
+      };
 
-    lucide.createIcons();
-    setTimeout(cekNotifikasiInbox, 1000); 
-}
+      window.pilihPO = function(m) {
+          if(selectedPlafonPO){
+              let inputEl = document.getElementById('p-po');
+              inputEl.value = selectedPlafonPO; inputEl.setAttribute('data-kode', selectedPlafonPOKode || "");
+              tutupModal('p-modal-cari-po');
+          } else alert("Pilih PO!");
+      };
 
-// ==========================================
-// FUNGSI UI & INTERAKSI
-// ==========================================
-window.toggleSidebar = function() { 
-    document.getElementById('app-sidebar').classList.toggle('-translate-x-full'); 
-    document.getElementById('sidebar-overlay').classList.toggle('hidden'); 
-};
+      window.pilihDus = function(m) {
+          let val = m === 'p' ? selectedPlafonDus : selectedLisDus;
+          let kode = m === 'p' ? selectedPlafonDusKode : selectedLisDusKode;
+          if(val){
+              let inputEl = document.getElementById(m+'-dus');
+              inputEl.value = val; inputEl.setAttribute('data-kode', kode || "");
+              tutupModal(m+'-modal-cari-dus');
+          } else alert("Pilih Merk!");
+      };
 
-window.toggleSidebarExpand = function() {
-    const sidebar = document.getElementById('app-sidebar');
-    const icon = document.getElementById('icon-expand-sidebar');
-    sidebar.classList.toggle('expanded');
-    
-    if(sidebar.classList.contains('expanded')) {
-        localStorage.setItem('sidebar_expanded', 'true');
-        icon.setAttribute('data-lucide', 'chevron-left');
-    } else {
-        localStorage.setItem('sidebar_expanded', 'false');
-        icon.setAttribute('data-lucide', 'chevron-right');
-    }
-    lucide.createIcons();
-};
+      let dapatkanKodeElemen = function(id) {
+          let el = document.getElementById(id); if(!el) return "";
+          if(el.tagName.toUpperCase() === 'SELECT') { let opt = el.options[el.selectedIndex]; return opt ? (opt.getAttribute('data-kode') || "") : ""; }
+          return el.getAttribute('data-kode') || "";
+      };
 
-window.toggleProfileMenu = function() { 
-    document.getElementById('profile-dropdown').classList.toggle('hidden'); 
-};
+      let modals = ['mesin', 'shift', 'item', 'grade', 'dus', 'po'];
+      ['p', 'l'].forEach(m => {
+          modals.forEach(jenis => {
+              let container = document.querySelector(`#${m}-modal-tambah-${jenis} .modal-content`);
+              let btn = document.getElementById(`${m}-btn-simpan-${jenis}`);
+              if(container && btn && !document.getElementById(`${m}-input-${jenis}-kode`)) {
+                  let inputNama = document.getElementById(`${m}-input-${jenis}-baru`);
+                  if(inputNama) { inputNama.placeholder = `Nama ${jenis.toUpperCase()} Baru`; inputNama.style.marginBottom = "5px"; }
+                  
+                  let inputKode = document.createElement('input'); 
+                  inputKode.type = "text"; inputKode.id = `${m}-input-${jenis}-kode`; inputKode.placeholder = "Kode (Unik)"; 
+                  inputKode.style.cssText = "width:100%; box-sizing:border-box; padding:8px; margin-bottom:5px;"; 
+                  container.insertBefore(inputKode, btn);
+                  
+                  if(m === 'l' && jenis === 'item') {
+                      let inputIsi = document.createElement('input'); 
+                      inputIsi.type = "number"; inputIsi.id = `${m}-input-${jenis}-isi`; inputIsi.placeholder = "Isi / Qty (Angka)"; 
+                      inputIsi.style.cssText = "width:100%; box-sizing:border-box; padding:8px; margin-bottom:5px;"; 
+                      container.insertBefore(inputIsi, btn);
+                  }
+                  
+                  let inputPin = document.createElement('input'); 
+                  inputPin.type = "password"; inputPin.id = `${m}-input-${jenis}-pin`; inputPin.placeholder = "Masukkan PIN Master"; 
+                  inputPin.style.cssText = "width:100%; box-sizing:border-box; padding:8px; margin-bottom:10px;"; 
+                  container.insertBefore(inputPin, btn);
+              }
+          });
+      });
 
-window.bukaModal = function(id) { 
-    document.getElementById(id).classList.remove('hidden'); 
-    document.getElementById('profile-dropdown').classList.add('hidden'); 
-};
+      window.simpanDataBaru = function(m, jenis) {
+          let inNama = document.getElementById(`${m}-input-${jenis}-baru`), nama = inNama ? inNama.value.trim() : "";
+          let inKode = document.getElementById(`${m}-input-${jenis}-kode`), kode = inKode ? inKode.value.trim() : "";
+          let inPin = document.getElementById(`${m}-input-${jenis}-pin`), pin = inPin ? inPin.value.trim() : "";
+          let isi = "";
+          
+          if(m === 'l' && jenis === 'item') { 
+              let inIsi = document.getElementById(`${m}-input-${jenis}-isi`); 
+              isi = inIsi ? inIsi.value.trim() : ""; 
+              if(!isi) { alert("Peringatan: Jumlah Isi (angka) LIS wajib dimasukkan!"); return; } 
+          }
+          
+          if(!nama || !kode || !pin) { alert(`Peringatan: Form Nama, Kode, dan PIN wajib diisi semuanya!`); return; }
+          
+          let realPin = m === 'p' ? dataPlafon.pin : dataLis.pin;
+          if(pin !== realPin) { alert("⛔ PIN SALAH! Anda tidak memiliki izin untuk menambah data ini."); return; }
+          
+          let dt = m === 'p' ? dataPlafon : dataLis;
+          let dataKey = jenis === 'item' ? 'items' : jenis;
+          if(dt && dt[dataKey]) {
+              let duplicate = dt[dataKey].some(x => x.kode && x.kode.toString().toUpperCase() === kode.toUpperCase());
+              if(duplicate) { alert(`⚠️ Peringatan: Kode '${kode}' sudah pernah dipakai! Harap buat kode yang unik/berbeda.`); return; }
+          }
+          
+          let btnEl = document.getElementById(`${m}-btn-simpan-${jenis}`);
+          btnEl.innerText="Menyimpan..."; btnEl.disabled=true; 
+          let sheetName = m==='p' ? 'MASTER PLAFON' : 'MASTER LIS';
+          
+          google.script.run.withSuccessHandler(function(res){
+              if(res === "SUCCESS" || res.includes("Peringatan")){ 
+                  if(['mesin', 'shift', 'grade'].includes(jenis)){ 
+                      let sel=document.getElementById(`${m}-${jenis}`); 
+                      if(sel) { let newOpt = new Option(nama, nama); newOpt.setAttribute('data-kode', kode); sel.insertBefore(newOpt, sel.options[sel.options.length-1]); sel.value=nama; }
+                  } 
+                  if(dt[dataKey]) dt[dataKey].push({nama: nama, kode: kode});
+                  if(jenis === 'item') window.isiListModal(`${m}-item-list`, dt.items, 'item', m);
+                  if(jenis === 'po' && m==='p') window.isiListModal('p-po-list', dt.po, 'po', 'p');
+                  if(jenis === 'dus') window.isiListModal(`${m}-dus-list`, dt.dus, 'dus', m);
+                  if(m === 'l' && jenis === 'item') { if(!dt.isi_lis) dt.isi_lis = {}; dt.isi_lis[nama] = isi; }
+                  
+                  if(inNama) inNama.value=""; if(inKode) inKode.value=""; if(inPin) inPin.value=""; 
+                  if(m === 'l' && jenis === 'item' && document.getElementById(`${m}-input-${jenis}-isi`)) document.getElementById(`${m}-input-${jenis}-isi`).value="";
+                  
+                  tutupModal(`${m}-modal-tambah-${jenis}`); 
+                  alert(res === "SUCCESS" ? "Mantap, Data Baru Berhasil Tersimpan!" : res); 
+              } else {
+                  alert(res); 
+              }
+              btnEl.innerText="Simpan"; btnEl.disabled=false;
+          }).simpanDataBaruLengkap(sheetName, jenis, nama, kode, isi);
+      };
 
-window.tutupModal = function(id) { 
-    document.getElementById(id).classList.add('hidden'); 
-};
+      window.generateLabel = function(m) {
+          let qtyEl = document.getElementById(m+'-qty');
+          if(!qtyEl || !qtyEl.value || parseInt(qtyEl.value) < 1) { alert("⚠️ Silakan isi Jumlah Box minimal 1 terlebih dahulu!"); if(qtyEl) qtyEl.focus(); return false; }
 
-window.logout = function() { 
-    if(confirm('Yakin ingin keluar dari sistem?')) { 
-        localStorage.removeItem('user_session'); 
-        window.location.href = 'index.html'; 
-    } 
-};
+          let tgl = document.getElementById(m+'-tgl').value, item = document.getElementById(m+'-item').value, panjang = document.getElementById(m+'-panjang').value, shift = document.getElementById(m+'-shift').value;
+          let gradeEl = document.getElementById(m+'-grade'); let grade = gradeEl ? gradeEl.value : ""; 
+          let poEl = document.getElementById(m+'-po'); let po = poEl ? poEl.value : "";
+          let shading = document.getElementById(m+'-shading').value, dus = document.getElementById(m+'-dus').value;
 
-document.addEventListener('click', (e) => { 
-    const dropdown = document.getElementById('profile-dropdown'); 
-    if (dropdown && !e.target.closest('.relative')) dropdown.classList.add('hidden'); 
-});
+          if(!item || !panjang) { alert("Nama Item dan Panjang wajib diisi!"); return false; }
+          
+          let dt = m === 'p' ? dataPlafon : dataLis;
+          
+          let getKode = (tipe, namaTarget) => {
+              if(!namaTarget) return "";
+              if(dt && dt[tipe]) {
+                  let arr = dt[tipe];
+                  let found = arr.find(x => x.nama.toString().trim().toUpperCase() === namaTarget.toString().trim().toUpperCase());
+                  if(found && found.kode !== undefined && found.kode !== "") return found.kode;
+              }
+              let elId = tipe === 'items' ? 'item' : tipe;
+              let el = document.getElementById(m+'-'+elId);
+              if(el && el.tagName.toUpperCase() === 'SELECT') {
+                  let opt = el.options[el.selectedIndex];
+                  return opt ? (opt.getAttribute('data-kode') || "") : "";
+              }
+              return namaTarget;
+          };
 
-// ==========================================
-// FUNGSI TABLE DESIGN CUSTOMIZER
-// ==========================================
-window.bukaModalTableDesign = function() {
-    document.getElementById('td-zebra').checked = tempDesign.isZebra;
-    document.getElementById('td-hover').checked = tempDesign.isHover !== false;
-    document.getElementById('td-opacity').value = tempDesign.opacity;
-    document.getElementById('lbl-opacity').innerText = tempDesign.opacity + '%';
-    updateDesignUI();
-    bukaModal('modal-table-design');
-};
+          let kodeItem = getKode('items', item);
+          let kodeGrade = m === 'l' ? "1" : getKode('grade', grade);
+          let kodeDus = getKode('dus', dus);
+          let kodeMesin = getKode('mesin', document.getElementById(m+'-mesin').value);
+          let kodeShift = getKode('shift', shift);
+          let kodePo = m === 'l' ? "P49" : getKode('po', po);
+          
+          let pAngka = panjang.replace(/\D/g, ''); 
+          
+          let dObj = new Date(tgl), start = new Date(dObj.getFullYear(), 0, 0);
+          let dayStr = String(Math.floor((dObj - start + (start.getTimezoneOffset()-dObj.getTimezoneOffset())*60*1000) / 86400000)).padStart(3, '0');
+          let yrRev = String(dObj.getFullYear()).slice(-2).split('').reverse().join('');
+          let dateCode = dayStr + yrRev;
+          
+          let bText = `${kodeItem}/${shading}/${pAngka}${kodeGrade}${kodeDus}/${dateCode}${kodeMesin}${kodeShift}${kodePo}`;
+          stateGlobal[m].barcodeData = bText;
 
-window.setTdColor = function(type, val, text = null) {
-    if(type === 'hdr') { tempDesign.hdrBg = val; tempDesign.hdrText = text; }
-    if(type === 'rowTheme') tempDesign.rowTheme = val;
-    if(type === 'hoverTheme') tempDesign.hoverTheme = val;
-    updateDesignUI();
-};
+          let hasilPanjang = Math.round(parseFloat(panjang.toString().replace(',', '.')) * 100) || 0;
+          let shiftAngka = shift.replace(/\D/g, '');
+          let dObj2 = new Date(tgl);
+          let tglStr = String(dObj2.getDate()).padStart(2, '0') + "/" + String(dObj2.getMonth() + 1).padStart(2, '0') + "/" + dObj2.getFullYear();
+          let isiStr = (m === 'p') ? "Qty: 15" : "Qty: " + ((dataLis.isi_lis && dataLis.isi_lis[item]) ? dataLis.isi_lis[item] : "-");
+          let poStr = m === 'l' ? "P49" : po;
+          let shiftStr = shiftAngka ? "S" + shiftAngka : "";
 
-function updateDesignUI() {
-    document.querySelectorAll('[id^="btn-hdr-"], [id^="btn-row-"], [id^="btn-hov-"]').forEach(btn => btn.innerHTML = '');
-    
-    const btnHdr = document.getElementById(`btn-hdr-${tempDesign.hdrBg}`);
-    if(btnHdr) btnHdr.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i>';
-    
-    const btnRow = document.getElementById(`btn-row-${tempDesign.rowTheme}`);
-    if(btnRow) btnRow.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
-    
-    const btnHov = document.getElementById(`btn-hov-${tempDesign.hoverTheme}`);
-    if(btnHov) btnHov.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
-    
-    lucide.createIcons();
-}
+          // Isi Label Depan
+          document.getElementById(m+'-l-nama-item').innerHTML = item;
+          document.getElementById(m+'-l-shading').innerText = shading;
+          document.getElementById(m+'-l-mesin').innerText = document.getElementById(m+'-mesin').value;
+          document.getElementById(m+'-l-po').innerText = poStr;
+          document.getElementById(m+'-l-dus').innerText = dus;
+          document.getElementById(m+'-l-ukuran').innerText = "Uk 20 x " + hasilPanjang;
+          document.getElementById(m+'-l-isi').innerText = isiStr;
+          document.getElementById(m+'-l-shift').innerText = shiftStr; 
+          document.getElementById(m+'-l-tanggal').innerText = tglStr;
 
-window.saveTableDesign = function() {
-    tempDesign.isZebra = document.getElementById('td-zebra').checked;
-    tempDesign.isHover = document.getElementById('td-hover').checked;
-    tempDesign.opacity = document.getElementById('td-opacity').value;
-    localStorage.setItem('wms_table_design', JSON.stringify(tempDesign));
-    applyTableDesign();
-    tutupModal('modal-table-design');
-    
-    if(typeof applyPagination === 'function') applyPagination();
-};
+          // Isi Label Belakang
+          document.getElementById(m+'-l-nama-item-back').innerHTML = item;
+          document.getElementById(m+'-l-shading-back').innerText = shading;
+          document.getElementById(m+'-l-mesin-back').innerText = document.getElementById(m+'-mesin').value;
+          document.getElementById(m+'-l-po-back').innerText = poStr;
+          document.getElementById(m+'-l-dus-back').innerText = dus;
+          document.getElementById(m+'-l-ukuran-back').innerText = "Uk 20 x " + hasilPanjang;
+          document.getElementById(m+'-l-isi-back').innerText = isiStr;
+          document.getElementById(m+'-l-shift-back').innerText = shiftStr; 
+          document.getElementById(m+'-l-tanggal-back').innerText = tglStr;
 
-// ==========================================
-// FUNGSI SISTEM PESAN (INBOX BARU)
-// ==========================================
-let inboxDataGlobal = [];
+          let isRevisi = document.getElementById(m+'-cb-revisi') && document.getElementById(m+'-cb-revisi').checked;
+          let suffixRevisi = isRevisi ? " N" : "";
 
-async function cekNotifikasiInbox() {
-    const user = JSON.parse(localStorage.getItem('user_session'));
-    if(!user) return;
+          let barcodeTextEl = document.getElementById(m+'-l-barcode-text');
+          if(barcodeTextEl) {
+              barcodeTextEl.innerText = bText + "/0001" + suffixRevisi;
+              barcodeTextEl.style.color = "black"; // Fix agar teks selalu hitam
+          }
+          
+          let qrEl = document.getElementById(m+'-qrcode');
+          if(qrEl) { 
+              qrEl.innerHTML = ""; 
+              new QRCode(qrEl, { text: bText + "/0001", width: 400, height: 400, correctLevel : QRCode.CorrectLevel.L }); 
+              setTimeout(() => { let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; }); }, 50);
+          }
+          
+          return true; 
+      };
 
-    try {
-        const { count: msgCount } = await db.from('app_messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('recipient', user.username)
-            .eq('status', 'UNREAD');
+      window.cetakLabel = async function(m) {
+          if (!window.generateLabel(m)) return; 
 
-        let reqCount = 0;
-        const canApprove = user.role === 'Admin' || user.role === 'CS' || user.username.toLowerCase().includes('admin');
-        if (canApprove) {
-            const { count } = await db.from('request_ganti_customer')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'PENDING');
-            reqCount = count || 0;
-        }
+          let qty = parseInt(document.getElementById(m+'-qty').value) || 1;
+          let btnCetak = document.getElementById(m+'-btn-cetak-label'); btnCetak.innerText = "⏳ Memproses..."; btnCetak.disabled = true;
 
-        const totalUnread = (msgCount || 0) + reqCount;
-        const badge = document.getElementById('inbox-badge');
-        
-        if (badge && totalUnread > 0) badge.classList.remove('hidden');
-        else if (badge) badge.classList.add('hidden');
-    } catch(e) { console.error("Gagal cek notif:", e); }
-}
+          document.querySelectorAll('.click-edit').forEach(el => el.classList.remove('active-edit'));
+          let ctx = document.getElementById(m+'-context-panel'); if (ctx) ctx.style.display = 'none';
+          activeSelection = { m: null, elements: [] };
 
-window.bukaModalInbox = async function() {
-    tutupModal('profile-dropdown');
-    document.getElementById('modal-inbox').classList.remove('hidden');
-    
-    document.getElementById('inbox-view-list').classList.remove('hidden');
-    document.getElementById('inbox-view-read').classList.add('hidden');
-    document.getElementById('inbox-view-compose').classList.add('hidden');
-    
-    await loadInboxData();
-};
+          let item = document.getElementById(m+'-item').value;
+          let panjang = document.getElementById(m+'-panjang').value;
+          let grade = document.getElementById(m+'-grade') ? document.getElementById(m+'-grade').value : "";
+          let shading = document.getElementById(m+'-shading').value;
+          let po = document.getElementById(m+'-po') ? document.getElementById(m+'-po').value : "";
+          let dus = document.getElementById(m+'-dus').value;
+          let shift = document.getElementById(m+'-shift').value;
+          let mesin = document.getElementById(m+'-mesin').value;
+          let tgl = document.getElementById(m+'-tgl').value;
 
-window.kembaliKeListInbox = function() {
-    document.getElementById('inbox-view-list').classList.remove('hidden');
-    document.getElementById('inbox-view-read').classList.add('hidden');
-    document.getElementById('inbox-view-compose').classList.add('hidden');
-    
-    loadInboxData(); 
-};
+          let dataKirim = {
+            jenis: m === 'p' ? 'PLAFON' : 'LIS', qty: qty, 
+            item: item, panjang: panjang,
+            grade: m === 'l' ? "1" : grade, shading: shading,
+            po: m === 'l' ? "P49" : po, dus: dus, tgl: tgl, mesin: mesin, shift: shift, 
+            barcodeText: stateGlobal[m].barcodeData 
+          };
 
-async function loadInboxData() {
-    const tbody = document.getElementById('tbody-inbox');
-    if(!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i> Memuat pesan...</td></tr>';
-    lucide.createIcons();
+          let isRevisi = document.getElementById(m+'-cb-revisi') && document.getElementById(m+'-cb-revisi').checked;
+          let suffixRevisi = isRevisi ? " N" : "";
 
-    const user = JSON.parse(localStorage.getItem('user_session'));
-    let tempInbox = [];
-
-    try {
-        const { data: msgs, error: errMsgs } = await db.from('app_messages')
-            .select('*')
-            .eq('recipient', user.username)
-            .order('created_at', { ascending: false });
-        
-        if(errMsgs) throw errMsgs;
-        
-        if(msgs) {
-            msgs.forEach(m => {
-                tempInbox.push({
-                    id: m.id,
-                    type: 'MESSAGE',
-                    created_at: m.created_at,
-                    sender: m.sender,
-                    subject: m.subject,
-                    body: m.body,
-                    status: m.status
-                });
-            });
-        }
-
-        const canApprove = user.role === 'Admin' || user.role === 'CS' || user.username.toLowerCase().includes('admin');
-        if (canApprove) {
-            const { data: reqs, error: errReqs } = await db.from('request_ganti_customer')
-                .select('*')
-                .eq('status', 'PENDING')
-                .order('created_at', { ascending: false });
+          google.script.run.withSuccessHandler(async function(res) {
+            let nodeFront = document.getElementById(m+'-label-canvas'); 
+            let nodeBack = document.getElementById(m+'-label-canvas-back'); 
             
-            if(reqs) {
-                reqs.forEach(r => {
-                    tempInbox.push({
-                        id: r.id,
-                        type: 'REQ_CUSTOMER',
-                        created_at: r.created_at,
-                        sender: r.pic_request || 'Sistem',
-                        subject: `Request Ganti Customer: ${r.qrcode}`,
-                        body: `Pengajuan ganti customer untuk kardus:\n\nQR Code: ${r.qrcode}\nCustomer Lama: ${r.customer_awal}\nCustomer Baru (Request): ${r.customer_request}\nKeterangan: ${r.keterangan || '-'}`,
-                        status: 'UNREAD', 
-                        meta: r 
-                    });
-                });
+            let wrapper = document.getElementById(m+'-labels-wrapper');
+            let oldWrapTransform = wrapper ? wrapper.style.transform : 'none';
+            if(wrapper) wrapper.style.transform = 'none';
+            
+            let oldTransformFront = nodeFront.style.transform;
+            let oldTransformBack = nodeBack.style.transform;
+            
+            nodeFront.style.transform = 'none'; nodeFront.style.border = 'none';
+            nodeBack.style.transform = 'none'; nodeBack.style.border = 'none';
+            
+            let container = document.getElementById(m+'-preview-container');
+            let oldOverflow = container.style.overflowY;
+            container.style.overflowY = 'visible';
+            
+            let sequenceImages = [];
+            
+            for(let i = res.startSerial; i <= res.endSerial; i++) {
+              let serialStr = "/" + ("0000" + i).slice(-4);
+              document.getElementById(m+'-l-barcode-text').innerText = stateGlobal[m].barcodeData + serialStr + suffixRevisi;
+              
+              let qrEl = document.getElementById(m+'-qrcode');
+              qrEl.innerHTML = "";
+              new QRCode(qrEl, { text: stateGlobal[m].barcodeData + serialStr, width: 400, height: 400, correctLevel : QRCode.CorrectLevel.L });
+              let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; });
+              
+              await new Promise(r => setTimeout(r, 40)); 
+              
+              let canvasFront = await html2canvas(nodeFront, { scale: 6, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
+              sequenceImages.push(canvasFront.toDataURL("image/png", 1.0));
+              
+              let canvasBack = await html2canvas(nodeBack, { scale: 6, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
+              sequenceImages.push(canvasBack.toDataURL("image/png", 1.0));
+              
+              btnCetak.innerText = `⏳ Merender: ${sequenceImages.length / 2}/${qty}`;
             }
-        }
-
-        tempInbox.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        inboxDataGlobal = tempInbox;
-        renderInboxTable();
-
-    } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`;
-    }
-}
-
-function renderInboxTable() {
-    const tbody = document.getElementById('tbody-inbox');
-    
-    if(inboxDataGlobal.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-400 font-bold"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Kotak pesan kosong.</td></tr>';
-        lucide.createIcons();
-        return;
-    }
-
-    let html = '';
-    inboxDataGlobal.forEach((d, index) => {
-        const dt = new Date(d.created_at);
-        const tgl = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
-        
-        const isUnread = d.status === 'UNREAD';
-        const textClass = isUnread ? 'font-black text-slate-900' : 'font-medium text-slate-500';
-        const badge = isUnread 
-            ? '<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-200">Baru</span>'
-            : '<span class="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200">Dibaca</span>';
-
-        const iconType = d.type === 'REQ_CUSTOMER' ? '<i data-lucide="file-warning" class="w-4 h-4 text-orange-500 inline mr-1"></i>' : '';
-
-        html += `
-            <tr class="border-b border-slate-200 hover:bg-slate-50 transition cursor-pointer group">
-                <td class="p-3 text-center" onclick="event.stopPropagation()">
-                    <input type="checkbox" value="${d.id}" data-type="${d.type}" class="cb-inbox rounded text-blue-500 focus:ring-0 cursor-pointer w-4 h-4 border-slate-300">
-                </td>
-                <td class="p-3 text-xs text-center ${textClass}" onclick="bacaPesan(${index})">${tgl}</td>
-                <td class="p-3 text-sm text-center ${textClass}" onclick="bacaPesan(${index})">${d.sender}</td>
-                <td class="p-3 text-sm text-center ${textClass} truncate max-w-[200px]" onclick="bacaPesan(${index})">${iconType}${d.subject}</td>
-                <td class="p-3 text-center" onclick="bacaPesan(${index})">${badge}</td>
-            </tr>
-        `;
-    });
-    
-    tbody.innerHTML = html;
-    lucide.createIcons();
-}
-
-window.toggleAllInbox = function(checked) {
-    document.querySelectorAll('.cb-inbox').forEach(cb => cb.checked = checked);
-};
-
-window.bacaPesan = async function(index) {
-    const msg = inboxDataGlobal[index];
-    if(!msg) return;
-
-    const dt = new Date(msg.created_at);
-    document.getElementById('read-subject').innerText = msg.subject;
-    document.getElementById('read-sender').innerText = msg.sender;
-    document.getElementById('read-date').innerText = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
-    document.getElementById('read-body').innerText = msg.body;
-
-    const actionContainer = document.getElementById('read-action-container');
-    actionContainer.innerHTML = '';
-    actionContainer.classList.add('hidden');
-
-    if (msg.type === 'REQ_CUSTOMER') {
-        actionContainer.classList.remove('hidden');
-        actionContainer.innerHTML = `
-            <button onclick="terimaRequestPO(${msg.meta.id}, '${msg.meta.qrcode}', '${msg.meta.customer_request}')" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2 text-sm">
-                <i data-lucide="check-circle" class="w-4 h-4"></i> TERIMA REQUEST INI
-            </button>
-        `;
-        lucide.createIcons();
-    } 
-    else if (msg.type === 'MESSAGE' && msg.status === 'UNREAD') {
-        try {
-            await db.from('app_messages').update({ status: 'READ' }).eq('id', msg.id);
-            msg.status = 'READ'; 
-            cekNotifikasiInbox(); 
-        } catch(e) { console.error("Gagal update status read:", e); }
-    }
-
-    document.getElementById('inbox-view-list').classList.add('hidden');
-    document.getElementById('inbox-view-read').classList.remove('hidden');
-}
-
-window.bukaBuatPesan = async function() {
-    document.getElementById('inbox-view-list').classList.add('hidden');
-    document.getElementById('inbox-view-compose').classList.remove('hidden');
-    
-    document.getElementById('compose-subject').value = '';
-    document.getElementById('compose-body').value = '';
-    
-    const sel = document.getElementById('compose-recipient');
-    sel.innerHTML = '<option value="">Memuat...</option>';
-    
-    try {
-        const { data, error } = await db.from('app_users').select('username, role').order('username');
-        if(error) throw error;
-        
-        const currentUser = JSON.parse(localStorage.getItem('user_session'));
-        let html = '<option value="">-- Pilih Penerima --</option>';
-        
-        data.forEach(u => {
-            if(u.username !== currentUser.username) {
-                html += `<option value="${u.username}">${u.username} - ${u.role || 'User'}</option>`;
-            }
-        });
-        sel.innerHTML = html;
-    } catch(e) {
-        sel.innerHTML = '<option value="">Gagal memuat user</option>';
-    }
-}
-
-window.kirimPesan = async function() {
-    const currentUser = JSON.parse(localStorage.getItem('user_session'));
-    const recipient = document.getElementById('compose-recipient').value;
-    const subject = document.getElementById('compose-subject').value.trim();
-    const body = document.getElementById('compose-body').value.trim();
-
-    if(!recipient) return alert("Pilih penerima pesan!");
-    if(!subject) return alert("Perihal tidak boleh kosong!");
-    if(!body) return alert("Isi pesan tidak boleh kosong!");
-
-    const btn = document.getElementById('btn-kirim-pesan');
-    const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Mengirim...';
-    btn.disabled = true;
-
-    try {
-        const { error } = await db.from('app_messages').insert([{
-            sender: currentUser.username,
-            recipient: recipient,
-            subject: subject,
-            body: body,
-            status: 'UNREAD'
-        }]);
-
-        if(error) throw error;
-        
-        alert("Pesan berhasil dikirim!");
-        kembaliKeListInbox();
-    } catch(e) {
-        alert("Gagal mengirim pesan: " + e.message);
-    } finally {
-        btn.innerHTML = ori;
-        btn.disabled = false;
-        lucide.createIcons();
-    }
-}
-
-window.hapusPesanMassal = async function() {
-    const checked = document.querySelectorAll('.cb-inbox:checked');
-    if(checked.length === 0) return alert("Pilih pesan yang ingin dihapus!");
-    
-    if(!confirm(`Yakin ingin menghapus ${checked.length} pesan ini?`)) return;
-
-    let idsMsg = [];
-    let idsReq = [];
-
-    checked.forEach(cb => {
-        if(cb.getAttribute('data-type') === 'MESSAGE') idsMsg.push(cb.value);
-        else if(cb.getAttribute('data-type') === 'REQ_CUSTOMER') idsReq.push(cb.value);
-    });
-
-    try {
-        if(idsMsg.length > 0) {
-            await db.from('app_messages').delete().in('id', idsMsg);
-        }
-        if(idsReq.length > 0) {
-            await db.from('request_ganti_customer').update({ status: 'DITOLAK' }).in('id', idsReq);
-        }
-        
-        alert("Pesan berhasil dihapus.");
-        loadInboxData();
-        cekNotifikasiInbox();
-    } catch(e) {
-        alert("Gagal menghapus pesan: " + e.message);
-    }
-}
-
-window.terimaRequestPO = async function(idReq, qrcode, customerBaru) {
-    if(!confirm(`Yakin ingin mengganti Customer untuk kardus ${qrcode} menjadi ${customerBaru}?`)) return;
-
-    try {
-        const { data: stokData, error: errStok } = await db.from('stok_global').select('id_sku').eq('qrcode', qrcode).single();
-        if(errStok || !stokData) throw new Error("Gagal mengambil kartu stok dari gudang (mungkin barang sudah keluar/terhapus).");
-
-        let id_sku = stokData.id_sku;
-        let parts = id_sku.split('_');
-        
-        if(parts.length >= 8) {
-            parts[7] = customerBaru; 
-        } 
-        
-        let sku_baru = parts.join('_'); 
-
-        const { error: errUpdate } = await db.from('stok_global').update({ id_sku: sku_baru, customer_aktual: customerBaru }).eq('qrcode', qrcode);
-        if(errUpdate) throw errUpdate;
-
-        const { error: errReq } = await db.from('request_ganti_customer').update({ status: 'SELESAI' }).eq('id', idReq);
-        if(errReq) throw errReq;
-
-        alert("Request berhasil disetujui! Customer telah diganti.");
-        kembaliKeListInbox(); 
-        cekNotifikasiInbox(); 
-
-    } catch(err) {
-        alert("Gagal memproses persetujuan: " + err.message);
-    }
-}
+            
+            nodeFront.style.transform = oldTransformFront; nodeFront.style.border = '1px solid black';
+            nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black';
+            if(wrapper) wrapper.style.transform = oldWrapTransform;
+            container.style.overflowY = oldOverflow;
+            
+            btnCetak.innerText = "🖨 3. CETAK LABEL"; btnCetak.disabled = false;
+            
+            let w = stateGlobal[m].kertas.w + "mm";
+            let h = stateGlobal[m].kertas.h + "mm";
+            let pWin = window.open('', '_blank');
+            
+            pWin.document.write(`<html><head><title>Print Label</title><style>
+              @page { size: ${w} ${h}; margin: 0; }
+              body { margin: 0; padding: 20px; background: #525659; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+              .label-page { page-break-after: always; width: ${w}; height: ${h}; background: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center; overflow: hidden; flex-shrink: 0; }
+              img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; filter: grayscale(100%) contrast(1000%); }
+              @media print { body { background: #fff; padding: 0; display: block; } .label-page { box-shadow: none; margin: 0; } }
+            </style></head><body>`);
+            
+            sequenceImages.forEach(img => { pWin.document.write(`<div class="label-page"><img src="${img}"></div>`); });
+            
+            pWin.document.write(`</body></html>`); 
+            pWin.document.close(); 
+            setTimeout(() => { pWin.focus(); pWin.print(); }, 500);
+          }).prosesCetakBatch(JSON.stringify(dataKirim));
+      };
+  }, 500);
+</script>
