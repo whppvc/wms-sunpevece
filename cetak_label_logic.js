@@ -2,9 +2,9 @@
 // WMS SUNPEVECE - CETAK LABEL ENGINE (REFACTORED & SUPABASE INTEGRATED)
 // ============================================================================
 
-let currentMode = 'plafon'; // plafon, lis, wpc, khusus, gudang
+let currentMode = 'plafon'; // plafon (Plafon & Lis), khusus
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [] };
-let pinAkses = "12345"; // PIN Default untuk akses Khusus & Gudang
+let pinAkses = "12345"; // PIN Default untuk akses Khusus & Tambah Master
 
 // State Global untuk Canvas (Posisi, Font, Visibilitas)
 const createBasePos = () => ({ x: 0, y: 0 });
@@ -12,9 +12,10 @@ const baseVis = { qr: true, barcode: true, nama: true, shading: true, ukuran: tr
 const baseVisBack = { nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
 
 let stateGlobal = {};
-const modes = ['plafon', 'lis', 'wpc', 'khusus', 'gudang'];
+const modes = ['plafon', 'khusus'];
 modes.forEach(m => {
-    stateGlobal[m] = { zoom: 4.0, pos: { qr: { x: 0, y: 0, s: 1 }, barcode: createBasePos(), nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { barcode: 5, nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: '100x50', w: 100, h: 50 }, wrap: { nama: 33, barcode: 45, nama_cb: true, barcode_cb: true }, barcodeData: "", linkFont: true, vis: JSON.parse(JSON.stringify(baseVis)) };
+    // REVISI: Default Kertas 85 x 50 mm
+    stateGlobal[m] = { zoom: 4.0, pos: { qr: { x: 0, y: 0, s: 1 }, barcode: createBasePos(), nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { barcode: 5, nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: 'custom', w: 85, h: 50 }, wrap: { nama: 33, barcode: 45, nama_cb: true, barcode_cb: true }, barcodeData: "", linkFont: true, vis: JSON.parse(JSON.stringify(baseVis)) };
     stateGlobal[m + '_back'] = { pos: { nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, wrap: { nama: 45, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) };
 });
 
@@ -24,6 +25,10 @@ modes.forEach(m => historyStack[m] = { undo: [], redo: [] });
 let activeSelection = { m: null, elements: [] };
 let isDragging = false, dragStartX = 0, dragStartY = 0, dragInitialPos = {};
 let pendingAction = null;
+
+// State Modal Search
+let currentSearchType = ''; // 'item', 'mesin', 'customer'
+let selectedSearchData = { nama: '', kode: '' };
 
 // ==========================================
 // 1. INISIALISASI & SUPABASE FETCH
@@ -40,7 +45,6 @@ async function loadMasterData() {
         const { data, error } = await db.from('master_2').select('*');
         if (error) throw error;
 
-        // Parsing data dari master_2 ke format array unik
         const getUnique = (keyName, keyCode) => {
             let map = new Map();
             data.forEach(r => {
@@ -68,8 +72,8 @@ async function loadMasterData() {
 // 2. UI RENDERER (DRY PRINCIPLE)
 // ==========================================
 function switchMode(mode) {
-    if ((mode === 'khusus' || mode === 'gudang') && currentMode !== mode) {
-        mintaPin("Akses Print " + (mode === 'khusus' ? "Khusus" : "Gudang"), () => executeSwitchMode(mode));
+    if (mode === 'khusus' && currentMode !== mode) {
+        mintaPin("Akses Print Khusus", () => executeSwitchMode(mode));
     } else {
         executeSwitchMode(mode);
     }
@@ -104,7 +108,7 @@ function toggleLeftPanel(target) {
         pForm.classList.add('hidden'); pSet.classList.remove('hidden');
         bSet.className = 'flex-1 py-2 bg-blue-600 text-white text-xs font-bold rounded shadow-sm transition';
         bForm.className = 'flex-1 py-2 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 text-xs font-bold rounded transition';
-        switchSideSettings(); // Refresh setting view
+        switchSideSettings(); 
     }
 }
 
@@ -121,22 +125,15 @@ function renderForm() {
             </select>
         </div>`;
 
-    if (currentMode === 'gudang') {
-        container.innerHTML = `
-            <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi (Global)</label><input type="date" id="g-tgl" value="${today}" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50"></div>
-            ${buildSelect('g-mesin', 'Mesin (Global)', masterData.mesin)}
-            ${buildSelect('g-shift', 'Shift (Global)', masterData.shift)}
-            <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs text-amber-800 font-medium leading-relaxed">
-                <b>Format File Wajib CSV (.csv)</b><br>Urutan 8 kolom (tanpa header):<br>1. Nama Item<br>2. Jenis (Plafon/Lis)<br>3. Panjang<br>4. Grade<br>5. Merk<br>6. Shading<br>7. Customer<br>8. Qty Print
+    // REVISI: Input dengan tombol Cari (Modal Search)
+    const buildSearchInput = (id, label, type) => `
+        <div>
+            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">${label}</label>
+            <div class="flex gap-2">
+                <input type="text" id="${id}" readonly class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-100 text-slate-600 cursor-not-allowed" placeholder="Pilih ${label}...">
+                <button onclick="bukaModalSearch('${type}')" class="px-3 bg-blue-100 text-blue-700 font-bold rounded hover:bg-blue-200 transition text-xs shadow-sm"><i data-lucide="search" class="w-4 h-4"></i></button>
             </div>
-            <div>
-                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Upload CSV</label>
-                <input type="file" id="g-file" accept=".csv" class="w-full p-2 text-sm border border-slate-300 rounded bg-white cursor-pointer">
-            </div>
-            <button onclick="prosesUploadGudang()" class="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-lg shadow-sm text-xs uppercase transition active:scale-95 mt-2">⚡ Proses CSV</button>
-        `;
-        return;
-    }
+        </div>`;
 
     if (currentMode === 'khusus') {
         container.innerHTML = `
@@ -156,15 +153,23 @@ function renderForm() {
         return;
     }
 
-    // Form Standard (Plafon, Lis, WPC)
     let m = currentMode;
     container.innerHTML = `
         <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="date" id="${m}-tgl" value="${today}" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50"></div>
-        ${buildSelect(`${m}-mesin`, 'Mesin', masterData.mesin)}
+        ${buildSearchInput(`${m}-mesin`, 'Mesin', 'mesin')}
         ${buildSelect(`${m}-shift`, 'Shift', masterData.shift)}
-        ${buildSelect(`${m}-item`, 'Nama Item', masterData.item)}
+        ${buildSearchInput(`${m}-item`, 'Nama Item', 'item')}
+        
+        <div>
+            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label>
+            <select id="${m}-jenis" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-blue-500 font-bold bg-slate-50 cursor-pointer">
+                <option value="Plafon">Plafon</option>
+                <option value="Lis">Lis</option>
+            </select>
+        </div>
+
         <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang (M)</label><input type="text" id="${m}-panjang" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50 uppercase" placeholder="Cth: 4 atau 5.95"></div>
-        ${m !== 'lis' ? buildSelect(`${m}-grade`, 'Grade', masterData.grade) : ''}
+        ${buildSelect(`${m}-grade`, 'Grade', masterData.grade)}
         ${buildSelect(`${m}-dus`, 'Dus / Merk', masterData.dus)}
         
         <div>
@@ -179,7 +184,7 @@ function renderForm() {
             <input type="hidden" id="${m}-shading">
         </div>
         
-        ${m !== 'lis' ? buildSelect(`${m}-po`, 'Customer (PO)', masterData.customer) : ''}
+        ${buildSearchInput(`${m}-po`, 'Customer (PO)', 'customer')}
         
         <label class="flex items-center gap-2 cursor-pointer mt-2 p-2 bg-slate-50 border border-slate-200 rounded">
             <input type="checkbox" id="${m}-cb-revisi" class="w-4 h-4 accent-blue-600">
@@ -191,6 +196,7 @@ function renderForm() {
             <input type="number" id="${m}-qty" value="1" min="1" class="w-full p-3 text-lg border-2 border-blue-200 rounded outline-none focus:border-blue-600 font-black text-center bg-blue-50 text-blue-800">
         </div>
     `;
+    lucide.createIcons();
 }
 
 function updateShading() {
@@ -208,7 +214,6 @@ function updateShading() {
 
 function renderSettings() {
     const container = document.getElementById('panel-setting');
-    let m = currentMode;
     
     container.innerHTML = `
         <div>
@@ -222,12 +227,12 @@ function renderSettings() {
         <div class="bg-slate-50 border border-slate-200 p-3 rounded-lg">
             <h4 class="text-xs font-black text-slate-700 mb-3 border-b border-slate-200 pb-1">Kertas Label</h4>
             <select id="kertas-select" onchange="ubahTipeKertas()" class="w-full p-2 text-xs border border-slate-300 rounded outline-none font-bold mb-2">
-                <option value="50.8x27.9">50.8 x 27.9 mm (Zebra)</option>
                 <option value="custom">Kustom Ukuran</option>
+                <option value="50.8x27.9">50.8 x 27.9 mm (Zebra)</option>
             </select>
-            <div id="custom-kertas-form" class="hidden gap-2">
-                <div><label class="text-[10px] font-bold">Lebar (mm)</label><input type="number" id="custom-w" value="50.8" step="0.1" class="w-full p-1 border rounded text-xs" oninput="updateKertasCustom()"></div>
-                <div><label class="text-[10px] font-bold">Tinggi (mm)</label><input type="number" id="custom-h" value="27.9" step="0.1" class="w-full p-1 border rounded text-xs" oninput="updateKertasCustom()"></div>
+            <div id="custom-kertas-form" class="flex gap-2">
+                <div><label class="text-[10px] font-bold">Lebar (mm)</label><input type="number" id="custom-w" value="85" step="0.1" class="w-full p-1 border rounded text-xs" oninput="updateKertasCustom()"></div>
+                <div><label class="text-[10px] font-bold">Tinggi (mm)</label><input type="number" id="custom-h" value="50" step="0.1" class="w-full p-1 border rounded text-xs" oninput="updateKertasCustom()"></div>
             </div>
         </div>
 
@@ -254,22 +259,18 @@ function renderSettings() {
 
 function renderCanvas() {
     const wrapper = document.getElementById('labels-wrapper');
-    let m = currentMode;
-    
-    if (m === 'gudang') {
-        wrapper.innerHTML = `<div id="gudang-labels-container" class="flex flex-col gap-4 w-full"></div>`;
-        return;
-    }
-
     const buildCanvas = (side) => {
         const isBack = side === 'back';
-        const sfx = isBack ? '_back' : '';
         const idSfx = isBack ? '-back' : '';
         
+        // REVISI: Default ukuran kanvas mengikuti stateGlobal (85x50)
+        let w = stateGlobal[currentMode].kertas.w + 'mm';
+        let h = stateGlobal[currentMode].kertas.h + 'mm';
+
         return `
         <div class="flex flex-col items-center gap-1">
             <span class="text-[8px] font-black text-white ${isBack ? 'bg-slate-500' : 'bg-blue-700'} px-2 py-0.5 rounded uppercase">Label ${isBack ? 'Belakang' : 'Depan'}</span>
-            <div id="canvas${idSfx}" class="label-canvas" style="width: 50.8mm; height: 27.9mm;">
+            <div id="canvas${idSfx}" class="label-canvas" style="width: ${w}; height: ${h};">
                 ${!isBack ? `
                 <div class="w-[30%] h-full flex flex-col justify-center items-center">
                     <div id="qr-wrapper" class="click-edit" onmousedown="startDrag('qr', event, ${isBack})"><div id="qrcode" style="width:45px; height:45px;"></div></div>
@@ -297,7 +298,6 @@ function renderCanvas() {
 
     wrapper.innerHTML = buildCanvas('front') + buildCanvas('back');
     
-    // Init Dummy QR
     let qrEl = document.getElementById('qrcode');
     if(qrEl) {
         qrEl.innerHTML = "";
@@ -370,14 +370,15 @@ function handleWrapChange(key, isChecked) {
 function ubahTipeKertas() {
     const val = document.getElementById('kertas-select').value;
     const customForm = document.getElementById('custom-kertas-form');
-    let w = 50.8, h = 27.9;
+    let w = 85, h = 50; // REVISI: Default 85x50
 
     if (val === 'custom') {
         customForm.classList.remove('hidden'); customForm.classList.add('flex');
-        w = parseFloat(document.getElementById('custom-w').value) || 50.8;
-        h = parseFloat(document.getElementById('custom-h').value) || 27.9;
+        w = parseFloat(document.getElementById('custom-w').value) || 85;
+        h = parseFloat(document.getElementById('custom-h').value) || 50;
     } else {
         customForm.classList.add('hidden'); customForm.classList.remove('flex');
+        w = 50.8; h = 27.9;
     }
 
     stateGlobal[currentMode].kertas = { tipe: val, w: w, h: h };
@@ -439,7 +440,6 @@ window.startDrag = function(elementKey, event, isBack = false) {
     activeSelection.isBack = isBack;
     if(activeSelection.elements.includes(elementKey)) el.classList.add('active-edit');
 
-    // Auto switch side settings
     document.getElementById('side-select').value = isBack ? 'back' : 'front';
     switchSideSettings();
 
@@ -503,13 +503,14 @@ function showContextPanel() {
     let m = activeSelection.m;
     
     let html = '';
+    // REVISI: Desain slider vertikal yang lebih rapi
     const buildSlider = (type, min, max, val) => `
-        <div class="flex flex-col items-center w-14">
-            <span class="text-[9px] font-black text-slate-400 uppercase mb-1">${type}</span>
-            <input type="number" value="${val}" class="w-full bg-slate-900 text-blue-400 border border-slate-600 rounded text-center font-bold text-xs py-1 mb-2" onchange="syncContext('${type}', this.value)">
-            <button onclick="stepContext('${type}', 1)" class="w-full bg-slate-700 hover:bg-slate-600 rounded py-1 font-bold text-xs mb-1">+</button>
-            <input type="range" orient="vertical" min="${min}" max="${max}" value="${val}" class="h-32 w-3 cursor-pointer my-2" style="-webkit-appearance: slider-vertical;" oninput="syncContext('${type}', this.value)">
-            <button onclick="stepContext('${type}', -1)" class="w-full bg-slate-700 hover:bg-slate-600 rounded py-1 font-bold text-xs mt-1">-</button>
+        <div class="flex flex-col items-center w-14 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
+            <span class="text-[9px] font-black text-slate-300 uppercase mb-1 tracking-wider">${type}</span>
+            <input type="number" value="${val}" class="w-full bg-slate-950 text-blue-400 border border-slate-600 rounded text-center font-bold text-xs py-1 mb-2 outline-none focus:border-blue-500" onchange="syncContext('${type}', this.value)">
+            <button onclick="stepContext('${type}', 1)" class="w-full bg-slate-700 hover:bg-blue-600 text-white rounded py-1 font-bold text-xs mb-1 transition">+</button>
+            <input type="range" orient="vertical" min="${min}" max="${max}" value="${val}" class="h-28 w-3 cursor-pointer my-2" oninput="syncContext('${type}', this.value)">
+            <button onclick="stepContext('${type}', -1)" class="w-full bg-slate-700 hover:bg-rose-600 text-white rounded py-1 font-bold text-xs mt-1 transition">-</button>
         </div>`;
 
     if (key === 'qr') html += buildSlider('skala', 50, 250, Math.round(stateGlobal[m].pos.qr.s * 100));
@@ -538,12 +539,13 @@ window.syncContext = function(type, val) {
             stateGlobal[m].gap.info = v; document.getElementById(`el-info-group${idSfx}`).style.gap = v + 'px';
         } else if (type === 'wrap') {
             stateGlobal[m].wrap[k] = v;
-            let el = document.getElementById(k === 'barcode' ? `el-barcode${idSfx}` : `el-nama${idSfx}`);
+            // REVISI: Perbaikan logika wrap text untuk barcode
+            let elId = k === 'barcode' ? `el-barcode${idSfx}` : `el-nama${idSfx}`;
+            let el = document.getElementById(elId);
             if(el && el.style.whiteSpace === 'normal') el.style.maxWidth = v + (k==='nama'?'mm':'px');
         }
     });
     
-    // Update input number di panel
     let inputs = document.querySelectorAll('#context-panel input[type="number"]');
     inputs.forEach(inp => { if(inp.getAttribute('onchange').includes(type)) inp.value = v; });
 };
@@ -630,7 +632,6 @@ function loadSetDefault(m) {
             Object.keys(stateGlobal[m].pos).forEach(k => updateTransform(k, false));
             Object.keys(stateGlobal[m+'_back'].pos).forEach(k => updateTransform(k, true));
             
-            // Terapkan Font & Gap
             ['barcode', 'nama', 'shading'].forEach(k => {
                 let el = document.getElementById(k==='barcode'?'el-barcode':`el-${k}`); if(el) el.style.fontSize = stateGlobal[m].font[k] + 'px';
                 let elB = document.getElementById(k==='barcode'?'el-barcode-back':`el-${k}-back`); if(elB) elB.style.fontSize = stateGlobal[m+'_back'].font[k] + 'px';
@@ -638,24 +639,248 @@ function loadSetDefault(m) {
             document.getElementById('el-info-group').style.fontSize = stateGlobal[m].font.info + 'px'; document.getElementById('el-info-group').style.gap = stateGlobal[m].gap.info + 'px';
             document.getElementById('el-info-group-back').style.fontSize = stateGlobal[m+'_back'].font.info + 'px'; document.getElementById('el-info-group-back').style.gap = stateGlobal[m+'_back'].gap.info + 'px';
             
-            // Terapkan Visibilitas
+            // Terapkan Kertas
+            document.getElementById('kertas-select').value = p.front.kertas.tipe;
+            ubahTipeKertas();
+            if(p.front.kertas.tipe === 'custom') {
+                document.getElementById('custom-w').value = p.front.kertas.w;
+                document.getElementById('custom-h').value = p.front.kertas.h;
+                updateKertasCustom();
+            }
+
+            // Terapkan Wrap Text
+            handleWrapChange('nama', p.front.wrap.nama_cb);
+            handleWrapChange('barcode', p.front.wrap.barcode_cb);
+
             Object.keys(stateGlobal[m].vis).forEach(k => handleVisChange(k, stateGlobal[m].vis[k]));
             
         } catch(e) { console.error("Gagal load default:", e); }
+    } else {
+        // Jika tidak ada default, set ke 85x50
+        document.getElementById('kertas-select').value = 'custom';
+        ubahTipeKertas();
     }
 }
 
 // ==========================================
-// 7. GENERATE BARCODE & PRINT (HTML2CANVAS)
+// 7. MODAL SEARCH (PILIH ITEM/MESIN/CUST)
+// ==========================================
+window.bukaModalSearch = function(type) {
+    currentSearchType = type;
+    const titleMap = { 'item': 'Nama Item', 'mesin': 'Mesin', 'customer': 'Customer' };
+    document.getElementById('title-modal-search').innerText = `Cari ${titleMap[type]}`;
+    document.getElementById('title-tambah-master').innerText = titleMap[type];
+    
+    document.getElementById('input-search-list').value = '';
+    renderSearchList();
+
+    document.getElementById('modal-search').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+    setTimeout(() => document.getElementById('input-search-list').focus(), 100);
+};
+
+window.tutupModalSearch = function() {
+    document.getElementById('modal-search').classList.add('hidden');
+    if(document.getElementById('modal-tambah-master').classList.contains('hidden')) {
+        document.getElementById('overlay-klik-luar').classList.add('hidden');
+    }
+};
+
+function renderSearchList() {
+    const ul = document.getElementById('list-search-result');
+    const dataArr = masterData[currentSearchType] || [];
+    
+    if(dataArr.length === 0) {
+        ul.innerHTML = '<li class="p-4 text-center text-slate-400 font-bold">Data kosong.</li>';
+        return;
+    }
+
+    ul.innerHTML = dataArr.map(d => `
+        <li onclick="selectSearchItem('${d.nama}', '${d.kode}')" class="search-item p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition flex justify-between items-center group">
+            <span class="font-bold text-slate-700 group-hover:text-blue-700">${d.nama}</span>
+            <span class="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded group-hover:bg-blue-200 group-hover:text-blue-800">${d.kode || '-'}</span>
+        </li>
+    `).join('');
+}
+
+window.filterSearchList = function() {
+    const q = document.getElementById('input-search-list').value.toLowerCase();
+    document.querySelectorAll('.search-item').forEach(li => {
+        li.style.display = li.innerText.toLowerCase().includes(q) ? '' : 'none';
+    });
+};
+
+window.selectSearchItem = function(nama, kode) {
+    document.querySelectorAll('.search-item').forEach(li => li.classList.remove('bg-blue-100', 'border-blue-400'));
+    event.currentTarget.classList.add('bg-blue-100', 'border-blue-400');
+    selectedSearchData = { nama, kode };
+};
+
+window.pilihDataSearch = function() {
+    if(!selectedSearchData.nama) return alert("Pilih data dari daftar terlebih dahulu!");
+    
+    let m = currentMode;
+    let inputId = `${m}-${currentSearchType === 'customer' ? 'po' : currentSearchType}`;
+    let el = document.getElementById(inputId);
+    
+    if(el) {
+        el.value = selectedSearchData.nama;
+        el.setAttribute('data-kode', selectedSearchData.kode);
+    }
+    
+    tutupModalSearch();
+};
+
+window.bukaModalTambahMaster = function() {
+    document.getElementById('input-tambah-nama').value = '';
+    document.getElementById('input-tambah-kode').value = '';
+    document.getElementById('input-tambah-pin').value = '';
+    document.getElementById('modal-tambah-master').classList.remove('hidden');
+};
+
+window.simpanDataMasterBaru = async function() {
+    const nama = document.getElementById('input-tambah-nama').value.trim().toUpperCase();
+    const kode = document.getElementById('input-tambah-kode').value.trim().toUpperCase();
+    const pin = document.getElementById('input-tambah-pin').value;
+
+    if(!nama || !kode || !pin) return alert("Semua kolom wajib diisi!");
+    if(pin !== pinAkses) return alert("⛔ PIN SALAH! Anda tidak memiliki izin.");
+
+    const btn = document.getElementById('btn-simpan-master'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
+
+    try {
+        let colNama = currentSearchType === 'item' ? 'nama_item' : currentSearchType;
+        let colKode = currentSearchType === 'item' ? 'kode_nama_item' : `kode_${currentSearchType}`;
+
+        const payload = { [colNama]: nama, [colKode]: kode };
+        const { error } = await db.from('master_2').insert([payload]);
+        if(error) throw error;
+
+        masterData[currentSearchType].push({ nama, kode });
+        masterData[currentSearchType].sort((a,b) => a.nama.localeCompare(b.nama));
+        
+        alert("Data berhasil ditambahkan!");
+        document.getElementById('modal-tambah-master').classList.add('hidden');
+        renderSearchList();
+
+    } catch(e) {
+        alert("Gagal menyimpan: " + e.message);
+    } finally {
+        btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
+    }
+};
+
+window.hapusDataMaster = async function() {
+    if(!selectedSearchData.nama) return alert("Pilih data yang ingin dihapus dari daftar!");
+    
+    mintaPin(`Hapus '${selectedSearchData.nama}'`, async () => {
+        try {
+            let colNama = currentSearchType === 'item' ? 'nama_item' : currentSearchType;
+            const { error } = await db.from('master_2').delete().eq(colNama, selectedSearchData.nama);
+            if(error) throw error;
+
+            masterData[currentSearchType] = masterData[currentSearchType].filter(d => d.nama !== selectedSearchData.nama);
+            alert("Data berhasil dihapus!");
+            selectedSearchData = { nama: '', kode: '' };
+            renderSearchList();
+        } catch(e) {
+            alert("Gagal menghapus: " + e.message);
+        }
+    });
+};
+
+// ==========================================
+// 8. GENERATE BARCODE & PRINT (HTML2CANVAS)
 // ==========================================
 window.generateLabel = function() {
     let m = currentMode;
-    if (m === 'gudang' || m === 'khusus') return; // Logika terpisah nanti
+    if (m === 'khusus') {
+        let str = document.getElementById('k-qr-string').value.trim();
+        let jenis = document.getElementById('k-jenis').value;
+        if(!str) return alert("Masukkan String QR Code!");
+        
+        let parts = str.split('/');
+        if(parts.length < 4) return alert("Format QR tidak valid! Pastikan ada minimal 3 garis miring (/).");
+        
+        let kItem = parts[0]; let kShading = parts[1]; let p3 = parts[2]; let p4 = parts[3];
+        
+        let findName = (type, code) => {
+            let found = masterData[type].find(x => x.kode === code.toUpperCase());
+            return found ? found.nama : code;
+        };
+        
+        let namaItem = findName('item', kItem);
+        
+        let dusCode = ""; let gradeCode = "";
+        for(let d of masterData.dus) { if(d.kode && p3.endsWith(d.kode)) { dusCode = d.kode; p3 = p3.slice(0, -dusCode.length); break; } }
+        for(let g of masterData.grade) { if(g.kode && p3.endsWith(g.kode)) { gradeCode = g.kode; p3 = p3.slice(0, -gradeCode.length); break; } }
+        let panjangCode = p3;
+        
+        let namaDus = findName('dus', dusCode);
+        let namaGrade = findName('grade', gradeCode);
+        
+        let panjangAsli = 0;
+        if(panjangCode) {
+            if(panjangCode.length === 2) panjangAsli = parseInt(panjangCode) * 10;
+            else if (panjangCode.length === 1) panjangAsli = parseInt(panjangCode) * 100;
+            else panjangAsli = parseInt(panjangCode);
+        }
+        
+        let dateCode = p4.substring(0,5); p4 = p4.substring(5);
+        
+        let poCode = ""; let shiftCode = ""; let mesinCode = "";
+        if(jenis === 'p') {
+            for(let p of masterData.customer) { if(p.kode && p4.endsWith(p.kode)) { poCode = p.kode; p4 = p4.slice(0, -poCode.length); break; } }
+        }
+        for(let s of masterData.shift) { if(s.kode && p4.endsWith(s.kode)) { shiftCode = s.kode; p4 = p4.slice(0, -shiftCode.length); break; } }
+        mesinCode = p4;
+        
+        let namaPo = findName('customer', poCode);
+        let namaShift = findName('shift', shiftCode);
+        let namaMesin = findName('mesin', mesinCode);
+        
+        let yr = "20" + dateCode.substring(3).split('').reverse().join('');
+        let dayOfYear = parseInt(dateCode.substring(0,3));
+        let d = new Date(yr, 0); if(!isNaN(dayOfYear)) d.setDate(dayOfYear);
+        
+        let tglStr = isNaN(d.getTime()) ? dateCode : (`${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`);
+        let shiftStr = namaShift.replace(/\D/g, '') ? "S" + namaShift.replace(/\D/g, '') : "";
+        let poStr = jenis === 'p' ? namaPo : "";
+        let isiStr = "Qty: " + (jenis === 'p' ? "15" : "-");
+        let namaStr = namaItem + (namaGrade === 'A' ? ' A' : '');
 
+        const setTxt = (id, txt) => { let el = document.getElementById(id); if(el) el.innerText = txt; };
+        
+        document.getElementById('el-nama').innerHTML = namaStr;
+        setTxt('el-shading', kShading); setTxt('el-mesin', namaMesin); setTxt('el-po', poStr); setTxt('el-dus', namaDus);
+        setTxt('el-ukuran', `Uk 20 x ${panjangAsli}`); setTxt('el-isi', isiStr); setTxt('el-shift', shiftStr); setTxt('el-tanggal', tglStr);
+        
+        document.getElementById('el-nama-back').innerHTML = namaStr;
+        setTxt('el-shading-back', kShading); setTxt('el-mesin-back', namaMesin); setTxt('el-po-back', poStr); setTxt('el-dus-back', namaDus);
+        setTxt('el-ukuran-back', `Uk 20 x ${panjangAsli}`); setTxt('el-isi-back', isiStr); setTxt('el-shift-back', shiftStr); setTxt('el-tanggal-back', tglStr);
+
+        stateGlobal[m].barcodeData = str;
+        setTxt('el-barcode', str);
+        
+        let qrEl = document.getElementById('qrcode');
+        if(qrEl) { 
+            qrEl.innerHTML = ""; 
+            new QRCode(qrEl, { text: str, width: 400, height: 400, correctLevel : QRCode.CorrectLevel.L }); 
+            setTimeout(() => { let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; }); }, 50);
+        }
+
+        document.getElementById('btn-cetak-label').classList.remove('hidden');
+        document.getElementById('btn-cetak-label').classList.add('flex');
+        return true;
+    }
+
+    // Mode Plafon & Lis
     let tgl = document.getElementById(`${m}-tgl`).value;
     let mesin = document.getElementById(`${m}-mesin`).value;
     let shift = document.getElementById(`${m}-shift`).value;
     let item = document.getElementById(`${m}-item`).value;
+    let jenis = document.getElementById(`${m}-jenis`).value;
     let panjang = document.getElementById(`${m}-panjang`).value.trim();
     let grade = document.getElementById(`${m}-grade`) ? document.getElementById(`${m}-grade`).value : '';
     let dus = document.getElementById(`${m}-dus`).value;
@@ -665,15 +890,14 @@ window.generateLabel = function() {
 
     if(!item || !panjang || isNaN(qty) || qty < 1) return alert("Nama Item, Panjang, dan Qty wajib diisi dengan benar!");
 
-    // Ambil Kode dari Select Options
-    const getKode = (id) => { let el = document.getElementById(id); return el && el.selectedIndex > 0 ? el.options[el.selectedIndex].getAttribute('data-kode') : ''; };
+    const getKode = (id) => { let el = document.getElementById(id); return el ? el.getAttribute('data-kode') : ''; };
     
     let kItem = getKode(`${m}-item`);
-    let kGrade = m === 'lis' ? '1' : getKode(`${m}-grade`);
+    let kGrade = jenis === 'Lis' ? '1' : getKode(`${m}-grade`);
     let kDus = getKode(`${m}-dus`);
     let kMesin = getKode(`${m}-mesin`);
     let kShift = getKode(`${m}-shift`);
-    let kPo = m === 'lis' ? 'P49' : getKode(`${m}-po`);
+    let kPo = jenis === 'Lis' ? 'P49' : getKode(`${m}-po`);
 
     let pAngka = panjang.replace(/\D/g, ''); 
     let dObj = new Date(tgl), start = new Date(dObj.getFullYear(), 0, 0);
@@ -687,18 +911,16 @@ window.generateLabel = function() {
     let hasilPanjang = Math.round(parseFloat(panjang.replace(',', '.')) * 100) || 0;
     let shiftAngka = shift.replace(/\D/g, '');
     let tglStr = `${String(dObj.getDate()).padStart(2, '0')}/${String(dObj.getMonth() + 1).padStart(2, '0')}/${dObj.getFullYear()}`;
-    let isiStr = m === 'plafon' ? "Qty: 15" : "Qty: -"; // Logic isi lis bisa disesuaikan nanti
+    let isiStr = jenis === 'Plafon' ? "Qty: 15" : "Qty: -"; 
     let shiftStr = shiftAngka ? "S" + shiftAngka : "";
-    let poStr = m === 'lis' ? "P49" : po;
+    let poStr = jenis === 'Lis' ? "P49" : po;
 
     const setTxt = (id, txt) => { let el = document.getElementById(id); if(el) el.innerText = txt; };
     
-    // Depan
     document.getElementById('el-nama').innerHTML = item;
     setTxt('el-shading', shading); setTxt('el-mesin', mesin); setTxt('el-po', poStr); setTxt('el-dus', dus);
     setTxt('el-ukuran', `Uk 20 x ${hasilPanjang}`); setTxt('el-isi', isiStr); setTxt('el-shift', shiftStr); setTxt('el-tanggal', tglStr);
     
-    // Belakang
     document.getElementById('el-nama-back').innerHTML = item;
     setTxt('el-shading-back', shading); setTxt('el-mesin-back', mesin); setTxt('el-po-back', poStr); setTxt('el-dus-back', dus);
     setTxt('el-ukuran-back', `Uk 20 x ${hasilPanjang}`); setTxt('el-isi-back', isiStr); setTxt('el-shift-back', shiftStr); setTxt('el-tanggal-back', tglStr);
@@ -729,15 +951,14 @@ window.cetakLabel = async function() {
     document.querySelectorAll('.click-edit').forEach(el => el.classList.remove('active-edit'));
     document.getElementById('context-panel').classList.add('hidden');
 
-    let item = document.getElementById(`${m}-item`).value;
-    let panjang = document.getElementById(`${m}-panjang`).value.trim().toUpperCase();
-    if(!panjang.endsWith('M')) panjang += 'M';
-    let grade = document.getElementById(`${m}-grade`) ? document.getElementById(`${m}-grade`).value : (m==='lis'?'1':'');
+    let item = m === 'khusus' ? document.getElementById('el-nama').innerText : document.getElementById(`${m}-item`).value;
+    let panjang = m === 'khusus' ? document.getElementById('el-ukuran').innerText.split('x')[1].trim() : document.getElementById(`${m}-panjang`).value.trim().toUpperCase();
+    if(m !== 'khusus' && !panjang.endsWith('M')) panjang += 'M';
+    let grade = m === 'khusus' ? '' : (document.getElementById(`${m}-grade`) ? document.getElementById(`${m}-grade`).value : (document.getElementById(`${m}-jenis`).value==='Lis'?'1':''));
     
     let idKombinasi = `${item}_${panjang}_${grade}`.toUpperCase().replace(/\s/g, "");
 
     try {
-        // 1. Ambil & Update Serial Number di Supabase
         const { data: unikData, error: errUnik } = await db.from('database_kode_unik').select('id, last_serial').eq('id_kombinasi', idKombinasi).single();
         
         let startSerial = 1;
@@ -751,7 +972,6 @@ window.cetakLabel = async function() {
             await db.from('database_kode_unik').insert([{ id_kombinasi: idKombinasi, nama_item: item, panjang: panjang, grade: grade, last_serial: endSerial }]);
         }
 
-        // 2. Render Canvas ke Gambar
         let nodeFront = document.getElementById('canvas'); 
         let nodeBack = document.getElementById('canvas-back'); 
         let wrapper = document.getElementById('labels-wrapper');
@@ -789,31 +1009,31 @@ window.cetakLabel = async function() {
             
             btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${i - startSerial + 1}/${qty}`;
             
-            // Siapkan payload untuk insert ke DB
-            payloadDB.push({
-                kode_barcode: fullBarcode,
-                tgl_produksi: document.getElementById(`${m}-tgl`).value,
-                mesin: document.getElementById(`${m}-mesin`).value,
-                shift: document.getElementById(`${m}-shift`).value,
-                nama_item: item,
-                panjang: panjang,
-                grade: grade,
-                dus: document.getElementById(`${m}-dus`).value,
-                shading: document.getElementById(`${m}-shading`).value,
-                qty_dus: 1
-            });
+            if (m !== 'khusus') {
+                payloadDB.push({
+                    kode_barcode: fullBarcode,
+                    tgl_produksi: document.getElementById(`${m}-tgl`).value,
+                    mesin: document.getElementById(`${m}-mesin`).value,
+                    shift: document.getElementById(`${m}-shift`).value,
+                    nama_item: item,
+                    panjang: panjang,
+                    grade: grade,
+                    dus: document.getElementById(`${m}-dus`).value,
+                    shading: document.getElementById(`${m}-shading`).value,
+                    qty_dus: 1
+                });
+            }
         }
         
-        // Kembalikan style
         nodeFront.style.transform = oldTransformFront; nodeFront.style.border = '1px solid black';
         nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black';
         wrapper.style.transform = oldWrapTransform; container.style.overflowY = oldOverflow;
         
-        // 3. Insert ke DATABASE_PLAFON_LIS
-        const { error: errInsert } = await db.from('database_plafon_lis').insert(payloadDB);
-        if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
+        if (m !== 'khusus' && payloadDB.length > 0) {
+            const { error: errInsert } = await db.from('database_plafon_lis').insert(payloadDB);
+            if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
+        }
 
-        // 4. Buka Window Print
         let w = stateGlobal[m].kertas.w + "mm"; let h = stateGlobal[m].kertas.h + "mm";
         let pWin = window.open('', '_blank');
         pWin.document.write(`<html><head><title>Print Label</title><style>
@@ -835,7 +1055,7 @@ window.cetakLabel = async function() {
 };
 
 // ==========================================
-// 8. SECURITY (PIN)
+// 9. SECURITY (PIN)
 // ==========================================
 function mintaPin(title, callback) {
     document.getElementById('pin-global-title').innerText = title;
