@@ -1,0 +1,179 @@
+<script>
+  let currentPIC = "";
+  let currentOpnameTab = "pic";
+
+  function bukaOpname() {
+      // Bypass login untuk versi GAS ini (Asumsi user sudah login di WMS)
+      currentPIC = "USER_AKTIF"; 
+      document.getElementById('opname-user-display').innerText = "PIC: " + currentPIC;
+      
+      document.getElementById('start-view').style.display = 'none';
+      document.getElementById('app-view').style.display = 'none';
+      document.getElementById('opname-view').style.display = 'block';
+
+      initOpname();
+  }
+
+  function keluarOpname() {
+      currentPIC = "";
+      document.getElementById('opname-view').style.display = 'none';
+      document.getElementById('start-view').style.display = 'flex';
+  }
+
+  function switchTabOpname(tab) {
+      currentOpnameTab = tab;
+      document.getElementById('tab-opname-pic').classList.remove('active');
+      document.getElementById('tab-opname-all').classList.remove('active');
+      
+      if(tab === 'pic') {
+          document.getElementById('tab-opname-pic').classList.add('active');
+          document.getElementById('tab-opname-pic').style.background = '#b58900';
+          document.getElementById('tab-opname-all').style.background = 'transparent';
+      } else {
+          document.getElementById('tab-opname-all').classList.add('active');
+          document.getElementById('tab-opname-all').style.background = '#b58900';
+          document.getElementById('tab-opname-pic').style.background = 'transparent';
+      }
+      
+      loadDataOpname();
+  }
+
+  function initOpname() {
+      document.getElementById('o-tgl').valueAsDate = new Date();
+
+      google.script.run.withSuccessHandler(function(res) {
+          if(res.error) { alert("Gagal memuat Master Gudang: " + res.error); return; }
+          
+          let fillDatalist = (id, arr) => {
+              let dl = document.getElementById(id);
+              if(!dl) return;
+              dl.innerHTML = '';
+              arr.forEach(val => {
+                  let opt = document.createElement('option');
+                  opt.value = val;
+                  dl.appendChild(opt);
+              });
+          };
+
+          let fillSelect = (id, arr) => {
+              let sel = document.getElementById(id);
+              if(!sel) return;
+              sel.innerHTML = '<option value="">Pilih...</option>';
+              arr.forEach(val => sel.add(new Option(val, val)));
+          };
+
+          fillDatalist('dl-area', res.area);
+          fillDatalist('dl-mesin', res.mesin);
+          fillDatalist('dl-item', res.item);
+          fillDatalist('dl-po', res.po);
+          
+          fillSelect('o-shift', res.shift);
+          fillSelect('o-grade', res.grade);
+          fillSelect('o-dus', res.dus);
+          
+      }).getOpnameMasterData();
+
+      loadDataOpname();
+  }
+
+  function loadDataOpname() {
+      let tbody = document.getElementById('tbody-opname');
+      tbody.innerHTML = '<tr><td colspan="14" style="text-align:center; padding:20px;">⏳ Memuat data dari server...</td></tr>';
+      
+      let filterPIC = currentOpnameTab === 'pic' ? currentPIC : "ALL";
+
+      google.script.run.withSuccessHandler(function(data) {
+          tbody.innerHTML = "";
+          if(data.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="14" style="text-align:center; padding:20px;">Belum ada data.</td></tr>';
+              return;
+          }
+          
+          data.forEach((row, index) => {
+              let tr = document.createElement('tr');
+              
+              tr.innerHTML = `
+                  <td style="text-align:center;"><input type="checkbox" class="cb-row" id="cb-opname-${index}"></td>
+                  <td>${row.tgl}</td>
+                  <td>${row.mesin}</td>
+                  <td>${row.shift}</td>
+                  <td>${row.area}</td>
+                  <td>${row.jenis}</td>
+                  <td>${row.item}</td>
+                  <td>${row.panjang}</td>
+                  <td>${row.grade}</td>
+                  <td>${row.dus}</td>
+                  <td>${row.shading}</td>
+                  <td>${row.po}</td>
+                  <td style="font-weight:bold; text-align:center;">${row.qty}</td>
+                  <td>${row.pic}</td>
+              `;
+              
+              tr.onclick = function(e) {
+                  if(e.target.tagName.toLowerCase() !== 'input') {
+                      let cb = document.getElementById(`cb-opname-${index}`);
+                      cb.checked = !cb.checked;
+                  }
+              };
+              
+              tbody.appendChild(tr);
+          });
+      }).getOpnameData(filterPIC);
+  }
+
+  function simpanOpname() {
+      let tgl = document.getElementById('o-tgl').value;
+      let mesin = document.getElementById('o-mesin').value.trim();
+      let shift = document.getElementById('o-shift').value.trim();
+      let area = document.getElementById('o-area').value.trim();
+      let jenis = document.getElementById('o-jenis').value;
+      let item = document.getElementById('o-item').value.trim();
+      let panjangRaw = document.getElementById('o-panjang').value.trim();
+      let grade = document.getElementById('o-grade').value.trim();
+      let dus = document.getElementById('o-dus').value.trim();
+      let shading = document.getElementById('o-shading').value.trim().toUpperCase();
+      let po = document.getElementById('o-po').value.trim();
+      let qty = document.getElementById('o-qty').value;
+
+      if(!tgl || !area || !jenis || !item || !panjangRaw || !qty) {
+          alert("Tanggal, Area, Jenis, Nama Item, Panjang, dan Qty wajib diisi!");
+          return;
+      }
+
+      let panjangFinal = panjangRaw + "M";
+
+      let payload = {
+          tgl: tgl,
+          mesin: mesin,
+          shift: shift,
+          area: area,
+          jenis: jenis,
+          item: item,
+          panjang: panjangFinal,
+          grade: grade,
+          dus: dus,
+          shading: shading,
+          po: po,
+          qty: qty,
+          pic: currentPIC
+      };
+
+      let btn = document.getElementById('btn-simpan-opname');
+      btn.innerText = "⏳ Menyimpan..."; btn.disabled = true;
+
+      google.script.run.withSuccessHandler(function(res) {
+          btn.innerText = "💾 Simpan Data"; btn.disabled = false;
+          if(res === "SUCCESS") {
+              document.getElementById('o-item').value = "";
+              document.getElementById('o-panjang').value = "";
+              document.getElementById('o-shading').value = "";
+              document.getElementById('o-qty').value = "1";
+              
+              tutupModal('modal-input-opname');
+              loadDataOpname(); 
+          } else {
+              alert(res);
+          }
+      }).simpanDataOpname(JSON.stringify(payload));
+  }
+</script>
