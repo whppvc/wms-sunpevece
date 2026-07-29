@@ -944,7 +944,6 @@ window.terimaRequestPO = async function(idReq, qrcode, customerBaru) {
     if(!confirm(`Yakin ingin mengganti Customer untuk kardus ${qrcode} menjadi ${customerBaru}?`)) return;
 
     try {
-        // Karena stok_qr sudah dihapus, logika ini harus memodifikasi stok_global
         const { data: stokData, error: errStok } = await db.from('stok_global').select('id_sku').eq('qrcode', qrcode).single();
         if(errStok || !stokData) throw new Error("Gagal mengambil kartu stok dari gudang (mungkin barang sudah keluar/terhapus).");
 
@@ -952,7 +951,7 @@ window.terimaRequestPO = async function(idReq, qrcode, customerBaru) {
         let parts = id_sku.split('_');
         
         if(parts.length >= 8) {
-            parts[7] = customerBaru; // Asumsi format baru: area_nama_pjg_grade_dus_shading_ket_customer_kondisi
+            parts[7] = customerBaru; 
         } 
         
         let sku_baru = parts.join('_'); 
