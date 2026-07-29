@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WMS - Cetak Label Barcode</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Library Bawaan Aplikasi Lama -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <script src="global.js"></script>
+    
+    <style>
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; background-color: #f8fafc; }
+        .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
+        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
+
+        /* Canvas Styles (Dipertahankan dari kode lama, disesuaikan) */
+        .preview-box-container { background: #e2e8f0; display: flex; justify-content: center; align-items: flex-start; overflow: auto; position: relative; }
+        .label-canvas { background: white; border: 1px solid black; position: relative; padding: 2mm; box-sizing: border-box; display: flex; overflow: hidden; transform-origin: top center; transition: transform 0.2s ease-in-out; }
+        
+        .click-edit { transition: outline 0.2s, background 0.2s; border-radius: 2px; }
+        .click-edit:hover { outline: 1px dashed #94a3b8; cursor: pointer; background: rgba(0,0,0,0.03); }
+        .active-edit { outline: 2px solid #2563eb !important; background-color: rgba(37,99,235,0.15) !important; z-index: 10; }
+        .hidden-element { display: none !important; }
+    </style>
+</head>
+<body class="font-sans text-slate-800">
+
+    <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
+        
+        <!-- HEADER TABS -->
+        <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-sm">
+            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
+                <button onclick="switchMode('plafon')" id="tab-plafon" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="box" class="w-4 h-4"></i> Plafon</button>
+                <button onclick="switchMode('lis')" id="tab-lis" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="minus" class="w-4 h-4"></i> Lis</button>
+                <button onclick="switchMode('wpc')" id="tab-wpc" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="columns" class="w-4 h-4"></i> WPC</button>
+                <button onclick="switchMode('khusus')" id="tab-khusus" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase text-emerald-700"><i data-lucide="qr-code" class="w-4 h-4"></i> Print Khusus</button>
+                <button onclick="switchMode('gudang')" id="tab-gudang" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase text-amber-700"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Print Gudang (CSV)</button>
+            </div>
+        </div>
+
+        <!-- MAIN WORKSPACE -->
+        <div class="flex-1 flex flex-col md:flex-row min-h-0 bg-slate-100">
+            
+            <!-- PANEL KIRI (FORM & SETTINGS) -->
+            <div class="w-full md:w-1/3 lg:w-1/4 bg-white border-r border-slate-300 flex flex-col min-h-0 shadow-md z-10">
+                
+                <!-- Toggle Form / Settings -->
+                <div class="flex p-2 bg-slate-50 border-b border-slate-200 gap-2 shrink-0">
+                    <button id="btn-view-form" onclick="toggleLeftPanel('form')" class="flex-1 py-2 bg-blue-600 text-white text-xs font-bold rounded shadow-sm transition">📝 Form Input</button>
+                    <button id="btn-view-setting" onclick="toggleLeftPanel('setting')" class="flex-1 py-2 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 text-xs font-bold rounded transition">⚙️ Atur Label</button>
+                </div>
+
+                <!-- AREA FORM INPUT (Dinamis via JS) -->
+                <div id="panel-form" class="flex-1 overflow-y-auto custom-scroll p-4 space-y-4">
+                    <!-- Konten form akan di-inject oleh JS berdasarkan Tab Aktif -->
+                </div>
+
+                <!-- AREA SETTINGS LABEL (Dinamis via JS) -->
+                <div id="panel-setting" class="hidden flex-1 overflow-y-auto custom-scroll p-4 space-y-4">
+                    <!-- Konten setting (Checkbox Hide/Unhide, Kertas, Wrap) akan di-inject oleh JS -->
+                </div>
+            </div>
+
+            <!-- PANEL KANAN (CANVAS PREVIEW) -->
+            <div class="flex-1 flex flex-col min-w-0 bg-slate-200 relative">
+                
+                <!-- Toolbar Canvas -->
+                <div class="shrink-0 bg-white p-3 border-b border-slate-300 flex flex-wrap justify-between items-center gap-3 shadow-sm z-10">
+                    <div class="flex items-center gap-2">
+                        <button onclick="generateLabel()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md text-xs uppercase shadow-sm transition flex items-center gap-2 active:scale-95"><i data-lucide="zap" class="w-4 h-4"></i> 1. Buat QR</button>
+                        <button id="btn-cetak-label" onclick="cetakLabel()" class="hidden px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-md text-xs uppercase shadow-sm transition items-center gap-2 active:scale-95"><i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label</button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="eksekusiUndo()" class="p-2 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition" title="Undo"><i data-lucide="undo" class="w-4 h-4"></i></button>
+                        <button onclick="eksekusiRedo()" class="p-2 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition" title="Redo"><i data-lucide="redo" class="w-4 h-4"></i></button>
+                        <button onclick="saveSetDefault()" class="px-3 py-2 bg-slate-100 border border-slate-300 text-slate-700 font-bold rounded-md text-xs transition hover:bg-slate-200 flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Set Default</button>
+                        
+                        <div class="flex items-center bg-white border border-slate-300 rounded-md overflow-hidden ml-2">
+                            <button onclick="ubahZoom(-0.2)" class="px-3 py-1.5 hover:bg-slate-100 font-black text-slate-600">-</button>
+                            <span id="zoom-text" class="px-2 text-xs font-bold text-slate-800 min-w-[50px] text-center">400%</span>
+                            <button onclick="ubahZoom(0.2)" class="px-3 py-1.5 hover:bg-slate-100 font-black text-slate-600">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Area Render Canvas -->
+                <div id="preview-container" class="preview-box-container flex-1 p-8 custom-scroll">
+                    <div id="labels-wrapper" style="transform: scale(4.0); transform-origin: top center; display: flex; flex-direction: column; gap: 15px; padding-bottom: 50px;">
+                        <!-- Canvas Depan & Belakang akan di-inject oleh JS di sini -->
+                    </div>
+                </div>
+
+                <!-- Floating Context Menu (Untuk Edit Font/Posisi) -->
+                <div id="context-panel" class="hidden absolute left-6 top-1/2 -translate-y-1/2 bg-slate-800 text-white p-4 rounded-xl shadow-2xl border border-slate-600 flex-row gap-4 z-50">
+                    <!-- Slider Font, Gap, Skala QR akan di-inject oleh JS -->
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PIN GLOBAL -->
+    <div id="modal-pin-global" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 text-center">
+            <h3 class="text-lg font-black mb-4 text-slate-800 flex items-center justify-center gap-2"><i data-lucide="lock" class="text-rose-600"></i> <span id="pin-global-title">Otorisasi Dibutuhkan</span></h3>
+            <input type="password" id="input-pin-global" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-rose-600 font-black text-center text-xl text-slate-800 bg-slate-50 mb-4 tracking-[0.5em]" placeholder="•••••">
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('modal-pin-global').classList.add('hidden')" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase hover:bg-slate-300 transition">Batal</button>
+                <button type="button" onclick="eksekusiPinGlobal()" class="w-1/2 py-3 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 border-b-4 border-rose-800">Lanjut</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- OVERLAY -->
+    <div id="overlay-klik-luar" onclick="tutupSemuaPopups()" class="hidden fixed inset-0 z-[40] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
+
+    <script src="cetak_label_logic.js"></script>
+</body>
+</html>
