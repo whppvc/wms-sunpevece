@@ -125,7 +125,6 @@ function renderForm() {
             </select>
         </div>`;
 
-    // REVISI: Input dengan tombol Cari (Modal Search)
     const buildSearchInput = (id, label, type) => `
         <div>
             <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">${label}</label>
@@ -263,7 +262,6 @@ function renderCanvas() {
         const isBack = side === 'back';
         const idSfx = isBack ? '-back' : '';
         
-        // REVISI: Default ukuran kanvas mengikuti stateGlobal (85x50)
         let w = stateGlobal[currentMode].kertas.w + 'mm';
         let h = stateGlobal[currentMode].kertas.h + 'mm';
 
@@ -370,7 +368,7 @@ function handleWrapChange(key, isChecked) {
 function ubahTipeKertas() {
     const val = document.getElementById('kertas-select').value;
     const customForm = document.getElementById('custom-kertas-form');
-    let w = 85, h = 50; // REVISI: Default 85x50
+    let w = 85, h = 50; 
 
     if (val === 'custom') {
         customForm.classList.remove('hidden'); customForm.classList.add('flex');
@@ -503,7 +501,6 @@ function showContextPanel() {
     let m = activeSelection.m;
     
     let html = '';
-    // REVISI: Desain slider vertikal yang lebih rapi
     const buildSlider = (type, min, max, val) => `
         <div class="flex flex-col items-center w-14 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
             <span class="text-[9px] font-black text-slate-300 uppercase mb-1 tracking-wider">${type}</span>
@@ -539,7 +536,6 @@ window.syncContext = function(type, val) {
             stateGlobal[m].gap.info = v; document.getElementById(`el-info-group${idSfx}`).style.gap = v + 'px';
         } else if (type === 'wrap') {
             stateGlobal[m].wrap[k] = v;
-            // REVISI: Perbaikan logika wrap text untuk barcode
             let elId = k === 'barcode' ? `el-barcode${idSfx}` : `el-nama${idSfx}`;
             let el = document.getElementById(elId);
             if(el && el.style.whiteSpace === 'normal') el.style.maxWidth = v + (k==='nama'?'mm':'px');
@@ -639,7 +635,6 @@ function loadSetDefault(m) {
             document.getElementById('el-info-group').style.fontSize = stateGlobal[m].font.info + 'px'; document.getElementById('el-info-group').style.gap = stateGlobal[m].gap.info + 'px';
             document.getElementById('el-info-group-back').style.fontSize = stateGlobal[m+'_back'].font.info + 'px'; document.getElementById('el-info-group-back').style.gap = stateGlobal[m+'_back'].gap.info + 'px';
             
-            // Terapkan Kertas
             document.getElementById('kertas-select').value = p.front.kertas.tipe;
             ubahTipeKertas();
             if(p.front.kertas.tipe === 'custom') {
@@ -648,7 +643,6 @@ function loadSetDefault(m) {
                 updateKertasCustom();
             }
 
-            // Terapkan Wrap Text
             handleWrapChange('nama', p.front.wrap.nama_cb);
             handleWrapChange('barcode', p.front.wrap.barcode_cb);
 
@@ -656,7 +650,6 @@ function loadSetDefault(m) {
             
         } catch(e) { console.error("Gagal load default:", e); }
     } else {
-        // Jika tidak ada default, set ke 85x50
         document.getElementById('kertas-select').value = 'custom';
         ubahTipeKertas();
     }
@@ -999,8 +992,10 @@ window.cetakLabel = async function() {
             new QRCode(qrEl, { text: fullBarcode, width: 400, height: 400, correctLevel : QRCode.CorrectLevel.L });
             let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; });
             
+            // REVISI: Jeda Waktu (Asynchronous) untuk render QR Code
             await new Promise(r => setTimeout(r, 40)); 
             
+            // REVISI: Rendering HD (html2canvas) skala 6x
             let canvasFront = await html2canvas(nodeFront, { scale: 6, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
             sequenceImages.push(canvasFront.toDataURL("image/png", 1.0));
             
@@ -1034,6 +1029,7 @@ window.cetakLabel = async function() {
             if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
         }
 
+        // REVISI: Streaming ke Tab Baru & Filter Hitam-Putih
         let w = stateGlobal[m].kertas.w + "mm"; let h = stateGlobal[m].kertas.h + "mm";
         let pWin = window.open('', '_blank');
         pWin.document.write(`<html><head><title>Print Label</title><style>
@@ -1045,6 +1041,8 @@ window.cetakLabel = async function() {
         </style></head><body>`);
         sequenceImages.forEach(img => { pWin.document.write(`<div class="label-page"><img src="${img}"></div>`); });
         pWin.document.write(`</body></html>`); pWin.document.close(); 
+        
+        // Eksekusi Print
         setTimeout(() => { pWin.focus(); pWin.print(); }, 200);
 
     } catch(e) {
