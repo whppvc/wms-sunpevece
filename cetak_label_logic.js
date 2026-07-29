@@ -4,6 +4,7 @@
 
 let currentMode = 'plafon'; // plafon (Plafon & Lis), khusus
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [] };
+let pinAkses = "12345"; // PIN Default untuk akses Khusus & Tambah Master
 
 // State Global untuk Canvas (Posisi, Font, Visibilitas)
 const createBasePos = () => ({ x: 0, y: 0 });
@@ -13,6 +14,7 @@ const baseVisBack = { nama: true, shading: true, ukuran: true, mesin: false, shi
 let stateGlobal = {};
 const modes = ['plafon', 'khusus'];
 modes.forEach(m => {
+    // Default Kertas 85 x 50 mm
     stateGlobal[m] = { zoom: 4.0, pos: { qr: { x: 0, y: 0, s: 1 }, barcode: createBasePos(), nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { barcode: 5, nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: 'custom', w: 85, h: 50 }, wrap: { nama: 33, barcode: 45, nama_cb: true, barcode_cb: true }, barcodeData: "", linkFont: true, vis: JSON.parse(JSON.stringify(baseVis)) };
     stateGlobal[m + '_back'] = { pos: { nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, wrap: { nama: 45, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) };
 });
@@ -34,10 +36,12 @@ const currentUser = JSON.parse(localStorage.getItem('user_session')) || {usernam
 // 1. INISIALISASI & SUPABASE FETCH
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
-    initModernLayout({ id: 'cetak_label', title: 'CETAK LABEL BARCODE', url: 'cetak_label.html' });
+    // FIX: Tambahkan 'await' agar form tidak dirender sebelum sidebar selesai dibuat
+    await initModernLayout({ id: 'cetak_label', title: 'CETAK LABEL BARCODE', url: 'cetak_label.html' });
+    
     initKeyboardGlobal();
     await loadMasterData();
-    switchMode('plafon'); 
+    switchMode('plafon'); // Default tab
 });
 
 async function loadMasterData() {
@@ -265,7 +269,6 @@ function renderCanvas() {
         let w = stateGlobal[currentMode].kertas.w + 'mm';
         let h = stateGlobal[currentMode].kertas.h + 'mm';
 
-        // REVISI: Tambahkan text-black pada el-barcode agar teks tidak transparan/putih
         return `
         <div class="flex flex-col items-center gap-1">
             <span class="text-[8px] font-black text-white ${isBack ? 'bg-slate-500' : 'bg-blue-700'} px-2 py-0.5 rounded uppercase">Label ${isBack ? 'Belakang' : 'Depan'}</span>
@@ -739,7 +742,6 @@ window.simpanDataMasterBaru = async function() {
 
     if(!nama || !kode || !pin) return alert("Semua kolom wajib diisi!");
     
-    // REVISI: PIN Otoritas menggunakan Password Akun User
     if(pin !== currentUser.password) return alert("⛔ PIN SALAH! Masukkan password akun Anda.");
 
     const btn = document.getElementById('btn-simpan-master'); const ori = btn.innerHTML;
@@ -924,7 +926,6 @@ window.generateLabel = function() {
     let isRevisi = document.getElementById(`${m}-cb-revisi`)?.checked;
     let suffixRevisi = isRevisi ? " N" : "";
 
-    // REVISI: Pastikan teks barcode terisi
     setTxt('el-barcode', bText + "/0001" + suffixRevisi);
     
     let qrEl = document.getElementById('qrcode');
@@ -996,10 +997,8 @@ window.cetakLabel = async function() {
             new QRCode(qrEl, { text: fullBarcode, width: 400, height: 400, correctLevel : QRCode.CorrectLevel.L });
             let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; });
             
-            // REVISI: Jeda Waktu (Asynchronous) untuk render QR Code
             await new Promise(r => setTimeout(r, 40)); 
             
-            // REVISI: Rendering HD (html2canvas) skala 6x
             let canvasFront = await html2canvas(nodeFront, { scale: 6, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
             sequenceImages.push(canvasFront.toDataURL("image/png", 1.0));
             
@@ -1033,7 +1032,6 @@ window.cetakLabel = async function() {
             if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
         }
 
-        // REVISI: Streaming ke Tab Baru & Filter Hitam-Putih
         let w = stateGlobal[m].kertas.w + "mm"; let h = stateGlobal[m].kertas.h + "mm";
         let pWin = window.open('', '_blank');
         pWin.document.write(`<html><head><title>Print Label</title><style>
@@ -1046,7 +1044,6 @@ window.cetakLabel = async function() {
         sequenceImages.forEach(img => { pWin.document.write(`<div class="label-page"><img src="${img}"></div>`); });
         pWin.document.write(`</body></html>`); pWin.document.close(); 
         
-        // Eksekusi Print
         setTimeout(() => { pWin.focus(); pWin.print(); }, 200);
 
     } catch(e) {
@@ -1069,7 +1066,6 @@ function mintaPin(title, callback) {
 
 window.eksekusiPinGlobal = function() {
     let pin = document.getElementById('input-pin-global').value;
-    // REVISI: PIN menggunakan password user saat ini
     if(pin === currentUser.password) {
         document.getElementById('modal-pin-global').classList.add('hidden');
         document.getElementById('overlay-klik-luar').classList.add('hidden');
@@ -1099,7 +1095,3 @@ function penangananKeyboardEvent(e) {
         if(stateGlobal[m].pos[k]) { stateGlobal[m].pos[k].x += x; stateGlobal[m].pos[k].y += y; updateTransform(k, activeSelection.isBack); } 
     }); 
 }
-
-Silakan timpa ketiga file tersebut dan uji coba. Jika Route Guard masih
-bermasalah, pastikan Anda menekan Ctrl + F5 (Hard Refresh) di browser agar cache
-JS lama terhapus.
