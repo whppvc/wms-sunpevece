@@ -14,7 +14,6 @@ const baseVisBack = { nama: true, shading: true, ukuran: true, mesin: false, shi
 let stateGlobal = {};
 const modes = ['plafon', 'khusus'];
 modes.forEach(m => {
-    // Default Kertas 85 x 50 mm
     stateGlobal[m] = { zoom: 4.0, pos: { qr: { x: 0, y: 0, s: 1 }, barcode: createBasePos(), nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { barcode: 5, nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: 'custom', w: 85, h: 50 }, wrap: { nama: 33, barcode: 45, nama_cb: true, barcode_cb: true }, barcodeData: "", linkFont: true, vis: JSON.parse(JSON.stringify(baseVis)) };
     stateGlobal[m + '_back'] = { pos: { nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, wrap: { nama: 45, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) };
 });
@@ -36,12 +35,10 @@ const currentUser = JSON.parse(localStorage.getItem('user_session')) || {usernam
 // 1. INISIALISASI & SUPABASE FETCH
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
-    // FIX: Tambahkan 'await' agar form tidak dirender sebelum sidebar selesai dibuat
     await initModernLayout({ id: 'cetak_label', title: 'CETAK LABEL BARCODE', url: 'cetak_label.html' });
-    
     initKeyboardGlobal();
     await loadMasterData();
-    switchMode('plafon'); // Default tab
+    switchMode('plafon'); 
 });
 
 async function loadMasterData() {
@@ -791,6 +788,16 @@ window.hapusDataMaster = async function() {
 // ==========================================
 // 8. GENERATE BARCODE & PRINT (HTML2CANVAS)
 // ==========================================
+
+// REVISI: Fungsi Lookup Anti-Null
+const findKode = (type, name) => {
+    if (!name) return "";
+    const arr = masterData[type];
+    if (!arr) return "";
+    const found = arr.find(x => x.nama.toUpperCase() === name.toUpperCase());
+    return found && found.kode ? found.kode : ""; 
+};
+
 window.generateLabel = function() {
     let m = currentMode;
     if (m === 'khusus') {
@@ -804,6 +811,7 @@ window.generateLabel = function() {
         let kItem = parts[0]; let kShading = parts[1]; let p3 = parts[2]; let p4 = parts[3];
         
         let findName = (type, code) => {
+            if(!code) return "";
             let found = masterData[type].find(x => x.kode === code.toUpperCase());
             return found ? found.nama : code;
         };
@@ -875,34 +883,39 @@ window.generateLabel = function() {
 
     // Mode Plafon & Lis
     let tgl = document.getElementById(`${m}-tgl`).value;
-    let mesin = document.getElementById(`${m}-mesin`).value;
-    let shift = document.getElementById(`${m}-shift`).value;
-    let item = document.getElementById(`${m}-item`).value;
+    let mesin = document.getElementById(`${m}-mesin`).value.trim();
+    let shift = document.getElementById(`${m}-shift`).value.trim();
+    let item = document.getElementById(`${m}-item`).value.trim();
     let jenis = document.getElementById(`${m}-jenis`).value;
     let panjang = document.getElementById(`${m}-panjang`).value.trim();
-    let grade = document.getElementById(`${m}-grade`) ? document.getElementById(`${m}-grade`).value : '';
-    let dus = document.getElementById(`${m}-dus`).value;
-    let shading = document.getElementById(`${m}-shading`).value;
-    let po = document.getElementById(`${m}-po`) ? document.getElementById(`${m}-po`).value : '';
+    let grade = document.getElementById(`${m}-grade`) ? document.getElementById(`${m}-grade`).value.trim() : '';
+    let dus = document.getElementById(`${m}-dus`).value.trim();
+    let shading = document.getElementById(`${m}-shading`).value.trim();
+    let po = document.getElementById(`${m}-po`) ? document.getElementById(`${m}-po`).value.trim() : '';
     let qty = parseInt(document.getElementById(`${m}-qty`).value);
 
     if(!item || !panjang || isNaN(qty) || qty < 1) return alert("Nama Item, Panjang, dan Qty wajib diisi dengan benar!");
 
-    const getKode = (id) => { let el = document.getElementById(id); return el ? el.getAttribute('data-kode') : ''; };
+    // REVISI: Menggunakan fungsi findKode (Anti-Null)
+    let kItem = findKode('item', item);
+    let kMesin = findKode('mesin', mesin);
+    let kShift = findKode('shift', shift);
+    let kDus = findKode('dus', dus);
     
-    let kItem = getKode(`${m}-item`);
-    let kGrade = jenis === 'Lis' ? '1' : getKode(`${m}-grade`);
-    let kDus = getKode(`${m}-dus`);
-    let kMesin = getKode(`${m}-mesin`);
-    let kShift = getKode(`${m}-shift`);
-    let kPo = jenis === 'Lis' ? 'P49' : getKode(`${m}-po`);
+    let kGrade = jenis === 'Lis' ? '1' : findKode('grade', grade);
+    let kPo = jenis === 'Lis' ? 'P49' : findKode('customer', po);
 
     let pAngka = panjang.replace(/\D/g, ''); 
-    let dObj = new Date(tgl), start = new Date(dObj.getFullYear(), 0, 0);
-    let dayStr = String(Math.floor((dObj - start + (start.getTimezoneOffset()-dObj.getTimezoneOffset())*60*1000) / 86400000)).padStart(3, '0');
+    
+    // REVISI: Logika Tanggal (DateCode) Presisi
+    let dObj = new Date(tgl);
+    let start = new Date(dObj.getFullYear(), 0, 0);
+    let diff = (dObj - start) + ((start.getTimezoneOffset() - dObj.getTimezoneOffset()) * 60 * 1000);
+    let dayStr = String(Math.floor(diff / 86400000)).padStart(3, '0');
     let yrRev = String(dObj.getFullYear()).slice(-2).split('').reverse().join('');
     let dateCode = dayStr + yrRev;
     
+    // REVISI: Template Literal Sesuai Rumus Baku
     let bText = `${kItem}/${shading}/${pAngka}${kGrade}${kDus}/${dateCode}${kMesin}${kShift}${kPo}`;
     stateGlobal[m].barcodeData = bText;
 
@@ -926,6 +939,7 @@ window.generateLabel = function() {
     let isRevisi = document.getElementById(`${m}-cb-revisi`)?.checked;
     let suffixRevisi = isRevisi ? " N" : "";
 
+    // REVISI: Pastikan teks barcode terisi
     setTxt('el-barcode', bText + "/0001" + suffixRevisi);
     
     let qrEl = document.getElementById('qrcode');
@@ -997,8 +1011,10 @@ window.cetakLabel = async function() {
             new QRCode(qrEl, { text: fullBarcode, width: 400, height: 400, correctLevel : QRCode.CorrectLevel.L });
             let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; });
             
+            // REVISI: Jeda Waktu (Asynchronous) untuk render QR Code
             await new Promise(r => setTimeout(r, 40)); 
             
+            // REVISI: Rendering HD (html2canvas) skala 6x
             let canvasFront = await html2canvas(nodeFront, { scale: 6, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
             sequenceImages.push(canvasFront.toDataURL("image/png", 1.0));
             
@@ -1032,6 +1048,7 @@ window.cetakLabel = async function() {
             if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
         }
 
+        // REVISI: Streaming ke Tab Baru & Filter Hitam-Putih
         let w = stateGlobal[m].kertas.w + "mm"; let h = stateGlobal[m].kertas.h + "mm";
         let pWin = window.open('', '_blank');
         pWin.document.write(`<html><head><title>Print Label</title><style>
@@ -1044,6 +1061,7 @@ window.cetakLabel = async function() {
         sequenceImages.forEach(img => { pWin.document.write(`<div class="label-page"><img src="${img}"></div>`); });
         pWin.document.write(`</body></html>`); pWin.document.close(); 
         
+        // Eksekusi Print
         setTimeout(() => { pWin.focus(); pWin.print(); }, 200);
 
     } catch(e) {
