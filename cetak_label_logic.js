@@ -4,7 +4,6 @@
 
 let currentMode = 'plafon'; // plafon (Plafon & Lis), khusus
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [] };
-let pinAkses = "12345"; // PIN Default untuk akses Khusus & Tambah Master
 
 // State Global untuk Canvas (Posisi, Font, Visibilitas)
 const createBasePos = () => ({ x: 0, y: 0 });
@@ -414,7 +413,7 @@ function ubahZoom(step) {
 }
 
 // ==========================================
-// 4. DRAG & DROP ENGINE (REVISI MULTI-DRAG)
+// 4. DRAG & DROP ENGINE
 // ==========================================
 window.startDrag = function(elementKey, event, isBack = false) {
     event.preventDefault();
@@ -424,7 +423,6 @@ window.startDrag = function(elementKey, event, isBack = false) {
     let el = document.getElementById(elId);
     
     if (event.ctrlKey) {
-        // Toggle selection jika menekan Ctrl
         if (activeSelection.elements.includes(elementKey)) {
             activeSelection.elements = activeSelection.elements.filter(e => e !== elementKey);
             el.classList.remove('active-edit');
@@ -433,8 +431,6 @@ window.startDrag = function(elementKey, event, isBack = false) {
             el.classList.add('active-edit');
         }
     } else {
-        // Jika klik elemen yang TIDAK ada di selection, reset selection
-        // Jika klik elemen yang ADA di selection, biarkan (untuk di-drag bersama)
         if (!activeSelection.elements.includes(elementKey)) {
             document.querySelectorAll('.click-edit').forEach(e => e.classList.remove('active-edit'));
             activeSelection.elements = [elementKey];
@@ -508,13 +504,13 @@ function showContextPanel() {
     let m = activeSelection.m;
     
     let html = '';
-    // REVISI: Desain Slider Vertical menggunakan class .vertical-slider
+    // REVISI: Menggunakan class .custom-vertical-slider
     const buildSlider = (type, min, max, val) => `
         <div class="flex flex-col items-center w-16 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
             <span class="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-wider">${type}</span>
             <input type="number" value="${val}" class="w-full bg-slate-950 text-blue-400 border border-slate-600 rounded text-center font-bold text-sm py-1 mb-3 outline-none focus:border-blue-500" onchange="syncContext('${type}', this.value)">
             <button onclick="stepContext('${type}', 1)" class="w-full bg-slate-700 hover:bg-blue-600 text-white rounded py-1.5 font-bold text-sm transition">+</button>
-            <input type="range" orient="vertical" min="${min}" max="${max}" value="${val}" class="vertical-slider" oninput="syncContext('${type}', this.value)">
+            <input type="range" orient="vertical" min="${min}" max="${max}" value="${val}" class="custom-vertical-slider" oninput="syncContext('${type}', this.value)">
             <button onclick="stepContext('${type}', -1)" class="w-full bg-slate-700 hover:bg-rose-600 text-white rounded py-1.5 font-bold text-sm transition">-</button>
         </div>`;
 
@@ -623,6 +619,23 @@ window.saveSetDefault = function() {
     alert("✅ Pengaturan berhasil disimpan sebagai Default Baru!");
 };
 
+// REVISI: Menerapkan state saat ini ke DOM untuk mencegah layout acak-acakan
+function applyCurrentStateToDOM(m) {
+    Object.keys(stateGlobal[m].pos).forEach(k => updateTransform(k, false));
+    Object.keys(stateGlobal[m+'_back'].pos).forEach(k => updateTransform(k, true));
+    
+    ['barcode', 'nama', 'shading'].forEach(k => {
+        let el = document.getElementById(k==='barcode'?'el-barcode':`el-${k}`); if(el) el.style.fontSize = stateGlobal[m].font[k] + 'px';
+        let elB = document.getElementById(k==='barcode'?'el-barcode-back':`el-${k}-back`); if(elB) elB.style.fontSize = stateGlobal[m+'_back'].font[k] + 'px';
+    });
+    document.getElementById('el-info-group').style.fontSize = stateGlobal[m].font.info + 'px'; document.getElementById('el-info-group').style.gap = stateGlobal[m].gap.info + 'px';
+    document.getElementById('el-info-group-back').style.fontSize = stateGlobal[m+'_back'].font.info + 'px'; document.getElementById('el-info-group-back').style.gap = stateGlobal[m+'_back'].gap.info + 'px';
+    
+    handleWrapChange('nama', stateGlobal[m].wrap.nama_cb, 'front');
+    handleWrapChange('barcode', stateGlobal[m].wrap.barcode_cb, 'front');
+    handleWrapChange('nama', stateGlobal[m+'_back'].wrap.nama_cb, 'back');
+}
+
 function loadSetDefault(m) {
     let saved = localStorage.getItem('defaultLabel_' + m);
     if(saved) {
@@ -636,15 +649,7 @@ function loadSetDefault(m) {
             
             if(p.front.zoom) { stateGlobal[m].zoom = p.front.zoom; document.getElementById('labels-wrapper').style.transform = `scale(${p.front.zoom})`; document.getElementById('zoom-text').innerText = Math.round(p.front.zoom * 100) + "%"; }
             
-            Object.keys(stateGlobal[m].pos).forEach(k => updateTransform(k, false));
-            Object.keys(stateGlobal[m+'_back'].pos).forEach(k => updateTransform(k, true));
-            
-            ['barcode', 'nama', 'shading'].forEach(k => {
-                let el = document.getElementById(k==='barcode'?'el-barcode':`el-${k}`); if(el) el.style.fontSize = stateGlobal[m].font[k] + 'px';
-                let elB = document.getElementById(k==='barcode'?'el-barcode-back':`el-${k}-back`); if(elB) elB.style.fontSize = stateGlobal[m+'_back'].font[k] + 'px';
-            });
-            document.getElementById('el-info-group').style.fontSize = stateGlobal[m].font.info + 'px'; document.getElementById('el-info-group').style.gap = stateGlobal[m].gap.info + 'px';
-            document.getElementById('el-info-group-back').style.fontSize = stateGlobal[m+'_back'].font.info + 'px'; document.getElementById('el-info-group-back').style.gap = stateGlobal[m+'_back'].gap.info + 'px';
+            applyCurrentStateToDOM(m);
             
             document.getElementById('kertas-select').value = p.front.kertas.tipe;
             ubahTipeKertas();
@@ -652,20 +657,6 @@ function loadSetDefault(m) {
                 document.getElementById('custom-w').value = p.front.kertas.w;
                 document.getElementById('custom-h').value = p.front.kertas.h;
                 updateKertasCustom();
-            }
-
-            handleWrapChange('nama', p.front.wrap.nama_cb);
-            handleWrapChange('barcode', p.front.wrap.barcode_cb);
-            
-            if(p.back && p.back.wrap) {
-                let elNamaBack = document.getElementById('el-nama-back');
-                if(elNamaBack) {
-                    if(p.back.wrap.nama_cb) {
-                        elNamaBack.style.whiteSpace = 'normal'; elNamaBack.style.wordWrap = 'break-word'; elNamaBack.style.maxWidth = p.back.wrap.nama + 'mm';
-                    } else {
-                        elNamaBack.style.whiteSpace = 'nowrap'; elNamaBack.style.maxWidth = 'none';
-                    }
-                }
             }
 
             Object.keys(stateGlobal[m].vis).forEach(k => {
@@ -905,6 +896,7 @@ window.generateLabel = function() {
             setTimeout(() => { let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; }); }, 50);
         }
 
+        applyCurrentStateToDOM(m);
         document.getElementById('btn-cetak-label').classList.remove('hidden');
         document.getElementById('btn-cetak-label').classList.add('flex');
         return true;
@@ -974,6 +966,9 @@ window.generateLabel = function() {
         setTimeout(() => { let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; }); }, 50);
     }
 
+    // REVISI: Pastikan state diterapkan kembali agar layout tidak rusak
+    applyCurrentStateToDOM(m);
+
     document.getElementById('btn-cetak-label').classList.remove('hidden');
     document.getElementById('btn-cetak-label').classList.add('flex');
     return true;
@@ -998,12 +993,14 @@ window.cetakLabel = async function() {
     try {
         const { data: unikData, error: errUnik } = await db.from('database_kode_unik').select('id, last_serial').eq('id_kombinasi', idKombinasi).single();
         
+        // REVISI: Perbaikan logika looping agar tidak infinite
         let startSerial = 1;
-        let endSerial = qty;
+        if (unikData && unikData.last_serial) {
+            startSerial = parseInt(unikData.last_serial) + 1;
+        }
+        let endSerial = startSerial + qty - 1;
         
         if (unikData) {
-            startSerial = (unikData.last_serial || 0) + 1;
-            endSerial = startSerial + qty - 1;
             await db.from('database_kode_unik').update({ last_serial: endSerial }).eq('id', unikData.id);
         } else {
             await db.from('database_kode_unik').insert([{ id_kombinasi: idKombinasi, nama_item: item, panjang: panjang, grade: grade, last_serial: endSerial }]);
@@ -1027,6 +1024,8 @@ window.cetakLabel = async function() {
         let isRevisi = document.getElementById(`${m}-cb-revisi`)?.checked;
         let suffixRevisi = isRevisi ? " N" : "";
 
+        let currentRenderCount = 1;
+
         for(let i = startSerial; i <= endSerial; i++) {
             let serialStr = "/" + ("0000" + i).slice(-4);
             let fullBarcode = stateGlobal[m].barcodeData + serialStr;
@@ -1044,7 +1043,8 @@ window.cetakLabel = async function() {
             let canvasBack = await html2canvas(nodeBack, { scale: 6, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
             sequenceImages.push(canvasBack.toDataURL("image/png", 1.0));
             
-            btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${i - startSerial + 1}/${qty}`;
+            btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${currentRenderCount}/${qty}`;
+            currentRenderCount++;
             
             if (m !== 'khusus') {
                 payloadDB.push({
