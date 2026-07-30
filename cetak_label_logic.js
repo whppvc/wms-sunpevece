@@ -504,6 +504,7 @@ function showContextPanel() {
     let m = activeSelection.m;
     
     let html = '';
+    // REVISI: Slider Vertikal menggunakan CSS Class .custom-vertical-slider
     const buildSlider = (type, min, max, val) => `
         <div class="flex flex-col items-center w-16 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
             <span class="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-wider">${type}</span>
@@ -1004,24 +1005,6 @@ window.cetakLabel = async function() {
             await db.from('database_kode_unik').insert([{ id_kombinasi: idKombinasi, nama_item: item, panjang: panjang, grade: grade, last_serial: endSerial }]);
         }
 
-        // Buka Window Print di awal sebelum looping (Anti-Block)
-        let w = stateGlobal[m].kertas.w + "mm"; let h = stateGlobal[m].kertas.h + "mm";
-        let pWin = window.open('', '_blank');
-        
-        if(!pWin) {
-            alert("Popup diblokir oleh browser! Silakan izinkan pop-up (Always allow pop-ups) di address bar atas, lalu coba lagi.");
-            btnCetak.innerHTML = '<i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label'; btnCetak.disabled = false;
-            return;
-        }
-
-        pWin.document.write(`<html><head><title>Print Label</title><style>
-            @page { size: ${w} ${h}; margin: 0; }
-            body { margin: 0; padding: 20px; background: #525659; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-            .label-page { page-break-after: always; width: ${w}; height: ${h}; background: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center; overflow: hidden; flex-shrink: 0; }
-            img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; filter: grayscale(100%) contrast(1000%); }
-            @media print { body { background: #fff; padding: 0; display: block; } .label-page { box-shadow: none; margin: 0; } }
-        </style></head><body>`);
-
         let nodeFront = document.getElementById('canvas'); 
         let nodeBack = document.getElementById('canvas-back'); 
         let wrapper = document.getElementById('labels-wrapper');
@@ -1045,9 +1028,10 @@ window.cetakLabel = async function() {
         btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render Background...`;
         await new Promise(r => setTimeout(r, 150)); // Jeda agar DOM stabil
         
-        let canvasBack = await html2canvas(nodeBack, { scale: 3, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
+        let canvasBack = await html2canvas(nodeBack, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
         let imgBackBase64 = canvasBack.toDataURL("image/png", 1.0);
 
+        let sequenceImages = [];
         let currentRenderCount = 1;
 
         // Loop untuk Label Depan
@@ -1061,14 +1045,14 @@ window.cetakLabel = async function() {
             let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; });
             
             // Jeda sangat singkat agar QR termuat
-            await new Promise(r => setTimeout(r, 15)); 
+            await new Promise(r => setTimeout(r, 10)); 
             
-            // Render Label Depan dengan Skala 3 (Sangat Cepat & Cukup Tajam)
-            let canvasFront = await html2canvas(nodeFront, { scale: 3, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
+            // Render Label Depan dengan Skala 2 (Sangat Cepat & Cukup Tajam untuk 203 DPI)
+            let canvasFront = await html2canvas(nodeFront, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
             let imgFrontBase64 = canvasFront.toDataURL("image/png", 1.0);
             
-            pWin.document.write(`<div class="label-page"><img src="${imgFrontBase64}"></div>`);
-            pWin.document.write(`<div class="label-page"><img src="${imgBackBase64}"></div>`);
+            sequenceImages.push(imgFrontBase64);
+            sequenceImages.push(imgBackBase64);
             
             btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${currentRenderCount}/${qty}`;
             currentRenderCount++;
@@ -1099,7 +1083,28 @@ window.cetakLabel = async function() {
             if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
         }
 
+        // Buka Window Print setelah looping selesai
+        let w = stateGlobal[m].kertas.w + "mm"; let h = stateGlobal[m].kertas.h + "mm";
+        let pWin = window.open('', '_blank');
+        
+        if(!pWin) {
+            alert("Popup diblokir oleh browser! Silakan izinkan pop-up (Always allow pop-ups) di address bar atas, lalu coba lagi.");
+            btnCetak.innerHTML = '<i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label'; btnCetak.disabled = false;
+            return;
+        }
+
+        pWin.document.write(`<html><head><title>Print Label</title><style>
+            @page { size: ${w} ${h}; margin: 0; }
+            body { margin: 0; padding: 20px; background: #525659; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+            .label-page { page-break-after: always; width: ${w}; height: ${h}; background: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center; overflow: hidden; flex-shrink: 0; }
+            img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; filter: grayscale(100%) contrast(1000%); }
+            @media print { body { background: #fff; padding: 0; display: block; } .label-page { box-shadow: none; margin: 0; } }
+        </style></head><body>`);
+        
+        sequenceImages.forEach(img => { pWin.document.write(`<div class="label-page"><img src="${img}"></div>`); });
+        
         pWin.document.write(`</body></html>`); pWin.document.close(); 
+        
         setTimeout(() => { pWin.focus(); pWin.print(); }, 200);
 
     } catch(e) {
