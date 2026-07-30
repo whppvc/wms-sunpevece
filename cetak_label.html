@@ -30,23 +30,25 @@
         .active-edit { outline: 2px solid #2563eb !important; background-color: rgba(37,99,235,0.15) !important; z-index: 10; }
         .hidden-element { display: none !important; }
 
-        /* REVISI: CSS Slider Vertikal Diperpanjang & Dirapikan */
-        .slider-container {
-            width: 30px;
-            height: 150px; /* Tinggi area slider */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 5px 0;
+        /* REVISI: CSS Slider Vertikal Presisi (Absolute Positioning) */
+        .slider-wrapper {
+            width: 20px;
+            height: 130px; /* Tinggi area slider */
+            position: relative;
+            margin: 10px auto;
         }
         .custom-vertical-slider {
             -webkit-appearance: none;
-            width: 140px; /* Panjang garis slider (karena dirotasi, ini jadi tingginya) */
+            width: 130px; /* Panjang garis slider harus sama dengan tinggi wrapper */
             height: 4px; 
-            background: #94a3b8; /* Warna garis abu-abu */
+            background: #94a3b8;
             border-radius: 4px;
             outline: none;
-            transform: rotate(270deg); 
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(270deg);
+            margin: 0;
             cursor: pointer;
         }
         .custom-vertical-slider::-webkit-slider-thumb {
@@ -122,7 +124,7 @@
                     <div id="labels-wrapper" style="transform: scale(4.0); transform-origin: top center; display: flex; flex-direction: column; gap: 15px; padding-bottom: 50px;"></div>
                 </div>
 
-                <div id="context-panel" class="hidden absolute left-6 top-1/2 -translate-y-1/2 bg-[#1e293b] text-white p-3 rounded-xl shadow-2xl border border-slate-600 flex-row gap-3 z-50"></div>
+                <div id="context-panel" class="hidden absolute left-6 top-1/2 -translate-y-1/2 bg-slate-800 text-white p-3 rounded-xl shadow-2xl border border-slate-600 flex-row gap-3 z-50"></div>
 
             </div>
         </div>
