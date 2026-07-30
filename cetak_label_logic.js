@@ -2,10 +2,9 @@
 // WMS SUNPEVECE - CETAK LABEL ENGINE (REFACTORED & SUPABASE INTEGRATED)
 // ============================================================================
 
-let currentMode = 'plafon'; // plafon (Plafon & Lis), khusus
+let currentMode = 'plafon'; 
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [] };
 
-// State Global untuk Canvas (Posisi, Font, Visibilitas)
 const createBasePos = () => ({ x: 0, y: 0 });
 const baseVis = { qr: true, barcode: true, nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
 const baseVisBack = { nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
@@ -24,7 +23,6 @@ let activeSelection = { m: null, elements: [] };
 let isDragging = false, dragStartX = 0, dragStartY = 0, dragInitialPos = {};
 let pendingAction = null;
 
-// State Modal Search
 let currentSearchType = ''; 
 let selectedSearchData = { nama: '', kode: '' };
 
@@ -504,6 +502,7 @@ function showContextPanel() {
     let m = activeSelection.m;
     
     let html = '';
+    // REVISI: Desain Slider Vertical menggunakan class .custom-vertical-slider
     const buildSlider = (type, min, max, val) => `
         <div class="flex flex-col items-center w-16 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
             <span class="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-wider">${type}</span>
@@ -711,10 +710,11 @@ function renderSearchList() {
         return;
     }
 
+    // REVISI: Hover dihapus, diganti active:scale-95
     ul.innerHTML = dataArr.map(d => `
-        <li onclick="selectSearchItem('${d.nama}', '${d.kode}')" class="search-item p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition flex justify-between items-center group">
-            <span class="font-bold text-slate-700 group-hover:text-blue-700">${d.nama}</span>
-            <span class="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded group-hover:bg-blue-200 group-hover:text-blue-800">${d.kode || '-'}</span>
+        <li onclick="selectSearchItem('${d.nama}', '${d.kode}')" class="search-item p-3 border border-slate-200 rounded-lg cursor-pointer transition flex justify-between items-center active:scale-95 active:bg-slate-100">
+            <span class="font-bold text-slate-700">${d.nama}</span>
+            <span class="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded">${d.kode || '-'}</span>
         </li>
     `).join('');
 }
@@ -727,8 +727,8 @@ window.filterSearchList = function() {
 };
 
 window.selectSearchItem = function(nama, kode) {
-    document.querySelectorAll('.search-item').forEach(li => li.classList.remove('bg-blue-100', 'border-blue-400'));
-    event.currentTarget.classList.add('bg-blue-100', 'border-blue-400');
+    document.querySelectorAll('.search-item').forEach(li => li.classList.remove('bg-emerald-100', 'border-emerald-400'));
+    event.currentTarget.classList.add('bg-emerald-100', 'border-emerald-400');
     selectedSearchData = { nama, kode };
 };
 
@@ -761,6 +761,7 @@ window.simpanDataMasterBaru = async function() {
 
     if(!nama || !kode || !pin) return alert("Semua kolom wajib diisi!");
     
+    // REVISI: PIN Otoritas menggunakan Password Akun User
     if(pin !== currentUser.password) return alert("⛔ PIN SALAH! Masukkan password akun Anda.");
 
     const btn = document.getElementById('btn-simpan-master'); const ori = btn.innerHTML;
@@ -810,6 +811,8 @@ window.hapusDataMaster = async function() {
 // ==========================================
 // 8. GENERATE BARCODE & PRINT (HTML2CANVAS)
 // ==========================================
+
+// REVISI: Fungsi Lookup Anti-Null
 const findKode = (type, name) => {
     if (!name) return "";
     const arr = masterData[type];
@@ -917,6 +920,7 @@ window.generateLabel = function() {
 
     if(!item || !panjang || isNaN(qty) || qty < 1) return alert("Nama Item, Panjang, dan Qty wajib diisi dengan benar!");
 
+    // REVISI: Menggunakan fungsi findKode (Anti-Null)
     let kItem = findKode('item', item);
     let kMesin = findKode('mesin', mesin);
     let kShift = findKode('shift', shift);
@@ -927,6 +931,7 @@ window.generateLabel = function() {
 
     let pAngka = panjang.replace(/\D/g, ''); 
     
+    // REVISI: Logika Tanggal (DateCode) Presisi
     let dObj = new Date(tgl);
     let start = new Date(dObj.getFullYear(), 0, 0);
     let diff = (dObj - start) + ((start.getTimezoneOffset() - dObj.getTimezoneOffset()) * 60 * 1000);
@@ -934,6 +939,7 @@ window.generateLabel = function() {
     let yrRev = String(dObj.getFullYear()).slice(-2).split('').reverse().join('');
     let dateCode = dayStr + yrRev;
     
+    // REVISI: Template Literal Sesuai Rumus Baku
     let bText = `${kItem}/${shading}/${pAngka}${kGrade}${kDus}/${dateCode}${kMesin}${kShift}${kPo}`;
     stateGlobal[m].barcodeData = bText;
 
@@ -957,6 +963,7 @@ window.generateLabel = function() {
     let isRevisi = document.getElementById(`${m}-cb-revisi`)?.checked;
     let suffixRevisi = isRevisi ? " N" : "";
 
+    // REVISI: Pastikan teks barcode terisi
     setTxt('el-barcode', bText + "/0001" + suffixRevisi);
     
     let qrEl = document.getElementById('qrcode');
@@ -972,6 +979,7 @@ window.generateLabel = function() {
     return true;
 };
 
+// REVISI: Optimasi Kecepatan Cetak (Membuat Window Baru di awal, lalu inject image)
 window.cetakLabel = async function() {
     let m = currentMode;
     let qty = parseInt(document.getElementById(`${m}-qty`).value) || 1;
@@ -991,6 +999,7 @@ window.cetakLabel = async function() {
     try {
         const { data: unikData, error: errUnik } = await db.from('database_kode_unik').select('id, last_serial').eq('id_kombinasi', idKombinasi).single();
         
+        // REVISI: Perbaikan logika looping agar tidak infinite
         let startSerial = 1;
         if (unikData && unikData.last_serial) {
             startSerial = parseInt(unikData.last_serial) + 1;
@@ -1005,27 +1014,40 @@ window.cetakLabel = async function() {
 
         let nodeFront = document.getElementById('canvas'); 
         let nodeBack = document.getElementById('canvas-back'); 
-        
-        // REVISI: Auto-Scroll Fix (Menghilangkan transform dan overflow)
         let wrapper = document.getElementById('labels-wrapper');
-        let oldWrapTransform = wrapper ? wrapper.style.transform : 'none';
-        if(wrapper) wrapper.style.transform = 'none';
+        let oldWrapTransform = wrapper.style.transform;
+        wrapper.style.transform = 'none';
         
-        let container = document.getElementById('preview-container');
-        let oldOverflow = container.style.overflowY;
-        container.style.overflowY = 'visible';
-
         let oldTransformFront = nodeFront.style.transform; let oldTransformBack = nodeBack.style.transform;
         nodeFront.style.transform = 'none'; nodeFront.style.border = 'none';
         nodeBack.style.transform = 'none'; nodeBack.style.border = 'none';
         
-        // Jeda 150ms agar DOM stabil
-        await new Promise(r => setTimeout(r, 150)); 
+        let container = document.getElementById('preview-container');
+        let oldOverflow = container.style.overflowY; container.style.overflowY = 'visible';
         
-        let sequenceImages = [];
         let payloadDB = [];
         let isRevisi = document.getElementById(`${m}-cb-revisi`)?.checked;
         let suffixRevisi = isRevisi ? " N" : "";
+
+        // Buka window print di awal agar tidak diblokir browser
+        let w = stateGlobal[m].kertas.w + "mm"; let h = stateGlobal[m].kertas.h + "mm";
+        let pWin = window.open('', '_blank');
+        
+        if(!pWin) {
+            alert("Popup diblokir oleh browser! Silakan izinkan pop-up (Always allow pop-ups) di address bar atas, lalu coba lagi.");
+            btnCetak.innerHTML = '<i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label'; btnCetak.disabled = false;
+            return;
+        }
+
+        pWin.document.write(`<html><head><title>Print Label</title><style>
+            @page { size: ${w} ${h}; margin: 0; }
+            body { margin: 0; padding: 20px; background: #525659; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+            .label-page { page-break-after: always; width: ${w}; height: ${h}; background: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center; overflow: hidden; flex-shrink: 0; }
+            img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; filter: grayscale(100%) contrast(1000%); }
+            @media print { body { background: #fff; padding: 0; display: block; } .label-page { box-shadow: none; margin: 0; } }
+        </style></head><body>`);
+
+        let currentRenderCount = 1;
 
         for(let i = startSerial; i <= endSerial; i++) {
             let serialStr = "/" + ("0000" + i).slice(-4);
@@ -1036,18 +1058,20 @@ window.cetakLabel = async function() {
             new QRCode(qrEl, { text: fullBarcode, width: 400, height: 400, correctLevel : QRCode.CorrectLevel.L });
             let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; });
             
-            // JEDA WAJIB 40ms agar QR Code selesai dimuat oleh browser
-            await new Promise(r => setTimeout(r, 40)); 
+            // REVISI: Jeda Waktu (Asynchronous) untuk render QR Code
+            await new Promise(r => setTimeout(r, 15)); 
             
-            // Render Label Depan
-            let canvasFront = await html2canvas(nodeFront, { scale: 6, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
-            sequenceImages.push(canvasFront.toDataURL("image/png", 1.0));
+            // REVISI: Rendering HD (html2canvas) skala 4x agar lebih cepat
+            let canvasFront = await html2canvas(nodeFront, { scale: 4, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
+            let imgFront = canvasFront.toDataURL("image/png", 1.0);
+            pWin.document.write(`<div class="label-page"><img src="${imgFront}"></div>`);
             
-            // Render Label Belakang
-            let canvasBack = await html2canvas(nodeBack, { scale: 6, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
-            sequenceImages.push(canvasBack.toDataURL("image/png", 1.0));
+            let canvasBack = await html2canvas(nodeBack, { scale: 4, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
+            let imgBack = canvasBack.toDataURL("image/png", 1.0);
+            pWin.document.write(`<div class="label-page"><img src="${imgBack}"></div>`);
             
-            btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${i - startSerial + 1}/${qty}`;
+            btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${currentRenderCount}/${qty}`;
+            currentRenderCount++;
             
             if (m !== 'khusus') {
                 payloadDB.push({
@@ -1065,31 +1089,17 @@ window.cetakLabel = async function() {
             }
         }
         
-        // Kembalikan style seperti semula
         nodeFront.style.transform = oldTransformFront; nodeFront.style.border = '1px solid black';
         nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black';
-        if(wrapper) wrapper.style.transform = oldWrapTransform;
-        container.style.overflowY = oldOverflow;
+        wrapper.style.transform = oldWrapTransform; container.style.overflowY = oldOverflow;
         
         if (m !== 'khusus' && payloadDB.length > 0) {
             const { error: errInsert } = await db.from('database_plafon_lis').insert(payloadDB);
             if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
         }
 
-        // Buka Window Print
-        let w = stateGlobal[m].kertas.w + "mm"; let h = stateGlobal[m].kertas.h + "mm";
-        let pWin = window.open('', '_blank');
-        pWin.document.write(`<html><head><title>Print Label</title><style>
-            @page { size: ${w} ${h}; margin: 0; }
-            body { margin: 0; padding: 20px; background: #525659; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-            .label-page { page-break-after: always; width: ${w}; height: ${h}; background: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center; overflow: hidden; flex-shrink: 0; }
-            img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; filter: grayscale(100%) contrast(1000%); }
-            @media print { body { background: #fff; padding: 0; display: block; } .label-page { box-shadow: none; margin: 0; } }
-        </style></head><body>`);
-        sequenceImages.forEach(img => { pWin.document.write(`<div class="label-page"><img src="${img}"></div>`); });
         pWin.document.write(`</body></html>`); pWin.document.close(); 
-        
-        setTimeout(() => { pWin.focus(); pWin.print(); }, 200);
+        setTimeout(() => { pWin.focus(); pWin.print(); }, 500);
 
     } catch(e) {
         alert("Terjadi kesalahan: " + e.message);
