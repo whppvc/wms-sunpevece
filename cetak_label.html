@@ -30,29 +30,35 @@
         .active-edit { outline: 2px solid #2563eb !important; background-color: rgba(37,99,235,0.15) !important; z-index: 10; }
         .hidden-element { display: none !important; }
 
-        /* REVISI: CSS KHUSUS SLIDER VERTICAL AGAR SEJAJAR RAPI */
-        .vertical-slider {
+        /* REVISI: CSS Slider Vertikal Presisi */
+        .custom-vertical-slider {
             -webkit-appearance: slider-vertical;
-            width: 20px;
-            height: 120px;
+            appearance: slider-vertical;
+            width: 6px;
+            height: 100px;
+            background: #cbd5e1;
+            border-radius: 4px;
             outline: none;
-            background: transparent;
+            margin: 10px auto;
             cursor: pointer;
-            margin: 10px 0;
         }
-        .vertical-slider::-webkit-slider-runnable-track {
-            width: 4px;
-            background: #cbd5e1; /* Warna track */
-            border-radius: 2px;
-        }
-        .vertical-slider::-webkit-slider-thumb {
+        .custom-vertical-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 16px;
+            appearance: none;
             width: 16px;
+            height: 16px;
             border-radius: 50%;
-            background: #3b82f6; /* Warna thumb biru */
+            background: #3b82f6;
             cursor: pointer;
-            margin-left: -6px; /* Rumus tengah: (16px thumb - 4px track) / 2 = 6px offset */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .custom-vertical-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: none;
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
     </style>
