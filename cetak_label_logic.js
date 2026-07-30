@@ -4,7 +4,6 @@
 
 let currentMode = 'plafon'; // plafon (Plafon & Lis), khusus
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [] };
-let pinAkses = "12345"; // PIN Default untuk akses Khusus & Tambah Master
 
 // State Global untuk Canvas (Posisi, Font, Visibilitas)
 const createBasePos = () => ({ x: 0, y: 0 });
@@ -15,6 +14,7 @@ let stateGlobal = {};
 const modes = ['plafon', 'khusus'];
 modes.forEach(m => {
     stateGlobal[m] = { zoom: 4.0, pos: { qr: { x: 0, y: 0, s: 1 }, barcode: createBasePos(), nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { barcode: 5, nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: 'custom', w: 85, h: 50 }, wrap: { nama: 33, barcode: 45, nama_cb: true, barcode_cb: true }, barcodeData: "", linkFont: true, vis: JSON.parse(JSON.stringify(baseVis)) };
+    // REVISI 2: Wrap text dipisah untuk back
     stateGlobal[m + '_back'] = { pos: { nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, wrap: { nama: 45, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) };
 });
 
@@ -126,12 +126,13 @@ function renderForm() {
             </select>
         </div>`;
 
+    // REVISI 4: Tombol CARI menyatu di dalam kotak input
     const buildSearchInput = (id, label, type) => `
         <div>
             <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">${label}</label>
-            <div class="flex gap-2">
-                <input type="text" id="${id}" readonly class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-100 text-slate-600 cursor-not-allowed" placeholder="Pilih ${label}...">
-                <button onclick="bukaModalSearch('${type}')" class="px-3 bg-blue-100 text-blue-700 font-bold rounded hover:bg-blue-200 transition text-xs shadow-sm"><i data-lucide="search" class="w-4 h-4"></i></button>
+            <div class="flex border border-slate-300 rounded overflow-hidden shadow-sm">
+                <input type="text" id="${id}" readonly class="flex-1 p-2 text-sm outline-none font-bold bg-slate-50 text-slate-600 cursor-not-allowed" placeholder="Pilih ${label}...">
+                <button onclick="bukaModalSearch('${type}')" class="px-4 bg-emerald-600 text-white font-black text-xs hover:bg-emerald-700 transition">CARI</button>
             </div>
         </div>`;
 
@@ -502,13 +503,14 @@ function showContextPanel() {
     let m = activeSelection.m;
     
     let html = '';
+    // REVISI 5: Desain Slider Vertical yang lebih rapi
     const buildSlider = (type, min, max, val) => `
-        <div class="flex flex-col items-center w-14 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
-            <span class="text-[9px] font-black text-slate-300 uppercase mb-1 tracking-wider">${type}</span>
-            <input type="number" value="${val}" class="w-full bg-slate-950 text-blue-400 border border-slate-600 rounded text-center font-bold text-xs py-1 mb-2 outline-none focus:border-blue-500" onchange="syncContext('${type}', this.value)">
-            <button onclick="stepContext('${type}', 1)" class="w-full bg-slate-700 hover:bg-blue-600 text-white rounded py-1 font-bold text-xs mb-1 transition">+</button>
-            <input type="range" orient="vertical" min="${min}" max="${max}" value="${val}" class="h-28 w-3 cursor-pointer my-2" oninput="syncContext('${type}', this.value)">
-            <button onclick="stepContext('${type}', -1)" class="w-full bg-slate-700 hover:bg-rose-600 text-white rounded py-1 font-bold text-xs mt-1 transition">-</button>
+        <div class="flex flex-col items-center w-16 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
+            <span class="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-wider">${type}</span>
+            <input type="number" value="${val}" class="w-full bg-slate-950 text-blue-400 border border-slate-600 rounded text-center font-bold text-sm py-1 mb-3 outline-none focus:border-blue-500" onchange="syncContext('${type}', this.value)">
+            <button onclick="stepContext('${type}', 1)" class="w-full bg-slate-700 hover:bg-blue-600 text-white rounded py-1.5 font-bold text-sm mb-2 transition">+</button>
+            <input type="range" orient="vertical" min="${min}" max="${max}" value="${val}" class="h-28 w-full cursor-pointer my-2" oninput="syncContext('${type}', this.value)">
+            <button onclick="stepContext('${type}', -1)" class="w-full bg-slate-700 hover:bg-rose-600 text-white rounded py-1.5 font-bold text-sm mt-2 transition">-</button>
         </div>`;
 
     if (key === 'qr') html += buildSlider('skala', 50, 250, Math.round(stateGlobal[m].pos.qr.s * 100));
@@ -616,13 +618,18 @@ window.saveSetDefault = function() {
     alert("✅ Pengaturan berhasil disimpan sebagai Default Baru!");
 };
 
+// REVISI 1: Load Default Back Diperbaiki
 function loadSetDefault(m) {
     let saved = localStorage.getItem('defaultLabel_' + m);
     if(saved) {
         try {
             let p = JSON.parse(saved);
             stateGlobal[m].pos = p.front.pos; stateGlobal[m].font = p.front.font; stateGlobal[m].gap = p.front.gap; stateGlobal[m].vis = p.front.vis; stateGlobal[m].kertas = p.front.kertas; stateGlobal[m].wrap = p.front.wrap;
-            stateGlobal[m+'_back'].pos = p.back.pos; stateGlobal[m+'_back'].font = p.back.font; stateGlobal[m+'_back'].gap = p.back.gap; stateGlobal[m+'_back'].vis = p.back.vis; stateGlobal[m+'_back'].wrap = p.back.wrap;
+            
+            // Terapkan ke stateGlobal Back
+            if(p.back) {
+                stateGlobal[m+'_back'].pos = p.back.pos; stateGlobal[m+'_back'].font = p.back.font; stateGlobal[m+'_back'].gap = p.back.gap; stateGlobal[m+'_back'].vis = p.back.vis; stateGlobal[m+'_back'].wrap = p.back.wrap;
+            }
             
             if(p.front.zoom) { stateGlobal[m].zoom = p.front.zoom; document.getElementById('labels-wrapper').style.transform = `scale(${p.front.zoom})`; document.getElementById('zoom-text').innerText = Math.round(p.front.zoom * 100) + "%"; }
             
@@ -644,11 +651,35 @@ function loadSetDefault(m) {
                 updateKertasCustom();
             }
 
+            // Terapkan Wrap Text
             handleWrapChange('nama', p.front.wrap.nama_cb);
             handleWrapChange('barcode', p.front.wrap.barcode_cb);
-
-            Object.keys(stateGlobal[m].vis).forEach(k => handleVisChange(k, stateGlobal[m].vis[k]));
             
+            // REVISI 1: Terapkan Wrap Text untuk Back
+            if(p.back && p.back.wrap) {
+                let elNamaBack = document.getElementById('el-nama-back');
+                if(elNamaBack) {
+                    if(p.back.wrap.nama_cb) {
+                        elNamaBack.style.whiteSpace = 'normal'; elNamaBack.style.wordWrap = 'break-word'; elNamaBack.style.maxWidth = p.back.wrap.nama + 'mm';
+                    } else {
+                        elNamaBack.style.whiteSpace = 'nowrap'; elNamaBack.style.maxWidth = 'none';
+                    }
+                }
+            }
+
+            // Terapkan Visibilitas (Front & Back)
+            Object.keys(stateGlobal[m].vis).forEach(k => {
+                let el = document.getElementById(k === 'qr' ? 'qr-wrapper' : `el-${k}`);
+                if(el) { if(stateGlobal[m].vis[k]) el.classList.remove('hidden-element'); else el.classList.add('hidden-element'); }
+            });
+            if(p.back && p.back.vis) {
+                Object.keys(stateGlobal[m+'_back'].vis).forEach(k => {
+                    let el = document.getElementById(`el-${k}-back`);
+                    if(el) { if(stateGlobal[m+'_back'].vis[k]) el.classList.remove('hidden-element'); else el.classList.add('hidden-element'); }
+                });
+            }
+            
+            switchSideSettings();
         } catch(e) { console.error("Gagal load default:", e); }
     } else {
         document.getElementById('kertas-select').value = 'custom';
@@ -788,8 +819,6 @@ window.hapusDataMaster = async function() {
 // ==========================================
 // 8. GENERATE BARCODE & PRINT (HTML2CANVAS)
 // ==========================================
-
-// REVISI: Fungsi Lookup Anti-Null
 const findKode = (type, name) => {
     if (!name) return "";
     const arr = masterData[type];
@@ -896,7 +925,6 @@ window.generateLabel = function() {
 
     if(!item || !panjang || isNaN(qty) || qty < 1) return alert("Nama Item, Panjang, dan Qty wajib diisi dengan benar!");
 
-    // REVISI: Menggunakan fungsi findKode (Anti-Null)
     let kItem = findKode('item', item);
     let kMesin = findKode('mesin', mesin);
     let kShift = findKode('shift', shift);
@@ -907,7 +935,6 @@ window.generateLabel = function() {
 
     let pAngka = panjang.replace(/\D/g, ''); 
     
-    // REVISI: Logika Tanggal (DateCode) Presisi
     let dObj = new Date(tgl);
     let start = new Date(dObj.getFullYear(), 0, 0);
     let diff = (dObj - start) + ((start.getTimezoneOffset() - dObj.getTimezoneOffset()) * 60 * 1000);
@@ -915,7 +942,6 @@ window.generateLabel = function() {
     let yrRev = String(dObj.getFullYear()).slice(-2).split('').reverse().join('');
     let dateCode = dayStr + yrRev;
     
-    // REVISI: Template Literal Sesuai Rumus Baku
     let bText = `${kItem}/${shading}/${pAngka}${kGrade}${kDus}/${dateCode}${kMesin}${kShift}${kPo}`;
     stateGlobal[m].barcodeData = bText;
 
@@ -939,7 +965,6 @@ window.generateLabel = function() {
     let isRevisi = document.getElementById(`${m}-cb-revisi`)?.checked;
     let suffixRevisi = isRevisi ? " N" : "";
 
-    // REVISI: Pastikan teks barcode terisi
     setTxt('el-barcode', bText + "/0001" + suffixRevisi);
     
     let qrEl = document.getElementById('qrcode');
@@ -1011,10 +1036,8 @@ window.cetakLabel = async function() {
             new QRCode(qrEl, { text: fullBarcode, width: 400, height: 400, correctLevel : QRCode.CorrectLevel.L });
             let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; });
             
-            // REVISI: Jeda Waktu (Asynchronous) untuk render QR Code
             await new Promise(r => setTimeout(r, 40)); 
             
-            // REVISI: Rendering HD (html2canvas) skala 6x
             let canvasFront = await html2canvas(nodeFront, { scale: 6, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
             sequenceImages.push(canvasFront.toDataURL("image/png", 1.0));
             
@@ -1048,7 +1071,6 @@ window.cetakLabel = async function() {
             if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
         }
 
-        // REVISI: Streaming ke Tab Baru & Filter Hitam-Putih
         let w = stateGlobal[m].kertas.w + "mm"; let h = stateGlobal[m].kertas.h + "mm";
         let pWin = window.open('', '_blank');
         pWin.document.write(`<html><head><title>Print Label</title><style>
@@ -1061,7 +1083,6 @@ window.cetakLabel = async function() {
         sequenceImages.forEach(img => { pWin.document.write(`<div class="label-page"><img src="${img}"></div>`); });
         pWin.document.write(`</body></html>`); pWin.document.close(); 
         
-        // Eksekusi Print
         setTimeout(() => { pWin.focus(); pWin.print(); }, 200);
 
     } catch(e) {
