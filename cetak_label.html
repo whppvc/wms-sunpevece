@@ -30,48 +30,30 @@
         .active-edit { outline: 2px solid #2563eb !important; background-color: rgba(37,99,235,0.15) !important; z-index: 10; }
         .hidden-element { display: none !important; }
 
-        /* REVISI 5: CSS SLIDER VERTICAL (Sesuai Gambar 2) */
-        input[type=range][orient=vertical] {
-            writing-mode: bt-rl; /* IE */
-            -webkit-appearance: slider-vertical; /* WebKit */
-            width: 100%;
+        /* REVISI: CSS KHUSUS SLIDER VERTICAL AGAR SEJAJAR RAPI */
+        .vertical-slider {
+            -webkit-appearance: slider-vertical;
+            width: 20px;
             height: 120px;
-            padding: 0;
-            margin: 10px 0;
+            outline: none;
             background: transparent;
             cursor: pointer;
+            margin: 10px 0;
         }
-        input[type=range][orient=vertical]::-webkit-slider-runnable-track {
-            width: 6px;
-            background: #e2e8f0; /* Warna track abu-abu terang */
-            border-radius: 4px;
-            margin: 0 auto;
+        .vertical-slider::-webkit-slider-runnable-track {
+            width: 4px;
+            background: #cbd5e1; /* Warna track */
+            border-radius: 2px;
         }
-        input[type=range][orient=vertical]::-webkit-slider-thumb {
+        .vertical-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 18px;
-            width: 18px;
+            height: 16px;
+            width: 16px;
             border-radius: 50%;
-            background: #2563eb; /* Warna thumb biru */
+            background: #3b82f6; /* Warna thumb biru */
             cursor: pointer;
-            margin-left: -6px; /* Agar thumb berada tepat di tengah track (18/2 - 6/2 = 6) */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        
-        /* Hack untuk Firefox */
-        input[type=range][orient=vertical]::-moz-range-track {
-            width: 6px;
-            background: #e2e8f0;
-            border-radius: 4px;
-        }
-        input[type=range][orient=vertical]::-moz-range-thumb {
-            height: 18px;
-            width: 18px;
-            border-radius: 50%;
-            background: #2563eb;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            margin-left: -6px; /* Rumus tengah: (16px thumb - 4px track) / 2 = 6px offset */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
     </style>
 </head>
@@ -127,8 +109,7 @@
                     <div id="labels-wrapper" style="transform: scale(4.0); transform-origin: top center; display: flex; flex-direction: column; gap: 15px; padding-bottom: 50px;"></div>
                 </div>
 
-                <!-- CONTEXT MENU (Slider Font, Gap, Wrap) -->
-                <div id="context-panel" class="hidden absolute left-6 top-1/2 -translate-y-1/2 bg-[#1e293b] text-white p-4 rounded-xl shadow-2xl border border-slate-600 flex-row gap-4 z-50"></div>
+                <div id="context-panel" class="hidden absolute left-6 top-1/2 -translate-y-1/2 bg-slate-800 text-white p-3 rounded-xl shadow-2xl border border-slate-600 flex-row gap-3 z-50"></div>
 
             </div>
         </div>
@@ -139,7 +120,6 @@
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 flex flex-col max-h-[85vh] overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                 <h3 class="text-base font-black flex items-center gap-2 text-slate-800"><i data-lucide="search" class="text-blue-600 w-5 h-5"></i> <span id="title-modal-search">Cari Data</span></h3>
-                <!-- REVISI 3: Tombol Silang Merah -->
                 <button type="button" onclick="tutupModalSearch()" class="bg-rose-600 hover:bg-rose-700 text-white p-1.5 rounded-md transition shadow-sm active:scale-95"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             
