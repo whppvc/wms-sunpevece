@@ -504,7 +504,6 @@ function showContextPanel() {
     let m = activeSelection.m;
     
     let html = '';
-    // REVISI: Menggunakan class .custom-vertical-slider
     const buildSlider = (type, min, max, val) => `
         <div class="flex flex-col items-center w-16 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
             <span class="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-wider">${type}</span>
@@ -712,11 +711,10 @@ function renderSearchList() {
         return;
     }
 
-    // REVISI: Hover dihapus, diganti active:scale-95
     ul.innerHTML = dataArr.map(d => `
-        <li onclick="selectSearchItem('${d.nama}', '${d.kode}')" class="search-item p-3 border border-slate-200 rounded-lg cursor-pointer transition flex justify-between items-center active:scale-95 active:bg-slate-100">
-            <span class="font-bold text-slate-700">${d.nama}</span>
-            <span class="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded">${d.kode || '-'}</span>
+        <li onclick="selectSearchItem('${d.nama}', '${d.kode}')" class="search-item p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition flex justify-between items-center group">
+            <span class="font-bold text-slate-700 group-hover:text-blue-700">${d.nama}</span>
+            <span class="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded group-hover:bg-blue-200 group-hover:text-blue-800">${d.kode || '-'}</span>
         </li>
     `).join('');
 }
@@ -729,8 +727,8 @@ window.filterSearchList = function() {
 };
 
 window.selectSearchItem = function(nama, kode) {
-    document.querySelectorAll('.search-item').forEach(li => li.classList.remove('bg-emerald-100', 'border-emerald-400'));
-    event.currentTarget.classList.add('bg-emerald-100', 'border-emerald-400');
+    document.querySelectorAll('.search-item').forEach(li => li.classList.remove('bg-blue-100', 'border-blue-400'));
+    event.currentTarget.classList.add('bg-blue-100', 'border-blue-400');
     selectedSearchData = { nama, kode };
 };
 
@@ -974,7 +972,6 @@ window.generateLabel = function() {
     return true;
 };
 
-// REVISI: Optimasi Kecepatan Cetak (Membuat Window Baru di awal, lalu inject image)
 window.cetakLabel = async function() {
     let m = currentMode;
     let qty = parseInt(document.getElementById(`${m}-qty`).value) || 1;
@@ -1008,33 +1005,27 @@ window.cetakLabel = async function() {
 
         let nodeFront = document.getElementById('canvas'); 
         let nodeBack = document.getElementById('canvas-back'); 
-        let wrapper = document.getElementById('labels-wrapper');
-        let oldWrapTransform = wrapper.style.transform;
-        wrapper.style.transform = 'none';
         
+        // REVISI: Auto-Scroll Fix (Menghilangkan transform dan overflow)
+        let wrapper = document.getElementById('labels-wrapper');
+        let oldWrapTransform = wrapper ? wrapper.style.transform : 'none';
+        if(wrapper) wrapper.style.transform = 'none';
+        
+        let container = document.getElementById('preview-container');
+        let oldOverflow = container.style.overflowY;
+        container.style.overflowY = 'visible';
+
         let oldTransformFront = nodeFront.style.transform; let oldTransformBack = nodeBack.style.transform;
         nodeFront.style.transform = 'none'; nodeFront.style.border = 'none';
         nodeBack.style.transform = 'none'; nodeBack.style.border = 'none';
         
-        let container = document.getElementById('preview-container');
-        let oldOverflow = container.style.overflowY; container.style.overflowY = 'visible';
+        // Jeda 150ms agar DOM stabil
+        await new Promise(r => setTimeout(r, 150)); 
         
+        let sequenceImages = [];
         let payloadDB = [];
         let isRevisi = document.getElementById(`${m}-cb-revisi`)?.checked;
         let suffixRevisi = isRevisi ? " N" : "";
-
-        // Buka window print di awal agar tidak diblokir browser
-        let w = stateGlobal[m].kertas.w + "mm"; let h = stateGlobal[m].kertas.h + "mm";
-        let pWin = window.open('', '_blank');
-        pWin.document.write(`<html><head><title>Print Label</title><style>
-            @page { size: ${w} ${h}; margin: 0; }
-            body { margin: 0; padding: 20px; background: #525659; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-            .label-page { page-break-after: always; width: ${w}; height: ${h}; background: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center; overflow: hidden; flex-shrink: 0; }
-            img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; filter: grayscale(100%) contrast(1000%); }
-            @media print { body { background: #fff; padding: 0; display: block; } .label-page { box-shadow: none; margin: 0; } }
-        </style></head><body>`);
-
-        let currentRenderCount = 1;
 
         for(let i = startSerial; i <= endSerial; i++) {
             let serialStr = "/" + ("0000" + i).slice(-4);
@@ -1045,18 +1036,18 @@ window.cetakLabel = async function() {
             new QRCode(qrEl, { text: fullBarcode, width: 400, height: 400, correctLevel : QRCode.CorrectLevel.L });
             let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; });
             
+            // JEDA WAJIB 40ms agar QR Code selesai dimuat oleh browser
             await new Promise(r => setTimeout(r, 40)); 
             
+            // Render Label Depan
             let canvasFront = await html2canvas(nodeFront, { scale: 6, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
-            let imgFront = canvasFront.toDataURL("image/png", 1.0);
-            pWin.document.write(`<div class="label-page"><img src="${imgFront}"></div>`);
+            sequenceImages.push(canvasFront.toDataURL("image/png", 1.0));
             
+            // Render Label Belakang
             let canvasBack = await html2canvas(nodeBack, { scale: 6, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
-            let imgBack = canvasBack.toDataURL("image/png", 1.0);
-            pWin.document.write(`<div class="label-page"><img src="${imgBack}"></div>`);
+            sequenceImages.push(canvasBack.toDataURL("image/png", 1.0));
             
-            btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${currentRenderCount}/${qty}`;
-            currentRenderCount++;
+            btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${i - startSerial + 1}/${qty}`;
             
             if (m !== 'khusus') {
                 payloadDB.push({
@@ -1074,16 +1065,30 @@ window.cetakLabel = async function() {
             }
         }
         
+        // Kembalikan style seperti semula
         nodeFront.style.transform = oldTransformFront; nodeFront.style.border = '1px solid black';
         nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black';
-        wrapper.style.transform = oldWrapTransform; container.style.overflowY = oldOverflow;
+        if(wrapper) wrapper.style.transform = oldWrapTransform;
+        container.style.overflowY = oldOverflow;
         
         if (m !== 'khusus' && payloadDB.length > 0) {
             const { error: errInsert } = await db.from('database_plafon_lis').insert(payloadDB);
             if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
         }
 
+        // Buka Window Print
+        let w = stateGlobal[m].kertas.w + "mm"; let h = stateGlobal[m].kertas.h + "mm";
+        let pWin = window.open('', '_blank');
+        pWin.document.write(`<html><head><title>Print Label</title><style>
+            @page { size: ${w} ${h}; margin: 0; }
+            body { margin: 0; padding: 20px; background: #525659; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+            .label-page { page-break-after: always; width: ${w}; height: ${h}; background: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center; overflow: hidden; flex-shrink: 0; }
+            img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; filter: grayscale(100%) contrast(1000%); }
+            @media print { body { background: #fff; padding: 0; display: block; } .label-page { box-shadow: none; margin: 0; } }
+        </style></head><body>`);
+        sequenceImages.forEach(img => { pWin.document.write(`<div class="label-page"><img src="${img}"></div>`); });
         pWin.document.write(`</body></html>`); pWin.document.close(); 
+        
         setTimeout(() => { pWin.focus(); pWin.print(); }, 200);
 
     } catch(e) {
