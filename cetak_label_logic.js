@@ -4,6 +4,7 @@
 
 let currentMode = 'plafon'; // plafon (Plafon & Lis), khusus
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [] };
+let pinAkses = "12345"; // PIN Default untuk akses Khusus & Tambah Master
 
 // State Global untuk Canvas (Posisi, Font, Visibilitas)
 const createBasePos = () => ({ x: 0, y: 0 });
@@ -14,7 +15,6 @@ let stateGlobal = {};
 const modes = ['plafon', 'khusus'];
 modes.forEach(m => {
     stateGlobal[m] = { zoom: 4.0, pos: { qr: { x: 0, y: 0, s: 1 }, barcode: createBasePos(), nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { barcode: 5, nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: 'custom', w: 85, h: 50 }, wrap: { nama: 33, barcode: 45, nama_cb: true, barcode_cb: true }, barcodeData: "", linkFont: true, vis: JSON.parse(JSON.stringify(baseVis)) };
-    // REVISI 2: Wrap text dipisah untuk back
     stateGlobal[m + '_back'] = { pos: { nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, wrap: { nama: 45, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) };
 });
 
@@ -126,7 +126,6 @@ function renderForm() {
             </select>
         </div>`;
 
-    // REVISI 4: Tombol CARI menyatu di dalam kotak input
     const buildSearchInput = (id, label, type) => `
         <div>
             <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">${label}</label>
@@ -415,7 +414,7 @@ function ubahZoom(step) {
 }
 
 // ==========================================
-// 4. DRAG & DROP ENGINE
+// 4. DRAG & DROP ENGINE (REVISI MULTI-DRAG)
 // ==========================================
 window.startDrag = function(elementKey, event, isBack = false) {
     event.preventDefault();
@@ -424,21 +423,27 @@ window.startDrag = function(elementKey, event, isBack = false) {
     let elId = elementKey === 'qr' ? 'qr-wrapper' : `el-${elementKey}${idSfx}`;
     let el = document.getElementById(elId);
     
-    if(!event.ctrlKey) {
-        document.querySelectorAll('.click-edit').forEach(e => e.classList.remove('active-edit'));
-        activeSelection.elements = [elementKey];
-    } else {
-        if(activeSelection.elements.includes(elementKey)) {
+    if (event.ctrlKey) {
+        // Toggle selection jika menekan Ctrl
+        if (activeSelection.elements.includes(elementKey)) {
             activeSelection.elements = activeSelection.elements.filter(e => e !== elementKey);
             el.classList.remove('active-edit');
         } else {
             activeSelection.elements.push(elementKey);
+            el.classList.add('active-edit');
+        }
+    } else {
+        // Jika klik elemen yang TIDAK ada di selection, reset selection
+        // Jika klik elemen yang ADA di selection, biarkan (untuk di-drag bersama)
+        if (!activeSelection.elements.includes(elementKey)) {
+            document.querySelectorAll('.click-edit').forEach(e => e.classList.remove('active-edit'));
+            activeSelection.elements = [elementKey];
+            el.classList.add('active-edit');
         }
     }
     
     activeSelection.m = m;
     activeSelection.isBack = isBack;
-    if(activeSelection.elements.includes(elementKey)) el.classList.add('active-edit');
 
     document.getElementById('side-select').value = isBack ? 'back' : 'front';
     switchSideSettings();
@@ -503,14 +508,14 @@ function showContextPanel() {
     let m = activeSelection.m;
     
     let html = '';
-    // REVISI 5: Desain Slider Vertical yang lebih rapi
+    // REVISI: Desain Slider Vertical menggunakan class .vertical-slider
     const buildSlider = (type, min, max, val) => `
         <div class="flex flex-col items-center w-16 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
             <span class="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-wider">${type}</span>
             <input type="number" value="${val}" class="w-full bg-slate-950 text-blue-400 border border-slate-600 rounded text-center font-bold text-sm py-1 mb-3 outline-none focus:border-blue-500" onchange="syncContext('${type}', this.value)">
-            <button onclick="stepContext('${type}', 1)" class="w-full bg-slate-700 hover:bg-blue-600 text-white rounded py-1.5 font-bold text-sm mb-2 transition">+</button>
-            <input type="range" orient="vertical" min="${min}" max="${max}" value="${val}" class="h-28 w-full cursor-pointer my-2" oninput="syncContext('${type}', this.value)">
-            <button onclick="stepContext('${type}', -1)" class="w-full bg-slate-700 hover:bg-rose-600 text-white rounded py-1.5 font-bold text-sm mt-2 transition">-</button>
+            <button onclick="stepContext('${type}', 1)" class="w-full bg-slate-700 hover:bg-blue-600 text-white rounded py-1.5 font-bold text-sm transition">+</button>
+            <input type="range" orient="vertical" min="${min}" max="${max}" value="${val}" class="vertical-slider" oninput="syncContext('${type}', this.value)">
+            <button onclick="stepContext('${type}', -1)" class="w-full bg-slate-700 hover:bg-rose-600 text-white rounded py-1.5 font-bold text-sm transition">-</button>
         </div>`;
 
     if (key === 'qr') html += buildSlider('skala', 50, 250, Math.round(stateGlobal[m].pos.qr.s * 100));
@@ -618,7 +623,6 @@ window.saveSetDefault = function() {
     alert("✅ Pengaturan berhasil disimpan sebagai Default Baru!");
 };
 
-// REVISI 1: Load Default Back Diperbaiki
 function loadSetDefault(m) {
     let saved = localStorage.getItem('defaultLabel_' + m);
     if(saved) {
@@ -626,7 +630,6 @@ function loadSetDefault(m) {
             let p = JSON.parse(saved);
             stateGlobal[m].pos = p.front.pos; stateGlobal[m].font = p.front.font; stateGlobal[m].gap = p.front.gap; stateGlobal[m].vis = p.front.vis; stateGlobal[m].kertas = p.front.kertas; stateGlobal[m].wrap = p.front.wrap;
             
-            // Terapkan ke stateGlobal Back
             if(p.back) {
                 stateGlobal[m+'_back'].pos = p.back.pos; stateGlobal[m+'_back'].font = p.back.font; stateGlobal[m+'_back'].gap = p.back.gap; stateGlobal[m+'_back'].vis = p.back.vis; stateGlobal[m+'_back'].wrap = p.back.wrap;
             }
@@ -651,11 +654,9 @@ function loadSetDefault(m) {
                 updateKertasCustom();
             }
 
-            // Terapkan Wrap Text
             handleWrapChange('nama', p.front.wrap.nama_cb);
             handleWrapChange('barcode', p.front.wrap.barcode_cb);
             
-            // REVISI 1: Terapkan Wrap Text untuk Back
             if(p.back && p.back.wrap) {
                 let elNamaBack = document.getElementById('el-nama-back');
                 if(elNamaBack) {
@@ -667,7 +668,6 @@ function loadSetDefault(m) {
                 }
             }
 
-            // Terapkan Visibilitas (Front & Back)
             Object.keys(stateGlobal[m].vis).forEach(k => {
                 let el = document.getElementById(k === 'qr' ? 'qr-wrapper' : `el-${k}`);
                 if(el) { if(stateGlobal[m].vis[k]) el.classList.remove('hidden-element'); else el.classList.add('hidden-element'); }
