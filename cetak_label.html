@@ -30,22 +30,22 @@
         .active-edit { outline: 2px solid #2563eb !important; background-color: rgba(37,99,235,0.15) !important; z-index: 10; }
         .hidden-element { display: none !important; }
 
-        /* REVISI: CSS Slider Vertikal Presisi (Absolute Positioning) */
+        /* REVISI: CSS Slider Diperhalus Sesuai Gambar 2 */
         .slider-wrapper {
             width: 24px;
-            height: 100px; /* Tinggi disesuaikan agar tidak menabrak tombol */
+            height: 120px;
             position: relative;
-            margin: 6px auto;
+            margin: 8px auto;
             display: flex;
             justify-content: center;
             align-items: center;
         }
         .custom-vertical-slider {
             -webkit-appearance: none;
-            width: 100px; /* Harus sama persis dengan height wrapper */
-            height: 4px; 
-            background: #475569; /* Warna track disesuaikan */
-            border-radius: 4px;
+            width: 120px; 
+            height: 6px; 
+            background: #334155; /* Default track color */
+            border-radius: 6px;
             outline: none;
             position: absolute;
             top: 50%;
@@ -57,22 +57,22 @@
         .custom-vertical-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             background: #3b82f6;
+            border: 3px solid #ffffff; /* Border putih seperti gambar */
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            border: 2px solid #1e293b;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
         }
         .custom-vertical-slider::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             background: #3b82f6;
+            border: 3px solid #ffffff;
             cursor: pointer;
-            border: 2px solid #1e293b;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
         }
     </style>
 </head>
