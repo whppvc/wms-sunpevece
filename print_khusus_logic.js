@@ -1,5 +1,5 @@
 // ============================================================================
-// WMS SUNPEVECE - CETAK LABEL KHUSUS ENGINE
+// WMS SUNPEVECE - CETAK LABEL KHUSUS ENGINE (STANDALONE)
 // ============================================================================
 
 let currentMode = 'khusus'; 
@@ -24,6 +24,9 @@ let isDragging = false, dragStartX = 0, dragStartY = 0, dragInitialPos = {};
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', password: ''};
 
+// ==========================================
+// 1. INISIALISASI & SUPABASE FETCH
+// ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     await initModernLayout({ id: 'print_khusus', title: 'CETAK LABEL KHUSUS', url: 'print_khusus.html' });
     initKeyboardGlobal();
@@ -55,9 +58,13 @@ async function loadMasterData() {
 
     } catch (e) {
         console.error("Gagal memuat master data:", e);
+        alert("Gagal terhubung ke database master!");
     }
 }
 
+// ==========================================
+// 2. UI RENDERER & PANELS
+// ==========================================
 function switchMode(mode) {
     currentMode = mode;
     renderForm();
@@ -91,14 +98,17 @@ function renderForm() {
     container.innerHTML = `
         <div>
             <label class="block text-xs font-bold text-slate-800 mb-1">Jenis Item:</label>
-            <select id="k-jenis" class="w-full p-2 text-sm border border-slate-300 rounded outline-none bg-white text-slate-800 cursor-pointer"><option value="p">Plafon</option><option value="l">Lis</option></select>
+            <select id="k-jenis" class="w-full p-2 text-sm border border-slate-300 rounded outline-none bg-white text-slate-800 cursor-pointer">
+                <option value="Plafon">Plafon</option>
+                <option value="Lis">Lis</option>
+            </select>
         </div>
         <div>
             <label class="block text-xs font-bold text-slate-800 mb-1">String QR Code:</label>
-            <textarea id="k-qr-string" rows="4" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-emerald-600 font-mono bg-white text-slate-800" placeholder="Contoh: P103/WT-1/61D4/16662C2S1P3/0001"></textarea>
+            <textarea id="k-qr-string" rows="4" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-emerald-600 font-mono bg-white text-slate-800" placeholder="Contoh: P103/WT-1/400A1/20262MPL02S1P49/0001"></textarea>
         </div>
         <div class="p-3 border border-emerald-200 bg-emerald-50 rounded-lg mt-2">
-            <label class="block text-xs font-bold text-emerald-800 mb-1">Jumlah Box:</label>
+            <label class="block text-xs font-bold text-emerald-800 mb-1">Jumlah Box (Qty Print):</label>
             <input type="number" id="k-qty" value="1" min="1" class="w-full p-2 text-base border border-slate-300 rounded outline-none focus:border-emerald-600 font-bold text-center bg-white text-slate-900">
         </div>
     `;
@@ -612,74 +622,183 @@ function loadSetDefault(m) {
 }
 
 // ==========================================
-// 8. GENERATE BARCODE & PRINT (KHUSUS)
+// 8. ALGORITMA PARSING KHUSUS & GENERATE LABEL
 // ==========================================
+function parseJulianDate(dateCode) {
+    if (!dateCode || dateCode.length < 5) return dateCode || "-";
+    try {
+        let dayNum = parseInt(dateCode.substring(0, 3));
+        let yrRaw = dateCode.substring(3, 5); // misal "62"
+        let yrRev = yrRaw.split('').reverse().join(''); // misal "26"
+        let fullYear = parseInt("20" + yrRev); // 2026
+
+        if (isNaN(dayNum) || isNaN(fullYear)) return dateCode;
+
+        let dateObj = new Date(fullYear, 0, 1);
+        dateObj.setDate(dayNum); 
+
+        let dd = String(dateObj.getDate()).padStart(2, '0');
+        let mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        let yyyy = dateObj.getFullYear();
+
+        return `${dd}/${mm}/${yyyy}`;
+    } catch (e) {
+        return dateCode;
+    }
+}
+
+function parsePanjangNumber(rawPjg) {
+    if (!rawPjg) return "0";
+    let digits = rawPjg.replace(/\D/g, ''); 
+    if (!digits) return "0";
+    if (digits.length === 1) return digits + "00"; // e.g. "4" -> "400"
+    if (digits.length === 2) return digits + "0";  // e.g. "45" -> "450"
+    return digits; // e.g. "400" -> "400"
+}
+
+function getIsiBoxText(jenisItem, namaItem) {
+    if (jenisItem === 'Plafon') return "Qty: 15";
+    
+    let n = (namaItem || '').toUpperCase();
+    if (n.includes('PROFILE IV') || n.includes('PROFILE V')) return "Qty: 60";
+    if (n.includes('PROFILE II')) return "Qty: 48";
+    if (n.includes('PROFILE I')) return "Qty: 140";
+    if (n.includes('CONNECTOR')) return "Qty: 80";
+    return "Qty: 24"; // Default Lis
+}
+
 window.generateLabel = function() {
     let m = currentMode;
     let str = document.getElementById('k-qr-string').value.trim();
-    let jenis = document.getElementById('k-jenis').value;
-    if(!str) return alert("Masukkan String QR Code!");
+    let jenis = document.getElementById('k-jenis').value; // 'Plafon' atau 'Lis'
+    
+    if(!str) return alert("Masukkan String QR Code terlebih dahulu!");
     
     let parts = str.split('/');
-    if(parts.length < 4) return alert("Format QR tidak valid! Pastikan ada minimal 3 garis miring (/).");
+    if(parts.length < 4) return alert("Format String QR Code tidak valid! Minimal terdiri dari 4 bagian pisahan garis miring (/).");
     
-    let kItem = parts[0]; let kShading = parts[1]; let p3 = parts[2]; let p4 = parts[3];
-    
-    let findName = (type, code) => {
-        if(!code) return "";
-        let found = masterData[type].find(x => x.kode === code.toUpperCase());
-        return found ? found.nama : code;
-    };
-    
-    let namaItem = findName('item', kItem);
-    
-    let dusCode = ""; let gradeCode = "";
-    for(let d of masterData.dus) { if(d.kode && p3.endsWith(d.kode)) { dusCode = d.kode; p3 = p3.slice(0, -dusCode.length); break; } }
-    for(let g of masterData.grade) { if(g.kode && p3.endsWith(g.kode)) { gradeCode = g.kode; p3 = p3.slice(0, -gradeCode.length); break; } }
-    let panjangCode = p3;
-    
-    let namaDus = findName('dus', dusCode);
-    let namaGrade = findName('grade', gradeCode);
-    
-    let panjangAsli = 0;
-    if(panjangCode) {
-        if(panjangCode.length === 2) panjangAsli = parseInt(panjangCode) * 10;
-        else if (panjangCode.length === 1) panjangAsli = parseInt(panjangCode) * 100;
-        else panjangAsli = parseInt(panjangCode);
+    let part0 = parts[0].trim();
+    let part1 = parts[1].trim();
+    let part2 = parts[2].trim();
+    let part3 = parts[3].trim();
+    let part4 = parts[4] ? parts[4].trim() : "0001";
+
+    // ----------------------------------------------------
+    // A. BAGIAN 0: KODE ITEM (LOOKUP MASTER_2)
+    // ----------------------------------------------------
+    let namaItemFound = "-";
+    let itemObj = masterData.item.find(x => x.kode.toUpperCase() === part0.toUpperCase());
+    if (itemObj) {
+        namaItemFound = itemObj.nama;
+    } else {
+        namaItemFound = part0; // Fallback jika tidak ketemu
     }
-    
-    let dateCode = p4.substring(0,5); p4 = p4.substring(5);
-    
-    let poCode = ""; let shiftCode = ""; let mesinCode = "";
-    if(jenis === 'p') {
-        for(let p of masterData.customer) { if(p.kode && p4.endsWith(p.kode)) { poCode = p.kode; p4 = p4.slice(0, -poCode.length); break; } }
+
+    // ----------------------------------------------------
+    // B. BAGIAN 1: SHADING
+    // ----------------------------------------------------
+    let shadingFound = part1 || "-";
+
+    // ----------------------------------------------------
+    // C. BAGIAN 2: PANJANG + KODE GRADE + KODE DUS
+    // ----------------------------------------------------
+    let rem2 = part2;
+    let dusFound = "-";
+    let gradeFound = "-";
+
+    // Step 1: Cari Dus (Merk) dari kanan
+    let dusList = [...masterData.dus].sort((a, b) => (b.kode || '').length - (a.kode || '').length);
+    for (let d of dusList) {
+        if (d.kode && rem2.toUpperCase().endsWith(d.kode.toUpperCase())) {
+            dusFound = d.nama;
+            rem2 = rem2.substring(0, rem2.length - d.kode.length);
+            break;
+        }
     }
-    for(let s of masterData.shift) { if(s.kode && p4.endsWith(s.kode)) { shiftCode = s.kode; p4 = p4.slice(0, -shiftCode.length); break; } }
-    mesinCode = p4;
-    
-    let namaPo = findName('customer', poCode);
-    let namaShift = findName('shift', shiftCode);
-    let namaMesin = findName('mesin', mesinCode);
-    
-    let yr = "20" + dateCode.substring(3).split('').reverse().join('');
-    let dayOfYear = parseInt(dateCode.substring(0,3));
-    let d = new Date(yr, 0); if(!isNaN(dayOfYear)) d.setDate(dayOfYear);
-    
-    let tglStr = isNaN(d.getTime()) ? dateCode : (`${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`);
-    let shiftStr = namaShift.replace(/\D/g, '') ? "S" + namaShift.replace(/\D/g, '') : "";
-    let poStr = jenis === 'p' ? namaPo : "";
-    let isiStr = "Qty: " + (jenis === 'p' ? "15" : "-");
-    let namaStr = namaItem + (namaGrade === 'A' ? ' A' : '');
+
+    // Step 2: Cari Grade dari kanan
+    let gradeList = [...masterData.grade].sort((a, b) => (b.kode || '').length - (a.kode || '').length);
+    for (let g of gradeList) {
+        if (g.kode && rem2.toUpperCase().endsWith(g.kode.toUpperCase())) {
+            gradeFound = g.nama;
+            rem2 = rem2.substring(0, rem2.length - g.kode.length);
+            break;
+        }
+    }
+
+    // Step 3: Sisa rem2 adalah Panjang
+    let pjgNum = parsePanjangNumber(rem2);
+
+    // ----------------------------------------------------
+    // D. BAGIAN 3: DATECODE + MESIN + SHIFT + CUSTOMER
+    // ----------------------------------------------------
+    let dateCode = part3.substring(0, 5);
+    let tglStr = parseJulianDate(dateCode);
+
+    let rem3 = part3.substring(5);
+    let customerFound = "-";
+    let shiftFound = "-";
+    let mesinFound = "-";
+
+    // Step 1: Cari Customer/PO dari kanan
+    if (jenis === 'Lis') {
+        customerFound = "P49";
+        let p49Obj = masterData.customer.find(c => c.kode === 'P49');
+        if (p49Obj) customerFound = p49Obj.nama;
+    } else {
+        let customerList = [...masterData.customer].sort((a, b) => (b.kode || '').length - (a.kode || '').length);
+        for (let c of customerList) {
+            if (c.kode && rem3.toUpperCase().endsWith(c.kode.toUpperCase())) {
+                customerFound = c.nama;
+                rem3 = rem3.substring(0, rem3.length - c.kode.length);
+                break;
+            }
+        }
+    }
+
+    // Step 2: Cari Shift dari kanan
+    let shiftList = [...masterData.shift].sort((a, b) => (b.kode || '').length - (a.kode || '').length);
+    for (let s of shiftList) {
+        if (s.kode && rem3.toUpperCase().endsWith(s.kode.toUpperCase())) {
+            shiftFound = s.nama;
+            rem3 = rem3.substring(0, rem3.length - s.kode.length);
+            break;
+        }
+    }
+    let shiftDisplay = shiftFound.replace(/\D/g, '') ? "S" + shiftFound.replace(/\D/g, '') : shiftFound;
+
+    // Step 3: Sisa rem3 adalah Mesin
+    let mesinCode = rem3;
+    let mesinObj = masterData.mesin.find(m => m.kode.toUpperCase() === mesinCode.toUpperCase());
+    mesinFound = mesinObj ? mesinObj.nama : (mesinCode || "-");
+
+    // ----------------------------------------------------
+    // E. KELENGKAPAN NAMA ITEM & QTY PER BOX
+    // ----------------------------------------------------
+    let namaStr = namaItemFound + (gradeFound === 'A' ? ' A' : '');
+    let isiStr = getIsiBoxText(jenis, namaItemFound);
 
     const setTxt = (id, txt) => { let el = document.getElementById(id); if(el) el.innerText = txt; };
     
     document.getElementById('el-nama').innerHTML = namaStr;
-    setTxt('el-shading', kShading); setTxt('el-mesin', namaMesin); setTxt('el-po', poStr); setTxt('el-dus', namaDus);
-    setTxt('el-ukuran', `Uk 20 x ${panjangAsli}`); setTxt('el-isi', isiStr); setTxt('el-shift', shiftStr); setTxt('el-tanggal', tglStr);
+    setTxt('el-shading', shadingFound); 
+    setTxt('el-mesin', mesinFound); 
+    setTxt('el-po', customerFound); 
+    setTxt('el-dus', dusFound);
+    setTxt('el-ukuran', `Uk 20 x ${pjgNum}`); 
+    setTxt('el-isi', isiStr); 
+    setTxt('el-shift', shiftDisplay); 
+    setTxt('el-tanggal', tglStr);
     
     document.getElementById('el-nama-back').innerHTML = namaStr;
-    setTxt('el-shading-back', kShading); setTxt('el-mesin-back', namaMesin); setTxt('el-po-back', poStr); setTxt('el-dus-back', namaDus);
-    setTxt('el-ukuran-back', `Uk 20 x ${panjangAsli}`); setTxt('el-isi-back', isiStr); setTxt('el-shift-back', shiftStr); setTxt('el-tanggal-back', tglStr);
+    setTxt('el-shading-back', shadingFound); 
+    setTxt('el-mesin-back', mesinFound); 
+    setTxt('el-po-back', customerFound); 
+    setTxt('el-dus-back', dusFound);
+    setTxt('el-ukuran-back', `Uk 20 x ${pjgNum}`); 
+    setTxt('el-isi-back', isiStr); 
+    setTxt('el-shift-back', shiftDisplay); 
+    setTxt('el-tanggal-back', tglStr);
 
     stateGlobal[m].barcodeData = str;
     setTxt('el-barcode', str);
@@ -688,7 +807,10 @@ window.generateLabel = function() {
     if(qrEl) { 
         qrEl.innerHTML = ""; 
         new QRCode(qrEl, { text: str, width: 150, height: 150, correctLevel : QRCode.CorrectLevel.L }); 
-        setTimeout(() => { let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; }); }, 50);
+        setTimeout(() => { 
+            let qs = qrEl.querySelectorAll('img, canvas'); 
+            qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; }); 
+        }, 50);
     }
 
     applyCurrentStateToDOM(m);
@@ -697,7 +819,7 @@ window.generateLabel = function() {
     return true;
 };
 
-// REVISI CETAK KHUSUS HIGH-SPEED & ANTI-POPUP BLOCKED
+// REVISI CETAK KHUSUS HIGH-SPEED & ANTI-POPUP BLOCKED (MEMPROSES N DUS DUPLIKAT)
 window.cetakLabel = async function() {
     let m = currentMode;
     let qty = parseInt(document.getElementById('k-qty').value) || 1;
@@ -737,28 +859,7 @@ window.cetakLabel = async function() {
         </body></html>
     `);
 
-    let item = document.getElementById('el-nama').innerText;
-    let panjang = document.getElementById('el-ukuran').innerText.split('x')[1].trim();
-    if(!panjang.endsWith('M')) panjang += 'M';
-    let grade = '';
-    
-    let idKombinasi = `${item}_${panjang}_${grade}`.toUpperCase().replace(/\s/g, "");
-
     try {
-        const { data: unikData } = await db.from('database_kode_unik').select('id, last_serial').eq('id_kombinasi', idKombinasi).single();
-        
-        let startSerial = 1;
-        if (unikData && unikData.last_serial) {
-            startSerial = parseInt(unikData.last_serial) + 1;
-        }
-        let endSerial = startSerial + qty - 1;
-        
-        if (unikData) {
-            await db.from('database_kode_unik').update({ last_serial: endSerial }).eq('id', unikData.id);
-        } else {
-            await db.from('database_kode_unik').insert([{ id_kombinasi: idKombinasi, nama_item: item, panjang: panjang, grade: grade, last_serial: endSerial }]);
-        }
-
         let nodeFront = document.getElementById('canvas'); 
         let nodeBack = document.getElementById('canvas-back'); 
         let wrapper = document.getElementById('labels-wrapper');
@@ -777,47 +878,32 @@ window.cetakLabel = async function() {
         nodeFront.style.transition = 'none';
         nodeBack.style.transition = 'none';
 
+        // Render HANYA 1 KALI SEBELUM LOOPING (KARENA WARNA & KODE CETAK KHUSUS IDENTIK MURNI)
         let canvasBack = await html2canvas(nodeBack, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
         let imgBackBase64 = canvasBack.toDataURL("image/png", 1.0);
 
+        let qrEl = document.getElementById('qrcode');
+        let imgTag = qrEl.querySelector('img'); if (imgTag) imgTag.remove();
+        let canvasTag = qrEl.querySelector('canvas');
+        if (canvasTag) { canvasTag.style.width = '100%'; canvasTag.style.height = '100%'; canvasTag.style.display = 'block'; }
+
+        let canvasFront = await html2canvas(nodeFront, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
+        let imgFrontBase64 = canvasFront.toDataURL("image/png", 1.0);
+
         let sequenceImages = [];
-        let currentRenderCount = 1;
+        for(let i = 1; i <= qty; i++) {
+            sequenceImages.push(imgFrontBase64);
+            sequenceImages.push(imgBackBase64);
 
-        for(let i = startSerial; i <= endSerial; i++) {
-            let serialStr = "/" + ("0000" + i).slice(-4);
-            let fullBarcode = stateGlobal[m].barcodeData + serialStr;
-            
-            document.getElementById('el-barcode').innerText = fullBarcode;
-            let qrEl = document.getElementById('qrcode'); qrEl.innerHTML = "";
-            new QRCode(qrEl, { text: fullBarcode, width: 150, height: 150, correctLevel : QRCode.CorrectLevel.L });
-            
-            let imgTag = qrEl.querySelector('img');
-            if (imgTag) imgTag.remove();
-            let canvasTag = qrEl.querySelector('canvas');
-            if (canvasTag) {
-                canvasTag.style.width = '100%';
-                canvasTag.style.height = '100%';
-                canvasTag.style.display = 'block';
-            }
-
-            let pct = Math.round((currentRenderCount / qty) * 100);
+            let pct = Math.round((i / qty) * 100);
             if (pWin && !pWin.closed && pWin.document) {
                 let elTxt = pWin.document.getElementById('prog-txt');
                 let elBar = pWin.document.getElementById('prog-bar');
                 let elDetail = pWin.document.getElementById('prog-detail');
-                if (elTxt) elTxt.innerText = `Merender Label ${currentRenderCount} dari ${qty}`;
+                if (elTxt) elTxt.innerText = `Menyiapkan Label ${i} dari ${qty}`;
                 if (elBar) elBar.style.width = pct + '%';
                 if (elDetail) elDetail.innerText = `${pct}% Selesai`;
             }
-            
-            let canvasFront = await html2canvas(nodeFront, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
-            let imgFrontBase64 = canvasFront.toDataURL("image/png", 1.0);
-            
-            sequenceImages.push(imgFrontBase64);
-            sequenceImages.push(imgBackBase64);
-            
-            btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${currentRenderCount}/${qty}`;
-            currentRenderCount++;
         }
         
         nodeFront.style.transform = oldTransformFront; nodeFront.style.border = '1px solid black'; nodeFront.style.transition = '';
