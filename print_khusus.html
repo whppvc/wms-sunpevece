@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WMS - Cetak Label Khusus</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <script src="global.js"></script>
+    
+    <style>
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; background-color: #f8fafc; }
+        .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .tab-active { border-bottom: 3px solid #059669; color: #059669; font-weight: 900; background-color: #ecfdf5; }
+
+        .preview-box-container { background: #e2e8f0; display: flex; justify-content: center; align-items: flex-start; overflow: auto; position: relative; }
+        .label-canvas { background: white; border: 1px solid black; position: relative; padding: 2mm; box-sizing: border-box; display: flex; overflow: hidden; transform-origin: top center; transition: transform 0.2s ease-in-out; }
+        
+        .click-edit { transition: outline 0.2s, background 0.2s; border-radius: 2px; }
+        .click-edit:hover { outline: 1px dashed #94a3b8; cursor: pointer; background: rgba(0,0,0,0.03); }
+        .active-edit { outline: 2px solid #059669 !important; background-color: rgba(5,150,105,0.15) !important; z-index: 10; }
+        .hidden-element { display: none !important; }
+
+        .slider-wrapper {
+            width: 28px;
+            height: 140px; 
+            position: relative;
+            margin: 4px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .custom-vertical-slider {
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            width: 140px !important; 
+            height: 6px !important;  
+            border-radius: 3px !important;
+            outline: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(270deg);
+            margin: 0 !important;
+            cursor: pointer;
+            background: #334155; 
+        }
+        .custom-vertical-slider::-webkit-slider-runnable-track {
+            width: 100% !important;
+            height: 6px !important;
+            background: inherit !important; 
+            border-radius: 3px !important;
+            border: none !important;
+        }
+        .custom-vertical-slider::-webkit-slider-thumb {
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            width: 18px !important;
+            height: 18px !important;
+            border-radius: 50% !important;
+            background: #059669 !important;
+            border: 3px solid #ffffff !important;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5) !important;
+            margin-top: -6px !important;
+        }
+        .custom-vertical-slider::-moz-range-track {
+            width: 100% !important;
+            height: 6px !important;
+            background: inherit !important;
+            border-radius: 3px !important;
+            border: none !important;
+        }
+        .custom-vertical-slider::-moz-range-thumb {
+            width: 18px !important;
+            height: 18px !important;
+            border-radius: 50% !important;
+            background: #059669 !important;
+            border: 3px solid #ffffff !important;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5) !important;
+        }
+    </style>
+</head>
+<body class="font-sans text-slate-800">
+
+    <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
+        
+        <!-- HEADER TABS -->
+        <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-sm">
+            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
+                <button onclick="switchMode('khusus')" id="tab-khusus" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase text-emerald-700"><i data-lucide="qr-code" class="w-4 h-4"></i> Cetak Label Khusus</button>
+            </div>
+        </div>
+
+        <!-- MAIN WORKSPACE -->
+        <div class="flex-1 flex flex-col md:flex-row min-h-0 bg-slate-100">
+            
+            <!-- PANEL KIRI (FORM & SETTINGS) -->
+            <div class="w-full md:w-1/3 lg:w-1/4 bg-white border-r border-slate-300 flex flex-col min-h-0 shadow-md z-10">
+                
+                <div class="flex p-2 bg-slate-50 border-b border-slate-200 gap-2 shrink-0">
+                    <button id="btn-view-form" onclick="toggleLeftPanel('form')" class="flex-1 py-2 bg-emerald-600 text-white text-xs font-bold rounded shadow-sm transition">📝 Form Input</button>
+                    <button id="btn-view-setting" onclick="toggleLeftPanel('setting')" class="flex-1 py-2 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 text-xs font-bold rounded transition">⚙️ Atur Label</button>
+                </div>
+
+                <div id="panel-form" class="flex-1 overflow-y-auto custom-scroll p-4 space-y-4"></div>
+                <div id="panel-setting" class="hidden flex-1 overflow-y-auto custom-scroll p-4 space-y-4"></div>
+            </div>
+
+            <!-- PANEL KANAN (CANVAS PREVIEW) -->
+            <div class="flex-1 flex flex-col min-w-0 bg-slate-200 relative">
+                
+                <div class="shrink-0 bg-white p-3 border-b border-slate-300 flex flex-wrap justify-between items-center gap-3 shadow-sm z-10">
+                    <div class="flex items-center gap-2">
+                        <button onclick="generateLabel()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md text-xs uppercase shadow-sm transition flex items-center gap-2 active:scale-95"><i data-lucide="zap" class="w-4 h-4"></i> 1. Buat QR</button>
+                        <button id="btn-cetak-label" onclick="cetakLabel()" class="hidden px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-md text-xs uppercase shadow-sm transition items-center gap-2 active:scale-95"><i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label</button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="eksekusiUndo()" class="p-2 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition" title="Undo"><i data-lucide="undo" class="w-4 h-4"></i></button>
+                        <button onclick="eksekusiRedo()" class="p-2 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition" title="Redo"><i data-lucide="redo" class="w-4 h-4"></i></button>
+                        <button onclick="saveSetDefault()" class="px-3 py-2 bg-slate-100 border border-slate-300 text-slate-700 font-bold rounded-md text-xs transition hover:bg-slate-200 flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Set Default</button>
+                        
+                        <div class="flex items-center bg-white border border-slate-300 rounded-md overflow-hidden ml-2">
+                            <button onclick="ubahZoom(-0.2)" class="px-3 py-1.5 hover:bg-slate-100 font-black text-slate-600">-</button>
+                            <span id="zoom-text" class="px-2 text-xs font-bold text-slate-800 min-w-[50px] text-center">400%</span>
+                            <button onclick="ubahZoom(0.2)" class="px-3 py-1.5 hover:bg-slate-100 font-black text-slate-600">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="preview-container" class="preview-box-container flex-1 p-8 custom-scroll">
+                    <div id="labels-wrapper" style="transform: scale(4.0); transform-origin: top center; display: flex; flex-direction: column; gap: 15px; padding-bottom: 50px;"></div>
+                </div>
+
+                <div id="context-panel" class="hidden absolute left-6 top-1/2 -translate-y-1/2 bg-slate-800 text-white p-3 rounded-xl shadow-2xl border border-slate-600 flex-row gap-3 z-50"></div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- OVERLAY -->
+    <div id="overlay-klik-luar" onclick="tutupSemuaPopups()" class="hidden fixed inset-0 z-[40] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
+
+    <script src="print_khusus_logic.js"></script>
+</body>
+</html>
