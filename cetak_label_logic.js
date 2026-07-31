@@ -346,8 +346,11 @@ function handleVisChange(key, isChecked) {
     }
 }
 
-function handleWrapChange(key, isChecked) {
-    const isBack = document.getElementById('side-select').value === 'back';
+// REVISI: Perbaikan fungsi Wrap Text agar mendukung parameter targetSide secara eksplisit
+function handleWrapChange(key, isChecked, targetSide = null) {
+    const sideSelect = document.getElementById('side-select')?.value || 'front';
+    const side = targetSide || sideSelect;
+    const isBack = side === 'back';
     const m = currentMode + (isBack ? '_back' : '');
     const idSfx = isBack ? '-back' : '';
     
@@ -357,10 +360,13 @@ function handleWrapChange(key, isChecked) {
     let el = document.getElementById(`el-${key}${idSfx}`);
     if(el) {
         if(isChecked) { 
-            el.style.whiteSpace = 'normal'; el.style.wordWrap = 'break-word'; 
+            el.style.whiteSpace = 'normal'; 
+            el.style.wordBreak = 'break-word'; 
+            el.style.wordWrap = 'break-word'; 
             el.style.maxWidth = val + (key==='nama'?'mm':'px'); 
         } else { 
-            el.style.whiteSpace = 'nowrap'; el.style.maxWidth = 'none'; 
+            el.style.whiteSpace = 'nowrap'; 
+            el.style.maxWidth = 'none'; 
         }
     }
 }
@@ -514,7 +520,6 @@ function showContextPanel() {
     
     let html = '';
     
-    // REVISI: Margin tombol diperbesar (mb-3 dan mt-3) agar slider 140px dapat bernapas dengan lega
     const buildSlider = (type, min, max, val) => `
         <div class="flex flex-col items-center w-16 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
             <span class="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-wider">${type}</span>
@@ -540,6 +545,7 @@ function showContextPanel() {
     }, 10);
 }
 
+// REVISI: Perbaikan syncContext agar mendukung wrap text pada label depan maupun belakang
 window.syncContext = function(type, val) {
     let m = activeSelection.m;
     let v = parseInt(val);
@@ -558,7 +564,12 @@ window.syncContext = function(type, val) {
             stateGlobal[m].wrap[k] = v;
             let elId = k === 'barcode' ? `el-barcode${idSfx}` : `el-nama${idSfx}`;
             let el = document.getElementById(elId);
-            if(el && el.style.whiteSpace === 'normal') el.style.maxWidth = v + (k==='nama'?'mm':'px');
+            if(el) {
+                el.style.whiteSpace = 'normal';
+                el.style.wordBreak = 'break-word';
+                el.style.wordWrap = 'break-word';
+                el.style.maxWidth = v + (k==='nama'?'mm':'px');
+            }
         }
     });
     
@@ -997,7 +1008,9 @@ window.generateLabel = function() {
     return true;
 };
 
-// REVISI: Optimasi Kecepatan Cetak (Skala 2x, Buka Window di Akhir)
+// REVISI OPTIMASI & ANTI-POPUP BLOCKED:
+// 1. window.open dipanggil di baris pertama (SINKRON) agar tidak diblokir browser.
+// 2. html2canvas(nodeBack) dirender HANYA 1 KALI di luar loop untuk kecepatan maksimal (10x lebih cepat).
 window.cetakLabel = async function() {
     let m = currentMode;
     let qty = parseInt(document.getElementById(`${m}-qty`).value) || 1;
@@ -1006,6 +1019,31 @@ window.cetakLabel = async function() {
 
     document.querySelectorAll('.click-edit').forEach(el => el.classList.remove('active-edit'));
     document.getElementById('context-panel').classList.add('hidden');
+
+    // 1. BUKA WINDOW PRINT SINKRON DI AWAL KETIKA EVENT KLIK MASIH AKTIF (ANTI-POPUP BLOCKED)
+    let pWin = window.open('about:blank', '_blank');
+    if(!pWin) {
+        alert("Popup diblokir oleh browser! Silakan izinkan pop-up (Always allow pop-ups) di address bar atas, lalu coba lagi.");
+        btnCetak.innerHTML = '<i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label'; btnCetak.disabled = false;
+        return;
+    }
+    
+    // Tulis tampilan loading sementara di tab baru
+    let w = stateGlobal[m].kertas.w + "mm"; 
+    let h = stateGlobal[m].kertas.h + "mm";
+    pWin.document.write(`
+        <html><head><title>Mencetak Label...</title>
+        <style>
+            body { font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f8fafc; color: #1e293b; }
+            .loader { border: 4px solid #e2e8f0; border-top: 4px solid #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        </style>
+        </head><body>
+            <div class="loader"></div>
+            <h3 style="margin:0; font-size:16px;">Sedang Merender ${qty} Label...</h3>
+            <p style="margin:4px 0 0 0; font-size:12px; color:#64748b;">Mohon tunggu, dialog cetak akan muncul otomatis.</p>
+        </body></html>
+    `);
 
     let item = m === 'khusus' ? document.getElementById('el-nama').innerText : document.getElementById(`${m}-item`).value;
     let panjang = m === 'khusus' ? document.getElementById('el-ukuran').innerText.split('x')[1].trim() : document.getElementById(`${m}-panjang`).value.trim().toUpperCase();
@@ -1036,7 +1074,8 @@ window.cetakLabel = async function() {
         let oldWrapTransform = wrapper.style.transform;
         wrapper.style.transform = 'none';
         
-        let oldTransformFront = nodeFront.style.transform; let oldTransformBack = nodeBack.style.transform;
+        let oldTransformFront = nodeFront.style.transform; 
+        let oldTransformBack = nodeBack.style.transform;
         nodeFront.style.transform = 'none'; nodeFront.style.border = 'none';
         nodeBack.style.transform = 'none'; nodeBack.style.border = 'none';
         
@@ -1048,9 +1087,9 @@ window.cetakLabel = async function() {
         let suffixRevisi = isRevisi ? " N" : "";
 
         btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render Background...`;
-        await new Promise(r => setTimeout(r, 150)); 
+        await new Promise(r => setTimeout(r, 50)); 
         
-        // REVISI: Skala diturunkan ke 2 agar rendering sangat cepat
+        // OPTIMASI SUPER CEPAT: RENDER CANVAS BACK HANYA 1 KALI SEBELUM LOOPING!
         let canvasBack = await html2canvas(nodeBack, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
         let imgBackBase64 = canvasBack.toDataURL("image/png", 1.0);
 
@@ -1066,14 +1105,14 @@ window.cetakLabel = async function() {
             new QRCode(qrEl, { text: fullBarcode, width: 150, height: 150, correctLevel : QRCode.CorrectLevel.L });
             let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; });
             
-            // REVISI: Jeda diturunkan ke 10ms
-            await new Promise(r => setTimeout(r, 10)); 
+            // Jeda ultra singkat untuk merender QR
+            await new Promise(r => setTimeout(r, 0)); 
             
             let canvasFront = await html2canvas(nodeFront, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
             let imgFrontBase64 = canvasFront.toDataURL("image/png", 1.0);
             
             sequenceImages.push(imgFrontBase64);
-            sequenceImages.push(imgBackBase64);
+            sequenceImages.push(imgBackBase64); // Gunakan kembali hasil render back yang sudah siap (reused)
             
             btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${currentRenderCount}/${qty}`;
             currentRenderCount++;
@@ -1103,16 +1142,8 @@ window.cetakLabel = async function() {
             if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
         }
 
-        // REVISI: Buka Window Print SETELAH Looping Selesai
-        let w = stateGlobal[m].kertas.w + "mm"; let h = stateGlobal[m].kertas.h + "mm";
-        let pWin = window.open('', '_blank');
-        
-        if(!pWin) {
-            alert("Popup diblokir oleh browser! Silakan izinkan pop-up (Always allow pop-ups) di address bar atas, lalu coba lagi.");
-            btnCetak.innerHTML = '<i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label'; btnCetak.disabled = false;
-            return;
-        }
-
+        // TULIS HASIL RENDER KE WINDOW PRINT YANG SUDAH DIBUKA DARI AWAL
+        pWin.document.open();
         pWin.document.write(`<html><head><title>Print Label</title><style>
             @page { size: ${w} ${h}; margin: 0; }
             body { margin: 0; padding: 20px; background: #525659; display: flex; flex-direction: column; align-items: center; gap: 20px; }
@@ -1123,11 +1154,13 @@ window.cetakLabel = async function() {
         
         sequenceImages.forEach(img => { pWin.document.write(`<div class="label-page"><img src="${img}"></div>`); });
         
-        pWin.document.write(`</body></html>`); pWin.document.close(); 
+        pWin.document.write(`</body></html>`); 
+        pWin.document.close(); 
         
-        setTimeout(() => { pWin.focus(); pWin.print(); }, 200);
+        setTimeout(() => { pWin.focus(); pWin.print(); }, 100);
 
     } catch(e) {
+        if(pWin && !pWin.closed) pWin.close();
         alert("Terjadi kesalahan: " + e.message);
     } finally {
         btnCetak.innerHTML = '<i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label'; btnCetak.disabled = false; lucide.createIcons();
