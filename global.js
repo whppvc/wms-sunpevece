@@ -160,10 +160,10 @@ style.innerHTML = `
     body:not(.disable-hover) tr.r-row:hover td.sticky-col { background-color: rgb(var(--tbl-row-hover)) !important; }
     tr.selected-row td.sticky-col { background-color: #ccfbf1 !important; }
     
-    /* Custom Range Slider */
-    input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #4f46e5; cursor: pointer; margin-top: -6px; }
-    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #cbd5e1; border-radius: 2px; }
+    /* REVISI: Pengecualian :not(.custom-vertical-slider) agar tidak merusak slider vertikal */
+    input[type=range]:not(.custom-vertical-slider) { -webkit-appearance: none; width: 100%; background: transparent; }
+    input[type=range]:not(.custom-vertical-slider)::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #4f46e5; cursor: pointer; margin-top: -6px; }
+    input[type=range]:not(.custom-vertical-slider)::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #cbd5e1; border-radius: 2px; }
 `;
 document.head.appendChild(style);
 
