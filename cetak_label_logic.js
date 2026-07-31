@@ -497,10 +497,11 @@ function updateTransform(key, isBack) {
 // 5. CONTEXT MENU (FONT, GAP, WRAP, SCALE)
 // ==========================================
 window.updateSliderFill = function(el) {
+    if (!el) return;
     const min = parseFloat(el.min) || 0;
     const max = parseFloat(el.max) || 100;
     const val = parseFloat(el.value);
-    const percentage = ((val - min) / (max - min)) * 100;
+    const percentage = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
     el.style.background = `linear-gradient(to right, #3b82f6 ${percentage}%, #334155 ${percentage}%)`;
 };
 
@@ -513,7 +514,7 @@ function showContextPanel() {
     
     let html = '';
     
-    // REVISI: Margin tombol diperbesar (mb-3 dan mt-3) agar slider lebih lega
+    // REVISI: Margin tombol diperbesar (mb-3 dan mt-3) agar slider 140px dapat bernapas dengan lega
     const buildSlider = (type, min, max, val) => `
         <div class="flex flex-col items-center w-16 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
             <span class="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-wider">${type}</span>
