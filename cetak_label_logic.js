@@ -112,7 +112,6 @@ function toggleLeftPanel(target) {
     }
 }
 
-// REVISI: UI Form Diperhalus Sesuai Gambar 3
 function renderForm() {
     const container = document.getElementById('panel-form');
     const today = new Date().toISOString().split('T')[0];
@@ -497,13 +496,11 @@ function updateTransform(key, isBack) {
 // ==========================================
 // 5. CONTEXT MENU (FONT, GAP, WRAP, SCALE)
 // ==========================================
-// REVISI: Fungsi Helper untuk Update Visual Gradient Slider
 window.updateSliderFill = function(el) {
     const min = parseFloat(el.min) || 0;
     const max = parseFloat(el.max) || 100;
     const val = parseFloat(el.value);
     const percentage = ((val - min) / (max - min)) * 100;
-    // Karena di-rotate 270deg, linear-gradient to right akan terlihat dari bawah ke atas
     el.style.background = `linear-gradient(to right, #3b82f6 ${percentage}%, #334155 ${percentage}%)`;
 };
 
@@ -516,16 +513,16 @@ function showContextPanel() {
     
     let html = '';
     
-    // REVISI: Menggunakan class .slider-wrapper dan menambahkan oninput updateSliderFill
+    // REVISI: Margin tombol diperbesar (mb-3 dan mt-3) agar slider lebih lega
     const buildSlider = (type, min, max, val) => `
         <div class="flex flex-col items-center w-16 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
             <span class="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-wider">${type}</span>
             <input type="number" value="${val}" class="w-full bg-slate-950 text-blue-400 border border-slate-600 rounded text-center font-bold text-sm py-1 mb-2 outline-none focus:border-blue-500" onchange="syncContext('${type}', this.value)">
-            <button onclick="stepContext('${type}', 1)" class="w-full bg-slate-700 hover:bg-blue-600 text-white rounded py-1 font-bold text-sm transition mb-1">+</button>
+            <button onclick="stepContext('${type}', 1)" class="w-full bg-slate-700 hover:bg-blue-600 text-white rounded py-1 font-bold text-sm transition mb-3">+</button>
             <div class="slider-wrapper">
                 <input type="range" orient="vertical" min="${min}" max="${max}" value="${val}" class="custom-vertical-slider" oninput="syncContext('${type}', this.value); updateSliderFill(this)">
             </div>
-            <button onclick="stepContext('${type}', -1)" class="w-full bg-slate-700 hover:bg-rose-600 text-white rounded py-1 font-bold text-sm transition mt-1">-</button>
+            <button onclick="stepContext('${type}', -1)" class="w-full bg-slate-700 hover:bg-rose-600 text-white rounded py-1 font-bold text-sm transition mt-3">-</button>
         </div>`;
 
     if (key === 'qr') html += buildSlider('skala', 50, 250, Math.round(stateGlobal[m].pos.qr.s * 100));
@@ -537,7 +534,6 @@ function showContextPanel() {
     panel.classList.remove('hidden');
     panel.classList.add('flex');
 
-    // Inisialisasi warna gradient slider saat panel pertama kali muncul
     setTimeout(() => {
         document.querySelectorAll('.custom-vertical-slider').forEach(el => updateSliderFill(el));
     }, 10);
@@ -569,7 +565,6 @@ window.syncContext = function(type, val) {
     inputs.forEach(inp => { 
         if(inp.getAttribute('onchange').includes(type)) {
             inp.value = v; 
-            // Cari slider pasangannya dan update fill
             let slider = inp.parentElement.querySelector('.custom-vertical-slider');
             if(slider) {
                 slider.value = v;
