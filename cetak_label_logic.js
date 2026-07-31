@@ -14,7 +14,7 @@ let stateGlobal = {};
 const modes = ['plafon', 'khusus'];
 modes.forEach(m => {
     stateGlobal[m] = { zoom: 4.0, pos: { qr: { x: 0, y: 0, s: 1 }, barcode: createBasePos(), nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { barcode: 5, nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: 'custom', w: 85, h: 50 }, wrap: { nama: 33, barcode: 45, nama_cb: true, barcode_cb: true }, barcodeData: "", linkFont: true, vis: JSON.parse(JSON.stringify(baseVis)) };
-    // REVISI: Max width wrap nama label belakang di-default ke 75mm (lebar penuh)
+    // REVISI: Default wrap nama label belakang ditingkatkan ke 75mm (lebar penuh)
     stateGlobal[m + '_back'] = { pos: { nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, wrap: { nama: 75, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) };
 });
 
@@ -856,7 +856,7 @@ window.hapusDataMaster = async function() {
 };
 
 // ==========================================
-// 8. GENERATE BARCODE & PRINT (OPTIMIZED SUPER FAST)
+// 8. GENERATE BARCODE & PRINT (OPTIMIZED HIGH SPEED)
 // ==========================================
 const findKode = (type, name) => {
     if (!name) return "";
@@ -1020,10 +1020,10 @@ window.generateLabel = function() {
     return true;
 };
 
-// REVISI OPTIMASI HIGH-SPEED & ANTI-POPUP BLOCKED:
-// 1. window.open dipanggil di baris pertama (SINKRON) agar tidak diblokir browser.
-// 2. html2canvas(nodeBack) dirender HANYA 1 KALI di luar loop.
-// 3. Tag <img> buatan qrcode.js dihapus otomatis sehingga html2canvas merender <canvas> secara instant (~30ms/label).
+// REVISI OPTIMASI ULTRA FAST & INDIKATOR PROGRES LIVE:
+// 1. window.open dipanggil di awal (SINKRON) untuk mencegah blokir popup.
+// 2. Indikator progres real-time (%) ditampilkan langsung di dalam tab cetak yang baru.
+// 3. Matikan sementara transisi CSS & hilangkan tag <img> buatan qrcode.js agar html2canvas berjalan kilat (~30ms/label).
 window.cetakLabel = async function() {
     let m = currentMode;
     let qty = parseInt(document.getElementById(`${m}-qty`).value) || 1;
@@ -1041,20 +1041,27 @@ window.cetakLabel = async function() {
         return;
     }
     
-    // Tulis tampilan loading sementara di tab baru
+    // Tulis tampilan loading + Progress Bar di tab baru
     let w = stateGlobal[m].kertas.w + "mm"; 
     let h = stateGlobal[m].kertas.h + "mm";
     pWin.document.write(`
         <html><head><title>Mencetak Label...</title>
         <style>
-            body { font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f8fafc; color: #1e293b; }
-            .loader { border: 4px solid #e2e8f0; border-top: 4px solid #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
-            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            body { font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #0f172a; color: #ffffff; }
+            .card { background: #1e293b; padding: 28px 36px; border-radius: 16px; border: 1px solid #334155; text-align: center; width: 320px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+            .title { font-size: 13px; font-weight: 800; margin-bottom: 6px; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; }
+            .subtitle { font-size: 16px; font-weight: 800; color: #38bdf8; margin-bottom: 16px; }
+            .progress-bg { width: 100%; height: 10px; background: #334155; border-radius: 5px; overflow: hidden; margin-bottom: 10px; }
+            .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #2563eb, #06b6d4); border-radius: 5px; transition: width 0.05s ease-out; }
+            .status-detail { font-size: 12px; font-weight: 700; color: #cbd5e1; }
         </style>
         </head><body>
-            <div class="loader"></div>
-            <h3 style="margin:0; font-size:16px;">Sedang Merender ${qty} Label...</h3>
-            <p style="margin:4px 0 0 0; font-size:12px; color:#64748b;">Mohon tunggu, dialog cetak akan muncul otomatis.</p>
+            <div class="card">
+                <div class="title">WMS SUNPEVECE</div>
+                <div class="subtitle" id="prog-txt">Menyiapkan Render...</div>
+                <div class="progress-bg"><div class="progress-fill" id="prog-bar"></div></div>
+                <div class="status-detail" id="prog-detail">0% Selesai</div>
+            </div>
         </body></html>
     `);
 
@@ -1066,7 +1073,7 @@ window.cetakLabel = async function() {
     let idKombinasi = `${item}_${panjang}_${grade}`.toUpperCase().replace(/\s/g, "");
 
     try {
-        const { data: unikData, error: errUnik } = await db.from('database_kode_unik').select('id, last_serial').eq('id_kombinasi', idKombinasi).single();
+        const { data: unikData } = await db.from('database_kode_unik').select('id, last_serial').eq('id_kombinasi', idKombinasi).single();
         
         let startSerial = 1;
         if (unikData && unikData.last_serial) {
@@ -1099,11 +1106,12 @@ window.cetakLabel = async function() {
         let isRevisi = document.getElementById(`${m}-cb-revisi`)?.checked;
         let suffixRevisi = isRevisi ? " N" : "";
 
-        btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render Background...`;
-        await new Promise(r => setTimeout(r, 50)); 
-        
-        // OPTIMASI SUPER CEPAT 1: RENDER CANVAS BACK HANYA 1 KALI SEBELUM LOOPING!
-        let canvasBack = await html2canvas(nodeBack, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
+        // Matikan transisi CSS sementara pada canvas untuk memaksimalkan kecepatan html2canvas
+        nodeFront.style.transition = 'none';
+        nodeBack.style.transition = 'none';
+
+        // Render Back Canvas HANYA 1 KALI SEBELUM LOOPING!
+        let canvasBack = await html2canvas(nodeBack, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
         let imgBackBase64 = canvasBack.toDataURL("image/png", 1.0);
 
         let sequenceImages = [];
@@ -1117,7 +1125,7 @@ window.cetakLabel = async function() {
             let qrEl = document.getElementById('qrcode'); qrEl.innerHTML = "";
             new QRCode(qrEl, { text: fullBarcode, width: 150, height: 150, correctLevel : QRCode.CorrectLevel.L });
             
-            // OPTIMASI SUPER CEPAT 2: HAPUS TAG <img> BUATAN QRCODE.JS AGAR HTML2CANVAS TIDAK DELAY!
+            // Hapus tag <img> buatan QRCode.js agar html2canvas tidak terhambat async image load
             let imgTag = qrEl.querySelector('img');
             if (imgTag) imgTag.remove();
             let canvasTag = qrEl.querySelector('canvas');
@@ -1126,12 +1134,23 @@ window.cetakLabel = async function() {
                 canvasTag.style.height = '100%';
                 canvasTag.style.display = 'block';
             }
+
+            // Update real-time progress di tab pWin
+            let pct = Math.round((currentRenderCount / qty) * 100);
+            if (pWin && !pWin.closed && pWin.document) {
+                let elTxt = pWin.document.getElementById('prog-txt');
+                let elBar = pWin.document.getElementById('prog-bar');
+                let elDetail = pWin.document.getElementById('prog-detail');
+                if (elTxt) elTxt.innerText = `Merender Label ${currentRenderCount} dari ${qty}`;
+                if (elBar) elBar.style.width = pct + '%';
+                if (elDetail) elDetail.innerText = `${pct}% Selesai`;
+            }
             
-            let canvasFront = await html2canvas(nodeFront, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
+            let canvasFront = await html2canvas(nodeFront, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
             let imgFrontBase64 = canvasFront.toDataURL("image/png", 1.0);
             
             sequenceImages.push(imgFrontBase64);
-            sequenceImages.push(imgBackBase64); // Gunakan kembali hasil render back yang sudah siap
+            sequenceImages.push(imgBackBase64);
             
             btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${currentRenderCount}/${qty}`;
             currentRenderCount++;
@@ -1152,8 +1171,9 @@ window.cetakLabel = async function() {
             }
         }
         
-        nodeFront.style.transform = oldTransformFront; nodeFront.style.border = '1px solid black';
-        nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black';
+        // Kembalikan gaya CSS
+        nodeFront.style.transform = oldTransformFront; nodeFront.style.border = '1px solid black'; nodeFront.style.transition = '';
+        nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black'; nodeBack.style.transition = '';
         wrapper.style.transform = oldWrapTransform; container.style.overflowY = oldOverflow;
         
         if (m !== 'khusus' && payloadDB.length > 0) {
@@ -1161,7 +1181,7 @@ window.cetakLabel = async function() {
             if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
         }
 
-        // TULIS HASIL RENDER KE WINDOW PRINT YANG SUDAH DIBUKA DARI AWAL
+        // SISIPKAN HASIL RENDER GAMBAR KE TAB PWIN LALU BUKA WINDOW PRINT
         pWin.document.open();
         pWin.document.write(`<html><head><title>Print Label</title><style>
             @page { size: ${w} ${h}; margin: 0; }
