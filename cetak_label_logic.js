@@ -1,20 +1,18 @@
 // ============================================================================
-// WMS SUNPEVECE - CETAK LABEL ENGINE (REFACTORED & SUPABASE INTEGRATED)
+// WMS SUNPEVECE - CETAK LABEL ENGINE (PLAFON & LIS)
 // ============================================================================
 
-let currentMode = 'plafon'; // plafon (Plafon & Lis), khusus
+let currentMode = 'plafon'; 
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [] };
 
-// State Global untuk Canvas (Posisi, Font, Visibilitas)
 const createBasePos = () => ({ x: 0, y: 0 });
 const baseVis = { qr: true, barcode: true, nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
 const baseVisBack = { nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
 
 let stateGlobal = {};
-const modes = ['plafon', 'khusus'];
+const modes = ['plafon'];
 modes.forEach(m => {
     stateGlobal[m] = { zoom: 4.0, pos: { qr: { x: 0, y: 0, s: 1 }, barcode: createBasePos(), nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { barcode: 5, nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: 'custom', w: 85, h: 50 }, wrap: { nama: 33, barcode: 45, nama_cb: true, barcode_cb: true }, barcodeData: "", linkFont: true, vis: JSON.parse(JSON.stringify(baseVis)) };
-    // REVISI: Default wrap nama label belakang ditingkatkan ke 75mm (lebar penuh)
     stateGlobal[m + '_back'] = { pos: { nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, wrap: { nama: 75, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) };
 });
 
@@ -25,15 +23,11 @@ let activeSelection = { m: null, elements: [] };
 let isDragging = false, dragStartX = 0, dragStartY = 0, dragInitialPos = {};
 let pendingAction = null;
 
-// State Modal Search
 let currentSearchType = ''; 
 let selectedSearchData = { nama: '', kode: '' };
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', password: ''};
 
-// ==========================================
-// 1. INISIALISASI & SUPABASE FETCH
-// ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     await initModernLayout({ id: 'cetak_label', title: 'CETAK LABEL BARCODE', url: 'cetak_label.html' });
     initKeyboardGlobal();
@@ -69,24 +63,8 @@ async function loadMasterData() {
     }
 }
 
-// ==========================================
-// 2. UI RENDERER (DRY PRINCIPLE)
-// ==========================================
 function switchMode(mode) {
-    if (mode === 'khusus' && currentMode !== mode) {
-        mintaPin("Akses Print Khusus", () => executeSwitchMode(mode));
-    } else {
-        executeSwitchMode(mode);
-    }
-}
-
-function executeSwitchMode(mode) {
     currentMode = mode;
-    modes.forEach(m => {
-        const tab = document.getElementById('tab-' + m);
-        if (tab) tab.className = (m === mode) ? 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase' : 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-    });
-
     renderForm();
     renderSettings();
     renderCanvas();
@@ -134,24 +112,6 @@ function renderForm() {
                 <button onclick="bukaModalSearch('${type}')" class="px-4 bg-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-300 border-l border-slate-300 transition">CARI</button>
             </div>
         </div>`;
-
-    if (currentMode === 'khusus') {
-        container.innerHTML = `
-            <div>
-                <label class="block text-xs font-bold text-slate-800 mb-1">Jenis Item:</label>
-                <select id="k-jenis" class="w-full p-2 text-sm border border-slate-300 rounded outline-none bg-white text-slate-800"><option value="p">Plafon</option><option value="l">Lis</option></select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-800 mb-1">String QR Code:</label>
-                <textarea id="k-qr-string" rows="4" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-blue-500 font-mono bg-white text-slate-800" placeholder="Contoh: P103/WT-1/61D4/16662C2S1P3/0001"></textarea>
-            </div>
-            <div class="p-3 border border-blue-200 bg-blue-50 rounded-lg mt-2">
-                <label class="block text-xs font-bold text-blue-700 mb-1">Jumlah Box:</label>
-                <input type="number" id="k-qty" value="1" min="1" class="w-full p-2 text-base border border-slate-300 rounded outline-none focus:border-blue-600 font-bold text-center bg-white text-slate-900">
-            </div>
-        `;
-        return;
-    }
 
     let m = currentMode;
     container.innerHTML = `
@@ -241,9 +201,7 @@ function renderSettings() {
                 <h4 class="text-xs font-black text-slate-700">Tampilkan Elemen</h4>
                 <button onclick="resetDefaultVisibility()" class="text-[10px] font-bold text-blue-600 hover:underline">Reset Default</button>
             </div>
-            <div class="grid grid-cols-2 gap-2" id="vis-checkboxes">
-                <!-- Checkboxes injected here -->
-            </div>
+            <div class="grid grid-cols-2 gap-2" id="vis-checkboxes"></div>
         </div>
 
         <div class="bg-slate-50 border border-slate-200 p-3 rounded-lg">
@@ -305,9 +263,6 @@ function renderCanvas() {
     }
 }
 
-// ==========================================
-// 3. LOGIKA SETTINGS & CANVAS ENGINE
-// ==========================================
 function switchSideSettings() {
     const side = document.getElementById('side-select').value;
     const isBack = side === 'back';
@@ -347,7 +302,6 @@ function handleVisChange(key, isChecked) {
     }
 }
 
-// REVISI: Perbaikan fungsi Wrap Text agar mendukung targetSide & paksa 1 baris (nowrap) jika uncheck
 function handleWrapChange(key, isChecked, targetSide = null) {
     const sideSelect = document.getElementById('side-select')?.value || 'front';
     const side = targetSide || sideSelect;
@@ -523,7 +477,6 @@ function showContextPanel() {
     
     let html = '';
     
-    // REVISI: Max slider wrap ditingkatkan hingga 85 (lebar penuh kertas)
     const buildSlider = (type, min, max, val) => `
         <div class="flex flex-col items-center w-16 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
             <span class="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-wider">${type}</span>
@@ -549,7 +502,6 @@ function showContextPanel() {
     }, 10);
 }
 
-// REVISI: Perbaikan syncContext agar mendukung wrap text secara independen pada label depan maupun belakang
 window.syncContext = function(type, val) {
     let m = activeSelection.m;
     let v = parseInt(val);
@@ -868,89 +820,6 @@ const findKode = (type, name) => {
 
 window.generateLabel = function() {
     let m = currentMode;
-    if (m === 'khusus') {
-        let str = document.getElementById('k-qr-string').value.trim();
-        let jenis = document.getElementById('k-jenis').value;
-        if(!str) return alert("Masukkan String QR Code!");
-        
-        let parts = str.split('/');
-        if(parts.length < 4) return alert("Format QR tidak valid! Pastikan ada minimal 3 garis miring (/).");
-        
-        let kItem = parts[0]; let kShading = parts[1]; let p3 = parts[2]; let p4 = parts[3];
-        
-        let findName = (type, code) => {
-            if(!code) return "";
-            let found = masterData[type].find(x => x.kode === code.toUpperCase());
-            return found ? found.nama : code;
-        };
-        
-        let namaItem = findName('item', kItem);
-        
-        let dusCode = ""; let gradeCode = "";
-        for(let d of masterData.dus) { if(d.kode && p3.endsWith(d.kode)) { dusCode = d.kode; p3 = p3.slice(0, -dusCode.length); break; } }
-        for(let g of masterData.grade) { if(g.kode && p3.endsWith(g.kode)) { gradeCode = g.kode; p3 = p3.slice(0, -gradeCode.length); break; } }
-        let panjangCode = p3;
-        
-        let namaDus = findName('dus', dusCode);
-        let namaGrade = findName('grade', gradeCode);
-        
-        let panjangAsli = 0;
-        if(panjangCode) {
-            if(panjangCode.length === 2) panjangAsli = parseInt(panjangCode) * 10;
-            else if (panjangCode.length === 1) panjangAsli = parseInt(panjangCode) * 100;
-            else panjangAsli = parseInt(panjangCode);
-        }
-        
-        let dateCode = p4.substring(0,5); p4 = p4.substring(5);
-        
-        let poCode = ""; let shiftCode = ""; let mesinCode = "";
-        if(jenis === 'p') {
-            for(let p of masterData.customer) { if(p.kode && p4.endsWith(p.kode)) { poCode = p.kode; p4 = p4.slice(0, -poCode.length); break; } }
-        }
-        for(let s of masterData.shift) { if(s.kode && p4.endsWith(s.kode)) { shiftCode = s.kode; p4 = p4.slice(0, -shiftCode.length); break; } }
-        mesinCode = p4;
-        
-        let namaPo = findName('customer', poCode);
-        let namaShift = findName('shift', shiftCode);
-        let namaMesin = findName('mesin', mesinCode);
-        
-        let yr = "20" + dateCode.substring(3).split('').reverse().join('');
-        let dayOfYear = parseInt(dateCode.substring(0,3));
-        let d = new Date(yr, 0); if(!isNaN(dayOfYear)) d.setDate(dayOfYear);
-        
-        let tglStr = isNaN(d.getTime()) ? dateCode : (`${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`);
-        let shiftStr = namaShift.replace(/\D/g, '') ? "S" + namaShift.replace(/\D/g, '') : "";
-        let poStr = jenis === 'p' ? namaPo : "";
-        let isiStr = "Qty: " + (jenis === 'p' ? "15" : "-");
-        let namaStr = namaItem + (namaGrade === 'A' ? ' A' : '');
-
-        const setTxt = (id, txt) => { let el = document.getElementById(id); if(el) el.innerText = txt; };
-        
-        document.getElementById('el-nama').innerHTML = namaStr;
-        setTxt('el-shading', kShading); setTxt('el-mesin', namaMesin); setTxt('el-po', poStr); setTxt('el-dus', namaDus);
-        setTxt('el-ukuran', `Uk 20 x ${panjangAsli}`); setTxt('el-isi', isiStr); setTxt('el-shift', shiftStr); setTxt('el-tanggal', tglStr);
-        
-        document.getElementById('el-nama-back').innerHTML = namaStr;
-        setTxt('el-shading-back', kShading); setTxt('el-mesin-back', namaMesin); setTxt('el-po-back', poStr); setTxt('el-dus-back', namaDus);
-        setTxt('el-ukuran-back', `Uk 20 x ${panjangAsli}`); setTxt('el-isi-back', isiStr); setTxt('el-shift-back', shiftStr); setTxt('el-tanggal-back', tglStr);
-
-        stateGlobal[m].barcodeData = str;
-        setTxt('el-barcode', str);
-        
-        let qrEl = document.getElementById('qrcode');
-        if(qrEl) { 
-            qrEl.innerHTML = ""; 
-            new QRCode(qrEl, { text: str, width: 150, height: 150, correctLevel : QRCode.CorrectLevel.L }); 
-            setTimeout(() => { let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; }); }, 50);
-        }
-
-        applyCurrentStateToDOM(m);
-        document.getElementById('btn-cetak-label').classList.remove('hidden');
-        document.getElementById('btn-cetak-label').classList.add('flex');
-        return true;
-    }
-
-    // Mode Plafon & Lis
     let tgl = document.getElementById(`${m}-tgl`).value;
     let mesin = document.getElementById(`${m}-mesin`).value.trim();
     let shift = document.getElementById(`${m}-shift`).value.trim();
@@ -1020,7 +889,7 @@ window.generateLabel = function() {
     return true;
 };
 
-// REVISI OPTIMASI ULTRA FAST & INDIKATOR PROGRES LIVE:
+// REVISI OPTIMASI HIGH-SPEED & ANTI-POPUP BLOCKED:
 // 1. window.open dipanggil di awal (SINKRON) untuk mencegah blokir popup.
 // 2. Indikator progres real-time (%) ditampilkan langsung di dalam tab cetak yang baru.
 // 3. Matikan sementara transisi CSS & hilangkan tag <img> buatan qrcode.js agar html2canvas berjalan kilat (~30ms/label).
@@ -1065,10 +934,10 @@ window.cetakLabel = async function() {
         </body></html>
     `);
 
-    let item = m === 'khusus' ? document.getElementById('el-nama').innerText : document.getElementById(`${m}-item`).value;
-    let panjang = m === 'khusus' ? document.getElementById('el-ukuran').innerText.split('x')[1].trim() : document.getElementById(`${m}-panjang`).value.trim().toUpperCase();
-    if(m !== 'khusus' && !panjang.endsWith('M')) panjang += 'M';
-    let grade = m === 'khusus' ? '' : (document.getElementById(`${m}-grade`) ? document.getElementById(`${m}-grade`).value : (document.getElementById(`${m}-jenis`).value==='Lis'?'1':''));
+    let item = document.getElementById(`${m}-item`).value;
+    let panjang = document.getElementById(`${m}-panjang`).value.trim().toUpperCase();
+    if(!panjang.endsWith('M')) panjang += 'M';
+    let grade = document.getElementById(`${m}-grade`) ? document.getElementById(`${m}-grade`).value : (document.getElementById(`${m}-jenis`).value==='Lis'?'1':'');
     
     let idKombinasi = `${item}_${panjang}_${grade}`.toUpperCase().replace(/\s/g, "");
 
@@ -1150,25 +1019,23 @@ window.cetakLabel = async function() {
             let imgFrontBase64 = canvasFront.toDataURL("image/png", 1.0);
             
             sequenceImages.push(imgFrontBase64);
-            sequenceImages.push(imgBackBase64);
+            sequenceImages.push(imgBackBase64); // Gunakan kembali hasil render back yang sudah siap
             
             btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${currentRenderCount}/${qty}`;
             currentRenderCount++;
             
-            if (m !== 'khusus') {
-                payloadDB.push({
-                    kode_barcode: fullBarcode,
-                    tgl_produksi: document.getElementById(`${m}-tgl`).value,
-                    mesin: document.getElementById(`${m}-mesin`).value,
-                    shift: document.getElementById(`${m}-shift`).value,
-                    nama_item: item,
-                    panjang: panjang,
-                    grade: grade,
-                    dus: document.getElementById(`${m}-dus`).value,
-                    shading: document.getElementById(`${m}-shading`).value,
-                    qty_dus: 1
-                });
-            }
+            payloadDB.push({
+                kode_barcode: fullBarcode,
+                tgl_produksi: document.getElementById(`${m}-tgl`).value,
+                mesin: document.getElementById(`${m}-mesin`).value,
+                shift: document.getElementById(`${m}-shift`).value,
+                nama_item: item,
+                panjang: panjang,
+                grade: grade,
+                dus: document.getElementById(`${m}-dus`).value,
+                shading: document.getElementById(`${m}-shading`).value,
+                qty_dus: 1
+            });
         }
         
         // Kembalikan gaya CSS
@@ -1176,12 +1043,12 @@ window.cetakLabel = async function() {
         nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black'; nodeBack.style.transition = '';
         wrapper.style.transform = oldWrapTransform; container.style.overflowY = oldOverflow;
         
-        if (m !== 'khusus' && payloadDB.length > 0) {
+        if (payloadDB.length > 0) {
             const { error: errInsert } = await db.from('database_plafon_lis').insert(payloadDB);
             if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
         }
 
-        // SISIPKAN HASIL RENDER GAMBAR KE TAB PWIN LALU BUKA WINDOW PRINT
+        // TULIS HASIL RENDER GAMBAR KE TAB PWIN LALU BUKA WINDOW PRINT
         pWin.document.open();
         pWin.document.write(`<html><head><title>Print Label</title><style>
             @page { size: ${w} ${h}; margin: 0; }
