@@ -60,8 +60,9 @@ const APP_MENUS = [
     { isDivider: true, title: 'REPORTS' },
     { id: 'reports', title: 'Laporan & Rekap', icon: 'bar-chart-3', url: 'reports.html' },
     { isDivider: true, title: 'PRINT & OPNAME' },
-    { id: 'input_opname', title: 'Input Stok Opname', icon: 'clipboard-check', url: 'input_opname.html' },
     { id: 'cetak_label', title: 'Cetak Label Barcode', icon: 'printer', url: 'cetak_label.html' },
+    { id: 'print_khusus', title: 'Cetak Label Khusus', icon: 'qr-code', url: 'print_khusus.html' },
+    { id: 'input_opname', title: 'Input Stok Opname', icon: 'clipboard-check', url: 'input_opname.html' },
     { isDivider: true, title: 'CONFIG' },
     { id: 'master_data', title: 'Master Data', icon: 'database', url: 'master_data.html' }
 ];
@@ -160,7 +161,7 @@ style.innerHTML = `
     body:not(.disable-hover) tr.r-row:hover td.sticky-col { background-color: rgb(var(--tbl-row-hover)) !important; }
     tr.selected-row td.sticky-col { background-color: #ccfbf1 !important; }
     
-    /* REVISI: Pengecualian :not(.custom-vertical-slider) agar tidak merusak slider vertikal */
+    /* Pengecualian :not(.custom-vertical-slider) agar tidak merusak slider vertikal */
     input[type=range]:not(.custom-vertical-slider) { -webkit-appearance: none; width: 100%; background: transparent; }
     input[type=range]:not(.custom-vertical-slider)::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #4f46e5; cursor: pointer; margin-top: -6px; }
     input[type=range]:not(.custom-vertical-slider)::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #cbd5e1; border-radius: 2px; }
@@ -353,9 +354,6 @@ async function initModernLayout(pageMeta) {
     layoutWrapper.innerHTML = sidebarHTML;
     layoutWrapper.appendChild(rightArea);
 
-    // ==========================================
-    // 3. MODALS (PASSWORD, INBOX, TABLE DESIGN)
-    // ==========================================
     const modalsHTML = `
         <div id="modal-password" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[90] px-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm border border-slate-200 text-slate-800">
@@ -368,7 +366,6 @@ async function initModernLayout(pageMeta) {
             </div>
         </div>
 
-        <!-- MODAL TABLE DESIGN CUSTOMIZER -->
         <div id="modal-table-design" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 text-slate-800">
                 <h3 class="text-lg font-black mb-1 flex items-center gap-2"><i data-lucide="palette" class="text-indigo-600"></i> Desain Tabel WMS</h3>
@@ -434,7 +431,6 @@ async function initModernLayout(pageMeta) {
             </div>
         </div>
         
-        <!-- MODAL INBOX BARU -->
         <div id="modal-inbox" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-2 sm:px-4 backdrop-blur-sm">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl border border-slate-200 text-slate-800 h-[85vh] flex flex-col overflow-hidden">
                 <div class="p-4 sm:p-5 flex justify-between items-center border-b border-slate-200 bg-slate-50 shrink-0">
@@ -464,7 +460,6 @@ async function initModernLayout(pageMeta) {
                     </div>
                 </div>
                 
-                <!-- VIEW 2: BACA PESAN -->
                 <div id="inbox-view-read" class="hidden flex-1 flex flex-col overflow-hidden bg-slate-50">
                     <div class="p-3 bg-white border-b border-slate-200 flex items-center gap-3 shrink-0">
                         <button onclick="kembaliKeListInbox()" class="p-2 hover:bg-slate-100 text-slate-600 rounded-md transition"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
@@ -483,13 +478,11 @@ async function initModernLayout(pageMeta) {
                             </div>
                             <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-medium" id="read-body">Isi pesan...</div>
                             <div id="read-action-container" class="mt-6 pt-4 border-t border-slate-100 hidden">
-                                <!-- Tombol aksi khusus (seperti Approve Request) akan di-inject ke sini -->
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- VIEW 3: BUAT PESAN -->
                 <div id="inbox-view-compose" class="hidden flex-1 flex flex-col overflow-hidden bg-slate-50">
                     <div class="p-3 bg-white border-b border-slate-200 flex items-center gap-3 shrink-0">
                         <button onclick="kembaliKeListInbox()" class="p-2 hover:bg-slate-100 text-slate-600 rounded-md transition"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
@@ -521,7 +514,6 @@ async function initModernLayout(pageMeta) {
     layoutWrapper.insertAdjacentHTML('beforeend', modalsHTML);
     document.body.appendChild(layoutWrapper);
 
-    // Global Tooltip Logic
     const globalTooltip = document.createElement('div');
     globalTooltip.id = 'global-sidebar-tooltip';
     globalTooltip.className = 'fixed hidden bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-md shadow-xl z-[9999] pointer-events-none whitespace-nowrap transition-opacity duration-200 opacity-0 border border-slate-700';
