@@ -112,14 +112,15 @@ function toggleLeftPanel(target) {
     }
 }
 
+// REVISI: UI Form Diperhalus Sesuai Gambar 3
 function renderForm() {
     const container = document.getElementById('panel-form');
     const today = new Date().toISOString().split('T')[0];
     
     const buildSelect = (id, label, options, isKode = true) => `
         <div>
-            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">${label}</label>
-            <select id="${id}" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-blue-500 font-bold bg-slate-50 cursor-pointer">
+            <label class="block text-xs font-bold text-slate-800 mb-1">${label}:</label>
+            <select id="${id}" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-blue-500 bg-white text-slate-800 cursor-pointer">
                 <option value="">-- Pilih --</option>
                 ${options.map(o => `<option value="${o.nama}" data-kode="${isKode ? o.kode : ''}">${o.nama}</option>`).join('')}
             </select>
@@ -127,26 +128,26 @@ function renderForm() {
 
     const buildSearchInput = (id, label, type) => `
         <div>
-            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">${label}</label>
+            <label class="block text-xs font-bold text-slate-800 mb-1">${label}:</label>
             <div class="flex border border-slate-300 rounded overflow-hidden shadow-sm">
-                <input type="text" id="${id}" readonly class="flex-1 p-2 text-sm outline-none font-bold bg-slate-50 text-slate-600 cursor-not-allowed" placeholder="Pilih ${label}...">
-                <button onclick="bukaModalSearch('${type}')" class="px-4 bg-emerald-600 text-white font-black text-xs hover:bg-emerald-700 transition">CARI</button>
+                <input type="text" id="${id}" readonly class="flex-1 p-2 text-sm outline-none bg-white text-slate-800 cursor-not-allowed" placeholder="Pilih ${label}...">
+                <button onclick="bukaModalSearch('${type}')" class="px-4 bg-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-300 border-l border-slate-300 transition">CARI</button>
             </div>
         </div>`;
 
     if (currentMode === 'khusus') {
         container.innerHTML = `
             <div>
-                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label>
-                <select id="k-jenis" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50"><option value="p">Plafon</option><option value="l">Lis</option></select>
+                <label class="block text-xs font-bold text-slate-800 mb-1">Jenis Item:</label>
+                <select id="k-jenis" class="w-full p-2 text-sm border border-slate-300 rounded outline-none bg-white text-slate-800"><option value="p">Plafon</option><option value="l">Lis</option></select>
             </div>
             <div>
-                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">String QR Code</label>
-                <textarea id="k-qr-string" rows="4" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-blue-500 font-mono font-bold bg-slate-50" placeholder="Contoh: P103/WT-1/61D4/16662C2S1P3/0001"></textarea>
+                <label class="block text-xs font-bold text-slate-800 mb-1">String QR Code:</label>
+                <textarea id="k-qr-string" rows="4" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-blue-500 font-mono bg-white text-slate-800" placeholder="Contoh: P103/WT-1/61D4/16662C2S1P3/0001"></textarea>
             </div>
-            <div>
-                <label class="block text-[10px] font-black uppercase text-blue-600 mb-1">Jumlah Print (Qty)</label>
-                <input type="number" id="k-qty" value="1" min="1" class="w-full p-3 text-lg border-2 border-blue-200 rounded outline-none focus:border-blue-600 font-black text-center bg-blue-50 text-blue-800">
+            <div class="p-3 border border-blue-200 bg-blue-50 rounded-lg mt-2">
+                <label class="block text-xs font-bold text-blue-700 mb-1">Jumlah Box:</label>
+                <input type="number" id="k-qty" value="1" min="1" class="w-full p-2 text-base border border-slate-300 rounded outline-none focus:border-blue-600 font-bold text-center bg-white text-slate-900">
             </div>
         `;
         return;
@@ -154,45 +155,45 @@ function renderForm() {
 
     let m = currentMode;
     container.innerHTML = `
-        <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><input type="date" id="${m}-tgl" value="${today}" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50"></div>
+        <div><label class="block text-xs font-bold text-slate-800 mb-1">Tgl Produksi:</label><input type="date" id="${m}-tgl" value="${today}" class="w-full p-2 text-sm border border-slate-300 rounded outline-none bg-white text-slate-800"></div>
         ${buildSearchInput(`${m}-mesin`, 'Mesin', 'mesin')}
         ${buildSelect(`${m}-shift`, 'Shift', masterData.shift)}
         ${buildSearchInput(`${m}-item`, 'Nama Item', 'item')}
         
         <div>
-            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label>
-            <select id="${m}-jenis" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-blue-500 font-bold bg-slate-50 cursor-pointer">
+            <label class="block text-xs font-bold text-slate-800 mb-1">Jenis Item:</label>
+            <select id="${m}-jenis" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-blue-500 bg-white text-slate-800 cursor-pointer">
                 <option value="Plafon">Plafon</option>
                 <option value="Lis">Lis</option>
             </select>
         </div>
 
-        <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang (M)</label><input type="text" id="${m}-panjang" class="w-full p-2 text-sm border border-slate-300 rounded outline-none font-bold bg-slate-50 uppercase" placeholder="Cth: 4 atau 5.95"></div>
+        <div><label class="block text-xs font-bold text-slate-800 mb-1">Panjang (M):</label><input type="text" id="${m}-panjang" class="w-full p-2 text-sm border border-slate-300 rounded outline-none bg-white text-slate-800 uppercase" placeholder="Cth: 4 atau 5.95"></div>
         ${buildSelect(`${m}-grade`, 'Grade', masterData.grade)}
-        ${buildSelect(`${m}-dus`, 'Dus / Merk', masterData.dus)}
+        ${buildSearchInput(`${m}-dus`, 'Merk', 'dus')}
         
         <div>
-            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label>
+            <label class="block text-xs font-bold text-slate-800 mb-1">Shading:</label>
             <div class="flex items-center gap-2">
-                <input type="text" id="${m}-shading-1" class="w-full p-2 text-sm border border-slate-300 rounded text-center font-bold uppercase" placeholder="Huruf" oninput="updateShading()">
-                <span class="font-black">-</span>
-                <input type="text" id="${m}-shading-2" class="w-full p-2 text-sm border border-slate-300 rounded text-center font-bold uppercase" placeholder="Angka" oninput="this.value=this.value.replace(/^0+(.)/, '$1'); updateShading()">
-                <span class="font-black">-</span>
-                <input type="text" id="${m}-shading-3" class="w-full p-2 text-sm border border-slate-300 rounded text-center font-bold uppercase" placeholder="Ext" oninput="updateShading()">
+                <input type="text" id="${m}-shading-1" class="w-full p-2 text-sm border border-slate-300 rounded text-center bg-white text-slate-800 uppercase" placeholder="Huruf" oninput="updateShading()">
+                <span class="font-bold text-slate-400">-</span>
+                <input type="text" id="${m}-shading-2" class="w-full p-2 text-sm border border-slate-300 rounded text-center bg-white text-slate-800 uppercase" placeholder="Angka" oninput="this.value=this.value.replace(/^0+(.)/, '$1'); updateShading()">
+                <span class="font-bold text-slate-400">-</span>
+                <input type="text" id="${m}-shading-3" class="w-full p-2 text-sm border border-slate-300 rounded text-center bg-white text-slate-800 uppercase" placeholder="Ext" oninput="updateShading()">
             </div>
             <input type="hidden" id="${m}-shading">
         </div>
         
-        ${buildSearchInput(`${m}-po`, 'Customer (PO)', 'customer')}
+        ${buildSearchInput(`${m}-po`, 'PO', 'customer')}
         
-        <label class="flex items-center gap-2 cursor-pointer mt-2 p-2 bg-slate-50 border border-slate-200 rounded">
-            <input type="checkbox" id="${m}-cb-revisi" class="w-4 h-4 accent-blue-600">
-            <span class="text-xs font-bold text-slate-700">Revisian Shift Lain</span>
+        <label class="flex items-center gap-2 cursor-pointer mt-2">
+            <input type="checkbox" id="${m}-cb-revisi" class="w-4 h-4 accent-blue-600 rounded border-slate-300">
+            <span class="text-sm font-bold text-blue-600">Revisian shift lain</span>
         </label>
 
-        <div>
-            <label class="block text-[10px] font-black uppercase text-blue-600 mb-1">Jumlah Box (Qty)</label>
-            <input type="number" id="${m}-qty" value="1" min="1" class="w-full p-3 text-lg border-2 border-blue-200 rounded outline-none focus:border-blue-600 font-black text-center bg-blue-50 text-blue-800">
+        <div class="p-3 border border-blue-200 bg-blue-50 rounded-lg mt-2 mb-4">
+            <label class="block text-xs font-bold text-blue-700 mb-1">Jumlah Box:</label>
+            <input type="number" id="${m}-qty" value="1" min="1" class="w-full p-2 text-base border border-slate-300 rounded outline-none focus:border-blue-600 font-bold text-center bg-white text-slate-900">
         </div>
     `;
     lucide.createIcons();
@@ -496,6 +497,16 @@ function updateTransform(key, isBack) {
 // ==========================================
 // 5. CONTEXT MENU (FONT, GAP, WRAP, SCALE)
 // ==========================================
+// REVISI: Fungsi Helper untuk Update Visual Gradient Slider
+window.updateSliderFill = function(el) {
+    const min = parseFloat(el.min) || 0;
+    const max = parseFloat(el.max) || 100;
+    const val = parseFloat(el.value);
+    const percentage = ((val - min) / (max - min)) * 100;
+    // Karena di-rotate 270deg, linear-gradient to right akan terlihat dari bawah ke atas
+    el.style.background = `linear-gradient(to right, #3b82f6 ${percentage}%, #334155 ${percentage}%)`;
+};
+
 function showContextPanel() {
     const panel = document.getElementById('context-panel');
     if(activeSelection.elements.length === 0) { panel.classList.add('hidden'); return; }
@@ -505,14 +516,14 @@ function showContextPanel() {
     
     let html = '';
     
-    // REVISI: Menggunakan class .slider-wrapper agar CSS absolute positioning bekerja dengan benar
+    // REVISI: Menggunakan class .slider-wrapper dan menambahkan oninput updateSliderFill
     const buildSlider = (type, min, max, val) => `
         <div class="flex flex-col items-center w-16 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
             <span class="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-wider">${type}</span>
             <input type="number" value="${val}" class="w-full bg-slate-950 text-blue-400 border border-slate-600 rounded text-center font-bold text-sm py-1 mb-2 outline-none focus:border-blue-500" onchange="syncContext('${type}', this.value)">
             <button onclick="stepContext('${type}', 1)" class="w-full bg-slate-700 hover:bg-blue-600 text-white rounded py-1 font-bold text-sm transition mb-1">+</button>
             <div class="slider-wrapper">
-                <input type="range" orient="vertical" min="${min}" max="${max}" value="${val}" class="custom-vertical-slider" oninput="syncContext('${type}', this.value)">
+                <input type="range" orient="vertical" min="${min}" max="${max}" value="${val}" class="custom-vertical-slider" oninput="syncContext('${type}', this.value); updateSliderFill(this)">
             </div>
             <button onclick="stepContext('${type}', -1)" class="w-full bg-slate-700 hover:bg-rose-600 text-white rounded py-1 font-bold text-sm transition mt-1">-</button>
         </div>`;
@@ -525,6 +536,11 @@ function showContextPanel() {
     panel.innerHTML = html;
     panel.classList.remove('hidden');
     panel.classList.add('flex');
+
+    // Inisialisasi warna gradient slider saat panel pertama kali muncul
+    setTimeout(() => {
+        document.querySelectorAll('.custom-vertical-slider').forEach(el => updateSliderFill(el));
+    }, 10);
 }
 
 window.syncContext = function(type, val) {
@@ -550,7 +566,17 @@ window.syncContext = function(type, val) {
     });
     
     let inputs = document.querySelectorAll('#context-panel input[type="number"]');
-    inputs.forEach(inp => { if(inp.getAttribute('onchange').includes(type)) inp.value = v; });
+    inputs.forEach(inp => { 
+        if(inp.getAttribute('onchange').includes(type)) {
+            inp.value = v; 
+            // Cari slider pasangannya dan update fill
+            let slider = inp.parentElement.querySelector('.custom-vertical-slider');
+            if(slider) {
+                slider.value = v;
+                updateSliderFill(slider);
+            }
+        } 
+    });
 };
 
 window.stepContext = function(type, step) {
@@ -558,7 +584,8 @@ window.stepContext = function(type, step) {
     inputs.forEach(inp => {
         if(inp.getAttribute('onchange').includes(type)) {
             let nVal = parseInt(inp.value) + (step * (type==='skala'?5:1));
-            inp.value = nVal; syncContext(type, nVal);
+            inp.value = nVal; 
+            syncContext(type, nVal);
         }
     });
 };
