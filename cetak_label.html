@@ -30,21 +30,21 @@
         .active-edit { outline: 2px solid #2563eb !important; background-color: rgba(37,99,235,0.15) !important; z-index: 10; }
         .hidden-element { display: none !important; }
 
-        /* REVISI: CSS Slider Diperhalus Sesuai Gambar 2 */
+        /* REVISI: CSS Slider Diperpanjang & Override Global.js */
         .slider-wrapper {
             width: 24px;
-            height: 120px;
+            height: 150px; /* Jauh lebih panjang */
             position: relative;
-            margin: 8px auto;
+            margin: 4px auto;
             display: flex;
             justify-content: center;
             align-items: center;
         }
         .custom-vertical-slider {
             -webkit-appearance: none;
-            width: 120px; 
+            width: 150px; /* Harus sama persis dengan height wrapper */
             height: 6px; 
-            background: #334155; /* Default track color */
+            background: #334155; 
             border-radius: 6px;
             outline: none;
             position: absolute;
@@ -54,6 +54,17 @@
             margin: 0;
             cursor: pointer;
         }
+        
+        /* Menimpa (Override) CSS dari global.js agar background gradient berfungsi sempurna */
+        .custom-vertical-slider::-webkit-slider-runnable-track {
+            background: transparent !important;
+            border: none !important;
+        }
+        .custom-vertical-slider::-moz-range-track {
+            background: transparent !important;
+            border: none !important;
+        }
+
         .custom-vertical-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
@@ -61,9 +72,10 @@
             height: 18px;
             border-radius: 50%;
             background: #3b82f6;
-            border: 3px solid #ffffff; /* Border putih seperti gambar */
+            border: 3px solid #ffffff;
             cursor: pointer;
             box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+            margin-top: -6px; /* Menyelaraskan posisi thumb ke tengah track */
         }
         .custom-vertical-slider::-moz-range-thumb {
             width: 18px;
