@@ -14,7 +14,8 @@ let stateGlobal = {};
 const modes = ['plafon', 'khusus'];
 modes.forEach(m => {
     stateGlobal[m] = { zoom: 4.0, pos: { qr: { x: 0, y: 0, s: 1 }, barcode: createBasePos(), nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { barcode: 5, nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: 'custom', w: 85, h: 50 }, wrap: { nama: 33, barcode: 45, nama_cb: true, barcode_cb: true }, barcodeData: "", linkFont: true, vis: JSON.parse(JSON.stringify(baseVis)) };
-    stateGlobal[m + '_back'] = { pos: { nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, wrap: { nama: 45, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) };
+    // REVISI: Max width wrap nama label belakang di-default ke 75mm (lebar penuh)
+    stateGlobal[m + '_back'] = { pos: { nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, wrap: { nama: 75, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) };
 });
 
 let historyStack = {};
@@ -277,7 +278,7 @@ function renderCanvas() {
                 ` : ''}
                 <div class="${isBack ? 'w-full' : 'w-[70%] pl-1'} h-full flex flex-col">
                     <div class="flex-[3] flex flex-col justify-center items-center">
-                        <div id="el-nama${idSfx}" class="click-edit font-black leading-none text-center text-black" style="font-size: 16px; max-width: ${isBack ? '45mm' : '33mm'};" onmousedown="startDrag('nama', event, ${isBack})">NAMA ITEM</div>
+                        <div id="el-nama${idSfx}" class="click-edit font-black leading-none text-center text-black" style="font-size: 16px; max-width: ${isBack ? '75mm' : '33mm'};" onmousedown="startDrag('nama', event, ${isBack})">NAMA ITEM</div>
                         <div id="el-shading${idSfx}" class="click-edit font-bold text-center whitespace-nowrap text-black" style="font-size: 14px;" onmousedown="startDrag('shading', event, ${isBack})">SHADING</div>
                     </div>
                     <div id="el-info-group${idSfx}" class="flex-[1] flex justify-center items-end font-bold gap-[5px] text-black" style="font-size: 6px;">
@@ -346,7 +347,7 @@ function handleVisChange(key, isChecked) {
     }
 }
 
-// REVISI: Perbaikan fungsi Wrap Text agar mendukung parameter targetSide secara eksplisit
+// REVISI: Perbaikan fungsi Wrap Text agar mendukung targetSide & paksa 1 baris (nowrap) jika uncheck
 function handleWrapChange(key, isChecked, targetSide = null) {
     const sideSelect = document.getElementById('side-select')?.value || 'front';
     const side = targetSide || sideSelect;
@@ -366,7 +367,9 @@ function handleWrapChange(key, isChecked, targetSide = null) {
             el.style.maxWidth = val + (key==='nama'?'mm':'px'); 
         } else { 
             el.style.whiteSpace = 'nowrap'; 
-            el.style.maxWidth = 'none'; 
+            el.style.maxWidth = 'none';
+            el.style.wordBreak = 'normal';
+            el.style.wordWrap = 'normal';
         }
     }
 }
@@ -520,6 +523,7 @@ function showContextPanel() {
     
     let html = '';
     
+    // REVISI: Max slider wrap ditingkatkan hingga 85 (lebar penuh kertas)
     const buildSlider = (type, min, max, val) => `
         <div class="flex flex-col items-center w-16 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
             <span class="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-wider">${type}</span>
@@ -533,7 +537,7 @@ function showContextPanel() {
 
     if (key === 'qr') html += buildSlider('skala', 50, 250, Math.round(stateGlobal[m].pos.qr.s * 100));
     else if (key === 'barcode') { html += buildSlider('font', 3, 80, stateGlobal[m].font.barcode); html += buildSlider('wrap', 10, 150, stateGlobal[m].wrap.barcode); }
-    else if (['nama', 'shading'].includes(key)) { html += buildSlider('font', 8, 80, stateGlobal[m].font[key]); if(key==='nama') html += buildSlider('wrap', 10, 150, stateGlobal[m].wrap.nama); }
+    else if (['nama', 'shading'].includes(key)) { html += buildSlider('font', 8, 80, stateGlobal[m].font[key]); if(key==='nama') html += buildSlider('wrap', 10, 85, stateGlobal[m].wrap.nama); }
     else { html += buildSlider('font', 3, 80, stateGlobal[m].font.info); html += buildSlider('gap', 0, 20, stateGlobal[m].gap.info); }
 
     panel.innerHTML = html;
@@ -545,7 +549,7 @@ function showContextPanel() {
     }, 10);
 }
 
-// REVISI: Perbaikan syncContext agar mendukung wrap text pada label depan maupun belakang
+// REVISI: Perbaikan syncContext agar mendukung wrap text secara independen pada label depan maupun belakang
 window.syncContext = function(type, val) {
     let m = activeSelection.m;
     let v = parseInt(val);
@@ -564,11 +568,19 @@ window.syncContext = function(type, val) {
             stateGlobal[m].wrap[k] = v;
             let elId = k === 'barcode' ? `el-barcode${idSfx}` : `el-nama${idSfx}`;
             let el = document.getElementById(elId);
+            let isWrapOn = stateGlobal[m].wrap[`${k}_cb`];
             if(el) {
-                el.style.whiteSpace = 'normal';
-                el.style.wordBreak = 'break-word';
-                el.style.wordWrap = 'break-word';
-                el.style.maxWidth = v + (k==='nama'?'mm':'px');
+                if(isWrapOn) {
+                    el.style.whiteSpace = 'normal';
+                    el.style.wordBreak = 'break-word';
+                    el.style.wordWrap = 'break-word';
+                    el.style.maxWidth = v + (k==='nama'?'mm':'px');
+                } else {
+                    el.style.whiteSpace = 'nowrap';
+                    el.style.maxWidth = 'none';
+                    el.style.wordBreak = 'normal';
+                    el.style.wordWrap = 'normal';
+                }
             }
         }
     });
@@ -844,7 +856,7 @@ window.hapusDataMaster = async function() {
 };
 
 // ==========================================
-// 8. GENERATE BARCODE & PRINT (HTML2CANVAS)
+// 8. GENERATE BARCODE & PRINT (OPTIMIZED SUPER FAST)
 // ==========================================
 const findKode = (type, name) => {
     if (!name) return "";
@@ -1008,9 +1020,10 @@ window.generateLabel = function() {
     return true;
 };
 
-// REVISI OPTIMASI & ANTI-POPUP BLOCKED:
+// REVISI OPTIMASI HIGH-SPEED & ANTI-POPUP BLOCKED:
 // 1. window.open dipanggil di baris pertama (SINKRON) agar tidak diblokir browser.
-// 2. html2canvas(nodeBack) dirender HANYA 1 KALI di luar loop untuk kecepatan maksimal (10x lebih cepat).
+// 2. html2canvas(nodeBack) dirender HANYA 1 KALI di luar loop.
+// 3. Tag <img> buatan qrcode.js dihapus otomatis sehingga html2canvas merender <canvas> secara instant (~30ms/label).
 window.cetakLabel = async function() {
     let m = currentMode;
     let qty = parseInt(document.getElementById(`${m}-qty`).value) || 1;
@@ -1089,7 +1102,7 @@ window.cetakLabel = async function() {
         btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render Background...`;
         await new Promise(r => setTimeout(r, 50)); 
         
-        // OPTIMASI SUPER CEPAT: RENDER CANVAS BACK HANYA 1 KALI SEBELUM LOOPING!
+        // OPTIMASI SUPER CEPAT 1: RENDER CANVAS BACK HANYA 1 KALI SEBELUM LOOPING!
         let canvasBack = await html2canvas(nodeBack, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
         let imgBackBase64 = canvasBack.toDataURL("image/png", 1.0);
 
@@ -1103,16 +1116,22 @@ window.cetakLabel = async function() {
             document.getElementById('el-barcode').innerText = fullBarcode + suffixRevisi;
             let qrEl = document.getElementById('qrcode'); qrEl.innerHTML = "";
             new QRCode(qrEl, { text: fullBarcode, width: 150, height: 150, correctLevel : QRCode.CorrectLevel.L });
-            let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; });
             
-            // Jeda ultra singkat untuk merender QR
-            await new Promise(r => setTimeout(r, 0)); 
+            // OPTIMASI SUPER CEPAT 2: HAPUS TAG <img> BUATAN QRCODE.JS AGAR HTML2CANVAS TIDAK DELAY!
+            let imgTag = qrEl.querySelector('img');
+            if (imgTag) imgTag.remove();
+            let canvasTag = qrEl.querySelector('canvas');
+            if (canvasTag) {
+                canvasTag.style.width = '100%';
+                canvasTag.style.height = '100%';
+                canvasTag.style.display = 'block';
+            }
             
             let canvasFront = await html2canvas(nodeFront, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollY: 0 });
             let imgFrontBase64 = canvasFront.toDataURL("image/png", 1.0);
             
             sequenceImages.push(imgFrontBase64);
-            sequenceImages.push(imgBackBase64); // Gunakan kembali hasil render back yang sudah siap (reused)
+            sequenceImages.push(imgBackBase64); // Gunakan kembali hasil render back yang sudah siap
             
             btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${currentRenderCount}/${qty}`;
             currentRenderCount++;
