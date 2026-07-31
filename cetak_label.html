@@ -32,16 +32,19 @@
 
         /* REVISI: CSS Slider Vertikal Presisi (Absolute Positioning) */
         .slider-wrapper {
-            width: 20px;
-            height: 130px; /* Tinggi area slider */
+            width: 24px;
+            height: 100px; /* Tinggi disesuaikan agar tidak menabrak tombol */
             position: relative;
-            margin: 10px auto;
+            margin: 6px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         .custom-vertical-slider {
             -webkit-appearance: none;
-            width: 130px; /* Panjang garis slider harus sama dengan tinggi wrapper */
+            width: 100px; /* Harus sama persis dengan height wrapper */
             height: 4px; 
-            background: #94a3b8;
+            background: #475569; /* Warna track disesuaikan */
             border-radius: 4px;
             outline: none;
             position: absolute;
@@ -59,7 +62,8 @@
             border-radius: 50%;
             background: #3b82f6;
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            border: 2px solid #1e293b;
         }
         .custom-vertical-slider::-moz-range-thumb {
             width: 16px;
@@ -67,8 +71,8 @@
             border-radius: 50%;
             background: #3b82f6;
             cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            border: 2px solid #1e293b;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
     </style>
 </head>
