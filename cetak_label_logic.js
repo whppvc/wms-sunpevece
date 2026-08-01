@@ -752,7 +752,7 @@ function loadSetDefault(m) {
 // ==========================================
 window.bukaModalSearch = function(type) {
     currentSearchType = type;
-    const titleMap = { 'item': 'Nama Item', 'mesin': 'Mesin', 'customer': 'Customer' };
+    const titleMap = { 'item': 'Nama Item', 'mesin': 'Mesin', 'customer': 'Customer', 'dus': 'Merk / Dus' };
     document.getElementById('title-modal-search').innerText = `Cari ${titleMap[type]}`;
     document.getElementById('title-tambah-master').innerText = titleMap[type];
     
@@ -823,6 +823,18 @@ window.bukaModalTambahMaster = function() {
     document.getElementById('modal-tambah-master').classList.remove('hidden');
 };
 
+// REVISI: Validasi PIN ke Supabase
+async function validatePin(inputPin) {
+    try {
+        const { data, error } = await db.from('master_pin').select('pin').eq('kategori', 'cetak label').single();
+        if (error) throw error;
+        return data && data.pin === inputPin;
+    } catch (e) {
+        console.error("Error validating PIN:", e);
+        return false;
+    }
+}
+
 window.simpanDataMasterBaru = async function() {
     const nama = document.getElementById('input-tambah-nama').value.trim().toUpperCase();
     const kode = document.getElementById('input-tambah-kode').value.trim().toUpperCase();
@@ -830,14 +842,21 @@ window.simpanDataMasterBaru = async function() {
 
     if(!nama || !kode || !pin) return alert("Semua kolom wajib diisi!");
     
-    if(pin !== currentUser.password) return alert("⛔ PIN SALAH! Masukkan password akun Anda.");
-
     const btn = document.getElementById('btn-simpan-master'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
 
     try {
-        let colNama = currentSearchType === 'item' ? 'nama_item' : currentSearchType;
-        let colKode = currentSearchType === 'item' ? 'kode_nama_item' : `kode_${currentSearchType}`;
+        // Validasi PIN ke Supabase
+        const isPinValid = await validatePin(pin);
+        if(!isPinValid) throw new Error("⛔ PIN SALAH!");
+
+        // Mapping Kolom Database
+        let colNama = '';
+        let colKode = '';
+        if (currentSearchType === 'item') { colNama = 'nama_item'; colKode = 'kode_nama_item'; }
+        else if (currentSearchType === 'mesin') { colNama = 'mesin'; colKode = 'kode_mesin'; }
+        else if (currentSearchType === 'dus') { colNama = 'dus'; colKode = 'kode_dus'; }
+        else if (currentSearchType === 'customer') { colNama = 'customer'; colKode = 'kode_customer'; }
 
         const payload = { [colNama]: nama, [colKode]: kode };
         const { error } = await db.from('master_2').insert([payload]);
@@ -851,7 +870,7 @@ window.simpanDataMasterBaru = async function() {
         renderSearchList();
 
     } catch(e) {
-        alert("Gagal menyimpan: " + e.message);
+        alert(e.message);
     } finally {
         btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
     }
@@ -862,7 +881,12 @@ window.hapusDataMaster = async function() {
     
     mintaPin(`Hapus '${selectedSearchData.nama}'`, async () => {
         try {
-            let colNama = currentSearchType === 'item' ? 'nama_item' : currentSearchType;
+            let colNama = '';
+            if (currentSearchType === 'item') colNama = 'nama_item';
+            else if (currentSearchType === 'mesin') colNama = 'mesin';
+            else if (currentSearchType === 'dus') colNama = 'dus';
+            else if (currentSearchType === 'customer') colNama = 'customer';
+
             const { error } = await db.from('master_2').delete().eq(colNama, selectedSearchData.nama);
             if(error) throw error;
 
@@ -1204,7 +1228,7 @@ window.cetakLabel = async function() {
 };
 
 // ==========================================
-// 9. SECURITY (PIN)
+// 9. SECURITY (PIN SUPABASE)
 // ==========================================
 function mintaPin(title, callback) {
     document.getElementById('pin-global-title').innerText = title;
@@ -1214,14 +1238,24 @@ function mintaPin(title, callback) {
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
 }
 
-window.eksekusiPinGlobal = function() {
+// REVISI: Validasi PIN Global ke Supabase
+window.eksekusiPinGlobal = async function() {
     let pin = document.getElementById('input-pin-global').value;
-    if(pin === currentUser.password) {
-        document.getElementById('modal-pin-global').classList.add('hidden');
-        document.getElementById('overlay-klik-luar').classList.add('hidden');
-        if(pendingAction) pendingAction();
-    } else {
-        alert("⛔ PIN SALAH! Masukkan password akun Anda.");
+    if(!pin) return alert("Masukkan PIN!");
+
+    try {
+        const { data, error } = await db.from('master_pin').select('pin').eq('kategori', 'cetak label').single();
+        if (error || !data) throw new Error("Gagal memverifikasi PIN ke server.");
+
+        if (data.pin === pin) {
+            document.getElementById('modal-pin-global').classList.add('hidden');
+            document.getElementById('overlay-klik-luar').classList.add('hidden');
+            if(pendingAction) pendingAction();
+        } else {
+            alert("⛔ PIN SALAH!");
+        }
+    } catch (e) {
+        alert(e.message);
     }
 };
 
