@@ -3,7 +3,8 @@
 // ============================================================================
 
 let currentMode = 'khusus'; 
-let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [] };
+let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [], lis: [] };
+let isInfoLocked = true; // State Kunci Elemen Informasi Bawah
 
 const createBasePos = () => ({ x: 0, y: 0 });
 const baseVis = { qr: true, barcode: true, nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
@@ -24,9 +25,6 @@ let isDragging = false, dragStartX = 0, dragStartY = 0, dragInitialPos = {};
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', password: ''};
 
-// ==========================================
-// 1. INISIALISASI & SUPABASE FETCH
-// ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     await initModernLayout({ id: 'print_khusus', title: 'CETAK LABEL KHUSUS', url: 'print_khusus.html' });
     initKeyboardGlobal();
@@ -36,8 +34,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadMasterData() {
     try {
-        const { data, error } = await db.from('master_2').select('*');
-        if (error) throw error;
+        const [resM2, resLis] = await Promise.all([
+            db.from('master_2').select('*'),
+            db.from('master_lis').select('*')
+        ]);
+
+        if (resM2.error) throw resM2.error;
+        const data = resM2.data || [];
 
         const getUnique = (keyName, keyCode) => {
             let map = new Map();
@@ -56,15 +59,15 @@ async function loadMasterData() {
         masterData.dus = getUnique('dus', 'kode_dus');
         masterData.customer = getUnique('customer', 'kode_customer');
 
+        if (!resLis.error && resLis.data) {
+            masterData.lis = resLis.data;
+        }
+
     } catch (e) {
         console.error("Gagal memuat master data:", e);
-        alert("Gagal terhubung ke database master!");
     }
 }
 
-// ==========================================
-// 2. UI RENDERER & PANELS
-// ==========================================
 function switchMode(mode) {
     currentMode = mode;
     renderForm();
@@ -98,10 +101,7 @@ function renderForm() {
     container.innerHTML = `
         <div>
             <label class="block text-xs font-bold text-slate-800 mb-1">Jenis Item:</label>
-            <select id="k-jenis" class="w-full p-2 text-sm border border-slate-300 rounded outline-none bg-white text-slate-800 cursor-pointer">
-                <option value="Plafon">Plafon</option>
-                <option value="Lis">Lis</option>
-            </select>
+            <select id="k-jenis" class="w-full p-2 text-sm border border-slate-300 rounded outline-none bg-white text-slate-800 cursor-pointer"><option value="Plafon">Plafon</option><option value="Lis">Lis</option></select>
         </div>
         <div>
             <label class="block text-xs font-bold text-slate-800 mb-1">String QR Code:</label>
@@ -319,10 +319,21 @@ function ubahZoom(step) {
 }
 
 // ==========================================
-// 4. DRAG & DROP ENGINE
+// 4. DRAG & DROP ENGINE (DENGAN SECURITY PIN LOCK)
 // ==========================================
 window.startDrag = function(elementKey, event, isBack = false) {
     event.preventDefault();
+
+    // REVISI: Penguncian Elemen Informasi Bawah (Ukuran, Tgl, Mesin, Shift, PO, Dus, Isi)
+    const infoElements = ['ukuran', 'mesin', 'shift', 'tanggal', 'po', 'dus', 'isi'];
+    if (infoElements.includes(elementKey) && isInfoLocked) {
+        mintaPin("Buka Kunci Pengaturan Ukuran & Posisi Info", () => {
+            isInfoLocked = false;
+            alert("🔓 Kunci berhasil dibuka! Anda sekarang dapat mengatur posisi dan font elemen informasi.");
+        });
+        return;
+    }
+
     let m = currentMode + (isBack ? '_back' : '');
     let idSfx = isBack ? '-back' : '';
     let elId = elementKey === 'qr' ? 'qr-wrapper' : `el-${elementKey}${idSfx}`;
@@ -628,9 +639,9 @@ function parseJulianDate(dateCode) {
     if (!dateCode || dateCode.length < 5) return dateCode || "-";
     try {
         let dayNum = parseInt(dateCode.substring(0, 3));
-        let yrRaw = dateCode.substring(3, 5); // misal "62"
-        let yrRev = yrRaw.split('').reverse().join(''); // misal "26"
-        let fullYear = parseInt("20" + yrRev); // 2026
+        let yrRaw = dateCode.substring(3, 5); 
+        let yrRev = yrRaw.split('').reverse().join(''); 
+        let fullYear = parseInt("20" + yrRev); 
 
         if (isNaN(dayNum) || isNaN(fullYear)) return dateCode;
 
@@ -651,26 +662,15 @@ function parsePanjangNumber(rawPjg) {
     if (!rawPjg) return "0";
     let digits = rawPjg.replace(/\D/g, ''); 
     if (!digits) return "0";
-    if (digits.length === 1) return digits + "00"; // e.g. "4" -> "400"
-    if (digits.length === 2) return digits + "0";  // e.g. "45" -> "450"
-    return digits; // e.g. "400" -> "400"
-}
-
-function getIsiBoxText(jenisItem, namaItem) {
-    if (jenisItem === 'Plafon') return "Qty: 15";
-    
-    let n = (namaItem || '').toUpperCase();
-    if (n.includes('PROFILE IV') || n.includes('PROFILE V')) return "Qty: 60";
-    if (n.includes('PROFILE II')) return "Qty: 48";
-    if (n.includes('PROFILE I')) return "Qty: 140";
-    if (n.includes('CONNECTOR')) return "Qty: 80";
-    return "Qty: 24"; // Default Lis
+    if (digits.length === 1) return digits + "00"; 
+    if (digits.length === 2) return digits + "0";  
+    return digits; 
 }
 
 window.generateLabel = function() {
     let m = currentMode;
     let str = document.getElementById('k-qr-string').value.trim();
-    let jenis = document.getElementById('k-jenis').value; // 'Plafon' atau 'Lis'
+    let jenis = document.getElementById('k-jenis').value; 
     
     if(!str) return alert("Masukkan String QR Code terlebih dahulu!");
     
@@ -681,32 +681,24 @@ window.generateLabel = function() {
     let part1 = parts[1].trim();
     let part2 = parts[2].trim();
     let part3 = parts[3].trim();
-    let part4 = parts[4] ? parts[4].trim() : "0001";
 
-    // ----------------------------------------------------
-    // A. BAGIAN 0: KODE ITEM (LOOKUP MASTER_2)
-    // ----------------------------------------------------
+    // A. BAGIAN 0: KODE ITEM
     let namaItemFound = "-";
     let itemObj = masterData.item.find(x => x.kode.toUpperCase() === part0.toUpperCase());
     if (itemObj) {
         namaItemFound = itemObj.nama;
     } else {
-        namaItemFound = part0; // Fallback jika tidak ketemu
+        namaItemFound = part0; 
     }
 
-    // ----------------------------------------------------
     // B. BAGIAN 1: SHADING
-    // ----------------------------------------------------
     let shadingFound = part1 || "-";
 
-    // ----------------------------------------------------
     // C. BAGIAN 2: PANJANG + KODE GRADE + KODE DUS
-    // ----------------------------------------------------
     let rem2 = part2;
     let dusFound = "-";
     let gradeFound = "-";
 
-    // Step 1: Cari Dus (Merk) dari kanan
     let dusList = [...masterData.dus].sort((a, b) => (b.kode || '').length - (a.kode || '').length);
     for (let d of dusList) {
         if (d.kode && rem2.toUpperCase().endsWith(d.kode.toUpperCase())) {
@@ -716,7 +708,6 @@ window.generateLabel = function() {
         }
     }
 
-    // Step 2: Cari Grade dari kanan
     let gradeList = [...masterData.grade].sort((a, b) => (b.kode || '').length - (a.kode || '').length);
     for (let g of gradeList) {
         if (g.kode && rem2.toUpperCase().endsWith(g.kode.toUpperCase())) {
@@ -726,21 +717,16 @@ window.generateLabel = function() {
         }
     }
 
-    // Step 3: Sisa rem2 adalah Panjang
     let pjgNum = parsePanjangNumber(rem2);
 
-    // ----------------------------------------------------
     // D. BAGIAN 3: DATECODE + MESIN + SHIFT + CUSTOMER
-    // ----------------------------------------------------
     let dateCode = part3.substring(0, 5);
     let tglStr = parseJulianDate(dateCode);
 
     let rem3 = part3.substring(5);
     let customerFound = "-";
     let shiftFound = "-";
-    let mesinFound = "-";
 
-    // Step 1: Cari Customer/PO dari kanan
     if (jenis === 'Lis') {
         customerFound = "P49";
         let p49Obj = masterData.customer.find(c => c.kode === 'P49');
@@ -756,7 +742,6 @@ window.generateLabel = function() {
         }
     }
 
-    // Step 2: Cari Shift dari kanan
     let shiftList = [...masterData.shift].sort((a, b) => (b.kode || '').length - (a.kode || '').length);
     for (let s of shiftList) {
         if (s.kode && rem3.toUpperCase().endsWith(s.kode.toUpperCase())) {
@@ -767,14 +752,11 @@ window.generateLabel = function() {
     }
     let shiftDisplay = shiftFound.replace(/\D/g, '') ? "S" + shiftFound.replace(/\D/g, '') : shiftFound;
 
-    // Step 3: Sisa rem3 adalah Mesin
     let mesinCode = rem3;
     let mesinObj = masterData.mesin.find(m => m.kode.toUpperCase() === mesinCode.toUpperCase());
-    mesinFound = mesinObj ? mesinObj.nama : (mesinCode || "-");
+    let mesinFound = mesinObj ? mesinObj.nama : (mesinCode || "-");
 
-    // ----------------------------------------------------
-    // E. KELENGKAPAN NAMA ITEM & QTY PER BOX
-    // ----------------------------------------------------
+    // E. KELENGKAPAN NAMA ITEM & QTY PER BOX (LOOKUP MASTER_LIS ACCURATE)
     let namaStr = namaItemFound + (gradeFound === 'A' ? ' A' : '');
     let isiStr = getIsiBoxText(jenis, namaItemFound);
 
@@ -819,7 +801,7 @@ window.generateLabel = function() {
     return true;
 };
 
-// REVISI CETAK KHUSUS HIGH-SPEED & ANTI-POPUP BLOCKED (MEMPROSES N DUS DUPLIKAT)
+// CETAK KHUSUS HIGH-SPEED & ANTI-POPUP BLOCKED
 window.cetakLabel = async function() {
     let m = currentMode;
     let qty = parseInt(document.getElementById('k-qty').value) || 1;
@@ -878,7 +860,6 @@ window.cetakLabel = async function() {
         nodeFront.style.transition = 'none';
         nodeBack.style.transition = 'none';
 
-        // Render HANYA 1 KALI SEBELUM LOOPING (KARENA WARNA & KODE CETAK KHUSUS IDENTIK MURNI)
         let canvasBack = await html2canvas(nodeBack, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
         let imgBackBase64 = canvasBack.toDataURL("image/png", 1.0);
 
@@ -931,6 +912,28 @@ window.cetakLabel = async function() {
         alert("Terjadi kesalahan: " + e.message);
     } finally {
         btnCetak.innerHTML = '<i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label'; btnCetak.disabled = false; lucide.createIcons();
+    }
+};
+
+// ==========================================
+// 9. SECURITY (PIN)
+// ==========================================
+function mintaPin(title, callback) {
+    document.getElementById('pin-global-title').innerText = title;
+    document.getElementById('input-pin-global').value = '';
+    pendingAction = callback;
+    document.getElementById('modal-pin-global').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+}
+
+window.eksekusiPinGlobal = function() {
+    let pin = document.getElementById('input-pin-global').value;
+    if(pin === currentUser.password) {
+        document.getElementById('modal-pin-global').classList.add('hidden');
+        document.getElementById('overlay-klik-luar').classList.add('hidden');
+        if(pendingAction) pendingAction();
+    } else {
+        alert("⛔ PIN SALAH! Masukkan password akun Anda.");
     }
 };
 
