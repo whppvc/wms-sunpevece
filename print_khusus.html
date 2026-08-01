@@ -147,7 +147,19 @@
         </div>
     </div>
 
-    <!-- OVERLAY KLIK LUAR -->
+    <!-- MODAL PIN GLOBAL -->
+    <div id="modal-pin-global" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 text-center">
+            <h3 class="text-lg font-black mb-4 text-slate-800 flex items-center justify-center gap-2"><i data-lucide="lock" class="text-rose-600"></i> <span id="pin-global-title">Otorisasi Dibutuhkan</span></h3>
+            <input type="password" id="input-pin-global" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-rose-600 font-black text-center text-xl text-slate-800 bg-slate-50 mb-4 tracking-[0.5em]" placeholder="•••••">
+            <div class="flex gap-2">
+                <!-- REVISI: Menggunakan fungsi tutupModalPinGlobal() agar overlay buram ikut ditutup -->
+                <button type="button" onclick="tutupModalPinGlobal()" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase hover:bg-slate-300 transition">Batal</button>
+                <button type="button" onclick="eksekusiPinGlobal()" class="w-1/2 py-3 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 border-b-4 border-rose-800">Lanjut</button>
+            </div>
+        </div>
+    </div>
+
     <div id="overlay-klik-luar" onclick="tutupSemuaPopups()" class="hidden fixed inset-0 z-[40] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="print_khusus_logic.js"></script>
