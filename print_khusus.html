@@ -213,6 +213,26 @@
         </div>
     </div>
 
+    <!-- MODAL PROGRESS PRINT (ANTI-POPUP BLOCKED) -->
+    <div id="modal-progress-print" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/80 z-[150] px-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 text-center flex flex-col items-center">
+            <i data-lucide="printer" class="w-10 h-10 text-blue-600 mb-3 animate-pulse"></i>
+            <h3 class="text-lg font-black mb-1 text-slate-800" id="print-title">Memproses Label...</h3>
+            <p class="text-xs font-bold text-slate-500 mb-4" id="print-subtitle">Mohon tunggu sebentar.</p>
+            
+            <div id="print-loading-area" class="w-full">
+                <div class="w-full bg-slate-200 rounded-full h-3 mb-2 overflow-hidden">
+                    <div id="print-progress-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-200" style="width: 0%"></div>
+                </div>
+                <p class="text-xs font-bold text-slate-600" id="print-progress-text">0% Selesai</p>
+            </div>
+
+            <div id="print-done-area" class="w-full hidden mt-2">
+                <button onclick="bukaTabPrint()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 flex justify-center items-center gap-2"><i data-lucide="external-link"></i> BUKA HASIL CETAK</button>
+            </div>
+        </div>
+    </div>
+
     <div id="overlay-klik-luar" onclick="tutupSemuaPopups()" class="hidden fixed inset-0 z-[40] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="print_khusus_logic.js"></script>
