@@ -33,8 +33,6 @@ window.tutupModalPinGlobal = function() {
 
 window.tutupSemuaPopups = function() {
     document.getElementById('overlay-klik-luar').classList.add('hidden');
-    document.getElementById('modal-search').classList.add('hidden');
-    document.getElementById('modal-tambah-master').classList.add('hidden');
     document.getElementById('modal-pin-global').classList.add('hidden');
     pendingAction = null;
 };
@@ -158,7 +156,7 @@ function renderForm() {
             <input type="number" id="k-qty" value="1" min="1" class="w-full p-2 text-base border border-slate-300 rounded outline-none focus:border-emerald-600 font-bold text-center bg-white text-slate-900">
         </div>
     `;
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function renderSettings() {
@@ -678,6 +676,135 @@ function loadSetDefault(m) {
 }
 
 // ==========================================
+// 7. MODAL SEARCH (PILIH ITEM/MESIN/CUST)
+// ==========================================
+window.bukaModalSearch = function(type) {
+    currentSearchType = type;
+    const titleMap = { 'item': 'Nama Item', 'mesin': 'Mesin', 'customer': 'Customer' };
+    document.getElementById('title-modal-search').innerText = `Cari ${titleMap[type]}`;
+    document.getElementById('title-tambah-master').innerText = titleMap[type];
+    
+    document.getElementById('input-search-list').value = '';
+    renderSearchList();
+
+    document.getElementById('modal-search').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+    setTimeout(() => document.getElementById('input-search-list').focus(), 100);
+};
+
+window.tutupModalSearch = function() {
+    document.getElementById('modal-search').classList.add('hidden');
+    if(document.getElementById('modal-tambah-master').classList.contains('hidden')) {
+        document.getElementById('overlay-klik-luar').classList.add('hidden');
+    }
+};
+
+function renderSearchList() {
+    const ul = document.getElementById('list-search-result');
+    const dataArr = masterData[currentSearchType] || [];
+    
+    if(dataArr.length === 0) {
+        ul.innerHTML = '<li class="p-4 text-center text-slate-400 font-bold">Data kosong.</li>';
+        return;
+    }
+
+    ul.innerHTML = dataArr.map(d => `
+        <li onclick="selectSearchItem('${d.nama}', '${d.kode}')" class="search-item p-3 border border-slate-200 rounded-lg cursor-pointer transition flex justify-between items-center active:scale-95 active:bg-slate-100">
+            <span class="font-bold text-slate-700">${d.nama}</span>
+            <span class="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded">${d.kode || '-'}</span>
+        </li>
+    `).join('');
+}
+
+window.filterSearchList = function() {
+    const q = document.getElementById('input-search-list').value.toLowerCase();
+    document.querySelectorAll('.search-item').forEach(li => {
+        li.style.display = li.innerText.toLowerCase().includes(q) ? '' : 'none';
+    });
+};
+
+window.selectSearchItem = function(nama, kode) {
+    document.querySelectorAll('.search-item').forEach(li => li.classList.remove('bg-emerald-100', 'border-emerald-400'));
+    event.currentTarget.classList.add('bg-emerald-100', 'border-emerald-400');
+    selectedSearchData = { nama, kode };
+};
+
+window.pilihDataSearch = function() {
+    if(!selectedSearchData.nama) return alert("Pilih data dari daftar terlebih dahulu!");
+    
+    let m = currentMode;
+    let inputId = `${m}-${currentSearchType === 'customer' ? 'po' : currentSearchType}`;
+    let el = document.getElementById(inputId);
+    
+    if(el) {
+        el.value = selectedSearchData.nama;
+        el.setAttribute('data-kode', selectedSearchData.kode);
+    }
+    
+    tutupModalSearch();
+};
+
+window.bukaModalTambahMaster = function() {
+    document.getElementById('input-tambah-nama').value = '';
+    document.getElementById('input-tambah-kode').value = '';
+    document.getElementById('input-tambah-pin').value = '';
+    document.getElementById('modal-tambah-master').classList.remove('hidden');
+};
+
+window.simpanDataMasterBaru = async function() {
+    const nama = document.getElementById('input-tambah-nama').value.trim().toUpperCase();
+    const kode = document.getElementById('input-tambah-kode').value.trim().toUpperCase();
+    const pin = document.getElementById('input-tambah-pin').value;
+
+    if(!nama || !kode || !pin) return alert("Semua kolom wajib diisi!");
+    
+    if(pin !== currentUser.password) return alert("⛔ PIN SALAH! Masukkan password akun Anda.");
+
+    const btn = document.getElementById('btn-simpan-master'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
+
+    try {
+        let colNama = currentSearchType === 'item' ? 'nama_item' : currentSearchType;
+        let colKode = currentSearchType === 'item' ? 'kode_nama_item' : `kode_${currentSearchType}`;
+
+        const payload = { [colNama]: nama, [colKode]: kode };
+        const { error } = await db.from('master_2').insert([payload]);
+        if(error) throw error;
+
+        masterData[currentSearchType].push({ nama, kode });
+        masterData[currentSearchType].sort((a,b) => a.nama.localeCompare(b.nama));
+        
+        alert("Data berhasil ditambahkan!");
+        document.getElementById('modal-tambah-master').classList.add('hidden');
+        renderSearchList();
+
+    } catch(e) {
+        alert("Gagal menyimpan: " + e.message);
+    } finally {
+        btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
+    }
+};
+
+window.hapusDataMaster = async function() {
+    if(!selectedSearchData.nama) return alert("Pilih data yang ingin dihapus dari daftar!");
+    
+    mintaPin(`Hapus '${selectedSearchData.nama}'`, async () => {
+        try {
+            let colNama = currentSearchType === 'item' ? 'nama_item' : currentSearchType;
+            const { error } = await db.from('master_2').delete().eq(colNama, selectedSearchData.nama);
+            if(error) throw error;
+
+            masterData[currentSearchType] = masterData[currentSearchType].filter(d => d.nama !== selectedSearchData.nama);
+            alert("Data berhasil dihapus!");
+            selectedSearchData = { nama: '', kode: '' };
+            renderSearchList();
+        } catch(e) {
+            alert("Gagal menghapus: " + e.message);
+        }
+    });
+};
+
+// ==========================================
 // 8. ALGORITMA PARSING KHUSUS & GENERATE LABEL
 // ==========================================
 function parseJulianDate(dateCode) {
@@ -801,7 +928,7 @@ window.generateLabel = function() {
     let mesinObj = masterData.mesin.find(m => m.kode.toUpperCase() === mesinCode.toUpperCase());
     let mesinFound = mesinObj ? mesinObj.nama : (mesinCode || "-");
 
-    // E. KELENGKAPAN NAMA ITEM & QTY PER BOX (LOOKUP MASTER_LIS ACCURATE)
+    // E. KELENGKAPAN NAMA ITEM & QTY PER BOX
     let namaStr = namaItemFound + (gradeFound === 'A' ? ' A' : '');
     let isiStr = getIsiBoxText(jenis, namaItemFound);
 
@@ -978,18 +1105,48 @@ window.cetakLabel = async function() {
             ctx.drawImage(baseFrontCanvas, 0, 0);
 
             qrTempDiv.innerHTML = "";
-            new QRCode(qrTempDiv, { text: stateGlobal[m].barcodeData, width: 300, height: 300, correctLevel : QRCode.CorrectLevel.L });
+            let fullBarcode = stateGlobal[m].barcodeData;
+            new QRCode(qrTempDiv, { text: fullBarcode, width: 300, height: 300, correctLevel : QRCode.CorrectLevel.L });
             let qrSourceCanvas = qrTempDiv.querySelector('canvas');
 
             if (qrSourceCanvas) {
                 ctx.drawImage(qrSourceCanvas, qrX, qrY, qrW, qrH);
             }
 
+            // REVISI: Manual Wrap Text untuk Canvas 2D
             ctx.font = `bold ${bcFontSize}px monospace, sans-serif`;
             ctx.fillStyle = '#000000';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
-            ctx.fillText(stateGlobal[m].barcodeData, bcX + (bcW / 2), bcY);
+            
+            let isWrapOn = stateGlobal[m].wrap.barcode_cb;
+            
+            if (isWrapOn) {
+                let maxWidth = bcW; 
+                let lineHeight = bcFontSize * 1.2; 
+                let lines = [];
+                let currentLine = '';
+
+                for (let j = 0; j < fullBarcode.length; j++) {
+                    let char = fullBarcode[j];
+                    let testLine = currentLine + char;
+                    let metrics = ctx.measureText(testLine);
+                    
+                    if (metrics.width > maxWidth && j > 0) {
+                        lines.push(currentLine);
+                        currentLine = char;
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+                lines.push(currentLine);
+
+                lines.forEach((line, index) => {
+                    ctx.fillText(line, bcX + (bcW / 2), bcY + (index * lineHeight));
+                });
+            } else {
+                ctx.fillText(fullBarcode, bcX + (bcW / 2), bcY);
+            }
 
             let imgFrontBase64 = offCanvas.toDataURL("image/png");
             sequenceImages.push(imgFrontBase64);
@@ -1040,9 +1197,6 @@ window.cetakLabel = async function() {
     }
 };
 
-// ==========================================
-// 9. SECURITY (PIN)
-// ==========================================
 function mintaPin(title, callback) {
     document.getElementById('pin-global-title').innerText = title;
     document.getElementById('input-pin-global').value = '';
