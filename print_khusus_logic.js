@@ -25,6 +25,7 @@ let isDragging = false, dragStartX = 0, dragStartY = 0, dragInitialPos = {};
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', password: ''};
 
+// REVISI: Fungsi Menutup Modal PIN Global dengan Sempurna
 window.tutupModalPinGlobal = function() {
     document.getElementById('modal-pin-global').classList.add('hidden');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
@@ -33,6 +34,8 @@ window.tutupModalPinGlobal = function() {
 
 window.tutupSemuaPopups = function() {
     document.getElementById('overlay-klik-luar').classList.add('hidden');
+    document.getElementById('modal-search').classList.add('hidden');
+    document.getElementById('modal-tambah-master').classList.add('hidden');
     document.getElementById('modal-pin-global').classList.add('hidden');
     pendingAction = null;
 };
@@ -46,43 +49,47 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch(e) { console.error("Layout init:", e); }
 
     initKeyboardGlobal();
+    
+    // LANGSUNG RENDER UI DI AWAL AGAR TIDAK BLANK
     switchMode('khusus'); 
+
+    // LOAD DATA MASTER SEPANJANG DI BACKGROUND DENGAN CRASH-PROOF WRAPPER
     await loadMasterData();
+    renderForm(); // Re-populate dropdowns
 });
 
 async function loadMasterData() {
     try {
-        const [resM2, resLis] = await Promise.all([
-            db.from('master_2').select('*'),
-            db.from('master_lis').select('*')
-        ]);
+        const { data, error } = await db.from('master_2').select('*');
+        if (!error && data) {
+            const getUnique = (keyName, keyCode) => {
+                let map = new Map();
+                data.forEach(r => {
+                    if (r[keyName] && String(r[keyName]).trim() !== '') {
+                        map.set(String(r[keyName]).trim().toUpperCase(), { nama: String(r[keyName]).trim(), kode: r[keyCode] || '' });
+                    }
+                });
+                return Array.from(map.values()).sort((a, b) => a.nama.localeCompare(b.nama));
+            };
 
-        if (resM2.error) throw resM2.error;
-        const data = resM2.data || [];
-
-        const getUnique = (keyName, keyCode) => {
-            let map = new Map();
-            data.forEach(r => {
-                if (r[keyName] && String(r[keyName]).trim() !== '') {
-                    map.set(String(r[keyName]).trim().toUpperCase(), { nama: String(r[keyName]).trim(), kode: r[keyCode] || '' });
-                }
-            });
-            return Array.from(map.values()).sort((a, b) => a.nama.localeCompare(b.nama));
-        };
-
-        masterData.mesin = getUnique('mesin', 'kode_mesin');
-        masterData.shift = getUnique('shift', 'kode_shift');
-        masterData.item = getUnique('nama_item', 'kode_nama_item');
-        masterData.grade = getUnique('grade', 'kode_grade');
-        masterData.dus = getUnique('dus', 'kode_dus');
-        masterData.customer = getUnique('customer', 'kode_customer');
-
-        if (!resLis.error && resLis.data) {
-            masterData.lis = resLis.data;
+            masterData.mesin = getUnique('mesin', 'kode_mesin');
+            masterData.shift = getUnique('shift', 'kode_shift');
+            masterData.item = getUnique('nama_item', 'kode_nama_item');
+            masterData.grade = getUnique('grade', 'kode_grade');
+            masterData.dus = getUnique('dus', 'kode_dus');
+            masterData.customer = getUnique('customer', 'kode_customer');
         }
-
     } catch (e) {
-        console.error("Gagal memuat master data:", e);
+        console.error("Gagal memuat master_2:", e);
+    }
+
+    try {
+        const { data: resLis, error: errLis } = await db.from('master_lis').select('*');
+        if (!errLis && resLis) {
+            masterData.lis = resLis;
+        }
+    } catch(e) {
+        console.error("Gagal memuat master_lis (opsional):", e);
     }
 }
 
@@ -102,6 +109,7 @@ function getIsiBoxText(jenisItem, namaItem) {
                 return `Qty: ${found.qty_isi}`;
             }
         }
+        // Fallback aturan default jika tidak ditemukan di tabel master_lis
         if (n.includes('PROFILE IV') || n.includes('PROFILE V')) return "Qty: 60";
         if (n.includes('PROFILE II')) return "Qty: 48";
         if (n.includes('PROFILE I')) return "Qty: 140";
@@ -303,14 +311,14 @@ function handleWrapChange(key, isChecked, targetSide = null) {
     if(el) {
         if(isChecked) { 
             el.style.whiteSpace = 'normal'; 
-            el.style.wordBreak = 'break-word'; 
-            el.style.wordWrap = 'break-word'; 
+            el.style.wordBreak = 'break-all'; 
+            el.style.overflowWrap = 'break-word'; 
             el.style.maxWidth = val + (key==='nama'?'mm':'px'); 
         } else { 
             el.style.whiteSpace = 'nowrap'; 
             el.style.maxWidth = 'none';
             el.style.wordBreak = 'normal';
-            el.style.wordWrap = 'normal';
+            el.style.overflowWrap = 'normal';
         }
     }
 }
@@ -521,8 +529,8 @@ window.syncContext = function(type, val) {
             if(el) {
                 if(isWrapOn) {
                     el.style.whiteSpace = 'normal';
-                    el.style.wordBreak = 'break-word';
-                    el.style.wordWrap = 'break-word';
+                    el.style.wordBreak = 'break-all';
+                    el.style.overflowWrap = 'break-word';
                     el.style.maxWidth = v + (k==='nama'?'mm':'px');
                 } else {
                     el.style.whiteSpace = 'nowrap';
@@ -676,135 +684,6 @@ function loadSetDefault(m) {
 }
 
 // ==========================================
-// 7. MODAL SEARCH (PILIH ITEM/MESIN/CUST)
-// ==========================================
-window.bukaModalSearch = function(type) {
-    currentSearchType = type;
-    const titleMap = { 'item': 'Nama Item', 'mesin': 'Mesin', 'customer': 'Customer' };
-    document.getElementById('title-modal-search').innerText = `Cari ${titleMap[type]}`;
-    document.getElementById('title-tambah-master').innerText = titleMap[type];
-    
-    document.getElementById('input-search-list').value = '';
-    renderSearchList();
-
-    document.getElementById('modal-search').classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
-    setTimeout(() => document.getElementById('input-search-list').focus(), 100);
-};
-
-window.tutupModalSearch = function() {
-    document.getElementById('modal-search').classList.add('hidden');
-    if(document.getElementById('modal-tambah-master').classList.contains('hidden')) {
-        document.getElementById('overlay-klik-luar').classList.add('hidden');
-    }
-};
-
-function renderSearchList() {
-    const ul = document.getElementById('list-search-result');
-    const dataArr = masterData[currentSearchType] || [];
-    
-    if(dataArr.length === 0) {
-        ul.innerHTML = '<li class="p-4 text-center text-slate-400 font-bold">Data kosong.</li>';
-        return;
-    }
-
-    ul.innerHTML = dataArr.map(d => `
-        <li onclick="selectSearchItem('${d.nama}', '${d.kode}')" class="search-item p-3 border border-slate-200 rounded-lg cursor-pointer transition flex justify-between items-center active:scale-95 active:bg-slate-100">
-            <span class="font-bold text-slate-700">${d.nama}</span>
-            <span class="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded">${d.kode || '-'}</span>
-        </li>
-    `).join('');
-}
-
-window.filterSearchList = function() {
-    const q = document.getElementById('input-search-list').value.toLowerCase();
-    document.querySelectorAll('.search-item').forEach(li => {
-        li.style.display = li.innerText.toLowerCase().includes(q) ? '' : 'none';
-    });
-};
-
-window.selectSearchItem = function(nama, kode) {
-    document.querySelectorAll('.search-item').forEach(li => li.classList.remove('bg-emerald-100', 'border-emerald-400'));
-    event.currentTarget.classList.add('bg-emerald-100', 'border-emerald-400');
-    selectedSearchData = { nama, kode };
-};
-
-window.pilihDataSearch = function() {
-    if(!selectedSearchData.nama) return alert("Pilih data dari daftar terlebih dahulu!");
-    
-    let m = currentMode;
-    let inputId = `${m}-${currentSearchType === 'customer' ? 'po' : currentSearchType}`;
-    let el = document.getElementById(inputId);
-    
-    if(el) {
-        el.value = selectedSearchData.nama;
-        el.setAttribute('data-kode', selectedSearchData.kode);
-    }
-    
-    tutupModalSearch();
-};
-
-window.bukaModalTambahMaster = function() {
-    document.getElementById('input-tambah-nama').value = '';
-    document.getElementById('input-tambah-kode').value = '';
-    document.getElementById('input-tambah-pin').value = '';
-    document.getElementById('modal-tambah-master').classList.remove('hidden');
-};
-
-window.simpanDataMasterBaru = async function() {
-    const nama = document.getElementById('input-tambah-nama').value.trim().toUpperCase();
-    const kode = document.getElementById('input-tambah-kode').value.trim().toUpperCase();
-    const pin = document.getElementById('input-tambah-pin').value;
-
-    if(!nama || !kode || !pin) return alert("Semua kolom wajib diisi!");
-    
-    if(pin !== currentUser.password) return alert("⛔ PIN SALAH! Masukkan password akun Anda.");
-
-    const btn = document.getElementById('btn-simpan-master'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
-
-    try {
-        let colNama = currentSearchType === 'item' ? 'nama_item' : currentSearchType;
-        let colKode = currentSearchType === 'item' ? 'kode_nama_item' : `kode_${currentSearchType}`;
-
-        const payload = { [colNama]: nama, [colKode]: kode };
-        const { error } = await db.from('master_2').insert([payload]);
-        if(error) throw error;
-
-        masterData[currentSearchType].push({ nama, kode });
-        masterData[currentSearchType].sort((a,b) => a.nama.localeCompare(b.nama));
-        
-        alert("Data berhasil ditambahkan!");
-        document.getElementById('modal-tambah-master').classList.add('hidden');
-        renderSearchList();
-
-    } catch(e) {
-        alert("Gagal menyimpan: " + e.message);
-    } finally {
-        btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
-    }
-};
-
-window.hapusDataMaster = async function() {
-    if(!selectedSearchData.nama) return alert("Pilih data yang ingin dihapus dari daftar!");
-    
-    mintaPin(`Hapus '${selectedSearchData.nama}'`, async () => {
-        try {
-            let colNama = currentSearchType === 'item' ? 'nama_item' : currentSearchType;
-            const { error } = await db.from('master_2').delete().eq(colNama, selectedSearchData.nama);
-            if(error) throw error;
-
-            masterData[currentSearchType] = masterData[currentSearchType].filter(d => d.nama !== selectedSearchData.nama);
-            alert("Data berhasil dihapus!");
-            selectedSearchData = { nama: '', kode: '' };
-            renderSearchList();
-        } catch(e) {
-            alert("Gagal menghapus: " + e.message);
-        }
-    });
-};
-
-// ==========================================
 // 8. ALGORITMA PARSING KHUSUS & GENERATE LABEL
 // ==========================================
 function parseJulianDate(dateCode) {
@@ -928,7 +807,7 @@ window.generateLabel = function() {
     let mesinObj = masterData.mesin.find(m => m.kode.toUpperCase() === mesinCode.toUpperCase());
     let mesinFound = mesinObj ? mesinObj.nama : (mesinCode || "-");
 
-    // E. KELENGKAPAN NAMA ITEM & QTY PER BOX
+    // E. KELENGKAPAN NAMA ITEM & QTY PER BOX (LOOKUP MASTER_LIS ACCURATE)
     let namaStr = namaItemFound + (gradeFound === 'A' ? ' A' : '');
     let isiStr = getIsiBoxText(jenis, namaItemFound);
 
@@ -973,45 +852,40 @@ window.generateLabel = function() {
     return true;
 };
 
-// CETAK KHUSUS HIGH-SPEED (ALGORITMA 2D CANVAS COMPOSITE)
+// REVISI: CETAK LABEL DENGAN PROGRESS MODAL & PURE HTML2CANVAS (ANTI-POPUP BLOCKED & ULTRA FAST)
+window.printHTMLData = ""; // Variabel global untuk menyimpan hasil HTML
+
+window.bukaTabPrint = function() {
+    let pWin = window.open('', '_blank');
+    if(!pWin) {
+        alert("Popup diblokir oleh browser! Silakan izinkan pop-up (Always allow pop-ups) di address bar atas, lalu klik tombol lagi.");
+        return;
+    }
+    pWin.document.open();
+    pWin.document.write(window.printHTMLData);
+    pWin.document.close();
+    
+    setTimeout(() => { pWin.focus(); pWin.print(); }, 200);
+    document.getElementById('modal-progress-print').classList.add('hidden');
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
+};
+
 window.cetakLabel = async function() {
     let m = currentMode;
     let qty = parseInt(document.getElementById('k-qty').value) || 1;
-    let btnCetak = document.getElementById('btn-cetak-label'); 
-    btnCetak.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Memproses...'; btnCetak.disabled = true;
-
+    
     document.querySelectorAll('.click-edit').forEach(el => el.classList.remove('active-edit'));
     document.getElementById('context-panel').classList.add('hidden');
 
-    let pWin = window.open('about:blank', '_blank');
-    if(!pWin) {
-        alert("Popup diblokir oleh browser! Silakan izinkan pop-up (Always allow pop-ups) di address bar atas, lalu coba lagi.");
-        btnCetak.innerHTML = '<i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label'; btnCetak.disabled = false;
-        return;
-    }
-    
-    let w = stateGlobal[m].kertas.w + "mm"; 
-    let h = stateGlobal[m].kertas.h + "mm";
-    pWin.document.write(`
-        <html><head><title>Mencetak Label Khusus...</title>
-        <style>
-            body { font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #0f172a; color: #ffffff; }
-            .card { background: #1e293b; padding: 28px 36px; border-radius: 16px; border: 1px solid #334155; text-align: center; width: 320px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
-            .title { font-size: 13px; font-weight: 800; margin-bottom: 6px; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; }
-            .subtitle { font-size: 16px; font-weight: 800; color: #10b981; margin-bottom: 16px; }
-            .progress-bg { width: 100%; height: 10px; background: #334155; border-radius: 5px; overflow: hidden; margin-bottom: 10px; }
-            .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #059669, #10b981); border-radius: 5px; transition: width 0.05s ease-out; }
-            .status-detail { font-size: 12px; font-weight: 700; color: #cbd5e1; }
-        </style>
-        </head><body>
-            <div class="card">
-                <div class="title">WMS SUNPEVECE</div>
-                <div class="subtitle" id="prog-txt">Menyiapkan Render...</div>
-                <div class="progress-bg"><div class="progress-fill" id="prog-bar"></div></div>
-                <div class="status-detail" id="prog-detail">0% Selesai</div>
-            </div>
-        </body></html>
-    `);
+    // Tampilkan Modal Progress di halaman saat ini
+    document.getElementById('modal-progress-print').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+    document.getElementById('print-done-area').classList.add('hidden');
+    document.getElementById('print-loading-area').classList.remove('hidden');
+    document.getElementById('print-title').innerText = 'Memproses Label...';
+    document.getElementById('print-subtitle').innerText = 'Mohon tunggu sebentar.';
+    document.getElementById('print-progress-bar').style.width = '0%';
+    document.getElementById('print-progress-text').innerText = '0% Selesai';
 
     let item = document.getElementById('el-nama').innerText;
     let panjang = document.getElementById('el-ukuran').innerText.split('x')[1].trim();
@@ -1053,150 +927,90 @@ window.cetakLabel = async function() {
         nodeFront.style.transition = 'none';
         nodeBack.style.transition = 'none';
 
-        // 1. RENDER BACKGROUND STATIS SISI BACK (1 KALI)
+        await new Promise(r => setTimeout(r, 50)); 
+        
+        // Render Back Canvas HANYA 1 KALI SEBELUM LOOPING!
         let canvasBack = await html2canvas(nodeBack, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
         let imgBackBase64 = canvasBack.toDataURL("image/png", 1.0);
 
-        // 2. RENDER BACKGROUND STATIS SISI FRONT (1 KALI)
-        let qrWrapper = document.getElementById('qr-wrapper');
-        let bcEl = document.getElementById('el-barcode');
-        
-        let origQrVis = qrWrapper.style.visibility;
-        let origBcVis = bcEl.style.visibility;
-        qrWrapper.style.visibility = 'hidden';
-        bcEl.style.visibility = 'hidden';
-
-        let baseFrontCanvas = await html2canvas(nodeFront, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
-
-        qrWrapper.style.visibility = origQrVis;
-        bcEl.style.visibility = origBcVis;
-
-        // Bounding Box
-        let canvasRect = nodeFront.getBoundingClientRect();
-        let qrRect = qrWrapper.getBoundingClientRect();
-        let bcRect = bcEl.getBoundingClientRect();
-
-        let scale = 2;
-        let qrX = (qrRect.left - canvasRect.left) * scale;
-        let qrY = (qrRect.top - canvasRect.top) * scale;
-        let qrW = qrRect.width * scale;
-        let qrH = qrRect.height * scale;
-
-        let bcX = (bcRect.left - canvasRect.left) * scale;
-        let bcY = (bcRect.top - canvasRect.top) * scale;
-        let bcW = bcRect.width * scale;
-        let bcFontSize = (parseFloat(window.getComputedStyle(bcEl).fontSize) || 5) * scale;
-
-        let offCanvas = document.createElement('canvas');
-        offCanvas.width = baseFrontCanvas.width;
-        offCanvas.height = baseFrontCanvas.height;
-        let ctx = offCanvas.getContext('2d');
-
-        let qrTempDiv = document.createElement('div');
-        qrTempDiv.style.position = 'absolute';
-        qrTempDiv.style.left = '-9999px';
-        document.body.appendChild(qrTempDiv);
-
         let sequenceImages = [];
+        let currentRenderCount = 1;
 
-        // 3. LOOPING PERAKITAN 2D CANVAS KILAT
-        for(let i = 1; i <= qty; i++) {
-            ctx.clearRect(0, 0, offCanvas.width, offCanvas.height);
-            ctx.drawImage(baseFrontCanvas, 0, 0);
-
-            qrTempDiv.innerHTML = "";
-            let fullBarcode = stateGlobal[m].barcodeData;
-            new QRCode(qrTempDiv, { text: fullBarcode, width: 300, height: 300, correctLevel : QRCode.CorrectLevel.L });
-            let qrSourceCanvas = qrTempDiv.querySelector('canvas');
-
-            if (qrSourceCanvas) {
-                ctx.drawImage(qrSourceCanvas, qrX, qrY, qrW, qrH);
+        for(let i = startSerial; i <= endSerial; i++) {
+            let serialStr = "/" + ("0000" + i).slice(-4);
+            let fullBarcode = stateGlobal[m].barcodeData + serialStr;
+            
+            document.getElementById('el-barcode').innerText = fullBarcode;
+            let qrEl = document.getElementById('qrcode'); qrEl.innerHTML = "";
+            new QRCode(qrEl, { text: fullBarcode, width: 150, height: 150, correctLevel : QRCode.CorrectLevel.L });
+            
+            // Hapus tag <img> buatan QRCode.js agar html2canvas tidak terhambat async image load
+            let imgTag = qrEl.querySelector('img');
+            if (imgTag) imgTag.remove();
+            let canvasTag = qrEl.querySelector('canvas');
+            if (canvasTag) {
+                canvasTag.style.width = '100%';
+                canvasTag.style.height = '100%';
+                canvasTag.style.display = 'block';
             }
 
-            // REVISI: Manual Wrap Text untuk Canvas 2D
-            ctx.font = `bold ${bcFontSize}px monospace, sans-serif`;
-            ctx.fillStyle = '#000000';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
+            // Render Front Canvas menggunakan html2canvas murni agar CSS Wrap Text berfungsi sempurna
+            let canvasFront = await html2canvas(nodeFront, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
+            let imgFrontBase64 = canvasFront.toDataURL("image/png", 1.0);
             
-            let isWrapOn = stateGlobal[m].wrap.barcode_cb;
-            
-            if (isWrapOn) {
-                let maxWidth = bcW; 
-                let lineHeight = bcFontSize * 1.2; 
-                let lines = [];
-                let currentLine = '';
-
-                for (let j = 0; j < fullBarcode.length; j++) {
-                    let char = fullBarcode[j];
-                    let testLine = currentLine + char;
-                    let metrics = ctx.measureText(testLine);
-                    
-                    if (metrics.width > maxWidth && j > 0) {
-                        lines.push(currentLine);
-                        currentLine = char;
-                    } else {
-                        currentLine = testLine;
-                    }
-                }
-                lines.push(currentLine);
-
-                lines.forEach((line, index) => {
-                    ctx.fillText(line, bcX + (bcW / 2), bcY + (index * lineHeight));
-                });
-            } else {
-                ctx.fillText(fullBarcode, bcX + (bcW / 2), bcY);
-            }
-
-            let imgFrontBase64 = offCanvas.toDataURL("image/png");
             sequenceImages.push(imgFrontBase64);
-            sequenceImages.push(imgBackBase64);
-
-            let pct = Math.round((i / qty) * 100);
-            if (pWin && !pWin.closed && pWin.document) {
-                let elTxt = pWin.document.getElementById('prog-txt');
-                let elBar = pWin.document.getElementById('prog-bar');
-                let elDetail = pWin.document.getElementById('prog-detail');
-                if (elTxt) elTxt.innerText = `Merender Label ${i} dari ${qty}`;
-                if (elBar) elBar.style.width = pct + '%';
-                if (elDetail) elDetail.innerText = `${pct}% Selesai`;
-            }
-
-            btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${i}/${qty} (${pct}%)`;
-
+            sequenceImages.push(imgBackBase64); // Gunakan kembali hasil render back yang sudah siap
+            
+            // Update Progress Bar UI
+            let pct = Math.round((currentRenderCount / qty) * 100);
+            document.getElementById('print-progress-bar').style.width = pct + '%';
+            document.getElementById('print-progress-text').innerText = `${pct}% Selesai (${currentRenderCount}/${qty})`;
+            
+            currentRenderCount++;
+            
+            // Beri nafas pada browser agar UI Progress Bar bisa terupdate
             await new Promise(r => requestAnimationFrame(r));
         }
         
-        document.body.removeChild(qrTempDiv);
-
+        // Kembalikan gaya CSS
         nodeFront.style.transform = oldTransformFront; nodeFront.style.border = '1px solid black'; nodeFront.style.transition = '';
         nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black'; nodeBack.style.transition = '';
         wrapper.style.transform = oldWrapTransform; container.style.overflowY = oldOverflow;
 
-        pWin.document.open();
-        pWin.document.write(`<html><head><title>Print Label Khusus</title><style>
+        // Siapkan HTML untuk di-print
+        let w = stateGlobal[m].kertas.w + "mm"; 
+        let h = stateGlobal[m].kertas.h + "mm";
+        
+        let htmlContent = `<html><head><title>Print Label Khusus</title><style>
             @page { size: ${w} ${h}; margin: 0; }
             body { margin: 0; padding: 20px; background: #525659; display: flex; flex-direction: column; align-items: center; gap: 20px; }
             .label-page { page-break-after: always; width: ${w}; height: ${h}; background: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center; overflow: hidden; flex-shrink: 0; }
             img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; filter: grayscale(100%) contrast(1000%); }
             @media print { body { background: #fff; padding: 0; display: block; } .label-page { box-shadow: none; margin: 0; } }
-        </style></head><body>`);
+        </style></head><body>`;
         
-        sequenceImages.forEach(img => { pWin.document.write(`<div class="label-page"><img src="${img}"></div>`); });
+        sequenceImages.forEach(img => { htmlContent += `<div class="label-page"><img src="${img}"></div>`; });
+        htmlContent += `</body></html>`;
         
-        pWin.document.write(`</body></html>`); 
-        pWin.document.close(); 
-        
-        setTimeout(() => { pWin.focus(); pWin.print(); }, 100);
+        // Simpan ke variabel global
+        window.printHTMLData = htmlContent;
+
+        // Ubah tampilan Modal menjadi tombol "BUKA HASIL CETAK"
+        document.getElementById('print-title').innerText = 'Render Selesai!';
+        document.getElementById('print-subtitle').innerText = 'Label siap untuk dicetak.';
+        document.getElementById('print-loading-area').classList.add('hidden');
+        document.getElementById('print-done-area').classList.remove('hidden');
 
     } catch(e) {
-        if(pWin && !pWin.closed) pWin.close();
+        document.getElementById('modal-progress-print').classList.add('hidden');
+        document.getElementById('overlay-klik-luar').classList.add('hidden');
         alert("Terjadi kesalahan: " + e.message);
-    } finally {
-        btnCetak.innerHTML = '<i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label'; btnCetak.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons();
     }
 };
 
+// ==========================================
+// 9. SECURITY (PIN)
+// ==========================================
 function mintaPin(title, callback) {
     document.getElementById('pin-global-title').innerText = title;
     document.getElementById('input-pin-global').value = '';
