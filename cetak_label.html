@@ -19,9 +19,6 @@
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
-        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
-
         .preview-box-container { background: #e2e8f0; display: flex; justify-content: center; align-items: flex-start; overflow: auto; position: relative; }
         .label-canvas { background: white; border: 1px solid black; position: relative; padding: 2mm; box-sizing: border-box; display: flex; overflow: hidden; transform-origin: top center; transition: transform 0.2s ease-in-out; }
         
@@ -95,13 +92,6 @@
 
     <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
-        <!-- HEADER TABS -->
-        <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-sm">
-            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
-                <button onclick="switchMode('plafon')" id="tab-plafon" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="box" class="w-4 h-4"></i> Cetak Label Plafon & Lis</button>
-            </div>
-        </div>
-
         <!-- MAIN WORKSPACE -->
         <div class="flex-1 flex flex-col md:flex-row min-h-0 bg-slate-100">
             
