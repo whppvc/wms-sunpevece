@@ -4,7 +4,7 @@
 
 let currentMode = 'khusus'; 
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [], lis: [] };
-let isInfoLocked = true; // State Kunci Elemen Informasi Bawah
+let isInfoLocked = true; 
 
 const createBasePos = () => ({ x: 0, y: 0 });
 const baseVis = { qr: true, barcode: true, nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
@@ -22,10 +22,10 @@ modes.forEach(m => historyStack[m] = { undo: [], redo: [] });
 
 let activeSelection = { m: null, elements: [] };
 let isDragging = false, dragStartX = 0, dragStartY = 0, dragInitialPos = {};
+let pendingAction = null;
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', password: ''};
 
-// REVISI: Fungsi Menutup Modal PIN Global dengan Sempurna
 window.tutupModalPinGlobal = function() {
     document.getElementById('modal-pin-global').classList.add('hidden');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
@@ -34,8 +34,6 @@ window.tutupModalPinGlobal = function() {
 
 window.tutupSemuaPopups = function() {
     document.getElementById('overlay-klik-luar').classList.add('hidden');
-    document.getElementById('modal-search').classList.add('hidden');
-    document.getElementById('modal-tambah-master').classList.add('hidden');
     document.getElementById('modal-pin-global').classList.add('hidden');
     pendingAction = null;
 };
@@ -55,41 +53,41 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // LOAD DATA MASTER SEPANJANG DI BACKGROUND DENGAN CRASH-PROOF WRAPPER
     await loadMasterData();
-    renderForm(); // Re-populate dropdowns
 });
 
 async function loadMasterData() {
     try {
-        const { data, error } = await db.from('master_2').select('*');
-        if (!error && data) {
-            const getUnique = (keyName, keyCode) => {
-                let map = new Map();
-                data.forEach(r => {
-                    if (r[keyName] && String(r[keyName]).trim() !== '') {
-                        map.set(String(r[keyName]).trim().toUpperCase(), { nama: String(r[keyName]).trim(), kode: r[keyCode] || '' });
-                    }
-                });
-                return Array.from(map.values()).sort((a, b) => a.nama.localeCompare(b.nama));
-            };
+        const [resM2, resLis] = await Promise.all([
+            db.from('master_2').select('*'),
+            db.from('master_lis').select('*')
+        ]);
 
-            masterData.mesin = getUnique('mesin', 'kode_mesin');
-            masterData.shift = getUnique('shift', 'kode_shift');
-            masterData.item = getUnique('nama_item', 'kode_nama_item');
-            masterData.grade = getUnique('grade', 'kode_grade');
-            masterData.dus = getUnique('dus', 'kode_dus');
-            masterData.customer = getUnique('customer', 'kode_customer');
+        if (resM2.error) throw resM2.error;
+        const data = resM2.data || [];
+
+        const getUnique = (keyName, keyCode) => {
+            let map = new Map();
+            data.forEach(r => {
+                if (r[keyName] && String(r[keyName]).trim() !== '') {
+                    map.set(String(r[keyName]).trim().toUpperCase(), { nama: String(r[keyName]).trim(), kode: r[keyCode] || '' });
+                }
+            });
+            return Array.from(map.values()).sort((a, b) => a.nama.localeCompare(b.nama));
+        };
+
+        masterData.mesin = getUnique('mesin', 'kode_mesin');
+        masterData.shift = getUnique('shift', 'kode_shift');
+        masterData.item = getUnique('nama_item', 'kode_nama_item');
+        masterData.grade = getUnique('grade', 'kode_grade');
+        masterData.dus = getUnique('dus', 'kode_dus');
+        masterData.customer = getUnique('customer', 'kode_customer');
+
+        if (!resLis.error && resLis.data) {
+            masterData.lis = resLis.data;
         }
+
     } catch (e) {
-        console.error("Gagal memuat master_2:", e);
-    }
-
-    try {
-        const { data: resLis, error: errLis } = await db.from('master_lis').select('*');
-        if (!errLis && resLis) {
-            masterData.lis = resLis;
-        }
-    } catch(e) {
-        console.error("Gagal memuat master_lis (opsional):", e);
+        console.error("Gagal memuat master data:", e);
     }
 }
 
@@ -109,7 +107,6 @@ function getIsiBoxText(jenisItem, namaItem) {
                 return `Qty: ${found.qty_isi}`;
             }
         }
-        // Fallback aturan default jika tidak ditemukan di tabel master_lis
         if (n.includes('PROFILE IV') || n.includes('PROFILE V')) return "Qty: 60";
         if (n.includes('PROFILE II')) return "Qty: 48";
         if (n.includes('PROFILE I')) return "Qty: 140";
@@ -318,7 +315,7 @@ function handleWrapChange(key, isChecked, targetSide = null) {
             el.style.whiteSpace = 'nowrap'; 
             el.style.maxWidth = 'none';
             el.style.wordBreak = 'normal';
-            el.style.overflowWrap = 'normal';
+            el.style.wordWrap = 'normal';
         }
     }
 }
@@ -807,7 +804,7 @@ window.generateLabel = function() {
     let mesinObj = masterData.mesin.find(m => m.kode.toUpperCase() === mesinCode.toUpperCase());
     let mesinFound = mesinObj ? mesinObj.nama : (mesinCode || "-");
 
-    // E. KELENGKAPAN NAMA ITEM & QTY PER BOX (LOOKUP MASTER_LIS ACCURATE)
+    // E. KELENGKAPAN NAMA ITEM & QTY PER BOX
     let namaStr = namaItemFound + (gradeFound === 'A' ? ' A' : '');
     let isiStr = getIsiBoxText(jenis, namaItemFound);
 
@@ -933,50 +930,119 @@ window.cetakLabel = async function() {
         let canvasBack = await html2canvas(nodeBack, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
         let imgBackBase64 = canvasBack.toDataURL("image/png", 1.0);
 
-        let sequenceImages = [];
-        let currentRenderCount = 1;
+        // Render Front Canvas HANYA 1 KALI (DENGAN MEMBERSIHKAN QR & BARCODE SEMENTARA)
+        let qrWrapper = document.getElementById('qr-wrapper');
+        let bcEl = document.getElementById('el-barcode');
+        
+        let origQrVis = qrWrapper.style.visibility;
+        let origBcVis = bcEl.style.visibility;
+        qrWrapper.style.visibility = 'hidden';
+        bcEl.style.visibility = 'hidden';
 
-        for(let i = startSerial; i <= endSerial; i++) {
-            let serialStr = "/" + ("0000" + i).slice(-4);
-            let fullBarcode = stateGlobal[m].barcodeData + serialStr;
-            
-            document.getElementById('el-barcode').innerText = fullBarcode;
-            let qrEl = document.getElementById('qrcode'); qrEl.innerHTML = "";
-            new QRCode(qrEl, { text: fullBarcode, width: 150, height: 150, correctLevel : QRCode.CorrectLevel.L });
-            
-            // Hapus tag <img> buatan QRCode.js agar html2canvas tidak terhambat async image load
-            let imgTag = qrEl.querySelector('img');
-            if (imgTag) imgTag.remove();
-            let canvasTag = qrEl.querySelector('canvas');
-            if (canvasTag) {
-                canvasTag.style.width = '100%';
-                canvasTag.style.height = '100%';
-                canvasTag.style.display = 'block';
+        let baseFrontCanvas = await html2canvas(nodeFront, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
+
+        qrWrapper.style.visibility = origQrVis;
+        bcEl.style.visibility = origBcVis;
+
+        // Bounding Box Koordinat Presisi untuk QR & Teks Barcode
+        let canvasRect = nodeFront.getBoundingClientRect();
+        let qrRect = qrWrapper.getBoundingClientRect();
+        let bcRect = bcEl.getBoundingClientRect();
+
+        let scale = 2; // Skala render html2canvas
+        let qrX = (qrRect.left - canvasRect.left) * scale;
+        let qrY = (qrRect.top - canvasRect.top) * scale;
+        let qrW = qrRect.width * scale;
+        let qrH = qrRect.height * scale;
+
+        let bcX = (bcRect.left - canvasRect.left) * scale;
+        let bcY = (bcRect.top - canvasRect.top) * scale;
+        let bcW = bcRect.width * scale;
+        let bcFontSize = (parseFloat(window.getComputedStyle(bcEl).fontSize) || 5) * scale;
+
+        // Canvas 2D Buffer Offscreen untuk perakitan kilat
+        let offCanvas = document.createElement('canvas');
+        offCanvas.width = baseFrontCanvas.width;
+        offCanvas.height = baseFrontCanvas.height;
+        let ctx = offCanvas.getContext('2d');
+
+        let qrTempDiv = document.createElement('div');
+        qrTempDiv.style.position = 'absolute';
+        qrTempDiv.style.left = '-9999px';
+        document.body.appendChild(qrTempDiv);
+
+        let sequenceImages = [];
+
+        // LOOPING PERAKITAN 2D CANVAS KILAT (0.001 Detik/Label)
+        for(let i = 1; i <= qty; i++) {
+            ctx.clearRect(0, 0, offCanvas.width, offCanvas.height);
+            ctx.drawImage(baseFrontCanvas, 0, 0); // Tempel background statis
+
+            // Generate QR Code Offscreen
+            qrTempDiv.innerHTML = "";
+            let fullBarcode = stateGlobal[m].barcodeData;
+            new QRCode(qrTempDiv, { text: fullBarcode, width: 300, height: 300, correctLevel : QRCode.CorrectLevel.L });
+            let qrSourceCanvas = qrTempDiv.querySelector('canvas');
+
+            if (qrSourceCanvas) {
+                ctx.drawImage(qrSourceCanvas, qrX, qrY, qrW, qrH); // Tempel QR Code
             }
 
-            // Render Front Canvas menggunakan html2canvas murni agar CSS Wrap Text berfungsi sempurna
-            let canvasFront = await html2canvas(nodeFront, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
-            let imgFrontBase64 = canvasFront.toDataURL("image/png", 1.0);
+            // Tulis Teks Barcode (Dengan Manual Text Wrap)
+            ctx.font = `bold ${bcFontSize}px monospace, sans-serif`;
+            ctx.fillStyle = '#000000';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
             
+            let isWrapOn = stateGlobal[m].wrap.barcode_cb;
+            
+            if (isWrapOn) {
+                let maxWidth = bcW; 
+                let lineHeight = bcFontSize * 1.2; 
+                let lines = [];
+                let currentLine = '';
+
+                for (let j = 0; j < fullBarcode.length; j++) {
+                    let char = fullBarcode[j];
+                    let testLine = currentLine + char;
+                    let metrics = ctx.measureText(testLine);
+                    
+                    if (metrics.width > maxWidth && j > 0) {
+                        lines.push(currentLine);
+                        currentLine = char;
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+                lines.push(currentLine);
+
+                lines.forEach((line, index) => {
+                    ctx.fillText(line, bcX + (bcW / 2), bcY + (index * lineHeight));
+                });
+            } else {
+                ctx.fillText(fullBarcode, bcX + (bcW / 2), bcY);
+            }
+
+            let imgFrontBase64 = offCanvas.toDataURL("image/png");
             sequenceImages.push(imgFrontBase64);
-            sequenceImages.push(imgBackBase64); // Gunakan kembali hasil render back yang sudah siap
-            
+            sequenceImages.push(imgBackBase64);
+
             // Update Progress Bar UI
-            let pct = Math.round((currentRenderCount / qty) * 100);
+            let pct = Math.round((i / qty) * 100);
             document.getElementById('print-progress-bar').style.width = pct + '%';
-            document.getElementById('print-progress-text').innerText = `${pct}% Selesai (${currentRenderCount}/${qty})`;
-            
-            currentRenderCount++;
+            document.getElementById('print-progress-text').innerText = `${pct}% Selesai (${i}/${qty})`;
             
             // Beri nafas pada browser agar UI Progress Bar bisa terupdate
             await new Promise(r => requestAnimationFrame(r));
         }
         
+        document.body.removeChild(qrTempDiv);
+
         // Kembalikan gaya CSS
         nodeFront.style.transform = oldTransformFront; nodeFront.style.border = '1px solid black'; nodeFront.style.transition = '';
         nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black'; nodeBack.style.transition = '';
         wrapper.style.transform = oldWrapTransform; container.style.overflowY = oldOverflow;
-
+        
         // Siapkan HTML untuk di-print
         let w = stateGlobal[m].kertas.w + "mm"; 
         let h = stateGlobal[m].kertas.h + "mm";
