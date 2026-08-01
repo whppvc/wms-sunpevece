@@ -31,7 +31,11 @@ const currentUser = JSON.parse(localStorage.getItem('user_session')) || {usernam
 
 window.tutupModalPinGlobal = function() {
     document.getElementById('modal-pin-global').classList.add('hidden');
-    document.getElementById('overlay-klik-luar').classList.add('hidden');
+    
+    // Hanya tutup overlay jika modal pencarian juga sedang tertutup
+    if(document.getElementById('modal-search').classList.contains('hidden')) {
+        document.getElementById('overlay-klik-luar').classList.add('hidden');
+    }
     pendingAction = null;
 };
 
@@ -823,12 +827,19 @@ window.bukaModalTambahMaster = function() {
     document.getElementById('modal-tambah-master').classList.remove('hidden');
 };
 
-// REVISI: Validasi PIN ke Supabase
+// REVISI: Fungsi validasi PIN terpusat dan sangat aman terhadap tipe data
 async function validatePin(inputPin) {
     try {
-        const { data, error } = await db.from('master_pin').select('pin').eq('kategori', 'cetak label').single();
+        // Gunakan ilike agar tidak case-sensitive pada kategori
+        const { data, error } = await db.from('master_pin')
+            .select('pin')
+            .ilike('kategori', 'cetak label') 
+            .single();
+            
         if (error) throw error;
-        return data && data.pin === inputPin;
+        
+        // Konversi ke string dan hapus spasi untuk memastikan kecocokan 100%
+        return data && String(data.pin).trim() === String(inputPin).trim();
     } catch (e) {
         console.error("Error validating PIN:", e);
         return false;
@@ -846,9 +857,9 @@ window.simpanDataMasterBaru = async function() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
 
     try {
-        // Validasi PIN ke Supabase
+        // Gunakan fungsi validasi terpusat
         const isPinValid = await validatePin(pin);
-        if(!isPinValid) throw new Error("⛔ PIN SALAH!");
+        if(!isPinValid) throw new Error("⛔ PIN SALAH! Silakan periksa kembali PIN Anda.");
 
         // Mapping Kolom Database
         let colNama = '';
@@ -1240,22 +1251,42 @@ function mintaPin(title, callback) {
 
 // REVISI: Validasi PIN Global ke Supabase
 window.eksekusiPinGlobal = async function() {
-    let pin = document.getElementById('input-pin-global').value;
+    let pinInput = document.getElementById('input-pin-global');
+    let pin = pinInput.value;
+    
     if(!pin) return alert("Masukkan PIN!");
 
-    try {
-        const { data, error } = await db.from('master_pin').select('pin').eq('kategori', 'cetak label').single();
-        if (error || !data) throw new Error("Gagal memverifikasi PIN ke server.");
+    // Berikan efek loading pada tombol
+    const btn = document.querySelector('#modal-pin-global button.bg-rose-600');
+    const oriText = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4 inline-block"></i> Memeriksa...';
+    btn.disabled = true;
+    lucide.createIcons();
 
-        if (data.pin === pin) {
+    try {
+        const isPinValid = await validatePin(pin);
+
+        if (isPinValid) {
             document.getElementById('modal-pin-global').classList.add('hidden');
-            document.getElementById('overlay-klik-luar').classList.add('hidden');
+            
+            // Cek apakah modal pencarian sedang terbuka. Jika tidak, tutup overlay.
+            if(document.getElementById('modal-search').classList.contains('hidden')) {
+                document.getElementById('overlay-klik-luar').classList.add('hidden');
+            }
+            
+            pinInput.value = ''; // Bersihkan input setelah sukses
             if(pendingAction) pendingAction();
         } else {
-            alert("⛔ PIN SALAH!");
+            alert("⛔ PIN SALAH! Silakan periksa kembali PIN Anda.");
+            pinInput.value = ''; // Bersihkan input jika salah
+            pinInput.focus();
         }
     } catch (e) {
-        alert(e.message);
+        alert("Terjadi kesalahan sistem: " + e.message);
+    } finally {
+        btn.innerHTML = oriText;
+        btn.disabled = false;
+        lucide.createIcons();
     }
 };
 
