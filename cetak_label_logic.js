@@ -1,10 +1,12 @@
 // ============================================================================
-// WMS SUNPEVECE - CETAK LABEL ENGINE (PLAFON & LIS)
+// WMS SUNPEVECE - CETAK LABEL ENGINE (REFACTORED & SUPABASE INTEGRATED)
 // ============================================================================
 
-let currentMode = 'plafon'; 
-let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [] };
+let currentMode = 'plafon'; // plafon (Plafon & Lis), khusus
+let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [], lis: [] };
+let isInfoLocked = true; // State Kunci Elemen Informasi Bawah
 
+// State Global untuk Canvas (Posisi, Font, Visibilitas)
 const createBasePos = () => ({ x: 0, y: 0 });
 const baseVis = { qr: true, barcode: true, nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
 const baseVisBack = { nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
@@ -23,11 +25,15 @@ let activeSelection = { m: null, elements: [] };
 let isDragging = false, dragStartX = 0, dragStartY = 0, dragInitialPos = {};
 let pendingAction = null;
 
+// State Modal Search
 let currentSearchType = ''; 
 let selectedSearchData = { nama: '', kode: '' };
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', password: ''};
 
+// ==========================================
+// 1. INISIALISASI & SUPABASE FETCH
+// ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     await initModernLayout({ id: 'cetak_label', title: 'CETAK LABEL BARCODE', url: 'cetak_label.html' });
     initKeyboardGlobal();
@@ -37,8 +43,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadMasterData() {
     try {
-        const { data, error } = await db.from('master_2').select('*');
-        if (error) throw error;
+        const [resM2, resLis] = await Promise.all([
+            db.from('master_2').select('*'),
+            db.from('master_lis').select('*')
+        ]);
+
+        if (resM2.error) throw resM2.error;
+        const data = resM2.data || [];
 
         const getUnique = (keyName, keyCode) => {
             let map = new Map();
@@ -57,12 +68,46 @@ async function loadMasterData() {
         masterData.dus = getUnique('dus', 'kode_dus');
         masterData.customer = getUnique('customer', 'kode_customer');
 
+        if (!resLis.error && resLis.data) {
+            masterData.lis = resLis.data;
+        }
+
     } catch (e) {
         console.error("Gagal memuat master data:", e);
         alert("Gagal terhubung ke database master!");
     }
 }
 
+// ==========================================
+// HELPER LOOKUP QTY DUS / BOX
+// ==========================================
+function getIsiBoxText(jenisItem, namaItem) {
+    let j = (jenisItem || '').trim();
+    let n = (namaItem || '').trim().toUpperCase();
+
+    if (j === 'Plafon') return "Qty: 15";
+
+    if (j === 'Lis') {
+        if (masterData.lis && masterData.lis.length > 0) {
+            let found = masterData.lis.find(l => (l.nama_item_lis || l.nama_item || '').trim().toUpperCase() === n);
+            if (found && found.qty_isi) {
+                return `Qty: ${found.qty_isi}`;
+            }
+        }
+        // Fallback aturan default jika tidak ditemukan di tabel master_lis
+        if (n.includes('PROFILE IV') || n.includes('PROFILE V')) return "Qty: 60";
+        if (n.includes('PROFILE II')) return "Qty: 48";
+        if (n.includes('PROFILE I')) return "Qty: 140";
+        if (n.includes('CONNECTOR')) return "Qty: 80";
+        return "Qty: 24";
+    }
+
+    return "Qty: -";
+}
+
+// ==========================================
+// 2. UI RENDERER (DRY PRINCIPLE)
+// ==========================================
 function switchMode(mode) {
     currentMode = mode;
     renderForm();
@@ -376,10 +421,21 @@ function ubahZoom(step) {
 }
 
 // ==========================================
-// 4. DRAG & DROP ENGINE
+// 4. DRAG & DROP ENGINE (DENGAN SECURITY PIN LOCK)
 // ==========================================
 window.startDrag = function(elementKey, event, isBack = false) {
     event.preventDefault();
+
+    // REVISI: Penguncian Elemen Informasi Bawah (Ukuran, Tgl, Mesin, Shift, PO, Dus, Isi)
+    const infoElements = ['ukuran', 'mesin', 'shift', 'tanggal', 'po', 'dus', 'isi'];
+    if (infoElements.includes(elementKey) && isInfoLocked) {
+        mintaPin("Buka Kunci Pengaturan Ukuran & Posisi Info", () => {
+            isInfoLocked = false;
+            alert("🔓 Kunci berhasil dibuka! Anda sekarang dapat mengatur posisi dan font elemen informasi.");
+        });
+        return;
+    }
+
     let m = currentMode + (isBack ? '_back' : '');
     let idSfx = isBack ? '-back' : '';
     let elId = elementKey === 'qr' ? 'qr-wrapper' : `el-${elementKey}${idSfx}`;
@@ -808,7 +864,7 @@ window.hapusDataMaster = async function() {
 };
 
 // ==========================================
-// 8. GENERATE BARCODE & PRINT (OPTIMIZED HIGH SPEED)
+// 8. GENERATE BARCODE & PRINT
 // ==========================================
 const findKode = (type, name) => {
     if (!name) return "";
@@ -857,7 +913,10 @@ window.generateLabel = function() {
     let hasilPanjang = Math.round(parseFloat(panjang.replace(',', '.')) * 100) || 0;
     let shiftAngka = shift.replace(/\D/g, '');
     let tglStr = `${String(dObj.getDate()).padStart(2, '0')}/${String(dObj.getMonth() + 1).padStart(2, '0')}/${dObj.getFullYear()}`;
-    let isiStr = jenis === 'Plafon' ? "Qty: 15" : "Qty: -"; 
+    
+    // REVISI: Menggunakan getIsiBoxText() dengan Lookup ke tabel master_lis
+    let isiStr = getIsiBoxText(jenis, item);
+    
     let shiftStr = shiftAngka ? "S" + shiftAngka : "";
     let poStr = jenis === 'Lis' ? "P49" : po;
 
@@ -889,10 +948,7 @@ window.generateLabel = function() {
     return true;
 };
 
-// REVISI OPTIMASI HIGH-SPEED & ANTI-POPUP BLOCKED:
-// 1. window.open dipanggil di awal (SINKRON) untuk mencegah blokir popup.
-// 2. Indikator progres real-time (%) ditampilkan langsung di dalam tab cetak yang baru.
-// 3. Matikan sementara transisi CSS & hilangkan tag <img> buatan qrcode.js agar html2canvas berjalan kilat (~30ms/label).
+// OPTIMASI HIGH-SPEED & ANTI-POPUP BLOCKED
 window.cetakLabel = async function() {
     let m = currentMode;
     let qty = parseInt(document.getElementById(`${m}-qty`).value) || 1;
@@ -902,7 +958,6 @@ window.cetakLabel = async function() {
     document.querySelectorAll('.click-edit').forEach(el => el.classList.remove('active-edit'));
     document.getElementById('context-panel').classList.add('hidden');
 
-    // 1. BUKA WINDOW PRINT SINKRON DI AWAL KETIKA EVENT KLIK MASIH AKTIF (ANTI-POPUP BLOCKED)
     let pWin = window.open('about:blank', '_blank');
     if(!pWin) {
         alert("Popup diblokir oleh browser! Silakan izinkan pop-up (Always allow pop-ups) di address bar atas, lalu coba lagi.");
@@ -910,7 +965,6 @@ window.cetakLabel = async function() {
         return;
     }
     
-    // Tulis tampilan loading + Progress Bar di tab baru
     let w = stateGlobal[m].kertas.w + "mm"; 
     let h = stateGlobal[m].kertas.h + "mm";
     pWin.document.write(`
@@ -975,11 +1029,9 @@ window.cetakLabel = async function() {
         let isRevisi = document.getElementById(`${m}-cb-revisi`)?.checked;
         let suffixRevisi = isRevisi ? " N" : "";
 
-        // Matikan transisi CSS sementara pada canvas untuk memaksimalkan kecepatan html2canvas
         nodeFront.style.transition = 'none';
         nodeBack.style.transition = 'none';
 
-        // Render Back Canvas HANYA 1 KALI SEBELUM LOOPING!
         let canvasBack = await html2canvas(nodeBack, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
         let imgBackBase64 = canvasBack.toDataURL("image/png", 1.0);
 
@@ -994,7 +1046,6 @@ window.cetakLabel = async function() {
             let qrEl = document.getElementById('qrcode'); qrEl.innerHTML = "";
             new QRCode(qrEl, { text: fullBarcode, width: 150, height: 150, correctLevel : QRCode.CorrectLevel.L });
             
-            // Hapus tag <img> buatan QRCode.js agar html2canvas tidak terhambat async image load
             let imgTag = qrEl.querySelector('img');
             if (imgTag) imgTag.remove();
             let canvasTag = qrEl.querySelector('canvas');
@@ -1004,7 +1055,6 @@ window.cetakLabel = async function() {
                 canvasTag.style.display = 'block';
             }
 
-            // Update real-time progress di tab pWin
             let pct = Math.round((currentRenderCount / qty) * 100);
             if (pWin && !pWin.closed && pWin.document) {
                 let elTxt = pWin.document.getElementById('prog-txt');
@@ -1019,7 +1069,7 @@ window.cetakLabel = async function() {
             let imgFrontBase64 = canvasFront.toDataURL("image/png", 1.0);
             
             sequenceImages.push(imgFrontBase64);
-            sequenceImages.push(imgBackBase64); // Gunakan kembali hasil render back yang sudah siap
+            sequenceImages.push(imgBackBase64);
             
             btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${currentRenderCount}/${qty}`;
             currentRenderCount++;
@@ -1038,7 +1088,6 @@ window.cetakLabel = async function() {
             });
         }
         
-        // Kembalikan gaya CSS
         nodeFront.style.transform = oldTransformFront; nodeFront.style.border = '1px solid black'; nodeFront.style.transition = '';
         nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black'; nodeBack.style.transition = '';
         wrapper.style.transform = oldWrapTransform; container.style.overflowY = oldOverflow;
@@ -1048,7 +1097,6 @@ window.cetakLabel = async function() {
             if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
         }
 
-        // TULIS HASIL RENDER GAMBAR KE TAB PWIN LALU BUKA WINDOW PRINT
         pWin.document.open();
         pWin.document.write(`<html><head><title>Print Label</title><style>
             @page { size: ${w} ${h}; margin: 0; }
@@ -1115,3 +1163,4 @@ function penangananKeyboardEvent(e) {
         if(stateGlobal[m].pos[k]) { stateGlobal[m].pos[k].x += x; stateGlobal[m].pos[k].y += y; updateTransform(k, activeSelection.isBack); } 
     }); 
 }
+
