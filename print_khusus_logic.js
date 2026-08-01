@@ -22,50 +22,99 @@ modes.forEach(m => historyStack[m] = { undo: [], redo: [] });
 
 let activeSelection = { m: null, elements: [] };
 let isDragging = false, dragStartX = 0, dragStartY = 0, dragInitialPos = {};
+let pendingAction = null;
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', password: ''};
 
+// REVISI: Fungsi Menutup Modal PIN Global dengan Sempurna
+window.tutupModalPinGlobal = function() {
+    document.getElementById('modal-pin-global').classList.add('hidden');
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
+    pendingAction = null;
+};
+
+window.tutupSemuaPopups = function() {
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
+    document.getElementById('modal-pin-global').classList.add('hidden');
+    pendingAction = null;
+};
+
+// ==========================================
+// 1. INISIALISASI & SUPABASE FETCH
+// ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
-    await initModernLayout({ id: 'print_khusus', title: 'CETAK LABEL KHUSUS', url: 'print_khusus.html' });
+    try {
+        await initModernLayout({ id: 'print_khusus', title: 'CETAK LABEL KHUSUS', url: 'print_khusus.html' });
+    } catch(e) { console.error("Layout init:", e); }
+
     initKeyboardGlobal();
-    await loadMasterData();
+
+    // REVISI: LANGSUNG RENDER UI DI AWAL AGAR TIDAK BLANK
     switchMode('khusus'); 
+
+    // LOAD DATA MASTER SEPANJANG DI BACKGROUND DENGAN CRASH-PROOF WRAPPER
+    await loadMasterData();
 });
 
 async function loadMasterData() {
     try {
-        const [resM2, resLis] = await Promise.all([
-            db.from('master_2').select('*'),
-            db.from('master_lis').select('*')
-        ]);
+        const { data, error } = await db.from('master_2').select('*');
+        if (!error && data) {
+            const getUnique = (keyName, keyCode) => {
+                let map = new Map();
+                data.forEach(r => {
+                    if (r[keyName] && String(r[keyName]).trim() !== '') {
+                        map.set(String(r[keyName]).trim().toUpperCase(), { nama: String(r[keyName]).trim(), kode: r[keyCode] || '' });
+                    }
+                });
+                return Array.from(map.values()).sort((a, b) => a.nama.localeCompare(b.nama));
+            };
 
-        if (resM2.error) throw resM2.error;
-        const data = resM2.data || [];
-
-        const getUnique = (keyName, keyCode) => {
-            let map = new Map();
-            data.forEach(r => {
-                if (r[keyName] && r[keyName].trim() !== '') {
-                    map.set(r[keyName].trim().toUpperCase(), { nama: r[keyName].trim(), kode: r[keyCode] || '' });
-                }
-            });
-            return Array.from(map.values()).sort((a, b) => a.nama.localeCompare(b.nama));
-        };
-
-        masterData.mesin = getUnique('mesin', 'kode_mesin');
-        masterData.shift = getUnique('shift', 'kode_shift');
-        masterData.item = getUnique('nama_item', 'kode_nama_item');
-        masterData.grade = getUnique('grade', 'kode_grade');
-        masterData.dus = getUnique('dus', 'kode_dus');
-        masterData.customer = getUnique('customer', 'kode_customer');
-
-        if (!resLis.error && resLis.data) {
-            masterData.lis = resLis.data;
+            masterData.mesin = getUnique('mesin', 'kode_mesin');
+            masterData.shift = getUnique('shift', 'kode_shift');
+            masterData.item = getUnique('nama_item', 'kode_nama_item');
+            masterData.grade = getUnique('grade', 'kode_grade');
+            masterData.dus = getUnique('dus', 'kode_dus');
+            masterData.customer = getUnique('customer', 'kode_customer');
         }
-
     } catch (e) {
-        console.error("Gagal memuat master data:", e);
+        console.error("Gagal memuat master_2:", e);
     }
+
+    try {
+        const { data: resLis, error: errLis } = await db.from('master_lis').select('*');
+        if (!errLis && resLis) {
+            masterData.lis = resLis;
+        }
+    } catch(e) {
+        console.error("Gagal memuat master_lis (opsional):", e);
+    }
+}
+
+// ==========================================
+// HELPER LOOKUP QTY DUS / BOX
+// ==========================================
+function getIsiBoxText(jenisItem, namaItem) {
+    let j = (jenisItem || '').trim();
+    let n = (namaItem || '').trim().toUpperCase();
+
+    if (j === 'Plafon') return "Qty: 15";
+
+    if (j === 'Lis') {
+        if (masterData.lis && masterData.lis.length > 0) {
+            let found = masterData.lis.find(l => (l.nama_item_lis || l.nama_item || '').trim().toUpperCase() === n);
+            if (found && found.qty_isi) {
+                return `Qty: ${found.qty_isi}`;
+            }
+        }
+        if (n.includes('PROFILE IV') || n.includes('PROFILE V')) return "Qty: 60";
+        if (n.includes('PROFILE II')) return "Qty: 48";
+        if (n.includes('PROFILE I')) return "Qty: 140";
+        if (n.includes('CONNECTOR')) return "Qty: 80";
+        return "Qty: 24";
+    }
+
+    return "Qty: -";
 }
 
 function switchMode(mode) {
@@ -112,7 +161,7 @@ function renderForm() {
             <input type="number" id="k-qty" value="1" min="1" class="w-full p-2 text-base border border-slate-300 rounded outline-none focus:border-emerald-600 font-bold text-center bg-white text-slate-900">
         </div>
     `;
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function renderSettings() {
@@ -801,7 +850,7 @@ window.generateLabel = function() {
     return true;
 };
 
-// CETAK KHUSUS HIGH-SPEED & ANTI-POPUP BLOCKED
+// CETAK KHUSUS HIGH-SPEED
 window.cetakLabel = async function() {
     let m = currentMode;
     let qty = parseInt(document.getElementById('k-qty').value) || 1;
