@@ -30,7 +30,6 @@
         .active-edit { outline: 2px solid #2563eb !important; background-color: rgba(37,99,235,0.15) !important; z-index: 10; }
         .hidden-element { display: none !important; }
 
-        /* CSS Slider Vertikal Presisi Panjang 140px & Anti Bentrok Global.js */
         .slider-wrapper {
             width: 28px;
             height: 140px; 
@@ -209,7 +208,8 @@
             <h3 class="text-lg font-black mb-4 text-slate-800 flex items-center justify-center gap-2"><i data-lucide="lock" class="text-rose-600"></i> <span id="pin-global-title">Otorisasi Dibutuhkan</span></h3>
             <input type="password" id="input-pin-global" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-rose-600 font-black text-center text-xl text-slate-800 bg-slate-50 mb-4 tracking-[0.5em]" placeholder="•••••">
             <div class="flex gap-2">
-                <button type="button" onclick="document.getElementById('modal-pin-global').classList.add('hidden')" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase hover:bg-slate-300 transition">Batal</button>
+                <!-- REVISI: Menggunakan fungsi tutupModalPinGlobal() agar overlay buram ikut ditutup -->
+                <button type="button" onclick="tutupModalPinGlobal()" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase hover:bg-slate-300 transition">Batal</button>
                 <button type="button" onclick="eksekusiPinGlobal()" class="w-1/2 py-3 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 border-b-4 border-rose-800">Lanjut</button>
             </div>
         </div>
