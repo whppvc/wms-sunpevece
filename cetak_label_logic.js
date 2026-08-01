@@ -2,10 +2,11 @@
 // WMS SUNPEVECE - CETAK LABEL ENGINE (REFACTORED & SUPABASE INTEGRATED)
 // ============================================================================
 
-let currentMode = 'plafon'; 
+let currentMode = 'plafon'; // plafon (Plafon & Lis), khusus
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [], lis: [] };
-let isInfoLocked = true; 
+let isInfoLocked = true; // State Kunci Elemen Informasi Bawah
 
+// State Global untuk Canvas (Posisi, Font, Visibilitas)
 const createBasePos = () => ({ x: 0, y: 0 });
 const baseVis = { qr: true, barcode: true, nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
 const baseVisBack = { nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
@@ -24,11 +25,13 @@ let activeSelection = { m: null, elements: [] };
 let isDragging = false, dragStartX = 0, dragStartY = 0, dragInitialPos = {};
 let pendingAction = null;
 
+// State Modal Search
 let currentSearchType = ''; 
 let selectedSearchData = { nama: '', kode: '' };
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', password: ''};
 
+// REVISI: Fungsi Menutup Modal PIN Global dengan Sempurna
 window.tutupModalPinGlobal = function() {
     document.getElementById('modal-pin-global').classList.add('hidden');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
@@ -52,44 +55,47 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch(e) { console.error("Layout init:", e); }
     
     initKeyboardGlobal();
+    
+    // LANGSUNG RENDER UI DI AWAL AGAR TIDAK BLANK
     switchMode('plafon'); 
+
+    // LOAD DATA MASTER SEPANJANG DI BACKGROUND DENGAN CRASH-PROOF WRAPPER
     await loadMasterData();
-    renderForm();
+    renderForm(); // Re-populate dropdowns
 });
 
 async function loadMasterData() {
     try {
-        const [resM2, resLis] = await Promise.all([
-            db.from('master_2').select('*'),
-            db.from('master_lis').select('*')
-        ]);
+        const { data, error } = await db.from('master_2').select('*');
+        if (!error && data) {
+            const getUnique = (keyName, keyCode) => {
+                let map = new Map();
+                data.forEach(r => {
+                    if (r[keyName] && String(r[keyName]).trim() !== '') {
+                        map.set(String(r[keyName]).trim().toUpperCase(), { nama: String(r[keyName]).trim(), kode: r[keyCode] || '' });
+                    }
+                });
+                return Array.from(map.values()).sort((a, b) => a.nama.localeCompare(b.nama));
+            };
 
-        if (resM2.error) throw resM2.error;
-        const data = resM2.data || [];
-
-        const getUnique = (keyName, keyCode) => {
-            let map = new Map();
-            data.forEach(r => {
-                if (r[keyName] && String(r[keyName]).trim() !== '') {
-                    map.set(String(r[keyName]).trim().toUpperCase(), { nama: String(r[keyName]).trim(), kode: r[keyCode] || '' });
-                }
-            });
-            return Array.from(map.values()).sort((a, b) => a.nama.localeCompare(b.nama));
-        };
-
-        masterData.mesin = getUnique('mesin', 'kode_mesin');
-        masterData.shift = getUnique('shift', 'kode_shift');
-        masterData.item = getUnique('nama_item', 'kode_nama_item');
-        masterData.grade = getUnique('grade', 'kode_grade');
-        masterData.dus = getUnique('dus', 'kode_dus');
-        masterData.customer = getUnique('customer', 'kode_customer');
-
-        if (!resLis.error && resLis.data) {
-            masterData.lis = resLis.data;
+            masterData.mesin = getUnique('mesin', 'kode_mesin');
+            masterData.shift = getUnique('shift', 'kode_shift');
+            masterData.item = getUnique('nama_item', 'kode_nama_item');
+            masterData.grade = getUnique('grade', 'kode_grade');
+            masterData.dus = getUnique('dus', 'kode_dus');
+            masterData.customer = getUnique('customer', 'kode_customer');
         }
-
     } catch (e) {
-        console.error("Gagal memuat master data:", e);
+        console.error("Gagal memuat master_2:", e);
+    }
+
+    try {
+        const { data: resLis, error: errLis } = await db.from('master_lis').select('*');
+        if (!errLis && resLis) {
+            masterData.lis = resLis;
+        }
+    } catch(e) {
+        console.error("Gagal memuat master_lis (opsional):", e);
     }
 }
 
@@ -109,6 +115,7 @@ function getIsiBoxText(jenisItem, namaItem) {
                 return `Qty: ${found.qty_isi}`;
             }
         }
+        // Fallback aturan default jika tidak ditemukan di tabel master_lis
         if (n.includes('PROFILE IV') || n.includes('PROFILE V')) return "Qty: 60";
         if (n.includes('PROFILE II')) return "Qty: 48";
         if (n.includes('PROFILE I')) return "Qty: 140";
@@ -218,7 +225,7 @@ function renderForm() {
             <input type="number" id="${m}-qty" value="1" min="1" class="w-full p-2 text-base border border-slate-300 rounded outline-none focus:border-blue-600 font-bold text-center bg-white text-slate-900">
         </div>
     `;
-    if(typeof lucide !== 'undefined') lucide.createIcons();
+    lucide.createIcons();
 }
 
 function updateShading() {
@@ -880,7 +887,7 @@ window.hapusDataMaster = async function() {
 };
 
 // ==========================================
-// 8. GENERATE BARCODE & PRINT (ULTRA FAST COMPOSITE ENGINE)
+// 8. GENERATE BARCODE & PRINT
 // ==========================================
 const findKode = (type, name) => {
     if (!name) return "";
@@ -929,7 +936,9 @@ window.generateLabel = function() {
     let hasilPanjang = Math.round(parseFloat(panjang.replace(',', '.')) * 100) || 0;
     let shiftAngka = shift.replace(/\D/g, '');
     let tglStr = `${String(dObj.getDate()).padStart(2, '0')}/${String(dObj.getMonth() + 1).padStart(2, '0')}/${dObj.getFullYear()}`;
+    
     let isiStr = getIsiBoxText(jenis, item);
+    
     let shiftStr = shiftAngka ? "S" + shiftAngka : "";
     let poStr = jenis === 'Lis' ? "P49" : po;
 
@@ -961,7 +970,7 @@ window.generateLabel = function() {
     return true;
 };
 
-// REVISI OPTIMASI ULTRA FAST (ALGORITMA 2D CANVAS COMPOSITE)
+// REVISI: OPTIMASI ULTRA FAST DENGAN CANVAS 2D COMPOSITE & MANUAL TEXT WRAP
 window.cetakLabel = async function() {
     let m = currentMode;
     let qty = parseInt(document.getElementById(`${m}-qty`).value) || 1;
@@ -970,6 +979,36 @@ window.cetakLabel = async function() {
 
     document.querySelectorAll('.click-edit').forEach(el => el.classList.remove('active-edit'));
     document.getElementById('context-panel').classList.add('hidden');
+
+    let pWin = window.open('about:blank', '_blank');
+    if(!pWin) {
+        alert("Popup diblokir oleh browser! Silakan izinkan pop-up (Always allow pop-ups) di address bar atas, lalu coba lagi.");
+        btnCetak.innerHTML = '<i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label'; btnCetak.disabled = false;
+        return;
+    }
+    
+    let w = stateGlobal[m].kertas.w + "mm"; 
+    let h = stateGlobal[m].kertas.h + "mm";
+    pWin.document.write(`
+        <html><head><title>Mencetak Label...</title>
+        <style>
+            body { font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #0f172a; color: #ffffff; }
+            .card { background: #1e293b; padding: 28px 36px; border-radius: 16px; border: 1px solid #334155; text-align: center; width: 320px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+            .title { font-size: 13px; font-weight: 800; margin-bottom: 6px; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; }
+            .subtitle { font-size: 16px; font-weight: 800; color: #38bdf8; margin-bottom: 16px; }
+            .progress-bg { width: 100%; height: 10px; background: #334155; border-radius: 5px; overflow: hidden; margin-bottom: 10px; }
+            .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #2563eb, #06b6d4); border-radius: 5px; transition: width 0.05s ease-out; }
+            .status-detail { font-size: 12px; font-weight: 700; color: #cbd5e1; }
+        </style>
+        </head><body>
+            <div class="card">
+                <div class="title">WMS SUNPEVECE</div>
+                <div class="subtitle" id="prog-txt">Menyiapkan Render...</div>
+                <div class="progress-bg"><div class="progress-fill" id="prog-bar"></div></div>
+                <div class="status-detail" id="prog-detail">0% Selesai</div>
+            </div>
+        </body></html>
+    `);
 
     let item = document.getElementById(`${m}-item`).value;
     let panjang = document.getElementById(`${m}-panjang`).value.trim().toUpperCase();
@@ -1079,12 +1118,40 @@ window.cetakLabel = async function() {
                 ctx.drawImage(qrSourceCanvas, qrX, qrY, qrW, qrH); // Tempel QR Code
             }
 
-            // Tulis Teks Barcode
+            // Tulis Teks Barcode (Dengan Manual Text Wrap)
             ctx.font = `bold ${bcFontSize}px monospace, sans-serif`;
             ctx.fillStyle = '#000000';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
-            ctx.fillText(fullBarcode, bcX + (bcW / 2), bcY);
+            
+            let isWrapOn = stateGlobal[m].wrap.barcode_cb;
+            
+            if (isWrapOn) {
+                let maxWidth = bcW; 
+                let lineHeight = bcFontSize * 1.2; 
+                let lines = [];
+                let currentLine = '';
+
+                for (let j = 0; j < fullBarcode.length; j++) {
+                    let char = fullBarcode[j];
+                    let testLine = currentLine + char;
+                    let metrics = ctx.measureText(testLine);
+                    
+                    if (metrics.width > maxWidth && j > 0) {
+                        lines.push(currentLine);
+                        currentLine = char;
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+                lines.push(currentLine);
+
+                lines.forEach((line, index) => {
+                    ctx.fillText(line, bcX + (bcW / 2), bcY + (index * lineHeight));
+                });
+            } else {
+                ctx.fillText(fullBarcode, bcX + (bcW / 2), bcY);
+            }
 
             let imgFrontBase64 = offCanvas.toDataURL("image/png");
             sequenceImages.push(imgFrontBase64);
@@ -1092,6 +1159,16 @@ window.cetakLabel = async function() {
 
             let currentRenderCount = i - startSerial + 1;
             let pct = Math.round((currentRenderCount / qty) * 100);
+            
+            if (pWin && !pWin.closed && pWin.document) {
+                let elTxt = pWin.document.getElementById('prog-txt');
+                let elBar = pWin.document.getElementById('prog-bar');
+                let elDetail = pWin.document.getElementById('prog-detail');
+                if (elTxt) elTxt.innerText = `Merender Label ${currentRenderCount} dari ${qty}`;
+                if (elBar) elBar.style.width = pct + '%';
+                if (elDetail) elDetail.innerText = `${pct}% Selesai`;
+            }
+
             btnCetak.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Render: ${currentRenderCount}/${qty} (${pct}%)`;
 
             payloadDB.push({
@@ -1122,17 +1199,8 @@ window.cetakLabel = async function() {
             if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
         }
 
-        // BUKA TAB BARU SECARA SINKRON DAN MURNI DI AKHIR KETIKA HASIL SUDAH 100% SELESAI
-        let pWin = window.open('', '_blank');
-        if(!pWin) {
-            alert("Popup diblokir oleh browser! Silakan izinkan pop-up (Always allow pop-ups) di address bar atas, lalu coba lagi.");
-            btnCetak.innerHTML = '<i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label'; btnCetak.disabled = false;
-            return;
-        }
-
-        let w = stateGlobal[m].kertas.w + "mm"; 
-        let h = stateGlobal[m].kertas.h + "mm";
-
+        // TULIS HASIL RENDER KE WINDOW PRINT YANG SUDAH DIBUKA DARI AWAL
+        pWin.document.open();
         pWin.document.write(`<html><head><title>Print Label</title><style>
             @page { size: ${w} ${h}; margin: 0; }
             body { margin: 0; padding: 20px; background: #525659; display: flex; flex-direction: column; align-items: center; gap: 20px; }
@@ -1149,9 +1217,10 @@ window.cetakLabel = async function() {
         setTimeout(() => { pWin.focus(); pWin.print(); }, 100);
 
     } catch(e) {
+        if(pWin && !pWin.closed) pWin.close();
         alert("Terjadi kesalahan: " + e.message);
     } finally {
-        btnCetak.innerHTML = '<i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label'; btnCetak.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons();
+        btnCetak.innerHTML = '<i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label'; btnCetak.disabled = false; lucide.createIcons();
     }
 };
 
@@ -1197,3 +1266,4 @@ function penangananKeyboardEvent(e) {
         if(stateGlobal[m].pos[k]) { stateGlobal[m].pos[k].x += x; stateGlobal[m].pos[k].y += y; updateTransform(k, activeSelection.isBack); } 
     }); 
 }
+
