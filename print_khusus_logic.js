@@ -2,6 +2,8 @@
 // WMS SUNPEVECE - CETAK LABEL KHUSUS ENGINE (STANDALONE)
 // ============================================================================
 
+const PIN_CATEGORY = 'Cetak Label Khusus'; // Kategori PIN di tabel master_pin
+
 let currentMode = 'khusus'; 
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [], lis: [] };
 let isInfoLocked = true; 
@@ -24,16 +26,25 @@ let activeSelection = { m: null, elements: [] };
 let isDragging = false, dragStartX = 0, dragStartY = 0, dragInitialPos = {};
 let pendingAction = null;
 
+let currentSearchType = ''; 
+let selectedSearchData = { nama: '', kode: '' };
+
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', password: ''};
 
 window.tutupModalPinGlobal = function() {
     document.getElementById('modal-pin-global').classList.add('hidden');
-    document.getElementById('overlay-klik-luar').classList.add('hidden');
+    
+    // Hanya tutup overlay jika modal pencarian juga sedang tertutup
+    if(document.getElementById('modal-search').classList.contains('hidden')) {
+        document.getElementById('overlay-klik-luar').classList.add('hidden');
+    }
     pendingAction = null;
 };
 
 window.tutupSemuaPopups = function() {
     document.getElementById('overlay-klik-luar').classList.add('hidden');
+    document.getElementById('modal-search').classList.add('hidden');
+    document.getElementById('modal-tambah-master').classList.add('hidden');
     document.getElementById('modal-pin-global').classList.add('hidden');
     pendingAction = null;
 };
@@ -47,11 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch(e) { console.error("Layout init:", e); }
 
     initKeyboardGlobal();
-    
-    // LANGSUNG RENDER UI DI AWAL AGAR TIDAK BLANK
     switchMode('khusus'); 
-
-    // LOAD DATA MASTER SEPANJANG DI BACKGROUND DENGAN CRASH-PROOF WRAPPER
     await loadMasterData();
 });
 
@@ -91,9 +98,6 @@ async function loadMasterData() {
     }
 }
 
-// ==========================================
-// HELPER LOOKUP QTY DUS / BOX
-// ==========================================
 function getIsiBoxText(jenisItem, namaItem) {
     let j = (jenisItem || '').trim();
     let n = (namaItem || '').trim().toUpperCase();
@@ -681,166 +685,238 @@ function loadSetDefault(m) {
 }
 
 // ==========================================
-// 8. ALGORITMA PARSING KHUSUS & GENERATE LABEL
+// 7. MODAL SEARCH (PILIH ITEM/MESIN/CUST)
 // ==========================================
-function parseJulianDate(dateCode) {
-    if (!dateCode || dateCode.length < 5) return dateCode || "-";
+window.bukaModalSearch = function(type) {
+    currentSearchType = type;
+    const titleMap = { 'item': 'Nama Item', 'mesin': 'Mesin', 'customer': 'Customer', 'dus': 'Merk / Dus' };
+    document.getElementById('title-modal-search').innerText = `Cari ${titleMap[type]}`;
+    document.getElementById('title-tambah-master').innerText = titleMap[type];
+    
+    document.getElementById('input-search-list').value = '';
+    renderSearchList();
+
+    document.getElementById('modal-search').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+    setTimeout(() => document.getElementById('input-search-list').focus(), 100);
+};
+
+window.tutupModalSearch = function() {
+    document.getElementById('modal-search').classList.add('hidden');
+    if(document.getElementById('modal-tambah-master').classList.contains('hidden')) {
+        document.getElementById('overlay-klik-luar').classList.add('hidden');
+    }
+};
+
+function renderSearchList() {
+    const ul = document.getElementById('list-search-result');
+    const dataArr = masterData[currentSearchType] || [];
+    
+    if(dataArr.length === 0) {
+        ul.innerHTML = '<li class="p-4 text-center text-slate-400 font-bold">Data kosong.</li>';
+        return;
+    }
+
+    ul.innerHTML = dataArr.map(d => `
+        <li onclick="selectSearchItem('${d.nama}', '${d.kode}')" class="search-item p-3 border border-slate-200 rounded-lg cursor-pointer transition flex justify-between items-center active:scale-95 active:bg-slate-100">
+            <span class="font-bold text-slate-700">${d.nama}</span>
+            <span class="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded">${d.kode || '-'}</span>
+        </li>
+    `).join('');
+}
+
+window.filterSearchList = function() {
+    const q = document.getElementById('input-search-list').value.toLowerCase();
+    document.querySelectorAll('.search-item').forEach(li => {
+        li.style.display = li.innerText.toLowerCase().includes(q) ? '' : 'none';
+    });
+};
+
+window.selectSearchItem = function(nama, kode) {
+    document.querySelectorAll('.search-item').forEach(li => li.classList.remove('bg-emerald-100', 'border-emerald-400'));
+    event.currentTarget.classList.add('bg-emerald-100', 'border-emerald-400');
+    selectedSearchData = { nama, kode };
+};
+
+window.pilihDataSearch = function() {
+    if(!selectedSearchData.nama) return alert("Pilih data dari daftar terlebih dahulu!");
+    
+    let m = currentMode;
+    let inputId = `${m}-${currentSearchType === 'customer' ? 'po' : currentSearchType}`;
+    let el = document.getElementById(inputId);
+    
+    if(el) {
+        el.value = selectedSearchData.nama;
+        el.setAttribute('data-kode', selectedSearchData.kode);
+    }
+    
+    tutupModalSearch();
+};
+
+window.bukaModalTambahMaster = function() {
+    document.getElementById('input-tambah-nama').value = '';
+    document.getElementById('input-tambah-kode').value = '';
+    document.getElementById('input-tambah-pin').value = '';
+    document.getElementById('modal-tambah-master').classList.remove('hidden');
+};
+
+// REVISI: Validasi PIN ke Supabase
+async function validatePin(inputPin) {
     try {
-        let dayNum = parseInt(dateCode.substring(0, 3));
-        let yrRaw = dateCode.substring(3, 5); 
-        let yrRev = yrRaw.split('').reverse().join(''); 
-        let fullYear = parseInt("20" + yrRev); 
-
-        if (isNaN(dayNum) || isNaN(fullYear)) return dateCode;
-
-        let dateObj = new Date(fullYear, 0, 1);
-        dateObj.setDate(dayNum); 
-
-        let dd = String(dateObj.getDate()).padStart(2, '0');
-        let mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-        let yyyy = dateObj.getFullYear();
-
-        return `${dd}/${mm}/${yyyy}`;
+        const { data, error } = await db.from('master_pin')
+            .select('pin')
+            .ilike('kategori', PIN_CATEGORY) 
+            .single();
+            
+        if (error) throw error;
+        return data && String(data.pin).trim() === String(inputPin).trim();
     } catch (e) {
-        return dateCode;
+        console.error("Error validating PIN:", e);
+        return false;
     }
 }
 
-function parsePanjangNumber(rawPjg) {
-    if (!rawPjg) return "0";
-    let digits = rawPjg.replace(/\D/g, ''); 
-    if (!digits) return "0";
-    if (digits.length === 1) return digits + "00"; 
-    if (digits.length === 2) return digits + "0";  
-    return digits; 
-}
+window.simpanDataMasterBaru = async function() {
+    const nama = document.getElementById('input-tambah-nama').value.trim().toUpperCase();
+    const kode = document.getElementById('input-tambah-kode').value.trim().toUpperCase();
+    const pin = document.getElementById('input-tambah-pin').value;
+
+    if(!nama || !kode || !pin) return alert("Semua kolom wajib diisi!");
+    
+    const btn = document.getElementById('btn-simpan-master'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
+
+    try {
+        // Validasi PIN ke Supabase
+        const isPinValid = await validatePin(pin);
+        if(!isPinValid) throw new Error("⛔ PIN SALAH! Silakan periksa kembali PIN Anda.");
+
+        // Mapping Kolom Database
+        let colNama = '';
+        let colKode = '';
+        if (currentSearchType === 'item') { colNama = 'nama_item'; colKode = 'kode_nama_item'; }
+        else if (currentSearchType === 'mesin') { colNama = 'mesin'; colKode = 'kode_mesin'; }
+        else if (currentSearchType === 'dus') { colNama = 'dus'; colKode = 'kode_dus'; }
+        else if (currentSearchType === 'customer') { colNama = 'customer'; colKode = 'kode_customer'; }
+
+        const payload = { [colNama]: nama, [colKode]: kode };
+        const { error } = await db.from('master_2').insert([payload]);
+        if(error) throw error;
+
+        masterData[currentSearchType].push({ nama, kode });
+        masterData[currentSearchType].sort((a,b) => a.nama.localeCompare(b.nama));
+        
+        alert("Data berhasil ditambahkan!");
+        document.getElementById('modal-tambah-master').classList.add('hidden');
+        renderSearchList();
+
+    } catch(e) {
+        alert(e.message);
+    } finally {
+        btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
+    }
+};
+
+window.hapusDataMaster = async function() {
+    if(!selectedSearchData.nama) return alert("Pilih data yang ingin dihapus dari daftar!");
+    
+    mintaPin(`Hapus '${selectedSearchData.nama}'`, async () => {
+        try {
+            let colNama = '';
+            if (currentSearchType === 'item') colNama = 'nama_item';
+            else if (currentSearchType === 'mesin') colNama = 'mesin';
+            else if (currentSearchType === 'dus') colNama = 'dus';
+            else if (currentSearchType === 'customer') colNama = 'customer';
+
+            const { error } = await db.from('master_2').delete().eq(colNama, selectedSearchData.nama);
+            if(error) throw error;
+
+            masterData[currentSearchType] = masterData[currentSearchType].filter(d => d.nama !== selectedSearchData.nama);
+            alert("Data berhasil dihapus!");
+            selectedSearchData = { nama: '', kode: '' };
+            renderSearchList();
+        } catch(e) {
+            alert("Gagal menghapus: " + e.message);
+        }
+    });
+};
+
+// ==========================================
+// 8. GENERATE BARCODE & PRINT
+// ==========================================
+const findKode = (type, name) => {
+    if (!name) return "";
+    const arr = masterData[type];
+    if (!arr) return "";
+    const found = arr.find(x => x.nama.toUpperCase() === name.toUpperCase());
+    return found && found.kode ? found.kode : ""; 
+};
 
 window.generateLabel = function() {
     let m = currentMode;
-    let str = document.getElementById('k-qr-string').value.trim();
-    let jenis = document.getElementById('k-jenis').value; 
+    let tgl = document.getElementById(`${m}-tgl`).value;
+    let mesin = document.getElementById(`${m}-mesin`).value.trim();
+    let shift = document.getElementById(`${m}-shift`).value.trim();
+    let item = document.getElementById(`${m}-item`).value.trim();
+    let jenis = document.getElementById(`${m}-jenis`).value;
+    let panjang = document.getElementById(`${m}-panjang`).value.trim();
+    let grade = document.getElementById(`${m}-grade`) ? document.getElementById(`${m}-grade`).value.trim() : '';
+    let dus = document.getElementById(`${m}-dus`).value.trim();
+    let shading = document.getElementById(`${m}-shading`).value.trim();
+    let po = document.getElementById(`${m}-po`) ? document.getElementById(`${m}-po`).value.trim() : '';
+    let qty = parseInt(document.getElementById(`${m}-qty`).value);
+
+    if(!item || !panjang || isNaN(qty) || qty < 1) return alert("Nama Item, Panjang, dan Qty wajib diisi dengan benar!");
+
+    let kItem = findKode('item', item);
+    let kMesin = findKode('mesin', mesin);
+    let kShift = findKode('shift', shift);
+    let kDus = findKode('dus', dus);
     
-    if(!str) return alert("Masukkan String QR Code terlebih dahulu!");
+    let kGrade = jenis === 'Lis' ? '1' : findKode('grade', grade);
+    let kPo = jenis === 'Lis' ? 'P49' : findKode('customer', po);
+
+    let pAngka = panjang.replace(/\D/g, ''); 
     
-    let parts = str.split('/');
-    if(parts.length < 4) return alert("Format String QR Code tidak valid! Minimal terdiri dari 4 bagian pisahan garis miring (/).");
+    let dObj = new Date(tgl);
+    let start = new Date(dObj.getFullYear(), 0, 0);
+    let diff = (dObj - start) + ((start.getTimezoneOffset() - dObj.getTimezoneOffset()) * 60 * 1000);
+    let dayStr = String(Math.floor(diff / 86400000)).padStart(3, '0');
+    let yrRev = String(dObj.getFullYear()).slice(-2).split('').reverse().join('');
+    let dateCode = dayStr + yrRev;
     
-    let part0 = parts[0].trim();
-    let part1 = parts[1].trim();
-    let part2 = parts[2].trim();
-    let part3 = parts[3].trim();
+    let bText = `${kItem}/${shading}/${pAngka}${kGrade}${kDus}/${dateCode}${kMesin}${kShift}${kPo}`;
+    stateGlobal[m].barcodeData = bText;
 
-    // A. BAGIAN 0: KODE ITEM
-    let namaItemFound = "-";
-    let itemObj = masterData.item.find(x => x.kode.toUpperCase() === part0.toUpperCase());
-    if (itemObj) {
-        namaItemFound = itemObj.nama;
-    } else {
-        namaItemFound = part0; 
-    }
-
-    // B. BAGIAN 1: SHADING
-    let shadingFound = part1 || "-";
-
-    // C. BAGIAN 2: PANJANG + KODE GRADE + KODE DUS
-    let rem2 = part2;
-    let dusFound = "-";
-    let gradeFound = "-";
-
-    let dusList = [...masterData.dus].sort((a, b) => (b.kode || '').length - (a.kode || '').length);
-    for (let d of dusList) {
-        if (d.kode && rem2.toUpperCase().endsWith(d.kode.toUpperCase())) {
-            dusFound = d.nama;
-            rem2 = rem2.substring(0, rem2.length - d.kode.length);
-            break;
-        }
-    }
-
-    let gradeList = [...masterData.grade].sort((a, b) => (b.kode || '').length - (a.kode || '').length);
-    for (let g of gradeList) {
-        if (g.kode && rem2.toUpperCase().endsWith(g.kode.toUpperCase())) {
-            gradeFound = g.nama;
-            rem2 = rem2.substring(0, rem2.length - g.kode.length);
-            break;
-        }
-    }
-
-    let pjgNum = parsePanjangNumber(rem2);
-
-    // D. BAGIAN 3: DATECODE + MESIN + SHIFT + CUSTOMER
-    let dateCode = part3.substring(0, 5);
-    let tglStr = parseJulianDate(dateCode);
-
-    let rem3 = part3.substring(5);
-    let customerFound = "-";
-    let shiftFound = "-";
-
-    if (jenis === 'Lis') {
-        customerFound = "P49";
-        let p49Obj = masterData.customer.find(c => c.kode === 'P49');
-        if (p49Obj) customerFound = p49Obj.nama;
-    } else {
-        let customerList = [...masterData.customer].sort((a, b) => (b.kode || '').length - (a.kode || '').length);
-        for (let c of customerList) {
-            if (c.kode && rem3.toUpperCase().endsWith(c.kode.toUpperCase())) {
-                customerFound = c.nama;
-                rem3 = rem3.substring(0, rem3.length - c.kode.length);
-                break;
-            }
-        }
-    }
-
-    let shiftList = [...masterData.shift].sort((a, b) => (b.kode || '').length - (a.kode || '').length);
-    for (let s of shiftList) {
-        if (s.kode && rem3.toUpperCase().endsWith(s.kode.toUpperCase())) {
-            shiftFound = s.nama;
-            rem3 = rem3.substring(0, rem3.length - s.kode.length);
-            break;
-        }
-    }
-    let shiftDisplay = shiftFound.replace(/\D/g, '') ? "S" + shiftFound.replace(/\D/g, '') : shiftFound;
-
-    let mesinCode = rem3;
-    let mesinObj = masterData.mesin.find(m => m.kode.toUpperCase() === mesinCode.toUpperCase());
-    let mesinFound = mesinObj ? mesinObj.nama : (mesinCode || "-");
-
-    // E. KELENGKAPAN NAMA ITEM & QTY PER BOX
-    let namaStr = namaItemFound + (gradeFound === 'A' ? ' A' : '');
-    let isiStr = getIsiBoxText(jenis, namaItemFound);
+    let hasilPanjang = Math.round(parseFloat(panjang.replace(',', '.')) * 100) || 0;
+    let shiftAngka = shift.replace(/\D/g, '');
+    let tglStr = `${String(dObj.getDate()).padStart(2, '0')}/${String(dObj.getMonth() + 1).padStart(2, '0')}/${dObj.getFullYear()}`;
+    
+    let isiStr = getIsiBoxText(jenis, item);
+    
+    let shiftStr = shiftAngka ? "S" + shiftAngka : "";
+    let poStr = jenis === 'Lis' ? "P49" : po;
 
     const setTxt = (id, txt) => { let el = document.getElementById(id); if(el) el.innerText = txt; };
     
-    document.getElementById('el-nama').innerHTML = namaStr;
-    setTxt('el-shading', shadingFound); 
-    setTxt('el-mesin', mesinFound); 
-    setTxt('el-po', customerFound); 
-    setTxt('el-dus', dusFound);
-    setTxt('el-ukuran', `Uk 20 x ${pjgNum}`); 
-    setTxt('el-isi', isiStr); 
-    setTxt('el-shift', shiftDisplay); 
-    setTxt('el-tanggal', tglStr);
+    document.getElementById('el-nama').innerHTML = item;
+    setTxt('el-shading', shading); setTxt('el-mesin', mesin); setTxt('el-po', poStr); setTxt('el-dus', dus);
+    setTxt('el-ukuran', `Uk 20 x ${hasilPanjang}`); setTxt('el-isi', isiStr); setTxt('el-shift', shiftStr); setTxt('el-tanggal', tglStr);
     
-    document.getElementById('el-nama-back').innerHTML = namaStr;
-    setTxt('el-shading-back', shadingFound); 
-    setTxt('el-mesin-back', mesinFound); 
-    setTxt('el-po-back', customerFound); 
-    setTxt('el-dus-back', dusFound);
-    setTxt('el-ukuran-back', `Uk 20 x ${pjgNum}`); 
-    setTxt('el-isi-back', isiStr); 
-    setTxt('el-shift-back', shiftDisplay); 
-    setTxt('el-tanggal-back', tglStr);
+    document.getElementById('el-nama-back').innerHTML = item;
+    setTxt('el-shading-back', shading); setTxt('el-mesin-back', mesin); setTxt('el-po-back', poStr); setTxt('el-dus-back', dus);
+    setTxt('el-ukuran-back', `Uk 20 x ${hasilPanjang}`); setTxt('el-isi-back', isiStr); setTxt('el-shift-back', shiftStr); setTxt('el-tanggal-back', tglStr);
 
-    stateGlobal[m].barcodeData = str;
-    setTxt('el-barcode', str);
+    let isRevisi = document.getElementById(`${m}-cb-revisi`)?.checked;
+    let suffixRevisi = isRevisi ? " N" : "";
+
+    setTxt('el-barcode', bText + "/0001" + suffixRevisi);
     
     let qrEl = document.getElementById('qrcode');
     if(qrEl) { 
         qrEl.innerHTML = ""; 
-        new QRCode(qrEl, { text: str, width: 150, height: 150, correctLevel : QRCode.CorrectLevel.L }); 
-        setTimeout(() => { 
-            let qs = qrEl.querySelectorAll('img, canvas'); 
-            qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; }); 
-        }, 50);
+        new QRCode(qrEl, { text: bText + "/0001", width: 150, height: 150, correctLevel : QRCode.CorrectLevel.L }); 
+        setTimeout(() => { let qs = qrEl.querySelectorAll('img, canvas'); qs.forEach(q => { q.style.width = '100%'; q.style.height = '100%'; }); }, 50);
     }
 
     applyCurrentStateToDOM(m);
@@ -850,7 +926,7 @@ window.generateLabel = function() {
 };
 
 // REVISI: CETAK LABEL DENGAN PROGRESS MODAL & PURE HTML2CANVAS (ANTI-POPUP BLOCKED & ULTRA FAST)
-window.printHTMLData = ""; // Variabel global untuk menyimpan hasil HTML
+window.printHTMLData = ""; 
 
 window.bukaTabPrint = function() {
     let pWin = window.open('', '_blank');
@@ -869,12 +945,11 @@ window.bukaTabPrint = function() {
 
 window.cetakLabel = async function() {
     let m = currentMode;
-    let qty = parseInt(document.getElementById('k-qty').value) || 1;
+    let qty = parseInt(document.getElementById(`${m}-qty`).value) || 1;
     
     document.querySelectorAll('.click-edit').forEach(el => el.classList.remove('active-edit'));
     document.getElementById('context-panel').classList.add('hidden');
 
-    // Tampilkan Modal Progress di halaman saat ini
     document.getElementById('modal-progress-print').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
     document.getElementById('print-done-area').classList.add('hidden');
@@ -884,10 +959,10 @@ window.cetakLabel = async function() {
     document.getElementById('print-progress-bar').style.width = '0%';
     document.getElementById('print-progress-text').innerText = '0% Selesai';
 
-    let item = document.getElementById('el-nama').innerText;
-    let panjang = document.getElementById('el-ukuran').innerText.split('x')[1].trim();
+    let item = document.getElementById(`${m}-item`).value;
+    let panjang = document.getElementById(`${m}-panjang`).value.trim().toUpperCase();
     if(!panjang.endsWith('M')) panjang += 'M';
-    let grade = '';
+    let grade = document.getElementById(`${m}-grade`) ? document.getElementById(`${m}-grade`).value : (document.getElementById(`${m}-jenis`).value==='Lis'?'1':'');
     
     let idKombinasi = `${item}_${panjang}_${grade}`.toUpperCase().replace(/\s/g, "");
 
@@ -920,17 +995,21 @@ window.cetakLabel = async function() {
         
         let container = document.getElementById('preview-container');
         let oldOverflow = container.style.overflowY; container.style.overflowY = 'visible';
+        
+        let payloadDB = [];
+        let isRevisi = document.getElementById(`${m}-cb-revisi`)?.checked;
+        let suffixRevisi = isRevisi ? " N" : "";
 
         nodeFront.style.transition = 'none';
         nodeBack.style.transition = 'none';
 
         await new Promise(r => setTimeout(r, 50)); 
         
-        // Render Back Canvas HANYA 1 KALI SEBELUM LOOPING!
+        // 1. RENDER BACKGROUND STATIS SISI BACK (1 KALI)
         let canvasBack = await html2canvas(nodeBack, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
         let imgBackBase64 = canvasBack.toDataURL("image/png", 1.0);
 
-        // Render Front Canvas HANYA 1 KALI (DENGAN MEMBERSIHKAN QR & BARCODE SEMENTARA)
+        // 2. RENDER BACKGROUND STATIS SISI FRONT (1 KALI)
         let qrWrapper = document.getElementById('qr-wrapper');
         let bcEl = document.getElementById('el-barcode');
         
@@ -949,7 +1028,7 @@ window.cetakLabel = async function() {
         let qrRect = qrWrapper.getBoundingClientRect();
         let bcRect = bcEl.getBoundingClientRect();
 
-        let scale = 2; // Skala render html2canvas
+        let scale = 2; 
         let qrX = (qrRect.left - canvasRect.left) * scale;
         let qrY = (qrRect.top - canvasRect.top) * scale;
         let qrW = qrRect.width * scale;
@@ -960,7 +1039,6 @@ window.cetakLabel = async function() {
         let bcW = bcRect.width * scale;
         let bcFontSize = (parseFloat(window.getComputedStyle(bcEl).fontSize) || 5) * scale;
 
-        // Canvas 2D Buffer Offscreen untuk perakitan kilat
         let offCanvas = document.createElement('canvas');
         offCanvas.width = baseFrontCanvas.width;
         offCanvas.height = baseFrontCanvas.height;
@@ -972,23 +1050,25 @@ window.cetakLabel = async function() {
         document.body.appendChild(qrTempDiv);
 
         let sequenceImages = [];
+        let currentRenderCount = 1;
 
-        // LOOPING PERAKITAN 2D CANVAS KILAT (0.001 Detik/Label)
-        for(let i = 1; i <= qty; i++) {
+        // 3. LOOPING PERAKITAN 2D CANVAS KILAT
+        for(let i = startSerial; i <= endSerial; i++) {
+            let serialStr = "/" + ("0000" + i).slice(-4);
+            let fullBarcode = stateGlobal[m].barcodeData + serialStr + suffixRevisi;
+            
             ctx.clearRect(0, 0, offCanvas.width, offCanvas.height);
-            ctx.drawImage(baseFrontCanvas, 0, 0); // Tempel background statis
+            ctx.drawImage(baseFrontCanvas, 0, 0); 
 
-            // Generate QR Code Offscreen
             qrTempDiv.innerHTML = "";
-            let fullBarcode = stateGlobal[m].barcodeData;
-            new QRCode(qrTempDiv, { text: fullBarcode, width: 300, height: 300, correctLevel : QRCode.CorrectLevel.L });
+            new QRCode(qrTempDiv, { text: stateGlobal[m].barcodeData + serialStr, width: 300, height: 300, correctLevel : QRCode.CorrectLevel.L });
             let qrSourceCanvas = qrTempDiv.querySelector('canvas');
 
             if (qrSourceCanvas) {
-                ctx.drawImage(qrSourceCanvas, qrX, qrY, qrW, qrH); // Tempel QR Code
+                ctx.drawImage(qrSourceCanvas, qrX, qrY, qrW, qrH); 
             }
 
-            // Tulis Teks Barcode (Dengan Manual Text Wrap)
+            // Manual Wrap Text untuk Canvas 2D
             ctx.font = `bold ${bcFontSize}px monospace, sans-serif`;
             ctx.fillStyle = '#000000';
             ctx.textAlign = 'center';
@@ -1025,29 +1105,45 @@ window.cetakLabel = async function() {
 
             let imgFrontBase64 = offCanvas.toDataURL("image/png");
             sequenceImages.push(imgFrontBase64);
-            sequenceImages.push(imgBackBase64);
-
-            // Update Progress Bar UI
-            let pct = Math.round((i / qty) * 100);
-            document.getElementById('print-progress-bar').style.width = pct + '%';
-            document.getElementById('print-progress-text').innerText = `${pct}% Selesai (${i}/${qty})`;
+            sequenceImages.push(imgBackBase64); 
             
-            // Beri nafas pada browser agar UI Progress Bar bisa terupdate
+            let pct = Math.round((currentRenderCount / qty) * 100);
+            document.getElementById('print-progress-bar').style.width = pct + '%';
+            document.getElementById('print-progress-text').innerText = `${pct}% Selesai (${currentRenderCount}/${qty})`;
+            
+            currentRenderCount++;
+            
+            payloadDB.push({
+                kode_barcode: fullBarcode,
+                tgl_produksi: document.getElementById(`${m}-tgl`).value,
+                mesin: document.getElementById(`${m}-mesin`).value,
+                shift: document.getElementById(`${m}-shift`).value,
+                nama_item: item,
+                panjang: panjang,
+                grade: grade,
+                dus: document.getElementById(`${m}-dus`).value,
+                shading: document.getElementById(`${m}-shading`).value,
+                qty_dus: 1
+            });
+            
             await new Promise(r => requestAnimationFrame(r));
         }
         
         document.body.removeChild(qrTempDiv);
 
-        // Kembalikan gaya CSS
         nodeFront.style.transform = oldTransformFront; nodeFront.style.border = '1px solid black'; nodeFront.style.transition = '';
         nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black'; nodeBack.style.transition = '';
         wrapper.style.transform = oldWrapTransform; container.style.overflowY = oldOverflow;
         
-        // Siapkan HTML untuk di-print
+        if (payloadDB.length > 0) {
+            const { error: errInsert } = await db.from('database_plafon_lis').insert(payloadDB);
+            if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
+        }
+
         let w = stateGlobal[m].kertas.w + "mm"; 
         let h = stateGlobal[m].kertas.h + "mm";
         
-        let htmlContent = `<html><head><title>Print Label Khusus</title><style>
+        let htmlContent = `<html><head><title>Print Label</title><style>
             @page { size: ${w} ${h}; margin: 0; }
             body { margin: 0; padding: 20px; background: #525659; display: flex; flex-direction: column; align-items: center; gap: 20px; }
             .label-page { page-break-after: always; width: ${w}; height: ${h}; background: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center; overflow: hidden; flex-shrink: 0; }
@@ -1058,10 +1154,8 @@ window.cetakLabel = async function() {
         sequenceImages.forEach(img => { htmlContent += `<div class="label-page"><img src="${img}"></div>`; });
         htmlContent += `</body></html>`;
         
-        // Simpan ke variabel global
         window.printHTMLData = htmlContent;
 
-        // Ubah tampilan Modal menjadi tombol "BUKA HASIL CETAK"
         document.getElementById('print-title').innerText = 'Render Selesai!';
         document.getElementById('print-subtitle').innerText = 'Label siap untuk dicetak.';
         document.getElementById('print-loading-area').classList.add('hidden');
@@ -1075,7 +1169,7 @@ window.cetakLabel = async function() {
 };
 
 // ==========================================
-// 9. SECURITY (PIN)
+// 9. SECURITY (PIN SUPABASE)
 // ==========================================
 function mintaPin(title, callback) {
     document.getElementById('pin-global-title').innerText = title;
@@ -1085,14 +1179,44 @@ function mintaPin(title, callback) {
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
 }
 
-window.eksekusiPinGlobal = function() {
-    let pin = document.getElementById('input-pin-global').value;
-    if(pin === currentUser.password) {
-        document.getElementById('modal-pin-global').classList.add('hidden');
-        document.getElementById('overlay-klik-luar').classList.add('hidden');
-        if(pendingAction) pendingAction();
-    } else {
-        alert("⛔ PIN SALAH! Masukkan password akun Anda.");
+// REVISI: Validasi PIN Global ke Supabase
+window.eksekusiPinGlobal = async function() {
+    let pinInput = document.getElementById('input-pin-global');
+    let pin = pinInput.value;
+    
+    if(!pin) return alert("Masukkan PIN!");
+
+    // Berikan efek loading pada tombol
+    const btn = document.querySelector('#modal-pin-global button.bg-emerald-600');
+    const oriText = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4 inline-block"></i> Memeriksa...';
+    btn.disabled = true;
+    lucide.createIcons();
+
+    try {
+        const isPinValid = await validatePin(pin);
+
+        if (isPinValid) {
+            document.getElementById('modal-pin-global').classList.add('hidden');
+            
+            // Cek apakah modal pencarian sedang terbuka. Jika tidak, tutup overlay.
+            if(document.getElementById('modal-search').classList.contains('hidden')) {
+                document.getElementById('overlay-klik-luar').classList.add('hidden');
+            }
+            
+            pinInput.value = ''; // Bersihkan input setelah sukses
+            if(pendingAction) pendingAction();
+        } else {
+            alert("⛔ PIN SALAH! Silakan periksa kembali PIN Anda.");
+            pinInput.value = ''; // Bersihkan input jika salah
+            pinInput.focus();
+        }
+    } catch (e) {
+        alert("Terjadi kesalahan sistem: " + e.message);
+    } finally {
+        btn.innerHTML = oriText;
+        btn.disabled = false;
+        lucide.createIcons();
     }
 };
 
