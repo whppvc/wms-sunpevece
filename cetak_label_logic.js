@@ -2,6 +2,8 @@
 // WMS SUNPEVECE - CETAK LABEL ENGINE (REFACTORED & SUPABASE INTEGRATED)
 // ============================================================================
 
+const PIN_CATEGORY = 'Cetak Label'; // Kategori PIN di tabel master_pin
+
 let currentMode = 'plafon'; 
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [], lis: [] };
 let isInfoLocked = true; 
@@ -827,18 +829,15 @@ window.bukaModalTambahMaster = function() {
     document.getElementById('modal-tambah-master').classList.remove('hidden');
 };
 
-// REVISI: Fungsi validasi PIN terpusat dan sangat aman terhadap tipe data
+// REVISI: Validasi PIN ke Supabase
 async function validatePin(inputPin) {
     try {
-        // Gunakan ilike agar tidak case-sensitive pada kategori
         const { data, error } = await db.from('master_pin')
             .select('pin')
-            .ilike('kategori', 'cetak label') 
+            .ilike('kategori', PIN_CATEGORY) 
             .single();
             
         if (error) throw error;
-        
-        // Konversi ke string dan hapus spasi untuk memastikan kecocokan 100%
         return data && String(data.pin).trim() === String(inputPin).trim();
     } catch (e) {
         console.error("Error validating PIN:", e);
@@ -857,7 +856,7 @@ window.simpanDataMasterBaru = async function() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
 
     try {
-        // Gunakan fungsi validasi terpusat
+        // Validasi PIN ke Supabase
         const isPinValid = await validatePin(pin);
         if(!isPinValid) throw new Error("⛔ PIN SALAH! Silakan periksa kembali PIN Anda.");
 
