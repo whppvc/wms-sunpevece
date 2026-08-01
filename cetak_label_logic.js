@@ -361,7 +361,6 @@ function handleVisChange(key, isChecked) {
     }
 }
 
-// REVISI: Pastikan word-break: break-all digunakan agar string tanpa spasi terpotong rapi
 function handleWrapChange(key, isChecked, targetSide = null) {
     const sideSelect = document.getElementById('side-select')?.value || 'front';
     const side = targetSide || sideSelect;
@@ -376,7 +375,7 @@ function handleWrapChange(key, isChecked, targetSide = null) {
     if(el) {
         if(isChecked) { 
             el.style.whiteSpace = 'normal'; 
-            el.style.wordBreak = 'break-all'; // Sangat penting untuk string QR
+            el.style.wordBreak = 'break-all'; 
             el.style.overflowWrap = 'break-word'; 
             el.style.maxWidth = val + (key==='nama'?'mm':'px'); 
         } else { 
@@ -594,14 +593,14 @@ window.syncContext = function(type, val) {
             if(el) {
                 if(isWrapOn) {
                     el.style.whiteSpace = 'normal';
-                    el.style.wordBreak = 'break-all'; // REVISI
+                    el.style.wordBreak = 'break-all';
                     el.style.overflowWrap = 'break-word';
                     el.style.maxWidth = v + (k==='nama'?'mm':'px');
                 } else {
                     el.style.whiteSpace = 'nowrap';
                     el.style.maxWidth = 'none';
                     el.style.wordBreak = 'normal';
-                    el.style.overflowWrap = 'normal';
+                    el.style.wordWrap = 'normal';
                 }
             }
         }
@@ -797,8 +796,8 @@ window.filterSearchList = function() {
 };
 
 window.selectSearchItem = function(nama, kode) {
-    document.querySelectorAll('.search-item').forEach(li => li.classList.remove('bg-emerald-100', 'border-emerald-400'));
-    event.currentTarget.classList.add('bg-emerald-100', 'border-emerald-400');
+    document.querySelectorAll('.search-item').forEach(li => li.classList.remove('bg-blue-100', 'border-blue-400'));
+    event.currentTarget.classList.add('bg-blue-100', 'border-blue-400');
     selectedSearchData = { nama, kode };
 };
 
@@ -962,7 +961,7 @@ window.generateLabel = function() {
 };
 
 // REVISI: CETAK LABEL DENGAN PROGRESS MODAL & PURE HTML2CANVAS (ANTI-POPUP BLOCKED & ULTRA FAST)
-window.printHTMLData = ""; // Variabel global untuk menyimpan hasil HTML
+window.printHTMLData = ""; 
 
 window.bukaTabPrint = function() {
     let pWin = window.open('', '_blank');
@@ -986,7 +985,6 @@ window.cetakLabel = async function() {
     document.querySelectorAll('.click-edit').forEach(el => el.classList.remove('active-edit'));
     document.getElementById('context-panel').classList.add('hidden');
 
-    // Tampilkan Modal Progress di halaman saat ini
     document.getElementById('modal-progress-print').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
     document.getElementById('print-done-area').classList.add('hidden');
@@ -1042,39 +1040,108 @@ window.cetakLabel = async function() {
 
         await new Promise(r => setTimeout(r, 50)); 
         
-        // Render Back Canvas HANYA 1 KALI SEBELUM LOOPING!
+        // 1. RENDER BACKGROUND STATIS SISI BACK (1 KALI)
         let canvasBack = await html2canvas(nodeBack, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
         let imgBackBase64 = canvasBack.toDataURL("image/png", 1.0);
+
+        // 2. RENDER BACKGROUND STATIS SISI FRONT (1 KALI)
+        let qrWrapper = document.getElementById('qr-wrapper');
+        let bcEl = document.getElementById('el-barcode');
+        
+        let origQrVis = qrWrapper.style.visibility;
+        let origBcVis = bcEl.style.visibility;
+        qrWrapper.style.visibility = 'hidden';
+        bcEl.style.visibility = 'hidden';
+
+        let baseFrontCanvas = await html2canvas(nodeFront, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
+
+        qrWrapper.style.visibility = origQrVis;
+        bcEl.style.visibility = origBcVis;
+
+        // Bounding Box Koordinat Presisi untuk QR & Teks Barcode
+        let canvasRect = nodeFront.getBoundingClientRect();
+        let qrRect = qrWrapper.getBoundingClientRect();
+        let bcRect = bcEl.getBoundingClientRect();
+
+        let scale = 2; 
+        let qrX = (qrRect.left - canvasRect.left) * scale;
+        let qrY = (qrRect.top - canvasRect.top) * scale;
+        let qrW = qrRect.width * scale;
+        let qrH = qrRect.height * scale;
+
+        let bcX = (bcRect.left - canvasRect.left) * scale;
+        let bcY = (bcRect.top - canvasRect.top) * scale;
+        let bcW = bcRect.width * scale;
+        let bcFontSize = (parseFloat(window.getComputedStyle(bcEl).fontSize) || 5) * scale;
+
+        let offCanvas = document.createElement('canvas');
+        offCanvas.width = baseFrontCanvas.width;
+        offCanvas.height = baseFrontCanvas.height;
+        let ctx = offCanvas.getContext('2d');
+
+        let qrTempDiv = document.createElement('div');
+        qrTempDiv.style.position = 'absolute';
+        qrTempDiv.style.left = '-9999px';
+        document.body.appendChild(qrTempDiv);
 
         let sequenceImages = [];
         let currentRenderCount = 1;
 
+        // 3. LOOPING PERAKITAN 2D CANVAS KILAT
         for(let i = startSerial; i <= endSerial; i++) {
             let serialStr = "/" + ("0000" + i).slice(-4);
-            let fullBarcode = stateGlobal[m].barcodeData + serialStr;
+            let fullBarcode = stateGlobal[m].barcodeData + serialStr + suffixRevisi;
             
-            document.getElementById('el-barcode').innerText = fullBarcode + suffixRevisi;
-            let qrEl = document.getElementById('qrcode'); qrEl.innerHTML = "";
-            new QRCode(qrEl, { text: fullBarcode, width: 150, height: 150, correctLevel : QRCode.CorrectLevel.L });
-            
-            // Hapus tag <img> buatan QRCode.js agar html2canvas tidak terhambat async image load
-            let imgTag = qrEl.querySelector('img');
-            if (imgTag) imgTag.remove();
-            let canvasTag = qrEl.querySelector('canvas');
-            if (canvasTag) {
-                canvasTag.style.width = '100%';
-                canvasTag.style.height = '100%';
-                canvasTag.style.display = 'block';
+            ctx.clearRect(0, 0, offCanvas.width, offCanvas.height);
+            ctx.drawImage(baseFrontCanvas, 0, 0); 
+
+            qrTempDiv.innerHTML = "";
+            new QRCode(qrTempDiv, { text: stateGlobal[m].barcodeData + serialStr, width: 300, height: 300, correctLevel : QRCode.CorrectLevel.L });
+            let qrSourceCanvas = qrTempDiv.querySelector('canvas');
+
+            if (qrSourceCanvas) {
+                ctx.drawImage(qrSourceCanvas, qrX, qrY, qrW, qrH); 
             }
 
-            // Render Front Canvas menggunakan html2canvas murni agar CSS Wrap Text berfungsi sempurna
-            let canvasFront = await html2canvas(nodeFront, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
-            let imgFrontBase64 = canvasFront.toDataURL("image/png", 1.0);
+            // Manual Wrap Text untuk Canvas 2D
+            ctx.font = `bold ${bcFontSize}px monospace, sans-serif`;
+            ctx.fillStyle = '#000000';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
             
+            let isWrapOn = stateGlobal[m].wrap.barcode_cb;
+            
+            if (isWrapOn) {
+                let maxWidth = bcW; 
+                let lineHeight = bcFontSize * 1.2; 
+                let lines = [];
+                let currentLine = '';
+
+                for (let j = 0; j < fullBarcode.length; j++) {
+                    let char = fullBarcode[j];
+                    let testLine = currentLine + char;
+                    let metrics = ctx.measureText(testLine);
+                    
+                    if (metrics.width > maxWidth && j > 0) {
+                        lines.push(currentLine);
+                        currentLine = char;
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+                lines.push(currentLine);
+
+                lines.forEach((line, index) => {
+                    ctx.fillText(line, bcX + (bcW / 2), bcY + (index * lineHeight));
+                });
+            } else {
+                ctx.fillText(fullBarcode, bcX + (bcW / 2), bcY);
+            }
+
+            let imgFrontBase64 = offCanvas.toDataURL("image/png");
             sequenceImages.push(imgFrontBase64);
-            sequenceImages.push(imgBackBase64); // Gunakan kembali hasil render back yang sudah siap
+            sequenceImages.push(imgBackBase64); 
             
-            // Update Progress Bar UI
             let pct = Math.round((currentRenderCount / qty) * 100);
             document.getElementById('print-progress-bar').style.width = pct + '%';
             document.getElementById('print-progress-text').innerText = `${pct}% Selesai (${currentRenderCount}/${qty})`;
@@ -1094,11 +1161,11 @@ window.cetakLabel = async function() {
                 qty_dus: 1
             });
             
-            // Beri nafas pada browser agar UI Progress Bar bisa terupdate
             await new Promise(r => requestAnimationFrame(r));
         }
         
-        // Kembalikan gaya CSS
+        document.body.removeChild(qrTempDiv);
+
         nodeFront.style.transform = oldTransformFront; nodeFront.style.border = '1px solid black'; nodeFront.style.transition = '';
         nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black'; nodeBack.style.transition = '';
         wrapper.style.transform = oldWrapTransform; container.style.overflowY = oldOverflow;
@@ -1108,7 +1175,6 @@ window.cetakLabel = async function() {
             if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
         }
 
-        // Siapkan HTML untuk di-print
         let w = stateGlobal[m].kertas.w + "mm"; 
         let h = stateGlobal[m].kertas.h + "mm";
         
@@ -1123,10 +1189,8 @@ window.cetakLabel = async function() {
         sequenceImages.forEach(img => { htmlContent += `<div class="label-page"><img src="${img}"></div>`; });
         htmlContent += `</body></html>`;
         
-        // Simpan ke variabel global
         window.printHTMLData = htmlContent;
 
-        // Ubah tampilan Modal menjadi tombol "BUKA HASIL CETAK"
         document.getElementById('print-title').innerText = 'Render Selesai!';
         document.getElementById('print-subtitle').innerText = 'Label siap untuk dicetak.';
         document.getElementById('print-loading-area').classList.add('hidden');
