@@ -14,7 +14,7 @@ let stateGlobal = {};
 const modes = ['plafon'];
 modes.forEach(m => {
     stateGlobal[m] = { zoom: 4.0, pos: { qr: { x: 0, y: 0, s: 1 }, barcode: createBasePos(), nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { barcode: 5, nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: 'custom', w: 85, h: 50 }, wrap: { nama: 33, barcode: 45, nama_cb: true, barcode_cb: true }, barcodeData: "", linkFont: true, vis: JSON.parse(JSON.stringify(baseVis)) };
-    stateGlobal[m + '_back'] = { pos: { nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, kertas: { tipe: 'custom', w: 85, h: 50 }, wrap: { nama: 75, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) };
+    stateGlobal[m + '_back'] = { pos: { nama: createBasePos(), shading: createBasePos(), ukuran: createBasePos(), mesin: createBasePos(), shift: createBasePos(), tanggal: createBasePos(), po: createBasePos(), dus: createBasePos(), isi: createBasePos() }, font: { nama: 16, shading: 16, info: 6 }, gap: { info: 5 }, wrap: { nama: 75, nama_cb: true }, linkFont: true, vis: JSON.parse(JSON.stringify(baseVisBack)) };
 });
 
 let historyStack = {};
@@ -59,39 +59,43 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadMasterData() {
     try {
-        const { data, error } = await db.from('master_2').select('*');
-        if (!error && data) {
-            const getUnique = (keyName, keyCode) => {
-                let map = new Map();
-                data.forEach(r => {
-                    if (r[keyName] && String(r[keyName]).trim() !== '') {
-                        map.set(String(r[keyName]).trim().toUpperCase(), { nama: String(r[keyName]).trim(), kode: r[keyCode] || '' });
-                    }
-                });
-                return Array.from(map.values()).sort((a, b) => a.nama.localeCompare(b.nama));
-            };
+        const [resM2, resLis] = await Promise.all([
+            db.from('master_2').select('*'),
+            db.from('master_lis').select('*')
+        ]);
 
-            masterData.mesin = getUnique('mesin', 'kode_mesin');
-            masterData.shift = getUnique('shift', 'kode_shift');
-            masterData.item = getUnique('nama_item', 'kode_nama_item');
-            masterData.grade = getUnique('grade', 'kode_grade');
-            masterData.dus = getUnique('dus', 'kode_dus');
-            masterData.customer = getUnique('customer', 'kode_customer');
+        if (resM2.error) throw resM2.error;
+        const data = resM2.data || [];
+
+        const getUnique = (keyName, keyCode) => {
+            let map = new Map();
+            data.forEach(r => {
+                if (r[keyName] && String(r[keyName]).trim() !== '') {
+                    map.set(String(r[keyName]).trim().toUpperCase(), { nama: String(r[keyName]).trim(), kode: r[keyCode] || '' });
+                }
+            });
+            return Array.from(map.values()).sort((a, b) => a.nama.localeCompare(b.nama));
+        };
+
+        masterData.mesin = getUnique('mesin', 'kode_mesin');
+        masterData.shift = getUnique('shift', 'kode_shift');
+        masterData.item = getUnique('nama_item', 'kode_nama_item');
+        masterData.grade = getUnique('grade', 'kode_grade');
+        masterData.dus = getUnique('dus', 'kode_dus');
+        masterData.customer = getUnique('customer', 'kode_customer');
+
+        if (!resLis.error && resLis.data) {
+            masterData.lis = resLis.data;
         }
+
     } catch (e) {
-        console.error("Gagal memuat master_2:", e);
-    }
-
-    try {
-        const { data: resLis, error: errLis } = await db.from('master_lis').select('*');
-        if (!errLis && resLis) {
-            masterData.lis = resLis;
-        }
-    } catch(e) {
-        console.error("Gagal memuat master_lis (opsional):", e);
+        console.error("Gagal memuat master data:", e);
     }
 }
 
+// ==========================================
+// HELPER LOOKUP QTY DUS / BOX
+// ==========================================
 function getIsiBoxText(jenisItem, namaItem) {
     let j = (jenisItem || '').trim();
     let n = (namaItem || '').trim().toUpperCase();
@@ -439,7 +443,6 @@ function ubahZoom(step) {
 window.startDrag = function(elementKey, event, isBack = false) {
     event.preventDefault();
 
-    // TEKS NOTIFIKASI DIKUNCI SESUAI PERMINTAAN USER
     const infoElements = ['ukuran', 'mesin', 'shift', 'tanggal', 'po', 'dus', 'isi'];
     if (infoElements.includes(elementKey) && isInfoLocked) {
         mintaPin("Buka Kunci Pengaturan Ukuran & Posisi", () => {
@@ -958,9 +961,7 @@ window.generateLabel = function() {
     return true;
 };
 
-// REVISI OPTIMASI ULTRA FAST (ALGORITMA 2D CANVAS COMPOSITE):
-// html2canvas dipanggil HANYA 2 KALI TOTAL (1 untuk Front & 1 untuk Back) untuk merender background statis.
-// Seluruh looping N label diproses murni dengan Canvas 2D API bawaan JS (Selesai dalam 0.05 - 0.2 detik).
+// REVISI OPTIMASI ULTRA FAST (ALGORITMA 2D CANVAS COMPOSITE)
 window.cetakLabel = async function() {
     let m = currentMode;
     let qty = parseInt(document.getElementById(`${m}-qty`).value) || 1;
@@ -1128,6 +1129,9 @@ window.cetakLabel = async function() {
             btnCetak.innerHTML = '<i data-lucide="printer" class="w-4 h-4"></i> 2. Cetak Label'; btnCetak.disabled = false;
             return;
         }
+
+        let w = stateGlobal[m].kertas.w + "mm"; 
+        let h = stateGlobal[m].kertas.h + "mm";
 
         pWin.document.write(`<html><head><title>Print Label</title><style>
             @page { size: ${w} ${h}; margin: 0; }
