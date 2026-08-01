@@ -449,9 +449,9 @@ window.startDrag = function(elementKey, event, isBack = false) {
 
     const infoElements = ['ukuran', 'mesin', 'shift', 'tanggal', 'po', 'dus', 'isi'];
     if (infoElements.includes(elementKey) && isInfoLocked) {
-        mintaPin("Buka Kunci Pengaturan Ukuran & Posisi Info", () => {
+        mintaPin("Buka Kunci Pengaturan Ukuran & Posisi", () => {
             isInfoLocked = false;
-            alert("🔓 Kunci berhasil dibuka! Anda sekarang dapat mengatur posisi dan font elemen informasi.");
+            alert("🔓 Kunci berhasil dibuka! Anda sekarang dapat mengatur posisi.");
         });
         return;
     }
