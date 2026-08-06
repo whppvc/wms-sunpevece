@@ -2,7 +2,7 @@
 // WMS SUNPEVECE - CETAK LABEL ENGINE (REFACTORED & SUPABASE INTEGRATED)
 // ============================================================================
 
-const PIN_CATEGORY = 'Cetak Label'; // Kategori PIN di tabel master_pin
+const PIN_CATEGORY = 'Cetak Label'; 
 
 let currentMode = 'plafon'; 
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [], lis: [] };
@@ -28,13 +28,12 @@ let pendingAction = null;
 
 let currentSearchType = ''; 
 let selectedSearchData = { nama: '', kode: '' };
+let searchTimeout; // Untuk Debounce pencarian agar tidak lemot
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', password: ''};
 
 window.tutupModalPinGlobal = function() {
     document.getElementById('modal-pin-global').classList.add('hidden');
-    
-    // Hanya tutup overlay jika modal pencarian juga sedang tertutup
     if(document.getElementById('modal-search').classList.contains('hidden')) {
         document.getElementById('overlay-klik-luar').classList.add('hidden');
     }
@@ -794,11 +793,19 @@ function renderSearchList() {
     `).join('');
 }
 
+// REVISI: Tambahkan Debounce agar tidak lemot saat mengetik
 window.filterSearchList = function() {
-    const q = document.getElementById('input-search-list').value.toLowerCase();
-    document.querySelectorAll('.search-item').forEach(li => {
-        li.style.display = li.innerText.toLowerCase().includes(q) ? '' : 'none';
-    });
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        const q = document.getElementById('input-search-list').value.toLowerCase();
+        const items = document.querySelectorAll('.search-item');
+        
+        requestAnimationFrame(() => {
+            items.forEach(li => {
+                li.style.display = li.innerText.toLowerCase().includes(q) ? '' : 'none';
+            });
+        });
+    }, 150); 
 };
 
 window.selectSearchItem = function(nama, kode) {
@@ -961,7 +968,7 @@ window.generateLabel = function() {
     let rawPjgNum = panjang.replace(/[^0-9.,]/g, '').replace(',', '.');
     let ukuranStr = "";
     if (jenis === 'Lis') {
-        ukuranStr = `P${rawPjgNum}M`;
+        ukuranStr = `P ${rawPjgNum} meter`;
     } else {
         let hasilPanjang = Math.round(parseFloat(rawPjgNum) * 100) || 0;
         ukuranStr = `Uk 20 x ${hasilPanjang}`;
@@ -1132,7 +1139,8 @@ window.cetakLabel = async function() {
 
         // 3. LOOPING PERAKITAN 2D CANVAS KILAT
         for(let i = startSerial; i <= endSerial; i++) {
-            let serialStr = "/" + ("0000" + i).slice(-4);
+            // REVISI: Serial dinamis padStart 4 digit
+            let serialStr = "/" + String(i).padStart(4, '0');
             let fullBarcode = stateGlobal[m].barcodeData + serialStr + suffixRevisi;
             
             ctx.clearRect(0, 0, offCanvas.width, offCanvas.height);
@@ -1191,18 +1199,7 @@ window.cetakLabel = async function() {
             
             currentRenderCount++;
             
-            payloadDB.push({
-                kode_barcode: fullBarcode,
-                tgl_produksi: document.getElementById(`${m}-tgl`).value,
-                mesin: document.getElementById(`${m}-mesin`).value,
-                shift: document.getElementById(`${m}-shift`).value,
-                nama_item: item,
-                panjang: panjang,
-                grade: grade,
-                dus: document.getElementById(`${m}-dus`).value,
-                shading: document.getElementById(`${m}-shading`).value,
-                qty_dus: 1
-            });
+            // Hapus payloadDB.push karena kita akan simpan ke database_gudang secara bulk
             
             await new Promise(r => requestAnimationFrame(r));
         }
@@ -1213,10 +1210,30 @@ window.cetakLabel = async function() {
         nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black'; nodeBack.style.transition = '';
         wrapper.style.transform = oldWrapTransform; container.style.overflowY = oldOverflow;
         
-        if (payloadDB.length > 0) {
-            const { error: errInsert } = await db.from('database_plafon_lis').insert(payloadDB);
-            if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
-        }
+        // REVISI: Simpan ke database_gudang
+        let startStr = String(startSerial).padStart(4, '0');
+        let endStr = String(endSerial).padStart(4, '0');
+        let summaryBarcode = `${stateGlobal[m].barcodeData}/${startStr} - ${endStr}${suffixRevisi}`;
+
+        let payloadGudang = {
+            tgl_produksii: document.getElementById(`${m}-tgl`).value,
+            mesin: document.getElementById(`${m}-mesin`).value || '-',
+            shift: document.getElementById(`${m}-shift`).value || '-',
+            area: '-', 
+            jenis_item: document.getElementById(`${m}-jenis`).value,
+            nama_item: item,
+            panjang: panjang,
+            grade: grade || '-',
+            dus: document.getElementById(`${m}-dus`).value || '-',
+            shading: document.getElementById(`${m}-shading`).value || '-',
+            customer: document.getElementById(`${m}-po`) ? document.getElementById(`${m}-po`).value : '-',
+            qty_print: qty,
+            pic: currentUser.username,
+            kode_barcode: summaryBarcode
+        };
+
+        const { error: errGudang } = await db.from('database_gudang').insert([payloadGudang]);
+        if(errGudang) console.error("Gagal simpan ke database_gudang:", errGudang);
 
         let w = stateGlobal[m].kertas.w + "mm"; 
         let h = stateGlobal[m].kertas.h + "mm";
