@@ -105,7 +105,17 @@ function getIsiBoxText(jenisItem, namaItem) {
 
     if (j === 'Lis') {
         if (masterData.lis && masterData.lis.length > 0) {
-            let found = masterData.lis.find(l => (l.nama_item_lis || l.nama_item || '').trim().toUpperCase() === n);
+            let sortedLis = [...masterData.lis].sort((a, b) => {
+                let lenA = (a.nama_item_lis || a.nama_item || '').length;
+                let lenB = (b.nama_item_lis || b.nama_item || '').length;
+                return lenB - lenA;
+            });
+
+            let found = sortedLis.find(l => {
+                let lisName = (l.nama_item_lis || l.nama_item || '').trim().toUpperCase();
+                return lisName !== '' && (n.includes(lisName) || lisName === n);
+            });
+
             if (found && found.qty_isi) {
                 return `Qty: ${found.qty_isi}`;
             }
@@ -953,7 +963,7 @@ window.generateLabel = function() {
     let rawPjgNum = panjang.replace(/[^0-9.,]/g, '').replace(',', '.');
     let ukuranStr = "";
     if (jenis === 'Lis') {
-        ukuranStr = `P${rawPjgNum}M`;
+        ukuranStr = `P ${rawPjgNum} meter`;
     } else {
         let hasilPanjang = Math.round(parseFloat(rawPjgNum) * 100) || 0;
         ukuranStr = `Uk 20 x ${hasilPanjang}`;
@@ -1307,4 +1317,3 @@ function penangananKeyboardEvent(e) {
         if(stateGlobal[m].pos[k]) { stateGlobal[m].pos[k].x += x; stateGlobal[m].pos[k].y += y; updateTransform(k, activeSelection.isBack); } 
     }); 
 }
-
