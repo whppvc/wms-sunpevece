@@ -6,7 +6,6 @@ const PIN_CATEGORY = 'Cetak Label';
 
 let currentMode = 'plafon'; 
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [], lis: [] };
-let isInfoLocked = true; 
 
 const createBasePos = () => ({ x: 0, y: 0 });
 const baseVis = { qr: true, barcode: true, nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
@@ -28,7 +27,7 @@ let pendingAction = null;
 
 let currentSearchType = ''; 
 let selectedSearchData = { nama: '', kode: '' };
-let searchTimeout; // Untuk Debounce pencarian agar tidak lemot
+let searchTimeout; 
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', password: ''};
 
@@ -387,7 +386,7 @@ function handleWrapChange(key, isChecked, targetSide = null) {
             el.style.whiteSpace = 'nowrap'; 
             el.style.maxWidth = 'none';
             el.style.wordBreak = 'normal';
-            el.style.overflowWrap = 'normal';
+            el.style.wordWrap = 'normal';
         }
     }
 }
@@ -440,19 +439,10 @@ function ubahZoom(step) {
 }
 
 // ==========================================
-// 4. DRAG & DROP ENGINE (DENGAN SECURITY PIN LOCK)
+// 4. DRAG & DROP ENGINE
 // ==========================================
 window.startDrag = function(elementKey, event, isBack = false) {
     event.preventDefault();
-
-    const infoElements = ['ukuran', 'mesin', 'shift', 'tanggal', 'po', 'dus', 'isi'];
-    if (infoElements.includes(elementKey) && isInfoLocked) {
-        mintaPin("Buka Kunci Pengaturan Ukuran & Posisi", () => {
-            isInfoLocked = false;
-            alert("🔓 Kunci berhasil dibuka! Anda sekarang dapat mengatur posisi.");
-        });
-        return;
-    }
 
     let m = currentMode + (isBack ? '_back' : '');
     let idSfx = isBack ? '-back' : '';
@@ -793,7 +783,6 @@ function renderSearchList() {
     `).join('');
 }
 
-// REVISI: Tambahkan Debounce agar tidak lemot saat mengetik
 window.filterSearchList = function() {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
@@ -836,7 +825,6 @@ window.bukaModalTambahMaster = function() {
     document.getElementById('modal-tambah-master').classList.remove('hidden');
 };
 
-// REVISI: Validasi PIN ke Supabase
 async function validatePin(inputPin) {
     try {
         const { data, error } = await db.from('master_pin')
@@ -863,11 +851,9 @@ window.simpanDataMasterBaru = async function() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
 
     try {
-        // Validasi PIN ke Supabase
         const isPinValid = await validatePin(pin);
         if(!isPinValid) throw new Error("⛔ PIN SALAH! Silakan periksa kembali PIN Anda.");
 
-        // Mapping Kolom Database
         let colNama = '';
         let colKode = '';
         if (currentSearchType === 'item') { colNama = 'nama_item'; colKode = 'kode_nama_item'; }
@@ -964,11 +950,10 @@ window.generateLabel = function() {
     let bText = `${kItem}/${shading}/${pAngka}${kGrade}${kDus}/${dateCode}${kMesin}${kShift}${kPo}`;
     stateGlobal[m].barcodeData = bText;
 
-    // REVISI: Format Ukuran berdasarkan Jenis Item
     let rawPjgNum = panjang.replace(/[^0-9.,]/g, '').replace(',', '.');
     let ukuranStr = "";
     if (jenis === 'Lis') {
-        ukuranStr = `P${rawPjgNum}M`;
+        ukuranStr = `P ${rawPjgNum} meter`;
     } else {
         let hasilPanjang = Math.round(parseFloat(rawPjgNum) * 100) || 0;
         ukuranStr = `Uk 20 x ${hasilPanjang}`;
@@ -1010,7 +995,6 @@ window.generateLabel = function() {
     return true;
 };
 
-// REVISI: CETAK LABEL DENGAN PROGRESS MODAL & PURE HTML2CANVAS (ANTI-POPUP BLOCKED & ULTRA FAST)
 window.printHTMLData = ""; 
 
 window.bukaTabPrint = function() {
@@ -1090,11 +1074,9 @@ window.cetakLabel = async function() {
 
         await new Promise(r => setTimeout(r, 50)); 
         
-        // 1. RENDER BACKGROUND STATIS SISI BACK (1 KALI)
         let canvasBack = await html2canvas(nodeBack, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
         let imgBackBase64 = canvasBack.toDataURL("image/png", 1.0);
 
-        // 2. RENDER BACKGROUND STATIS SISI FRONT (1 KALI)
         let qrWrapper = document.getElementById('qr-wrapper');
         let bcEl = document.getElementById('el-barcode');
         
@@ -1108,7 +1090,6 @@ window.cetakLabel = async function() {
         qrWrapper.style.visibility = origQrVis;
         bcEl.style.visibility = origBcVis;
 
-        // Bounding Box Koordinat Presisi untuk QR & Teks Barcode
         let canvasRect = nodeFront.getBoundingClientRect();
         let qrRect = qrWrapper.getBoundingClientRect();
         let bcRect = bcEl.getBoundingClientRect();
@@ -1137,9 +1118,7 @@ window.cetakLabel = async function() {
         let sequenceImages = [];
         let currentRenderCount = 1;
 
-        // 3. LOOPING PERAKITAN 2D CANVAS KILAT
         for(let i = startSerial; i <= endSerial; i++) {
-            // REVISI: Serial dinamis padStart 4 digit
             let serialStr = "/" + String(i).padStart(4, '0');
             let fullBarcode = stateGlobal[m].barcodeData + serialStr + suffixRevisi;
             
@@ -1154,7 +1133,6 @@ window.cetakLabel = async function() {
                 ctx.drawImage(qrSourceCanvas, qrX, qrY, qrW, qrH); 
             }
 
-            // Manual Wrap Text untuk Canvas 2D
             ctx.font = `bold ${bcFontSize}px monospace, sans-serif`;
             ctx.fillStyle = '#000000';
             ctx.textAlign = 'center';
@@ -1199,8 +1177,6 @@ window.cetakLabel = async function() {
             
             currentRenderCount++;
             
-            // Hapus payloadDB.push karena kita akan simpan ke database_gudang secara bulk
-            
             await new Promise(r => requestAnimationFrame(r));
         }
         
@@ -1210,7 +1186,6 @@ window.cetakLabel = async function() {
         nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black'; nodeBack.style.transition = '';
         wrapper.style.transform = oldWrapTransform; container.style.overflowY = oldOverflow;
         
-        // REVISI: Simpan ke database_gudang
         let startStr = String(startSerial).padStart(4, '0');
         let endStr = String(endSerial).padStart(4, '0');
         let summaryBarcode = `${stateGlobal[m].barcodeData}/${startStr} - ${endStr}${suffixRevisi}`;
@@ -1274,14 +1249,12 @@ function mintaPin(title, callback) {
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
 }
 
-// REVISI: Validasi PIN Global ke Supabase
 window.eksekusiPinGlobal = async function() {
     let pinInput = document.getElementById('input-pin-global');
     let pin = pinInput.value;
     
     if(!pin) return alert("Masukkan PIN!");
 
-    // Berikan efek loading pada tombol
     const btn = document.querySelector('#modal-pin-global button.bg-blue-600');
     const oriText = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4 inline-block"></i> Memeriksa...';
@@ -1294,16 +1267,15 @@ window.eksekusiPinGlobal = async function() {
         if (isPinValid) {
             document.getElementById('modal-pin-global').classList.add('hidden');
             
-            // Cek apakah modal pencarian sedang terbuka. Jika tidak, tutup overlay.
             if(document.getElementById('modal-search').classList.contains('hidden')) {
                 document.getElementById('overlay-klik-luar').classList.add('hidden');
             }
             
-            pinInput.value = ''; // Bersihkan input setelah sukses
+            pinInput.value = ''; 
             if(pendingAction) pendingAction();
         } else {
             alert("⛔ PIN SALAH! Silakan periksa kembali PIN Anda.");
-            pinInput.value = ''; // Bersihkan input jika salah
+            pinInput.value = ''; 
             pinInput.focus();
         }
     } catch (e) {
@@ -1335,3 +1307,4 @@ function penangananKeyboardEvent(e) {
         if(stateGlobal[m].pos[k]) { stateGlobal[m].pos[k].x += x; stateGlobal[m].pos[k].y += y; updateTransform(k, activeSelection.isBack); } 
     }); 
 }
+
