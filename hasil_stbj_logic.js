@@ -3,6 +3,7 @@ let statusSekarang = 'ALL';
 let rawDataRaw = [];
 let kamusData = [];
 let jasperData = [];
+let lisData = []; 
 let sortState = {}; 
 
 let currentPage = 1;
@@ -15,7 +16,6 @@ let selectAllState = 0;
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
-// REVISI: Fungsi Helper untuk Konversi & Format WIB (Asia/Jakarta) secara Akurat
 function formatWIB(isoString) {
     if (!isoString || isoString === '-') return '-';
     try {
@@ -290,6 +290,11 @@ async function loadKamusDanJasper() {
         const { data: dj } = await db.from('nama_jasper').select('*').order('created_at', {ascending: false});
         if(dj) jasperData = dj;
     } catch(e) { console.log("Tabel nama_jasper belum siap."); }
+    
+    try {
+        const { data: dl } = await db.from('master_lis').select('*');
+        if(dl) lisData = dl;
+    } catch(e) { console.log("Tabel master_lis belum siap."); }
 }
 
 async function muatDataDariSupabase() {
@@ -352,33 +357,25 @@ function setMode(m) {
         if(btnHapus) btnHapus.classList.remove('hidden');
     }
 
-    // REVISI: Amankan filter status sebelum mereset filter lainnya
     const savedStatusFilter = activeFilters['col-status'];
-    
-    // Reset filter kolom Excel biasa (karena kolom antar mode berbeda)
     activeFilters = {}; 
-    
-    // Kembalikan filter status yang sedang aktif
     if (savedStatusFilter) {
         activeFilters['col-status'] = savedStatusFilter;
     }
 
     renderHeaderDanTabel();
 }
+
 function switchStatusFilter(val) { 
     statusSekarang = val; 
     
     if(val === 'ALL') {
-        // Hapus filter status jika memilih SEMUA DATA
         delete activeFilters['col-status'];
     } else if (val === 'STBJ') {
-        // Petakan STBJ agar mencocokkan baris berstatus 'STBJ' maupun 'SUDAH STBJ'
         activeFilters['col-status'] = ['STBJ', 'SUDAH STBJ'];
     } else if (val === 'HOLD STBJ') {
-        // Petakan HOLD STBJ agar mencocokkan 'HOLD STBJ' maupun 'HOLD'
         activeFilters['col-status'] = ['HOLD STBJ', 'HOLD'];
     } else {
-        // Untuk status lainnya (e.g., 'IN GUDANG', 'HOLD LANGSIR')
         activeFilters['col-status'] = [val];
     }
     
@@ -582,15 +579,36 @@ function updateFilterIcons() {
     }
 }
 
+// REVISI: Fungsi hitungQtyLembar yang merujuk ke master_lis dengan pencarian "includes"
 function hitungQtyLembar(jenis, nama, qtyDus) {
     if (!qtyDus) return 0;
     let j = (jenis || '').toUpperCase();
-    let n = (nama || '').toUpperCase();
+    let n = (nama || '').trim().toUpperCase();
     
     if (j === 'PLAFON') return qtyDus * 15;
+    
     if (j === 'LIST' || j === 'LIS') {
-        if (n.includes('PROFILE IV')) return qtyDus * 60;
-        if (n.includes('PROFILE V')) return qtyDus * 60;
+        // 1. Cek dari database master_lis terlebih dahulu
+        if (lisData && lisData.length > 0) {
+            // Urutkan dari yang terpanjang agar match lebih spesifik dulu
+            let sortedLis = [...lisData].sort((a, b) => {
+                let lenA = (a.nama_item_lis || a.nama_item || '').length;
+                let lenB = (b.nama_item_lis || b.nama_item || '').length;
+                return lenB - lenA;
+            });
+
+            let found = sortedLis.find(l => {
+                let lisName = (l.nama_item_lis || l.nama_item || '').trim().toUpperCase();
+                return lisName !== '' && (n.includes(lisName) || lisName === n);
+            });
+
+            if (found && found.qty_isi) {
+                return qtyDus * parseInt(found.qty_isi);
+            }
+        }
+
+        // 2. Fallback ke hardcode jika tidak ditemukan di database
+        if (n.includes('PROFILE IV') || n.includes('PROFILE V')) return qtyDus * 60;
         if (n.includes('PROFILE II')) return qtyDus * 48;
         if (n.includes('PROFILE I')) return qtyDus * 140;
         if (n.includes('CONNECTOR')) return qtyDus * 80;
@@ -667,7 +685,6 @@ function highlightRow(checkbox, skipStateReset = false) {
     if(!skipStateReset) updateSelectedCount();
 }
 
-// REVISI: Menambahkan kolom Waktu Langsir di thead dan memformat waktu ke WIB
 function renderHeaderDanTabel() {
     const thead = document.getElementById('thead-stbj');
     const tbody = document.getElementById('tbody-stbj');
@@ -706,7 +723,6 @@ function renderHeaderDanTabel() {
         
         let h = '';
         rawDataRaw.forEach((r, i) => {
-            // REVISI: Format waktu ke WIB (Asia/Jakarta) secara akurat
             const tglSTBJ = formatWIB(r.created_at);
             const tglLangsir = formatWIB(r.waktu_langsir);
             
@@ -811,7 +827,6 @@ function renderHeaderDanTabel() {
             let sData = r.status_data || 'BELUM';
             let cust = r.customer || '-';
 
-            // REVISI 1: Ambil dan samakan status item untuk grouping
             let itemStatus = r.status || '-';
             if (itemStatus === 'STBJ' || itemStatus === 'SUDAH STBJ') {
                 itemStatus = 'SUDAH STBJ';
@@ -819,7 +834,6 @@ function renderHeaderDanTabel() {
                 itemStatus = 'HOLD STBJ';
             }
             
-            // Masukkan itemStatus ke dalam key agar item dengan status berbeda tidak tercampur
             let key = `${r.jenis_item}_${n}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${cust}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}_${itemStatus}`;
             
             if(!groups[key]) {
@@ -827,7 +841,7 @@ function renderHeaderDanTabel() {
                     jenisItem: r.jenis_item, namaItemAsli: n, displayNama: jName, jasperId: jId, panjang: r.panjang, grade: r.grade, dus: r.dus, shading: r.shading, customer: cust,
                     tglProduksi: r.tgl_produksi, mesin: r.mesin, shift: r.shift,
                     qty: 0, qrcodes: [], trolis: new Set(), ket: ket, sData: sData,
-                    status: itemStatus // Simpan status ke dalam grup
+                    status: itemStatus 
                 };
             }
             groups[key].qty++; 
@@ -867,7 +881,6 @@ function renderHeaderDanTabel() {
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" value="${cbVal}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     
-                    <!-- REVISI 2: Tulis status asli ke data-search agar filter lokal dapat mendeteksi -->
                     <td class="px-4 py-3 hidden col-status" data-search="${r.status}">${r.status}</td>
                     
                     <td class="px-4 py-3 text-center col-status-data" data-search="${r.sData || '-'}">${statData}</td>
