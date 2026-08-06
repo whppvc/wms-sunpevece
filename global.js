@@ -66,6 +66,7 @@ const APP_MENUS = [
     { isDivider: true, title: 'PRINT & OPNAME' },
     { id: 'cetak_label', title: 'Cetak Label Barcode', icon: 'printer', url: 'cetak_label.html' },
     { id: 'print_khusus', title: 'Cetak Label Khusus', icon: 'qr-code', url: 'print_khusus.html' },
+    { id: 'riwayat_cetak', title: 'Riwayat Cetak Label', icon: 'scroll-text', url: 'riwayat_cetak.html' },
     { id: 'input_opname', title: 'Input Stok Opname', icon: 'clipboard-check', url: 'input_opname.html' },
     { isDivider: true, title: 'CONFIG' },
     { id: 'master_data', title: 'Master Data', icon: 'database', url: 'master_data.html' }
@@ -89,7 +90,6 @@ style.innerHTML = `
     .hide-scrollbar::-webkit-scrollbar { display: none; } 
     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
-    /* REVISI: Custom Scrollbar khusus untuk Sidebar Menu agar rapi */
     #sidebar-menu-container::-webkit-scrollbar { width: 5px; }
     #sidebar-menu-container::-webkit-scrollbar-track { background: transparent; }
     #sidebar-menu-container::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
@@ -104,7 +104,6 @@ style.innerHTML = `
         #app-sidebar:not(.expanded) .sidebar-logo-text { display: none !important; }
         #app-sidebar:not(.expanded) .sidebar-item { justify-content: center !important; padding: 0 !important; width: 3rem !important; margin: 0 auto !important; }
         
-        /* REVISI: Divider saat sidebar di-collapse (menjadi garis) */
         #app-sidebar:not(.expanded) .sidebar-divider { height: 1px !important; background-color: #334155 !important; margin: 1rem 1rem !important; padding: 0 !important; }
         #app-sidebar:not(.expanded) .sidebar-divider .sidebar-text { display: none !important; }
         
@@ -163,7 +162,6 @@ style.innerHTML = `
     
     tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
 
-    /* FREEZE PANE (STICKY COLUMN) CSS */
     .sticky-col { position: sticky !important; left: 0 !important; z-index: 30 !important; }
     th.sticky-col { z-index: 40 !important; background-color: var(--tbl-hdr-bg) !important; }
     
@@ -173,14 +171,12 @@ style.innerHTML = `
     body:not(.disable-hover) tr.r-row:hover td.sticky-col { background-color: rgb(var(--tbl-row-hover)) !important; }
     tr.selected-row td.sticky-col { background-color: #ccfbf1 !important; }
     
-    /* Pengecualian :not(.custom-vertical-slider) agar tidak merusak slider vertikal */
     input[type=range]:not(.custom-vertical-slider) { -webkit-appearance: none; width: 100%; background: transparent; }
     input[type=range]:not(.custom-vertical-slider)::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #4f46e5; cursor: pointer; margin-top: -6px; }
     input[type=range]:not(.custom-vertical-slider)::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #cbd5e1; border-radius: 2px; }
 `;
 document.head.appendChild(style);
 
-// LOAD PREFERENCES
 const THEMES = {
     row: {
         gray: { r1: '255, 255, 255', r2: '248, 250, 252' },
@@ -281,13 +277,11 @@ async function initModernLayout(pageMeta) {
                 <span class="sidebar-logo-text text-white font-black text-lg tracking-wider whitespace-nowrap">SUNPEVECE</span>
             </a>
             
-            <!-- REVISI: Menggunakan custom scrollbar dan menambahkan padding bottom agar rapi -->
             <div id="sidebar-menu-container" class="flex flex-col gap-1.5 w-full px-3 overflow-y-auto flex-1 pb-6">
     `;
     
     finalMenus.forEach(menu => {
         if (menu.isDivider) { 
-            // REVISI: Desain divider diperbaiki agar teks tidak terpotong saat diexpand
             sidebarHTML += `
                 <div class="sidebar-divider mt-5 mb-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap transition-all">
                     <span class="sidebar-text">${menu.title}</span>
