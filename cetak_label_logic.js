@@ -957,7 +957,16 @@ window.generateLabel = function() {
     let bText = `${kItem}/${shading}/${pAngka}${kGrade}${kDus}/${dateCode}${kMesin}${kShift}${kPo}`;
     stateGlobal[m].barcodeData = bText;
 
-    let hasilPanjang = Math.round(parseFloat(panjang.replace(',', '.')) * 100) || 0;
+    // REVISI: Format Ukuran berdasarkan Jenis Item
+    let rawPjgNum = panjang.replace(/[^0-9.,]/g, '').replace(',', '.');
+    let ukuranStr = "";
+    if (jenis === 'Lis') {
+        ukuranStr = `P ${rawPjgNum} meter`;
+    } else {
+        let hasilPanjang = Math.round(parseFloat(rawPjgNum) * 100) || 0;
+        ukuranStr = `Uk 20 x ${hasilPanjang}`;
+    }
+
     let shiftAngka = shift.replace(/\D/g, '');
     let tglStr = `${String(dObj.getDate()).padStart(2, '0')}/${String(dObj.getMonth() + 1).padStart(2, '0')}/${dObj.getFullYear()}`;
     
@@ -970,11 +979,11 @@ window.generateLabel = function() {
     
     document.getElementById('el-nama').innerHTML = item;
     setTxt('el-shading', shading); setTxt('el-mesin', mesin); setTxt('el-po', poStr); setTxt('el-dus', dus);
-    setTxt('el-ukuran', `Uk 20 x ${hasilPanjang}`); setTxt('el-isi', isiStr); setTxt('el-shift', shiftStr); setTxt('el-tanggal', tglStr);
+    setTxt('el-ukuran', ukuranStr); setTxt('el-isi', isiStr); setTxt('el-shift', shiftStr); setTxt('el-tanggal', tglStr);
     
     document.getElementById('el-nama-back').innerHTML = item;
     setTxt('el-shading-back', shading); setTxt('el-mesin-back', mesin); setTxt('el-po-back', poStr); setTxt('el-dus-back', dus);
-    setTxt('el-ukuran-back', `Uk 20 x ${hasilPanjang}`); setTxt('el-isi-back', isiStr); setTxt('el-shift-back', shiftStr); setTxt('el-tanggal-back', tglStr);
+    setTxt('el-ukuran-back', ukuranStr); setTxt('el-isi-back', isiStr); setTxt('el-shift-back', shiftStr); setTxt('el-tanggal-back', tglStr);
 
     let isRevisi = document.getElementById(`${m}-cb-revisi`)?.checked;
     let suffixRevisi = isRevisi ? " N" : "";
@@ -1256,7 +1265,7 @@ window.eksekusiPinGlobal = async function() {
     if(!pin) return alert("Masukkan PIN!");
 
     // Berikan efek loading pada tombol
-    const btn = document.querySelector('#modal-pin-global button.bg-rose-600');
+    const btn = document.querySelector('#modal-pin-global button.bg-blue-600');
     const oriText = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4 inline-block"></i> Memeriksa...';
     btn.disabled = true;
