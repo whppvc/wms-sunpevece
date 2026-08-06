@@ -968,7 +968,7 @@ window.generateLabel = function() {
     let rawPjgNum = panjang.replace(/[^0-9.,]/g, '').replace(',', '.');
     let ukuranStr = "";
     if (jenis === 'Lis') {
-        ukuranStr = `P ${rawPjgNum} meter`;
+        ukuranStr = `P${rawPjgNum}M`;
     } else {
         let hasilPanjang = Math.round(parseFloat(rawPjgNum) * 100) || 0;
         ukuranStr = `Uk 20 x ${hasilPanjang}`;
