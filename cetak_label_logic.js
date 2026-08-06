@@ -6,6 +6,7 @@ const PIN_CATEGORY = 'Cetak Label';
 
 let currentMode = 'plafon'; 
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [], lis: [] };
+let isInfoLocked = true; 
 
 const createBasePos = () => ({ x: 0, y: 0 });
 const baseVis = { qr: true, barcode: true, nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
@@ -396,7 +397,7 @@ function handleWrapChange(key, isChecked, targetSide = null) {
             el.style.whiteSpace = 'nowrap'; 
             el.style.maxWidth = 'none';
             el.style.wordBreak = 'normal';
-            el.style.wordWrap = 'normal';
+            el.style.overflowWrap = 'normal';
         }
     }
 }
@@ -449,7 +450,7 @@ function ubahZoom(step) {
 }
 
 // ==========================================
-// 4. DRAG & DROP ENGINE
+// 4. DRAG & DROP ENGINE (TANPA PIN UNTUK INFO BAWAH)
 // ==========================================
 window.startDrag = function(elementKey, event, isBack = false) {
     event.preventDefault();
@@ -938,7 +939,9 @@ window.generateLabel = function() {
     let po = document.getElementById(`${m}-po`) ? document.getElementById(`${m}-po`).value.trim() : '';
     let qty = parseInt(document.getElementById(`${m}-qty`).value);
 
-    if(!item || !panjang || isNaN(qty) || qty < 1) return alert("Nama Item, Panjang, dan Qty wajib diisi dengan benar!");
+    if (!tgl || !mesin || !shift || !item || !jenis || !panjang || !grade || !dus || !shading || !po || isNaN(qty) || qty < 1) {
+        return alert("Terdapat variable yg belum diinput, silahkan mengisi semua variable pada daftar input!!");
+    }
 
     let kItem = findKode('item', item);
     let kMesin = findKode('mesin', mesin);
@@ -1245,55 +1248,6 @@ window.cetakLabel = async function() {
         document.getElementById('modal-progress-print').classList.add('hidden');
         document.getElementById('overlay-klik-luar').classList.add('hidden');
         alert("Terjadi kesalahan: " + e.message);
-    }
-};
-
-// ==========================================
-// 9. SECURITY (PIN SUPABASE)
-// ==========================================
-function mintaPin(title, callback) {
-    document.getElementById('pin-global-title').innerText = title;
-    document.getElementById('input-pin-global').value = '';
-    pendingAction = callback;
-    document.getElementById('modal-pin-global').classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
-}
-
-window.eksekusiPinGlobal = async function() {
-    let pinInput = document.getElementById('input-pin-global');
-    let pin = pinInput.value;
-    
-    if(!pin) return alert("Masukkan PIN!");
-
-    const btn = document.querySelector('#modal-pin-global button.bg-blue-600');
-    const oriText = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4 inline-block"></i> Memeriksa...';
-    btn.disabled = true;
-    lucide.createIcons();
-
-    try {
-        const isPinValid = await validatePin(pin);
-
-        if (isPinValid) {
-            document.getElementById('modal-pin-global').classList.add('hidden');
-            
-            if(document.getElementById('modal-search').classList.contains('hidden')) {
-                document.getElementById('overlay-klik-luar').classList.add('hidden');
-            }
-            
-            pinInput.value = ''; 
-            if(pendingAction) pendingAction();
-        } else {
-            alert("⛔ PIN SALAH! Silakan periksa kembali PIN Anda.");
-            pinInput.value = ''; 
-            pinInput.focus();
-        }
-    } catch (e) {
-        alert("Terjadi kesalahan sistem: " + e.message);
-    } finally {
-        btn.innerHTML = oriText;
-        btn.disabled = false;
-        lucide.createIcons();
     }
 };
 
