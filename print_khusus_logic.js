@@ -151,18 +151,45 @@ function toggleLeftPanel(target) {
 
 function renderForm() {
     const container = document.getElementById('panel-form');
+    const today = new Date().toISOString().split('T')[0];
+    
+    const buildSelect = (id, label, options = [], isKode = true) => {
+        const safeOpts = Array.isArray(options) ? options : [];
+        return `
+        <div>
+            <label class="block text-xs font-bold text-slate-800 mb-1">${label}:</label>
+            <select id="${id}" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-emerald-500 bg-white text-slate-800 cursor-pointer">
+                <option value="">-- Pilih --</option>
+                ${safeOpts.map(o => `<option value="${o.nama}" data-kode="${isKode ? o.kode : ''}">${o.nama}</option>`).join('')}
+            </select>
+        </div>`;
+    };
+
+    const buildSearchInput = (id, label, type) => `
+        <div>
+            <label class="block text-xs font-bold text-slate-800 mb-1">${label}:</label>
+            <div class="flex border border-slate-300 rounded overflow-hidden shadow-sm">
+                <input type="text" id="${id}" readonly class="flex-1 p-2 text-sm outline-none bg-white text-slate-800 cursor-not-allowed" placeholder="Pilih ${label}...">
+                <button onclick="bukaModalSearch('${type}')" class="px-4 bg-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-300 border-l border-slate-300 transition">CARI</button>
+            </div>
+        </div>`;
+
+    let m = currentMode;
     container.innerHTML = `
         <div>
             <label class="block text-xs font-bold text-slate-800 mb-1">Jenis Item:</label>
-            <select id="k-jenis" class="w-full p-2 text-sm border border-slate-300 rounded outline-none bg-white text-slate-800 cursor-pointer"><option value="Plafon">Plafon</option><option value="Lis">Lis</option></select>
+            <select id="${m}-jenis" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-emerald-500 bg-white text-slate-800 cursor-pointer">
+                <option value="Plafon">Plafon</option>
+                <option value="Lis">Lis</option>
+            </select>
         </div>
         <div>
             <label class="block text-xs font-bold text-slate-800 mb-1">String QR Code:</label>
-            <textarea id="k-qr-string" rows="4" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-emerald-600 font-mono bg-white text-slate-800" placeholder="Contoh: P103/WT-1/400A1/20262MPL02S1P49/0001"></textarea>
+            <textarea id="${m}-qr-string" rows="4" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-emerald-500 font-mono bg-white text-slate-800" placeholder="Contoh: P103/WT-1/400A1/20262MPL02S1P49/0001"></textarea>
         </div>
         <div class="p-3 border border-emerald-200 bg-emerald-50 rounded-lg mt-2">
             <label class="block text-xs font-bold text-emerald-800 mb-1">Jumlah Box (Qty Print):</label>
-            <input type="number" id="k-qty" value="1" min="1" class="w-full p-2 text-base border border-slate-300 rounded outline-none focus:border-emerald-600 font-bold text-center bg-white text-slate-900">
+            <input type="number" id="${m}-qty" value="1" min="1" class="w-full p-2 text-base border border-slate-300 rounded outline-none focus:border-emerald-500 font-bold text-center bg-white text-slate-900">
         </div>
     `;
     if(typeof lucide !== 'undefined') lucide.createIcons();
@@ -888,7 +915,16 @@ window.generateLabel = function() {
     let bText = `${kItem}/${shading}/${pAngka}${kGrade}${kDus}/${dateCode}${kMesin}${kShift}${kPo}`;
     stateGlobal[m].barcodeData = bText;
 
-    let hasilPanjang = Math.round(parseFloat(panjang.replace(',', '.')) * 100) || 0;
+    // REVISI: Format Ukuran berdasarkan Jenis Item
+    let rawPjgNum = panjang.replace(/[^0-9.,]/g, '').replace(',', '.');
+    let ukuranStr = "";
+    if (jenis === 'Lis') {
+        ukuranStr = `P ${rawPjgNum} meter`;
+    } else {
+        let hasilPanjang = Math.round(parseFloat(rawPjgNum) * 100) || 0;
+        ukuranStr = `Uk 20 x ${hasilPanjang}`;
+    }
+
     let shiftAngka = shift.replace(/\D/g, '');
     let tglStr = `${String(dObj.getDate()).padStart(2, '0')}/${String(dObj.getMonth() + 1).padStart(2, '0')}/${dObj.getFullYear()}`;
     
@@ -901,11 +937,11 @@ window.generateLabel = function() {
     
     document.getElementById('el-nama').innerHTML = item;
     setTxt('el-shading', shading); setTxt('el-mesin', mesin); setTxt('el-po', poStr); setTxt('el-dus', dus);
-    setTxt('el-ukuran', `Uk 20 x ${hasilPanjang}`); setTxt('el-isi', isiStr); setTxt('el-shift', shiftStr); setTxt('el-tanggal', tglStr);
+    setTxt('el-ukuran', ukuranStr); setTxt('el-isi', isiStr); setTxt('el-shift', shiftStr); setTxt('el-tanggal', tglStr);
     
     document.getElementById('el-nama-back').innerHTML = item;
     setTxt('el-shading-back', shading); setTxt('el-mesin-back', mesin); setTxt('el-po-back', poStr); setTxt('el-dus-back', dus);
-    setTxt('el-ukuran-back', `Uk 20 x ${hasilPanjang}`); setTxt('el-isi-back', isiStr); setTxt('el-shift-back', shiftStr); setTxt('el-tanggal-back', tglStr);
+    setTxt('el-ukuran-back', ukuranStr); setTxt('el-isi-back', isiStr); setTxt('el-shift-back', shiftStr); setTxt('el-tanggal-back', tglStr);
 
     let isRevisi = document.getElementById(`${m}-cb-revisi`)?.checked;
     let suffixRevisi = isRevisi ? " N" : "";
