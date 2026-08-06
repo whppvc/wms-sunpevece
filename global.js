@@ -1,3 +1,7 @@
+// ============================================================================
+// WMS SUNPEVECE - GLOBAL SCRIPT & ROUTE GUARD
+// ============================================================================
+
 // ==========================================
 // 0. ROUTE GUARD (PENJAGA KEAMANAN HALAMAN)
 // ==========================================
@@ -84,6 +88,13 @@ style.innerHTML = `
 
     .hide-scrollbar::-webkit-scrollbar { display: none; } 
     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* REVISI: Custom Scrollbar khusus untuk Sidebar Menu agar rapi */
+    #sidebar-menu-container::-webkit-scrollbar { width: 5px; }
+    #sidebar-menu-container::-webkit-scrollbar-track { background: transparent; }
+    #sidebar-menu-container::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    #sidebar-menu-container::-webkit-scrollbar-thumb:hover { background: #475569; }
+
     body > div.absolute.inset-0 { padding-top: 0 !important; position: relative !important; height: 100% !important; }
     #app-sidebar { transition: width 0.3s ease, transform 0.3s ease; }
     
@@ -92,13 +103,15 @@ style.innerHTML = `
         #app-sidebar:not(.expanded) .sidebar-text { display: none !important; }
         #app-sidebar:not(.expanded) .sidebar-logo-text { display: none !important; }
         #app-sidebar:not(.expanded) .sidebar-item { justify-content: center !important; padding: 0 !important; width: 3rem !important; margin: 0 auto !important; }
-        #app-sidebar:not(.expanded) .sidebar-divider { width: 2rem !important; margin: 0.5rem auto !important; }
+        
+        /* REVISI: Divider saat sidebar di-collapse (menjadi garis) */
+        #app-sidebar:not(.expanded) .sidebar-divider { height: 1px !important; background-color: #334155 !important; margin: 1rem 1rem !important; padding: 0 !important; }
+        #app-sidebar:not(.expanded) .sidebar-divider .sidebar-text { display: none !important; }
         
         #app-sidebar.expanded { width: 16rem !important; }
         #app-sidebar.expanded .sidebar-text { display: block !important; }
         #app-sidebar.expanded .sidebar-logo-text { display: block !important; }
         #app-sidebar.expanded .sidebar-item { justify-content: flex-start !important; padding: 0 1rem !important; width: 100% !important; }
-        #app-sidebar.expanded .sidebar-divider { width: 100% !important; padding: 0 1rem !important; text-align: left !important; background: transparent !important; height: auto !important; margin-top: 1rem !important; }
         #app-sidebar.expanded #btn-expand-container { justify-content: flex-end !important; padding-right: 1rem !important; }
     }
     
@@ -107,7 +120,6 @@ style.innerHTML = `
         .sidebar-text { display: block !important; }
         .sidebar-logo-text { display: block !important; }
         .sidebar-item { justify-content: flex-start !important; padding: 0 1rem !important; width: 100% !important; }
-        .sidebar-divider { width: 100% !important; padding: 0 1rem !important; text-align: left !important; background: transparent !important; height: auto !important; margin-top: 1rem !important; }
     }
 
     .sidebar-item { position: relative; }
@@ -268,12 +280,19 @@ async function initModernLayout(pageMeta) {
                 </div>
                 <span class="sidebar-logo-text text-white font-black text-lg tracking-wider whitespace-nowrap">SUNPEVECE</span>
             </a>
-            <div class="flex flex-col gap-2 w-full px-3 overflow-y-auto hide-scrollbar flex-1">
+            
+            <!-- REVISI: Menggunakan custom scrollbar dan menambahkan padding bottom agar rapi -->
+            <div id="sidebar-menu-container" class="flex flex-col gap-1.5 w-full px-3 overflow-y-auto flex-1 pb-6">
     `;
     
     finalMenus.forEach(menu => {
         if (menu.isDivider) { 
-            sidebarHTML += `<div class="sidebar-divider h-px bg-slate-700 my-1 text-[10px] font-black text-slate-400 uppercase tracking-widest overflow-hidden whitespace-nowrap"><span class="sidebar-text">${menu.title}</span></div>`; 
+            // REVISI: Desain divider diperbaiki agar teks tidak terpotong saat diexpand
+            sidebarHTML += `
+                <div class="sidebar-divider mt-5 mb-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap transition-all">
+                    <span class="sidebar-text">${menu.title}</span>
+                </div>
+            `; 
         } else {
             const isActive = pageMeta && menu.id === pageMeta.id;
             const bgClass = isActive ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-white';
