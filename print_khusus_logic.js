@@ -104,7 +104,17 @@ function getIsiBoxText(jenisItem, namaItem) {
 
     if (j === 'Lis') {
         if (masterData.lis && masterData.lis.length > 0) {
-            let found = masterData.lis.find(l => (l.nama_item_lis || l.nama_item || '').trim().toUpperCase() === n);
+            let sortedLis = [...masterData.lis].sort((a, b) => {
+                let lenA = (a.nama_item_lis || a.nama_item || '').length;
+                let lenB = (b.nama_item_lis || b.nama_item || '').length;
+                return lenB - lenA;
+            });
+
+            let found = sortedLis.find(l => {
+                let lisName = (l.nama_item_lis || l.nama_item || '').trim().toUpperCase();
+                return lisName !== '' && (n.includes(lisName) || lisName === n);
+            });
+
             if (found && found.qty_isi) {
                 return `Qty: ${found.qty_isi}`;
             }
@@ -924,7 +934,9 @@ window.generateLabel = function() {
     let po = document.getElementById(`${m}-po`) ? document.getElementById(`${m}-po`).value.trim() : '';
     let qty = parseInt(document.getElementById(`${m}-qty`).value);
 
-    if(!item || !panjang || isNaN(qty) || qty < 1) return alert("Nama Item, Panjang, dan Qty wajib diisi dengan benar!");
+    if (!tgl || !mesin || !shift || !item || !jenis || !panjang || !grade || !dus || !shading || !po || isNaN(qty) || qty < 1) {
+        return alert("Terdapat variable yg belum diinput, silahkan mengisi semua variable pada daftar input!!");
+    }
 
     let kItem = findKode('item', item);
     let kMesin = findKode('mesin', mesin);
@@ -1234,9 +1246,6 @@ window.cetakLabel = async function() {
     }
 };
 
-// ==========================================
-// 9. SECURITY (PIN SUPABASE)
-// ==========================================
 function mintaPin(title, callback) {
     document.getElementById('pin-global-title').innerText = title;
     document.getElementById('input-pin-global').value = '';
@@ -1251,7 +1260,7 @@ window.eksekusiPinGlobal = async function() {
     
     if(!pin) return alert("Masukkan PIN!");
 
-    const btn = document.querySelector('#modal-pin-global button.bg-emerald-600');
+    const btn = document.querySelector('#modal-pin-global button.bg-rose-600');
     const oriText = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4 inline-block"></i> Memeriksa...';
     btn.disabled = true;
