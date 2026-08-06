@@ -2,11 +2,10 @@
 // WMS SUNPEVECE - CETAK LABEL KHUSUS ENGINE (STANDALONE)
 // ============================================================================
 
-const PIN_CATEGORY = 'Cetak Label Khusus'; // Kategori PIN di tabel master_pin
+const PIN_CATEGORY = 'Cetak Label Khusus'; 
 
 let currentMode = 'khusus'; 
 let masterData = { mesin: [], shift: [], item: [], grade: [], dus: [], customer: [], lis: [] };
-let isInfoLocked = true; 
 
 const createBasePos = () => ({ x: 0, y: 0 });
 const baseVis = { qr: true, barcode: true, nama: true, shading: true, ukuran: true, mesin: false, shift: true, tanggal: true, po: false, dus: true, isi: true };
@@ -28,13 +27,12 @@ let pendingAction = null;
 
 let currentSearchType = ''; 
 let selectedSearchData = { nama: '', kode: '' };
+let searchTimeout; 
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', password: ''};
 
 window.tutupModalPinGlobal = function() {
     document.getElementById('modal-pin-global').classList.add('hidden');
-    
-    // Hanya tutup overlay jika modal pencarian juga sedang tertutup
     if(document.getElementById('modal-search').classList.contains('hidden')) {
         document.getElementById('overlay-klik-luar').classList.add('hidden');
     }
@@ -176,6 +174,11 @@ function renderForm() {
 
     let m = currentMode;
     container.innerHTML = `
+        <div><label class="block text-xs font-bold text-slate-800 mb-1">Tgl Produksi:</label><input type="date" id="${m}-tgl" value="${today}" class="w-full p-2 text-sm border border-slate-300 rounded outline-none bg-white text-slate-800"></div>
+        ${buildSearchInput(`${m}-mesin`, 'Mesin', 'mesin')}
+        ${buildSelect(`${m}-shift`, 'Shift', masterData.shift)}
+        ${buildSearchInput(`${m}-item`, 'Nama Item', 'item')}
+        
         <div>
             <label class="block text-xs font-bold text-slate-800 mb-1">Jenis Item:</label>
             <select id="${m}-jenis" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-emerald-500 bg-white text-slate-800 cursor-pointer">
@@ -183,16 +186,49 @@ function renderForm() {
                 <option value="Lis">Lis</option>
             </select>
         </div>
+
+        <div><label class="block text-xs font-bold text-slate-800 mb-1">Panjang (M):</label><input type="text" id="${m}-panjang" class="w-full p-2 text-sm border border-slate-300 rounded outline-none bg-white text-slate-800 uppercase" placeholder="Cth: 4 atau 5.95"></div>
+        ${buildSelect(`${m}-grade`, 'Grade', masterData.grade)}
+        ${buildSearchInput(`${m}-dus`, 'Merk', 'dus')}
+        
         <div>
-            <label class="block text-xs font-bold text-slate-800 mb-1">String QR Code:</label>
-            <textarea id="${m}-qr-string" rows="4" class="w-full p-2 text-sm border border-slate-300 rounded outline-none focus:border-emerald-500 font-mono bg-white text-slate-800" placeholder="Contoh: P103/WT-1/400A1/20262MPL02S1P49/0001"></textarea>
+            <label class="block text-xs font-bold text-slate-800 mb-1">Shading:</label>
+            <div class="flex items-center gap-2">
+                <input type="text" id="${m}-shading-1" class="w-full p-2 text-sm border border-slate-300 rounded text-center bg-white text-slate-800 uppercase" placeholder="Huruf" oninput="updateShading()">
+                <span class="font-bold text-slate-400">-</span>
+                <input type="text" id="${m}-shading-2" class="w-full p-2 text-sm border border-slate-300 rounded text-center bg-white text-slate-800 uppercase" placeholder="Angka" oninput="this.value=this.value.replace(/^0+(.)/, '$1'); updateShading()">
+                <span class="font-bold text-slate-400">-</span>
+                <input type="text" id="${m}-shading-3" class="w-full p-2 text-sm border border-slate-300 rounded text-center bg-white text-slate-800 uppercase" placeholder="Ext" oninput="updateShading()">
+            </div>
+            <input type="hidden" id="${m}-shading">
         </div>
-        <div class="p-3 border border-emerald-200 bg-emerald-50 rounded-lg mt-2">
-            <label class="block text-xs font-bold text-emerald-800 mb-1">Jumlah Box (Qty Print):</label>
-            <input type="number" id="${m}-qty" value="1" min="1" class="w-full p-2 text-base border border-slate-300 rounded outline-none focus:border-emerald-500 font-bold text-center bg-white text-slate-900">
+        
+        ${buildSearchInput(`${m}-po`, 'PO', 'customer')}
+        
+        <label class="flex items-center gap-2 cursor-pointer mt-2">
+            <input type="checkbox" id="${m}-cb-revisi" class="w-4 h-4 accent-emerald-600 rounded border-slate-300">
+            <span class="text-sm font-bold text-emerald-600">Revisian shift lain</span>
+        </label>
+
+        <div class="p-3 border border-emerald-200 bg-emerald-50 rounded-lg mt-2 mb-4">
+            <label class="block text-xs font-bold text-emerald-800 mb-1">Jumlah Box:</label>
+            <input type="number" id="${m}-qty" value="1" min="1" class="w-full p-2 text-base border border-slate-300 rounded outline-none focus:border-emerald-600 font-bold text-center bg-white text-slate-900">
         </div>
     `;
     if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function updateShading() {
+    let m = currentMode;
+    let v1 = document.getElementById(`${m}-shading-1`)?.value.trim().toUpperCase() || '';
+    let v2 = document.getElementById(`${m}-shading-2`)?.value.trim().toUpperCase() || '';
+    let v3 = document.getElementById(`${m}-shading-3`)?.value.trim().toUpperCase() || '';
+    
+    let arr = [];
+    if(v1) arr.push(v1); if(v2) arr.push(v2); if(v3) arr.push(v3);
+    
+    let hidden = document.getElementById(`${m}-shading`);
+    if(hidden) hidden.value = arr.join('-');
 }
 
 function renderSettings() {
@@ -399,19 +435,10 @@ function ubahZoom(step) {
 }
 
 // ==========================================
-// 4. DRAG & DROP ENGINE (DENGAN SECURITY PIN LOCK)
+// 4. DRAG & DROP ENGINE
 // ==========================================
 window.startDrag = function(elementKey, event, isBack = false) {
     event.preventDefault();
-
-    const infoElements = ['ukuran', 'mesin', 'shift', 'tanggal', 'po', 'dus', 'isi'];
-    if (infoElements.includes(elementKey) && isInfoLocked) {
-        mintaPin("Buka Kunci Pengaturan Ukuran & Posisi", () => {
-            isInfoLocked = false;
-            alert("🔓 Kunci berhasil dibuka! Anda sekarang dapat mengatur posisi.");
-        });
-        return;
-    }
 
     let m = currentMode + (isBack ? '_back' : '');
     let idSfx = isBack ? '-back' : '';
@@ -753,10 +780,17 @@ function renderSearchList() {
 }
 
 window.filterSearchList = function() {
-    const q = document.getElementById('input-search-list').value.toLowerCase();
-    document.querySelectorAll('.search-item').forEach(li => {
-        li.style.display = li.innerText.toLowerCase().includes(q) ? '' : 'none';
-    });
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        const q = document.getElementById('input-search-list').value.toLowerCase();
+        const items = document.querySelectorAll('.search-item');
+        
+        requestAnimationFrame(() => {
+            items.forEach(li => {
+                li.style.display = li.innerText.toLowerCase().includes(q) ? '' : 'none';
+            });
+        });
+    }, 150); 
 };
 
 window.selectSearchItem = function(nama, kode) {
@@ -787,7 +821,6 @@ window.bukaModalTambahMaster = function() {
     document.getElementById('modal-tambah-master').classList.remove('hidden');
 };
 
-// REVISI: Validasi PIN ke Supabase
 async function validatePin(inputPin) {
     try {
         const { data, error } = await db.from('master_pin')
@@ -814,11 +847,9 @@ window.simpanDataMasterBaru = async function() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
 
     try {
-        // Validasi PIN ke Supabase
         const isPinValid = await validatePin(pin);
         if(!isPinValid) throw new Error("⛔ PIN SALAH! Silakan periksa kembali PIN Anda.");
 
-        // Mapping Kolom Database
         let colNama = '';
         let colKode = '';
         if (currentSearchType === 'item') { colNama = 'nama_item'; colKode = 'kode_nama_item'; }
@@ -915,7 +946,6 @@ window.generateLabel = function() {
     let bText = `${kItem}/${shading}/${pAngka}${kGrade}${kDus}/${dateCode}${kMesin}${kShift}${kPo}`;
     stateGlobal[m].barcodeData = bText;
 
-    // REVISI: Format Ukuran berdasarkan Jenis Item
     let rawPjgNum = panjang.replace(/[^0-9.,]/g, '').replace(',', '.');
     let ukuranStr = "";
     if (jenis === 'Lis') {
@@ -961,7 +991,6 @@ window.generateLabel = function() {
     return true;
 };
 
-// REVISI: CETAK LABEL DENGAN PROGRESS MODAL & PURE HTML2CANVAS (ANTI-POPUP BLOCKED & ULTRA FAST)
 window.printHTMLData = ""; 
 
 window.bukaTabPrint = function() {
@@ -1041,11 +1070,9 @@ window.cetakLabel = async function() {
 
         await new Promise(r => setTimeout(r, 50)); 
         
-        // 1. RENDER BACKGROUND STATIS SISI BACK (1 KALI)
         let canvasBack = await html2canvas(nodeBack, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false, imageTimeout: 0 });
         let imgBackBase64 = canvasBack.toDataURL("image/png", 1.0);
 
-        // 2. RENDER BACKGROUND STATIS SISI FRONT (1 KALI)
         let qrWrapper = document.getElementById('qr-wrapper');
         let bcEl = document.getElementById('el-barcode');
         
@@ -1059,7 +1086,6 @@ window.cetakLabel = async function() {
         qrWrapper.style.visibility = origQrVis;
         bcEl.style.visibility = origBcVis;
 
-        // Bounding Box Koordinat Presisi untuk QR & Teks Barcode
         let canvasRect = nodeFront.getBoundingClientRect();
         let qrRect = qrWrapper.getBoundingClientRect();
         let bcRect = bcEl.getBoundingClientRect();
@@ -1088,9 +1114,8 @@ window.cetakLabel = async function() {
         let sequenceImages = [];
         let currentRenderCount = 1;
 
-        // 3. LOOPING PERAKITAN 2D CANVAS KILAT
         for(let i = startSerial; i <= endSerial; i++) {
-            let serialStr = "/" + ("0000" + i).slice(-4);
+            let serialStr = "/" + String(i).padStart(4, '0');
             let fullBarcode = stateGlobal[m].barcodeData + serialStr + suffixRevisi;
             
             ctx.clearRect(0, 0, offCanvas.width, offCanvas.height);
@@ -1104,7 +1129,6 @@ window.cetakLabel = async function() {
                 ctx.drawImage(qrSourceCanvas, qrX, qrY, qrW, qrH); 
             }
 
-            // Manual Wrap Text untuk Canvas 2D
             ctx.font = `bold ${bcFontSize}px monospace, sans-serif`;
             ctx.fillStyle = '#000000';
             ctx.textAlign = 'center';
@@ -1149,19 +1173,6 @@ window.cetakLabel = async function() {
             
             currentRenderCount++;
             
-            payloadDB.push({
-                kode_barcode: fullBarcode,
-                tgl_produksi: document.getElementById(`${m}-tgl`).value,
-                mesin: document.getElementById(`${m}-mesin`).value,
-                shift: document.getElementById(`${m}-shift`).value,
-                nama_item: item,
-                panjang: panjang,
-                grade: grade,
-                dus: document.getElementById(`${m}-dus`).value,
-                shading: document.getElementById(`${m}-shading`).value,
-                qty_dus: 1
-            });
-            
             await new Promise(r => requestAnimationFrame(r));
         }
         
@@ -1171,10 +1182,29 @@ window.cetakLabel = async function() {
         nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black'; nodeBack.style.transition = '';
         wrapper.style.transform = oldWrapTransform; container.style.overflowY = oldOverflow;
         
-        if (payloadDB.length > 0) {
-            const { error: errInsert } = await db.from('database_plafon_lis').insert(payloadDB);
-            if(errInsert) console.error("Gagal simpan ke DB Plafon/Lis:", errInsert);
-        }
+        let startStr = String(startSerial).padStart(4, '0');
+        let endStr = String(endSerial).padStart(4, '0');
+        let summaryBarcode = `${stateGlobal[m].barcodeData}/${startStr} - ${endStr}${suffixRevisi}`;
+
+        let payloadGudang = {
+            tgl_produksii: document.getElementById(`${m}-tgl`).value,
+            mesin: document.getElementById(`${m}-mesin`).value || '-',
+            shift: document.getElementById(`${m}-shift`).value || '-',
+            area: '-', 
+            jenis_item: document.getElementById(`${m}-jenis`).value,
+            nama_item: item,
+            panjang: panjang,
+            grade: grade || '-',
+            dus: document.getElementById(`${m}-dus`).value || '-',
+            shading: document.getElementById(`${m}-shading`).value || '-',
+            customer: document.getElementById(`${m}-po`) ? document.getElementById(`${m}-po`).value : '-',
+            qty_print: qty,
+            pic: currentUser.username,
+            kode_barcode: summaryBarcode
+        };
+
+        const { error: errGudang } = await db.from('database_gudang').insert([payloadGudang]);
+        if(errGudang) console.error("Gagal simpan ke database_gudang:", errGudang);
 
         let w = stateGlobal[m].kertas.w + "mm"; 
         let h = stateGlobal[m].kertas.h + "mm";
@@ -1215,14 +1245,12 @@ function mintaPin(title, callback) {
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
 }
 
-// REVISI: Validasi PIN Global ke Supabase
 window.eksekusiPinGlobal = async function() {
     let pinInput = document.getElementById('input-pin-global');
     let pin = pinInput.value;
     
     if(!pin) return alert("Masukkan PIN!");
 
-    // Berikan efek loading pada tombol
     const btn = document.querySelector('#modal-pin-global button.bg-emerald-600');
     const oriText = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4 inline-block"></i> Memeriksa...';
@@ -1235,16 +1263,15 @@ window.eksekusiPinGlobal = async function() {
         if (isPinValid) {
             document.getElementById('modal-pin-global').classList.add('hidden');
             
-            // Cek apakah modal pencarian sedang terbuka. Jika tidak, tutup overlay.
             if(document.getElementById('modal-search').classList.contains('hidden')) {
                 document.getElementById('overlay-klik-luar').classList.add('hidden');
             }
             
-            pinInput.value = ''; // Bersihkan input setelah sukses
+            pinInput.value = ''; 
             if(pendingAction) pendingAction();
         } else {
             alert("⛔ PIN SALAH! Silakan periksa kembali PIN Anda.");
-            pinInput.value = ''; // Bersihkan input jika salah
+            pinInput.value = ''; 
             pinInput.focus();
         }
     } catch (e) {
