@@ -1,7 +1,3 @@
-// ============================================================================
-// WMS SUNPEVECE - HASIL STBJ ENGINE (DATA-DRIVEN ARCHITECTURE)
-// ============================================================================
-
 let modeSekarang = 'qrcode'; 
 let statusSekarang = 'ALL'; 
 let rawDataRaw = [];
@@ -19,10 +15,11 @@ let currentFilterCol = '';
 let currentPage = 1;
 let rowsPerPage = 10; 
 let userColOrder = []; 
+let hiddenCols = []; // State untuk kolom yang disembunyikan
 let selectAllState = 0; 
-let selectedRows = new Set(); // Menyimpan ID baris yang dipilih di memori
+let selectedRows = new Set(); 
 
-let filterTimeout; // Untuk Debounce
+let filterTimeout; 
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
@@ -135,6 +132,10 @@ function loadUserPreferences() {
     const savedOrder = localStorage.getItem(`col_order_stbj_${currentUser.username}`);
     if (savedOrder) { try { userColOrder = JSON.parse(savedOrder); } catch(e) { userColOrder = []; } }
     
+    // REVISI: Load Hidden Columns
+    const savedHidden = localStorage.getItem(`col_hidden_stbj_${currentUser.username}`);
+    if (savedHidden) { try { hiddenCols = JSON.parse(savedHidden); } catch(e) { hiddenCols = []; } }
+    
     const savedRows = localStorage.getItem('wms_rows_per_page');
     if(savedRows) {
         rowsPerPage = parseInt(savedRows);
@@ -166,6 +167,7 @@ function tutupPopups() {
     document.getElementById('overlay-klik-luar').classList.add('hidden');
 }
 
+// REVISI: Render Drag List dengan Ikon Mata (Hide/Unhide)
 function renderDragList() {
     const container = document.getElementById('kolom-drag-container');
     container.innerHTML = '';
@@ -174,10 +176,22 @@ function renderDragList() {
     headers.forEach(th => {
         const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
         const label = th.innerText.trim() || 'Kolom';
+        if(!colClass) return;
+
+        const isHidden = hiddenCols.includes(colClass);
+        const eyeIcon = isHidden ? 'eye-off' : 'eye';
+        const eyeColor = isHidden ? 'text-slate-300' : 'text-blue-600';
+
         const div = document.createElement('div');
-        div.className = 'drag-item flex items-center justify-between p-3 bg-white border border-slate-200 rounded-md shadow-sm hover:border-blue-400 transition';
+        div.className = 'drag-item flex items-center justify-between p-3 bg-white border border-slate-200 rounded-md shadow-sm hover:border-blue-400 transition cursor-grab';
         div.draggable = true; div.setAttribute('data-col', colClass);
-        div.innerHTML = `<span class="font-bold text-slate-700 text-xs">${label}</span><i data-lucide="grip-vertical" class="w-4 h-4 text-slate-400"></i>`;
+        div.innerHTML = `
+            <span class="font-bold text-slate-700 text-xs">${label}</span>
+            <div class="flex items-center gap-3">
+                <button onclick="toggleHideCol(event, '${colClass}')" class="p-1 hover:bg-slate-100 rounded"><i data-lucide="${eyeIcon}" class="w-4 h-4 ${eyeColor}"></i></button>
+                <i data-lucide="grip-vertical" class="w-4 h-4 text-slate-400"></i>
+            </div>
+        `;
         div.addEventListener('dragstart', () => { div.classList.add('dragging'); });
         div.addEventListener('dragend', () => { div.classList.remove('dragging'); });
         container.appendChild(div);
@@ -191,6 +205,17 @@ function renderDragList() {
         else { container.insertBefore(draggable, afterElement); }
     });
 }
+
+// REVISI: Fungsi Toggle Hide Col
+window.toggleHideCol = function(e, colClass) {
+    e.stopPropagation();
+    if(hiddenCols.includes(colClass)) {
+        hiddenCols = hiddenCols.filter(c => c !== colClass);
+    } else {
+        hiddenCols.push(colClass);
+    }
+    renderDragList();
+};
 
 function getDragAfterElement(container, y) {
     const draggableElements = [...container.querySelectorAll('.drag-item:not(.dragging)')];
@@ -207,17 +232,23 @@ function simpanUrutanKolom() {
     let newOrder = [];
     items.forEach(item => newOrder.push(item.getAttribute('data-col')));
     userColOrder = newOrder;
+    
     localStorage.setItem(`col_order_stbj_${currentUser.username}`, JSON.stringify(newOrder));
-    alert("Urutan kolom berhasil disimpan di perangkat ini!");
-    toggleSidebarKolom(); renderTable(); 
+    localStorage.setItem(`col_hidden_stbj_${currentUser.username}`, JSON.stringify(hiddenCols));
+    
+    alert("Pengaturan kolom berhasil disimpan di perangkat ini!");
+    toggleSidebarKolom(); renderHeaderDanTabel(); 
 }
 
 function resetUrutanKolom() {
-    if(!confirm("Kembalikan urutan kolom ke default (bawaan sistem)?")) return;
+    if(!confirm("Kembalikan pengaturan kolom ke default (bawaan sistem)?")) return;
     userColOrder = [];
+    hiddenCols = [];
     localStorage.removeItem(`col_order_stbj_${currentUser.username}`);
-    alert("Urutan dikembalikan ke default.");
-    toggleSidebarKolom(); renderTable();
+    localStorage.removeItem(`col_hidden_stbj_${currentUser.username}`);
+    
+    alert("Pengaturan dikembalikan ke default.");
+    toggleSidebarKolom(); renderHeaderDanTabel();
 }
 
 function applyColumnOrder() {
@@ -480,8 +511,10 @@ function sortTable(colClass, headerEl) {
     if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
 }
 
+// REVISI: Update thSort untuk menambahkan class col-hidden
 const thSort = (label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
+    const isHidden = hiddenCols.includes(colClass) ? 'col-hidden' : '';
     const noFilter = ['col-cb', 'col-btn', 'col-btn-edit'].includes(colClass);
     
     const filterBtn = noFilter ? '' : `
@@ -489,7 +522,7 @@ const thSort = (label, cls = "") => {
             <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
         </button>`;
 
-    return `<th class="hdr-std ${cls} select-none group">
+    return `<th class="hdr-std ${cls} ${isHidden} select-none group">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
             <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable('${colClass}', this.closest('th'))" title="Sort ${label}">${label}</span>
             <div class="flex items-center gap-1 shrink-0">
@@ -570,7 +603,6 @@ function updateSelectAllState() {
 
 document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) updateSelectAllState(); });
 
-// REVISI: Debounce untuk pencarian filter Excel
 window.searchFilterList = function(val) {
     clearTimeout(filterTimeout);
     filterTimeout = setTimeout(() => {
@@ -794,27 +826,28 @@ function renderTable() {
 
             let statDataHtml = sv['col-status-data'] !== '-' ? `<span class="text-indigo-600 font-medium uppercase">${sv['col-status-data']}</span>` : '-';
 
+            // REVISI: Tambahkan col-hidden jika kolom disembunyikan
             h += `
                 <tr class="${trClass}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${row._id}')" value="${row._id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
-                    <td class="px-4 py-3 text-center col-status"><span class="font-black ${textColor}">${sv['col-status']}</span></td>
-                    <td class="px-4 py-3 text-center col-status-data">${statDataHtml}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-waktu">${sv['col-waktu']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-waktu-langsir">${sv['col-waktu-langsir']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-troli">${sv['col-troli']}</td>
-                    <td class="px-4 py-3 text-left font-mono font-bold text-slate-900 col-qr">${sv['col-qr']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-tgl">${sv['col-tgl']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-mesin">${sv['col-mesin']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shift">${sv['col-shift']}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-jenis">${sv['col-jenis']}</td>
-                    <td class="px-4 py-3 text-left font-semibold text-slate-900 col-nama">${sv['col-nama']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-pjg">${sv['col-pjg']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-grade">${sv['col-grade']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-dus">${sv['col-dus']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shading">${sv['col-shading']}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-customer">${sv['col-customer']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-600 col-ket">${sv['col-ket']}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-500 col-pic">${sv['col-pic']}</td>
+                    <td class="px-4 py-3 text-center col-status ${hiddenCols.includes('col-status')?'col-hidden':''}"><span class="font-black ${textColor}">${sv['col-status']}</span></td>
+                    <td class="px-4 py-3 text-center col-status-data ${hiddenCols.includes('col-status-data')?'col-hidden':''}">${statDataHtml}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-waktu ${hiddenCols.includes('col-waktu')?'col-hidden':''}">${sv['col-waktu']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-waktu-langsir ${hiddenCols.includes('col-waktu-langsir')?'col-hidden':''}">${sv['col-waktu-langsir']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-troli ${hiddenCols.includes('col-troli')?'col-hidden':''}">${sv['col-troli']}</td>
+                    <td class="px-4 py-3 text-left font-mono font-bold text-slate-900 col-qr ${hiddenCols.includes('col-qr')?'col-hidden':''}">${sv['col-qr']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}">${sv['col-tgl']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}">${sv['col-mesin']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}">${sv['col-shift']}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
+                    <td class="px-4 py-3 text-left font-semibold text-slate-900 col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}">${sv['col-pjg']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}">${sv['col-grade']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}">${sv['col-dus']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}">${sv['col-shading']}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-customer ${hiddenCols.includes('col-customer')?'col-hidden':''}">${sv['col-customer']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-600 col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-500 col-pic ${hiddenCols.includes('col-pic')?'col-hidden':''}">${sv['col-pic']}</td>
                 </tr>`;
         } else {
             const r = row.raw;
@@ -828,32 +861,33 @@ function renderTable() {
                 const jData = encodeURIComponent(JSON.stringify({
                     id: r.jasperId, nama_item: r.namaItemAsli, panjang: r.panjang, grade: r.grade, nama_jasper: r.displayNama
                 }));
-                btnEditJasper = `<td class="px-4 py-3 text-center col-btn-edit"><button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>`;
+                btnEditJasper = `<td class="px-4 py-3 text-center col-btn-edit ${hiddenCols.includes('col-btn-edit')?'col-hidden':''}"><button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>`;
             }
 
+            // REVISI: Tambahkan col-hidden jika kolom disembunyikan
             h += `
                 <tr class="${trClass}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${row._id}')" value="${row._id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
                     <td class="px-4 py-3 hidden col-status">${sv['col-status']}</td>
-                    <td class="px-4 py-3 text-center col-status-data">${statDataHtml}</td>
+                    <td class="px-4 py-3 text-center col-status-data ${hiddenCols.includes('col-status-data')?'col-hidden':''}">${statDataHtml}</td>
                     <td class="px-4 py-3 hidden col-waktu">-</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-troli">${sv['col-troli']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-troli ${hiddenCols.includes('col-troli')?'col-hidden':''}">${sv['col-troli']}</td>
                     <td class="px-4 py-3 hidden col-qr">-</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-tgl">${sv['col-tgl']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-mesin">${sv['col-mesin']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shift">${sv['col-shift']}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-jenis">${sv['col-jenis']}</td>
-                    <td class="px-4 py-3 text-left font-semibold text-slate-900 col-nama">${sv['col-nama']}</td>
-                    ${isJasper ? `<td class="px-4 py-3 text-left font-black text-purple-700 col-jasper">${sv['col-jasper']}</td>` : ''}
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}">${sv['col-tgl']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}">${sv['col-mesin']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}">${sv['col-shift']}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
+                    <td class="px-4 py-3 text-left font-semibold text-slate-900 col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
+                    ${isJasper ? `<td class="px-4 py-3 text-left font-black text-purple-700 col-jasper ${hiddenCols.includes('col-jasper')?'col-hidden':''}">${sv['col-jasper']}</td>` : ''}
                     ${btnEditJasper}
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-pjg">${sv['col-pjg']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-grade">${sv['col-grade']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-dus">${sv['col-dus']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shading">${sv['col-shading']}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-customer">${sv['col-customer']}</td>
-                    <td class="px-4 py-3 text-center font-black text-emerald-600 col-qty">${sv['col-qty']}</td>
-                    <td class="px-4 py-3 text-center font-black text-emerald-600 col-qty-lembar">${sv['col-qty-lembar']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-ket">${sv['col-ket']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}">${sv['col-pjg']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}">${sv['col-grade']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}">${sv['col-dus']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}">${sv['col-shading']}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-customer ${hiddenCols.includes('col-customer')?'col-hidden':''}">${sv['col-customer']}</td>
+                    <td class="px-4 py-3 text-center font-black text-emerald-600 col-qty ${hiddenCols.includes('col-qty')?'col-hidden':''}">${sv['col-qty']}</td>
+                    <td class="px-4 py-3 text-center font-black text-emerald-600 col-qty-lembar ${hiddenCols.includes('col-qty-lembar')?'col-hidden':''}">${sv['col-qty-lembar']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
                     <td class="px-4 py-3 hidden col-pic">-</td>
                 </tr>`;
         }
