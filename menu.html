@@ -385,7 +385,7 @@
         }
 
         // ==========================================
-        // 3. QUICK EXPORT REPORT
+        // 3. QUICK EXPORT REPORT (REVISI MODE JASPER & RANGKUMAN)
         // ==========================================
         async function downloadQuickReport(type) {
             if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
@@ -413,39 +413,87 @@
                 let fileName = "";
 
                 if (type === 'stbj') {
+                    // Fetch STBJ Data
                     const { data, error } = await db.from('hasil_stbj_langsir')
                         .select('*')
-                        .gte('created_at', startISO).lte('created_at', endISO)
-                        .order('created_at', { ascending: false });
+                        .gte('created_at', startISO).lte('created_at', endISO);
                     if(error) throw error;
 
-                    ws_data.push(['Waktu STBJ', 'Troli', 'QRCode', 'Tgl Produksi', 'Mesin', 'Shift', 'Jenis Item', 'Nama Item', 'Panjang', 'Grade', 'Dus', 'Shading', 'Customer Aktual', 'Keterangan', 'PIC']);
+                    // Fetch Jasper Data for mapping
+                    const { data: jasperData } = await db.from('nama_jasper').select('*');
+
+                    // Grouping Logic (Mode Jasper)
+                    let groups = {};
                     (data || []).forEach(r => {
-                        ws_data.push([
-                            formatWIB(r.created_at), r.troli, r.qrcode, r.tgl_produksi, r.mesin, r.shift, 
-                            r.jenis_item, r.nama_item, r.panjang, r.grade, r.dus, r.shading, r.customer, r.keterangan, r.pic_input
-                        ]);
+                        let n = r.nama_item || '-';
+                        let jName = n;
+                        if(jasperData && jasperData.length > 0) {
+                            const cJasper = jasperData.find(j => j.nama_item === r.nama_item && j.panjang === r.panjang && j.grade === r.grade);
+                            if(cJasper) jName = cJasper.nama_jasper;
+                            else jName = `JAS-${n}`;
+                        } else {
+                            jName = `JAS-${n}`;
+                        }
+                        
+                        let ket = r.keterangan || '-';
+                        let cust = r.customer || '-';
+                        
+                        let key = `${r.tgl_produksi}_${r.mesin}_${r.shift}_${r.jenis_item}_${jName}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${cust}_${ket}`;
+                        
+                        if(!groups[key]) {
+                            groups[key] = {
+                                tgl: r.tgl_produksi || '-', mesin: r.mesin || '-', shift: r.shift || '-',
+                                jenis: r.jenis_item || '-', namaJasper: jName, pjg: r.panjang || '-',
+                                grade: r.grade || '-', dus: r.dus || '-', shading: r.shading || '-',
+                                cust: cust, ket: ket, qty: 0
+                            };
+                        }
+                        groups[key].qty++;
                     });
-                    sheetName = "Data_STBJ";
-                    fileName = `Laporan_STBJ_${dStart}_sd_${dEnd}.xlsx`;
+
+                    ws_data.push(['Tgl Produksi', 'Mesin', 'Shift', 'Jenis Item', 'Nama Jasper', 'Panjang', 'Grade', 'Dus', 'Shading', 'Customer Bawaan', 'QTY (DUS)', 'Keterangan']);
+                    Object.values(groups).forEach(g => {
+                        ws_data.push([g.tgl, g.mesin, g.shift, g.jenis, g.namaJasper, g.pjg, g.grade, g.dus, g.shading, g.cust, g.qty, g.ket]);
+                    });
+
+                    sheetName = "STBJ_Jasper";
+                    fileName = `Laporan_STBJ_Jasper_${dStart}_sd_${dEnd}.xlsx`;
                 } 
                 else if (type === 'langsir') {
                     const { data, error } = await db.from('hasil_stbj_langsir')
                         .select('*')
                         .eq('status', 'IN GUDANG')
-                        .gte('waktu_langsir', startISO).lte('waktu_langsir', endISO)
-                        .order('waktu_langsir', { ascending: false });
+                        .gte('waktu_langsir', startISO).lte('waktu_langsir', endISO);
                     if(error) throw error;
 
-                    ws_data.push(['Waktu Langsir', 'Troli', 'Area', 'QRCode', 'Tgl Produksi', 'Mesin', 'Shift', 'Jenis Item', 'Nama Item', 'Panjang', 'Grade', 'Dus', 'Shading', 'Customer Aktual', 'Keterangan', 'PIC']);
+                    // Grouping Logic (Mode Rangkuman Item)
+                    let groups = {};
                     (data || []).forEach(r => {
-                        ws_data.push([
-                            formatWIB(r.waktu_langsir), r.troli, r.posisi, r.qrcode, r.tgl_produksi, r.mesin, r.shift, 
-                            r.jenis_item, r.nama_item, r.panjang, r.grade, r.dus, r.shading, r.customer, r.keterangan, r.pic_input
-                        ]);
+                        let area = r.posisi || '-';
+                        let n = r.nama_item || '-';
+                        let ket = r.keterangan || '-';
+                        let cust = r.customer || '-';
+                        
+                        let key = `${area}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${r.jenis_item}_${n}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${cust}_${ket}`;
+                        
+                        if(!groups[key]) {
+                            groups[key] = {
+                                area: area, tgl: r.tgl_produksi || '-', mesin: r.mesin || '-', shift: r.shift || '-',
+                                jenis: r.jenis_item || '-', nama: n, pjg: r.panjang || '-',
+                                grade: r.grade || '-', dus: r.dus || '-', shading: r.shading || '-',
+                                cust: cust, ket: ket, qty: 0
+                            };
+                        }
+                        groups[key].qty++;
                     });
-                    sheetName = "Data_Langsir";
-                    fileName = `Laporan_Langsir_${dStart}_sd_${dEnd}.xlsx`;
+
+                    ws_data.push(['Area', 'Tgl Produksi', 'Mesin', 'Shift', 'Jenis Item', 'Nama Item', 'Panjang', 'Grade', 'Dus', 'Shading', 'Customer Bawaan', 'QTY (DUS)', 'Keterangan']);
+                    Object.values(groups).forEach(g => {
+                        ws_data.push([g.area, g.tgl, g.mesin, g.shift, g.jenis, g.nama, g.pjg, g.grade, g.dus, g.shading, g.cust, g.qty, g.ket]);
+                    });
+
+                    sheetName = "Langsir_Rangkuman";
+                    fileName = `Laporan_Langsir_Rangkuman_${dStart}_sd_${dEnd}.xlsx`;
                 }
                 else if (type === 'keluar') {
                     const { data, error } = await db.from('stok_keluar')
