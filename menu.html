@@ -7,18 +7,29 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Tambahan library XLSX untuk fitur Quick Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <script src="global.js"></script>
+    
+    <style>
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; } 
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
 </head>
-<body class="font-sans text-slate-800">
+<body class="font-sans text-slate-800 bg-slate-100">
 
-    <div class="w-full max-w-7xl mx-auto space-y-6">
+    <div class="w-full max-w-7xl mx-auto space-y-6 p-4 sm:p-6 pb-20">
         
         <!-- HEADER DASHBOARD -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <div>
                 <h2 class="text-2xl font-black text-slate-800 tracking-tight">Selamat Datang, <span id="lbl-user-name" class="text-blue-600">Admin</span>! 👋</h2>
-                <p class="text-sm font-medium text-slate-500 mt-1">Berikut adalah ringkasan aktivitas gudang Anda hari ini.</p>
+                <p class="text-sm font-medium text-slate-500 mt-1">Berikut adalah ringkasan performa dan aktivitas gudang hari ini.</p>
             </div>
             <div class="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
                 <div class="relative flex items-center justify-center w-8 h-8">
@@ -26,135 +37,184 @@
                     <div class="relative w-3 h-3 rounded-full bg-emerald-500 border-2 border-white"></div>
                 </div>
                 <div class="flex flex-col">
-                    <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider">System Status</span>
+                    <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Server Status</span>
                     <span id="lbl-ping" class="text-xs font-bold text-emerald-600">Online (Memuat...)</span>
                 </div>
             </div>
         </div>
 
         <!-- STATISTIK UTAMA (TOP CARDS) -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             
-            <!-- Card 1: Belum Dilangsir -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
-                <div class="absolute -right-6 -top-6 w-24 h-24 bg-amber-50 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
-                <div class="relative z-10 flex justify-between items-start">
-                    <div class="flex flex-col gap-1">
-                        <span class="text-xs font-black uppercase tracking-wider text-slate-400">Belum Dilangsir</span>
-                        <span id="stat-stbj" class="text-4xl font-black text-slate-800">0</span>
-                        <span class="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md w-max mt-1">Di Area Transit / Hold</span>
-                    </div>
-                    <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-inner">
-                        <i data-lucide="package-search" class="w-6 h-6"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Card 2: Total Stok Gudang -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
+            <!-- Card 1: Total Stok Gudang -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
                 <div class="absolute -right-6 -top-6 w-24 h-24 bg-blue-50 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
                 <div class="relative z-10 flex justify-between items-start">
                     <div class="flex flex-col gap-1">
-                        <span class="text-xs font-black uppercase tracking-wider text-slate-400">Total Stok Gudang</span>
-                        <span id="stat-stok" class="text-4xl font-black text-slate-800">0</span>
-                        <span class="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md w-max mt-1">Kardus Tersedia</span>
+                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Stok Gudang</span>
+                        <span id="stat-stok" class="text-3xl font-black text-slate-800"><i data-lucide="loader-2" class="w-6 h-6 animate-spin text-slate-300"></i></span>
+                        <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md w-max mt-1">Kardus Tersedia</span>
                     </div>
-                    <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-inner">
-                        <i data-lucide="layers" class="w-6 h-6"></i>
+                    <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-inner">
+                        <i data-lucide="layers" class="w-5 h-5"></i>
                     </div>
                 </div>
             </div>
 
-            <!-- Card 3: Barang Keluar Hari Ini -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
+            <!-- Card 2: STBJ Hari Ini -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
+                <div class="absolute -right-6 -top-6 w-24 h-24 bg-amber-50 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                <div class="relative z-10 flex justify-between items-start">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">STBJ Hari Ini</span>
+                        <span id="stat-stbj" class="text-3xl font-black text-slate-800"><i data-lucide="loader-2" class="w-6 h-6 animate-spin text-slate-300"></i></span>
+                        <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md w-max mt-1">Barang Masuk Transit</span>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-inner">
+                        <i data-lucide="shield-check" class="w-5 h-5"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3: Langsir Hari Ini -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
+                <div class="absolute -right-6 -top-6 w-24 h-24 bg-purple-50 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                <div class="relative z-10 flex justify-between items-start">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Langsir Hari Ini</span>
+                        <span id="stat-langsir" class="text-3xl font-black text-slate-800"><i data-lucide="loader-2" class="w-6 h-6 animate-spin text-slate-300"></i></span>
+                        <span class="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md w-max mt-1">Disimpan ke Area</span>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-inner">
+                        <i data-lucide="log-in" class="w-5 h-5"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 4: Keluar Hari Ini -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
                 <div class="absolute -right-6 -top-6 w-24 h-24 bg-emerald-50 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
                 <div class="relative z-10 flex justify-between items-start">
                     <div class="flex flex-col gap-1">
-                        <span class="text-xs font-black uppercase tracking-wider text-slate-400">Keluar Hari Ini</span>
-                        <span id="stat-keluar" class="text-4xl font-black text-slate-800">0</span>
-                        <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md w-max mt-1">Telah Dikirim</span>
+                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Keluar Hari Ini</span>
+                        <span id="stat-keluar" class="text-3xl font-black text-slate-800"><i data-lucide="loader-2" class="w-6 h-6 animate-spin text-slate-300"></i></span>
+                        <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md w-max mt-1">Telah Dikirim</span>
                     </div>
-                    <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-inner">
-                        <i data-lucide="truck" class="w-6 h-6"></i>
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-inner">
+                        <i data-lucide="truck" class="w-5 h-5"></i>
                     </div>
                 </div>
             </div>
 
         </div>
 
-        <!-- BAGIAN BAWAH: GRAFIK & AKTIVITAS TERAKHIR -->
+        <!-- MIDDLE ROW: SHORTCUTS, PERFORMANCE, QUICK REPORTS -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            <!-- Kiri: Progress Bar & Quick Actions -->
-            <div class="lg:col-span-1 space-y-6">
+            <!-- Kolom Kiri: Pintasan & Performa -->
+            <div class="lg:col-span-1 flex flex-col gap-6">
                 
-                <!-- Progress Kapasitas (Ilustrasi) -->
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <h3 class="text-sm font-black uppercase tracking-wider text-slate-700 mb-4 flex items-center gap-2"><i data-lucide="activity" class="w-4 h-4 text-blue-600"></i> Rasio Pergerakan</h3>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <div class="flex justify-between text-xs font-bold text-slate-500 mb-1">
-                                <span>Inbound (Masuk)</span>
-                                <span id="lbl-rasio-in" class="text-slate-800">0%</span>
-                            </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                                <div id="bar-in" class="bg-blue-500 h-2.5 rounded-full transition-all duration-1000" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <div class="flex justify-between text-xs font-bold text-slate-500 mb-1">
-                                <span>Outbound (Keluar)</span>
-                                <span id="lbl-rasio-out" class="text-slate-800">0%</span>
-                            </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                                <div id="bar-out" class="bg-emerald-500 h-2.5 rounded-full transition-all duration-1000" style="width: 0%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Quick Actions -->
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                     <h3 class="text-sm font-black uppercase tracking-wider text-slate-700 mb-4 flex items-center gap-2"><i data-lucide="zap" class="w-4 h-4 text-amber-500"></i> Akses Cepat</h3>
                     <div class="grid grid-cols-2 gap-3">
-                        <button onclick="window.location.href='stbj.html'" class="p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl flex flex-col items-center justify-center gap-2 transition group cursor-pointer">
-                            <i data-lucide="shield-check" class="w-6 h-6 text-slate-400 group-hover:text-blue-600 transition"></i>
-                            <span class="text-[10px] font-bold text-slate-600 group-hover:text-blue-700 uppercase">Scan STBJ</span>
+                        <button onclick="window.location.href='stbj.html'" class="p-3 bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl flex flex-col items-center justify-center gap-2 transition group cursor-pointer">
+                            <i data-lucide="shield-check" class="w-6 h-6 text-slate-400 group-hover:text-amber-600 transition"></i>
+                            <span class="text-[10px] font-bold text-slate-600 group-hover:text-amber-700 uppercase">Scan STBJ</span>
                         </button>
-                        <button onclick="window.location.href='langsir.html'" class="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl flex flex-col items-center justify-center gap-2 transition group cursor-pointer">
-                            <i data-lucide="log-in" class="w-6 h-6 text-slate-400 group-hover:text-indigo-600 transition"></i>
-                            <span class="text-[10px] font-bold text-slate-600 group-hover:text-indigo-700 uppercase">Langsir</span>
+                        <button onclick="window.location.href='langsir.html'" class="p-3 bg-slate-50 hover:bg-purple-50 border border-slate-200 hover:border-purple-300 rounded-xl flex flex-col items-center justify-center gap-2 transition group cursor-pointer">
+                            <i data-lucide="log-in" class="w-6 h-6 text-slate-400 group-hover:text-purple-600 transition"></i>
+                            <span class="text-[10px] font-bold text-slate-600 group-hover:text-purple-700 uppercase">Langsir</span>
                         </button>
-                        <button onclick="window.location.href='po.html'" class="p-3 bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-200 rounded-xl flex flex-col items-center justify-center gap-2 transition group cursor-pointer">
-                            <i data-lucide="clipboard-check" class="w-6 h-6 text-slate-400 group-hover:text-orange-600 transition"></i>
-                            <span class="text-[10px] font-bold text-slate-600 group-hover:text-orange-700 uppercase">Input PO</span>
+                        <button onclick="window.location.href='po.html'" class="p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl flex flex-col items-center justify-center gap-2 transition group cursor-pointer">
+                            <i data-lucide="clipboard-check" class="w-6 h-6 text-slate-400 group-hover:text-blue-600 transition"></i>
+                            <span class="text-[10px] font-bold text-slate-600 group-hover:text-blue-700 uppercase">Input PO</span>
                         </button>
-                        <button onclick="window.location.href='keluar.html'" class="p-3 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 rounded-xl flex flex-col items-center justify-center gap-2 transition group cursor-pointer">
+                        <button onclick="window.location.href='keluar.html'" class="p-3 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-xl flex flex-col items-center justify-center gap-2 transition group cursor-pointer">
                             <i data-lucide="truck" class="w-6 h-6 text-slate-400 group-hover:text-emerald-600 transition"></i>
-                            <span class="text-[10px] font-bold text-slate-600 group-hover:text-emerald-700 uppercase">Kirim</span>
+                            <span class="text-[10px] font-bold text-slate-600 group-hover:text-emerald-700 uppercase">Kirim Keluar</span>
                         </button>
+                    </div>
+                </div>
+
+                <!-- Performance Metrics -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex-1">
+                    <h3 class="text-sm font-black uppercase tracking-wider text-slate-700 mb-4 flex items-center gap-2"><i data-lucide="cpu" class="w-4 h-4 text-indigo-500"></i> Performa Sistem</h3>
+                    <div class="space-y-4">
+                        <!-- RAM Usage -->
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center"><i data-lucide="memory-stick" class="w-4 h-4"></i></div>
+                                <div class="flex flex-col">
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase">Penggunaan RAM</span>
+                                    <span class="text-xs font-black text-slate-800" id="ram-usage">Menghitung...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Network Speed / Ping -->
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-teal-100 text-teal-600 flex items-center justify-center"><i data-lucide="wifi" class="w-4 h-4"></i></div>
+                                <div class="flex flex-col">
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase">Respon Database</span>
+                                    <span class="text-xs font-black text-slate-800" id="db-latency">Menghitung...</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
             </div>
 
-            <!-- Kanan: Aktivitas Terakhir -->
-            <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h3 class="text-sm font-black uppercase tracking-wider text-slate-700 flex items-center gap-2"><i data-lucide="history" class="w-4 h-4 text-indigo-600"></i> Aktivitas Terakhir</h3>
-                    <button onclick="loadDashboardData()" class="text-slate-400 hover:text-blue-600 transition" title="Refresh Data"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
-                </div>
-                <div class="flex-1 p-0 overflow-y-auto hide-scrollbar">
-                    <table class="w-full text-left text-sm whitespace-nowrap">
-                        <tbody id="tbody-aktivitas" class="divide-y divide-slate-100">
-                            <tr><td class="p-10 text-center text-slate-400 font-bold"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i> Memuat aktivitas...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <!-- Kolom Tengah & Kanan: Quick Reports & Aktivitas -->
+            <div class="lg:col-span-2 flex flex-col gap-6">
+                
+                <!-- Quick Download Reports -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-sm font-black uppercase tracking-wider text-slate-700 mb-4 flex items-center gap-2"><i data-lucide="file-down" class="w-4 h-4 text-emerald-600"></i> Download Laporan Cepat</h3>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 items-end">
+                        <!-- Date Range -->
+                        <div class="w-full sm:w-auto flex-1">
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1.5">Rentang Tanggal</label>
+                            <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-1.5">
+                                <input type="date" id="report-start" class="w-full p-2 text-xs font-bold text-slate-700 outline-none cursor-pointer bg-white border border-slate-200 rounded">
+                                <span class="text-xs font-black text-slate-400">S/D</span>
+                                <input type="date" id="report-end" class="w-full p-2 text-xs font-bold text-slate-700 outline-none cursor-pointer bg-white border border-slate-200 rounded">
+                            </div>
+                        </div>
 
+                        <!-- Buttons -->
+                        <div class="w-full sm:w-auto flex gap-2">
+                            <button onclick="downloadQuickReport('stbj')" id="btn-dl-stbj" class="flex-1 sm:flex-none px-4 py-3 bg-amber-100 hover:bg-amber-200 text-amber-700 font-black rounded-lg text-[10px] uppercase transition shadow-sm flex flex-col items-center justify-center gap-1 active:scale-95 border border-amber-300">
+                                <i data-lucide="shield-check" class="w-4 h-4"></i> Laporan STBJ
+                            </button>
+                            <button onclick="downloadQuickReport('langsir')" id="btn-dl-langsir" class="flex-1 sm:flex-none px-4 py-3 bg-purple-100 hover:bg-purple-200 text-purple-700 font-black rounded-lg text-[10px] uppercase transition shadow-sm flex flex-col items-center justify-center gap-1 active:scale-95 border border-purple-300">
+                                <i data-lucide="log-in" class="w-4 h-4"></i> Laporan Langsir
+                            </button>
+                            <button onclick="downloadQuickReport('keluar')" id="btn-dl-keluar" class="flex-1 sm:flex-none px-4 py-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg text-[10px] uppercase transition shadow-sm flex flex-col items-center justify-center gap-1 active:scale-95 border border-emerald-300">
+                                <i data-lucide="truck" class="w-4 h-4"></i> Laporan Keluar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aktivitas Terakhir -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden flex-1">
+                    <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h3 class="text-sm font-black uppercase tracking-wider text-slate-700 flex items-center gap-2"><i data-lucide="history" class="w-4 h-4 text-blue-600"></i> Log Aktivitas Terakhir</h3>
+                        <button onclick="loadDashboardData()" class="text-slate-400 hover:text-blue-600 transition" title="Refresh Data"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
+                    </div>
+                    <div class="flex-1 p-0 overflow-y-auto custom-scroll max-h-[300px]">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <tbody id="tbody-aktivitas" class="divide-y divide-slate-100">
+                                <tr><td class="p-10 text-center text-slate-400 font-bold"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i> Memuat aktivitas...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
         </div>
 
     </div>
@@ -166,97 +226,131 @@
             const user = JSON.parse(localStorage.getItem('user_session'));
             if(user) document.getElementById('lbl-user-name').innerText = user.username;
 
+            // Set Default Date untuk Quick Report (Hari ini)
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('report-start').value = today;
+            document.getElementById('report-end').value = today;
+
             loadDashboardData();
-            cekPing();
-            setInterval(cekPing, 30000); // Cek ping setiap 30 detik
+            cekPerforma();
+            setInterval(cekPerforma, 5000); // Cek RAM tiap 5 detik
         });
 
-        async function cekPing() {
-            const start = Date.now();
-            try {
-                const { error } = await db.from('master_area').select('id').limit(1);
-                if(error) throw error;
-                const end = Date.now();
-                const ping = end - start;
-                
-                const lbl = document.getElementById('lbl-ping');
-                const indicator = document.getElementById('ping-indicator');
-                
-                lbl.innerText = `Online (${ping}ms)`;
-                lbl.className = 'text-xs font-bold text-emerald-600';
-                indicator.className = 'absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75';
-                indicator.nextElementSibling.className = 'relative w-3 h-3 rounded-full bg-emerald-500 border-2 border-white';
-                
-                if(ping > 1000) {
-                    lbl.className = 'text-xs font-bold text-amber-600';
-                    indicator.className = 'absolute inset-0 rounded-full bg-amber-400 animate-ping opacity-75';
-                    indicator.nextElementSibling.className = 'relative w-3 h-3 rounded-full bg-amber-500 border-2 border-white';
+        // ==========================================
+        // 1. CEK PERFORMA (RAM & PING)
+        // ==========================================
+        async function cekPerforma() {
+            // Cek RAM (Hanya jalan di browser berbasis Chromium)
+            const ramLbl = document.getElementById('ram-usage');
+            if (window.performance && window.performance.memory) {
+                const usedMB = (window.performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(1);
+                const limitMB = (window.performance.memory.jsHeapSizeLimit / (1024 * 1024)).toFixed(0);
+                ramLbl.innerText = `${usedMB} MB / ${limitMB} MB`;
+                ramLbl.className = usedMB > (limitMB * 0.8) ? 'text-xs font-black text-rose-600' : 'text-xs font-black text-slate-800';
+            } else {
+                ramLbl.innerText = "Tidak didukung browser ini";
+                ramLbl.className = 'text-xs font-bold text-slate-400';
+            }
+
+            // Cek Ping ke Supabase (Setiap 30 detik agar tidak spam)
+            if (!window.lastPingTime || (Date.now() - window.lastPingTime > 30000)) {
+                window.lastPingTime = Date.now();
+                const start = Date.now();
+                try {
+                    const { error } = await db.from('master_area').select('id').limit(1);
+                    if(error) throw error;
+                    const ping = Date.now() - start;
+                    
+                    const lblPingTop = document.getElementById('lbl-ping');
+                    const indicator = document.getElementById('ping-indicator');
+                    const lblDbLatency = document.getElementById('db-latency');
+                    
+                    lblPingTop.innerText = `Online (${ping}ms)`;
+                    lblDbLatency.innerText = `${ping} ms`;
+                    
+                    if(ping > 1000) {
+                        lblPingTop.className = 'text-xs font-bold text-amber-600';
+                        lblDbLatency.className = 'text-xs font-black text-amber-600';
+                        indicator.className = 'absolute inset-0 rounded-full bg-amber-400 animate-ping opacity-75';
+                        indicator.nextElementSibling.className = 'relative w-3 h-3 rounded-full bg-amber-500 border-2 border-white';
+                    } else {
+                        lblPingTop.className = 'text-xs font-bold text-emerald-600';
+                        lblDbLatency.className = 'text-xs font-black text-emerald-600';
+                        indicator.className = 'absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75';
+                        indicator.nextElementSibling.className = 'relative w-3 h-3 rounded-full bg-emerald-500 border-2 border-white';
+                    }
+                } catch(e) {
+                    document.getElementById('lbl-ping').innerText = `Offline / Error`;
+                    document.getElementById('lbl-ping').className = 'text-xs font-bold text-rose-600';
+                    document.getElementById('db-latency').innerText = `Gagal Terhubung`;
+                    document.getElementById('db-latency').className = 'text-xs font-black text-rose-600';
+                    document.getElementById('ping-indicator').className = 'hidden';
+                    document.getElementById('ping-indicator').nextElementSibling.className = 'relative w-3 h-3 rounded-full bg-rose-500 border-2 border-white';
                 }
-            } catch(e) {
-                const lbl = document.getElementById('lbl-ping');
-                const indicator = document.getElementById('ping-indicator');
-                lbl.innerText = `Offline / Error`;
-                lbl.className = 'text-xs font-bold text-rose-600';
-                indicator.className = 'hidden';
-                indicator.nextElementSibling.className = 'relative w-3 h-3 rounded-full bg-rose-500 border-2 border-white';
             }
         }
 
+        // ==========================================
+        // 2. LOAD DATA DASHBOARD (STATISTIK HARI INI)
+        // ==========================================
         async function loadDashboardData() {
             try {
-                // 1. Ambil Count Belum Dilangsir (stok_global)
-                const { count: countStbj } = await db.from('stok_global').select('*', { count: 'exact', head: true });
-                document.getElementById('stat-stbj').innerText = countStbj || 0;
+                // Rentang waktu hari ini (WIB / Local)
+                const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+                const endOfDay = new Date(); endOfDay.setHours(23,59,59,999);
+                const startISO = startOfDay.toISOString();
+                const endISO = endOfDay.toISOString();
 
-                // 2. Ambil Count Total Stok Gudang (stok_qr)
-                const { count: countStok } = await db.from('stok_qr').select('*', { count: 'exact', head: true });
+                // 1. Total Stok Gudang (stok_global)
+                const { count: countStok } = await db.from('stok_global').select('*', { count: 'exact', head: true });
                 document.getElementById('stat-stok').innerText = countStok || 0;
 
-                // 3. Ambil Count Barang Keluar Hari Ini
-                const today = new Date().toISOString().split('T')[0];
-                const { count: countKeluar } = await db.from('stok_keluar').select('*', { count: 'exact', head: true }).gte('created_at', today + 'T00:00:00Z');
+                // 2. STBJ Hari Ini (created_at hari ini)
+                const { count: countStbj } = await db.from('hasil_stbj_langsir')
+                    .select('*', { count: 'exact', head: true })
+                    .gte('created_at', startISO).lte('created_at', endISO);
+                document.getElementById('stat-stbj').innerText = countStbj || 0;
+
+                // 3. Langsir Hari Ini (waktu_langsir hari ini & status IN GUDANG)
+                const { count: countLangsir } = await db.from('hasil_stbj_langsir')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'IN GUDANG')
+                    .gte('waktu_langsir', startISO).lte('waktu_langsir', endISO);
+                document.getElementById('stat-langsir').innerText = countLangsir || 0;
+
+                // 4. Keluar Hari Ini (created_at hari ini)
+                const { count: countKeluar } = await db.from('stok_keluar')
+                    .select('*', { count: 'exact', head: true })
+                    .gte('created_at', startISO).lte('created_at', endISO);
                 document.getElementById('stat-keluar').innerText = countKeluar || 0;
 
-                // 4. Hitung Rasio (Ilustrasi Sederhana)
-                let totalAktivitas = (countStbj || 0) + (countStok || 0) + (countKeluar || 0);
-                if(totalAktivitas > 0) {
-                    let pctIn = Math.round(((countStbj || 0) / totalAktivitas) * 100);
-                    let pctOut = Math.round(((countKeluar || 0) / totalAktivitas) * 100);
-                    
-                    document.getElementById('lbl-rasio-in').innerText = pctIn + '%';
-                    document.getElementById('bar-in').style.width = pctIn + '%';
-                    
-                    document.getElementById('lbl-rasio-out').innerText = pctOut + '%';
-                    document.getElementById('bar-out').style.width = pctOut + '%';
-                }
-
-                // 5. Ambil 5 Aktivitas Terakhir (Gabungan Masuk & Keluar)
+                // 5. Ambil 6 Aktivitas Terakhir (Gabungan Langsir & Keluar)
                 const [resMasuk, resKeluar] = await Promise.all([
-                    db.from('hasil_langsir').select('qrcode, nama_item, created_at, pic_input').order('created_at', {ascending: false}).limit(3),
-                    db.from('stok_keluar').select('qrcode, nama_item, created_at, pic_keluar').order('created_at', {ascending: false}).limit(3)
+                    db.from('hasil_stbj_langsir').select('qrcode, nama_item, waktu_langsir, pic_input').eq('status', 'IN GUDANG').order('waktu_langsir', {ascending: false}).limit(4),
+                    db.from('stok_keluar').select('qrcode, nama_item, created_at, pic_keluar').order('created_at', {ascending: false}).limit(4)
                 ]);
 
                 let aktivitas = [];
-                if(resMasuk.data) resMasuk.data.forEach(d => aktivitas.push({ type: 'IN', ...d, pic: d.pic_input }));
-                if(resKeluar.data) resKeluar.data.forEach(d => aktivitas.push({ type: 'OUT', ...d, pic: d.pic_keluar }));
+                if(resMasuk.data) resMasuk.data.forEach(d => { if(d.waktu_langsir) aktivitas.push({ type: 'IN', qrcode: d.qrcode, nama_item: d.nama_item, time: d.waktu_langsir, pic: d.pic_input }); });
+                if(resKeluar.data) resKeluar.data.forEach(d => aktivitas.push({ type: 'OUT', qrcode: d.qrcode, nama_item: d.nama_item, time: d.created_at, pic: d.pic_keluar }));
 
                 // Urutkan berdasarkan waktu terbaru
-                aktivitas.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                aktivitas = aktivitas.slice(0, 5); // Ambil 5 teratas
+                aktivitas.sort((a, b) => new Date(b.time) - new Date(a.time));
+                aktivitas = aktivitas.slice(0, 6); // Ambil 6 teratas
 
                 const tbody = document.getElementById('tbody-aktivitas');
                 if(aktivitas.length === 0) {
-                    tbody.innerHTML = '<tr><td class="p-10 text-center text-slate-400 font-bold">Belum ada aktivitas hari ini.</td></tr>';
+                    tbody.innerHTML = '<tr><td class="p-10 text-center text-slate-400 font-bold">Belum ada aktivitas.</td></tr>';
                 } else {
                     let html = '';
                     aktivitas.forEach(a => {
-                        const dt = new Date(a.created_at);
-                        const waktu = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+                        const dt = new Date(a.time);
+                        const waktu = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
                         
                         const isMasuk = a.type === 'IN';
-                        const icon = isMasuk ? '<i data-lucide="arrow-down-to-line" class="w-4 h-4 text-blue-600"></i>' : '<i data-lucide="arrow-up-from-line" class="w-4 h-4 text-emerald-600"></i>';
-                        const bgIcon = isMasuk ? 'bg-blue-100' : 'bg-emerald-100';
-                        const textAksi = isMasuk ? 'Masuk Gudang' : 'Keluar Gudang';
+                        const icon = isMasuk ? '<i data-lucide="arrow-down-to-line" class="w-4 h-4 text-purple-600"></i>' : '<i data-lucide="arrow-up-from-line" class="w-4 h-4 text-emerald-600"></i>';
+                        const bgIcon = isMasuk ? 'bg-purple-100' : 'bg-emerald-100';
+                        const textAksi = isMasuk ? 'Langsir Masuk' : 'Kirim Keluar';
 
                         html += `
                             <tr class="hover:bg-slate-50 transition group">
@@ -285,6 +379,118 @@
             } catch(e) {
                 console.error("Gagal load dashboard:", e);
             }
+        }
+
+        // ==========================================
+        // 3. QUICK EXPORT REPORT
+        // ==========================================
+        async function downloadQuickReport(type) {
+            if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
+
+            const dStart = document.getElementById('report-start').value;
+            const dEnd = document.getElementById('report-end').value;
+
+            if(!dStart || !dEnd) return alert("Pilih rentang tanggal terlebih dahulu!");
+
+            // Format ISO untuk query
+            const startISO = new Date(dStart + 'T00:00:00Z').toISOString();
+            const endISO = new Date(dEnd + 'T23:59:59Z').toISOString();
+
+            // Animasi Tombol
+            const btnId = `btn-dl-${type}`;
+            const btn = document.getElementById(btnId);
+            const oriHtml = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Loading...`;
+            btn.disabled = true;
+            lucide.createIcons();
+
+            try {
+                let ws_data = [];
+                let sheetName = "";
+                let fileName = "";
+
+                if (type === 'stbj') {
+                    const { data, error } = await db.from('hasil_stbj_langsir')
+                        .select('*')
+                        .gte('created_at', startISO).lte('created_at', endISO)
+                        .order('created_at', { ascending: false });
+                    if(error) throw error;
+
+                    ws_data.push(['Waktu STBJ', 'Troli', 'QRCode', 'Tgl Produksi', 'Mesin', 'Shift', 'Jenis Item', 'Nama Item', 'Panjang', 'Grade', 'Dus', 'Shading', 'Customer Aktual', 'Keterangan', 'PIC']);
+                    (data || []).forEach(r => {
+                        ws_data.push([
+                            formatWIB(r.created_at), r.troli, r.qrcode, r.tgl_produksi, r.mesin, r.shift, 
+                            r.jenis_item, r.nama_item, r.panjang, r.grade, r.dus, r.shading, r.customer, r.keterangan, r.pic_input
+                        ]);
+                    });
+                    sheetName = "Data_STBJ";
+                    fileName = `Laporan_STBJ_${dStart}_sd_${dEnd}.xlsx`;
+                } 
+                else if (type === 'langsir') {
+                    const { data, error } = await db.from('hasil_stbj_langsir')
+                        .select('*')
+                        .eq('status', 'IN GUDANG')
+                        .gte('waktu_langsir', startISO).lte('waktu_langsir', endISO)
+                        .order('waktu_langsir', { ascending: false });
+                    if(error) throw error;
+
+                    ws_data.push(['Waktu Langsir', 'Troli', 'Area', 'QRCode', 'Tgl Produksi', 'Mesin', 'Shift', 'Jenis Item', 'Nama Item', 'Panjang', 'Grade', 'Dus', 'Shading', 'Customer Aktual', 'Keterangan', 'PIC']);
+                    (data || []).forEach(r => {
+                        ws_data.push([
+                            formatWIB(r.waktu_langsir), r.troli, r.posisi, r.qrcode, r.tgl_produksi, r.mesin, r.shift, 
+                            r.jenis_item, r.nama_item, r.panjang, r.grade, r.dus, r.shading, r.customer, r.keterangan, r.pic_input
+                        ]);
+                    });
+                    sheetName = "Data_Langsir";
+                    fileName = `Laporan_Langsir_${dStart}_sd_${dEnd}.xlsx`;
+                }
+                else if (type === 'keluar') {
+                    const { data, error } = await db.from('stok_keluar')
+                        .select('*')
+                        .gte('created_at', startISO).lte('created_at', endISO)
+                        .order('created_at', { ascending: false });
+                    if(error) throw error;
+
+                    ws_data.push(['Waktu Keluar', 'QRCode', 'Tgl Produksi', 'Mesin', 'Shift', 'Jenis Item', 'Nama Item', 'Panjang', 'Grade', 'Dus', 'Shading', 'Customer Aktual', 'Customer Estimasi', 'Customer Keluar', 'Keterangan', 'PIC']);
+                    (data || []).forEach(r => {
+                        ws_data.push([
+                            formatWIB(r.created_at), r.qrcode, r.tgl_produksi, r.mesin, r.shift, 
+                            r.jenis_item, r.nama_item, r.panjang, r.grade, r.dus, r.shading, 
+                            r.customer_aktual, r.customer_estimasi, r.customer_keluar, r.keterangan, r.pic_keluar
+                        ]);
+                    });
+                    sheetName = "Data_Keluar";
+                    fileName = `Laporan_Keluar_${dStart}_sd_${dEnd}.xlsx`;
+                }
+
+                if(ws_data.length <= 1) {
+                    alert("Tidak ada data pada rentang tanggal tersebut.");
+                } else {
+                    let ws = XLSX.utils.aoa_to_sheet(ws_data); 
+                    let wb = XLSX.utils.book_new(); 
+                    XLSX.utils.book_append_sheet(wb, ws, sheetName); 
+                    XLSX.writeFile(wb, fileName);
+                }
+
+            } catch(e) {
+                alert("Gagal mendownload laporan: " + e.message);
+            } finally {
+                btn.innerHTML = oriHtml;
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        }
+
+        function formatWIB(isoString) {
+            if (!isoString || isoString === '-') return '-';
+            try {
+                const dt = new Date(isoString);
+                if (isNaN(dt.getTime())) return isoString;
+                return new Intl.DateTimeFormat('id-ID', {
+                    timeZone: 'Asia/Jakarta', day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', hour12: false
+                }).format(dt).replace(/\./g, ':');
+            } catch(e) { return isoString; }
         }
     </script>
 </body>
