@@ -15,7 +15,7 @@ let currentFilterCol = '';
 let currentPage = 1;
 let rowsPerPage = 10; 
 let userColOrder = []; 
-let hiddenCols = []; // State untuk kolom yang disembunyikan
+let hiddenCols = []; 
 let selectAllState = 0; 
 let selectedRows = new Set(); 
 
@@ -132,7 +132,6 @@ function loadUserPreferences() {
     const savedOrder = localStorage.getItem(`col_order_stbj_${currentUser.username}`);
     if (savedOrder) { try { userColOrder = JSON.parse(savedOrder); } catch(e) { userColOrder = []; } }
     
-    // REVISI: Load Hidden Columns
     const savedHidden = localStorage.getItem(`col_hidden_stbj_${currentUser.username}`);
     if (savedHidden) { try { hiddenCols = JSON.parse(savedHidden); } catch(e) { hiddenCols = []; } }
     
@@ -167,7 +166,6 @@ function tutupPopups() {
     document.getElementById('overlay-klik-luar').classList.add('hidden');
 }
 
-// REVISI: Render Drag List dengan Ikon Mata (Hide/Unhide)
 function renderDragList() {
     const container = document.getElementById('kolom-drag-container');
     container.innerHTML = '';
@@ -206,7 +204,6 @@ function renderDragList() {
     });
 }
 
-// REVISI: Fungsi Toggle Hide Col
 window.toggleHideCol = function(e, colClass) {
     e.stopPropagation();
     if(hiddenCols.includes(colClass)) {
@@ -511,7 +508,6 @@ function sortTable(colClass, headerEl) {
     if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
 }
 
-// REVISI: Update thSort untuk menambahkan class col-hidden
 const thSort = (label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const isHidden = hiddenCols.includes(colClass) ? 'col-hidden' : '';
@@ -826,7 +822,6 @@ function renderTable() {
 
             let statDataHtml = sv['col-status-data'] !== '-' ? `<span class="text-indigo-600 font-medium uppercase">${sv['col-status-data']}</span>` : '-';
 
-            // REVISI: Tambahkan col-hidden jika kolom disembunyikan
             h += `
                 <tr class="${trClass}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${row._id}')" value="${row._id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
@@ -864,7 +859,6 @@ function renderTable() {
                 btnEditJasper = `<td class="px-4 py-3 text-center col-btn-edit ${hiddenCols.includes('col-btn-edit')?'col-hidden':''}"><button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>`;
             }
 
-            // REVISI: Tambahkan col-hidden jika kolom disembunyikan
             h += `
                 <tr class="${trClass}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${row._id}')" value="${row._id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
@@ -1109,7 +1103,6 @@ async function aksiMassal(tipe) {
             const sv = row.searchValues;
             const rowData = [];
             headers.forEach(h => {
-                // Map header back to colClass
                 let colClass = '';
                 if(h === 'Status Item') colClass = 'col-status';
                 else if(h === 'Collect') colClass = 'col-status-data';
@@ -1133,7 +1126,11 @@ async function aksiMassal(tipe) {
                 else if(h === 'Keterangan') colClass = 'col-ket';
                 else if(h === 'PIC Input') colClass = 'col-pic';
 
-                if(colClass) rowData.push(String(sv[colClass] || '').replace(/\n/g, ' '));
+                if(colClass) {
+                    let val = sv[colClass] || '-';
+                    let cleanVal = String(val).replace(/<[^>]*>?/gm, '').trim();
+                    rowData.push(cleanVal);
+                }
             });
             textSalin += rowData.join('\t') + '\n';
         });
@@ -1223,40 +1220,26 @@ async function aksiMassal(tipe) {
         if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
         
         let ws_data = [];
-        const headers = Array.from(document.querySelectorAll('#thead-stbj th'))
-            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-btn') && !th.classList.contains('col-btn-edit'))
-            .map(th => th.innerText.trim().replace(/\n/g, ' '));
-        ws_data.push(headers);
+        const activeHeaders = [];
+        
+        document.querySelectorAll('#thead-stbj th').forEach(th => {
+            if(window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-btn') && !th.classList.contains('col-btn-edit')) {
+                const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
+                let headerText = th.innerText.trim().replace(/\n/g, ' ');
+                activeHeaders.push({ text: headerText, colClass: colClass });
+            }
+        });
+
+        ws_data.push(activeHeaders.map(h => h.text));
 
         let exportData = filteredData.filter(r => selectedRows.has(r._id));
         exportData.forEach(row => {
             const sv = row.searchValues;
             const rowData = [];
-            headers.forEach(h => {
-                let colClass = '';
-                if(h === 'Status Item') colClass = 'col-status';
-                else if(h === 'Collect') colClass = 'col-status-data';
-                else if(h === 'Waktu STBJ') colClass = 'col-waktu';
-                else if(h === 'Waktu Langsir') colClass = 'col-waktu-langsir';
-                else if(h === 'Troli') colClass = 'col-troli';
-                else if(h === 'QRCode') colClass = 'col-qr';
-                else if(h === 'Tgl Produksi') colClass = 'col-tgl';
-                else if(h === 'Mesin') colClass = 'col-mesin';
-                else if(h === 'Shift') colClass = 'col-shift';
-                else if(h === 'Jenis Item') colClass = 'col-jenis';
-                else if(h === 'Nama Item') colClass = 'col-nama';
-                else if(h === 'Nama Jasper') colClass = 'col-jasper';
-                else if(h === 'Pjg' || h === 'Panjang') colClass = 'col-pjg';
-                else if(h === 'Grade') colClass = 'col-grade';
-                else if(h === 'Dus') colClass = 'col-dus';
-                else if(h === 'Shading') colClass = 'col-shading';
-                else if(h === 'Customer Bawaan') colClass = 'col-customer';
-                else if(h === 'QTY (DUS)') colClass = 'col-qty';
-                else if(h === 'QTY (LEMBAR)') colClass = 'col-qty-lembar';
-                else if(h === 'Keterangan') colClass = 'col-ket';
-                else if(h === 'PIC Input') colClass = 'col-pic';
-
-                if(colClass) rowData.push(`"${String(sv[colClass] || '').replace(/\n/g, ' ')}"`);
+            activeHeaders.forEach(h => {
+                let val = sv[h.colClass] || '-';
+                let cleanVal = String(val).replace(/<[^>]*>?/gm, '').trim();
+                rowData.push(cleanVal);
             });
             ws_data.push(rowData);
         });
