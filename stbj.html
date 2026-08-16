@@ -26,28 +26,8 @@
         
         <div class="shrink-0 bg-white flex flex-col z-20 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)] border-b border-slate-200">
             
-            <!-- TOOLBAR AKSI -->
-            <div class="p-3 sm:p-4 flex items-center justify-between bg-slate-50/50 w-full">
-                <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar">
-                    <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="shrink-0 flex items-stretch rounded-md overflow-hidden shadow-sm active:scale-95 transition h-9 border border-slate-800">
-                        <div class="w-9 bg-slate-900 text-white flex items-center justify-center shrink-0"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
-                        <div class="flex-1 bg-slate-800 text-white font-black text-[11px] uppercase flex items-center justify-center px-3 tracking-wider">Verifikasi</div>
-                    </button>
-
-                    <button onclick="undoHapusSTBJ()" class="shrink-0 flex items-stretch rounded-md overflow-hidden shadow-sm active:scale-95 transition h-9 border border-rose-700">
-                        <div class="w-9 bg-rose-700 text-white flex items-center justify-center shrink-0"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
-                        <div class="flex-1 bg-rose-600 text-white font-black text-[11px] uppercase flex items-center justify-center px-3 tracking-wider">Undo</div>
-                    </button>
-
-                    <button onclick="holdManual()" class="shrink-0 flex items-stretch rounded-md overflow-hidden shadow-sm active:scale-95 transition h-9 border border-amber-600">
-                        <div class="w-9 bg-amber-700 text-white flex items-center justify-center shrink-0"><i data-lucide="pause-circle" class="w-4 h-4"></i></div>
-                        <div class="flex-1 bg-amber-500 text-white font-black text-[11px] uppercase flex items-center justify-center px-3 tracking-wider">Hold Item</div>
-                    </button>
-                </div>
-            </div>
-
             <!-- SELECT ALL & QTY & FILTER -->
-            <div class="flex justify-between items-center px-3 py-2 bg-white border-t border-slate-200">
+            <div class="flex justify-between items-center px-3 py-3 bg-white border-b border-slate-200">
                 <div class="flex items-center gap-2">
                     <input type="checkbox" onchange="toggleAll(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-400" id="cb-all">
                     <label for="cb-all" class="text-[11px] font-black text-slate-500 uppercase tracking-wide cursor-pointer">Pilih Semua</label>
@@ -71,14 +51,47 @@
             </div>
         </div>
 
-        <!-- FOOTER ACTION -->
-        <div class="shrink-0 w-full bg-slate-50 p-2 flex items-center gap-2 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300 pb-4">
-            <button onclick="bukaModalAdd()" class="w-[50px] h-[50px] bg-[#0f172a] hover:bg-black text-white flex justify-center items-center shadow-md active:scale-95 shrink-0 transition rounded border-b-4 border-slate-900">
-                <i data-lucide="plus" class="w-7 h-7"></i>
-            </button>
-            <button id="btn-save" onclick="saveToDatabaseSTBJ()" class="flex-1 h-[50px] bg-[#058c5e] hover:bg-[#04724d] text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-[#035237]">
-                <i data-lucide="save" class="w-5 h-5"></i> SIMPAN KE GUDANG
-            </button>
+        <!-- FOOTER ACTION (4 KOTAK BOTTOM BAR) -->
+        <div class="shrink-0 w-full bg-slate-50 p-2 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300 pb-4">
+            <div class="grid grid-cols-4 gap-2 h-[55px]">
+                
+                <!-- KOTAK 1: ADD (DROPUP) -->
+                <div class="relative w-full h-full">
+                    <button onclick="toggleAddMenu(event)" class="w-full h-full bg-[#0f172a] hover:bg-black text-white flex flex-col justify-center items-center shadow-md active:scale-95 transition rounded border-b-4 border-slate-900">
+                        <i data-lucide="plus" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                    </button>
+                    
+                    <!-- Dropup Menu Add -->
+                    <div id="dropup-add" class="hidden absolute bottom-full left-0 mb-2 w-48 bg-white shadow-xl rounded-lg border border-slate-200 z-50 flex flex-col overflow-hidden">
+                        <button onclick="bukaModalAdd(); toggleAddMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="qr-code" class="w-4 h-4 text-blue-600"></i> Input QRCode</button>
+                        <button onclick="bukaModalManual(); toggleAddMenu(event)" class="text-left px-4 py-3 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="keyboard" class="w-4 h-4 text-purple-600"></i> Input Manual</button>
+                    </div>
+                </div>
+
+                <!-- KOTAK 2: VERIFIKASI -->
+                <button onclick="cekGudangSTBJ()" id="btn-cek-gudang" class="w-full h-full bg-blue-600 hover:bg-blue-700 text-white font-black shadow-md flex flex-col items-center justify-center gap-1 text-[9px] sm:text-[11px] cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-blue-800 leading-none">
+                    <i data-lucide="shield-check" class="w-4 h-4 sm:w-5 sm:h-5"></i> Verifikasi
+                </button>
+
+                <!-- KOTAK 3: SIMPAN -->
+                <button id="btn-save" onclick="saveToDatabaseSTBJ()" class="w-full h-full bg-[#058c5e] hover:bg-[#04724d] text-white font-black shadow-md flex flex-col items-center justify-center gap-1 text-[9px] sm:text-[11px] cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-[#035237] leading-none">
+                    <i data-lucide="save" class="w-4 h-4 sm:w-5 sm:h-5"></i> Simpan
+                </button>
+
+                <!-- KOTAK 4: LAINNYA (DROPUP) -->
+                <div class="relative w-full h-full">
+                    <button onclick="toggleMoreMenu(event)" class="w-full h-full bg-slate-700 hover:bg-slate-800 text-white font-black shadow-md flex flex-col items-center justify-center gap-1 text-[9px] sm:text-[11px] cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-slate-900 leading-none">
+                        <i data-lucide="more-horizontal" class="w-4 h-4 sm:w-5 sm:h-5"></i> Lainnya
+                    </button>
+                    
+                    <!-- Dropup Menu Lainnya -->
+                    <div id="dropup-more" class="hidden absolute bottom-full right-0 mb-2 w-40 bg-white shadow-xl rounded-lg border border-slate-200 z-50 flex flex-col overflow-hidden">
+                        <button onclick="undoHapusSTBJ(); toggleMoreMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-rose-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo Hapus</button>
+                        <button onclick="holdManual(); toggleMoreMenu(event)" class="text-left px-4 py-3 text-xs font-bold text-amber-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Item</button>
+                    </div>
+                </div>
+
+            </div>
         </div>
         
     </div>
