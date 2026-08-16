@@ -114,7 +114,8 @@ function renderTable() {
         if(d.status === 'BELUM STBJ') {
             badgeClass = "bg-emerald-600 text-white border-emerald-700"; 
         } 
-        else if(['RETUR', 'STBJ', 'SUDAH STBJ', 'HOLD STBJ', 'IN GUDANG', 'HOLD LANGSIR', 'DUPLIKAT SCAN'].includes(d.status)) {
+        // REVISI: Tambahkan 'FORMAT SALAH' ke dalam array kondisi merah
+        else if(['RETUR', 'STBJ', 'SUDAH STBJ', 'HOLD STBJ', 'IN GUDANG', 'HOLD LANGSIR', 'DUPLIKAT SCAN', 'FORMAT SALAH'].includes(d.status)) {
             badgeClass = "bg-red-600 text-white border-red-800"; 
         }
         else if(d.status === 'HOLD') {
@@ -126,7 +127,8 @@ function renderTable() {
             displayStatus = "DUPLIKAT SCAN";
         }
 
-        const isRedHighlight = ['RETUR', 'STBJ', 'SUDAH STBJ', 'HOLD STBJ', 'IN GUDANG', 'HOLD LANGSIR', 'DUPLIKAT SCAN'].includes(d.status) || d.isLocalDuplicate;
+        // REVISI: Tambahkan 'FORMAT SALAH' sebagai trigger baris berwarna merah
+        const isRedHighlight = ['RETUR', 'STBJ', 'SUDAH STBJ', 'HOLD STBJ', 'IN GUDANG', 'HOLD LANGSIR', 'DUPLIKAT SCAN', 'FORMAT SALAH'].includes(d.status) || d.isLocalDuplicate;
         const rowClass = isRedHighlight ? 'bg-red-50 hover:bg-red-100' : (d.status === 'HOLD' ? 'bg-amber-50 hover:bg-amber-100' : 'bg-white hover:bg-slate-50');
 
         html += `
@@ -354,18 +356,26 @@ window.cekGudangSTBJ = async function() {
         const hasilMap = {}; resHasil.data.forEach(d => hasilMap[d.qrcode] = d);
 
         let infoDuplikat = 0;
+        let infoFormatSalah = 0; // REVISI: Counter untuk format salah
+
         dataStbj.forEach(d => {
             if(d.status === 'HOLD' && d.keterangan === 'Dihold Manual') return; 
             
+            // REVISI: Logika pengecekan format QR Code yang rusak/salah
+            let isFormatBad = (!d.mesin || d.mesin === '-' || !d.shift || d.shift === '-' || !d.customer || d.customer === '-' || !d.namaItem || d.namaItem === '-' || !d.panjang || d.panjang === '-' || !d.grade || d.grade === '-' || !d.dus || d.dus === '-');
+
             let existsInGlobal = !!globalMap[d.qrcode];
             let isRetur = existsInGlobal && (globalMap[d.qrcode].jalur_masuk || '').toLowerCase() === 'retur';
 
-            if (isRetur) {
+            if (isFormatBad) {
+                d.status = 'FORMAT SALAH';
+                d.keterangan = 'Format QR Code tidak terbaca sempurna (Label Rusak)';
+                infoFormatSalah++;
+            } else if (isRetur) {
                 d.status = 'RETUR';
                 d.keterangan = 'BARANG RETUR DARI GLOBAL';
                 infoDuplikat++;
             } else if (existsInGlobal) {
-                // REVISI: Jika sudah ada di stok_global, tandai sebagai IN GUDANG (Duplikat Fisik)
                 d.status = 'IN GUDANG';
                 d.keterangan = 'BARANG SUDAH ADA DI GUDANG (STOK GLOBAL)';
                 infoDuplikat++;
@@ -387,8 +397,14 @@ window.cekGudangSTBJ = async function() {
         });
 
         renderTable();
-        if(infoDuplikat > 0) alert(`Verifikasi Selesai!\nDitemukan ${infoDuplikat} data DUPLIKAT / RETUR.`);
-        else alert("Verifikasi Selesai!\nSemua data UNIK (Belum STBJ) dan aman untuk disimpan.");
+
+        // REVISI: Notifikasi Alert disesuaikan jika ada format salah
+        let alertMsg = "Verifikasi Selesai!\n";
+        if (infoFormatSalah > 0) alertMsg += `\n⚠️ Ditemukan ${infoFormatSalah} label dengan FORMAT SALAH (Rusak).`;
+        if (infoDuplikat > 0) alertMsg += `\n⚠️ Ditemukan ${infoDuplikat} data DUPLIKAT / RETUR.`;
+        if (infoFormatSalah === 0 && infoDuplikat === 0) alertMsg += "\n✅ Semua data UNIK (Belum STBJ) dan aman untuk disimpan.";
+        
+        alert(alertMsg);
 
     } catch (err) { alert("Gagal cek database: " + err.message); }
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
@@ -447,7 +463,7 @@ window.saveToDatabaseSTBJ = async function() {
             if(error) throw error;
         }
 
-        alert(`BERHASIL DISIMPAN!\n- ${UNIKs.length} Barang UNIK (STBJ)\n- ${dupes.length} Barang Hold/Duplikat (HOLD STBJ)`);
+        alert(`BERHASIL DISIMPAN!\n- ${UNIKs.length} Barang UNIK (STBJ)\n- ${dupes.length} Barang Hold/Duplikat/Format Salah (HOLD STBJ)`);
         dataStbj = []; renderTable();
         document.getElementById('cb-all').checked = false;
         
