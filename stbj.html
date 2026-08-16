@@ -61,10 +61,10 @@
                         <i data-lucide="plus" class="w-5 h-5 sm:w-6 sm:h-6"></i>
                     </button>
                     
-                    <!-- Dropup Menu Add -->
-                    <div id="dropup-add" class="hidden absolute bottom-full left-0 mb-2 w-48 bg-white shadow-xl rounded-lg border border-slate-200 z-50 flex flex-col overflow-hidden">
-                        <button onclick="bukaModalAdd(); toggleAddMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="qr-code" class="w-4 h-4 text-blue-600"></i> Input QRCode</button>
-                        <button onclick="bukaModalManual(); toggleAddMenu(event)" class="text-left px-4 py-3 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="keyboard" class="w-4 h-4 text-purple-600"></i> Input Manual</button>
+                    <!-- Dropup Menu Add (REVISI: Ukuran diperbesar untuk HP) -->
+                    <div id="dropup-add" class="hidden absolute bottom-full left-0 mb-2 w-56 bg-white shadow-2xl rounded-xl border border-slate-200 z-50 flex flex-col overflow-hidden">
+                        <button onclick="bukaModalAdd(); toggleAddMenu(event)" class="text-left px-5 py-4 border-b border-slate-100 text-sm font-bold text-slate-700 flex items-center gap-3 hover:bg-slate-50 active:bg-slate-100 transition"><i data-lucide="qr-code" class="w-5 h-5 text-blue-600"></i> Input QRCode</button>
+                        <button onclick="bukaModalManual(); toggleAddMenu(event)" class="text-left px-5 py-4 text-sm font-bold text-slate-700 flex items-center gap-3 hover:bg-slate-50 active:bg-slate-100 transition"><i data-lucide="keyboard" class="w-5 h-5 text-purple-600"></i> Input Manual</button>
                     </div>
                 </div>
 
@@ -84,10 +84,10 @@
                         <i data-lucide="more-horizontal" class="w-4 h-4 sm:w-5 sm:h-5"></i> Lainnya
                     </button>
                     
-                    <!-- Dropup Menu Lainnya -->
-                    <div id="dropup-more" class="hidden absolute bottom-full right-0 mb-2 w-40 bg-white shadow-xl rounded-lg border border-slate-200 z-50 flex flex-col overflow-hidden">
-                        <button onclick="undoHapusSTBJ(); toggleMoreMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-rose-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Undo Hapus</button>
-                        <button onclick="holdManual(); toggleMoreMenu(event)" class="text-left px-4 py-3 text-xs font-bold text-amber-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="pause-circle" class="w-4 h-4"></i> Hold Item</button>
+                    <!-- Dropup Menu Lainnya (REVISI: Ukuran diperbesar untuk HP) -->
+                    <div id="dropup-more" class="hidden absolute bottom-full right-0 mb-2 w-48 bg-white shadow-2xl rounded-xl border border-slate-200 z-50 flex flex-col overflow-hidden">
+                        <button onclick="undoHapusSTBJ(); toggleMoreMenu(event)" class="text-left px-5 py-4 border-b border-slate-100 text-sm font-bold text-rose-600 flex items-center gap-3 hover:bg-slate-50 active:bg-slate-100 transition"><i data-lucide="rotate-ccw" class="w-5 h-5"></i> Undo Hapus</button>
+                        <button onclick="holdManual(); toggleMoreMenu(event)" class="text-left px-5 py-4 text-sm font-bold text-amber-600 flex items-center gap-3 hover:bg-slate-50 active:bg-slate-100 transition"><i data-lucide="pause-circle" class="w-5 h-5"></i> Hold Item</button>
                     </div>
                 </div>
 
