@@ -451,7 +451,7 @@ function renderTabel() {
             let isKonversi = r.konversi && r.konversi !== '-' && r.konversi !== '';
             let customRowClass = isKonversi 
                 ? "transition row-ks text-[13px] !bg-rose-100 !text-rose-900 font-bold is-konversi" 
-                : "transition row-ks text-[13px]";
+                : "transition row-ks text-[13px] bg-white even:bg-slate-50 border-b border-slate-200";
 
             return `
                 <tr class="${customRowClass}">
@@ -481,30 +481,30 @@ function renderTabel() {
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
                     <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
-                <th class="hdr-std w-12 col-open text-center">Detail</th>
-                ${thSort(2, 'Jenis Item', 'col-jenis')}
-                ${thSort(3, 'Nama Item', 'col-nama')}
-                ${thSort(4, 'Panjang', 'col-pjg')}
-                ${thSort(5, 'Grade', 'col-grade')}
-                ${thSort(6, 'Dus', 'col-dus')}
-                ${thSort(7, 'Shading', 'col-shading')}
-                ${thSort(8, 'Customer Aktual', 'col-po')}
-                ${thSort(9, 'Customer Estimasi', 'col-estimasi text-purple-300')}
-                ${thSort(10, 'Keterangan', 'col-ket')}
-                ${thSort(11, 'TOTAL (DUS)', 'col-qty')}
+                ${thSort(1, 'Jenis Item', 'col-jenis')}
+                ${thSort(2, 'Nama Item', 'col-nama')}
+                ${thSort(3, 'Panjang', 'col-pjg')}
+                ${thSort(4, 'Grade', 'col-grade')}
+                ${thSort(5, 'Dus', 'col-dus')}
+                ${thSort(6, 'Shading', 'col-shading')}
+                ${thSort(7, 'Customer Aktual', 'col-po')}
+                ${thSort(8, 'Customer Estimasi', 'col-estimasi text-purple-300')}
+                ${thSort(9, 'Keterangan', 'col-ket')}
+                ${thSort(10, 'TOTAL (DUS)', 'col-qty')}
             </tr>`;
 
-        if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = dataKSGlobal.map((r) => {
             let checkKey = `${r.nama}_${r.pjg}_${r.grade}_${r.dus}_${r.shading}_${r.ket}_${r.po}`;
             let isProcessing = processedGlobalKeys.has(`${checkKey}_${r.customer_estimasi}`);
             let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
 
+            let customRowClass = "transition row-ks text-[13px] bg-white even:bg-slate-50 border-b border-slate-200";
+
             return `
             <tr class="${customRowClass}">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 text-center col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
@@ -520,7 +520,7 @@ function renderTabel() {
                 <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
             </tr>
         `}).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
     else if (modeKS === 'nonaktif') {
         thead.innerHTML = `
@@ -550,7 +550,7 @@ function renderTabel() {
                 <td class="px-4 py-3 font-semibold text-left col-area" data-search="${r.posisi || '-'}">${r.posisi || '-'}</td>
                 <td class="px-4 py-3 font-mono font-bold text-left col-qr" data-search="${r.qrcode || '-'}">${r.qrcode || '-'}</td>
                 <td class="px-4 py-3 font-medium text-left col-jenis" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
-                <td class="px-4 py-3 font-medium text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
+                <td class="px-4 py-3 font-semibold text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
                 <td class="px-4 py-3 font-medium text-left col-panjang" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
                 <td class="px-4 py-3 font-medium text-left col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
                 <td class="px-4 py-3 font-medium text-left col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
@@ -869,12 +869,9 @@ function saringTabelExcel() {
             if(cb) { cb.checked = false; highlightRow(cb, true); } 
         }
     });
-    
-    selectAllState = 0;
-    updateSelectAllUI();
-    currentPage = 1; 
-    applyPagination(); 
-    updateFilterIcons();
+    window.currentPage = 1; 
+    window.applyPagination(); 
+    window.updateFilterIcons();
 }
 
 function updateFilterIcons() {
