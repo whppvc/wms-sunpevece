@@ -15,8 +15,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         wmsMain.style.padding = '0'; 
     }
 
+    // Event listener untuk menutup dropup jika klik di luar
+    document.addEventListener('click', function(e) {
+        const dropupAdd = document.getElementById('dropup-add');
+        const dropupMore = document.getElementById('dropup-more');
+        
+        if (dropupAdd && !dropupAdd.classList.contains('hidden') && !e.target.closest('.relative')) {
+            dropupAdd.classList.add('hidden');
+        }
+        if (dropupMore && !dropupMore.classList.contains('hidden') && !e.target.closest('.relative')) {
+            dropupMore.classList.add('hidden');
+        }
+    });
+
     await loadInitialSTBJData();
 });
+
+// Fungsi Toggle Dropup Add (+)
+window.toggleAddMenu = function(e) {
+    if(e) e.stopPropagation();
+    const menu = document.getElementById('dropup-add');
+    const moreMenu = document.getElementById('dropup-more');
+    if(moreMenu) moreMenu.classList.add('hidden'); // Tutup menu lain
+    if(menu) menu.classList.toggle('hidden');
+};
+
+// Fungsi Toggle Dropup Lainnya
+window.toggleMoreMenu = function(e) {
+    if(e) e.stopPropagation();
+    const menu = document.getElementById('dropup-more');
+    const addMenu = document.getElementById('dropup-add');
+    if(addMenu) addMenu.classList.add('hidden'); // Tutup menu lain
+    if(menu) menu.classList.toggle('hidden');
+};
 
 window.bukaModalAdd = function() {
     document.getElementById('modal-add-scan').classList.remove('hidden');
@@ -25,6 +56,11 @@ window.bukaModalAdd = function() {
 
 window.tutupModalAdd = function() {
     document.getElementById('modal-add-scan').classList.add('hidden');
+};
+
+// Placeholder untuk fitur Input Manual
+window.bukaModalManual = function() {
+    alert("Fitur Input Manual sedang dalam tahap pengembangan.");
 };
 
 async function loadInitialSTBJData() {
@@ -327,7 +363,7 @@ window.saringTabelSTBJ = function() {
 window.cekGudangSTBJ = async function() {
     if(dataStbj.length === 0) return alert("Belum ada data.");
     const btn = document.getElementById('btn-cek-gudang'); const ori = btn.innerHTML;
-    btn.innerHTML = '<div class="bg-slate-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="animate-spin w-4 h-4"></i></div><div class="bg-slate-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-700 transition">Mengecek...</div>'; btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4 sm:w-5 sm:h-5"></i> Cek...'; btn.disabled = true;
 
     const allQRs = dataStbj.map(d => d.qrcode);
     try {
@@ -401,7 +437,7 @@ window.saveToDatabaseSTBJ = async function() {
     if(blmCek.length > 0) return alert('Tekan tombol Verifikasi Kode terlebih dahulu sebelum menyimpan!');
 
     const btn = document.getElementById('btn-save'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> MEMPROSES...'; btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4 sm:w-5 sm:h-5"></i> Proses...'; btn.disabled = true;
 
     const UNIKs = dataStbj.filter(d => d.status === 'BELUM STBJ');
     const dupes = dataStbj.filter(d => d.status !== 'BELUM STBJ' && d.status !== 'BELUM CEK');
