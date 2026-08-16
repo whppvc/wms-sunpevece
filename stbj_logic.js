@@ -29,16 +29,7 @@ window.tutupModalAdd = function() {
 
 async function loadInitialSTBJData() {
     try {
-        // 1. Muat data Troli dari master_1
-        const { data: mData1 } = await db.from('master_1').select('nama_troli').order('id', { ascending: true });
-        if(mData1) {
-            const trolis = [...new Set(mData1.map(r => r.nama_troli).filter(x => x))];
-            const sel = document.getElementById('select-troli');
-            sel.innerHTML = '<option value="">-- Pilih Troli --</option>';
-            trolis.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
-        }
-
-        // 2. Muat data Kamus Item dari master_2
+        // 1. Muat data Kamus Item dari master_2
         const { data: mData2 } = await db.from('master_2').select('*');
         if(mData2) {
             masterKamus = mData2;
@@ -46,7 +37,7 @@ async function loadInitialSTBJData() {
             window.masterData.kamus = mData2; 
         }
 
-        // 3. Muat Katalog Nama Jasper dari Supabase
+        // 2. Muat Katalog Nama Jasper dari Supabase
         const { data: mJasper, error: errJasper } = await db.from('nama_jasper').select('*');
         if(!errJasper && mJasper) {
             if(!window.masterData) window.masterData = {};
@@ -59,11 +50,9 @@ async function loadInitialSTBJData() {
 document.addEventListener('submit', function(e) {
     if (e.target && e.target.id === 'form-scan') {
         e.preventDefault();
-        const troli = document.getElementById('select-troli').value;
         const inputEl = document.getElementById('input-qrcode');
         const rawInput = inputEl.value.trim();
         
-        if(!troli) return alert("Pilih Troli terlebih dahulu!");
         if(!rawInput) return;
 
         // Mendukung pemisahan dengan spasi, enter, atau titik koma
@@ -76,7 +65,7 @@ document.addEventListener('submit', function(e) {
             dataStbj.push({ 
                 id: ++globalRowId, 
                 qrcode: code, 
-                troli: troli, 
+                troli: '-', // Default troli karena sudah tidak diinput
                 status: 'BELUM CEK', 
                 keterangan: isLocalDuplicate ? 'DUPLIKAT SCAN' : '', 
                 pic: currentUser.username, 
@@ -114,7 +103,6 @@ function renderTable() {
         if(d.status === 'BELUM STBJ') {
             badgeClass = "bg-emerald-600 text-white border-emerald-700"; 
         } 
-        // REVISI: Tambahkan 'FORMAT SALAH' ke dalam array kondisi merah
         else if(['RETUR', 'STBJ', 'SUDAH STBJ', 'HOLD STBJ', 'IN GUDANG', 'HOLD LANGSIR', 'DUPLIKAT SCAN', 'FORMAT SALAH'].includes(d.status)) {
             badgeClass = "bg-red-600 text-white border-red-800"; 
         }
@@ -127,7 +115,6 @@ function renderTable() {
             displayStatus = "DUPLIKAT SCAN";
         }
 
-        // REVISI: Tambahkan 'FORMAT SALAH' sebagai trigger baris berwarna merah
         const isRedHighlight = ['RETUR', 'STBJ', 'SUDAH STBJ', 'HOLD STBJ', 'IN GUDANG', 'HOLD LANGSIR', 'DUPLIKAT SCAN', 'FORMAT SALAH'].includes(d.status) || d.isLocalDuplicate;
         const rowClass = isRedHighlight ? 'bg-red-50 hover:bg-red-100' : (d.status === 'HOLD' ? 'bg-amber-50 hover:bg-amber-100' : 'bg-white hover:bg-slate-50');
 
@@ -356,12 +343,11 @@ window.cekGudangSTBJ = async function() {
         const hasilMap = {}; resHasil.data.forEach(d => hasilMap[d.qrcode] = d);
 
         let infoDuplikat = 0;
-        let infoFormatSalah = 0; // REVISI: Counter untuk format salah
+        let infoFormatSalah = 0; 
 
         dataStbj.forEach(d => {
             if(d.status === 'HOLD' && d.keterangan === 'Dihold Manual') return; 
             
-            // REVISI: Logika pengecekan format QR Code yang rusak/salah
             let isFormatBad = (!d.mesin || d.mesin === '-' || !d.shift || d.shift === '-' || !d.customer || d.customer === '-' || !d.namaItem || d.namaItem === '-' || !d.panjang || d.panjang === '-' || !d.grade || d.grade === '-' || !d.dus || d.dus === '-');
 
             let existsInGlobal = !!globalMap[d.qrcode];
@@ -398,7 +384,6 @@ window.cekGudangSTBJ = async function() {
 
         renderTable();
 
-        // REVISI: Notifikasi Alert disesuaikan jika ada format salah
         let alertMsg = "Verifikasi Selesai!\n";
         if (infoFormatSalah > 0) alertMsg += `\n⚠️ Ditemukan ${infoFormatSalah} label dengan FORMAT SALAH (Rusak).`;
         if (infoDuplikat > 0) alertMsg += `\n⚠️ Ditemukan ${infoDuplikat} data DUPLIKAT / RETUR.`;
