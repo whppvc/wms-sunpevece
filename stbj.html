@@ -148,12 +148,10 @@
                         </div>
                     </div>
                     
+                    <!-- REVISI: Input Panjang menjadi free text angka -->
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang (M)</label>
-                        <div class="flex gap-2">
-                            <input type="text" id="m-panjang" readonly class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-100 text-slate-600 cursor-not-allowed" placeholder="Pilih Panjang...">
-                            <button onclick="bukaModalSearch('panjang')" class="px-3 bg-purple-100 text-purple-700 font-bold rounded-lg hover:bg-purple-200 transition text-xs shadow-sm"><i data-lucide="search" class="w-4 h-4"></i></button>
-                        </div>
+                        <input type="number" step="0.01" id="m-panjang" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none focus:border-purple-500 font-bold bg-slate-50" placeholder="Cth: 4 atau 5.95">
                     </div>
                     
                     <div>
@@ -169,7 +167,7 @@
                         </div>
                     </div>
                     
-                    <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="m-shading" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase" placeholder="Ketik Shading..."></div>
+                    <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><input type="text" id="m-shading" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none focus:border-purple-500 font-bold bg-slate-50 uppercase" placeholder="Ketik Shading..."></div>
                     
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer</label>
@@ -179,7 +177,7 @@
                         </div>
                     </div>
                     
-                    <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="m-ket" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50" placeholder="Keterangan..."></div>
+                    <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label><input type="text" id="m-ket" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none focus:border-purple-500 font-bold bg-slate-50" placeholder="Keterangan..."></div>
                     
                     <div class="md:col-span-2">
                         <label class="block text-[10px] font-black uppercase text-purple-600 mb-1">QTY (DUS)</label>
@@ -195,7 +193,7 @@
         </div>
     </div>
 
-    <!-- MODAL PENCARIAN (MESIN, ITEM, PANJANG, DUS, CUSTOMER) -->
+    <!-- MODAL PENCARIAN (MESIN, ITEM, DUS, CUSTOMER) -->
     <div id="modal-search" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 flex flex-col max-h-[85vh] overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
