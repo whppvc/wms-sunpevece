@@ -351,7 +351,6 @@ function setMode(m) {
     const savedStatusFilter = activeFilters['col-status'];
     activeFilters = {}; 
     
-    // REVISI: Hanya pertahankan filter status jika BUKAN mode manual
     if (m !== 'manual' && savedStatusFilter) {
         activeFilters['col-status'] = savedStatusFilter;
     }
@@ -415,6 +414,16 @@ function buildProcessedData() {
     } else if (modeSekarang === 'manual') {
         processedData = stbjManualRaw.map(r => {
             const tglInput = formatWIB(r.created_at);
+            
+            // REVISI: Logika Jasper untuk Tabel Manual
+            let n = r.nama_item || '-';
+            let jName = n;
+            if(jasperData && jasperData.length > 0) {
+                const cJasper = jasperData.find(j => j.nama_item === r.nama_item && j.panjang === r.panjang && j.grade === r.grade);
+                if(cJasper) { jName = cJasper.nama_jasper; } 
+                else { jName = `JAS-${r.nama_item}`; }
+            } else { jName = `JAS-${r.nama_item}`; }
+
             return {
                 _id: r.id.toString(),
                 raw: r,
@@ -424,6 +433,7 @@ function buildProcessedData() {
                     'col-mesin': r.mesin || '-',
                     'col-shift': r.shift || '-',
                     'col-nama': r.nama_item || '-',
+                    'col-jasper': jName,
                     'col-pjg': r.panjang || '-',
                     'col-grade': r.grade || '-',
                     'col-dus': r.dus || '-',
@@ -837,6 +847,7 @@ function renderHeaderDanTabel() {
                 ${thSort('Mesin', 'col-mesin text-center')}
                 ${thSort('Shift', 'col-shift text-center')}
                 ${thSort('Nama Item', 'col-nama')}
+                ${thSort('Nama Jasper', 'col-jasper text-purple-300')}
                 ${thSort('Pjg', 'col-pjg text-center')}
                 ${thSort('Grade', 'col-grade text-center')}
                 ${thSort('Dus', 'col-dus text-center')}
@@ -911,6 +922,7 @@ function renderTable() {
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}">${sv['col-mesin']}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}">${sv['col-shift']}</td>
                     <td class="px-4 py-3 text-left font-semibold text-slate-900 col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
+                    <td class="px-4 py-3 text-left font-black text-purple-700 col-jasper ${hiddenCols.includes('col-jasper')?'col-hidden':''}">${sv['col-jasper']}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}">${sv['col-pjg']}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}">${sv['col-grade']}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}">${sv['col-dus']}</td>
