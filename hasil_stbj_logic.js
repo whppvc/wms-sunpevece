@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const actionMenu = document.getElementById('mobile-action-menu');
         if (actionMenu && !actionMenu.classList.contains('hidden')) {
-            if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenuMobile"]')) {
+            if (!actionMenu.contains(e.target) && !actionMenu.closest('button[onclick^="toggleActionMenuMobile"]')) {
                 actionMenu.classList.add('hidden');
             }
         }
@@ -172,7 +172,8 @@ function tutupPopups() {
 function renderDragList() {
     const container = document.getElementById('kolom-drag-container');
     container.innerHTML = '';
-    const headers = Array.from(document.querySelectorAll('#thead-stbj th')).filter(th => !th.classList.contains('col-cb'));
+    // REVISI: Abaikan kolom yang memiliki class 'hidden' bawaan atau 'col-btn-edit'
+    const headers = Array.from(document.querySelectorAll('#thead-stbj th')).filter(th => !th.classList.contains('col-cb') && !th.classList.contains('hidden') && !th.classList.contains('col-btn-edit'));
     
     headers.forEach(th => {
         const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
@@ -415,7 +416,6 @@ function buildProcessedData() {
         processedData = stbjManualRaw.map(r => {
             const tglInput = formatWIB(r.created_at);
             
-            // REVISI: Logika Jasper untuk Tabel Manual
             let n = r.nama_item || '-';
             let jName = n;
             if(jasperData && jasperData.length > 0) {
