@@ -1,6 +1,7 @@
 let modeSekarang = 'qrcode'; 
 let statusSekarang = 'ALL'; 
 let rawDataRaw = [];
+let stbjManualRaw = []; 
 let processedData = []; 
 let filteredData = []; 
 
@@ -164,6 +165,8 @@ function toggleSidebarKolom() {
 function tutupPopups() {
     document.getElementById('sidebar-kolom').classList.add('translate-x-full');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
+    document.getElementById('modal-list-katalog').classList.add('hidden');
+    document.getElementById('modal-katalog').classList.add('hidden');
 }
 
 function renderDragList() {
@@ -291,6 +294,9 @@ async function muatDataDariSupabase() {
     tbody.innerHTML = `<tr><td colspan="23" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500 text-sm">Menarik Data...</p></td></tr>`;
     lucide.createIcons();
     try {
+        const { data: manualData } = await db.from('stbj_manual').select('*').order('created_at', {ascending: false});
+        stbjManualRaw = manualData || [];
+
         let filterValues = [];
         if (statusSekarang === 'STBJ') filterValues = ['STBJ', 'stbj', 'SUDAH STBJ', 'sudah stbj'];
         else if (statusSekarang === 'HOLD STBJ') filterValues = ['HOLD STBJ', 'hold stbj', 'HOLD', 'hold'];
@@ -315,7 +321,7 @@ function setMode(m) {
     const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
 
-    ['qrcode', 'item', 'jasper'].forEach(tab => {
+    ['qrcode', 'item', 'jasper', 'manual'].forEach(tab => {
         const el = document.getElementById('tab-mode-' + tab);
         if(el) el.className = (m === tab) ? activeClass : inactiveClass;
     });
@@ -330,6 +336,11 @@ function setMode(m) {
         if(btnCollectMob) btnCollectMob.classList.remove('hidden'); 
         if(btnHold) btnHold.classList.add('hidden');
         if(btnHapus) btnHapus.classList.add('hidden');
+    } else if (m === 'manual') {
+        if(btnCollect) btnCollect.classList.add('hidden'); 
+        if(btnCollectMob) btnCollectMob.classList.add('hidden'); 
+        if(btnHold) btnHold.classList.add('hidden');
+        if(btnHapus) btnHapus.classList.remove('hidden');
     } else {
         if(btnCollect) btnCollect.classList.add('hidden'); 
         if(btnCollectMob) btnCollectMob.classList.add('hidden'); 
@@ -339,7 +350,11 @@ function setMode(m) {
 
     const savedStatusFilter = activeFilters['col-status'];
     activeFilters = {}; 
-    if (savedStatusFilter) activeFilters['col-status'] = savedStatusFilter;
+    
+    // REVISI: Hanya pertahankan filter status jika BUKAN mode manual
+    if (m !== 'manual' && savedStatusFilter) {
+        activeFilters['col-status'] = savedStatusFilter;
+    }
 
     renderHeaderDanTabel();
 }
@@ -394,6 +409,28 @@ function buildProcessedData() {
                     'col-customer': r.customer || '-',
                     'col-ket': r.keterangan || '-',
                     'col-pic': r.pic_input || '-'
+                }
+            };
+        });
+    } else if (modeSekarang === 'manual') {
+        processedData = stbjManualRaw.map(r => {
+            const tglInput = formatWIB(r.created_at);
+            return {
+                _id: r.id.toString(),
+                raw: r,
+                searchValues: {
+                    'col-waktu': tglInput,
+                    'col-tgl': r.tgl_produksi || '-',
+                    'col-mesin': r.mesin || '-',
+                    'col-shift': r.shift || '-',
+                    'col-nama': r.nama_item || '-',
+                    'col-pjg': r.panjang || '-',
+                    'col-grade': r.grade || '-',
+                    'col-dus': r.dus || '-',
+                    'col-shading': r.shading || '-',
+                    'col-customer': r.customer || '-',
+                    'col-qty': r.qty || '0',
+                    'col-ket': r.keterangan || '-'
                 }
             };
         });
@@ -789,6 +826,26 @@ function renderHeaderDanTabel() {
                 <th class="hdr-std col-pic hidden">PIC Input</th>
             </tr>`;
     }
+    else if (modeSekarang === 'manual') {
+        thead.innerHTML = `
+            <tr>
+                <th class="hdr-std w-10 col-cb text-center sticky-col">
+                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                </th>
+                ${thSort('Waktu Input', 'col-waktu text-center')}
+                ${thSort('Tgl Produksi', 'col-tgl text-center')}
+                ${thSort('Mesin', 'col-mesin text-center')}
+                ${thSort('Shift', 'col-shift text-center')}
+                ${thSort('Nama Item', 'col-nama')}
+                ${thSort('Pjg', 'col-pjg text-center')}
+                ${thSort('Grade', 'col-grade text-center')}
+                ${thSort('Dus', 'col-dus text-center')}
+                ${thSort('Shading', 'col-shading text-center')}
+                ${thSort('Customer', 'col-customer')}
+                ${thSort('QTY (DUS)', 'col-qty text-center')}
+                ${thSort('Keterangan', 'col-ket text-center')}
+            </tr>`;
+    }
     
     buildProcessedData();
 }
@@ -818,7 +875,7 @@ function renderTable() {
             if(sv['col-status'] === 'SUDAH STBJ') textColor = "text-slate-900"; 
             else if(sv['col-status'] === 'HOLD STBJ' || sv['col-status'] === 'HOLD LANGSIR') textColor = "text-orange-600"; 
             else if(sv['col-status'] === 'IN GUDANG') textColor = "text-emerald-600"; 
-            else if(sv['col-status'] === 'RETUR') textColor = "text-rose-600";
+            else if(sv['col-status'] === 'RETUR' || sv['col-status'] === 'FORMAT SALAH') textColor = "text-rose-600";
 
             let statDataHtml = sv['col-status-data'] !== '-' ? `<span class="text-indigo-600 font-medium uppercase">${sv['col-status-data']}</span>` : '-';
 
@@ -843,6 +900,24 @@ function renderTable() {
                     <td class="px-4 py-3 text-left font-medium text-slate-900 col-customer ${hiddenCols.includes('col-customer')?'col-hidden':''}">${sv['col-customer']}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-600 col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
                     <td class="px-4 py-3 text-left font-medium text-slate-500 col-pic ${hiddenCols.includes('col-pic')?'col-hidden':''}">${sv['col-pic']}</td>
+                </tr>`;
+        } else if (modeSekarang === 'manual') {
+            const sv = row.searchValues;
+            h += `
+                <tr class="${trClass}">
+                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${row._id}')" value="${row._id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-waktu ${hiddenCols.includes('col-waktu')?'col-hidden':''}">${sv['col-waktu']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}">${sv['col-tgl']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}">${sv['col-mesin']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}">${sv['col-shift']}</td>
+                    <td class="px-4 py-3 text-left font-semibold text-slate-900 col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}">${sv['col-pjg']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}">${sv['col-grade']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}">${sv['col-dus']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}">${sv['col-shading']}</td>
+                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-customer ${hiddenCols.includes('col-customer')?'col-hidden':''}">${sv['col-customer']}</td>
+                    <td class="px-4 py-3 text-center font-black text-purple-600 col-qty ${hiddenCols.includes('col-qty')?'col-hidden':''}">${sv['col-qty']}</td>
+                    <td class="px-4 py-3 text-center font-medium text-slate-600 col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
                 </tr>`;
         } else {
             const r = row.raw;
@@ -1206,8 +1281,16 @@ async function aksiMassal(tipe) {
         if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Proses...'; btn.disabled = true; }
 
         try {
-            const { error } = await db.from('hasil_stbj_langsir').delete().in('qrcode', checkedValues);
-            if(error) throw error;
+            let errorRes;
+            if (modeSekarang === 'manual') {
+                const { error } = await db.from('stbj_manual').delete().in('id', checkedValues);
+                errorRes = error;
+            } else {
+                const { error } = await db.from('hasil_stbj_langsir').delete().in('qrcode', checkedValues);
+                errorRes = error;
+            }
+            
+            if(errorRes) throw errorRes;
             alert(`Berhasil menghapus ${checkedValues.length} data.`);
             await muatDataDariSupabase();
         } catch(e) { 
