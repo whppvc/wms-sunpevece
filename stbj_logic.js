@@ -97,7 +97,7 @@ function renderSearchList() {
 
     // REVISI: Hilangkan efek hover warna, sisakan efek active (press)
     ul.innerHTML = dataArr.map(d => `
-        <li onclick="selectSearchItem('${d}')" class="search-item p-3 border border-slate-200 rounded-lg cursor-pointer transition flex justify-between items-center active:scale-95 active:bg-slate-100">
+        <li onclick="selectSearchItem('${d}')" class="search-item p-3 border border-slate-200 rounded-lg cursor-pointer flex justify-between items-center active:scale-95 active:bg-slate-100">
             <span class="font-bold text-slate-700">${d}</span>
         </li>
     `).join('');
@@ -201,6 +201,7 @@ async function loadInitialSTBJData() {
             window.masterData.mesin = getUnique('mesin');
             window.masterData.shift = getUnique('shift');
             window.masterData.item = getUnique('nama_item');
+            window.masterData.panjang = getUnique('panjang');
             window.masterData.grade = getUnique('grade');
             window.masterData.dus = getUnique('dus');
             window.masterData.customer = getUnique('customer');
