@@ -19,6 +19,7 @@ let activeFilters = {};
 let currentFilterCol = ''; 
 let selectAllState = 0; 
 let userColOrder = []; 
+let hiddenCols = []; // REVISI: State untuk kolom yang disembunyikan
 let selectedForReq = null; 
 
 let processedGantiKeys = new Set();
@@ -38,6 +39,14 @@ function loadUserPreferences() {
         try { userColOrder = JSON.parse(savedOrder); } catch(e) { userColOrder = []; }
     } else {
         userColOrder = [];
+    }
+    
+    // REVISI: Load hidden columns preference
+    const savedHidden = localStorage.getItem(`col_hidden_ks_${modeKS}_${currentUser.username}`);
+    if (savedHidden) {
+        try { hiddenCols = JSON.parse(savedHidden); } catch(e) { hiddenCols = []; }
+    } else {
+        hiddenCols = [];
     }
     
     const savedRows = localStorage.getItem('wms_rows_per_page');
@@ -85,6 +94,112 @@ function toggleActionMenu(e) {
     const menu = document.getElementById('mobile-action-menu');
     if(menu) menu.classList.toggle('hidden');
 }
+
+// REVISI: FUNGSI ATUR KOLOM (DRAG & DROP + HIDE)
+window.toggleSidebarKolom = function() {
+    const sidebar = document.getElementById('sidebar-kolom');
+    const overlay = document.getElementById('overlay-klik-luar');
+    if (sidebar.classList.contains('translate-x-full')) {
+        sidebar.classList.remove('translate-x-full'); 
+        overlay.classList.remove('hidden'); 
+        renderDragList();
+    } else {
+        sidebar.classList.add('translate-x-full'); 
+        overlay.classList.add('hidden');
+    }
+};
+
+window.renderDragList = function() {
+    const container = document.getElementById('kolom-drag-container');
+    container.innerHTML = '';
+    
+    // Ambil header yang tidak disembunyikan secara default oleh sistem (misal col-cb, col-open)
+    const headers = Array.from(document.querySelectorAll('#thead-ks th')).filter(th => 
+        !th.classList.contains('col-cb') && 
+        !th.classList.contains('col-open') && 
+        !th.classList.contains('col-proses')
+    );
+    
+    headers.forEach(th => {
+        const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
+        const label = th.innerText.trim() || 'Kolom';
+        if(!colClass) return;
+
+        const isHidden = hiddenCols.includes(colClass);
+        const eyeIcon = isHidden ? 'eye-off' : 'eye';
+        const eyeColor = isHidden ? 'text-slate-300' : 'text-blue-600';
+
+        const div = document.createElement('div');
+        div.className = 'drag-item flex items-center justify-between p-3 bg-white border border-slate-200 rounded-md shadow-sm hover:border-blue-400 transition cursor-grab';
+        div.draggable = true; 
+        div.setAttribute('data-col', colClass);
+        div.innerHTML = `
+            <span class="font-bold text-slate-700 text-xs">${label}</span>
+            <div class="flex items-center gap-3">
+                <button onclick="toggleHideCol(event, '${colClass}')" class="p-1 hover:bg-slate-100 rounded"><i data-lucide="${eyeIcon}" class="w-4 h-4 ${eyeColor}"></i></button>
+                <i data-lucide="grip-vertical" class="w-4 h-4 text-slate-400"></i>
+            </div>
+        `;
+        div.addEventListener('dragstart', () => { div.classList.add('dragging'); });
+        div.addEventListener('dragend', () => { div.classList.remove('dragging'); });
+        container.appendChild(div);
+    });
+    lucide.createIcons();
+    
+    container.addEventListener('dragover', e => {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(container, e.clientY);
+        const draggable = document.querySelector('.dragging');
+        if (afterElement == null) { container.appendChild(draggable); } 
+        else { container.insertBefore(draggable, afterElement); }
+    });
+};
+
+window.toggleHideCol = function(e, colClass) {
+    e.stopPropagation();
+    if(hiddenCols.includes(colClass)) {
+        hiddenCols = hiddenCols.filter(c => c !== colClass);
+    } else {
+        hiddenCols.push(colClass);
+    }
+    renderDragList();
+};
+
+window.getDragAfterElement = function(container, y) {
+    const draggableElements = [...container.querySelectorAll('.drag-item:not(.dragging)')];
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } 
+        else { return closest; }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+};
+
+window.simpanUrutanKolom = function() {
+    const items = document.querySelectorAll('.drag-item');
+    let newOrder = [];
+    items.forEach(item => newOrder.push(item.getAttribute('data-col')));
+    userColOrder = newOrder;
+    
+    localStorage.setItem(`col_order_ks_${modeKS}_${currentUser.username}`, JSON.stringify(newOrder));
+    localStorage.setItem(`col_hidden_ks_${modeKS}_${currentUser.username}`, JSON.stringify(hiddenCols));
+    
+    alert("Pengaturan kolom berhasil disimpan!");
+    toggleSidebarKolom(); 
+    renderTabel(); 
+};
+
+window.resetUrutanKolom = function() {
+    if(!confirm("Kembalikan pengaturan kolom ke default?")) return;
+    userColOrder = [];
+    hiddenCols = [];
+    localStorage.removeItem(`col_order_ks_${modeKS}_${currentUser.username}`);
+    localStorage.removeItem(`col_hidden_ks_${modeKS}_${currentUser.username}`);
+    
+    alert("Pengaturan dikembalikan ke default.");
+    toggleSidebarKolom(); 
+    renderTabel();
+};
 
 async function loadMasterData() {
     try {
@@ -331,13 +446,14 @@ function sortTable(colIndex, headerEl) {
 
 function thSort(idx, label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
+    const isHidden = hiddenCols.includes(colClass) ? 'col-hidden' : '';
     const noFilter = ['col-cb', 'col-open', 'col-proses'].includes(colClass);
     
     if (noFilter) {
-        return `<th class="hdr-std ${cls} select-none text-center"><div class="flex items-center justify-center w-full">${label}</div></th>`;
+        return `<th class="hdr-std ${cls} ${isHidden} select-none text-center"><div class="flex items-center justify-center w-full">${label}</div></th>`;
     }
 
-    return `<th class="hdr-std ${cls} select-none group">
+    return `<th class="hdr-std ${cls} ${isHidden} select-none group">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
             <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable(${idx}, this.closest('th'))" title="Sort ${label}">${label}</span>
             <div class="flex items-center gap-1 shrink-0">
@@ -402,19 +518,19 @@ function renderTabel() {
             return `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
-                    <td class="px-4 py-3 font-mono font-medium text-slate-800 text-left col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-mesin" data-search="${r.mesin}">${r.mesin}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shift" data-search="${r.shift}">${r.shift}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-3 text-left col-po" data-search="${poString}">${btnPO}</td>
-                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area ${hiddenCols.includes('col-area')?'col-hidden':''}" data-search="${r.area}">${r.area}</td>
+                    <td class="px-4 py-3 font-mono font-medium text-slate-800 text-left col-qr ${hiddenCols.includes('col-qr')?'col-hidden':''}" data-search="${r.qrcode}">${r.qrcode}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}" data-search="${r.mesin}">${r.mesin}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}" data-search="${r.shift}">${r.shift}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}" data-search="${r.jenis}">${r.jenis}</td>
+                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}" data-search="${r.nama}">${r.nama}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}" data-search="${r.pjg}">${r.pjg}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-3 text-left col-po ${hiddenCols.includes('col-po')?'col-hidden':''}" data-search="${poString}">${btnPO}</td>
+                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}" data-search="${r.ket}">${r.ket}</td>
                 </tr>`;
         }).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="14" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -451,26 +567,26 @@ function renderTabel() {
             let isKonversi = r.konversi && r.konversi !== '-' && r.konversi !== '';
             let customRowClass = isKonversi 
                 ? "transition row-ks text-[13px] !bg-rose-100 !text-rose-900 font-bold is-konversi" 
-                : "transition row-ks text-[13px] bg-white even:bg-slate-50 border-b border-slate-200";
+                : "transition row-ks text-[13px]";
 
             return `
                 <tr class="${customRowClass}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" data-id="${r.id}" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama_item}" data-pjg="${r.panjang}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-estimasi="${r.customer_estimasi}" data-qty="${r.qty}" data-ket="${r.keterangan}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area" data-search="${r.area}">${r.area}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama_item}">${r.nama_item}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.panjang}">${r.panjang}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po relative" data-search="${r.po_aktual}">
+                    <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area ${hiddenCols.includes('col-area')?'col-hidden':''}" data-search="${r.area}">${r.area}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}" data-search="${r.jenis}">${r.jenis}</td>
+                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}" data-search="${r.nama_item}">${r.nama_item}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}" data-search="${r.panjang}">${r.panjang}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po relative ${hiddenCols.includes('col-po')?'col-hidden':''}" data-search="${r.po_aktual}">
                         ${r.po_aktual}
                         ${iconGanti}
                     </td>
-                    <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
-                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan}">${r.keterangan}</td>
-                    <td class="px-4 py-3 font-bold text-rose-600 text-center col-konversi" data-search="${r.konversi || '-'}">${r.konversi || '-'}</td>
-                    <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
+                    <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi ${hiddenCols.includes('col-estimasi')?'col-hidden':''}" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
+                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}" data-search="${r.keterangan}">${r.keterangan}</td>
+                    <td class="px-4 py-3 font-bold text-rose-600 text-center col-konversi ${hiddenCols.includes('col-konversi')?'col-hidden':''}" data-search="${r.konversi || '-'}">${r.konversi || '-'}</td>
+                    <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base ${hiddenCols.includes('col-qty')?'col-hidden':''}" data-search="${r.qty}">${r.qty}</td>
                 </tr>`;
         }).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -481,19 +597,20 @@ function renderTabel() {
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
                     <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
                 </th>
-                ${thSort(1, 'Jenis Item', 'col-jenis')}
-                ${thSort(2, 'Nama Item', 'col-nama')}
-                ${thSort(3, 'Panjang', 'col-pjg')}
-                ${thSort(4, 'Grade', 'col-grade')}
-                ${thSort(5, 'Dus', 'col-dus')}
-                ${thSort(6, 'Shading', 'col-shading')}
-                ${thSort(7, 'Customer Aktual', 'col-po')}
-                ${thSort(8, 'Customer Estimasi', 'col-estimasi text-purple-300')}
-                ${thSort(9, 'Keterangan', 'col-ket')}
-                ${thSort(10, 'TOTAL (DUS)', 'col-qty')}
+                <th class="hdr-std w-12 col-open text-center">Detail</th>
+                ${thSort(2, 'Jenis Item', 'col-jenis')}
+                ${thSort(3, 'Nama Item', 'col-nama')}
+                ${thSort(4, 'Panjang', 'col-pjg')}
+                ${thSort(5, 'Grade', 'col-grade')}
+                ${thSort(6, 'Dus', 'col-dus')}
+                ${thSort(7, 'Shading', 'col-shading')}
+                ${thSort(8, 'Customer Aktual', 'col-po')}
+                ${thSort(9, 'Customer Estimasi', 'col-estimasi text-purple-300')}
+                ${thSort(10, 'Keterangan', 'col-ket')}
+                ${thSort(11, 'TOTAL (DUS)', 'col-qty')}
             </tr>`;
 
-        if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
+        if(dataKSGlobal.length === 0) { tbody.innerHTML = `<tr id="empty-row-ks"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok tersimpan.</td></tr>`; return; }
 
         tbody.innerHTML = dataKSGlobal.map((r) => {
             let checkKey = `${r.nama}_${r.pjg}_${r.grade}_${r.dus}_${r.shading}_${r.ket}_${r.po}`;
@@ -505,22 +622,23 @@ function renderTabel() {
             return `
             <tr class="${customRowClass}">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenis}">${r.jenis}</td>
-                <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.nama}">${r.nama}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.pjg}">${r.pjg}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
-                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po relative" data-search="${r.po}">
+                <td class="px-4 py-3 text-center col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}" data-search="${r.jenis}">${r.jenis}</td>
+                <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}" data-search="${r.nama}">${r.nama}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}" data-search="${r.pjg}">${r.pjg}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}" data-search="${r.grade}">${r.grade}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}" data-search="${r.dus}">${r.dus}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}" data-search="${r.shading}">${r.shading}</td>
+                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po relative ${hiddenCols.includes('col-po')?'col-hidden':''}" data-search="${r.po}">
                     ${r.po}
                     ${iconGanti}
                 </td>
-                <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
-                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.ket}">${r.ket}</td>
-                <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base" data-search="${r.qty}">${r.qty}</td>
+                <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi ${hiddenCols.includes('col-estimasi')?'col-hidden':''}" data-search="${r.customer_estimasi}">${r.customer_estimasi}</td>
+                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}" data-search="${r.ket}">${r.ket}</td>
+                <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base ${hiddenCols.includes('col-qty')?'col-hidden':''}" data-search="${r.qty}">${r.qty}</td>
             </tr>
         `}).join('');
-        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="11" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
+        tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
     } 
     else if (modeKS === 'nonaktif') {
         thead.innerHTML = `
@@ -547,17 +665,17 @@ function renderTabel() {
             return `
             <tr class="${rowClassBase} !bg-red-100 !text-red-900 font-bold is-nonaktif">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 font-semibold text-left col-area" data-search="${r.posisi || '-'}">${r.posisi || '-'}</td>
-                <td class="px-4 py-3 font-mono font-bold text-left col-qr" data-search="${r.qrcode || '-'}">${r.qrcode || '-'}</td>
-                <td class="px-4 py-3 font-medium text-left col-jenis" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
-                <td class="px-4 py-3 font-semibold text-left col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
-                <td class="px-4 py-3 font-medium text-left col-panjang" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
-                <td class="px-4 py-3 font-medium text-left col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
-                <td class="px-4 py-3 font-medium text-left col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
-                <td class="px-4 py-3 font-medium text-left col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
-                <td class="px-4 py-3 font-medium text-left col-po" data-search="${r.customer_aktual || '-'}">${r.customer_aktual || '-'}</td>
-                <td class="px-4 py-3 font-medium text-left col-estimasi" data-search="${r.customer_estimasi || '-'}">${r.customer_estimasi || '-'}</td>
-                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
+                <td class="px-4 py-3 font-semibold text-left col-area ${hiddenCols.includes('col-area')?'col-hidden':''}" data-search="${r.posisi || '-'}">${r.posisi || '-'}</td>
+                <td class="px-4 py-3 font-mono font-bold text-left col-qr ${hiddenCols.includes('col-qr')?'col-hidden':''}" data-search="${r.qrcode || '-'}">${r.qrcode || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-panjang ${hiddenCols.includes('col-panjang')?'col-hidden':''}" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-po ${hiddenCols.includes('col-po')?'col-hidden':''}" data-search="${r.customer_aktual || '-'}">${r.customer_aktual || '-'}</td>
+                <td class="px-4 py-3 font-medium text-left col-estimasi ${hiddenCols.includes('col-estimasi')?'col-hidden':''}" data-search="${r.customer_estimasi || '-'}">${r.customer_estimasi || '-'}</td>
+                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
             </tr>
         `}).join('');
         tbody.innerHTML += `<tr id="empty-row-ks" style="display:none;"><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada stok yang cocok dengan filter.</td></tr>`;
@@ -869,9 +987,12 @@ function saringTabelExcel() {
             if(cb) { cb.checked = false; highlightRow(cb, true); } 
         }
     });
-    window.currentPage = 1; 
-    window.applyPagination(); 
-    window.updateFilterIcons();
+    
+    selectAllState = 0;
+    updateSelectAllUI();
+    currentPage = 1; 
+    applyPagination(); 
+    updateFilterIcons();
 }
 
 function updateFilterIcons() {
