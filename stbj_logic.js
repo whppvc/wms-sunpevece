@@ -3,6 +3,10 @@ let deletedStbjStack = [];
 let masterKamus = [];
 let globalRowId = 0;
 
+// State Modal Search
+let currentSearchType = ''; 
+let selectedSearchData = '';
+
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
 document.addEventListener('DOMContentLoaded', async () => { 
@@ -58,9 +62,127 @@ window.tutupModalAdd = function() {
     document.getElementById('modal-add-scan').classList.add('hidden');
 };
 
-// Placeholder untuk fitur Input Manual
+// ==========================================
+// LOGIKA INPUT MANUAL
+// ==========================================
 window.bukaModalManual = function() {
-    alert("Fitur Input Manual sedang dalam tahap pengembangan.");
+    document.getElementById('m-tgl').valueAsDate = new Date();
+    document.getElementById('modal-manual').classList.remove('hidden');
+};
+
+window.tutupModalManual = function() {
+    document.getElementById('modal-manual').classList.add('hidden');
+};
+
+window.bukaModalSearch = function(type) {
+    currentSearchType = type;
+    const titleMap = { 'item': 'Nama Item', 'mesin': 'Mesin', 'customer': 'Customer', 'panjang': 'Panjang', 'dus': 'Dus / Merk' };
+    document.getElementById('title-modal-search').innerText = `Cari ${titleMap[type]}`;
+    
+    document.getElementById('input-search-list').value = '';
+    renderSearchList();
+
+    document.getElementById('modal-search').classList.remove('hidden');
+};
+
+function renderSearchList() {
+    const ul = document.getElementById('list-search-result');
+    const dataArr = window.masterData[currentSearchType] || [];
+    
+    if(dataArr.length === 0) {
+        ul.innerHTML = '<li class="p-4 text-center text-slate-400 font-bold">Data kosong.</li>';
+        return;
+    }
+
+    ul.innerHTML = dataArr.map(d => `
+        <li onclick="selectSearchItem('${d}')" class="search-item p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-purple-50 hover:border-purple-300 transition flex justify-between items-center group">
+            <span class="font-bold text-slate-700 group-hover:text-purple-700">${d}</span>
+        </li>
+    `).join('');
+}
+
+window.filterSearchList = function() {
+    const q = document.getElementById('input-search-list').value.toLowerCase();
+    document.querySelectorAll('.search-item').forEach(li => {
+        li.style.display = li.innerText.toLowerCase().includes(q) ? '' : 'none';
+    });
+};
+
+window.selectSearchItem = function(nama) {
+    document.querySelectorAll('.search-item').forEach(li => li.classList.remove('bg-purple-100', 'border-purple-400'));
+    event.currentTarget.classList.add('bg-purple-100', 'border-purple-400');
+    selectedSearchData = nama;
+};
+
+window.pilihDataSearch = function() {
+    if(!selectedSearchData) return alert("Pilih data dari daftar terlebih dahulu!");
+    
+    let inputId = `m-${currentSearchType}`;
+    let el = document.getElementById(inputId);
+    
+    if(el) el.value = selectedSearchData;
+    
+    document.getElementById('modal-search').classList.add('hidden');
+    selectedSearchData = '';
+};
+
+window.simpanManual = async function() {
+    let tgl = document.getElementById('m-tgl').value;
+    let mesin = document.getElementById('m-mesin').value.trim().toUpperCase();
+    let shift = document.getElementById('m-shift').value;
+    let item = document.getElementById('m-item').value.trim().toUpperCase();
+    let panjangRaw = document.getElementById('m-panjang').value.trim().toUpperCase();
+    let grade = document.getElementById('m-grade').value;
+    let dus = document.getElementById('m-dus').value.trim().toUpperCase();
+    let shading = document.getElementById('m-shading').value.trim().toUpperCase();
+    let customer = document.getElementById('m-customer').value.trim().toUpperCase();
+    let ket = document.getElementById('m-ket').value.trim();
+    let qty = parseInt(document.getElementById('m-qty').value);
+
+    if(!tgl || !item || !panjangRaw || isNaN(qty) || qty < 1) {
+        return alert("Tanggal, Nama Item, Panjang, dan Qty wajib diisi!");
+    }
+
+    let panjangFinal = panjangRaw.endsWith('M') ? panjangRaw : panjangRaw + "M";
+
+    const btn = document.getElementById('btn-simpan-manual');
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...';
+    btn.disabled = true;
+
+    try {
+        const payload = {
+            tgl_produksi: tgl,
+            mesin: mesin || '-',
+            shift: shift || '-',
+            nama_item: item,
+            panjang: panjangFinal,
+            grade: grade || '-',
+            dus: dus || '-',
+            shading: shading || '-',
+            customer: customer || '-',
+            keterangan: ket || '-',
+            qty: qty.toString()
+        };
+
+        const { error } = await db.from('stbj_manual').insert([payload]);
+        if(error) throw error;
+
+        // Reset form parsial
+        document.getElementById('m-item').value = "";
+        document.getElementById('m-panjang').value = "";
+        document.getElementById('m-shading').value = "";
+        document.getElementById('m-qty').value = "1";
+        
+        tutupModalManual();
+        alert("Data manual berhasil disimpan ke database!");
+    } catch(e) {
+        alert("Gagal menyimpan: " + e.message);
+    } finally {
+        btn.innerHTML = ori;
+        btn.disabled = false;
+        lucide.createIcons();
+    }
 };
 
 async function loadInitialSTBJData() {
@@ -70,7 +192,27 @@ async function loadInitialSTBJData() {
         if(mData2) {
             masterKamus = mData2;
             if(!window.masterData) window.masterData = {};
-            window.masterData.kamus = mData2; 
+            
+            let getUnique = (key) => [...new Set(mData2.map(r => r[key]).filter(x => x))].sort();
+            
+            window.masterData.mesin = getUnique('mesin');
+            window.masterData.shift = getUnique('shift');
+            window.masterData.item = getUnique('nama_item');
+            window.masterData.panjang = getUnique('panjang');
+            window.masterData.grade = getUnique('grade');
+            window.masterData.dus = getUnique('dus');
+            window.masterData.customer = getUnique('customer');
+
+            // Isi Select Biasa (Shift, Grade)
+            const fillSelect = (id, arr) => {
+                let sel = document.getElementById(id);
+                if(sel) {
+                    sel.innerHTML = '<option value="">-- Pilih --</option>';
+                    arr.forEach(val => sel.innerHTML += `<option value="${val}">${val}</option>`);
+                }
+            };
+            fillSelect('m-shift', window.masterData.shift);
+            fillSelect('m-grade', window.masterData.grade);
         }
 
         // 2. Muat Katalog Nama Jasper dari Supabase
@@ -300,6 +442,8 @@ window.tutupPopups = function() {
     document.getElementById('sidebar-filter').classList.add('translate-x-full');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
     window.tutupModalAdd();
+    window.tutupModalManual();
+    document.getElementById('modal-search').classList.add('hidden');
 }
 
 window.resetFilterSTBJ = function() {
