@@ -76,7 +76,6 @@ window.tutupModalManual = function() {
 
 window.bukaModalSearch = function(type) {
     currentSearchType = type;
-    // REVISI: Panjang dihilangkan dari pencarian karena sudah jadi input manual
     const titleMap = { 'item': 'Nama Item', 'mesin': 'Mesin', 'customer': 'Customer', 'dus': 'Dus / Merk' };
     document.getElementById('title-modal-search').innerText = `Cari ${titleMap[type]}`;
     
@@ -95,9 +94,8 @@ function renderSearchList() {
         return;
     }
 
-    // REVISI: Hilangkan efek hover warna, sisakan efek active (press)
     ul.innerHTML = dataArr.map(d => `
-        <li onclick="selectSearchItem('${d}')" class="search-item p-3 border border-slate-200 rounded-lg cursor-pointer flex justify-between items-center active:scale-95 active:bg-slate-100">
+        <li onclick="selectSearchItem('${d}')" class="search-item p-3 border border-slate-200 rounded-lg cursor-pointer transition flex justify-between items-center active:scale-95 active:bg-slate-100">
             <span class="font-bold text-slate-700">${d}</span>
         </li>
     `).join('');
@@ -145,7 +143,6 @@ window.simpanManual = async function() {
         return alert("Tanggal, Nama Item, Panjang, dan Qty wajib diisi!");
     }
 
-    // REVISI: Pastikan akhiran 'M' ditambahkan jika belum ada
     let panjangFinal = panjangRaw.endsWith('M') ? panjangRaw : panjangRaw + "M";
 
     const btn = document.getElementById('btn-simpan-manual');
@@ -195,6 +192,9 @@ async function loadInitialSTBJData() {
         if(mData2) {
             masterKamus = mData2;
             if(!window.masterData) window.masterData = {};
+            
+            // REVISI: Mengembalikan referensi kamus agar wms_parser.js bisa membaca barcode
+            window.masterData.kamus = mData2; 
             
             let getUnique = (key) => [...new Set(mData2.map(r => r[key]).filter(x => x))].sort();
             
