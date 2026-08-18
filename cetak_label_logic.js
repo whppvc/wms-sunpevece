@@ -25,9 +25,11 @@ let activeSelection = { m: null, elements: [] };
 let isDragging = false, dragStartX = 0, dragStartY = 0, dragInitialPos = {};
 let pendingAction = null;
 
+// State Modal Search
 let currentSearchType = ''; 
 let selectedSearchData = { nama: '', kode: '' };
 let searchTimeout; 
+let currentSearchQuery = ''; // REVISI: Menyimpan kata kunci pencarian
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', password: ''};
 
@@ -753,7 +755,7 @@ function loadSetDefault(m) {
 }
 
 // ==========================================
-// 7. MODAL SEARCH (PILIH ITEM/MESIN/CUST)
+// 7. MODAL SEARCH (PILIH ITEM/MESIN/CUST) - REVISI DOM OPTIMIZATION
 // ==========================================
 window.bukaModalSearch = function(type) {
     currentSearchType = type;
@@ -761,6 +763,7 @@ window.bukaModalSearch = function(type) {
     document.getElementById('title-modal-search').innerText = `Cari ${titleMap[type]}`;
     document.getElementById('title-tambah-master').innerText = titleMap[type];
     
+    currentSearchQuery = ''; 
     document.getElementById('input-search-list').value = '';
     renderSearchList();
 
@@ -785,31 +788,46 @@ function renderSearchList() {
         return;
     }
 
-    ul.innerHTML = dataArr.map(d => `
-        <li onclick="selectSearchItem('${d.nama}', '${d.kode}')" class="search-item p-3 border border-slate-200 rounded-lg cursor-pointer transition flex justify-between items-center active:scale-95 active:bg-slate-100">
+    // 1. Filter array data terlebih dahulu
+    let filteredData = dataArr;
+    if (currentSearchQuery) {
+        filteredData = dataArr.filter(d => d.nama.toLowerCase().includes(currentSearchQuery));
+    }
+
+    // 2. Batasi render maksimal 100 item agar DOM tidak berat
+    const limit = 100;
+    const displayData = filteredData.slice(0, limit);
+
+    if(displayData.length === 0) {
+        ul.innerHTML = '<li class="p-4 text-center text-slate-400 font-bold">Tidak ditemukan.</li>';
+        return;
+    }
+
+    // 3. Render HTML tanpa animasi hover/transition untuk performa maksimal
+    ul.innerHTML = displayData.map(d => `
+        <li onclick="selectSearchItem('${d.nama}', '${d.kode}')" class="search-item p-3 border border-slate-200 rounded-lg cursor-pointer flex justify-between items-center active:bg-slate-200 active:border-slate-400">
             <span class="font-bold text-slate-700">${d.nama}</span>
             <span class="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded">${d.kode || '-'}</span>
         </li>
     `).join('');
+    
+    // Tambahkan info jika hasil melebihi limit
+    if (filteredData.length > limit) {
+        ul.innerHTML += `<li class="p-3 text-center text-xs font-bold text-slate-400 italic">Menampilkan 100 dari ${filteredData.length} hasil. Ketik untuk lebih spesifik.</li>`;
+    }
 }
 
 window.filterSearchList = function() {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-        const q = document.getElementById('input-search-list').value.toLowerCase();
-        const items = document.querySelectorAll('.search-item');
-        
-        requestAnimationFrame(() => {
-            items.forEach(li => {
-                li.style.display = li.innerText.toLowerCase().includes(q) ? '' : 'none';
-            });
-        });
+        currentSearchQuery = document.getElementById('input-search-list').value.toLowerCase().trim();
+        renderSearchList(); 
     }, 150); 
 };
 
 window.selectSearchItem = function(nama, kode) {
-    document.querySelectorAll('.search-item').forEach(li => li.classList.remove('bg-emerald-100', 'border-emerald-400'));
-    event.currentTarget.classList.add('bg-emerald-100', 'border-emerald-400');
+    document.querySelectorAll('.search-item').forEach(li => li.classList.remove('bg-blue-100', 'border-blue-400'));
+    event.currentTarget.classList.add('bg-blue-100', 'border-blue-400');
     selectedSearchData = { nama, kode };
 };
 
@@ -938,7 +956,6 @@ window.generateLabel = function() {
     let po = document.getElementById(`${m}-po`) ? document.getElementById(`${m}-po`).value.trim() : '';
     let qty = parseInt(document.getElementById(`${m}-qty`).value);
 
-    // REVISI: Validasi ketat semua variabel harus terisi
     if (!tgl || !mesin || !shift || !item || !jenis || !panjang || !grade || !dus || !shading || !po || isNaN(qty) || qty < 1) {
         return alert("Terdapat variable yg belum diinput, silahkan mengisi semua variable pada daftar input!!");
     }
@@ -1265,7 +1282,7 @@ window.eksekusiPinGlobal = async function() {
     
     if(!pin) return alert("Masukkan PIN!");
 
-    const btn = document.querySelector('#modal-pin-global button.bg-blue-600');
+    const btn = document.querySelector('#modal-pin-global button.bg-rose-600');
     const oriText = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4 inline-block"></i> Memeriksa...';
     btn.disabled = true;
@@ -1316,4 +1333,4 @@ function penangananKeyboardEvent(e) {
     activeSelection.elements.forEach(k => { 
         if(stateGlobal[m].pos[k]) { stateGlobal[m].pos[k].x += x; stateGlobal[m].pos[k].y += y; updateTransform(k, activeSelection.isBack); } 
     }); 
-}
+                                                                                                                                                                                                                                                                                                                                                                                                                                             }
