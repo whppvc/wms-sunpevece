@@ -29,7 +29,7 @@ let pendingAction = null;
 let currentSearchType = ''; 
 let selectedSearchData = { nama: '', kode: '' };
 let searchTimeout; 
-let currentSearchQuery = ''; // REVISI: Menyimpan kata kunci pencarian
+let currentSearchQuery = ''; 
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', password: ''};
 
@@ -844,6 +844,7 @@ window.pilihDataSearch = function() {
     }
     
     tutupModalSearch();
+    selectedSearchData = { nama: '', kode: '' }; // Reset state
 };
 
 window.bukaModalTambahMaster = function() {
@@ -1282,7 +1283,7 @@ window.eksekusiPinGlobal = async function() {
     
     if(!pin) return alert("Masukkan PIN!");
 
-    const btn = document.querySelector('#modal-pin-global button.bg-rose-600');
+    const btn = document.querySelector('#modal-pin-global button.bg-blue-600');
     const oriText = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4 inline-block"></i> Memeriksa...';
     btn.disabled = true;
@@ -1333,4 +1334,4 @@ function penangananKeyboardEvent(e) {
     activeSelection.elements.forEach(k => { 
         if(stateGlobal[m].pos[k]) { stateGlobal[m].pos[k].x += x; stateGlobal[m].pos[k].y += y; updateTransform(k, activeSelection.isBack); } 
     }); 
-                                                                                                                                                                                                                                                                                                                                                                                                                                             }
+        }
