@@ -391,7 +391,7 @@
         }
 
         // ==========================================
-        // 3. QUICK EXPORT REPORT (REVISI: PAGINATION SUPABASE)
+        // 3. QUICK EXPORT REPORT (REVISI: PAGINATION SUPABASE & QTY LEMBAR)
         // ==========================================
         
         // Helper function untuk bypass limit 1000 baris Supabase
@@ -407,6 +407,38 @@
                 page++;
             }
             return allData;
+        }
+
+        // Helper function untuk menghitung Qty Lembar
+        function hitungQtyLembar(jenis, nama, qtyDus, lisData) {
+            if (!qtyDus) return 0;
+            let j = (jenis || '').toUpperCase();
+            let n = (nama || '').trim().toUpperCase();
+            
+            if (j === 'PLAFON') return qtyDus * 15;
+            
+            if (j === 'LIST' || j === 'LIS') {
+                if (lisData && lisData.length > 0) {
+                    let sortedLis = [...lisData].sort((a, b) => {
+                        let lenA = (a.nama_item_lis || a.nama_item || '').length;
+                        let lenB = (b.nama_item_lis || b.nama_item || '').length;
+                        return lenB - lenA;
+                    });
+                    let found = sortedLis.find(l => {
+                        let lisName = (l.nama_item_lis || l.nama_item || '').trim().toUpperCase();
+                        return lisName !== '' && (n.includes(lisName) || lisName === n);
+                    });
+                    if (found && found.qty_isi) {
+                        return qtyDus * parseInt(found.qty_isi);
+                    }
+                }
+                if (n.includes('PROFILE IV') || n.includes('PROFILE V')) return qtyDus * 60;
+                if (n.includes('PROFILE II')) return qtyDus * 48;
+                if (n.includes('PROFILE I')) return qtyDus * 140;
+                if (n.includes('CONNECTOR')) return qtyDus * 80;
+                return qtyDus * 24; 
+            }
+            return 0;
         }
 
         async function downloadQuickReport(type) {
@@ -439,51 +471,100 @@
                 let fileName = "";
 
                 if (type === 'stbj') {
-                    let query = db.from('hasil_stbj_langsir').select('*')
-                        .gte('created_at', startISO).lte('created_at', endISO)
-                        .order('created_at', { ascending: false });
-                    
-                    const data = await fetchAllRows(query);
-
+                    // Fetch Lis Data for Lembar calculation
+                    const { data: lisData } = await db.from('master_lis').select('*');
+                    // Fetch Jasper Data
                     const { data: jasperData } = await db.from('nama_jasper').select('*');
 
+                    // Fetch STBJ Normal
+                    let queryStbj = db.from('hasil_stbj_langsir').select('*')
+                        .gte('created_at', startISO).lte('created_at', endISO)
+                        .order('created_at', { ascending: false });
+                    const dataStbj = await fetchAllRows(queryStbj);
+
+                    // Fetch STBJ Manual
+                    let queryManual = db.from('stbj_manual').select('*')
+                        .gte('created_at', startISO).lte('created_at', endISO)
+                        .order('created_at', { ascending: false });
+                    const dataManual = await fetchAllRows(queryManual);
+
                     let groups = {};
-                    (data || []).forEach(r => {
+                    
+                    // Process Normal STBJ
+                    (dataStbj || []).forEach(r => {
                         let n = r.nama_item || '-';
                         let jName = n;
                         if(jasperData && jasperData.length > 0) {
                             const cJasper = jasperData.find(j => j.nama_item === r.nama_item && j.panjang === r.panjang && j.grade === r.grade);
                             if(cJasper) jName = cJasper.nama_jasper;
                             else jName = `JAS-${n}`;
-                        } else {
-                            jName = `JAS-${n}`;
-                        }
+                        } else { jName = `JAS-${n}`; }
                         
                         let ket = r.keterangan || '-';
                         let cust = r.customer || '-';
-                        
                         let key = `${r.tgl_produksi}_${r.mesin}_${r.shift}_${r.jenis_item}_${jName}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${cust}_${ket}`;
                         
                         if(!groups[key]) {
                             groups[key] = {
                                 tgl: r.tgl_produksi || '-', mesin: r.mesin || '-', shift: r.shift || '-',
-                                jenis: r.jenis_item || '-', namaJasper: jName, pjg: r.panjang || '-',
+                                jenis: r.jenis_item || '-', namaAsli: n, namaJasper: jName, pjg: r.panjang || '-',
                                 grade: r.grade || '-', dus: r.dus || '-', shading: r.shading || '-',
-                                cust: cust, ket: ket, qty: 0
+                                cust: cust, ket: ket, qty: 0, source: 'SCAN'
                             };
                         }
                         groups[key].qty++;
                     });
 
-                    ws_data.push(['Tgl Produksi', 'Mesin', 'Shift', 'Jenis Item', 'Nama Jasper', 'Panjang', 'Grade', 'Dus', 'Shading', 'Customer Bawaan', 'QTY (DUS)', 'Keterangan']);
-                    Object.values(groups).forEach(g => {
-                        ws_data.push([g.tgl, g.mesin, g.shift, g.jenis, g.namaJasper, g.pjg, g.grade, g.dus, g.shading, g.cust, g.qty, g.ket]);
+                    // Process Manual STBJ
+                    (dataManual || []).forEach(r => {
+                        let n = r.nama_item || '-';
+                        let jName = n;
+                        if(jasperData && jasperData.length > 0) {
+                            const cJasper = jasperData.find(j => j.nama_item === r.nama_item && j.panjang === r.panjang && j.grade === r.grade);
+                            if(cJasper) jName = cJasper.nama_jasper;
+                            else jName = `JAS-${n}`;
+                        } else { jName = `JAS-${n}`; }
+                        
+                        let ket = r.keterangan || '-';
+                        let cust = r.customer || '-';
+                        let qtyManual = parseInt(r.qty) || 0;
+                        
+                        let key = `MANUAL_${r.tgl_produksi}_${r.mesin}_${r.shift}_${r.jenis_item}_${jName}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${cust}_${ket}`;
+                        
+                        if(!groups[key]) {
+                            groups[key] = {
+                                tgl: r.tgl_produksi || '-', mesin: r.mesin || '-', shift: r.shift || '-',
+                                jenis: r.jenis_item || '-', namaAsli: n, namaJasper: jName, pjg: r.panjang || '-',
+                                grade: r.grade || '-', dus: r.dus || '-', shading: r.shading || '-',
+                                cust: cust, ket: ket, qty: 0, source: 'MANUAL'
+                            };
+                        }
+                        groups[key].qty += qtyManual;
                     });
+
+                    ws_data.push(['Tgl Produksi', 'Mesin', 'Shift', 'Jenis Item', 'Nama Jasper', 'Panjang', 'Grade', 'Dus', 'Shading', 'Customer Bawaan', 'QTY (DUS)', 'QTY (LEMBAR)', 'Keterangan', 'Sumber']);
+                    
+                    let arrScan = [];
+                    let arrManual = [];
+
+                    Object.values(groups).forEach(g => {
+                        let qtyLembar = hitungQtyLembar(g.jenis, g.namaAsli, g.qty, lisData);
+                        let row = [g.tgl, g.mesin, g.shift, g.jenis, g.namaJasper, g.pjg, g.grade, g.dus, g.shading, g.cust, g.qty, qtyLembar, g.ket, g.source];
+                        
+                        if(g.source === 'SCAN') arrScan.push(row);
+                        else arrManual.push(row);
+                    });
+
+                    // Append SCAN first, then MANUAL
+                    ws_data.push(...arrScan);
+                    ws_data.push(...arrManual);
 
                     sheetName = "STBJ_Jasper";
                     fileName = `Laporan_STBJ_Jasper_${dStart}_sd_${dEnd}.xlsx`;
                 } 
                 else if (type === 'langsir') {
+                    const { data: lisData } = await db.from('master_lis').select('*');
+
                     let query = db.from('hasil_stbj_langsir').select('*')
                         .eq('status', 'IN GUDANG')
                         .gte('waktu_langsir', startISO).lte('waktu_langsir', endISO)
@@ -511,9 +592,10 @@
                         groups[key].qty++;
                     });
 
-                    ws_data.push(['Area', 'Tgl Produksi', 'Mesin', 'Shift', 'Jenis Item', 'Nama Item', 'Panjang', 'Grade', 'Dus', 'Shading', 'Customer Bawaan', 'QTY (DUS)', 'Keterangan']);
+                    ws_data.push(['Area', 'Tgl Produksi', 'Mesin', 'Shift', 'Jenis Item', 'Nama Item', 'Panjang', 'Grade', 'Dus', 'Shading', 'Customer Bawaan', 'QTY (DUS)', 'QTY (LEMBAR)', 'Keterangan']);
                     Object.values(groups).forEach(g => {
-                        ws_data.push([g.area, g.tgl, g.mesin, g.shift, g.jenis, g.nama, g.pjg, g.grade, g.dus, g.shading, g.cust, g.qty, g.ket]);
+                        let qtyLembar = hitungQtyLembar(g.jenis, g.nama, g.qty, lisData);
+                        ws_data.push([g.area, g.tgl, g.mesin, g.shift, g.jenis, g.nama, g.pjg, g.grade, g.dus, g.shading, g.cust, g.qty, qtyLembar, g.ket]);
                     });
 
                     sheetName = "Langsir_Rangkuman";
@@ -604,4 +686,4 @@
         }
     </script>
 </body>
-                                    </html>
+    </html>
