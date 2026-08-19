@@ -178,7 +178,7 @@
                         <div class="flex flex-col gap-4">
                             <!-- Date Range -->
                             <div class="w-full">
-                                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1.5">Rentang Tanggal (Untuk Transaksi)</label>
+                                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1.5">Rentang Tanggal</label>
                                 <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-1.5 w-fit">
                                     <input type="date" id="report-start" class="w-full p-2 text-xs font-bold text-slate-700 outline-none cursor-pointer bg-white border border-slate-200 rounded">
                                     <span class="text-xs font-black text-slate-400">S/D</span>
@@ -478,14 +478,12 @@
 
                     // Fetch STBJ Normal
                     let queryStbj = db.from('hasil_stbj_langsir').select('*')
-                        .gte('created_at', startISO).lte('created_at', endISO)
-                        .order('created_at', { ascending: false });
+                        .gte('created_at', startISO).lte('created_at', endISO);
                     const dataStbj = await fetchAllRows(queryStbj);
 
                     // Fetch STBJ Manual
                     let queryManual = db.from('stbj_manual').select('*')
-                        .gte('created_at', startISO).lte('created_at', endISO)
-                        .order('created_at', { ascending: false });
+                        .gte('created_at', startISO).lte('created_at', endISO);
                     const dataManual = await fetchAllRows(queryManual);
 
                     let groups = {};
@@ -555,7 +553,10 @@
                         else arrManual.push(row);
                     });
 
-                    // Append SCAN first, then MANUAL
+                    // Sort by Tgl Produksi descending
+                    arrScan.sort((a, b) => String(b[0]).localeCompare(String(a[0])));
+                    arrManual.sort((a, b) => String(b[0]).localeCompare(String(a[0])));
+
                     ws_data.push(...arrScan);
                     ws_data.push(...arrManual);
 
@@ -686,4 +687,4 @@
         }
     </script>
 </body>
-    </html>
+                                                                                                                                                                      </html>
