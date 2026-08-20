@@ -99,29 +99,35 @@ async function loadMasterData() {
     }
 }
 
+// REVISI: Logika pencocokan master_lis diperkuat
 function getIsiBoxText(jenisItem, namaItem) {
-    let j = (jenisItem || '').trim();
+    let j = (jenisItem || '').trim().toUpperCase();
     let n = (namaItem || '').trim().toUpperCase();
 
-    if (j === 'Plafon') return "Qty: 15";
+    if (j === 'PLAFON') return "Qty: 15";
 
-    if (j === 'Lis') {
+    if (j === 'LIS' || j === 'LIST') {
         if (masterData.lis && masterData.lis.length > 0) {
+            // Urutkan dari nama terpanjang agar pencocokan lebih spesifik
             let sortedLis = [...masterData.lis].sort((a, b) => {
-                let lenA = (a.nama_item_lis || a.nama_item || '').length;
-                let lenB = (b.nama_item_lis || b.nama_item || '').length;
+                let lenA = String(a.nama_item_lis || a.nama_item || '').length;
+                let lenB = String(b.nama_item_lis || b.nama_item || '').length;
                 return lenB - lenA;
             });
 
             let found = sortedLis.find(l => {
-                let lisName = (l.nama_item_lis || l.nama_item || '').trim().toUpperCase();
-                return lisName !== '' && (n.includes(lisName) || lisName === n);
+                let lisName = String(l.nama_item_lis || l.nama_item || '').trim().toUpperCase();
+                if (!lisName) return false;
+                // Pencocokan dua arah: apakah nama input mengandung nama master, ATAU sebaliknya
+                return n.includes(lisName) || lisName.includes(n);
             });
 
             if (found && found.qty_isi) {
                 return `Qty: ${found.qty_isi}`;
             }
         }
+        
+        // Fallback jika tidak ditemukan di database
         if (n.includes('PROFILE IV') || n.includes('PROFILE V')) return "Qty: 60";
         if (n.includes('PROFILE II')) return "Qty: 48";
         if (n.includes('PROFILE I')) return "Qty: 140";
