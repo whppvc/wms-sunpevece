@@ -22,7 +22,7 @@ let selectedRows = new Set();
 
 let filterTimeout; 
 
-const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
+const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'admin'};
 
 function formatWIB(isoString) {
     if (!isoString || isoString === '-') return '-';
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const actionMenu = document.getElementById('mobile-action-menu');
         if (actionMenu && !actionMenu.classList.contains('hidden')) {
-            if (!actionMenu.contains(e.target) && !actionMenu.closest('button[onclick^="toggleActionMenuMobile"]')) {
+            if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenuMobile"]')) {
                 actionMenu.classList.add('hidden');
             }
         }
@@ -172,7 +172,6 @@ function tutupPopups() {
 function renderDragList() {
     const container = document.getElementById('kolom-drag-container');
     container.innerHTML = '';
-    // REVISI: Abaikan kolom yang memiliki class 'hidden' bawaan atau 'col-btn-edit'
     const headers = Array.from(document.querySelectorAll('#thead-stbj th')).filter(th => !th.classList.contains('col-cb') && !th.classList.contains('hidden') && !th.classList.contains('col-btn-edit'));
     
     headers.forEach(th => {
@@ -332,6 +331,9 @@ function setMode(m) {
     const btnHold = document.getElementById('btn-hold-mob');
     const btnHapus = document.getElementById('btn-hapus-mob');
     
+    // REVISI: Cek apakah user adalah Creator
+    const isCreator = currentUser && currentUser.role && currentUser.role.toLowerCase() === 'creator';
+
     if (m === 'item' || m === 'jasper') {
         if(btnCollect) btnCollect.classList.remove('hidden'); 
         if(btnCollectMob) btnCollectMob.classList.remove('hidden'); 
@@ -341,12 +343,20 @@ function setMode(m) {
         if(btnCollect) btnCollect.classList.add('hidden'); 
         if(btnCollectMob) btnCollectMob.classList.add('hidden'); 
         if(btnHold) btnHold.classList.add('hidden');
-        if(btnHapus) btnHapus.classList.remove('hidden');
+        // REVISI: Tampilkan tombol hapus hanya untuk Creator
+        if(btnHapus) {
+            if(isCreator) btnHapus.classList.remove('hidden');
+            else btnHapus.classList.add('hidden');
+        }
     } else {
         if(btnCollect) btnCollect.classList.add('hidden'); 
         if(btnCollectMob) btnCollectMob.classList.add('hidden'); 
         if(btnHold) btnHold.classList.remove('hidden');
-        if(btnHapus) btnHapus.classList.remove('hidden');
+        // REVISI: Tampilkan tombol hapus hanya untuk Creator
+        if(btnHapus) {
+            if(isCreator) btnHapus.classList.remove('hidden');
+            else btnHapus.classList.add('hidden');
+        }
     }
 
     const savedStatusFilter = activeFilters['col-status'];
@@ -1286,6 +1296,7 @@ async function aksiMassal(tipe) {
         lucide.createIcons();
     }
     else if(tipe === 'hapus') {
+        if(currentUser.role.toLowerCase() !== 'creator') return alert("Akses ditolak! Hanya Creator yang dapat menghapus data.");
         if(!confirm(`Yakin ingin menghapus permanen ${checkedValues.length} data ini dari database?`)) return;
         
         const btn = document.getElementById('btn-hapus-mob'); 
@@ -1344,4 +1355,4 @@ async function aksiMassal(tipe) {
         XLSX.utils.book_append_sheet(wb, ws, "STBJ_Data");
         XLSX.writeFile(wb, `STBJ_${statusSekarang}_${modeSekarang.toUpperCase()}.xlsx`);
     }
-}
+                                                 }
