@@ -93,7 +93,9 @@
                 <div>
                     <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Area Penyimpanan</label>
                     <div class="flex border border-slate-300 rounded overflow-hidden shadow-sm">
-                        <input type="text" id="input-area" readonly class="flex-1 p-2.5 text-sm outline-none bg-slate-50 text-slate-800 cursor-not-allowed font-bold" placeholder="Pilih Area..." required>
+                        <!-- REVISI: Mengubah input readonly menjadi button agar tidak memicu keyboard di HP -->
+                        <button type="button" id="btn-pilih-area" onclick="bukaModalSearch('area')" class="flex-1 p-2.5 text-sm outline-none bg-slate-50 text-slate-400 font-bold text-left cursor-pointer">Pilih Area...</button>
+                        <input type="hidden" id="input-area" required>
                         <button type="button" onclick="bukaModalSearch('area')" class="px-4 bg-emerald-100 text-emerald-700 font-bold text-xs hover:bg-emerald-200 border-l border-slate-300 transition">CARI</button>
                     </div>
                 </div>
@@ -139,4 +141,4 @@
     <script src="wms_parser.js"></script>
     <script src="input_opname_logic.js"></script>
 </body>
-        </html>
+</html>
