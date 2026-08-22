@@ -52,6 +52,7 @@ const APP_MENUS = [
     { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers', url: 'kartu_stok.html' },
     { id: 'ganti_customer', title: 'Table Ganti Customer', icon: 'user-cog', url: 'ganti_customer.html' },
     { id: 'req_konversi', title: 'Tabel Request Konversi', icon: 'replace', url: 'req_konversi.html' },
+    { id: 'input_opname', title: 'Input Stok Opname', icon: 'clipboard-check', url: 'input_opname.html' },
     { isDivider: true, title: 'MUTASI' },
     { id: 'stok_nonaktif', title: 'Stok Nonaktif', icon: 'package-x', url: 'stok_nonaktif.html' },
     { id: 'scan_pic', title: 'Scan PIC Area', icon: 'user-check', url: 'scan_pic.html' },
@@ -63,11 +64,10 @@ const APP_MENUS = [
     { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' },
     { isDivider: true, title: 'REPORTS' },
     { id: 'reports', title: 'Laporan & Rekap', icon: 'bar-chart-3', url: 'reports.html' },
-    { isDivider: true, title: 'PRINT & OPNAME' },
+    { isDivider: true, title: 'PRINT LABEL' },
     { id: 'cetak_label', title: 'Cetak Label Barcode', icon: 'printer', url: 'cetak_label.html' },
     { id: 'print_khusus', title: 'Cetak Label Khusus', icon: 'qr-code', url: 'print_khusus.html' },
     { id: 'riwayat_cetak', title: 'Riwayat Cetak Label', icon: 'scroll-text', url: 'riwayat_cetak.html' },
-    { id: 'input_opname', title: 'Input Stok Opname', icon: 'clipboard-check', url: 'input_opname.html' },
     { isDivider: true, title: 'CONFIG' },
     { id: 'master_data', title: 'Master Data', icon: 'database', url: 'master_data.html' }
 ];
