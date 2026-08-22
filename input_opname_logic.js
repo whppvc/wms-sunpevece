@@ -120,10 +120,11 @@ window.selectSearchItem = function(nama) {
 window.pilihDataSearch = function() {
     if(!selectedSearchData) return alert("Pilih area dari daftar terlebih dahulu!");
     
-    let inputId = `input-${currentSearchType}`;
-    let el = document.getElementById(inputId);
-    
-    if(el) el.value = selectedSearchData;
+    // REVISI: Update tombol text dan hidden input value
+    document.getElementById('btn-pilih-area').innerText = selectedSearchData;
+    document.getElementById('btn-pilih-area').classList.remove('text-slate-400');
+    document.getElementById('btn-pilih-area').classList.add('text-slate-800');
+    document.getElementById('input-area').value = selectedSearchData;
     
     document.getElementById('modal-search').classList.add('hidden');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
@@ -167,7 +168,7 @@ document.addEventListener('submit', function(e) {
         inputEl.focus();
         
         const scrollContainer = document.getElementById('scroll-container');
-        if (scrollContainer) scrollContainer.scrollTop = 0; // Scroll ke atas karena unshift
+        if (scrollContainer) scrollContainer.scrollTop = 0; 
     }
 });
 
@@ -201,7 +202,7 @@ function renderTable() {
         const isRedHighlight = ['DUPLIKAT GUDANG', 'DUPLIKAT SCAN', 'FORMAT SALAH'].includes(d.status) || d.isLocalDuplicate;
         const rowClass = isRedHighlight ? 'bg-red-50 border-red-200' : 'bg-white border-slate-300';
 
-        // REVISI: Desain Card yang lebih besar dan lega
+        // REVISI: Font size spesifikasi item diperbesar (text-base)
         html += `
             <div class="row-opname ${rowClass} border rounded-xl p-4 mb-3 relative transition w-full flex flex-col shadow-sm">
                 
@@ -234,7 +235,7 @@ function renderTable() {
                     </div>
                     <div class="flex flex-col col-span-2 bg-blue-50 p-2 rounded-lg border border-blue-100">
                         <span class="text-[10px] font-black text-blue-500 uppercase mb-0.5">Spesifikasi Item</span>
-                        <span class="text-sm font-black text-slate-900 leading-snug">
+                        <span class="text-base font-black text-slate-900 leading-snug">
                             ${d.namaItem} - ${d.panjang} - ${d.grade} - ${d.dus}
                         </span>
                         <span class="text-xs font-bold text-blue-700 mt-0.5">Shading: ${d.shading}</span>
@@ -318,7 +319,9 @@ window.verifikasiOpname = async function() {
                 d.keterangan = 'BARANG SUDAH ADA DI GUDANG (STOK GLOBAL)';
                 infoDuplikat++;
             } else if (d.isLocalDuplicate) {
+                // REVISI: Duplikat scan tetap merah dan tidak valid
                 d.status = 'DUPLIKAT SCAN';
+                d.keterangan = 'BARCODE DI-SCAN LEBIH DARI SEKALI DI LAYAR';
             } else {
                 d.status = 'VALID';
             }
@@ -428,4 +431,4 @@ window.simpanOpnameKeGudang = async function() {
     } finally { 
         btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); 
     }
-                          }
+        }
