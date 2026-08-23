@@ -22,27 +22,11 @@
 </head>
 <body class="font-sans text-slate-800">
 
-    <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
+    <div class="flex flex-col h-full w-full absolute inset-0 pt-[64px] sm:pt-[64px] z-10">
         
+        <!-- INFO BAR ATAS -->
         <div class="shrink-0 bg-white flex flex-col z-20 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)] border-b border-slate-200">
-            
-            <!-- TOOLBAR AKSI -->
-            <div class="p-3 sm:p-4 flex items-center justify-between bg-slate-50/50 w-full">
-                <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar">
-                    <button onclick="verifikasiKeluar()" id="btn-verifikasi" class="shrink-0 flex items-stretch rounded-md overflow-hidden shadow-sm active:scale-95 transition h-9 border border-slate-800">
-                        <div class="w-9 bg-slate-900 text-white flex items-center justify-center shrink-0"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
-                        <div class="flex-1 bg-slate-800 text-white font-black text-[11px] uppercase flex items-center justify-center px-3 tracking-wider">Verifikasi</div>
-                    </button>
-
-                    <button onclick="undoHapusKeluar()" class="shrink-0 flex items-stretch rounded-md overflow-hidden shadow-sm active:scale-95 transition h-9 border border-rose-700">
-                        <div class="w-9 bg-rose-700 text-white flex items-center justify-center shrink-0"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
-                        <div class="flex-1 bg-rose-600 text-white font-black text-[11px] uppercase flex items-center justify-center px-3 tracking-wider">Undo Hapus</div>
-                    </button>
-                </div>
-            </div>
-
-            <!-- SELECT ALL & QTY & FILTER -->
-            <div class="flex justify-between items-center px-3 py-2 bg-white border-t border-slate-200">
+            <div class="flex justify-between items-center px-3 py-3 bg-white border-b border-slate-200">
                 <div class="flex items-center gap-2">
                     <input type="checkbox" onchange="toggleAll(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-400" id="cb-all">
                     <label for="cb-all" class="text-[11px] font-black text-slate-500 uppercase tracking-wide cursor-pointer">Pilih Semua</label>
@@ -61,18 +45,46 @@
         <!-- MIDDLE SCROLL SECTION (CARD VIEW) -->
         <div class="flex-1 min-h-0 bg-slate-200 p-2 overflow-hidden flex flex-col relative z-0">
             <div class="flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll" id="scroll-container">
-                <div id="tbody-keluar" class="flex flex-col gap-0 w-full"></div>
+                <div id="tbody-keluar" class="flex flex-col gap-0 w-full">
+                    <div class="p-10 text-center font-medium text-slate-400 h-full flex flex-col items-center justify-center">
+                        <i data-lucide="package-search" class="w-12 h-12 mx-auto mb-3 opacity-30"></i> 
+                        Belum ada data di-scan.
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- FOOTER ACTION -->
-        <div class="shrink-0 w-full bg-slate-50 p-2 flex items-center gap-2 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300 pb-4">
-            <button onclick="bukaModalAdd()" class="w-[50px] h-[50px] bg-[#0f172a] hover:bg-black text-white flex justify-center items-center shadow-md active:scale-95 shrink-0 transition rounded border-b-4 border-slate-900">
-                <i data-lucide="plus" class="w-7 h-7"></i>
-            </button>
-            <button id="btn-save" onclick="simpanKeluar()" class="flex-1 h-[50px] bg-rose-700 hover:bg-rose-800 text-white font-black shadow-md flex items-center justify-center gap-2 text-[13px] tracking-widest cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-rose-900">
-                <i data-lucide="truck-fast" class="w-5 h-5"></i> PROSES KELUAR BARANG
-            </button>
+        <!-- FOOTER ACTION (4 KOTAK BOTTOM BAR) -->
+        <div class="shrink-0 w-full bg-slate-50 p-2 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300 pb-4">
+            <div class="grid grid-cols-4 gap-2 h-[55px]">
+                
+                <!-- KOTAK 1: ADD -->
+                <button onclick="bukaModalAdd()" class="w-full h-full bg-[#0f172a] hover:bg-black text-white flex flex-col justify-center items-center shadow-md active:scale-95 transition rounded border-b-4 border-slate-900">
+                    <i data-lucide="plus" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                </button>
+
+                <!-- KOTAK 2: VERIFIKASI -->
+                <button onclick="verifikasiKeluar()" id="btn-verifikasi" class="w-full h-full bg-blue-600 hover:bg-blue-700 text-white font-black shadow-md flex flex-col items-center justify-center gap-1 text-[9px] sm:text-[11px] cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-blue-800 leading-none">
+                    <i data-lucide="shield-check" class="w-4 h-4 sm:w-5 sm:h-5"></i> Verifikasi
+                </button>
+
+                <!-- KOTAK 3: SIMPAN KELUAR -->
+                <button id="btn-save" onclick="simpanKeluar()" class="w-full h-full bg-rose-700 hover:bg-rose-800 text-white font-black shadow-md flex flex-col items-center justify-center gap-1 text-[9px] sm:text-[11px] cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-rose-900 leading-none">
+                    <i data-lucide="truck-fast" class="w-4 h-4 sm:w-5 sm:h-5"></i> Proses Keluar
+                </button>
+
+                <!-- KOTAK 4: LAINNYA (DROPUP) -->
+                <div class="relative w-full h-full">
+                    <button onclick="toggleMoreMenu(event)" class="w-full h-full bg-slate-700 hover:bg-slate-800 text-white font-black shadow-md flex flex-col items-center justify-center gap-1 text-[9px] sm:text-[11px] cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-slate-900 leading-none">
+                        <i data-lucide="more-horizontal" class="w-4 h-4 sm:w-5 sm:h-5"></i> Lainnya
+                    </button>
+                    
+                    <div id="dropup-more" class="hidden absolute bottom-full right-0 mb-2 w-48 bg-white shadow-2xl rounded-xl border border-slate-200 z-50 flex flex-col overflow-hidden">
+                        <button onclick="undoHapusKeluar(); toggleMoreMenu(event)" class="text-left px-5 py-4 border-b border-slate-100 text-sm font-bold text-rose-600 flex items-center gap-3 hover:bg-slate-50 active:bg-slate-100 transition"><i data-lucide="rotate-ccw" class="w-5 h-5"></i> Undo Hapus</button>
+                    </div>
+                </div>
+
+            </div>
         </div>
         
     </div>
@@ -87,15 +99,15 @@
             <form id="form-scan" class="flex flex-col gap-4">
                 <div>
                     <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Customer Keluar (Tujuan)</label>
-                    <select id="select-customer-keluar" class="w-full p-2.5 border border-slate-300 rounded font-bold outline-none focus:border-rose-500 text-slate-800 cursor-pointer bg-slate-50 text-sm uppercase" required>
+                    <select id="select-customer-keluar" class="w-full p-3 border-2 border-slate-200 rounded-xl font-bold outline-none focus:border-rose-600 text-slate-800 cursor-pointer bg-slate-50 text-sm uppercase" required>
                         <option value="">-- Memuat Customer... --</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Scan Fisik Kardus</label>
-                    <textarea id="input-qrcode" rows="4" class="w-full p-2.5 border border-slate-300 rounded outline-none focus:border-rose-500 font-mono font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition custom-scroll" placeholder="Arahkan scanner atau paste QR Code..." required></textarea>
+                    <textarea id="input-qrcode" rows="4" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-rose-600 font-mono font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition custom-scroll" placeholder="Arahkan scanner atau paste QR Code..." oninput="autoEnterScan(this)" required></textarea>
                 </div>
-                <button type="submit" class="mt-2 w-full bg-rose-700 hover:bg-rose-800 text-white py-3 rounded font-black shadow transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-4 border-rose-900">
+                <button type="submit" class="mt-2 w-full bg-rose-700 hover:bg-rose-800 text-white py-3 rounded-xl font-black shadow transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-4 border-rose-900">
                     <i data-lucide="plus-square" class="w-4 h-4"></i> TAMBAHKAN KODE
                 </button>
             </form>
@@ -115,11 +127,11 @@
             <div class="flex flex-col gap-4">
                 <div>
                     <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Customer Estimasi Tersedia</label>
-                    <select id="select-pinjam-estimasi" class="w-full p-2.5 border border-slate-300 rounded font-bold outline-none focus:border-indigo-500 text-slate-800 cursor-pointer bg-slate-50 text-sm uppercase">
+                    <select id="select-pinjam-estimasi" class="w-full p-3 border-2 border-slate-200 rounded-xl font-bold outline-none focus:border-indigo-600 text-slate-800 cursor-pointer bg-slate-50 text-sm uppercase">
                         <option value="">-- Memuat Data... --</option>
                     </select>
                 </div>
-                <button type="button" onclick="simpanPinjamEstimasi()" class="mt-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded font-black shadow transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-4 border-indigo-800">
+                <button type="button" onclick="simpanPinjamEstimasi()" class="mt-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-black shadow transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-4 border-indigo-800">
                     <i data-lucide="check-circle" class="w-4 h-4"></i> KONFIRMASI PINJAM
                 </button>
             </div>
@@ -137,6 +149,8 @@
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label><select id="fs-status" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Keluar</label><select id="fs-cust-keluar" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
                 <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="fs-qr" oninput="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50" placeholder="Ketik QR Code..."></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Aktual</label><select id="fs-cust-aktual" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Estimasi</label><select id="fs-cust-estimasi" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><select id="fs-jenis" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
                 <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><select id="fs-nama" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><select id="fs-pjg" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
@@ -151,7 +165,15 @@
     <!-- OVERLAY -->
     <div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-[50] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
+    <script>
+        function autoEnterScan(el) {
+            let val = el.value;
+            if (val.match(/\/0001( N)?$/)) {
+                el.value = val + '\n';
+            }
+        }
+    </script>
     <script src="wms_parser.js"></script>
     <script src="keluar_logic.js"></script>
 </body>
-</html>
+    </html>
