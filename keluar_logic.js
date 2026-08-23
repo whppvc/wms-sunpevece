@@ -23,12 +23,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         wmsMain.style.padding = '0'; 
     }
 
+    document.addEventListener('click', function(e) {
+        const dropupMore = document.getElementById('dropup-more');
+        if (dropupMore && !dropupMore.classList.contains('hidden') && !e.target.closest('.relative')) {
+            dropupMore.classList.add('hidden');
+        }
+    });
+
     await loadInitialData();
 });
+
+window.toggleMoreMenu = function(e) {
+    if(e) e.stopPropagation();
+    const menu = document.getElementById('dropup-more');
+    if(menu) menu.classList.toggle('hidden');
+};
 
 window.bukaModalAdd = function() {
     document.getElementById('input-qrcode').value = '';
     document.getElementById('modal-add-scan').classList.remove('hidden');
+    setTimeout(() => document.getElementById('input-qrcode').focus(), 100);
 };
 
 window.tutupModalAdd = function() {
@@ -67,7 +81,7 @@ document.addEventListener('submit', function(e) {
             const isLocalDuplicate = dataKeluar.some(d => d.qrcode === code);
             const trans = window.translateBarcode(code);
             
-            dataKeluar.push({ 
+            dataKeluar.unshift({ 
                 id: ++globalRowId, 
                 qrcode: code, 
                 customer_keluar: customerKeluar,
@@ -90,24 +104,24 @@ document.addEventListener('submit', function(e) {
         renderTable();
         
         inputEl.value = ''; 
-        tutupModalAdd(); 
+        inputEl.focus();
         
         const scrollContainer = document.getElementById('scroll-container');
-        if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        if (scrollContainer) scrollContainer.scrollTop = 0;
     }
 });
 
 function renderTable() {
     const tbody = document.getElementById('tbody-keluar');
     if(dataKeluar.length === 0) {
-        tbody.innerHTML = '<div class="p-10 text-center font-medium text-slate-400"><i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Belum ada data di-scan.</div>';
+        tbody.innerHTML = '<div class="p-10 text-center font-medium text-slate-400 h-full flex flex-col items-center justify-center"><i data-lucide="package-search" class="w-12 h-12 mx-auto mb-3 opacity-30"></i> Belum ada data di-scan.</div>';
         document.getElementById('lbl-tampil-baris').innerText = '0';
         updateFilterDropdowns(); 
         lucide.createIcons(); return;
     }
     
     let html = '';
-    let count = 1;
+    let count = dataKeluar.length;
 
     dataKeluar.forEach((d) => {
         let badgeClass = "bg-slate-200 text-slate-700 border-slate-300";
@@ -121,7 +135,7 @@ function renderTable() {
         }
 
         const isRedHighlight = d.status_verif === 'TIDAK DITEMUKAN' || d.status_verif === 'DUPLIKAT SCAN' || d.status_verif === 'DUPLIKAT KELUAR';
-        const rowClass = isRedHighlight ? 'bg-red-50 hover:bg-red-100' : 'bg-white hover:bg-slate-50';
+        const rowClass = isRedHighlight ? 'bg-red-50 border-red-200' : 'bg-white border-slate-300';
 
         // Logika Tombol Pinjam
         let pinjamHtml = '';
@@ -129,72 +143,87 @@ function renderTable() {
             if (d.need_pinjam_aktual) {
                 if (d.is_pinjam_aktual) {
                     pinjamHtml = `
-                        <div class="mt-2 flex items-center justify-between bg-orange-50 border border-orange-200 p-1.5 rounded">
-                            <span class="text-[10px] font-bold text-orange-800">Pinjam Aktual (Potong Est: ${d.pinjam_estimasi_selected})</span>
-                            <button onclick="togglePinjamAktual(${d.id})" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-[9px] rounded transition uppercase">Cancel</button>
+                        <div class="mt-3 flex items-center justify-between bg-orange-50 border border-orange-200 p-2 rounded-lg">
+                            <span class="text-xs font-bold text-orange-800">Pinjam Aktual (Potong Est: ${d.pinjam_estimasi_selected})</span>
+                            <button onclick="togglePinjamAktual(${d.id})" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-[10px] rounded-md transition uppercase">Cancel</button>
                         </div>`;
                 } else {
                     pinjamHtml = `
-                        <div class="mt-2 p-2 bg-orange-50 border border-orange-200 rounded">
-                            <p class="text-[10px] text-orange-800 font-bold mb-1">Customer Aktual tidak sesuai! (Fisik: ${d.customer_aktual_db})</p>
-                            <button onclick="togglePinjamAktual(${d.id})" class="w-full py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-[10px] rounded shadow-sm transition uppercase">Pinjam Customer Aktual</button>
+                        <div class="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                            <p class="text-xs text-orange-800 font-bold mb-2">Customer Aktual tidak sesuai! (Fisik: ${d.customer_aktual_db})</p>
+                            <button onclick="togglePinjamAktual(${d.id})" class="w-full py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-md shadow-sm transition uppercase">Pinjam Customer Aktual</button>
                         </div>`;
                 }
             } else if (d.need_pinjam_estimasi) {
                 if (d.pinjam_estimasi_selected) {
                     pinjamHtml = `
-                        <div class="mt-2 flex items-center justify-between bg-indigo-50 border border-indigo-200 p-1.5 rounded">
-                            <span class="text-[10px] font-bold text-indigo-800">Dipinjam dari Est: ${d.pinjam_estimasi_selected}</span>
-                            <button onclick="bukaModalPinjamEstimasi(${d.id}, false)" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[9px] rounded transition uppercase">Ubah</button>
+                        <div class="mt-3 flex items-center justify-between bg-indigo-50 border border-indigo-200 p-2 rounded-lg">
+                            <span class="text-xs font-bold text-indigo-800">Dipinjam dari Est: ${d.pinjam_estimasi_selected}</span>
+                            <button onclick="bukaModalPinjamEstimasi(${d.id}, false)" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] rounded-md transition uppercase">Ubah</button>
                         </div>`;
                 } else {
                     pinjamHtml = `
-                        <div class="mt-2 p-2 bg-indigo-50 border border-indigo-200 rounded">
-                            <p class="text-[10px] text-indigo-800 font-bold mb-1">Customer Estimasi berbeda!</p>
-                            <button onclick="bukaModalPinjamEstimasi(${d.id}, false)" class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] rounded shadow-sm transition uppercase">Pilih Pinjam Customer</button>
+                        <div class="mt-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                            <p class="text-xs text-indigo-800 font-bold mb-2">Customer Estimasi berbeda!</p>
+                            <button onclick="bukaModalPinjamEstimasi(${d.id}, false)" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-md shadow-sm transition uppercase">Pilih Pinjam Customer</button>
                         </div>`;
                 }
             }
         }
 
         html += `
-            <div class="row-keluar ${rowClass} border-b border-slate-300 p-2.5 relative transition w-full flex shrink-0">
-                <div class="flex flex-col items-center justify-start pr-2 mr-2 border-r border-slate-300 w-10 shrink-0 pt-1">
-                    <div class="font-black text-slate-800 text-xl mb-3 leading-none no-cell">${count++}</div>
-                    <input type="checkbox" value="${d.id}" onchange="highlightRow(this)" class="row-cb cursor-pointer w-4 h-4 accent-blue-600 rounded bg-white border-slate-400">
+            <div class="row-keluar ${rowClass} border rounded-xl p-4 mb-3 relative transition w-full flex flex-col shadow-sm">
+                
+                <div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center font-black text-lg shadow-inner">${count--}</div>
+                        <div class="flex flex-col">
+                            <span class="font-black text-xl text-rose-700 leading-none uppercase col-cust-keluar">${d.customer_keluar}</span>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Customer Tujuan</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" value="${d.id}" onchange="highlightRow(this)" class="row-cb cursor-pointer w-5 h-5 accent-blue-600 rounded bg-white border-slate-400">
+                        <button onclick="hapusBaris(${d.id})" class="bg-slate-100 text-slate-500 p-2 rounded-lg hover:bg-rose-600 hover:text-white transition active:scale-95 shrink-0 border border-slate-200"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
                 </div>
                 
-                <div class="flex-1 flex flex-col gap-0 w-full min-w-0">
-                    <div class="flex justify-between items-start mb-0.5">
-                        <div class="font-black text-[16px] text-rose-700 leading-none col-cust-keluar uppercase">Tujuan: ${d.customer_keluar}</div>
-                        <button onclick="hapusBaris(${d.id})" class="bg-slate-700 text-white p-1.5 rounded hover:bg-rose-600 transition active:scale-95 shrink-0"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                    </div>
-                    
-                    <div class="font-mono font-black text-slate-900 text-[13px] break-all leading-tight col-qr">${d.qrcode}</div>
-                    
-                    <div class="text-[12px] font-bold text-slate-600 tracking-tight">
-                        <span class="col-tgl">${d.tglProduksi}</span> - <span class="col-mesin">${d.mesin}</span> - <span class="col-shift">${d.shift}</span>
-                    </div>
-                    
-                    <div class="text-[13px] font-black text-slate-900 leading-snug my-0.5">
-                        <span class="col-nama">${d.namaItem}</span> - <span class="col-pjg">${d.panjang}</span> - <span class="col-grade">${d.grade}</span> - <span class="col-dus">${d.dus}</span>
-                        <span class="col-jenis hidden">${d.jenisItem}</span>
-                    </div>
-                    
-                    <div class="text-[12px] font-bold text-blue-600 col-shading">${d.shading}</div>
-                    
-                    <div class="mt-1 flex flex-col gap-0.5">
-                        <div class="text-[11px] font-bold text-slate-500">Cust Aktual: <span class="text-orange-600 col-cust-aktual">${d.customer_aktual_db !== '-' ? d.customer_aktual_db : d.customerBawaan}</span></div>
-                        <div class="text-[11px] font-bold text-slate-500">Cust Estimasi: <span class="text-purple-600 col-cust-estimasi">${d.customer_estimasi_db}</span></div>
-                    </div>
-                    
-                    <div class="flex flex-row flex-wrap items-center gap-1.5 mt-1.5">
-                        <span class="font-bold px-3 py-1 text-[10px] rounded-sm border col-status ${badgeClass}">${displayStatus}</span>
-                        ${d.area !== '-' ? `<span class="font-bold px-2 py-1 text-[10px] rounded-sm bg-slate-100 text-slate-600 border border-slate-300">Area: ${d.area}</span>` : ''}
-                    </div>
-
-                    ${pinjamHtml}
+                <div class="flex flex-col gap-1 mb-3">
+                    <div class="font-mono font-black text-slate-900 text-base break-all leading-tight bg-slate-100 p-2 rounded-lg border border-slate-200 text-center col-qr">${d.qrcode}</div>
                 </div>
+                
+                <div class="grid grid-cols-2 gap-x-2 gap-y-3 mb-3">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-black text-slate-400 uppercase">Produksi</span>
+                        <span class="text-sm font-bold text-slate-700">${d.tglProduksi} - ${d.mesin} - ${d.shift}</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-black text-slate-400 uppercase">Area Gudang</span>
+                        <span class="text-sm font-black text-emerald-700 uppercase">${d.area}</span>
+                    </div>
+                    <div class="flex flex-col col-span-2 bg-blue-50 p-2 rounded-lg border border-blue-100">
+                        <span class="text-[10px] font-black text-blue-500 uppercase mb-0.5">Spesifikasi Item</span>
+                        <span class="text-base font-black text-slate-900 leading-snug">
+                            <span class="col-nama">${d.namaItem}</span> - <span class="col-pjg">${d.panjang}</span> - <span class="col-grade">${d.grade}</span> - <span class="col-dus">${d.dus}</span>
+                            <span class="col-jenis hidden">${d.jenisItem}</span>
+                        </span>
+                        <span class="text-xs font-bold text-blue-700 mt-0.5">Shading: <span class="col-shading">${d.shading}</span></span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-black text-slate-400 uppercase">Cust Aktual</span>
+                        <span class="text-sm font-bold text-orange-600 uppercase col-cust-aktual">${d.customer_aktual_db !== '-' ? d.customer_aktual_db : d.customerBawaan}</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-black text-slate-400 uppercase">Cust Estimasi</span>
+                        <span class="text-sm font-bold text-purple-600 uppercase col-cust-estimasi">${d.customer_estimasi_db}</span>
+                    </div>
+                </div>
+                
+                <div class="flex flex-row justify-start items-center mt-auto pt-2 border-t border-slate-100">
+                    <span class="font-bold px-3 py-1.5 text-xs rounded-md border col-status ${badgeClass} shadow-sm">${displayStatus}</span>
+                </div>
+
+                ${pinjamHtml}
             </div>
         `;
     });
@@ -239,8 +268,8 @@ function updateFilterDropdowns() {
 function highlightRow(cb) {
     const div = cb.closest('.row-keluar');
     if (div) {
-        if (cb.checked) div.classList.add('selected-row');
-        else div.classList.remove('selected-row');
+        if (cb.checked) div.classList.add('border-blue-500', 'bg-blue-50');
+        else div.classList.remove('border-blue-500', 'bg-blue-50');
     }
 }
 
@@ -252,10 +281,6 @@ function toggleAll(checked) {
             highlightRow(cb);
         }
     }); 
-}
-
-function getCheckedIds() {
-    const ids = []; document.querySelectorAll('.row-cb:checked').forEach(cb => ids.push(parseInt(cb.value))); return ids;
 }
 
 function hapusBaris(id) {
@@ -270,7 +295,7 @@ function hapusBaris(id) {
 window.undoHapusKeluar = function() {
     if(deletedKeluarStack.length === 0) return alert("Tidak ada histori penghapusan yang dapat di-undo.");
     const last = deletedKeluarStack.pop();
-    dataKeluar = [...dataKeluar, ...last]; 
+    dataKeluar = [...last, ...dataKeluar]; 
     renderTable();
 }
 
@@ -319,7 +344,6 @@ window.saringTabelKeluar = function() {
                 const cell = row.querySelector('.' + classMap[key]);
                 if(cell) {
                     let text = cell.innerText.trim();
-                    if(key === 'cust') text = text.replace('Tujuan: ', '').trim();
                     if(text !== f[key]) { show = false; break; }
                 }
             }
@@ -342,7 +366,7 @@ window.saringTabelKeluar = function() {
 window.verifikasiKeluar = async function() {
     if(dataKeluar.length === 0) return alert("Belum ada data.");
     const btn = document.getElementById('btn-verifikasi'); const ori = btn.innerHTML;
-    btn.innerHTML = '<div class="bg-slate-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="animate-spin w-4 h-4"></i></div><div class="bg-slate-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-700 transition">Mengecek...</div>'; btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4 sm:w-5 sm:h-5"></i> Cek...'; btn.disabled = true;
 
     const allQRs = dataKeluar.map(d => d.qrcode);
     try {
@@ -389,11 +413,10 @@ window.verifikasiKeluar = async function() {
                 if (d.customer_keluar !== d.customer_aktual_db) {
                     d.need_pinjam_aktual = true;
                     d.need_pinjam_estimasi = false;
-                    // REVISI: Tambahkan ke specsToCheck agar kita tahu estimasi apa saja yang tersedia untuk aktual ini
                     specsToCheck.add(`${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${d.customer_aktual_db}`);
                 } else {
                     d.need_pinjam_aktual = false;
-                    d.need_pinjam_estimasi = true; // Flag to check estimasi later
+                    d.need_pinjam_estimasi = true; 
                     specsToCheck.add(`${d.namaItem}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.area}_${d.customer_aktual_db}`);
                 }
             } else {
@@ -414,7 +437,6 @@ window.verifikasiKeluar = async function() {
                     .eq('customer_aktual', parts[6]).gt('qty', 0);
                 
                 if (actData) {
-                    // Grouping by customer_estimasi to sum qty
                     let grouped = {};
                     actData.forEach(a => {
                         grouped[a.customer_estimasi] = (grouped[a.customer_estimasi] || 0) + a.qty;
@@ -429,15 +451,14 @@ window.verifikasiKeluar = async function() {
                     let availableEst = estimasiMap[spec] || [];
                     d.available_estimasi = availableEst;
                     
-                    // Format for UI
                     let estArr = availableEst.map(a => `${a.customer_estimasi} (${a.qty})`);
                     d.customer_estimasi_db = estArr.length > 0 ? estArr.join(' | ') : 'KOSONG';
 
                     if (d.need_pinjam_estimasi) {
                         let isMatch = availableEst.some(a => a.customer_estimasi === d.customer_keluar);
                         if (isMatch) {
-                            d.need_pinjam_estimasi = false; // All good
-                            d.pinjam_estimasi_selected = d.customer_keluar; // Auto select
+                            d.need_pinjam_estimasi = false; 
+                            d.pinjam_estimasi_selected = d.customer_keluar; 
                         }
                     }
                 }
@@ -456,22 +477,18 @@ window.togglePinjamAktual = function(id) {
     if(!item) return;
 
     if (item.is_pinjam_aktual) {
-        // Batal Pinjam
         item.is_pinjam_aktual = false;
         item.pinjam_estimasi_selected = '';
         renderTable();
     } else {
-        // Mau Pinjam Aktual
         if (item.available_estimasi.length === 0) {
             alert("Stok tidak ditemukan di Kartu Stok!");
             return;
         } else if (item.available_estimasi.length === 1) {
-            // Auto select jika hanya 1
             item.is_pinjam_aktual = true;
             item.pinjam_estimasi_selected = item.available_estimasi[0].customer_estimasi;
             renderTable();
         } else {
-            // Munculkan popup jika lebih dari 1
             bukaModalPinjamEstimasi(id, true);
         }
     }
@@ -627,4 +644,4 @@ window.simpanKeluar = async function() {
     } finally { 
         btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); 
     }
-}
+            }
