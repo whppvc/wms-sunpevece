@@ -36,6 +36,10 @@
                     <div class="bg-emerald-50 border border-emerald-300 px-3 py-1.5 rounded text-emerald-800 text-[11px] font-black shadow-sm uppercase tracking-wider">
                         Total Qty: <span id="lbl-tampil-baris" class="text-slate-900 text-[13px] ml-1">0</span> Dus
                     </div>
+                    <!-- ICON FILTER -->
+                    <button onclick="toggleSidebarFilter()" class="p-1.5 bg-white border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition shadow-sm active:scale-95">
+                        <i data-lucide="filter" class="w-5 h-5"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -109,7 +113,7 @@
         </div>
     </div>
 
-    <!-- MODAL PENCARIAN AREA (REVISI: Anti Autofill Keyboard) -->
+    <!-- MODAL PENCARIAN AREA -->
     <div id="modal-search" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 flex flex-col max-h-[85vh] overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -120,7 +124,6 @@
             <div class="p-4 border-b border-slate-100 bg-white">
                 <div class="relative">
                     <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
-                    <!-- REVISI: Tambahkan readonly dan onclick untuk mencegah keyboard muncul otomatis -->
                     <input type="text" id="input-search-list" onkeyup="filterSearchList()" onclick="this.removeAttribute('readonly'); this.focus();" readonly inputmode="none" class="w-full pl-9 p-2.5 border border-slate-300 rounded-lg outline-none focus:border-emerald-500 font-bold text-sm bg-slate-50 cursor-text" placeholder="Ketik untuk mencari..." autocomplete="off">
                 </div>
             </div>
@@ -135,10 +138,36 @@
         </div>
     </div>
 
+    <!-- SIDEBAR FILTER LENGKAP -->
+    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
+        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data</h3>
+            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="p-3 flex flex-col gap-3 overflow-y-auto custom-scroll flex-1">
+            <div class="grid grid-cols-2 gap-2">
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label><select id="fs-status" onchange="saringTabelOpname()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label><select id="fs-area" onchange="saringTabelOpname()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="fs-qr" oninput="saringTabelOpname()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50" placeholder="Ketik QR Code..."></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tgl Produksi</label><select id="fs-tgl" onchange="saringTabelOpname()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label><select id="fs-mesin" onchange="saringTabelOpname()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label><select id="fs-shift" onchange="saringTabelOpname()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><select id="fs-jenis" onchange="saringTabelOpname()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><select id="fs-nama" onchange="saringTabelOpname()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><select id="fs-pjg" onchange="saringTabelOpname()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><select id="fs-grade" onchange="saringTabelOpname()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><select id="fs-dus" onchange="saringTabelOpname()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><select id="fs-shading" onchange="saringTabelOpname()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer</label><select id="fs-customer" onchange="saringTabelOpname()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+            </div>
+            <button onclick="resetFilterOpname()" class="mt-2 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black rounded text-xs uppercase transition shrink-0">RESET FILTER</button>
+        </div>
+    </div>
+
     <!-- OVERLAY -->
     <div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-[50] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="wms_parser.js"></script>
     <script src="input_opname_logic.js"></script>
 </body>
-    </html>
+                        </html>
