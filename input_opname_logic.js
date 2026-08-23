@@ -52,8 +52,14 @@ window.tutupModalAdd = function() {
     document.getElementById('modal-add-scan').classList.add('hidden');
 };
 
+window.toggleSidebarFilter = function() {
+    document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
+    document.getElementById('overlay-klik-luar').classList.toggle('hidden');
+};
+
 window.tutupPopups = function() {
     document.getElementById('modal-search').classList.add('hidden');
+    document.getElementById('sidebar-filter').classList.add('translate-x-full');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
 };
 
@@ -120,7 +126,6 @@ window.selectSearchItem = function(nama) {
 window.pilihDataSearch = function() {
     if(!selectedSearchData) return alert("Pilih area dari daftar terlebih dahulu!");
     
-    // REVISI: Update tombol text dan hidden input value
     document.getElementById('btn-pilih-area').innerText = selectedSearchData;
     document.getElementById('btn-pilih-area').classList.remove('text-slate-400');
     document.getElementById('btn-pilih-area').classList.add('text-slate-800');
@@ -177,6 +182,7 @@ function renderTable() {
     if(dataOpname.length === 0) {
         tbody.innerHTML = '<div class="p-10 text-center font-medium text-slate-400 h-full flex flex-col items-center justify-center"><i data-lucide="box" class="w-12 h-12 mx-auto mb-3 opacity-30"></i> Belum ada data di-scan.</div>';
         document.getElementById('lbl-tampil-baris').innerText = '0';
+        updateFilterDropdowns();
         lucide.createIcons(); return;
     }
     
@@ -202,7 +208,6 @@ function renderTable() {
         const isRedHighlight = ['DUPLIKAT GUDANG', 'DUPLIKAT SCAN', 'FORMAT SALAH'].includes(d.status) || d.isLocalDuplicate;
         const rowClass = isRedHighlight ? 'bg-red-50 border-red-200' : 'bg-white border-slate-300';
 
-        // REVISI: Font size spesifikasi item diperbesar (text-base)
         html += `
             <div class="row-opname ${rowClass} border rounded-xl p-4 mb-3 relative transition w-full flex flex-col shadow-sm">
                 
@@ -210,7 +215,7 @@ function renderTable() {
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center font-black text-lg shadow-inner">${count--}</div>
                         <div class="flex flex-col">
-                            <span class="font-black text-xl text-emerald-700 leading-none uppercase">${d.area}</span>
+                            <span class="font-black text-xl text-emerald-700 leading-none uppercase col-area">${d.area}</span>
                             <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Area Penyimpanan</span>
                         </div>
                     </div>
@@ -221,29 +226,30 @@ function renderTable() {
                 </div>
                 
                 <div class="flex flex-col gap-1 mb-3">
-                    <div class="font-mono font-black text-slate-900 text-base break-all leading-tight bg-slate-100 p-2 rounded-lg border border-slate-200 text-center">${d.qrcode}</div>
+                    <div class="font-mono font-black text-slate-900 text-base break-all leading-tight bg-slate-100 p-2 rounded-lg border border-slate-200 text-center col-qr">${d.qrcode}</div>
                 </div>
                 
                 <div class="grid grid-cols-2 gap-x-2 gap-y-3 mb-3">
                     <div class="flex flex-col">
                         <span class="text-[10px] font-black text-slate-400 uppercase">Produksi</span>
-                        <span class="text-sm font-bold text-slate-700">${d.tglProduksi} - ${d.mesin} - ${d.shift}</span>
+                        <span class="text-sm font-bold text-slate-700"><span class="col-tgl">${d.tglProduksi}</span> - <span class="col-mesin">${d.mesin}</span> - <span class="col-shift">${d.shift}</span></span>
                     </div>
                     <div class="flex flex-col">
                         <span class="text-[10px] font-black text-slate-400 uppercase">Customer Bawaan</span>
-                        <span class="text-sm font-bold text-orange-600 uppercase">${d.customer}</span>
+                        <span class="text-sm font-bold text-orange-600 uppercase col-customer">${d.customer}</span>
                     </div>
                     <div class="flex flex-col col-span-2 bg-blue-50 p-2 rounded-lg border border-blue-100">
                         <span class="text-[10px] font-black text-blue-500 uppercase mb-0.5">Spesifikasi Item</span>
                         <span class="text-base font-black text-slate-900 leading-snug">
-                            ${d.namaItem} - ${d.panjang} - ${d.grade} - ${d.dus}
+                            <span class="col-nama">${d.namaItem}</span> - <span class="col-pjg">${d.panjang}</span> - <span class="col-grade">${d.grade}</span> - <span class="col-dus">${d.dus}</span>
+                            <span class="col-jenis hidden">${d.jenisItem}</span>
                         </span>
-                        <span class="text-xs font-bold text-blue-700 mt-0.5">Shading: ${d.shading}</span>
+                        <span class="text-xs font-bold text-blue-700 mt-0.5">Shading: <span class="col-shading">${d.shading}</span></span>
                     </div>
                 </div>
                 
                 <div class="flex flex-row justify-between items-center mt-auto pt-2 border-t border-slate-100">
-                    <span class="font-bold px-3 py-1.5 text-xs rounded-md border ${badgeClass} shadow-sm">${displayStatus}</span>
+                    <span class="font-bold px-3 py-1.5 text-xs rounded-md border col-status ${badgeClass} shadow-sm">${displayStatus}</span>
                     <span class="text-[10px] font-bold text-slate-400 uppercase">PIC: ${d.pic}</span>
                 </div>
             </div>
@@ -252,8 +258,104 @@ function renderTable() {
     tbody.innerHTML = html; 
     document.getElementById('lbl-tampil-baris').innerText = dataOpname.length;
     
+    updateFilterDropdowns();
     lucide.createIcons(); 
 }
+
+function updateFilterDropdowns() {
+    const fields = {
+        'fs-status': 'statusUI', 
+        'fs-area': 'area',
+        'fs-tgl': 'tglProduksi',
+        'fs-mesin': 'mesin',
+        'fs-shift': 'shift',
+        'fs-jenis': 'jenisItem',
+        'fs-nama': 'namaItem',
+        'fs-pjg': 'panjang',
+        'fs-grade': 'grade',
+        'fs-dus': 'dus',
+        'fs-shading': 'shading',
+        'fs-customer': 'customer'
+    };
+
+    for (let id in fields) {
+        const select = document.getElementById(id);
+        if (!select) continue;
+        
+        const currentVal = select.value; 
+        const key = fields[id];
+        
+        let uniqueVals = [];
+        if (key === 'statusUI') {
+            uniqueVals = [...new Set(dataOpname.map(d => {
+                if(d.status === 'BELUM CEK' && d.isLocalDuplicate) return 'DUPLIKAT SCAN';
+                return d.status;
+            }))].sort();
+        } else {
+            uniqueVals = [...new Set(dataOpname.map(item => item[key] || '-'))].sort();
+        }
+        
+        let html = '<option value="">-- Semua --</option>';
+        uniqueVals.forEach(val => {
+            html += `<option value="${val}">${val}</option>`;
+        });
+        
+        select.innerHTML = html;
+        
+        if (uniqueVals.includes(currentVal)) {
+            select.value = currentVal;
+        }
+    }
+}
+
+window.resetFilterOpname = function() {
+    const ids = ['fs-status','fs-area','fs-qr','fs-tgl','fs-mesin','fs-shift','fs-jenis','fs-nama','fs-pjg','fs-grade','fs-dus','fs-shading','fs-customer'];
+    ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; });
+    window.saringTabelOpname(); window.toggleSidebarFilter();
+};
+
+window.saringTabelOpname = function() {
+    const f = {
+        status: document.getElementById('fs-status')?.value || '',
+        area: document.getElementById('fs-area')?.value || '',
+        qr: document.getElementById('fs-qr')?.value.toLowerCase() || '',
+        tgl: document.getElementById('fs-tgl')?.value || '',
+        mesin: document.getElementById('fs-mesin')?.value || '',
+        shift: document.getElementById('fs-shift')?.value || '',
+        jenis: document.getElementById('fs-jenis')?.value || '',
+        nama: document.getElementById('fs-nama')?.value || '',
+        pjg: document.getElementById('fs-pjg')?.value || '',
+        grade: document.getElementById('fs-grade')?.value || '',
+        dus: document.getElementById('fs-dus')?.value || '',
+        shading: document.getElementById('fs-shading')?.value || '',
+        customer: document.getElementById('fs-customer')?.value || ''
+    };
+
+    let visibleCount = 0;
+    document.querySelectorAll('.row-opname').forEach(row => {
+        let show = true;
+        
+        const exactFields = ['status', 'area', 'tgl', 'mesin', 'shift', 'jenis', 'nama', 'pjg', 'grade', 'dus', 'shading', 'customer'];
+        for(let key of exactFields) {
+            if(f[key]) {
+                const cell = row.querySelector('.col-' + key);
+                if(cell) {
+                    let text = cell.innerText.trim();
+                    if(text !== f[key]) { show = false; break; }
+                }
+            }
+        }
+
+        if(show && f.qr) {
+            const cell = row.querySelector('.col-qr');
+            if(cell && !cell.innerText.toLowerCase().includes(f.qr)) show = false;
+        }
+
+        row.style.display = show ? 'flex' : 'none';
+        if(show) visibleCount++;
+    });
+    document.getElementById('lbl-tampil-baris').innerText = visibleCount;
+};
 
 function highlightRow(cb) {
     const div = cb.closest('.row-opname');
@@ -319,7 +421,6 @@ window.verifikasiOpname = async function() {
                 d.keterangan = 'BARANG SUDAH ADA DI GUDANG (STOK GLOBAL)';
                 infoDuplikat++;
             } else if (d.isLocalDuplicate) {
-                // REVISI: Duplikat scan tetap merah dan tidak valid
                 d.status = 'DUPLIKAT SCAN';
                 d.keterangan = 'BARCODE DI-SCAN LEBIH DARI SEKALI DI LAYAR';
             } else {
@@ -431,4 +532,4 @@ window.simpanOpnameKeGudang = async function() {
     } finally { 
         btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); 
     }
-        }
+                }
