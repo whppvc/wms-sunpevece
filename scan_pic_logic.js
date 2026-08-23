@@ -61,7 +61,6 @@ window.tutupModalAdd = function() {
     document.getElementById('modal-add-scan').classList.add('hidden');
 };
 
-// REVISI: Fungsi Sidebar Filter
 window.toggleSidebarFilter = function() {
     document.getElementById('sidebar-filter').classList.toggle('translate-x-full');
     document.getElementById('overlay-klik-luar').classList.toggle('hidden');
@@ -75,16 +74,26 @@ window.tutupPopups = function() {
 
 async function loadMasterArea() {
     try {
-        const { data } = await db.from('master_area').select('*');
-        if(data) {
-            masterArea = [...new Set(data.map(r => r.nama_area || r.area).filter(x => x))].sort();
+        // REVISI: Muat master_area DAN master_2 sekaligus agar wms_parser.js bisa bekerja
+        const [resArea, resM2] = await Promise.all([
+            db.from('master_area').select('*'),
+            db.from('master_2').select('*')
+        ]);
+
+        if(resM2.data) {
+            if(!window.masterData) window.masterData = {};
+            window.masterData.kamus = resM2.data; 
+        }
+
+        if(resArea.data) {
+            masterArea = [...new Set(resArea.data.map(r => r.nama_area || r.area).filter(x => x))].sort();
             const sel = document.getElementById('select-area-target');
             if(sel) {
                 sel.innerHTML = '<option value="">-- PILIH AREA TUJUAN --</option>';
                 masterArea.forEach(a => sel.innerHTML += `<option value="${a}">${a}</option>`);
             }
         }
-    } catch (err) { console.error("Gagal muat area:", err); }
+    } catch (err) { console.error("Gagal muat area/kamus:", err); }
 }
 
 // ==========================================
@@ -213,7 +222,6 @@ function renderTable() {
     lucide.createIcons(); 
 }
 
-// REVISI: Fungsi Filter Dropdown
 function updateFilterDropdowns() {
     const fields = {
         'fs-status': 'status', 
