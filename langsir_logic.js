@@ -111,14 +111,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             if(!rawInput) return;
 
+            // REVISI: Ambil semua QR Code yang sudah ada di layar (termasuk yang baru di-scan)
             const activeRows = Array.from(document.querySelectorAll('.row-item:not(.deleted-row)'));
             const existingQRs = activeRows.map(r => r.querySelector('.qr-val').innerText);
             
             const codes = rawInput.split(/[\s;]+/).map(q => q.trim()).filter(q => q);
             
             codes.forEach(code => { 
+                // REVISI: Cek apakah code sudah ada di array existingQRs
                 const isLocalDuplicate = existingQRs.includes(code);
                 addRow('?', code, isLocalDuplicate); 
+                
+                // Jika belum duplikat, tambahkan ke array agar scan berikutnya dalam batch yang sama terdeteksi
                 if(!isLocalDuplicate) existingQRs.push(code); 
             });
             
@@ -379,8 +383,16 @@ async function VerifikasiDanCek() {
 
             let isManuallyHeld = r.getAttribute('data-hold-langsir') === 'true';
 
+            // REVISI: Jika sudah ditandai duplikat scan dari awal, biarkan merah
+            let isLocalDuplicate = statusContainer.innerHTML.includes('DUPLIKAT SCAN');
+
+            if (isLocalDuplicate) {
+                statusText = 'DUPLIKAT SCAN';
+                statusClass = 'bg-red-600 text-white border-red-800';
+                hasError = true;
+            }
             // Cek stok_global terlebih dahulu (Kebenaran Fisik Gudang)
-            if (globalSet.has(qr)) {
+            else if (globalSet.has(qr)) {
                 statusText = 'DUPLIKAT GUDANG';
                 statusClass = 'bg-red-600 text-white border-red-800';
                 hasError = true;
@@ -512,7 +524,6 @@ async function saveToSupabase() {
         let mesin = r.querySelector('.col-mesin').innerText;
         let shift = r.querySelector('.col-shift').innerText;
         
-        // REVISI: id_sku ditambahkan _Aman di belakangnya (9 segmen)
         let id_sku = `${area}_${nama}_${pjg}_${grade}_${dus}_${shading}_${ket}_${customer}_Aman`;
         let id_po = `${nama}_${pjg}_${grade}`;
         
@@ -539,7 +550,7 @@ async function saveToSupabase() {
             shading: shading,
             customer_aktual: customer, 
             keterangan: ket,
-            kondisi: 'Aman', // REVISI: Tambah kondisi Aman
+            kondisi: 'Aman', 
             pic_input: user.username,
             jalur_masuk: 'langsir',
             created_at: wibNow
@@ -553,7 +564,7 @@ async function saveToSupabase() {
                 area: area, customer_aktual: customer, 
                 customer_estimasi: customer, 
                 keterangan: ket,
-                kondisi: 'Aman', // REVISI: Tambah kondisi Aman
+                kondisi: 'Aman', 
                 qty: 0
             };
         }
@@ -762,4 +773,4 @@ async function bukaModalHold(tabelTarget = 'hold_stbj') {
         });
         if(tbody) tbody.innerHTML = h;
     } catch (e) { if(tbody) tbody.innerHTML = `<div class="p-6 text-center font-bold text-red-500">Gagal Memuat: ${e.message}</div>`; }
-}
+    }
