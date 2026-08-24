@@ -110,7 +110,7 @@
             </div>
 
             <!-- VIEW MOBILE (Folder / Drill-Down View) -->
-            <div id="view-mobile" class="flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-28">
+            <div id="view-mobile" class="flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-32">
                 <!-- Konten Mobile di-render oleh JS -->
             </div>
 
@@ -142,11 +142,11 @@
             </div>
         </div>
 
-        <!-- REVISI: FOOTER FREEZE KHUSUS LEVEL 4 MOBILE (PILIH SEMUA & TOMBOL CANCEL KELUAR) -->
-        <div id="mobile-lvl4-footer" class="hidden shrink-0 w-full bg-white px-4 py-3 z-30 shadow-[0_-5px_20px_rgba(0,0,0,0.12)] border-t border-slate-300 flex justify-between items-center">
-            <label class="flex items-center gap-2.5 cursor-pointer select-none">
-                <input type="checkbox" id="cb-all-lvl4" onchange="toggleSelectAllLvl4(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-300">
-                <span class="text-xs font-black text-slate-700 uppercase tracking-wide">Pilih Semua</span>
+        <!-- REVISI: FOOTER FREEZE LEVEL 4 MOBILE (PILIH SEMUA & TOMBOL CANCEL KELUAR) -->
+        <div id="mobile-lvl4-footer" class="hidden shrink-0 w-full bg-white px-4 py-3.5 z-40 shadow-[0_-8px_25px_rgba(0,0,0,0.15)] border-t border-slate-300 flex justify-between items-center">
+            <label class="flex items-center gap-3 cursor-pointer select-none">
+                <input type="checkbox" id="cb-all-lvl4" onchange="toggleSelectAllLvl4(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-400">
+                <span class="text-xs font-black text-slate-800 uppercase tracking-wider">Pilih Semua</span>
             </label>
 
             <button id="btn-cancel-mobile-lvl4" onclick="cancelKeluarMobile()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 transition border-b-4 border-rose-900 cursor-pointer">
@@ -266,4 +266,4 @@
     <script src="wms_parser.js"></script>
     <script src="riwayat_keluar_logic.js"></script>
 </body>
-                    </html>
+    </html>
