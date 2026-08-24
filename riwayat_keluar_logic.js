@@ -189,18 +189,21 @@ function setMode(m) {
     const viewTable = document.getElementById('view-table');
     const viewMobile = document.getElementById('view-mobile');
     const footerPagination = document.getElementById('footer-pagination');
+    const lvl4Footer = document.getElementById('mobile-lvl4-footer');
 
     if(m === 'qrcode') { 
         btnHold.classList.remove('hidden'); btnCancel.classList.add('hidden'); 
         dateFilter.classList.add('hidden');
         viewTable.classList.remove('hidden'); viewMobile.classList.add('hidden');
         footerPagination.classList.remove('hidden');
+        if(lvl4Footer) lvl4Footer.classList.add('hidden');
     }
     else if(m === 'hold') { 
         btnHold.classList.add('hidden'); btnCancel.classList.remove('hidden'); 
         dateFilter.classList.add('hidden');
         viewTable.classList.remove('hidden'); viewMobile.classList.add('hidden');
         footerPagination.classList.remove('hidden');
+        if(lvl4Footer) lvl4Footer.classList.add('hidden');
     }
     else if(m === 'mobile') {
         btnHold.classList.add('hidden'); btnCancel.classList.add('hidden'); 
@@ -214,6 +217,7 @@ function setMode(m) {
         dateFilter.classList.add('hidden');
         viewTable.classList.remove('hidden'); viewMobile.classList.add('hidden');
         footerPagination.classList.remove('hidden');
+        if(lvl4Footer) lvl4Footer.classList.add('hidden');
     }
 
     if (m === 'mobile') {
@@ -319,7 +323,7 @@ window.toggleSelectAllLvl4 = function(checked) {
     });
 };
 
-// REVISI: Fungsi Cancel Keluar Mobile (Hapus dari stok_keluar -> Masuk hold_keluar)
+// Fungsi Cancel Keluar Mobile (Hapus dari stok_keluar -> Masuk hold_keluar)
 window.cancelKeluarMobile = async function() {
     const checkedBoxes = document.querySelectorAll('.cb-lvl4:checked');
     if (checkedBoxes.length === 0) return alert("Pilih / centang minimal 1 kardus yang ingin di-cancel keluar!");
@@ -369,6 +373,18 @@ window.cancelKeluarMobile = async function() {
 function renderMobileView() {
     const container = document.getElementById('view-mobile');
     const targetDate = document.getElementById('filter-date-mobile').value;
+    const lvl4Footer = document.getElementById('mobile-lvl4-footer');
+
+    // Kontrol Tampilan Footer Freeze Level 4
+    if (lvl4Footer) {
+        if (modeSekarang === 'mobile' && mobileLevel === 4) {
+            lvl4Footer.classList.remove('hidden');
+            const cbAllLvl4 = document.getElementById('cb-all-lvl4');
+            if (cbAllLvl4) cbAllLvl4.checked = false;
+        } else {
+            lvl4Footer.classList.add('hidden');
+        }
+    }
 
     let targetData = modeSekarang === 'hold' ? holdDataRaw : rawDataRaw;
 
@@ -397,7 +413,9 @@ function renderMobileView() {
 
     let html = '';
 
+    // ==========================================
     // LEVEL 1: CUSTOMER KELUAR
+    // ==========================================
     if (mobileLevel === 1) {
         let custMap = {};
         mobileData.forEach(r => {
@@ -428,7 +446,9 @@ function renderMobileView() {
             `;
         });
     } 
+    // ==========================================
     // LEVEL 2: SPESIFIKASI ITEM
+    // ==========================================
     else if (mobileLevel === 2) {
         let itemMap = {};
         mobileData.forEach(r => {
@@ -443,12 +463,12 @@ function renderMobileView() {
 
         html += `
             <div class="flex items-center gap-3 mb-2 px-1">
-                <button onclick="goBackMobile()" class="p-2 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1 text-xs font-bold text-slate-700">
+                <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700">
                     <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
                 </button>
                 <div class="flex flex-col">
                     <span class="text-[10px] font-black text-slate-400 uppercase leading-none">Customer Tujuan</span>
-                    <span class="text-sm font-black text-blue-700 uppercase leading-tight">${mobileSelectedCust}</span>
+                    <span class="text-base font-black text-blue-700 uppercase leading-tight">${mobileSelectedCust}</span>
                 </div>
             </div>
         `;
@@ -471,7 +491,9 @@ function renderMobileView() {
             `;
         });
     }
+    // ==========================================
     // LEVEL 3: SHADING
+    // ==========================================
     else if (mobileLevel === 3) {
         let shadingMap = {};
         mobileData.forEach(r => {
@@ -490,12 +512,12 @@ function renderMobileView() {
 
         html += `
             <div class="flex items-center gap-3 mb-2 px-1">
-                <button onclick="goBackMobile()" class="p-2 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1 text-xs font-bold text-slate-700">
+                <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700">
                     <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
                 </button>
                 <div class="flex flex-col">
-                    <span class="text-[10px] font-black text-slate-400 uppercase leading-none">${mobileSelectedCust}</span>
-                    <span class="text-xs font-black text-emerald-700 uppercase leading-tight">${displayItem}</span>
+                    <span class="text-base font-black text-rose-700 uppercase leading-snug">${mobileSelectedCust}</span>
+                    <span class="text-sm font-black text-slate-800 uppercase leading-snug">${displayItem}</span>
                 </div>
             </div>
         `;
@@ -523,7 +545,9 @@ function renderMobileView() {
             `;
         });
     }
-    // REVISI LEVEL 4: DETAIL KARDUS FISIK DENGAN CHECKBOX & 5 VARIABEL UTAMA
+    // ==========================================
+    // REVISI LEVEL 4: DETAIL KARDUS FISIK
+    // ==========================================
     else if (mobileLevel === 4) {
         let detailItems = mobileData.filter(r => {
             if (r.customerKeluar !== mobileSelectedCust) return false;
@@ -537,29 +561,17 @@ function renderMobileView() {
         let displayItem = `${itemParts[0]} - ${itemParts[1]} - ${itemParts[2]} - ${itemParts[3]}`;
 
         html += `
-            <!-- HEADER LEVEL 4 (BREADCRUMB & SUMMARY) -->
-            <div class="flex items-center gap-3 mb-1 px-1">
-                <button onclick="goBackMobile()" class="p-2 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1 text-xs font-bold text-slate-700">
+            <!-- HEADER LEVEL 4: TULISAN DIPERBESAR DAN RAPI -->
+            <div class="flex items-center gap-3 mb-2 px-1">
+                <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
                     <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
                 </button>
-                <div class="flex flex-col">
-                    <span class="text-[10px] font-black text-slate-400 uppercase leading-none">${mobileSelectedCust} • Shading: ${mobileSelectedShading}</span>
-                    <span class="text-xs font-black text-blue-700 uppercase leading-tight">${displayItem} (${detailItems.length} Kardus)</span>
+                <div class="flex flex-col overflow-hidden">
+                    <!-- CUSTOMER TUJUAN DIPERBESAR -->
+                    <span class="text-base font-black text-rose-700 uppercase leading-snug truncate">${mobileSelectedCust}</span>
+                    <!-- SPESIFIKASI ITEM & SHADING DIPERBESAR -->
+                    <span class="text-sm font-black text-slate-800 uppercase leading-snug truncate">${displayItem} • Shading: <span class="text-amber-600">${mobileSelectedShading}</span></span>
                 </div>
-            </div>
-
-            <!-- TOOLBAR AKSI LEVEL 4 (PILIH SEMUA & TOMBOL CANCEL KELUAR) -->
-            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between gap-2 mb-2">
-                <label class="flex items-center gap-2 cursor-pointer select-none">
-                    <input type="checkbox" onchange="toggleSelectAllLvl4(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-300">
-                    <span class="text-xs font-black text-slate-700 uppercase">Pilih Semua</span>
-                </label>
-
-                <!-- REVISI: Tombol Cancel Keluar yang langsung memindahkan data ke hold_keluar -->
-                <button id="btn-cancel-mobile-lvl4" onclick="cancelKeluarMobile()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-xs uppercase rounded-lg shadow-md flex items-center gap-1.5 transition border-b-2 border-rose-800">
-                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-                    <span>Cancel Keluar</span>
-                </button>
             </div>
         `;
 
@@ -567,13 +579,13 @@ function renderMobileView() {
             const waktuKeluar = formatWIB(d.created_at);
 
             html += `
-                <div class="bg-white border border-slate-300 rounded-xl p-4 mb-2 relative transition w-full flex flex-col shadow-sm">
+                <div class="bg-white border border-slate-300 rounded-2xl p-4 mb-2 relative transition w-full flex flex-col shadow-sm">
                     
-                    <!-- TOP HEADER: KOTAK CENTANG (MENGGANTIKAN NOMOR) & STATUS -->
+                    <!-- TOP HEADER: KOTAK CENTANG (CHECKBOX) & STATUS -->
                     <div class="flex justify-between items-center mb-3 pb-2.5 border-b border-slate-100">
                         <div class="flex items-center gap-3">
                             <input type="checkbox" value="${d.qrcode}" class="cb-lvl4 cursor-pointer w-5 h-5 accent-blue-600 rounded border-slate-400">
-                            <span class="font-mono text-xs font-black text-slate-500 uppercase">PILIH ITEM</span>
+                            <span class="font-mono text-xs font-black text-slate-500 uppercase">PILIH DUS</span>
                         </div>
                         <span class="font-bold px-2.5 py-0.5 text-[10px] rounded-md border bg-emerald-600 text-white border-emerald-700 shadow-sm">KELUAR</span>
                     </div>
@@ -583,8 +595,8 @@ function renderMobileView() {
                         ${d.qrcode}
                     </div>
                     
-                    <!-- 2. GRID INFORMASI: WAKTU SCAN KELUAR, ASAL AREA, CUSTOMER AKTUAL, CUSTOMER ESTIMASI -->
-                    <div class="grid grid-cols-2 gap-x-2 gap-y-3">
+                    <!-- 2. GRID 4 VARIABEL UTAMA -->
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-3">
                         <!-- WAKTU SCAN KELUAR -->
                         <div class="flex flex-col">
                             <span class="text-[10px] font-black text-slate-400 uppercase">Waktu Scan Keluar</span>
@@ -886,7 +898,7 @@ function updateFilterIcons() {
     document.querySelectorAll('.filter-icon').forEach(icon => { icon.classList.remove('text-amber-400', 'opacity-100'); icon.classList.add('opacity-40', 'text-white'); });
     for (let colClass in activeFilters) {
         const th = document.querySelector(`th.${colClass}`);
-        if (th) { const icon = th.querySelector('.filter-icon'); if (icon) { icon.classList.remove('opacity-40', 'text-white'); icon.classList.add('text-amber-400', 'opacity-100'); } }
+        if (th) { const icon = th.querySelector('.filter-icon'); if (icon) { icon.classList.remove('text-white', 'opacity-40'); icon.classList.add('text-amber-400', 'opacity-100'); } }
     }
 }
 
