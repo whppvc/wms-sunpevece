@@ -2,7 +2,7 @@ let rawData = [];
 let activeFilters = {};
 let currentFilterCol = '';
 let sortState = {};
-let tempScannedQR = '';
+let tempScannedData = null; // Menyimpan data dari stok_global saat di-scan
 
 let currentPage = 1;
 let rowsPerPage = 10; 
@@ -113,23 +113,38 @@ window.bukaModalScan = function() {
     setTimeout(() => document.getElementById('input-qr').focus(), 100);
 };
 
+// ========================================================
+// LOGIKA NONAKTIF ITEM (HAPUS DARI GLOBAL, KURANGI AKTUAL)
+// ========================================================
 window.prosesScan = async function() {
-    const qr = document.getElementById('input-qr').value.trim();
-    if(!qr) return alert("Masukkan QR Code!");
+    const qrRaw = document.getElementById('input-qr').value.trim();
+    if(!qrRaw) return alert("Masukkan QR Code!");
+    
+    // Ambil QR pertama jika user scan massal (karena nonaktif diproses satu per satu)
+    const qr = qrRaw.split(/[\r\n; ]+/)[0].trim();
 
     const btn = document.getElementById('btn-proses-scan'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Mengecek...'; btn.disabled = true;
 
     try {
+        // 1. Cek apakah ada di stok_global
         const { data: globalData, error: errGlobal } = await db.from('stok_global').select('*').eq('qrcode', qr).single();
-        if(errGlobal || !globalData) throw new Error("QR Code tidak ditemukan di gudang!");
-        if(globalData.kondisi === 'NONAKTIF') throw new Error("Item ini sudah berstatus NONAKTIF!");
+        if(errGlobal || !globalData) throw new Error("QR Code tidak ditemukan di gudang (stok_global)!");
 
-        tempScannedQR = qr;
-        const idSkuBase = globalData.id_sku;
+        tempScannedData = globalData;
 
-        // Cek stok aktual untuk melihat distribusi customer_estimasi
-        const { data: aktualData, error: errAktual } = await db.from('stok_aktual').select('customer_estimasi, qty').eq('id_sku', idSkuBase).gt('qty', 0);
+        // 2. Cek stok aktual untuk melihat distribusi customer_estimasi
+        const { data: aktualData, error: errAktual } = await db.from('stok_aktual')
+            .select('id, customer_estimasi, qty')
+            .eq('nama_item', globalData.nama_item)
+            .eq('panjang', globalData.panjang)
+            .eq('grade', globalData.grade)
+            .eq('dus', globalData.dus)
+            .eq('shading', globalData.shading)
+            .eq('area', globalData.area)
+            .eq('customer_aktual', globalData.customer_aktual)
+            .gt('qty', 0);
+
         if(errAktual) throw errAktual;
 
         if(aktualData && aktualData.length > 1) {
@@ -141,7 +156,7 @@ window.prosesScan = async function() {
         } else {
             // Jika hanya 1 estimasi, langsung eksekusi
             let custEst = aktualData && aktualData.length === 1 ? aktualData[0].customer_estimasi : globalData.customer_aktual;
-            await jalankanRPC(qr, custEst);
+            await prosesEksekusiNonaktif(custEst);
         }
     } catch(e) {
         alert(e.message);
@@ -157,28 +172,63 @@ window.eksekusiNonaktif = async function() {
     const btn = document.getElementById('btn-eksekusi'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Memproses...'; btn.disabled = true;
 
-    await jalankanRPC(tempScannedQR, custEst);
+    await prosesEksekusiNonaktif(custEst);
     
     btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
 };
 
-async function jalankanRPC(qr, custEst) {
+async function prosesEksekusiNonaktif(custEst) {
     try {
-        const { data, error } = await db.rpc('proses_stok_nonaktif', {
-            p_qrcode: qr,
-            p_cust_estimasi: custEst,
-            p_pic: currentUser.username
-        });
+        const d = tempScannedData;
 
-        if(error) throw error;
-        if(data && data.startsWith('ERROR')) throw new Error(data);
+        // 1. Insert ke stok_nonaktif
+        const payloadNonaktif = {
+            qrcode: d.qrcode,
+            posisi: d.area,
+            jenis_item: d.jenis_item,
+            nama_item: d.nama_item,
+            panjang: d.panjang,
+            grade: d.grade,
+            dus: d.dus,
+            shading: d.shading,
+            customer_aktual: d.customer_aktual,
+            customer_estimasi: custEst,
+            keterangan: 'Barang Rusak / BS',
+            pic_input: currentUser.username
+        };
 
-        alert("✅ BERHASIL! Item telah dinonaktifkan dan stok aktual telah disesuaikan.");
+        const { error: errInsert } = await db.from('stok_nonaktif').insert([payloadNonaktif]);
+        if(errInsert) throw errInsert;
+
+        // 2. Delete dari stok_global & stok_qr
+        await db.from('stok_global').delete().eq('qrcode', d.qrcode);
+        await db.from('stok_qr').delete().eq('qrcode', d.qrcode);
+
+        // 3. Update stok_aktual (Kurangi 1)
+        const { data: ext } = await db.from('stok_aktual').select('id, qty')
+            .eq('nama_item', d.nama_item).eq('panjang', d.panjang).eq('grade', d.grade)
+            .eq('dus', d.dus).eq('shading', d.shading).eq('area', d.area)
+            .eq('customer_aktual', d.customer_aktual).eq('customer_estimasi', custEst)
+            .limit(1);
+
+        if(ext && ext.length > 0) {
+            let newQty = ext[0].qty - 1;
+            if(newQty <= 0) {
+                await db.from('stok_aktual').delete().eq('id', ext[0].id);
+            } else {
+                await db.from('stok_aktual').update({qty: newQty}).eq('id', ext[0].id);
+            }
+        }
+
+        alert("✅ BERHASIL!\nItem telah dinonaktifkan, dihapus dari gudang, dan stok aktual telah disesuaikan.");
+        
         document.getElementById('modal-scan').classList.add('hidden');
         document.getElementById('modal-estimasi').classList.add('hidden');
-        muatData();
+        document.getElementById('input-qr').value = '';
+        
+        muatData(); // Refresh tabel
     } catch(e) {
-        alert("GAGAL: " + e.message);
+        alert("GAGAL MEMPROSES: " + e.message);
     }
 }
 
@@ -193,13 +243,78 @@ window.cancelNonaktifMassal = async function() {
     const btn = document.getElementById('btn-cancel'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Memproses...'; btn.disabled = true;
 
-    let payload = [];
-    checked.forEach(cb => { payload.push(JSON.parse(decodeURIComponent(cb.getAttribute('data-row')))); });
-
     try {
-        const { data, error } = await db.rpc('cancel_stok_nonaktif_massal', { payload: payload });
-        if(error) throw error;
-        alert("✅ BERHASIL! Item telah dikembalikan ke kondisi Aman.");
+        let insertsGlobal = [];
+        let insertsStokQr = [];
+        let mapAktual = {};
+        let idsToDelete = [];
+
+        checked.forEach(cb => { 
+            const d = JSON.parse(decodeURIComponent(cb.getAttribute('data-row')));
+            idsToDelete.push(d.id);
+
+            let id_sku = `${d.posisi}_${d.nama_item}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_-_${d.customer_aktual}_Aman`;
+
+            insertsGlobal.push({
+                qrcode: d.qrcode,
+                area: d.posisi,
+                id_sku: id_sku,
+                tgl_produksi: '-', // Default karena tidak tersimpan di stok_nonaktif
+                mesin: '-',
+                shift: '-',
+                jenis_item: d.jenis_item,
+                nama_item: d.nama_item,
+                panjang: d.panjang,
+                grade: d.grade,
+                dus: d.dus,
+                shading: d.shading,
+                customer_aktual: d.customer_aktual,
+                keterangan: '-',
+                kondisi: 'Aman',
+                pic_input: currentUser.username,
+                jalur_masuk: 'cancel-nonaktif'
+            });
+
+            insertsStokQr.push({
+                qrcode: d.qrcode, id_sku: id_sku, area: d.posisi, keterangan: '-'
+            });
+
+            let keyAkt = `${d.nama_item}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.posisi}_${d.customer_aktual}_${d.customer_estimasi}`;
+            if(!mapAktual[keyAkt]) {
+                mapAktual[keyAkt] = {
+                    id_sku: id_sku, jenis_item: d.jenis_item, nama_item: d.nama_item, panjang: d.panjang,
+                    grade: d.grade, dus: d.dus, shading: d.shading, area: d.posisi,
+                    customer_aktual: d.customer_aktual, customer_estimasi: d.customer_estimasi,
+                    keterangan: '-', kondisi: 'Aman', qty: 0
+                };
+            }
+            mapAktual[keyAkt].qty++;
+        });
+
+        // 1. Insert ke stok_global & stok_qr
+        await db.from('stok_global').insert(insertsGlobal);
+        await db.from('stok_qr').insert(insertsStokQr);
+
+        // 2. Incremental Update ke stok_aktual
+        for(let key in mapAktual) {
+            let item = mapAktual[key];
+            const { data: existing } = await db.from('stok_aktual').select('id, qty')
+                .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
+                .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
+                .eq('customer_aktual', item.customer_aktual).eq('customer_estimasi', item.customer_estimasi)
+                .eq('keterangan', item.keterangan).is('konversi', null).limit(1);
+            
+            if(existing && existing.length > 0) {
+                await db.from('stok_aktual').update({ qty: existing[0].qty + item.qty }).eq('id', existing[0].id);
+            } else {
+                await db.from('stok_aktual').insert([item]);
+            }
+        }
+
+        // 3. Hapus dari stok_nonaktif
+        await db.from('stok_nonaktif').delete().in('id', idsToDelete);
+
+        alert("✅ BERHASIL! Item telah dikembalikan ke gudang.");
         muatData();
     } catch(e) {
         alert("GAGAL: " + e.message);
@@ -211,18 +326,24 @@ window.cancelNonaktifMassal = async function() {
 window.prosesBSMassal = async function() {
     const checked = document.querySelectorAll('.cb-main:checked');
     if(checked.length === 0) return alert("Pilih baris yang ingin di-BS-kan!");
-    if(!confirm(`Yakin ingin memproses ${checked.length} item ini menjadi BS?\nItem akan dihapus dari stok_global dan stok_aktual, lalu posisinya diubah menjadi 'BS'.`)) return;
+    if(!confirm(`Yakin ingin memproses ${checked.length} item ini menjadi BS?\nItem akan dihapus permanen dari sistem WMS.`)) return;
 
     const btn = document.getElementById('btn-bs'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Memproses...'; btn.disabled = true;
 
-    let payload = [];
-    checked.forEach(cb => { payload.push(JSON.parse(decodeURIComponent(cb.getAttribute('data-row')))); });
+    let idsToDelete = [];
+    checked.forEach(cb => { 
+        const d = JSON.parse(decodeURIComponent(cb.getAttribute('data-row')));
+        idsToDelete.push(d.id); 
+    });
 
     try {
-        const { data, error } = await db.rpc('proses_bs_nonaktif_massal', { payload: payload });
+        // Karena item sudah dihapus dari global dan aktual saat dinonaktifkan,
+        // Proses BS hanya perlu menghapus datanya dari tabel stok_nonaktif (Clear history)
+        const { error } = await db.from('stok_nonaktif').delete().in('id', idsToDelete);
         if(error) throw error;
-        alert("✅ BERHASIL! Item telah diproses menjadi BS.");
+        
+        alert("✅ BERHASIL! Item telah diproses menjadi BS dan dihapus dari sistem.");
         muatData();
     } catch(e) {
         alert("GAGAL: " + e.message);
