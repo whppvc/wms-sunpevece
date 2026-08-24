@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const actionMenu = document.getElementById('mobile-action-menu');
         if (actionMenu && !actionMenu.classList.contains('hidden')) {
-            if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenu"]')) { actionMenu.classList.add('hidden'); }
+            if (!actionMenu.contains(e.target) && !actionMenu.closest('button[onclick^="toggleActionMenu"]')) { actionMenu.classList.add('hidden'); }
         }
     });
 
@@ -93,6 +93,16 @@ window.toggleActionMenu = function(e) {
     if(e) e.stopPropagation();
     const menu = document.getElementById('mobile-action-menu');
     if(menu) menu.classList.toggle('hidden');
+};
+
+window.toggleSidebarFilter = function() {
+    const sidebar = document.getElementById('sidebar-filter');
+    const overlay = document.getElementById('overlay-klik-luar');
+    sidebar.classList.toggle('translate-x-full');
+    overlay.classList.toggle('hidden');
+    if (!sidebar.classList.contains('translate-x-full')) {
+        updateFilterDropdowns();
+    }
 };
 
 window.toggleMobileActionDrawer = function() {
@@ -114,6 +124,8 @@ window.tutupSemuaPopups = function() {
     document.getElementById('modal-error-konv').classList.add('hidden');
     document.getElementById('modal-konfirmasi-konv').classList.add('hidden');
     document.getElementById('mobile-action-drawer').classList.add('hidden');
+    const sidebarFilter = document.getElementById('sidebar-filter');
+    if(sidebarFilter) sidebarFilter.classList.add('translate-x-full');
     if(document.getElementById('sidebar-kolom')) document.getElementById('sidebar-kolom').classList.add('translate-x-full');
 };
 
@@ -171,6 +183,7 @@ window.muatData = async function() {
         window.rawData = resReq.data || [];
         window.stokKonvRaw = resStok.data || [];
         
+        updateFilterDropdowns();
         window.setModeReq(window.currentTab);
     } catch(e) { 
         tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-medium">Gagal: ${e.message}</td></tr>`; 
@@ -178,7 +191,111 @@ window.muatData = async function() {
 };
 
 // ========================================================
-// LOGIKA MODE MOBILE (DRILL-DOWN DUA TINGKAT)
+// LOGIKA FILTER SIDEBAR DROPDOWN
+// ========================================================
+function updateFilterDropdowns() {
+    const fields = [
+        { id: 'fs-status', key: 'progres_konversi' },
+        { id: 'fs-area', key: 'area' },
+        { id: 'fs-jenis', key: 'jenis_item' },
+        { id: 'fs-nama', key: 'nama_item' },
+        { id: 'fs-pjg', key: 'panjang' },
+        { id: 'fs-grade', key: 'grade' },
+        { id: 'fs-dus', key: 'dus' },
+        { id: 'fs-shading', key: 'shading' },
+        { id: 'fs-cust', key: 'customer aktual' },
+        { id: 'fs-pic', key: 'pic_request' }
+    ];
+
+    fields.forEach(field => {
+        const select = document.getElementById(field.id);
+        if (!select) return;
+        
+        const currentVal = select.value;
+        const uniqueVals = [...new Set(window.rawData.map(d => d[field.key] || '-'))].filter(x => x && x !== '-').sort();
+
+        let html = '<option value="">-- Semua --</option>';
+        uniqueVals.forEach(val => {
+            html += `<option value="${val}">${val}</option>`;
+        });
+        select.innerHTML = html;
+
+        if (uniqueVals.includes(currentVal)) {
+            select.value = currentVal;
+        }
+    });
+}
+
+window.resetFilterKonversi = function() {
+    ['fs-status', 'fs-kode', 'fs-area', 'fs-jenis', 'fs-nama', 'fs-pjg', 'fs-grade', 'fs-dus', 'fs-shading', 'fs-cust', 'fs-pic'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.value = '';
+    });
+    saringTabelKonversi();
+    toggleSidebarFilter();
+};
+
+window.saringTabelKonversi = function() {
+    if (window.currentTab === 'MOBILE') {
+        window.renderMobileView();
+    } else {
+        saringTabelDesktop();
+    }
+};
+
+function saringTabelDesktop() {
+    const f = {
+        status: document.getElementById('fs-status')?.value || '',
+        kode: document.getElementById('fs-kode')?.value.toLowerCase() || '',
+        area: document.getElementById('fs-area')?.value || '',
+        jenis: document.getElementById('fs-jenis')?.value || '',
+        nama: document.getElementById('fs-nama')?.value || '',
+        pjg: document.getElementById('fs-pjg')?.value || '',
+        grade: document.getElementById('fs-grade')?.value || '',
+        dus: document.getElementById('fs-dus')?.value || '',
+        shading: document.getElementById('fs-shading')?.value || '',
+        cust: document.getElementById('fs-cust')?.value || '',
+        pic: document.getElementById('fs-pic')?.value || ''
+    };
+
+    document.querySelectorAll('#tbody-req tr.r-row').forEach(row => {
+        let show = true;
+
+        const checkMatch = (colCls, filterVal) => {
+            if(!filterVal) return true;
+            const cell = row.querySelector('.' + colCls);
+            if(!cell) return true;
+            let val = cell.getAttribute('data-search') || cell.innerText.trim();
+            return val === filterVal;
+        };
+
+        if(!checkMatch('col-progres', f.status)) show = false;
+        if(!checkMatch('col-area', f.area)) show = false;
+        if(!checkMatch('col-jenis', f.jenis)) show = false;
+        if(!checkMatch('col-asal', f.nama)) show = false;
+        if(!checkMatch('col-pjg', f.pjg)) show = false;
+        if(!checkMatch('col-grade', f.grade)) show = false;
+        if(!checkMatch('col-dus', f.dus)) show = false;
+        if(!checkMatch('col-shading', f.shading)) show = false;
+        if(!checkMatch('col-pic', f.pic)) show = false;
+
+        if (show && f.kode) {
+            const cell = row.querySelector('.col-kode');
+            if (cell && !cell.innerText.toLowerCase().includes(f.kode)) show = false;
+        }
+
+        if (show) row.classList.remove('filtered-out');
+        else row.classList.add('filtered-out');
+    });
+
+    window.selectAllState = 0;
+    window.updateSelectAllUI();
+    window.currentPage = 1; 
+    window.applyPagination();
+}
+
+// ========================================================
+// LOGIKA MODE MOBILE (DRILL-DOWN DUA TINGKAT & WARNA KARTU)
 // ========================================================
 window.goToMobileLevel2 = function(kodeKonversi) {
     window.mobileSelectedKodeKonversi = kodeKonversi;
@@ -192,29 +309,91 @@ window.goBackMobileReq = function() {
     window.renderMobileView();
 };
 
+window.setMobileAllDate = function() {
+    const inputDate = document.getElementById('filter-date-mobile');
+    if(inputDate) inputDate.value = '';
+    window.renderMobileView();
+};
+
+function matchesMobileFilter(r) {
+    const targetDate = document.getElementById('filter-date-mobile')?.value || '';
+    if(targetDate) {
+        const rowDate = (r.created_at || '').split('T')[0];
+        if(rowDate !== targetDate) return false;
+    }
+
+    const f = {
+        status: document.getElementById('fs-status')?.value || '',
+        kode: document.getElementById('fs-kode')?.value.toLowerCase() || '',
+        area: document.getElementById('fs-area')?.value || '',
+        jenis: document.getElementById('fs-jenis')?.value || '',
+        nama: document.getElementById('fs-nama')?.value || '',
+        pjg: document.getElementById('fs-pjg')?.value || '',
+        grade: document.getElementById('fs-grade')?.value || '',
+        dus: document.getElementById('fs-dus')?.value || '',
+        shading: document.getElementById('fs-shading')?.value || '',
+        cust: document.getElementById('fs-cust')?.value || '',
+        pic: document.getElementById('fs-pic')?.value || ''
+    };
+
+    if (f.status && r.progres_konversi !== f.status) return false;
+    if (f.kode && !(r.kode_konversi || '').toLowerCase().includes(f.kode)) return false;
+    if (f.area && r.area !== f.area) return false;
+    if (f.jenis && r.jenis_item !== f.jenis) return false;
+    if (f.nama && r.nama_item !== f.nama) return false;
+    if (f.pjg && r.panjang !== f.pjg) return false;
+    if (f.grade && r.grade !== f.grade) return false;
+    if (f.dus && r.dus !== f.dus) return false;
+    if (f.shading && r.shading !== f.shading) return false;
+    if (f.cust && r['customer aktual'] !== f.cust) return false;
+    if (f.pic && r.pic_request !== f.pic) return false;
+
+    return true;
+}
+
 window.renderMobileView = function() {
     const container = document.getElementById('view-mobile');
     if(!container) return;
 
     // LEVEL 1: DAFTAR KARTU REQUEST
     if (window.mobileLevel === 1) {
-        if(window.rawData.length === 0) {
-            container.innerHTML = `
-                <div class="flex flex-col items-center justify-center h-56 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
+        const targetDate = document.getElementById('filter-date-mobile')?.value || '';
+        const filteredReqs = window.rawData.filter(matchesMobileFilter);
+
+        let toolbarHtml = `
+            <!-- TOOLBAR ATAS: FILTER TANGGAL & TOMBOL FILTER -->
+            <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-2 mb-2">
+                <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-xl p-1 shadow-inner">
+                    <i data-lucide="calendar" class="w-4 h-4 text-slate-400 ml-1"></i>
+                    <input type="date" id="filter-date-mobile" value="${targetDate}" onchange="renderMobileView()" class="p-1 text-xs font-bold text-slate-700 outline-none cursor-pointer bg-transparent">
+                    <button onclick="setMobileAllDate()" class="px-2.5 py-1 ${targetDate === '' ? 'bg-blue-600 text-white font-black' : 'bg-slate-200 text-slate-700 font-bold'} hover:bg-blue-700 hover:text-white rounded-lg text-[10px] uppercase transition" title="Tampilkan Semua Tanggal">Semua</button>
+                </div>
+
+                <button onclick="toggleSidebarFilter()" class="px-4 py-2 bg-white rounded-xl border border-slate-300 shadow-sm active:scale-95 text-slate-700 font-bold text-xs hover:bg-slate-50 transition flex items-center gap-2">
+                    <i data-lucide="filter" class="w-4 h-4 text-blue-600"></i>
+                    <span>Filter</span>
+                </button>
+            </div>
+        `;
+
+        if(filteredReqs.length === 0) {
+            container.innerHTML = toolbarHtml + `
+                <div class="flex flex-col items-center justify-center h-56 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center mt-1">
                     <i data-lucide="clock" class="w-12 h-12 text-slate-300 mb-2"></i>
                     <h4 class="font-bold text-slate-700 text-sm">Tidak ada request konversi</h4>
+                    <p class="text-xs text-slate-400 mt-1">Sesuaikan tanggal atau reset filter untuk melihat data lainnya.</p>
                 </div>`;
             lucide.createIcons();
             return;
         }
 
-        let html = '';
+        let html = toolbarHtml;
         html += `<div class="flex justify-between items-center mb-1 px-1">
             <h3 class="text-xs font-black text-slate-500 uppercase tracking-wider">Daftar Request Konversi</h3>
-            <span class="text-xs font-black text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">${window.rawData.length} Total</span>
+            <span class="text-xs font-black text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">${filteredReqs.length} Total</span>
         </div>`;
 
-        window.rawData.forEach((r, idx) => {
+        filteredReqs.forEach((r) => {
             const tgl = window.formatWIB(r.created_at);
             const pjgAsal = formatPanjang(r.panjang);
             const pjgReq = formatPanjang(r.panjang_req);
@@ -223,18 +402,23 @@ window.renderMobileView = function() {
             let qtyOutNum = parseInt(r.qty_out) || 0;
             let qtyInNum = parseInt(r.qty_in) || 0;
 
+            // REVISI: Logika Pewarnaan Kotak CardView Berdasarkan Status
+            let cardBgClass = "bg-white border-slate-300";
             let badgeStatus = `<span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-md font-black text-[10px] border border-blue-200">REQUEST</span>`;
+
             if (rawProg === 'DONE') {
-                badgeStatus = `<span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-md font-black text-[10px] border border-emerald-200">DONE</span>`;
-            } else if (qtyOutNum > 0 || qtyInNum > 0 || rawProg === 'PROSES') {
-                badgeStatus = `<span class="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-md font-black text-[10px] border border-amber-200">PROSES</span>`;
+                cardBgClass = "bg-emerald-50/90 border-emerald-300 shadow-emerald-50";
+                badgeStatus = `<span class="bg-emerald-600 text-white px-2.5 py-1 rounded-md font-black text-[10px] border border-emerald-700 shadow-sm">DONE</span>`;
+            } else if (rawProg === 'PROSES' || qtyOutNum > 0 || qtyInNum > 0) {
+                cardBgClass = "bg-amber-50/90 border-amber-300 shadow-amber-50";
+                badgeStatus = `<span class="bg-amber-500 text-white px-2.5 py-1 rounded-md font-black text-[10px] border border-amber-600 shadow-sm">PROSES</span>`;
             }
 
             html += `
-                <div class="bg-white border border-slate-300 rounded-2xl p-4 shadow-sm relative transition flex flex-col hover:border-indigo-400">
+                <div class="${cardBgClass} border rounded-2xl p-4 shadow-sm relative transition flex flex-col hover:border-indigo-400">
                     
                     <!-- HEADER KARTU: Checkbox, Kode Konversi, Badge Status -->
-                    <div class="flex justify-between items-center mb-3 pb-3 border-b border-slate-100">
+                    <div class="flex justify-between items-center mb-3 pb-3 border-b border-black/5">
                         <div class="flex items-center gap-3">
                             <input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
                             <div class="flex flex-col">
@@ -249,7 +433,7 @@ window.renderMobileView = function() {
                     <div onclick="goToMobileLevel2('${r.kode_konversi}')" class="cursor-pointer space-y-3">
                         
                         <!-- SPESIFIKASI ASAL -->
-                        <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                        <div class="bg-white/80 p-2.5 rounded-xl border border-black/5">
                             <span class="text-[10px] font-black uppercase text-slate-500 block mb-1">Item Asal (Gudang)</span>
                             <div class="text-xs font-black text-slate-800 leading-snug">
                                 <span class="text-blue-600">${r.jenis_item || '-'}</span> | ${r.nama_item || '-'} | ${pjgAsal} | ${r.grade || '-'} | ${r.dus || '-'} | <span class="text-indigo-600">${r.shading || '-'}</span>
@@ -260,7 +444,7 @@ window.renderMobileView = function() {
                         </div>
 
                         <!-- SPESIFIKASI REQUEST TARGET -->
-                        <div class="bg-indigo-50/60 p-2.5 rounded-xl border border-indigo-100">
+                        <div class="bg-white/90 p-2.5 rounded-xl border border-black/5">
                             <span class="text-[10px] font-black uppercase text-indigo-600 block mb-1">Target Konversi</span>
                             <div class="text-xs font-black text-slate-800 leading-snug">
                                 <span class="text-indigo-700">${r.nama_item_req || r.nama_item}</span> | ${pjgReq} | ${r.grade_req || r.grade} | ${r.dus_req || r.dus} | <span class="text-indigo-600">${r.shading_req || r.shading}</span>
@@ -269,27 +453,27 @@ window.renderMobileView = function() {
 
                         <!-- KUANTITI GRID (REQ, HASIL, OUT, IN) -->
                         <div class="grid grid-cols-4 gap-2 text-center pt-1">
-                            <div class="bg-slate-100 p-2 rounded-lg border border-slate-200">
+                            <div class="bg-white/90 p-2 rounded-lg border border-black/5">
                                 <span class="text-[9px] font-black text-slate-500 uppercase block">Req</span>
                                 <span class="text-sm font-black text-slate-800">${r.qty_req || 0}</span>
                             </div>
-                            <div class="bg-indigo-50 p-2 rounded-lg border border-indigo-200">
+                            <div class="bg-indigo-50/80 p-2 rounded-lg border border-indigo-200">
                                 <span class="text-[9px] font-black text-indigo-600 uppercase block">Hasil</span>
                                 <span class="text-sm font-black text-indigo-700">${r.qty_hasil || 0}</span>
                             </div>
-                            <div class="bg-rose-50 p-2 rounded-lg border border-rose-200">
+                            <div class="bg-rose-50/80 p-2 rounded-lg border border-rose-200">
                                 <span class="text-[9px] font-black text-rose-600 uppercase block">Out</span>
                                 <span class="text-sm font-black text-rose-700">${r.qty_out || 0}</span>
                             </div>
-                            <div class="bg-emerald-50 p-2 rounded-lg border border-emerald-200">
+                            <div class="bg-emerald-50/80 p-2 rounded-lg border border-emerald-200">
                                 <span class="text-[9px] font-black text-emerald-600 uppercase block">In</span>
                                 <span class="text-sm font-black text-emerald-700">${r.qty_in || 0}</span>
                             </div>
                         </div>
 
                         <!-- FOOTER HINT -->
-                        <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-[11px] font-bold text-slate-400">
-                            <span>PIC: <strong class="text-slate-600 uppercase">${r.pic_request || '-'}</strong></span>
+                        <div class="flex justify-between items-center pt-2 border-t border-black/5 text-[11px] font-bold text-slate-500">
+                            <span>PIC: <strong class="text-slate-700 uppercase">${r.pic_request || '-'}</strong></span>
                             <span class="text-indigo-600 flex items-center gap-1">Detail Hasil IN/OUT <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></span>
                         </div>
                     </div>
@@ -303,7 +487,6 @@ window.renderMobileView = function() {
 
     // LEVEL 2: DRILL-DOWN RIWAYAT FISIK IN & OUT
     else if (window.mobileLevel === 2) {
-        const req = window.mobileSelectedReqData;
         const kode = window.mobileSelectedKodeKonversi;
         const filteredKonv = window.stokKonvRaw.filter(k => k.kode_konversi === kode);
 
@@ -324,7 +507,7 @@ window.renderMobileView = function() {
                 <div class="flex flex-col items-center justify-center h-56 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center mt-2">
                     <i data-lucide="package-search" class="w-12 h-12 text-slate-300 mb-2"></i>
                     <h4 class="font-bold text-slate-700 text-sm">Belum ada barang yang diproses</h4>
-                    <p class="text-xs text-slate-400 mt-1">Gunakan tombol 'Proses' untuk melakukan Konversi OUT atau IN.</p>
+                    <p class="text-xs text-slate-400 mt-1">Gunakan 'MENU TOMBOL' ➔ 'Proses' untuk melakukan Konversi OUT atau IN.</p>
                 </div>
             `;
         } else {
@@ -1027,10 +1210,13 @@ window.highlightRow = function(checkbox, skipStateReset = false) {
         else { tr.classList.remove('selected-row'); }
     }
 
-    const card = checkbox.closest('.bg-white.border');
+    const card = checkbox.closest('.border.rounded-2xl');
     if (card) {
-        if (checkbox.checked) { card.classList.add('border-blue-500', 'bg-blue-50'); }
-        else { card.classList.remove('border-blue-500', 'bg-blue-50'); }
+        if (checkbox.checked) { 
+            card.classList.add('ring-2', 'ring-blue-500'); 
+        } else { 
+            card.classList.remove('ring-2', 'ring-blue-500'); 
+        }
     }
     
     if(!skipStateReset && !checkbox.checked && window.selectAllState !== 0) { window.selectAllState = 0; window.updateSelectAllUI(); }
@@ -1179,7 +1365,7 @@ window.applyFilterForCurrentCol = function() {
     window.closeFilterMenu(); window.saringTabelExcel(); 
 };
 window.saringTabelExcel = function() {
-    document.querySelectorAll('.r-row').forEach(row => {
+    document.querySelectorAll('#tbody-req tr.r-row').forEach(row => {
         let show = true;
         for (let colClass in window.activeFilters) {
             const allowedValues = window.activeFilters[colClass]; const cell = row.querySelector('.' + colClass);
