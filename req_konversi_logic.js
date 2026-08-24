@@ -2,13 +2,18 @@ window.rawData = [];
 window.stokKonvRaw = [];
 window.sortState = {}; 
 
-window.currentTab = 'REQUEST'; 
+window.currentTab = 'MOBILE'; // Default ke Tab Mobile
 window.currentPage = 1;
 window.rowsPerPage = 10; 
 window.activeFilters = {}; 
 window.currentFilterCol = ''; 
 window.selectAllState = 0; 
 window.userColOrder = []; 
+
+// State Khusus Mobile (Level 1: Daftar Request, Level 2: Detail Item Hasil IN & OUT)
+window.mobileLevel = 1; 
+window.mobileSelectedKodeKonversi = '';
+window.mobileSelectedReqData = null;
 
 // State untuk Proses Konversi
 window.activeRequestRow = null;
@@ -36,7 +41,6 @@ window.formatWIB = function(isoString) {
     } catch(e) { return isoString; }
 };
 
-// REVISI: HELPER FORMAT PANJANG DENGAN AKHIRAN 'M'
 function formatPanjang(pjg) {
     if (!pjg || pjg === '-') return '-';
     let str = String(pjg).trim().toUpperCase();
@@ -77,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const actionMenu = document.getElementById('mobile-action-menu');
         if (actionMenu && !actionMenu.classList.contains('hidden')) {
-            if (!actionMenu.contains(e.target) && !actionMenu.closest('button[onclick^="toggleActionMenu"]')) { actionMenu.classList.add('hidden'); }
+            if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenu"]')) { actionMenu.classList.add('hidden'); }
         }
     });
 
@@ -91,12 +95,25 @@ window.toggleActionMenu = function(e) {
     if(menu) menu.classList.toggle('hidden');
 };
 
+window.toggleMobileActionDrawer = function() {
+    const drawer = document.getElementById('mobile-action-drawer');
+    const overlay = document.getElementById('overlay-klik-luar');
+    if(drawer.classList.contains('hidden')) {
+        drawer.classList.remove('hidden');
+        overlay.classList.remove('hidden');
+    } else {
+        drawer.classList.add('hidden');
+        overlay.classList.add('hidden');
+    }
+};
+
 window.tutupSemuaPopups = function() {
     document.getElementById('overlay-klik-luar').classList.add('hidden');
     document.getElementById('modal-proses-pilih').classList.add('hidden');
     document.getElementById('modal-scan-konv').classList.add('hidden');
     document.getElementById('modal-error-konv').classList.add('hidden');
     document.getElementById('modal-konfirmasi-konv').classList.add('hidden');
+    document.getElementById('mobile-action-drawer').classList.add('hidden');
     if(document.getElementById('sidebar-kolom')) document.getElementById('sidebar-kolom').classList.add('translate-x-full');
 };
 
@@ -105,20 +122,36 @@ window.setModeReq = function(mode) {
     const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     
+    document.getElementById('tab-mobile').className = mode === 'MOBILE' ? activeClass : inactiveClass;
     document.getElementById('tab-req').className = mode === 'REQUEST' ? activeClass : inactiveClass;
     document.getElementById('tab-konv').className = mode === 'KONVERSI' ? activeClass : inactiveClass;
     
+    const isMobile = mode === 'MOBILE';
     const isReq = mode === 'REQUEST';
-    document.getElementById('btn-proses-konv').classList.toggle('hidden', !isReq);
-    document.getElementById('btn-done-konv').classList.toggle('hidden', !isReq);
-    document.getElementById('btn-undone-konv').classList.toggle('hidden', !isReq);
-    document.getElementById('btn-cancel-konv').classList.toggle('hidden', !isReq);
     
-    const btnHapusMob = document.getElementById('btn-hapus-req-mob');
-    if(btnHapusMob) btnHapusMob.classList.toggle('hidden', !isReq);
+    // Toggle Tampilan View
+    document.getElementById('view-mobile').classList.toggle('hidden', !isMobile);
+    document.getElementById('view-table').classList.toggle('hidden', isMobile);
+    document.getElementById('desktop-toolbar').classList.toggle('hidden', isMobile);
+    document.getElementById('footer-pagination').classList.toggle('hidden', isMobile);
+    document.getElementById('mobile-bottom-bar').classList.toggle('hidden', !isMobile);
+
+    if(!isMobile) {
+        document.getElementById('btn-proses-konv').classList.toggle('hidden', !isReq);
+        document.getElementById('btn-done-konv').classList.toggle('hidden', !isReq);
+        document.getElementById('btn-undone-konv').classList.toggle('hidden', !isReq);
+        document.getElementById('btn-cancel-konv').classList.toggle('hidden', !isReq);
+        const btnHapusMob = document.getElementById('btn-hapus-req-mob');
+        if(btnHapusMob) btnHapusMob.classList.toggle('hidden', !isReq);
+    }
 
     window.activeFilters = {};
-    window.renderTabel();
+    if(isMobile) {
+        window.mobileLevel = 1;
+        window.renderMobileView();
+    } else {
+        window.renderTabel();
+    }
 };
 
 window.muatData = async function() {
@@ -144,6 +177,211 @@ window.muatData = async function() {
     }
 };
 
+// ========================================================
+// LOGIKA MODE MOBILE (DRILL-DOWN DUA TINGKAT)
+// ========================================================
+window.goToMobileLevel2 = function(kodeKonversi) {
+    window.mobileSelectedKodeKonversi = kodeKonversi;
+    window.mobileSelectedReqData = window.rawData.find(r => r.kode_konversi === kodeKonversi) || null;
+    window.mobileLevel = 2;
+    window.renderMobileView();
+};
+
+window.goBackMobileReq = function() {
+    window.mobileLevel = 1;
+    window.renderMobileView();
+};
+
+window.renderMobileView = function() {
+    const container = document.getElementById('view-mobile');
+    if(!container) return;
+
+    // LEVEL 1: DAFTAR KARTU REQUEST
+    if (window.mobileLevel === 1) {
+        if(window.rawData.length === 0) {
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-56 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
+                    <i data-lucide="clock" class="w-12 h-12 text-slate-300 mb-2"></i>
+                    <h4 class="font-bold text-slate-700 text-sm">Tidak ada request konversi</h4>
+                </div>`;
+            lucide.createIcons();
+            return;
+        }
+
+        let html = '';
+        html += `<div class="flex justify-between items-center mb-1 px-1">
+            <h3 class="text-xs font-black text-slate-500 uppercase tracking-wider">Daftar Request Konversi</h3>
+            <span class="text-xs font-black text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">${window.rawData.length} Total</span>
+        </div>`;
+
+        window.rawData.forEach((r, idx) => {
+            const tgl = window.formatWIB(r.created_at);
+            const pjgAsal = formatPanjang(r.panjang);
+            const pjgReq = formatPanjang(r.panjang_req);
+
+            let rawProg = (r.progres_konversi || 'PENDING').toUpperCase();
+            let qtyOutNum = parseInt(r.qty_out) || 0;
+            let qtyInNum = parseInt(r.qty_in) || 0;
+
+            let badgeStatus = `<span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-md font-black text-[10px] border border-blue-200">REQUEST</span>`;
+            if (rawProg === 'DONE') {
+                badgeStatus = `<span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-md font-black text-[10px] border border-emerald-200">DONE</span>`;
+            } else if (qtyOutNum > 0 || qtyInNum > 0 || rawProg === 'PROSES') {
+                badgeStatus = `<span class="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-md font-black text-[10px] border border-amber-200">PROSES</span>`;
+            }
+
+            html += `
+                <div class="bg-white border border-slate-300 rounded-2xl p-4 shadow-sm relative transition flex flex-col hover:border-indigo-400">
+                    
+                    <!-- HEADER KARTU: Checkbox, Kode Konversi, Badge Status -->
+                    <div class="flex justify-between items-center mb-3 pb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" value="${r.id}" onchange="window.highlightRow(this)" class="cb-main cursor-pointer w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                            <div class="flex flex-col">
+                                <span class="font-mono font-black text-slate-900 text-base leading-tight">${r.kode_konversi}</span>
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${tgl}</span>
+                            </div>
+                        </div>
+                        <div>${badgeStatus}</div>
+                    </div>
+
+                    <!-- AREA BODY YANG DAPAT DIKLIK UNTUK LIHAT DETAIL IN/OUT -->
+                    <div onclick="goToMobileLevel2('${r.kode_konversi}')" class="cursor-pointer space-y-3">
+                        
+                        <!-- SPESIFIKASI ASAL -->
+                        <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                            <span class="text-[10px] font-black uppercase text-slate-500 block mb-1">Item Asal (Gudang)</span>
+                            <div class="text-xs font-black text-slate-800 leading-snug">
+                                <span class="text-blue-600">${r.jenis_item || '-'}</span> | ${r.nama_item || '-'} | ${pjgAsal} | ${r.grade || '-'} | ${r.dus || '-'} | <span class="text-indigo-600">${r.shading || '-'}</span>
+                            </div>
+                            <div class="text-[11px] font-bold text-slate-500 mt-1">
+                                Area: <span class="text-emerald-700 font-black">${r.area || '-'}</span> • Customer: <span class="text-orange-600">${r['customer aktual'] || '-'}</span>
+                            </div>
+                        </div>
+
+                        <!-- SPESIFIKASI REQUEST TARGET -->
+                        <div class="bg-indigo-50/60 p-2.5 rounded-xl border border-indigo-100">
+                            <span class="text-[10px] font-black uppercase text-indigo-600 block mb-1">Target Konversi</span>
+                            <div class="text-xs font-black text-slate-800 leading-snug">
+                                <span class="text-indigo-700">${r.nama_item_req || r.nama_item}</span> | ${pjgReq} | ${r.grade_req || r.grade} | ${r.dus_req || r.dus} | <span class="text-indigo-600">${r.shading_req || r.shading}</span>
+                            </div>
+                        </div>
+
+                        <!-- KUANTITI GRID (REQ, HASIL, OUT, IN) -->
+                        <div class="grid grid-cols-4 gap-2 text-center pt-1">
+                            <div class="bg-slate-100 p-2 rounded-lg border border-slate-200">
+                                <span class="text-[9px] font-black text-slate-500 uppercase block">Req</span>
+                                <span class="text-sm font-black text-slate-800">${r.qty_req || 0}</span>
+                            </div>
+                            <div class="bg-indigo-50 p-2 rounded-lg border border-indigo-200">
+                                <span class="text-[9px] font-black text-indigo-600 uppercase block">Hasil</span>
+                                <span class="text-sm font-black text-indigo-700">${r.qty_hasil || 0}</span>
+                            </div>
+                            <div class="bg-rose-50 p-2 rounded-lg border border-rose-200">
+                                <span class="text-[9px] font-black text-rose-600 uppercase block">Out</span>
+                                <span class="text-sm font-black text-rose-700">${r.qty_out || 0}</span>
+                            </div>
+                            <div class="bg-emerald-50 p-2 rounded-lg border border-emerald-200">
+                                <span class="text-[9px] font-black text-emerald-600 uppercase block">In</span>
+                                <span class="text-sm font-black text-emerald-700">${r.qty_in || 0}</span>
+                            </div>
+                        </div>
+
+                        <!-- FOOTER HINT -->
+                        <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-[11px] font-bold text-slate-400">
+                            <span>PIC: <strong class="text-slate-600 uppercase">${r.pic_request || '-'}</strong></span>
+                            <span class="text-indigo-600 flex items-center gap-1">Detail Hasil IN/OUT <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></span>
+                        </div>
+                    </div>
+
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    // LEVEL 2: DRILL-DOWN RIWAYAT FISIK IN & OUT
+    else if (window.mobileLevel === 2) {
+        const req = window.mobileSelectedReqData;
+        const kode = window.mobileSelectedKodeKonversi;
+        const filteredKonv = window.stokKonvRaw.filter(k => k.kode_konversi === kode);
+
+        let html = `
+            <div class="flex items-center gap-3 mb-2 px-1">
+                <button onclick="goBackMobileReq()" class="p-2 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1 text-xs font-bold text-slate-700">
+                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
+                </button>
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-black text-slate-400 uppercase leading-none">Detail Hasil Konversi</span>
+                    <span class="text-sm font-black text-indigo-700 uppercase leading-tight font-mono">${kode}</span>
+                </div>
+            </div>
+        `;
+
+        if (filteredKonv.length === 0) {
+            html += `
+                <div class="flex flex-col items-center justify-center h-56 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center mt-2">
+                    <i data-lucide="package-search" class="w-12 h-12 text-slate-300 mb-2"></i>
+                    <h4 class="font-bold text-slate-700 text-sm">Belum ada barang yang diproses</h4>
+                    <p class="text-xs text-slate-400 mt-1">Gunakan tombol 'Proses' untuk melakukan Konversi OUT atau IN.</p>
+                </div>
+            `;
+        } else {
+            let count = filteredKonv.length;
+            filteredKonv.forEach(k => {
+                const tgl = window.formatWIB(k.created_at);
+                const pjgFormatted = formatPanjang(k.panjang);
+                const isOut = (k.aktifitas || '').toLowerCase().includes('out');
+                
+                const badgeAktifitas = isOut 
+                    ? `<span class="bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-md text-[10px] font-black uppercase">KONVERSI OUT</span>`
+                    : `<span class="bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-md text-[10px] font-black uppercase">KONVERSI IN</span>`;
+
+                html += `
+                    <div class="bg-white border border-slate-300 rounded-2xl p-4 mb-1 relative shadow-sm flex flex-col">
+                        <div class="flex justify-between items-start mb-3 pb-3 border-b border-slate-100">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-full bg-slate-800 text-white flex items-center justify-center font-black text-base shadow-inner">${count--}</div>
+                                <div class="flex flex-col">
+                                    <span class="font-black text-sm text-slate-800 leading-none uppercase">${k.area || '-'}</span>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">${tgl}</span>
+                                </div>
+                            </div>
+                            <div>${badgeAktifitas}</div>
+                        </div>
+
+                        <div class="font-mono font-black text-slate-900 text-sm break-all bg-slate-100 p-2 rounded-lg border border-slate-200 text-center mb-3">
+                            ${k.qrcode}
+                        </div>
+
+                        <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mb-3">
+                            <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Spesifikasi Item</span>
+                            <span class="text-xs font-black text-slate-900 leading-snug">
+                                ${k.nama_item || '-'} - ${pjgFormatted} - ${k.grade || '-'} - ${k.dus || '-'}
+                            </span>
+                            <span class="text-xs font-bold text-indigo-700 block mt-0.5">Shading: ${k.shading || '-'}</span>
+                        </div>
+
+                        <div class="flex justify-between items-center text-[11px] font-bold text-slate-500 pt-2 border-t border-slate-100">
+                            <span>Customer: <strong class="text-orange-600">${k.customer_aktual || '-'}</strong></span>
+                            <span>PIC: <strong class="text-slate-700 uppercase">${k.pic || '-'}</strong></span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        container.innerHTML = html;
+    }
+
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+    window.updateSelectedCount();
+};
+
+// ========================================================
+// LOGIKA TABEL DESKTOP (REQUEST & KONVERSI)
+// ========================================================
 function thSort(idx, label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const noFilter = ['col-cb', 'col-progres'].includes(colClass);
@@ -172,8 +410,6 @@ window.renderTabel = function() {
     const thead = document.getElementById('thead-req');
     const tbody = document.getElementById('tbody-req');
     window.sortState = {}; window.selectAllState = 0;
-
-    const rowClassBase = "transition r-row text-[13px]";
 
     if(window.currentTab === 'REQUEST') {
         thead.innerHTML = `
@@ -288,7 +524,7 @@ window.renderTabel = function() {
 
         tbody.innerHTML = window.stokKonvRaw.map((r) => {
             const tgl = window.formatWIB(r.created_at);
-            const pjgFormatted = formatPanjang(r.panjang); // REVISI: Pastikan akhiran 'M' selalu ada
+            const pjgFormatted = formatPanjang(r.panjang);
             
             let aktText = r.aktifitas || '-';
             let aktClass = "text-slate-600 font-bold";
@@ -298,7 +534,6 @@ window.renderTabel = function() {
                 aktClass = "text-rose-600 font-bold";
             }
 
-            // REVISI: Status murni mengikuti apakah kode konversi induknya sudah DONE di request_konversi
             let isDone = doneKodes.has(r.kode_konversi);
             let displayStatus = isDone ? 'DONE' : 'PROSES';
             let badgeStatus = isDone 
@@ -342,6 +577,7 @@ window.bukaModalProsesKonv = function() {
     const idReq = checked[0].value;
     window.activeRequestRow = window.rawData.find(r => r.id == idReq);
     
+    if(!window.activeRequestRow) return alert("Data request tidak ditemukan!");
     if(window.activeRequestRow.progres_konversi === 'DONE') return alert("Request ini sudah selesai (DONE)!");
 
     document.getElementById('modal-proses-pilih').classList.remove('hidden');
@@ -352,7 +588,6 @@ window.pilihJenisProses = function(jenis) {
     document.getElementById('modal-proses-pilih').classList.add('hidden');
     
     const title = document.getElementById('title-scan-konv');
-    
     if(jenis === 'OUT') {
         title.innerHTML = '<i data-lucide="log-out" class="text-rose-600"></i> PROSES KONVERSI OUT';
     } else {
@@ -478,7 +713,7 @@ window.eksekusiSaveKonv = async function() {
                     shift: item.shift,
                     jenis_item: item.jenis_item,
                     nama_item: item.nama_item,
-                    panjang: pjgFormatted, // REVISI: Selalu simpan Panjang bertanda 'M'
+                    panjang: pjgFormatted,
                     grade: item.grade,
                     dus: item.dus,
                     shading: item.shading,
@@ -486,7 +721,7 @@ window.eksekusiSaveKonv = async function() {
                     keterangan: item.keterangan || '-',
                     pic: window.currentUser.username,
                     area: item.area,
-                    status: 'PENDING', // REVISI: Status tetap PENDING
+                    status: 'PENDING',
                     id_sku: item.id_sku
                 });
 
@@ -520,7 +755,7 @@ window.eksekusiSaveKonv = async function() {
 
             let nama = window.activeRequestRow.nama_item_req || window.activeRequestRow.nama_item;
             let rawPjg = window.activeRequestRow.panjang_req || window.activeRequestRow.panjang;
-            let pjg = formatPanjang(rawPjg); // REVISI: Dipastikan berakhiran 'M'
+            let pjg = formatPanjang(rawPjg);
             
             let grade = window.activeRequestRow.grade_req || window.activeRequestRow.grade;
             let dus = window.activeRequestRow.dus_req || window.activeRequestRow.dus;
@@ -542,7 +777,7 @@ window.eksekusiSaveKonv = async function() {
                     shift: item.shift,
                     jenis_item: item.jenisItem,
                     nama_item: nama,
-                    panjang: pjg, // REVISI: 'M' dipastikan ada
+                    panjang: pjg,
                     grade: grade,
                     dus: dus,
                     shading: shading,
@@ -550,7 +785,7 @@ window.eksekusiSaveKonv = async function() {
                     keterangan: ket,
                     pic: window.currentUser.username,
                     area: area,
-                    status: 'PENDING', // REVISI: Disimpan sebagai PENDING (Bukan DONE)
+                    status: 'PENDING',
                     id_sku: new_id_sku
                 });
 
@@ -563,7 +798,7 @@ window.eksekusiSaveKonv = async function() {
                     shift: item.shift,
                     jenis_item: item.jenisItem,
                     nama_item: nama,
-                    panjang: pjg, // REVISI: 'M' dipastikan ada
+                    panjang: pjg,
                     grade: grade,
                     dus: dus,
                     shading: shading,
@@ -619,7 +854,7 @@ window.eksekusiSaveKonv = async function() {
 };
 
 // ==========================================
-// LOGIKA DONE / UNDONE / CANCEL KONVERSI
+// LOGIKA DONE / UNDONE / CANCEL / HAPUS KONVERSI
 // ==========================================
 window.doneKonversiMassal = async function() {
     const checked = document.querySelectorAll('.cb-main:checked');
@@ -649,6 +884,20 @@ window.undoneKonversiMassal = async function() {
     } catch(e) { alert("Gagal: " + e.message); }
 };
 
+window.hapusRequest = async function() {
+    const checked = document.querySelectorAll('.cb-main:checked');
+    if(checked.length === 0) return alert("Pilih baris request yang ingin dihapus!");
+    
+    if(!confirm(`Apakah Anda yakin ingin menghapus ${checked.length} data request konversi ini secara permanen?`)) return;
+
+    const ids = Array.from(checked).map(cb => cb.value);
+    try {
+        await db.from('request_konversi').delete().in('id', ids);
+        alert("Data request berhasil dihapus!");
+        window.muatData();
+    } catch(e) { alert("Gagal: " + e.message); }
+};
+
 window.cancelKonversiMassal = async function() {
     const checked = document.querySelectorAll('.cb-main:checked');
     if(checked.length === 0) return alert("Pilih baris request yang ingin di-Cancel!");
@@ -660,8 +909,9 @@ window.cancelKonversiMassal = async function() {
 
     if(!confirm(`⚠️ PERHATIAN!\n\nCancel Konversi akan menghapus request dan otomatis MENGEMBALIKAN seluruh barang yang sudah dikonversi OUT kembali ke Gudang.\n\nApakah Anda yakin ingin membatalkan ${selectedRequests.length} request ini?`)) return;
 
-    const btn = document.getElementById('btn-cancel-konv'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Membatalkan...'; btn.disabled = true;
+    const btn = document.getElementById('btn-cancel-konv'); 
+    const ori = btn ? btn.innerHTML : '';
+    if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Membatalkan...'; btn.disabled = true; }
 
     const kodes = selectedRequests.map(r => r.kode_konversi);
 
@@ -762,7 +1012,8 @@ window.cancelKonversiMassal = async function() {
     } catch(e) {
         alert("Gagal membatalkan request: " + e.message);
     } finally {
-        btn.innerHTML = ori; btn.disabled = false; lucide.createIcons();
+        if(btn) { btn.innerHTML = ori; btn.disabled = false; }
+        lucide.createIcons();
     }
 };
 
@@ -771,8 +1022,16 @@ window.cancelKonversiMassal = async function() {
 // ==========================================
 window.highlightRow = function(checkbox, skipStateReset = false) {
     const tr = checkbox.closest('tr');
-    if (checkbox.checked) { tr.classList.add('selected-row'); } 
-    else { tr.classList.remove('selected-row'); }
+    if (tr) {
+        if (checkbox.checked) { tr.classList.add('selected-row'); } 
+        else { tr.classList.remove('selected-row'); }
+    }
+
+    const card = checkbox.closest('.bg-white.border');
+    if (card) {
+        if (checkbox.checked) { card.classList.add('border-blue-500', 'bg-blue-50'); }
+        else { card.classList.remove('border-blue-500', 'bg-blue-50'); }
+    }
     
     if(!skipStateReset && !checkbox.checked && window.selectAllState !== 0) { window.selectAllState = 0; window.updateSelectAllUI(); }
     if(!skipStateReset) window.updateSelectedCount();
@@ -829,7 +1088,12 @@ window.applyPagination = function() {
 
 window.prevPage = function() { if(window.currentPage > 1) { window.currentPage--; window.applyPagination(); } };
 window.nextPage = function() { const totalVisible = document.querySelectorAll('#tbody-req tr.r-row:not(.filtered-out)').length; if(window.currentPage < Math.ceil(totalVisible / window.rowsPerPage)) { window.currentPage++; window.applyPagination(); } };
-window.updateSelectedCount = function() { const count = document.querySelectorAll('.cb-main:checked').length; if(document.getElementById('lbl-pilih-baris')) document.getElementById('lbl-pilih-baris').innerText = count; };
+
+window.updateSelectedCount = function() { 
+    const count = document.querySelectorAll('.cb-main:checked').length; 
+    if(document.getElementById('lbl-pilih-baris')) document.getElementById('lbl-pilih-baris').innerText = count; 
+    if(document.getElementById('lbl-mobile-selected-count')) document.getElementById('lbl-mobile-selected-count').innerText = count; 
+};
 
 window.cycleSelectAll = function() { window.selectAllState = (window.selectAllState + 1) % 3; window.updateSelectAllUI(); window.applySelection(); };
 window.updateSelectAllUI = function() {
@@ -839,6 +1103,7 @@ window.updateSelectAllUI = function() {
     else if (window.selectAllState === 2) { btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>'; btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto'; }
     lucide.createIcons();
 };
+
 window.applySelection = function() {
     const allRows = Array.from(document.querySelectorAll('#tbody-req tr.r-row'));
     const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
@@ -940,12 +1205,15 @@ window.salinData = function() {
     const headers = Array.from(document.querySelectorAll('#thead-req th')).filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-btn')).map(th => th.innerText.trim().replace(/\n/g, ' '));
     copyString += headers.join('\t') + '\n';
     cek.forEach(cb => {
-        const tr = cb.closest('tr'); const rowData = [];
-        Array.from(tr.children).forEach(td => {
-            if(td.classList.contains('col-cb') || td.classList.contains('col-btn')) return;
-            if(window.getComputedStyle(td).display !== 'none') { let val = td.getAttribute('data-search') ? td.getAttribute('data-search') : td.innerText.trim(); rowData.push(val.replace(/\n/g, ' ')); }
-        });
-        copyString += rowData.join('\t') + '\n';
+        const tr = cb.closest('tr');
+        if (tr) {
+            const rowData = [];
+            Array.from(tr.children).forEach(td => {
+                if(td.classList.contains('col-cb') || td.classList.contains('col-btn')) return;
+                if(window.getComputedStyle(td).display !== 'none') { let val = td.getAttribute('data-search') ? td.getAttribute('data-search') : td.innerText.trim(); rowData.push(val.replace(/\n/g, ' ')); }
+            });
+            copyString += rowData.join('\t') + '\n';
+        }
     });
     navigator.clipboard.writeText(copyString).then(() => { alert("Berhasil menyalin!"); }).catch(err => { alert("Browser menolak akses Clipboard."); });
 };
