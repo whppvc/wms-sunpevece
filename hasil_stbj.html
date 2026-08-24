@@ -24,8 +24,6 @@
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
         
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
-
-        /* REVISI: Tambahkan class col-hidden agar kolom benar-benar hilang */
         .col-hidden { display: none !important; }
 
         .hdr-std { 
@@ -56,15 +54,19 @@
 
     <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
+        <!-- HEADER SECTION -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
-                <button onclick="setMode('qrcode')" id="tab-mode-qrcode" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="qr-code" class="w-4 h-4"></i> MODE QRCODE</button>
+                <!-- TAB MOBILE (Hanya tampil di HP) -->
+                <button onclick="setMode('mobile')" id="tab-mode-mobile" class="sm:hidden px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="smartphone" class="w-4 h-4"></i> MOBILE</button>
+                <button onclick="setMode('qrcode')" id="tab-mode-qrcode" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="qr-code" class="w-4 h-4"></i> MODE QRCODE</button>
                 <button onclick="setMode('item')" id="tab-mode-item" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="boxes" class="w-4 h-4"></i> MODE NAMA ITEM</button>
                 <button onclick="setMode('jasper')" id="tab-mode-jasper" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="file-text" class="w-4 h-4"></i> MODE JASPER</button>
                 <button onclick="setMode('manual')" id="tab-mode-manual" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="keyboard" class="w-4 h-4"></i> TABEL MANUAL</button>
             </div>
 
-            <div class="p-3 sm:p-4 flex items-center bg-slate-50/50 border-t border-slate-100 w-full">
+            <!-- TOOLBAR DESKTOP -->
+            <div id="desktop-toolbar" class="p-3 sm:p-4 flex items-center bg-slate-50/50 border-t border-slate-100 w-full">
                 <div class="flex items-center gap-3 shrink-0">
                     <label id="lbl-pilih-tabel" class="text-[11px] font-black text-slate-500 uppercase tracking-wide">Filter Status:</label>
                     <select id="select-status" onchange="switchStatusFilter(this.value)" class="p-2 sm:p-2.5 bg-white border border-slate-300 rounded-md font-black text-xs text-slate-800 outline-none cursor-pointer uppercase focus:border-blue-500 transition shadow-sm">
@@ -106,16 +108,26 @@
             </div>
         </div>
 
+        <!-- AREA KONTEN -->
         <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
-            <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-t-xl shadow-sm border border-slate-300">
+            
+            <!-- VIEW TABEL (Mode Desktop) -->
+            <div id="view-table" class="hidden flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-t-xl shadow-sm border border-slate-300">
                 <table class="w-full text-left whitespace-nowrap" id="table-stbj-main">
                     <thead class="sticky top-0 z-50 shadow-sm" id="thead-stbj"></thead>
                     <tbody id="tbody-stbj" class="text-slate-800"></tbody>
                 </table>
             </div>
+
+            <!-- VIEW MOBILE (Folder / Drill-Down View) -->
+            <div id="view-mobile" class="flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-24">
+                <!-- Konten Mobile di-render oleh JS -->
+            </div>
+
         </div>
 
-        <div class="shrink-0 w-full bg-white p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
+        <!-- FOOTER PAGINASI (Desktop) -->
+        <div id="footer-pagination" class="hidden shrink-0 w-full bg-white p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
             <div class="flex items-center gap-2 flex-wrap justify-center">
                 <span class="bg-blue-50 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-medium ml-1">0</span></span>
                 <span class="bg-amber-50 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-amber-900 font-medium ml-1">0</span></span>
@@ -130,9 +142,7 @@
                         <option value="50">50</option>
                         <option value="100">100</option>
                         <option value="ALL">Semua</option>
-                        <option value="CUSTOM">Isi Sendiri...</option>
                     </select>
-                    <input type="number" id="input-custom-rows" oninput="setCustomRowsPerPage(this.value)" class="hidden w-16 text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 rounded outline-none px-1 py-0.5 text-center transition" placeholder="Jml...">
                 </div>
                 <div class="flex items-center gap-2 bg-white border border-slate-300 p-1 rounded shadow-sm">
                     <button onclick="prevPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
@@ -144,7 +154,72 @@
 
     </div>
 
-    <!-- MODAL FILTER EXCEL -->
+    <!-- SIDEBAR FILTER LENGKAP DENGAN DROPDOWN -->
+    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
+        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4 text-blue-600"></i> Filter Data STBJ</h3>
+            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="p-3 flex flex-col gap-3 overflow-y-auto custom-scroll flex-1">
+            <div class="grid grid-cols-2 gap-2">
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status STBJ</label>
+                    <select id="fs-status" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label>
+                    <input type="text" id="fs-qr" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50 font-mono" placeholder="Ketik QR Code...">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label>
+                    <select id="fs-troli" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label>
+                    <select id="fs-mesin" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label>
+                    <select id="fs-shift" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label>
+                    <select id="fs-jenis" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
+                    <select id="fs-nama" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
+                    <select id="fs-pjg" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
+                    <select id="fs-grade" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label>
+                    <select id="fs-dus" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label>
+                    <select id="fs-shading" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Bawaan</label>
+                    <select id="fs-customer" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PIC Input</label>
+                    <select id="fs-pic" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+            </div>
+            <button onclick="resetFilterSTBJ()" class="mt-2 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg text-xs uppercase transition shrink-0">RESET FILTER</button>
+        </div>
+    </div>
+
+    <!-- MODAL FILTER EXCEL (DESKTOP) -->
     <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm overflow-hidden">
         <div class="p-3 border-b border-slate-100 flex justify-between items-center rounded-t-lg">
             <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
@@ -170,7 +245,7 @@
             <button onclick="toggleSidebarKolom()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
         <div class="p-3 bg-blue-50 border-b border-blue-100 text-xs text-blue-800 font-medium leading-relaxed">
-            Tahan dan geser (Drag & Drop) kotak di bawah ini untuk mengatur urutan kolom. Paling atas adalah kolom paling kiri.
+            Tahan dan geser (Drag & Drop) kotak di bawah ini untuk mengatur urutan kolom.
         </div>
         <div class="p-3 flex flex-col gap-2 overflow-y-auto custom-scroll flex-1" id="kolom-drag-container"></div>
         <div class="p-4 border-t border-slate-200 bg-slate-50 flex gap-2">
@@ -179,7 +254,7 @@
         </div>
     </div>
 
-    <!-- MODAL KATALOG -->
+    <!-- MODAL KATALOG JASPER -->
     <div id="modal-list-katalog" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[60] px-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -247,8 +322,9 @@
         </div>
     </div>
 
+    <!-- OVERLAY KLIK LUAR -->
     <div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-[50] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="hasil_stbj_logic.js"></script>
 </body>
-</html>
+                        </html>
