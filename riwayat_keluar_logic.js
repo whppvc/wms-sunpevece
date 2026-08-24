@@ -136,6 +136,12 @@ function extractPOFromSKU(id_sku) {
     return parts.length >= 8 ? parts[7] : '-';
 }
 
+function extractAreaFromSKU(id_sku) {
+    if(!id_sku) return '-';
+    const parts = id_sku.split('_');
+    return parts.length > 0 ? parts[0] : '-';
+}
+
 async function muatDataDariSupabase() {
     const tbody = document.getElementById('tbody-keluar');
     tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data Keluar...</p></td></tr>`;
@@ -168,7 +174,6 @@ function setMode(m) {
     ['mobile', 'qrcode', 'item', 'jasper', 'hold'].forEach(tab => {
         const el = document.getElementById('tab-mode-' + tab);
         if(el) {
-            // Jaga kelas sm:hidden pada tab mobile
             if(tab === 'mobile') {
                 el.className = (m === tab) ? 'sm:hidden ' + activeClass : 'sm:hidden ' + inactiveClass;
             } else {
@@ -252,9 +257,11 @@ function mapItemForFilter(r) {
     const custEstimasi = r.customer_estimasi || '-';
     const customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku) || '-';
     const pjgFormatted = formatPanjang(r.panjang || t.panjang);
+    const asalArea = r.area || extractAreaFromSKU(r.id_sku) || '-';
 
     return {
         qrcode: r.qrcode,
+        id_sku: r.id_sku,
         customerKeluar: customerKeluar,
         customerAktual: custAktual,
         customerEstimasi: custEstimasi,
@@ -270,7 +277,7 @@ function mapItemForFilter(r) {
         tglProduksi: t.tglProduksi || '-',
         mesin: t.mesin || '-',
         shift: t.shift || '-',
-        area: r.area || '-'
+        area: asalArea
     };
 }
 
@@ -305,6 +312,59 @@ function matchesActiveFilters(item) {
 
     return true;
 }
+
+window.toggleSelectAllLvl4 = function(checked) {
+    document.querySelectorAll('.cb-lvl4').forEach(cb => {
+        cb.checked = checked;
+    });
+};
+
+// REVISI: Fungsi Cancel Keluar Mobile (Hapus dari stok_keluar -> Masuk hold_keluar)
+window.cancelKeluarMobile = async function() {
+    const checkedBoxes = document.querySelectorAll('.cb-lvl4:checked');
+    if (checkedBoxes.length === 0) return alert("Pilih / centang minimal 1 kardus yang ingin di-cancel keluar!");
+
+    const qrsToCancel = Array.from(checkedBoxes).map(cb => cb.value);
+
+    if (!confirm(`Yakin ingin membatalkan (Cancel) ${qrsToCancel.length} item ini dari status Keluar?\nItem akan langsung dipindahkan ke Tabel Hold Keluar.`)) return;
+
+    const btn = document.getElementById('btn-cancel-mobile-lvl4');
+    const oriText = btn ? btn.innerHTML : '';
+    if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Memproses...'; btn.disabled = true; }
+
+    const itemsToHold = rawDataRaw.filter(r => qrsToCancel.includes(r.qrcode)).map(r => ({
+        qrcode: r.qrcode,
+        id_sku: r.id_sku,
+        customer_keluar: r.customer_keluar,
+        customer_aktual: r.customer_aktual,
+        customer_estimasi: r.customer_estimasi,
+        keterangan: 'DI-CANCEL dari Mobile Riwayat',
+        pic_input: currentUser.username
+    }));
+
+    try {
+        // 1. Masukkan ke tabel hold_keluar
+        const { error: errAdd } = await db.from('hold_keluar').insert(itemsToHold);
+        if (errAdd) throw errAdd;
+
+        // 2. Hapus dari tabel stok_keluar
+        const { error: errDel } = await db.from('stok_keluar').delete().in('qrcode', qrsToCancel);
+        if (errDel) throw errDel;
+
+        // 3. Update data lokal
+        rawDataRaw = rawDataRaw.filter(r => !qrsToCancel.includes(r.qrcode));
+        holdDataRaw.push(...itemsToHold);
+
+        alert(`✅ SUKSES!\n${qrsToCancel.length} kardus berhasil di-cancel dan dipindahkan ke Tabel Hold Keluar.`);
+        renderMobileView();
+
+    } catch (e) {
+        alert("Gagal memproses cancel keluar: " + e.message);
+    } finally {
+        if(btn) { btn.innerHTML = oriText; btn.disabled = false; }
+        lucide.createIcons();
+    }
+};
 
 function renderMobileView() {
     const container = document.getElementById('view-mobile');
@@ -463,7 +523,7 @@ function renderMobileView() {
             `;
         });
     }
-    // LEVEL 4: DETAIL KARDUS FISIK (CARD VIEW)
+    // REVISI LEVEL 4: DETAIL KARDUS FISIK DENGAN CHECKBOX & 5 VARIABEL UTAMA
     else if (mobileLevel === 4) {
         let detailItems = mobileData.filter(r => {
             if (r.customerKeluar !== mobileSelectedCust) return false;
@@ -477,7 +537,8 @@ function renderMobileView() {
         let displayItem = `${itemParts[0]} - ${itemParts[1]} - ${itemParts[2]} - ${itemParts[3]}`;
 
         html += `
-            <div class="flex items-center gap-3 mb-2 px-1">
+            <!-- HEADER LEVEL 4 (BREADCRUMB & SUMMARY) -->
+            <div class="flex items-center gap-3 mb-1 px-1">
                 <button onclick="goBackMobile()" class="p-2 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1 text-xs font-bold text-slate-700">
                     <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
                 </button>
@@ -486,60 +547,67 @@ function renderMobileView() {
                     <span class="text-xs font-black text-blue-700 uppercase leading-tight">${displayItem} (${detailItems.length} Kardus)</span>
                 </div>
             </div>
-        `;
 
-        let count = detailItems.length;
+            <!-- TOOLBAR AKSI LEVEL 4 (PILIH SEMUA & TOMBOL CANCEL KELUAR) -->
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between gap-2 mb-2">
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" onchange="toggleSelectAllLvl4(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-300">
+                    <span class="text-xs font-black text-slate-700 uppercase">Pilih Semua</span>
+                </label>
+
+                <!-- REVISI: Tombol Cancel Keluar yang langsung memindahkan data ke hold_keluar -->
+                <button id="btn-cancel-mobile-lvl4" onclick="cancelKeluarMobile()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-xs uppercase rounded-lg shadow-md flex items-center gap-1.5 transition border-b-2 border-rose-800">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    <span>Cancel Keluar</span>
+                </button>
+            </div>
+        `;
 
         detailItems.forEach(d => {
             const waktuKeluar = formatWIB(d.created_at);
 
             html += `
-                <div class="bg-white border border-slate-300 rounded-xl p-4 mb-1 relative transition w-full flex flex-col shadow-sm">
+                <div class="bg-white border border-slate-300 rounded-xl p-4 mb-2 relative transition w-full flex flex-col shadow-sm">
                     
-                    <div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-3">
+                    <!-- TOP HEADER: KOTAK CENTANG (MENGGANTIKAN NOMOR) & STATUS -->
+                    <div class="flex justify-between items-center mb-3 pb-2.5 border-b border-slate-100">
                         <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full bg-slate-800 text-white flex items-center justify-center font-black text-base shadow-inner">${count--}</div>
-                            <div class="flex flex-col">
-                                <span class="font-black text-base text-rose-700 leading-none uppercase">${d.customerKeluar}</span>
-                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Customer Tujuan</span>
-                            </div>
+                            <input type="checkbox" value="${d.qrcode}" class="cb-lvl4 cursor-pointer w-5 h-5 accent-blue-600 rounded border-slate-400">
+                            <span class="font-mono text-xs font-black text-slate-500 uppercase">PILIH ITEM</span>
                         </div>
-                        <span class="font-bold px-2.5 py-1 text-[10px] rounded-md border bg-emerald-600 text-white border-emerald-700 shadow-sm">KELUAR</span>
+                        <span class="font-bold px-2.5 py-0.5 text-[10px] rounded-md border bg-emerald-600 text-white border-emerald-700 shadow-sm">KELUAR</span>
                     </div>
                     
-                    <div class="flex flex-col gap-1 mb-3">
-                        <div class="font-mono font-black text-slate-900 text-sm break-all leading-tight bg-slate-100 p-2 rounded-lg border border-slate-200 text-center">${d.qrcode}</div>
+                    <!-- 1. QRCODE -->
+                    <div class="font-mono font-black text-slate-900 text-sm break-all leading-tight bg-slate-100 p-2.5 rounded-xl border border-slate-200 text-center mb-3">
+                        ${d.qrcode}
                     </div>
                     
-                    <div class="grid grid-cols-2 gap-x-2 gap-y-3 mb-3">
+                    <!-- 2. GRID INFORMASI: WAKTU SCAN KELUAR, ASAL AREA, CUSTOMER AKTUAL, CUSTOMER ESTIMASI -->
+                    <div class="grid grid-cols-2 gap-x-2 gap-y-3">
+                        <!-- WAKTU SCAN KELUAR -->
                         <div class="flex flex-col">
-                            <span class="text-[10px] font-black text-slate-400 uppercase">Waktu Keluar</span>
+                            <span class="text-[10px] font-black text-slate-400 uppercase">Waktu Scan Keluar</span>
                             <span class="text-xs font-bold text-slate-700">${waktuKeluar}</span>
                         </div>
+                        
+                        <!-- ASAL AREA / ASAL LOKASI PENYIMPANAN -->
                         <div class="flex flex-col">
-                            <span class="text-[10px] font-black text-slate-400 uppercase">Produksi</span>
-                            <span class="text-xs font-bold text-slate-700">${d.tglProduksi} - ${d.mesin} - ${d.shift}</span>
+                            <span class="text-[10px] font-black text-slate-400 uppercase">Asal Area</span>
+                            <span class="text-xs font-black text-emerald-700 uppercase">${d.area || '-'}</span>
                         </div>
-                        <div class="flex flex-col col-span-2 bg-blue-50 p-2.5 rounded-lg border border-blue-100">
-                            <span class="text-[10px] font-black text-blue-500 uppercase mb-0.5">Spesifikasi Item</span>
-                            <span class="text-sm font-black text-slate-900 leading-snug">
-                                ${d.namaItem} - ${d.panjang} - ${d.grade} - ${d.dus}
-                            </span>
-                            <span class="text-xs font-bold text-blue-700 mt-0.5">Shading: ${d.shading}</span>
-                        </div>
+
+                        <!-- CUSTOMER AKTUAL -->
                         <div class="flex flex-col">
                             <span class="text-[10px] font-black text-slate-400 uppercase">Customer Aktual</span>
                             <span class="text-xs font-bold text-orange-600 uppercase">${d.customerAktual}</span>
                         </div>
+                        
+                        <!-- CUSTOMER ESTIMASI -->
                         <div class="flex flex-col">
                             <span class="text-[10px] font-black text-slate-400 uppercase">Customer Estimasi</span>
                             <span class="text-xs font-bold text-purple-600 uppercase">${d.customerEstimasi}</span>
                         </div>
-                    </div>
-                    
-                    <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-[11px] font-medium text-slate-500">
-                        <span>Ket: <strong class="text-slate-700">${d.keterangan}</strong></span>
-                        <span class="uppercase text-[10px] font-bold text-slate-400">PIC: ${d.pic}</span>
                     </div>
                 </div>
             `;
@@ -1252,4 +1320,4 @@ async function eksekusiCancelHold() {
         document.getElementById('modal-cancel-hold').classList.add('hidden');
     } catch(e) { alert("GAGAL RETUR: " + e.message); }
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
-            }
+}
