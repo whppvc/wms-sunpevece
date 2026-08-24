@@ -446,7 +446,7 @@ function renderMobileView() {
                         <div class="flex flex-col">
                             <span class="text-[10px] font-black text-slate-400 uppercase">Shading</span>
                             <h4 class="font-black text-slate-800 text-base leading-tight">${shading}</h4>
-                            <span class="text-[10px] font-bold text-amber-700 mt-0.5">Klik untuk melihat fisik kardus</span>
+                            <span class="text-[10px] font-bold text-amber-700 mt-0.5">Klik untuk melihat detail item</span>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
