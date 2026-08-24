@@ -1,4 +1,7 @@
-let modeSekarang = 'mobile'; // Default ke Mobile
+// Otomatis deteksi mode perangkat saat buka halaman (Layar < 640px = Mobile, >= 640px = Desktop QR Code)
+const isMobileDevice = window.innerWidth < 640;
+let modeSekarang = isMobileDevice ? 'mobile' : 'qrcode';
+
 let rawDataRaw = [];
 let holdDataRaw = [];
 let kamusData = [];
@@ -48,7 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'riwayat_keluar', title: 'RIWAYAT KELUAR', url: 'riwayat_keluar.html' });
     
     // Set default date mobile ke hari ini
-    document.getElementById('filter-date-mobile').value = getTodayDate();
+    const dateInput = document.getElementById('filter-date-mobile');
+    if(dateInput) dateInput.value = getTodayDate();
 
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
@@ -60,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const actionMenu = document.getElementById('mobile-action-menu');
         if (actionMenu && !actionMenu.classList.contains('hidden')) {
-            if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenu"]')) {
+            if (!actionMenu.contains(e.target) && !actionMenu.closest('button[onclick^="toggleActionMenu"]')) {
                 actionMenu.classList.add('hidden');
             }
         }
@@ -163,7 +167,14 @@ function setMode(m) {
 
     ['mobile', 'qrcode', 'item', 'jasper', 'hold'].forEach(tab => {
         const el = document.getElementById('tab-mode-' + tab);
-        if(el) el.className = (m === tab) ? activeClass : inactiveClass;
+        if(el) {
+            // Jaga kelas sm:hidden pada tab mobile
+            if(tab === 'mobile') {
+                el.className = (m === tab) ? 'sm:hidden ' + activeClass : 'sm:hidden ' + inactiveClass;
+            } else {
+                el.className = (m === tab) ? activeClass : inactiveClass;
+            }
+        }
     });
 
     const btnHold = document.getElementById('btn-hold');
@@ -191,7 +202,7 @@ function setMode(m) {
         dateFilter.classList.remove('hidden');
         viewTable.classList.add('hidden'); viewMobile.classList.remove('hidden');
         footerPagination.classList.add('hidden');
-        mobileLevel = 1; // Reset ke level 1 setiap ganti ke tab mobile
+        mobileLevel = 1; 
     }
     else { 
         btnHold.classList.add('hidden'); btnCancel.classList.add('hidden'); 
@@ -235,7 +246,6 @@ window.goBackMobile = function() {
     }
 };
 
-// Helper data row mapper
 function mapItemForFilter(r) {
     const t = window.translateBarcode(r.qrcode);
     const custAktual = r.customer_aktual || t.customer || '-';
@@ -327,9 +337,7 @@ function renderMobileView() {
 
     let html = '';
 
-    // ==========================================
     // LEVEL 1: CUSTOMER KELUAR
-    // ==========================================
     if (mobileLevel === 1) {
         let custMap = {};
         mobileData.forEach(r => {
@@ -360,9 +368,7 @@ function renderMobileView() {
             `;
         });
     } 
-    // ==========================================
     // LEVEL 2: SPESIFIKASI ITEM
-    // ==========================================
     else if (mobileLevel === 2) {
         let itemMap = {};
         mobileData.forEach(r => {
@@ -405,9 +411,7 @@ function renderMobileView() {
             `;
         });
     }
-    // ==========================================
     // LEVEL 3: SHADING
-    // ==========================================
     else if (mobileLevel === 3) {
         let shadingMap = {};
         mobileData.forEach(r => {
@@ -459,9 +463,7 @@ function renderMobileView() {
             `;
         });
     }
-    // ==========================================
-    // REVISI LEVEL 4: DETAIL KARDUS FISIK (CARD VIEW)
-    // ==========================================
+    // LEVEL 4: DETAIL KARDUS FISIK (CARD VIEW)
     else if (mobileLevel === 4) {
         let detailItems = mobileData.filter(r => {
             if (r.customerKeluar !== mobileSelectedCust) return false;
@@ -1250,4 +1252,4 @@ async function eksekusiCancelHold() {
         document.getElementById('modal-cancel-hold').classList.add('hidden');
     } catch(e) { alert("GAGAL RETUR: " + e.message); }
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
-}
+            }
