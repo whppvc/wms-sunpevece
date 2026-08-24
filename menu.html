@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Tambahan library XLSX untuk fitur Quick Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <script src="global.js"></script>
@@ -23,7 +22,6 @@
 </head>
 <body class="font-sans text-slate-800 bg-slate-100">
 
-    <!-- WRAPPER SCROLL: Ditambahkan agar dashboard bisa di-scroll ke bawah -->
     <div class="h-full w-full overflow-y-auto custom-scroll">
         <div class="w-full max-w-7xl mx-auto space-y-6 p-4 sm:p-6 pb-20">
             
@@ -235,21 +233,16 @@
             const user = JSON.parse(localStorage.getItem('user_session'));
             if(user) document.getElementById('lbl-user-name').innerText = user.username;
 
-            // Set Default Date untuk Quick Report (Hari ini)
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('report-start').value = today;
             document.getElementById('report-end').value = today;
 
             loadDashboardData();
             cekPerforma();
-            setInterval(cekPerforma, 5000); // Cek RAM tiap 5 detik
+            setInterval(cekPerforma, 5000); 
         });
 
-        // ==========================================
-        // 1. CEK PERFORMA (RAM & PING)
-        // ==========================================
         async function cekPerforma() {
-            // Cek RAM (Hanya jalan di browser berbasis Chromium)
             const ramLbl = document.getElementById('ram-usage');
             if (window.performance && window.performance.memory) {
                 const usedMB = (window.performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(1);
@@ -261,7 +254,6 @@
                 ramLbl.className = 'text-xs font-bold text-slate-400';
             }
 
-            // Cek Ping ke Supabase (Setiap 30 detik agar tidak spam)
             if (!window.lastPingTime || (Date.now() - window.lastPingTime > 30000)) {
                 window.lastPingTime = Date.now();
                 const start = Date.now();
@@ -299,41 +291,38 @@
             }
         }
 
-        // ==========================================
-        // 2. LOAD DATA DASHBOARD (STATISTIK HARI INI)
-        // ==========================================
         async function loadDashboardData() {
             try {
-                // Rentang waktu hari ini (WIB / Local)
                 const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
                 const endOfDay = new Date(); endOfDay.setHours(23,59,59,999);
                 const startISO = startOfDay.toISOString();
                 const endISO = endOfDay.toISOString();
 
-                // 1. Total Stok Gudang (stok_global)
-                const { count: countStok } = await db.from('stok_global').select('*', { count: 'exact', head: true });
-                document.getElementById('stat-stok').innerText = countStok || 0;
+                // REVISI: Hitung Total Stok Gudang berdasarkan SUM(qty) dari stok_aktual
+                const { data: dataStok, error: errStok } = await db.from('stok_aktual').select('qty').gt('qty', 0);
+                if (errStok) throw errStok;
+                let totalStokDus = 0;
+                if (dataStok) {
+                    dataStok.forEach(r => { totalStokDus += (r.qty || 0); });
+                }
+                document.getElementById('stat-stok').innerText = totalStokDus;
 
-                // 2. STBJ Hari Ini (created_at hari ini)
                 const { count: countStbj } = await db.from('hasil_stbj_langsir')
                     .select('*', { count: 'exact', head: true })
                     .gte('created_at', startISO).lte('created_at', endISO);
                 document.getElementById('stat-stbj').innerText = countStbj || 0;
 
-                // 3. Langsir Hari Ini (waktu_langsir hari ini & status IN GUDANG)
                 const { count: countLangsir } = await db.from('hasil_stbj_langsir')
                     .select('*', { count: 'exact', head: true })
                     .eq('status', 'IN GUDANG')
                     .gte('waktu_langsir', startISO).lte('waktu_langsir', endISO);
                 document.getElementById('stat-langsir').innerText = countLangsir || 0;
 
-                // 4. Keluar Hari Ini (created_at hari ini)
                 const { count: countKeluar } = await db.from('stok_keluar')
                     .select('*', { count: 'exact', head: true })
                     .gte('created_at', startISO).lte('created_at', endISO);
                 document.getElementById('stat-keluar').innerText = countKeluar || 0;
 
-                // 5. Ambil 6 Aktivitas Terakhir (Gabungan Langsir & Keluar)
                 const [resMasuk, resKeluar] = await Promise.all([
                     db.from('hasil_stbj_langsir').select('qrcode, nama_item, waktu_langsir, pic_input').eq('status', 'IN GUDANG').order('waktu_langsir', {ascending: false}).limit(4),
                     db.from('stok_keluar').select('qrcode, nama_item, created_at, pic_keluar').order('created_at', {ascending: false}).limit(4)
@@ -343,9 +332,8 @@
                 if(resMasuk.data) resMasuk.data.forEach(d => { if(d.waktu_langsir) aktivitas.push({ type: 'IN', qrcode: d.qrcode, nama_item: d.nama_item, time: d.waktu_langsir, pic: d.pic_input }); });
                 if(resKeluar.data) resKeluar.data.forEach(d => aktivitas.push({ type: 'OUT', qrcode: d.qrcode, nama_item: d.nama_item, time: d.created_at, pic: d.pic_keluar }));
 
-                // Urutkan berdasarkan waktu terbaru
                 aktivitas.sort((a, b) => new Date(b.time) - new Date(a.time));
-                aktivitas = aktivitas.slice(0, 6); // Ambil 6 teratas
+                aktivitas = aktivitas.slice(0, 6); 
 
                 const tbody = document.getElementById('tbody-aktivitas');
                 if(aktivitas.length === 0) {
@@ -390,11 +378,6 @@
             }
         }
 
-        // ==========================================
-        // 3. QUICK EXPORT REPORT (REVISI: PAGINATION SUPABASE & QTY LEMBAR)
-        // ==========================================
-        
-        // Helper function untuk bypass limit 1000 baris Supabase
         async function fetchAllRows(baseQuery) {
             let allData = [];
             let page = 0;
@@ -409,7 +392,6 @@
             return allData;
         }
 
-        // Helper function untuk menghitung Qty Lembar
         function hitungQtyLembar(jenis, nama, qtyDus, lisData) {
             if (!qtyDus) return 0;
             let j = (jenis || '').toUpperCase();
@@ -453,11 +435,9 @@
                 return alert("Pilih rentang tanggal terlebih dahulu untuk laporan transaksi!");
             }
 
-            // REVISI: Gunakan Timezone WIB (+07:00) agar data jam 00:00 - 06:59 tidak hilang
             const startISO = dStart ? `${dStart}T00:00:00+07:00` : null;
             const endISO = dEnd ? `${dEnd}T23:59:59+07:00` : null;
 
-            // Animasi Tombol
             const btnId = `btn-dl-${type}`;
             const btn = document.getElementById(btnId);
             const oriHtml = btn.innerHTML;
@@ -471,24 +451,21 @@
                 let fileName = "";
 
                 if (type === 'stbj') {
-                    // Fetch Lis Data for Lembar calculation
                     const { data: lisData } = await db.from('master_lis').select('*');
-                    // Fetch Jasper Data
                     const { data: jasperData } = await db.from('nama_jasper').select('*');
 
-                    // Fetch STBJ Normal
                     let queryStbj = db.from('hasil_stbj_langsir').select('*')
-                        .gte('created_at', startISO).lte('created_at', endISO);
+                        .gte('created_at', startISO).lte('created_at', endISO)
+                        .order('created_at', { ascending: false });
                     const dataStbj = await fetchAllRows(queryStbj);
 
-                    // Fetch STBJ Manual
                     let queryManual = db.from('stbj_manual').select('*')
-                        .gte('created_at', startISO).lte('created_at', endISO);
+                        .gte('created_at', startISO).lte('created_at', endISO)
+                        .order('created_at', { ascending: false });
                     const dataManual = await fetchAllRows(queryManual);
 
                     let groups = {};
                     
-                    // Process Normal STBJ
                     (dataStbj || []).forEach(r => {
                         let n = r.nama_item || '-';
                         let jName = n;
@@ -513,7 +490,6 @@
                         groups[key].qty++;
                     });
 
-                    // Process Manual STBJ
                     (dataManual || []).forEach(r => {
                         let n = r.nama_item || '-';
                         let jName = n;
@@ -553,7 +529,6 @@
                         else arrManual.push(row);
                     });
 
-                    // Sort by Tgl Produksi descending
                     arrScan.sort((a, b) => String(b[0]).localeCompare(String(a[0])));
                     arrManual.sort((a, b) => String(b[0]).localeCompare(String(a[0])));
 
@@ -687,4 +662,4 @@
         }
     </script>
 </body>
-                                                                                                                                                                      </html>
+</html>
