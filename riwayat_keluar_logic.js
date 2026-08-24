@@ -12,10 +12,11 @@ let currentPage = 1;
 let rowsPerPage = 10; 
 let selectAllState = 0; 
 
-// State Khusus Mode Mobile
-let mobileLevel = 1; // 1: Customer, 2: Item, 3: Shading
+// State Khusus Mode Mobile (Drill-Down sampai Level 4)
+let mobileLevel = 1; // 1: Customer, 2: Item Spec, 3: Shading, 4: Detail Kartu Fisik
 let mobileSelectedCust = '';
 let mobileSelectedItem = '';
+let mobileSelectedShading = '';
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
@@ -24,10 +25,29 @@ function getTodayDate() {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
+function formatPanjang(pjg) {
+    if (!pjg || pjg === '-') return '-';
+    let str = String(pjg).trim().toUpperCase();
+    if (!str.endsWith('M')) str += 'M';
+    return str;
+}
+
+function formatWIB(isoString) {
+    if (!isoString || isoString === '-') return '-';
+    try {
+        const dt = new Date(isoString);
+        if (isNaN(dt.getTime())) return isoString;
+        return new Intl.DateTimeFormat('id-ID', {
+            timeZone: 'Asia/Jakarta', day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: false
+        }).format(dt).replace(/\./g, ':');
+    } catch(e) { return isoString; }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'riwayat_keluar', title: 'RIWAYAT KELUAR', url: 'riwayat_keluar.html' });
     
-    // Set default date mobile
+    // Set default date mobile ke hari ini
     document.getElementById('filter-date-mobile').value = getTodayDate();
 
     document.addEventListener('click', function(e) {
@@ -57,6 +77,29 @@ window.toggleActionMenu = function(e) {
     if(e) e.stopPropagation();
     const menu = document.getElementById('mobile-action-menu');
     if(menu) menu.classList.toggle('hidden');
+};
+
+window.toggleSidebarFilter = function() {
+    const sidebar = document.getElementById('sidebar-filter');
+    const overlay = document.getElementById('overlay-klik-luar');
+    sidebar.classList.toggle('translate-x-full');
+    overlay.classList.toggle('hidden');
+    if (!sidebar.classList.contains('translate-x-full')) {
+        updateFilterDropdowns();
+    }
+};
+
+window.tutupSemuaPopups = function() {
+    const sidebar = document.getElementById('sidebar-filter');
+    if(sidebar) sidebar.classList.add('translate-x-full');
+    
+    const overlay = document.getElementById('overlay-klik-luar');
+    if(overlay) overlay.classList.add('hidden');
+    
+    const modalCancel = document.getElementById('modal-cancel-hold');
+    if(modalCancel) modalCancel.classList.add('hidden');
+    
+    closeFilterMenu();
 };
 
 async function loadAreasForCancel() {
@@ -105,6 +148,7 @@ async function muatDataDariSupabase() {
         rawDataRaw = resK.data || [];
         holdDataRaw = resH.data || [];
         
+        updateFilterDropdowns();
         setMode(modeSekarang);
     } catch(err) { 
         tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; 
@@ -147,7 +191,7 @@ function setMode(m) {
         dateFilter.classList.remove('hidden');
         viewTable.classList.add('hidden'); viewMobile.classList.remove('hidden');
         footerPagination.classList.add('hidden');
-        mobileLevel = 1; // Reset ke level 1 tiap kali buka tab
+        mobileLevel = 1; // Reset ke level 1 setiap ganti ke tab mobile
     }
     else { 
         btnHold.classList.add('hidden'); btnCancel.classList.add('hidden'); 
@@ -156,8 +200,6 @@ function setMode(m) {
         footerPagination.classList.remove('hidden');
     }
 
-    activeFilters = {}; 
-    
     if (m === 'mobile') {
         renderMobileView();
     } else {
@@ -166,13 +208,8 @@ function setMode(m) {
 }
 
 // ========================================================
-// LOGIKA MODE MOBILE (FOLDER VIEW)
+// LOGIKA MODE MOBILE (DRILL-DOWN FOLDER: LEVEL 1 s/d LEVEL 4)
 // ========================================================
-window.applyMobileDateFilter = function() {
-    mobileLevel = 1;
-    renderMobileView();
-};
-
 window.goToMobileLevel2 = function(cust) {
     mobileSelectedCust = cust;
     mobileLevel = 2;
@@ -185,52 +222,104 @@ window.goToMobileLevel3 = function(itemKey) {
     renderMobileView();
 };
 
-window.goBackMobile = function() {
-    if (mobileLevel > 1) mobileLevel--;
+window.goToMobileLevel4 = function(shading) {
+    mobileSelectedShading = shading;
+    mobileLevel = 4;
     renderMobileView();
 };
+
+window.goBackMobile = function() {
+    if (mobileLevel > 1) {
+        mobileLevel--;
+        renderMobileView();
+    }
+};
+
+// Helper data row mapper
+function mapItemForFilter(r) {
+    const t = window.translateBarcode(r.qrcode);
+    const custAktual = r.customer_aktual || t.customer || '-';
+    const custEstimasi = r.customer_estimasi || '-';
+    const customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku) || '-';
+    const pjgFormatted = formatPanjang(r.panjang || t.panjang);
+
+    return {
+        qrcode: r.qrcode,
+        customerKeluar: customerKeluar,
+        customerAktual: custAktual,
+        customerEstimasi: custEstimasi,
+        jenisItem: r.jenis_item || t.jenisItem || '-',
+        namaItem: r.nama_item || t.namaItem || '-',
+        panjang: pjgFormatted,
+        grade: r.grade || t.grade || '-',
+        dus: r.dus || t.dus || '-',
+        shading: r.shading || t.shading || '-',
+        pic: r.pic_keluar || r.pic_input || '-',
+        keterangan: r.keterangan || '-',
+        created_at: r.created_at,
+        tglProduksi: t.tglProduksi || '-',
+        mesin: t.mesin || '-',
+        shift: t.shift || '-',
+        area: r.area || '-'
+    };
+}
+
+function matchesActiveFilters(item) {
+    const f = {
+        custKeluar: document.getElementById('fs-cust-keluar')?.value || '',
+        qr: document.getElementById('fs-qr')?.value.toLowerCase() || '',
+        custAktual: document.getElementById('fs-cust-aktual')?.value || '',
+        custEst: document.getElementById('fs-cust-est')?.value || '',
+        jenis: document.getElementById('fs-jenis')?.value || '',
+        nama: document.getElementById('fs-nama')?.value || '',
+        pjg: document.getElementById('fs-pjg')?.value || '',
+        grade: document.getElementById('fs-grade')?.value || '',
+        dus: document.getElementById('fs-dus')?.value || '',
+        shading: document.getElementById('fs-shading')?.value || '',
+        pic: document.getElementById('fs-pic')?.value || '',
+        ket: document.getElementById('fs-ket')?.value.toLowerCase() || ''
+    };
+
+    if (f.custKeluar && item.customerKeluar !== f.custKeluar) return false;
+    if (f.qr && !item.qrcode.toLowerCase().includes(f.qr)) return false;
+    if (f.custAktual && item.customerAktual !== f.custAktual) return false;
+    if (f.custEst && item.customerEstimasi !== f.custEst) return false;
+    if (f.jenis && item.jenisItem !== f.jenis) return false;
+    if (f.nama && item.namaItem !== f.nama) return false;
+    if (f.pjg && item.panjang !== f.pjg) return false;
+    if (f.grade && item.grade !== f.grade) return false;
+    if (f.dus && item.dus !== f.dus) return false;
+    if (f.shading && item.shading !== f.shading) return false;
+    if (f.pic && item.pic !== f.pic) return false;
+    if (f.ket && !item.keterangan.toLowerCase().includes(f.ket)) return false;
+
+    return true;
+}
 
 function renderMobileView() {
     const container = document.getElementById('view-mobile');
     const targetDate = document.getElementById('filter-date-mobile').value;
 
-    // 1. Filter Data (Tanggal + Filter Sidebar)
-    let mobileData = rawDataRaw.filter(r => {
-        const rowDate = r.created_at.split('T')[0];
-        if (rowDate !== targetDate) return false;
+    let targetData = modeSekarang === 'hold' ? holdDataRaw : rawDataRaw;
 
-        // Terapkan filter sidebar jika ada
-        const t = window.translateBarcode(r.qrcode);
-        const custAktual = r.customer_aktual || t.customer || '-';
-        const custEstimasi = r.customer_estimasi || '-';
-        const customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku);
+    // Filter Tanggal dan Sidebar Filter
+    let mobileData = [];
+    targetData.forEach(r => {
+        const rowDate = (r.created_at || '').split('T')[0];
+        if (targetDate && rowDate !== targetDate) return;
 
-        const sv = {
-            'col-status': 'VERIFIED', 
-            'col-tujuan': customerKeluar,
-            'col-customer': custAktual,
-            'col-estimasi': custEstimasi,
-            'col-qr': r.qrcode,
-            'col-jenis': t.jenisItem,
-            'col-nama': t.namaItem,
-            'col-pjg': t.panjang,
-            'col-grade': t.grade,
-            'col-dus': t.dus,
-            'col-shading': t.shading
-        };
-
-        for (let col in activeFilters) {
-            const allowed = activeFilters[col];
-            if (!allowed.includes(sv[col])) return false;
+        const mapped = mapItemForFilter(r);
+        if (matchesActiveFilters(mapped)) {
+            mobileData.push(mapped);
         }
-        return true;
     });
 
     if (mobileData.length === 0) {
         container.innerHTML = `
-            <div class="flex flex-col items-center justify-center h-48 bg-white rounded-xl border border-slate-200 shadow-sm mt-4">
-                <i data-lucide="folder-search" class="w-12 h-12 text-slate-300 mb-2"></i>
-                <p class="text-sm font-bold text-slate-500">Tidak ada pengiriman pada tanggal ini.</p>
+            <div class="flex flex-col items-center justify-center h-56 bg-white rounded-2xl border border-slate-200 shadow-sm mt-4 p-6 text-center">
+                <i data-lucide="package-x" class="w-12 h-12 text-slate-300 mb-2"></i>
+                <h4 class="font-bold text-slate-700 text-sm">Tidak ada data keluar</h4>
+                <p class="text-xs text-slate-400 mt-1">Coba sesuaikan tanggal atau reset filter.</p>
             </div>`;
         lucide.createIcons();
         return;
@@ -238,27 +327,32 @@ function renderMobileView() {
 
     let html = '';
 
-    // LEVEL 1: CUSTOMER
+    // ==========================================
+    // LEVEL 1: CUSTOMER KELUAR
+    // ==========================================
     if (mobileLevel === 1) {
         let custMap = {};
         mobileData.forEach(r => {
-            let cust = r.customer_keluar || extractPOFromSKU(r.id_sku) || '-';
+            let cust = r.customerKeluar || '-';
             if(!custMap[cust]) custMap[cust] = 0;
             custMap[cust]++;
         });
 
-        html += `<h3 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-2 px-1">Daftar Pengiriman (Customer)</h3>`;
+        html += `<div class="flex justify-between items-center mb-1 px-1">
+            <h3 class="text-xs font-black text-slate-500 uppercase tracking-wider">Daftar Pengiriman (Customer)</h3>
+            <span class="text-xs font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">${mobileData.length} Total Dus</span>
+        </div>`;
         
         Object.keys(custMap).sort().forEach(cust => {
             html += `
                 <div onclick="goToMobileLevel2('${cust}')" class="bg-white border border-blue-200 p-4 rounded-xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-blue-50">
                     <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 shadow-inner">
                             <i data-lucide="truck" class="w-5 h-5"></i>
                         </div>
                         <div class="flex flex-col">
-                            <h4 class="font-black text-slate-800 text-base uppercase">${cust}</h4>
-                            <p class="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded w-max mt-1 border border-blue-100">Total: ${custMap[cust]} Dus</p>
+                            <h4 class="font-black text-slate-800 text-base uppercase leading-tight">${cust}</h4>
+                            <p class="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded w-max mt-1 border border-blue-100">${custMap[cust]} Dus</p>
                         </div>
                     </div>
                     <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
@@ -266,27 +360,28 @@ function renderMobileView() {
             `;
         });
     } 
-    // LEVEL 2: ITEM SPEC
+    // ==========================================
+    // LEVEL 2: SPESIFIKASI ITEM
+    // ==========================================
     else if (mobileLevel === 2) {
         let itemMap = {};
         mobileData.forEach(r => {
-            let cust = r.customer_keluar || extractPOFromSKU(r.id_sku) || '-';
-            if (cust !== mobileSelectedCust) return;
+            if (r.customerKeluar !== mobileSelectedCust) return;
 
-            const t = window.translateBarcode(r.qrcode);
-            let key = `${t.namaItem}_${t.panjang}_${t.grade}_${t.dus}`;
-            
+            let key = `${r.namaItem}_${r.panjang}_${r.grade}_${r.dus}`;
             if(!itemMap[key]) {
-                itemMap[key] = { nama: t.namaItem, pjg: t.panjang, grade: t.grade, dus: t.dus, qty: 0 };
+                itemMap[key] = { nama: r.namaItem, pjg: r.panjang, grade: r.grade, dus: r.dus, qty: 0 };
             }
             itemMap[key].qty++;
         });
 
         html += `
             <div class="flex items-center gap-3 mb-2 px-1">
-                <button onclick="goBackMobile()" class="p-1.5 bg-white border border-slate-300 rounded-md shadow-sm hover:bg-slate-50 active:scale-95 transition"><i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i></button>
+                <button onclick="goBackMobile()" class="p-2 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1 text-xs font-bold text-slate-700">
+                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
+                </button>
                 <div class="flex flex-col">
-                    <span class="text-[10px] font-black text-slate-400 uppercase leading-none">Customer</span>
+                    <span class="text-[10px] font-black text-slate-400 uppercase leading-none">Customer Tujuan</span>
                     <span class="text-sm font-black text-blue-700 uppercase leading-tight">${mobileSelectedCust}</span>
                 </div>
             </div>
@@ -297,12 +392,12 @@ function renderMobileView() {
             html += `
                 <div onclick="goToMobileLevel3('${key}')" class="bg-white border border-emerald-200 p-4 rounded-xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-emerald-50">
                     <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                        <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 shadow-inner">
                             <i data-lucide="box" class="w-5 h-5"></i>
                         </div>
                         <div class="flex flex-col">
                             <h4 class="font-black text-slate-800 text-sm leading-snug">${item.nama} - ${item.pjg} - ${item.grade} - ${item.dus}</h4>
-                            <p class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded w-max mt-1 border border-emerald-100">Qty: ${item.qty} Dus</p>
+                            <p class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded w-max mt-1 border border-emerald-100">${item.qty} Dus</p>
                         </div>
                     </div>
                     <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
@@ -310,18 +405,18 @@ function renderMobileView() {
             `;
         });
     }
+    // ==========================================
     // LEVEL 3: SHADING
+    // ==========================================
     else if (mobileLevel === 3) {
         let shadingMap = {};
         mobileData.forEach(r => {
-            let cust = r.customer_keluar || extractPOFromSKU(r.id_sku) || '-';
-            if (cust !== mobileSelectedCust) return;
+            if (r.customerKeluar !== mobileSelectedCust) return;
 
-            const t = window.translateBarcode(r.qrcode);
-            let key = `${t.namaItem}_${t.panjang}_${t.grade}_${t.dus}`;
+            let key = `${r.namaItem}_${r.panjang}_${r.grade}_${r.dus}`;
             if (key !== mobileSelectedItem) return;
 
-            let shading = t.shading || '-';
+            let shading = r.shading || '-';
             if(!shadingMap[shading]) shadingMap[shading] = 0;
             shadingMap[shading]++;
         });
@@ -331,9 +426,11 @@ function renderMobileView() {
 
         html += `
             <div class="flex items-center gap-3 mb-2 px-1">
-                <button onclick="goBackMobile()" class="p-1.5 bg-white border border-slate-300 rounded-md shadow-sm hover:bg-slate-50 active:scale-95 transition"><i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i></button>
+                <button onclick="goBackMobile()" class="p-2 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1 text-xs font-bold text-slate-700">
+                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
+                </button>
                 <div class="flex flex-col">
-                    <span class="text-[10px] font-black text-slate-400 uppercase leading-none">Rincian Item</span>
+                    <span class="text-[10px] font-black text-slate-400 uppercase leading-none">${mobileSelectedCust}</span>
                     <span class="text-xs font-black text-emerald-700 uppercase leading-tight">${displayItem}</span>
                 </div>
             </div>
@@ -341,18 +438,106 @@ function renderMobileView() {
 
         Object.keys(shadingMap).sort().forEach(shading => {
             html += `
-                <div class="bg-white border border-amber-200 p-4 rounded-xl flex justify-between items-center shadow-sm">
+                <div onclick="goToMobileLevel4('${shading}')" class="bg-white border border-amber-200 p-4 rounded-xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-amber-50">
                     <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                        <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 shadow-inner">
                             <i data-lucide="palette" class="w-5 h-5"></i>
                         </div>
                         <div class="flex flex-col">
                             <span class="text-[10px] font-black text-slate-400 uppercase">Shading</span>
-                            <h4 class="font-black text-slate-800 text-base">${shading}</h4>
+                            <h4 class="font-black text-slate-800 text-base leading-tight">${shading}</h4>
+                            <span class="text-[10px] font-bold text-amber-700 mt-0.5">Klik untuk melihat fisik kardus</span>
                         </div>
                     </div>
-                    <div class="bg-amber-50 border border-amber-200 px-3 py-1 rounded-lg">
-                        <span class="text-sm font-black text-amber-700">${shadingMap[shading]} Dus</span>
+                    <div class="flex items-center gap-3">
+                        <div class="bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">
+                            <span class="text-sm font-black text-amber-700">${shadingMap[shading]} Dus</span>
+                        </div>
+                        <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    // ==========================================
+    // REVISI LEVEL 4: DETAIL KARDUS FISIK (CARD VIEW)
+    // ==========================================
+    else if (mobileLevel === 4) {
+        let detailItems = mobileData.filter(r => {
+            if (r.customerKeluar !== mobileSelectedCust) return false;
+            let key = `${r.namaItem}_${r.panjang}_${r.grade}_${r.dus}`;
+            if (key !== mobileSelectedItem) return false;
+            if (r.shading !== mobileSelectedShading) return false;
+            return true;
+        });
+
+        let itemParts = mobileSelectedItem.split('_');
+        let displayItem = `${itemParts[0]} - ${itemParts[1]} - ${itemParts[2]} - ${itemParts[3]}`;
+
+        html += `
+            <div class="flex items-center gap-3 mb-2 px-1">
+                <button onclick="goBackMobile()" class="p-2 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1 text-xs font-bold text-slate-700">
+                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
+                </button>
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-black text-slate-400 uppercase leading-none">${mobileSelectedCust} • Shading: ${mobileSelectedShading}</span>
+                    <span class="text-xs font-black text-blue-700 uppercase leading-tight">${displayItem} (${detailItems.length} Kardus)</span>
+                </div>
+            </div>
+        `;
+
+        let count = detailItems.length;
+
+        detailItems.forEach(d => {
+            const waktuKeluar = formatWIB(d.created_at);
+
+            html += `
+                <div class="bg-white border border-slate-300 rounded-xl p-4 mb-1 relative transition w-full flex flex-col shadow-sm">
+                    
+                    <div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-full bg-slate-800 text-white flex items-center justify-center font-black text-base shadow-inner">${count--}</div>
+                            <div class="flex flex-col">
+                                <span class="font-black text-base text-rose-700 leading-none uppercase">${d.customerKeluar}</span>
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Customer Tujuan</span>
+                            </div>
+                        </div>
+                        <span class="font-bold px-2.5 py-1 text-[10px] rounded-md border bg-emerald-600 text-white border-emerald-700 shadow-sm">KELUAR</span>
+                    </div>
+                    
+                    <div class="flex flex-col gap-1 mb-3">
+                        <div class="font-mono font-black text-slate-900 text-sm break-all leading-tight bg-slate-100 p-2 rounded-lg border border-slate-200 text-center">${d.qrcode}</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-x-2 gap-y-3 mb-3">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-slate-400 uppercase">Waktu Keluar</span>
+                            <span class="text-xs font-bold text-slate-700">${waktuKeluar}</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-slate-400 uppercase">Produksi</span>
+                            <span class="text-xs font-bold text-slate-700">${d.tglProduksi} - ${d.mesin} - ${d.shift}</span>
+                        </div>
+                        <div class="flex flex-col col-span-2 bg-blue-50 p-2.5 rounded-lg border border-blue-100">
+                            <span class="text-[10px] font-black text-blue-500 uppercase mb-0.5">Spesifikasi Item</span>
+                            <span class="text-sm font-black text-slate-900 leading-snug">
+                                ${d.namaItem} - ${d.panjang} - ${d.grade} - ${d.dus}
+                            </span>
+                            <span class="text-xs font-bold text-blue-700 mt-0.5">Shading: ${d.shading}</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-slate-400 uppercase">Customer Aktual</span>
+                            <span class="text-xs font-bold text-orange-600 uppercase">${d.customerAktual}</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-slate-400 uppercase">Customer Estimasi</span>
+                            <span class="text-xs font-bold text-purple-600 uppercase">${d.customerEstimasi}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-[11px] font-medium text-slate-500">
+                        <span>Ket: <strong class="text-slate-700">${d.keterangan}</strong></span>
+                        <span class="uppercase text-[10px] font-bold text-slate-400">PIC: ${d.pic}</span>
                     </div>
                 </div>
             `;
@@ -364,9 +549,123 @@ function renderMobileView() {
 }
 
 // ========================================================
-// LOGIKA TABEL STANDAR (QR, ITEM, JASPER, HOLD)
+// LOGIKA FILTER SIDEBAR (DROPDOWN DINAMIS)
 // ========================================================
+function updateFilterDropdowns() {
+    let targetData = modeSekarang === 'hold' ? holdDataRaw : rawDataRaw;
 
+    const fields = [
+        { id: 'fs-cust-keluar', key: 'customerKeluar' },
+        { id: 'fs-cust-aktual', key: 'customerAktual' },
+        { id: 'fs-cust-est', key: 'customerEstimasi' },
+        { id: 'fs-jenis', key: 'jenisItem' },
+        { id: 'fs-nama', key: 'namaItem' },
+        { id: 'fs-pjg', key: 'panjang' },
+        { id: 'fs-grade', key: 'grade' },
+        { id: 'fs-dus', key: 'dus' },
+        { id: 'fs-shading', key: 'shading' },
+        { id: 'fs-pic', key: 'pic' }
+    ];
+
+    let mappedData = targetData.map(mapItemForFilter);
+
+    fields.forEach(field => {
+        const select = document.getElementById(field.id);
+        if (!select) return;
+        
+        const currentVal = select.value;
+        const uniqueVals = [...new Set(mappedData.map(d => d[field.key] || '-'))].filter(x => x && x !== '-').sort();
+
+        let html = '<option value="">-- Semua --</option>';
+        uniqueVals.forEach(val => {
+            html += `<option value="${val}">${val}</option>`;
+        });
+        select.innerHTML = html;
+
+        if (uniqueVals.includes(currentVal)) {
+            select.value = currentVal;
+        }
+    });
+}
+
+window.resetFilterRiwayat = function() {
+    ['fs-cust-keluar', 'fs-qr', 'fs-cust-aktual', 'fs-cust-est', 'fs-jenis', 'fs-nama', 'fs-pjg', 'fs-grade', 'fs-dus', 'fs-shading', 'fs-pic', 'fs-ket'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.value = '';
+    });
+    saringTabelRiwayat();
+    toggleSidebarFilter();
+};
+
+window.saringTabelRiwayat = function() {
+    if (modeSekarang === 'mobile') {
+        renderMobileView();
+    } else {
+        saringTabelDesktop();
+    }
+};
+
+function saringTabelDesktop() {
+    const f = {
+        custKeluar: document.getElementById('fs-cust-keluar')?.value || '',
+        qr: document.getElementById('fs-qr')?.value.toLowerCase() || '',
+        custAktual: document.getElementById('fs-cust-aktual')?.value || '',
+        custEst: document.getElementById('fs-cust-est')?.value || '',
+        jenis: document.getElementById('fs-jenis')?.value || '',
+        nama: document.getElementById('fs-nama')?.value || '',
+        pjg: document.getElementById('fs-pjg')?.value || '',
+        grade: document.getElementById('fs-grade')?.value || '',
+        dus: document.getElementById('fs-dus')?.value || '',
+        shading: document.getElementById('fs-shading')?.value || '',
+        pic: document.getElementById('fs-pic')?.value || '',
+        ket: document.getElementById('fs-ket')?.value.toLowerCase() || ''
+    };
+
+    document.querySelectorAll('.text-row').forEach(row => {
+        let show = true;
+
+        const checkMatch = (colCls, filterVal) => {
+            if(!filterVal) return true;
+            const cell = row.querySelector('.' + colCls);
+            if(!cell) return true;
+            let val = cell.getAttribute('data-search') || cell.innerText.trim();
+            return val === filterVal;
+        };
+
+        if(!checkMatch('col-tujuan', f.custKeluar)) show = false;
+        if(!checkMatch('col-customer', f.custAktual)) show = false;
+        if(!checkMatch('col-estimasi', f.custEst)) show = false;
+        if(!checkMatch('col-jenis', f.jenis)) show = false;
+        if(!checkMatch('col-nama', f.nama)) show = false;
+        if(!checkMatch('col-pjg', f.pjg)) show = false;
+        if(!checkMatch('col-grade', f.grade)) show = false;
+        if(!checkMatch('col-dus', f.dus)) show = false;
+        if(!checkMatch('col-shading', f.shading)) show = false;
+        if(!checkMatch('col-pic', f.pic)) show = false;
+
+        if (show && f.qr) {
+            const cell = row.querySelector('.col-qr');
+            if (cell && !cell.innerText.toLowerCase().includes(f.qr)) show = false;
+        }
+
+        if (show && f.ket) {
+            const cell = row.querySelector('.col-ket');
+            if (cell && !cell.innerText.toLowerCase().includes(f.ket)) show = false;
+        }
+
+        if (show) row.classList.remove('filtered-out');
+        else row.classList.add('filtered-out');
+    });
+
+    selectAllState = 0;
+    updateSelectAllUI();
+    currentPage = 1; 
+    applyPagination();
+}
+
+// ========================================================
+// LOGIKA TABEL DESKTOP (QR, ITEM, JASPER, HOLD)
+// ========================================================
 function sortTable(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-keluar');
     const rows = Array.from(tbody.querySelectorAll('tr.text-row'));
@@ -500,12 +799,6 @@ function applyFilterForCurrentCol() {
     closeFilterMenu(); saringTabelExcel(); updateFilterIcons();
 }
 function saringTabelExcel() {
-    if (modeSekarang === 'mobile') {
-        renderMobileView();
-        updateFilterIcons();
-        return;
-    }
-
     document.querySelectorAll('.text-row').forEach(row => {
         let show = true;
         for (let colClass in activeFilters) {
@@ -527,9 +820,7 @@ function updateFilterIcons() {
     }
 }
 
-// ========================================================
-// TRI-STATE CHECKBOX LOGIC
-// ========================================================
+// Tri-State Checkbox
 window.cycleSelectAll = function() {
     selectAllState = (selectAllState + 1) % 3;
     updateSelectAllUI();
@@ -698,14 +989,15 @@ function renderHeaderDanTabel() {
         if(targetData.length === 0) { tbody.innerHTML = '<tr><td colspan="17" class="p-10 text-center font-medium text-slate-400">Tidak ada data.</td></tr>'; applyPagination(); return; }
         
         let h = '';
-        targetData.forEach((r, i) => {
+        targetData.forEach((r) => {
             const dt = new Date(r.created_at);
             const tglKeluar = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
             const td = window.translateBarcode(r.qrcode);
             
             const custAktual = r.customer_aktual || td.customer || '-';
             const custEstimasi = r.customer_estimasi || '-';
-            const customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku); 
+            const customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku) || '-'; 
+            const pjgFormatted = formatPanjang(r.panjang || td.panjang);
 
             h += `
                 <tr class="${rowClassBase}">
@@ -717,7 +1009,7 @@ function renderHeaderDanTabel() {
                     <td class="px-4 py-3 font-medium text-slate-600 text-left col-shift" data-search="${td.shift}">${td.shift}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${td.jenisItem}">${td.jenisItem}</td>
                     <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${td.namaItem}">${td.namaItem}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${td.panjang}">${td.panjang}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${pjgFormatted}">${pjgFormatted}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${td.grade}">${td.grade}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${td.dus}">${td.dus}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${td.shading}">${td.shading}</td>
@@ -761,12 +1053,13 @@ function renderHeaderDanTabel() {
             let ket = r.keterangan || 'TANPA_KETERANGAN';
             let custAktual = r.customer_aktual || t.customer || '-';
             let custEstimasi = r.customer_estimasi || '-';
-            let customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku);
+            let customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku) || '-';
+            let pjgFormatted = formatPanjang(r.panjang || t.panjang);
             
-            let key = `${t.jenisItem}_${n}_${t.panjang}_${t.grade}_${t.dus}_${t.shading}_${custAktual}_${custEstimasi}_${customerKeluar}_${t.tglProduksi}_${t.mesin}_${t.shift}_${ket}`;
+            let key = `${t.jenisItem}_${n}_${pjgFormatted}_${t.grade}_${t.dus}_${t.shading}_${custAktual}_${custEstimasi}_${customerKeluar}_${t.tglProduksi}_${t.mesin}_${t.shift}_${ket}`;
             
             if(!groups[key]) {
-                groups[key] = { ...t, displayNama: n, qty: 0, qrcodes: [], tj: customerKeluar, ket: ket, custAktual: custAktual, custEstimasi: custEstimasi };
+                groups[key] = { ...t, panjang: pjgFormatted, displayNama: n, qty: 0, qrcodes: [], tj: customerKeluar, ket: ket, custAktual: custAktual, custEstimasi: custEstimasi };
             }
             groups[key].qty++; 
             groups[key].qrcodes.push(r.qrcode);
@@ -776,7 +1069,7 @@ function renderHeaderDanTabel() {
         if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="15" class="p-10 text-center font-medium text-slate-400">Kosong.</td></tr>'; applyPagination(); return; }
 
         let h = '';
-        arr.forEach((r, i) => {
+        arr.forEach((r) => {
             const displayKet = (r.ket === 'TANPA_KETERANGAN') ? '-' : r.ket; 
             h += `
                 <tr class="${rowClassBase}">
@@ -801,7 +1094,7 @@ function renderHeaderDanTabel() {
     }
     lucide.createIcons(); 
     updateSelectAllUI();
-    saringTabelExcel();
+    saringTabelDesktop();
 }
 
 async function aksiMassal(tipe) {
@@ -910,8 +1203,9 @@ async function eksekusiCancelHold() {
             item.id_sku = parts.join('_');
             
             let [a, jenis, nama, pjg, grade, dus, shading] = parts;
-            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${customerAktual}_${customerEstimasi}`;
-            if(!aktualUpdates[key]) aktualUpdates[key] = { nama_item: nama, pjg: pjg, grade: grade, dus: dus, shading: shading, customer_aktual: customerAktual, customer_estimasi: customerEstimasi, qty: 0 };
+            let pjgFormatted = formatPanjang(pjg);
+            let key = `${nama}_${pjgFormatted}_${grade}_${dus}_${shading}_${customerAktual}_${customerEstimasi}`;
+            if(!aktualUpdates[key]) aktualUpdates[key] = { nama_item: nama, pjg: pjgFormatted, grade: grade, dus: dus, shading: shading, customer_aktual: customerAktual, customer_estimasi: customerEstimasi, qty: 0 };
             aktualUpdates[key].qty++;
         }
 
@@ -929,11 +1223,22 @@ async function eksekusiCancelHold() {
 
         for(let key in aktualUpdates) {
             let u = aktualUpdates[key];
-            const {data: curData} = await db.from('stok_aktual').select('id, qty').eq('nama_item', u.nama_item).eq('pjg', u.pjg).eq('grade', u.grade).eq('dus', u.dus).eq('shading', u.shading).eq('customer_aktual', u.customer_aktual).eq('customer_estimasi', u.customer_estimasi).single();
+            const {data: curData} = await db.from('stok_aktual').select('id, qty').eq('nama_item', u.nama_item).eq('panjang', u.pjg).eq('grade', u.grade).eq('dus', u.dus).eq('shading', u.shading).eq('area', areaCancel).eq('customer_aktual', u.customer_aktual).eq('customer_estimasi', u.customer_estimasi).single();
             if(curData) {
                 await db.from('stok_aktual').update({qty: curData.qty + u.qty}).eq('id', curData.id);
             } else {
-                await db.from('stok_aktual').insert([{...u}]); 
+                await db.from('stok_aktual').insert([{
+                    area: areaCancel,
+                    nama_item: u.nama_item,
+                    panjang: u.pjg,
+                    grade: u.grade,
+                    dus: u.dus,
+                    shading: u.shading,
+                    customer_aktual: u.customer_aktual,
+                    customer_estimasi: u.customer_estimasi,
+                    keterangan: ketCancel,
+                    qty: u.qty
+                }]); 
             }
         }
 
