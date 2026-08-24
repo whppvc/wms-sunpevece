@@ -110,13 +110,13 @@
             </div>
 
             <!-- VIEW MOBILE (Folder / Drill-Down View) -->
-            <div id="view-mobile" class="flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-24">
+            <div id="view-mobile" class="flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-28">
                 <!-- Konten Mobile di-render oleh JS -->
             </div>
 
         </div>
         
-        <!-- FOOTER PAGINATION (Disembunyikan di Mode Mobile) -->
+        <!-- FOOTER PAGINATION (Mode Desktop) -->
         <div id="footer-pagination" class="hidden shrink-0 w-full bg-white p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
             <div class="flex items-center gap-2 flex-wrap justify-center">
                 <span class="bg-blue-50 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-medium ml-1">0</span></span>
@@ -141,6 +141,20 @@
                 </div>
             </div>
         </div>
+
+        <!-- REVISI: FOOTER FREEZE KHUSUS LEVEL 4 MOBILE (PILIH SEMUA & TOMBOL CANCEL KELUAR) -->
+        <div id="mobile-lvl4-footer" class="hidden shrink-0 w-full bg-white px-4 py-3 z-30 shadow-[0_-5px_20px_rgba(0,0,0,0.12)] border-t border-slate-300 flex justify-between items-center">
+            <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                <input type="checkbox" id="cb-all-lvl4" onchange="toggleSelectAllLvl4(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-300">
+                <span class="text-xs font-black text-slate-700 uppercase tracking-wide">Pilih Semua</span>
+            </label>
+
+            <button id="btn-cancel-mobile-lvl4" onclick="cancelKeluarMobile()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 transition border-b-4 border-rose-900 cursor-pointer">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                <span>Cancel Keluar</span>
+            </button>
+        </div>
+
     </div>
 
     <!-- MODAL CANCEL KELUAR (RETURN STOK DARI TABEL HOLD) -->
