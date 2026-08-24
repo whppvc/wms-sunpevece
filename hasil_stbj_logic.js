@@ -1,4 +1,8 @@
-let modeSekarang = 'qrcode'; 
+
+// Otomatis deteksi mode perangkat saat buka halaman (Layar < 640px = Mobile, >= 640px = Desktop QR Code)
+const isMobileDevice = window.innerWidth < 640;
+let modeSekarang = isMobileDevice ? 'mobile' : 'qrcode';
+
 let statusSekarang = 'ALL'; 
 let rawDataRaw = [];
 let stbjManualRaw = []; 
@@ -22,7 +26,22 @@ let selectedRows = new Set();
 
 let filterTimeout; 
 
+// State Khusus Mode Mobile (Drill-Down 6 Tingkat)
+let mobileLevel = 1; 
+let mobileSelectedSource = ''; // 'ALL', 'SCAN', 'MANUAL'
+let mobileSelectedTgl = '';
+let mobileSelectedMesinShift = ''; // `${mesin}_${shift}`
+let mobileSelectedItemSpec = ''; // `${nama}_${pjg}_${grade}_${dus}`
+let mobileSelectedShading = '';
+
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'admin'};
+
+function formatPanjang(pjg) {
+    if (!pjg || pjg === '-') return '-';
+    let str = String(pjg).trim().toUpperCase();
+    if (!str.endsWith('M')) str += 'M';
+    return str;
+}
 
 function formatWIB(isoString) {
     if (!isoString || isoString === '-') return '-';
@@ -57,64 +76,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const actionMenu = document.getElementById('mobile-action-menu');
         if (actionMenu && !actionMenu.classList.contains('hidden')) {
-            if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenuMobile"]')) {
+            if (!actionMenu.contains(e.target) && !actionMenu.closest('button[onclick^="toggleActionMenuMobile"]')) {
                 actionMenu.classList.add('hidden');
             }
         }
     });
-
-    const filterMenuEl = document.getElementById('excel-filter-menu');
-    if (filterMenuEl) {
-        filterMenuEl.addEventListener('keydown', function(e) {
-            const searchInput = document.getElementById('filter-search-input');
-            const visibleLabels = Array.from(document.querySelectorAll('.filter-val-item')).filter(lbl => lbl.style.display !== 'none');
-            const visibleCbs = visibleLabels.map(lbl => lbl.querySelector('input[type="checkbox"]'));
-            
-            const selectAllCb = document.getElementById('filter-select-all');
-            if(selectAllCb && selectAllCb.closest('label').style.display !== 'none') {
-                visibleCbs.unshift(selectAllCb);
-            }
-
-            const currentIndex = visibleCbs.indexOf(document.activeElement);
-            const jump = 8; 
-
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                if (document.activeElement === searchInput) {
-                    if (visibleCbs.length > 0) visibleCbs[0].focus();
-                } else if (currentIndex >= 0 && currentIndex < visibleCbs.length - 1) {
-                    visibleCbs[currentIndex + 1].focus();
-                }
-            } 
-            else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (currentIndex === 0) {
-                    searchInput.focus();
-                } else if (currentIndex > 0) {
-                    visibleCbs[currentIndex - 1].focus();
-                }
-            }
-            else if (e.key === 'PageDown') {
-                e.preventDefault();
-                if (document.activeElement === searchInput) {
-                    if (visibleCbs.length > 0) visibleCbs[Math.min(jump, visibleCbs.length - 1)].focus();
-                } else if (currentIndex >= 0) {
-                    visibleCbs[Math.min(currentIndex + jump, visibleCbs.length - 1)].focus();
-                }
-            }
-            else if (e.key === 'PageUp') {
-                e.preventDefault();
-                if (currentIndex >= 0) {
-                    if (currentIndex - jump < 0) searchInput.focus();
-                    else visibleCbs[currentIndex - jump].focus();
-                }
-            }
-            else if (e.key === 'Enter') {
-                e.preventDefault();
-                applyFilterForCurrentCol();
-            }
-        });
-    }
 
     setTimeout(async () => {
         await loadKamusDanJasper();
@@ -129,28 +95,15 @@ window.toggleActionMenuMobile = function(e) {
     if(menu) menu.classList.toggle('hidden');
 };
 
-function loadUserPreferences() {
-    const savedOrder = localStorage.getItem(`col_order_stbj_${currentUser.username}`);
-    if (savedOrder) { try { userColOrder = JSON.parse(savedOrder); } catch(e) { userColOrder = []; } }
-    
-    const savedHidden = localStorage.getItem(`col_hidden_stbj_${currentUser.username}`);
-    if (savedHidden) { try { hiddenCols = JSON.parse(savedHidden); } catch(e) { hiddenCols = []; } }
-    
-    const savedRows = localStorage.getItem('wms_rows_per_page');
-    if(savedRows) {
-        rowsPerPage = parseInt(savedRows);
-        const sel = document.getElementById('select-rows-per-page');
-        if(sel) {
-            let found = false;
-            Array.from(sel.options).forEach(opt => { if(opt.value == rowsPerPage) { opt.selected = true; found = true; } });
-            if(!found) {
-                sel.value = 'CUSTOM';
-                const inp = document.getElementById('input-custom-rows');
-                inp.classList.remove('hidden'); inp.value = rowsPerPage;
-            }
-        }
+window.toggleSidebarFilter = function() {
+    const sidebar = document.getElementById('sidebar-filter');
+    const overlay = document.getElementById('overlay-klik-luar');
+    sidebar.classList.toggle('translate-x-full');
+    overlay.classList.toggle('hidden');
+    if (!sidebar.classList.contains('translate-x-full')) {
+        updateFilterDropdowns();
     }
-}
+};
 
 function toggleSidebarKolom() {
     const sidebar = document.getElementById('sidebar-kolom');
@@ -163,118 +116,31 @@ function toggleSidebarKolom() {
 }
 
 function tutupPopups() {
-    document.getElementById('sidebar-kolom').classList.add('translate-x-full');
+    const sidebar = document.getElementById('sidebar-filter');
+    if(sidebar) sidebar.classList.add('translate-x-full');
+
+    const sidebarK = document.getElementById('sidebar-kolom');
+    if(sidebarK) sidebarK.classList.add('translate-x-full');
+
     document.getElementById('overlay-klik-luar').classList.add('hidden');
     document.getElementById('modal-list-katalog').classList.add('hidden');
     document.getElementById('modal-katalog').classList.add('hidden');
+    closeFilterMenu();
 }
 
-function renderDragList() {
-    const container = document.getElementById('kolom-drag-container');
-    container.innerHTML = '';
-    const headers = Array.from(document.querySelectorAll('#thead-stbj th')).filter(th => !th.classList.contains('col-cb') && !th.classList.contains('hidden') && !th.classList.contains('col-btn-edit'));
+function loadUserPreferences() {
+    const savedOrder = localStorage.getItem(`col_order_stbj_${currentUser.username}`);
+    if (savedOrder) { try { userColOrder = JSON.parse(savedOrder); } catch(e) { userColOrder = []; } }
     
-    headers.forEach(th => {
-        const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
-        const label = th.innerText.trim() || 'Kolom';
-        if(!colClass) return;
-
-        const isHidden = hiddenCols.includes(colClass);
-        const eyeIcon = isHidden ? 'eye-off' : 'eye';
-        const eyeColor = isHidden ? 'text-slate-300' : 'text-blue-600';
-
-        const div = document.createElement('div');
-        div.className = 'drag-item flex items-center justify-between p-3 bg-white border border-slate-200 rounded-md shadow-sm hover:border-blue-400 transition cursor-grab';
-        div.draggable = true; div.setAttribute('data-col', colClass);
-        div.innerHTML = `
-            <span class="font-bold text-slate-700 text-xs">${label}</span>
-            <div class="flex items-center gap-3">
-                <button onclick="toggleHideCol(event, '${colClass}')" class="p-1 hover:bg-slate-100 rounded"><i data-lucide="${eyeIcon}" class="w-4 h-4 ${eyeColor}"></i></button>
-                <i data-lucide="grip-vertical" class="w-4 h-4 text-slate-400"></i>
-            </div>
-        `;
-        div.addEventListener('dragstart', () => { div.classList.add('dragging'); });
-        div.addEventListener('dragend', () => { div.classList.remove('dragging'); });
-        container.appendChild(div);
-    });
-    lucide.createIcons();
-    container.addEventListener('dragover', e => {
-        e.preventDefault();
-        const afterElement = getDragAfterElement(container, e.clientY);
-        const draggable = document.querySelector('.dragging');
-        if (afterElement == null) { container.appendChild(draggable); } 
-        else { container.insertBefore(draggable, afterElement); }
-    });
-}
-
-window.toggleHideCol = function(e, colClass) {
-    e.stopPropagation();
-    if(hiddenCols.includes(colClass)) {
-        hiddenCols = hiddenCols.filter(c => c !== colClass);
-    } else {
-        hiddenCols.push(colClass);
+    const savedHidden = localStorage.getItem(`col_hidden_stbj_${currentUser.username}`);
+    if (savedHidden) { try { hiddenCols = JSON.parse(savedHidden); } catch(e) { hiddenCols = []; } }
+    
+    const savedRows = localStorage.getItem('wms_rows_per_page');
+    if(savedRows) {
+        rowsPerPage = parseInt(savedRows);
+        const sel = document.getElementById('select-rows-per-page');
+        if(sel) sel.value = rowsPerPage;
     }
-    renderDragList();
-};
-
-function getDragAfterElement(container, y) {
-    const draggableElements = [...container.querySelectorAll('.drag-item:not(.dragging)')];
-    return draggableElements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } 
-        else { return closest; }
-    }, { offset: Number.NEGATIVE_INFINITY }).element;
-}
-
-function simpanUrutanKolom() {
-    const items = document.querySelectorAll('.drag-item');
-    let newOrder = [];
-    items.forEach(item => newOrder.push(item.getAttribute('data-col')));
-    userColOrder = newOrder;
-    
-    localStorage.setItem(`col_order_stbj_${currentUser.username}`, JSON.stringify(newOrder));
-    localStorage.setItem(`col_hidden_stbj_${currentUser.username}`, JSON.stringify(hiddenCols));
-    
-    alert("Pengaturan kolom berhasil disimpan di perangkat ini!");
-    toggleSidebarKolom(); renderHeaderDanTabel(); 
-}
-
-function resetUrutanKolom() {
-    if(!confirm("Kembalikan pengaturan kolom ke default (bawaan sistem)?")) return;
-    userColOrder = [];
-    hiddenCols = [];
-    localStorage.removeItem(`col_order_stbj_${currentUser.username}`);
-    localStorage.removeItem(`col_hidden_stbj_${currentUser.username}`);
-    
-    alert("Pengaturan dikembalikan ke default.");
-    toggleSidebarKolom(); renderHeaderDanTabel();
-}
-
-function applyColumnOrder() {
-    if (!userColOrder || userColOrder.length === 0) return;
-    const table = document.getElementById('table-stbj-main');
-    const rows = table.querySelectorAll('tr');
-
-    rows.forEach(row => {
-        const cells = Array.from(row.children);
-        if (cells.length <= 1) return; 
-        const cbCell = cells.find(c => c.classList.contains('col-cb'));
-        const cellMap = {};
-        cells.forEach(c => {
-            const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
-            if (colClass) cellMap[colClass] = c;
-        });
-
-        row.innerHTML = ''; 
-        if (cbCell) row.appendChild(cbCell); 
-
-        userColOrder.forEach(colId => { if (cellMap[colId]) row.appendChild(cellMap[colId]); });
-        cells.forEach(c => {
-            const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
-            if (colClass !== 'col-cb' && !userColOrder.includes(colClass)) { row.appendChild(c); }
-        });
-    });
 }
 
 async function loadKamusDanJasper() {
@@ -282,11 +148,11 @@ async function loadKamusDanJasper() {
     try {
         const { data: dj } = await db.from('nama_jasper').select('*').order('created_at', {ascending: false});
         if(dj) jasperData = dj;
-    } catch(e) { console.log("Tabel nama_jasper belum siap."); }
+    } catch(e) {}
     try {
         const { data: dl } = await db.from('master_lis').select('*');
         if(dl) lisData = dl;
-    } catch(e) { console.log("Tabel master_lis belum siap."); }
+    } catch(e) {}
 }
 
 async function muatDataDariSupabase() {
@@ -310,7 +176,8 @@ async function muatDataDariSupabase() {
         if(error) throw error;
 
         rawDataRaw = data || [];
-        renderHeaderDanTabel();
+        updateFilterDropdowns();
+        setMode(modeSekarang);
     } catch(err) { 
         tbody.innerHTML = `<tr><td colspan="23" class="p-10 text-center text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; 
     }
@@ -321,54 +188,659 @@ function setMode(m) {
     const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
 
-    ['qrcode', 'item', 'jasper', 'manual'].forEach(tab => {
+    ['mobile', 'qrcode', 'item', 'jasper', 'manual'].forEach(tab => {
         const el = document.getElementById('tab-mode-' + tab);
-        if(el) el.className = (m === tab) ? activeClass : inactiveClass;
+        if(el) {
+            if(tab === 'mobile') {
+                el.className = (m === tab) ? 'sm:hidden ' + activeClass : 'sm:hidden ' + inactiveClass;
+            } else {
+                el.className = (m === tab) ? activeClass : inactiveClass;
+            }
+        }
     });
     
+    const isMobile = m === 'mobile';
+    document.getElementById('view-mobile').classList.toggle('hidden', !isMobile);
+    document.getElementById('view-table').classList.toggle('hidden', isMobile);
+    document.getElementById('desktop-toolbar').classList.toggle('hidden', isMobile);
+    document.getElementById('footer-pagination').classList.toggle('hidden', isMobile);
+
     const btnCollect = document.getElementById('btn-massal-collect');
     const btnCollectMob = document.getElementById('btn-massal-collect-mob');
     const btnHold = document.getElementById('btn-hold-mob');
     const btnHapus = document.getElementById('btn-hapus-mob');
-    
-    // REVISI: Cek apakah user adalah Creator
     const isCreator = currentUser && currentUser.role && currentUser.role.toLowerCase() === 'creator';
 
-    if (m === 'item' || m === 'jasper') {
-        if(btnCollect) btnCollect.classList.remove('hidden'); 
-        if(btnCollectMob) btnCollectMob.classList.remove('hidden'); 
-        if(btnHold) btnHold.classList.add('hidden');
-        if(btnHapus) btnHapus.classList.add('hidden');
-    } else if (m === 'manual') {
-        if(btnCollect) btnCollect.classList.add('hidden'); 
-        if(btnCollectMob) btnCollectMob.classList.add('hidden'); 
-        if(btnHold) btnHold.classList.add('hidden');
-        // REVISI: Tampilkan tombol hapus hanya untuk Creator
-        if(btnHapus) {
-            if(isCreator) btnHapus.classList.remove('hidden');
-            else btnHapus.classList.add('hidden');
+    if (!isMobile) {
+        if (m === 'item' || m === 'jasper') {
+            if(btnCollect) btnCollect.classList.remove('hidden'); 
+            if(btnCollectMob) btnCollectMob.classList.remove('hidden'); 
+            if(btnHold) btnHold.classList.add('hidden');
+            if(btnHapus) btnHapus.classList.add('hidden');
+        } else if (m === 'manual') {
+            if(btnCollect) btnCollect.classList.add('hidden'); 
+            if(btnCollectMob) btnCollectMob.classList.add('hidden'); 
+            if(btnHold) btnHold.classList.add('hidden');
+            if(btnHapus) btnHapus.classList.toggle('hidden', !isCreator);
+        } else {
+            if(btnCollect) btnCollect.classList.add('hidden'); 
+            if(btnCollectMob) btnCollectMob.classList.add('hidden'); 
+            if(btnHold) btnHold.classList.remove('hidden');
+            if(btnHapus) btnHapus.classList.toggle('hidden', !isCreator);
         }
+        renderHeaderDanTabel();
     } else {
-        if(btnCollect) btnCollect.classList.add('hidden'); 
-        if(btnCollectMob) btnCollectMob.classList.add('hidden'); 
-        if(btnHold) btnHold.classList.remove('hidden');
-        // REVISI: Tampilkan tombol hapus hanya untuk Creator
-        if(btnHapus) {
-            if(isCreator) btnHapus.classList.remove('hidden');
-            else btnHapus.classList.add('hidden');
-        }
+        mobileLevel = 1;
+        renderMobileView();
     }
-
-    const savedStatusFilter = activeFilters['col-status'];
-    activeFilters = {}; 
-    
-    if (m !== 'manual' && savedStatusFilter) {
-        activeFilters['col-status'] = savedStatusFilter;
-    }
-
-    renderHeaderDanTabel();
 }
 
+// ========================================================
+// LOGIKA MODE MOBILE (DRILL-DOWN 6 TINGKAT)
+// ========================================================
+function getAllUnifiedItems() {
+    let list = [];
+    (rawDataRaw || []).forEach(r => {
+        list.push({
+            source: 'SCAN',
+            tglProduksi: r.tgl_produksi || '-',
+            mesin: r.mesin || '-',
+            shift: r.shift || '-',
+            jenisItem: r.jenis_item || '-',
+            namaItem: r.nama_item || '-',
+            panjang: formatPanjang(r.panjang),
+            grade: r.grade || '-',
+            dus: r.dus || '-',
+            shading: r.shading || '-',
+            customer: r.customer || '-',
+            qty: 1,
+            qrcode: r.qrcode,
+            troli: r.troli || '-',
+            status: r.status || '-',
+            keterangan: r.keterangan || '-',
+            pic: r.pic_input || '-',
+            created_at: r.created_at
+        });
+    });
+
+    (stbjManualRaw || []).forEach(r => {
+        list.push({
+            source: 'MANUAL',
+            tglProduksi: r.tgl_produksi || '-',
+            mesin: r.mesin || '-',
+            shift: r.shift || '-',
+            jenisItem: r.jenis_item || '-',
+            namaItem: r.nama_item || '-',
+            panjang: formatPanjang(r.panjang),
+            grade: r.grade || '-',
+            dus: r.dus || '-',
+            shading: r.shading || '-',
+            customer: r.customer || '-',
+            qty: parseInt(r.qty) || 0,
+            qrcode: '-',
+            troli: '-',
+            status: 'MANUAL',
+            keterangan: r.keterangan || '-',
+            pic: r.pic || '-',
+            created_at: r.created_at
+        });
+    });
+
+    return list;
+}
+
+function matchesActiveFilters(item) {
+    const f = {
+        status: document.getElementById('fs-status')?.value || '',
+        qr: document.getElementById('fs-qr')?.value.toLowerCase() || '',
+        troli: document.getElementById('fs-troli')?.value || '',
+        mesin: document.getElementById('fs-mesin')?.value || '',
+        shift: document.getElementById('fs-shift')?.value || '',
+        jenis: document.getElementById('fs-jenis')?.value || '',
+        nama: document.getElementById('fs-nama')?.value || '',
+        pjg: document.getElementById('fs-pjg')?.value || '',
+        grade: document.getElementById('fs-grade')?.value || '',
+        dus: document.getElementById('fs-dus')?.value || '',
+        shading: document.getElementById('fs-shading')?.value || '',
+        customer: document.getElementById('fs-customer')?.value || '',
+        pic: document.getElementById('fs-pic')?.value || ''
+    };
+
+    if (f.status && item.status !== f.status) return false;
+    if (f.qr && !item.qrcode.toLowerCase().includes(f.qr)) return false;
+    if (f.troli && item.troli !== f.troli) return false;
+    if (f.mesin && item.mesin !== f.mesin) return false;
+    if (f.shift && item.shift !== f.shift) return false;
+    if (f.jenis && item.jenisItem !== f.jenis) return false;
+    if (f.nama && item.namaItem !== f.nama) return false;
+    if (f.pjg && item.panjang !== f.pjg) return false;
+    if (f.grade && item.grade !== f.grade) return false;
+    if (f.dus && item.dus !== f.dus) return false;
+    if (f.shading && item.shading !== f.shading) return false;
+    if (f.customer && item.customer !== f.customer) return false;
+    if (f.pic && item.pic !== f.pic) return false;
+
+    return true;
+}
+
+window.goToMobileLevel2 = function(source) {
+    mobileSelectedSource = source; // 'ALL', 'SCAN', 'MANUAL'
+    mobileLevel = 2;
+    renderMobileView();
+};
+
+window.goToMobileLevel3 = function(tgl) {
+    mobileSelectedTgl = tgl;
+    mobileLevel = 3;
+    renderMobileView();
+};
+
+window.goToMobileLevel4 = function(mesinShiftKey) {
+    mobileSelectedMesinShift = mesinShiftKey;
+    mobileLevel = 4;
+    renderMobileView();
+};
+
+window.goToMobileLevel5 = function(itemSpecKey) {
+    mobileSelectedItemSpec = itemSpecKey;
+    mobileLevel = 5;
+    renderMobileView();
+};
+
+window.goToMobileLevel6 = function(shading) {
+    mobileSelectedShading = shading;
+    mobileLevel = 6;
+    renderMobileView();
+};
+
+window.goBackMobile = function() {
+    if (mobileLevel > 1) {
+        mobileLevel--;
+        renderMobileView();
+    }
+};
+
+window.setMobileAllDate = function() {
+    const inputDate = document.getElementById('filter-date-mobile');
+    if(inputDate) inputDate.value = '';
+    renderMobileView();
+};
+
+function renderMobileView() {
+    const container = document.getElementById('view-mobile');
+    const targetDate = document.getElementById('filter-date-mobile')?.value || '';
+
+    // Ambil data gabungan & saring berdasarkan filter
+    let allItems = getAllUnifiedItems().filter(r => {
+        if (targetDate) {
+            const rowDate = (r.created_at || '').split('T')[0];
+            if (rowDate !== targetDate) return false;
+        }
+        return matchesActiveFilters(r);
+    });
+
+    // Toolbar Header Filter Mobile (Selalu ada di Level 1)
+    let toolbarHtml = `
+        <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-2 mb-2">
+            <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-xl p-1 shadow-inner">
+                <i data-lucide="calendar" class="w-4 h-4 text-slate-400 ml-1"></i>
+                <input type="date" id="filter-date-mobile" value="${targetDate}" onchange="renderMobileView()" class="p-1 text-xs font-bold text-slate-700 outline-none cursor-pointer bg-transparent">
+                <button onclick="setMobileAllDate()" class="px-2.5 py-1 ${targetDate === '' ? 'bg-blue-600 text-white font-black' : 'bg-slate-200 text-slate-700 font-bold'} hover:bg-blue-700 hover:text-white rounded-lg text-[10px] uppercase transition" title="Tampilkan Semua Tanggal">Semua</button>
+            </div>
+
+            <button onclick="toggleSidebarFilter()" class="px-4 py-2 bg-white rounded-xl border border-slate-300 shadow-sm active:scale-95 text-slate-700 font-bold text-xs hover:bg-slate-50 transition flex items-center gap-2">
+                <i data-lucide="filter" class="w-4 h-4 text-blue-600"></i>
+                <span>Filter</span>
+            </button>
+        </div>
+    `;
+
+    if (allItems.length === 0) {
+        container.innerHTML = toolbarHtml + `
+            <div class="flex flex-col items-center justify-center h-56 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center mt-1">
+                <i data-lucide="package-x" class="w-12 h-12 text-slate-300 mb-2"></i>
+                <h4 class="font-bold text-slate-700 text-sm">Tidak ada data STBJ</h4>
+                <p class="text-xs text-slate-400 mt-1">Sesuaikan tanggal atau reset filter untuk melihat data lainnya.</p>
+            </div>`;
+        lucide.createIcons();
+        return;
+    }
+
+    let html = '';
+
+    // ==========================================
+    // LEVEL 1: PILIHAN SUMBER DATA (A/B/C)
+    // ==========================================
+    if (mobileLevel === 1) {
+        let totalScan = 0;
+        let totalManual = 0;
+        allItems.forEach(r => {
+            if (r.source === 'SCAN') totalScan += r.qty;
+            else if (r.source === 'MANUAL') totalManual += r.qty;
+        });
+
+        html += toolbarHtml;
+        html += `<div class="flex justify-between items-center mb-1 px-1">
+            <h3 class="text-xs font-black text-slate-500 uppercase tracking-wider">Pilih Kategori STBJ</h3>
+            <span class="text-xs font-black text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">${totalScan + totalManual} Total Dus</span>
+        </div>`;
+
+        // Pilihan A: Gabungan
+        html += `
+            <div onclick="goToMobileLevel2('ALL')" class="bg-white border border-blue-200 p-4 rounded-2xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-blue-50">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                        <i data-lucide="layers" class="w-6 h-6"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-black text-blue-600 uppercase tracking-wider">Kategori A</span>
+                        <h4 class="font-black text-slate-800 text-base leading-tight">Hasil Scan + Manual</h4>
+                        <p class="text-[11px] font-bold text-slate-500 mt-1">${totalScan + totalManual} Dus Total</p>
+                    </div>
+                </div>
+                <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+            </div>
+        `;
+
+        // Pilihan B: Scan Saja
+        html += `
+            <div onclick="goToMobileLevel2('SCAN')" class="bg-white border border-indigo-200 p-4 rounded-2xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-indigo-50">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                        <i data-lucide="qr-code" class="w-6 h-6"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-black text-indigo-600 uppercase tracking-wider">Kategori B</span>
+                        <h4 class="font-black text-slate-800 text-base leading-tight">Hasil Scan Saja</h4>
+                        <p class="text-[11px] font-bold text-slate-500 mt-1">${totalScan} Dus dari Barcode</p>
+                    </div>
+                </div>
+                <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+            </div>
+        `;
+
+        // Pilihan C: Manual Saja
+        html += `
+            <div onclick="goToMobileLevel2('MANUAL')" class="bg-white border border-purple-200 p-4 rounded-2xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-purple-50">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                        <i data-lucide="keyboard" class="w-6 h-6"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-black text-purple-600 uppercase tracking-wider">Kategori C</span>
+                        <h4 class="font-black text-slate-800 text-base leading-tight">Input Manual Saja</h4>
+                        <p class="text-[11px] font-bold text-slate-500 mt-1">${totalManual} Dus dari Form</p>
+                    </div>
+                </div>
+                <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+            </div>
+        `;
+    }
+
+    // ==========================================
+    // LEVEL 2: TANGGAL PRODUKSI
+    // ==========================================
+    else if (mobileLevel === 2) {
+        let sourceLabel = mobileSelectedSource === 'ALL' ? 'Hasil Scan + Manual' : (mobileSelectedSource === 'SCAN' ? 'Hasil Scan Saja' : 'Manual Saja');
+
+        let dataLvl2 = allItems.filter(r => {
+            if (mobileSelectedSource === 'SCAN') return r.source === 'SCAN';
+            if (mobileSelectedSource === 'MANUAL') return r.source === 'MANUAL';
+            return true;
+        });
+
+        let tglMap = {};
+        dataLvl2.forEach(r => {
+            let tgl = r.tglProduksi || '-';
+            if(!tglMap[tgl]) tglMap[tgl] = 0;
+            tglMap[tgl] += r.qty;
+        });
+
+        html += `
+            <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center gap-3 mb-2">
+                <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
+                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
+                </button>
+                <div class="flex flex-col overflow-hidden">
+                    <span class="text-[10px] font-black text-slate-400 uppercase leading-none">Pilih Tanggal Produksi</span>
+                    <span class="text-base font-black text-blue-700 uppercase leading-snug truncate">${sourceLabel}</span>
+                </div>
+            </div>
+        `;
+
+        Object.keys(tglMap).sort().reverse().forEach(tgl => {
+            html += `
+                <div onclick="goToMobileLevel3('${tgl}')" class="bg-white border border-slate-200 p-4 rounded-2xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-slate-50">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 font-bold">
+                            <i data-lucide="calendar" class="w-5 h-5"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-slate-400 uppercase">Tanggal Produksi</span>
+                            <h4 class="font-black text-slate-800 text-base leading-tight">${tgl}</h4>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-black text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">${tglMap[tgl]} Dus</span>
+                        <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // ==========================================
+    // LEVEL 3: MESIN & SHIFT
+    // ==========================================
+    else if (mobileLevel === 3) {
+        let dataLvl3 = allItems.filter(r => {
+            if (mobileSelectedSource === 'SCAN' && r.source !== 'SCAN') return false;
+            if (mobileSelectedSource === 'MANUAL' && r.source !== 'MANUAL') return false;
+            return r.tglProduksi === mobileSelectedTgl;
+        });
+
+        let msMap = {};
+        dataLvl3.forEach(r => {
+            let key = `${r.mesin}_${r.shift}`;
+            if(!msMap[key]) msMap[key] = { mesin: r.mesin, shift: r.shift, qty: 0 };
+            msMap[key].qty += r.qty;
+        });
+
+        html += `
+            <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center gap-3 mb-2">
+                <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
+                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
+                </button>
+                <div class="flex flex-col overflow-hidden">
+                    <span class="text-[10px] font-black text-slate-400 uppercase leading-none">Pilih Mesin & Shift</span>
+                    <span class="text-base font-black text-blue-700 uppercase leading-snug truncate">Tgl Produksi: ${mobileSelectedTgl}</span>
+                </div>
+            </div>
+        `;
+
+        Object.keys(msMap).sort().forEach(key => {
+            let item = msMap[key];
+            html += `
+                <div onclick="goToMobileLevel4('${key}')" class="bg-white border border-slate-200 p-4 rounded-2xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-slate-50">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                            <i data-lucide="settings" class="w-5 h-5"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <h4 class="font-black text-slate-800 text-base leading-tight">Mesin ${item.mesin} • Shift ${item.shift}</h4>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase mt-0.5">Produksi Harian</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-black text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">${item.qty} Dus</span>
+                        <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // ==========================================
+    // LEVEL 4: SPESIFIKASI ITEM (NAMA-PJG-GRADE-DUS)
+    // ==========================================
+    else if (mobileLevel === 4) {
+        let [mSel, sSel] = mobileSelectedMesinShift.split('_');
+
+        let dataLvl4 = allItems.filter(r => {
+            if (mobileSelectedSource === 'SCAN' && r.source !== 'SCAN') return false;
+            if (mobileSelectedSource === 'MANUAL' && r.source !== 'MANUAL') return false;
+            return r.tglProduksi === mobileSelectedTgl && r.mesin === mSel && r.shift === sSel;
+        });
+
+        let itemMap = {};
+        dataLvl4.forEach(r => {
+            let key = `${r.namaItem}_${r.panjang}_${r.grade}_${r.dus}`;
+            if(!itemMap[key]) itemMap[key] = { nama: r.namaItem, pjg: r.panjang, grade: r.grade, dus: r.dus, jenis: r.jenisItem, qty: 0 };
+            itemMap[key].qty += r.qty;
+        });
+
+        html += `
+            <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center gap-3 mb-2">
+                <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
+                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
+                </button>
+                <div class="flex flex-col overflow-hidden">
+                    <span class="text-[10px] font-black text-slate-400 uppercase leading-none">Mesin ${mSel} • Shift ${sSel}</span>
+                    <span class="text-base font-black text-blue-700 uppercase leading-snug truncate">${mobileSelectedTgl}</span>
+                </div>
+            </div>
+        `;
+
+        Object.keys(itemMap).sort().forEach(key => {
+            let item = itemMap[key];
+            html += `
+                <div onclick="goToMobileLevel5('${key}')" class="bg-white border border-emerald-200 p-4 rounded-2xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-emerald-50">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                            <i data-lucide="box" class="w-5 h-5"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-emerald-600 uppercase">${item.jenis}</span>
+                            <h4 class="font-black text-slate-800 text-sm leading-snug">${item.nama} - ${item.pjg} - ${item.grade} - ${item.dus}</h4>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-black text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">${item.qty} Dus</span>
+                        <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // ==========================================
+    // LEVEL 5: SHADING
+    // ==========================================
+    else if (mobileLevel === 5) {
+        let [mSel, sSel] = mobileSelectedMesinShift.split('_');
+        let [namaSel, pjgSel, gradeSel, dusSel] = mobileSelectedItemSpec.split('_');
+
+        let dataLvl5 = allItems.filter(r => {
+            if (mobileSelectedSource === 'SCAN' && r.source !== 'SCAN') return false;
+            if (mobileSelectedSource === 'MANUAL' && r.source !== 'MANUAL') return false;
+            return r.tglProduksi === mobileSelectedTgl && r.mesin === mSel && r.shift === sSel &&
+                   r.namaItem === namaSel && r.panjang === pjgSel && r.grade === gradeSel && r.dus === dusSel;
+        });
+
+        let shadingMap = {};
+        dataLvl5.forEach(r => {
+            let sh = r.shading || '-';
+            if(!shadingMap[sh]) shadingMap[sh] = 0;
+            shadingMap[sh] += r.qty;
+        });
+
+        let displayItem = `${namaSel} - ${pjgSel} - ${gradeSel} - ${dusSel}`;
+
+        html += `
+            <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center gap-3 mb-2">
+                <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
+                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
+                </button>
+                <div class="flex flex-col overflow-hidden">
+                    <span class="text-[10px] font-black text-slate-400 uppercase leading-none">Pilih Shading</span>
+                    <span class="text-sm font-black text-blue-700 uppercase leading-snug truncate">${displayItem}</span>
+                </div>
+            </div>
+        `;
+
+        Object.keys(shadingMap).sort().forEach(shading => {
+            html += `
+                <div onclick="goToMobileLevel6('${shading}')" class="bg-white border border-amber-200 p-4 rounded-2xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-amber-50">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                            <i data-lucide="palette" class="w-5 h-5"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-slate-400 uppercase">Shading</span>
+                            <h4 class="font-black text-slate-800 text-base leading-tight">${shading}</h4>
+                            <span class="text-[10px] font-bold text-amber-700 mt-0.5">Klik untuk melihat detail item</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">
+                            <span class="text-sm font-black text-amber-700">${shadingMap[shading]} Dus</span>
+                        </div>
+                        <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // ==========================================
+    // LEVEL 6: PO & DETAIL KARDUS FISIK
+    // ==========================================
+    else if (mobileLevel === 6) {
+        let [mSel, sSel] = mobileSelectedMesinShift.split('_');
+        let [namaSel, pjgSel, gradeSel, dusSel] = mobileSelectedItemSpec.split('_');
+
+        let detailItems = allItems.filter(r => {
+            if (mobileSelectedSource === 'SCAN' && r.source !== 'SCAN') return false;
+            if (mobileSelectedSource === 'MANUAL' && r.source !== 'MANUAL') return false;
+            return r.tglProduksi === mobileSelectedTgl && r.mesin === mSel && r.shift === sSel &&
+                   r.namaItem === namaSel && r.panjang === pjgSel && r.grade === gradeSel && r.dus === dusSel &&
+                   r.shading === mobileSelectedShading;
+        });
+
+        let displayItem = `${namaSel} - ${pjgSel} - ${gradeSel} - ${dusSel}`;
+
+        html += `
+            <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center gap-3 mb-2">
+                <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
+                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
+                </button>
+                <div class="flex flex-col overflow-hidden">
+                    <span class="text-base font-black text-rose-700 uppercase leading-snug truncate">${displayItem}</span>
+                    <span class="text-xs sm:text-sm font-black text-slate-800 uppercase leading-snug truncate">Shading: <span class="text-amber-600">${mobileSelectedShading}</span> (${detailItems.length} Record)</span>
+                </div>
+            </div>
+        `;
+
+        let count = detailItems.length;
+
+        detailItems.forEach(d => {
+            const waktuSTBJ = formatWIB(d.created_at);
+
+            let badgeStatusClass = 'bg-blue-100 text-blue-700 border-blue-200';
+            if (d.status === 'IN GUDANG') badgeStatusClass = 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            else if (d.status.includes('HOLD')) badgeStatusClass = 'bg-amber-100 text-amber-700 border-amber-200';
+            else if (d.status === 'MANUAL') badgeStatusClass = 'bg-purple-100 text-purple-700 border-purple-200';
+
+            html += `
+                <div class="bg-white border border-slate-300 rounded-2xl p-4 mb-2 relative transition w-full flex flex-col shadow-sm">
+                    
+                    <div class="flex justify-between items-center mb-3 pb-2.5 border-b border-slate-100">
+                        <div class="flex items-center gap-2">
+                            <span class="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-black">${count--}</span>
+                            <span class="font-black text-sm text-orange-600 uppercase">Customer: ${d.customer}</span>
+                        </div>
+                        <span class="font-bold px-2.5 py-0.5 text-[10px] rounded-md border ${badgeStatusClass} uppercase">${d.status}</span>
+                    </div>
+                    
+                    ${d.qrcode !== '-' ? `
+                    <div class="font-mono font-black text-slate-900 text-sm break-all leading-tight bg-slate-100 p-2.5 rounded-xl border border-slate-200 text-center mb-3">
+                        ${d.qrcode}
+                    </div>` : `
+                    <div class="font-black text-purple-700 text-xs uppercase bg-purple-50 p-2 rounded-xl border border-purple-200 text-center mb-3">
+                        INPUT MANUAL (TANPA SCAN)
+                    </div>`}
+                    
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-slate-400 uppercase">Waktu Input / STBJ</span>
+                            <span class="font-bold text-slate-700">${waktuSTBJ}</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-slate-400 uppercase">Troli</span>
+                            <span class="font-black text-slate-800">${d.troli}</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-slate-400 uppercase">Qty Kardus</span>
+                            <span class="font-black text-emerald-700 text-sm">${d.qty} Dus</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-slate-400 uppercase">PIC Input</span>
+                            <span class="font-bold text-slate-700 uppercase">${d.pic}</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-2 pt-2 border-t border-slate-100 text-[11px] font-medium text-slate-500">
+                        Keterangan: <strong class="text-slate-700">${d.keterangan}</strong>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    container.innerHTML = html;
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ========================================================
+// LOGIKA FILTER SIDEBAR DROPDOWN LENGKAP
+// ========================================================
+function updateFilterDropdowns() {
+    const fields = [
+        { id: 'fs-status', key: 'status' },
+        { id: 'fs-troli', key: 'troli' },
+        { id: 'fs-mesin', key: 'mesin' },
+        { id: 'fs-shift', key: 'shift' },
+        { id: 'fs-jenis', key: 'jenisItem' },
+        { id: 'fs-nama', key: 'namaItem' },
+        { id: 'fs-pjg', key: 'panjang' },
+        { id: 'fs-grade', key: 'grade' },
+        { id: 'fs-dus', key: 'dus' },
+        { id: 'fs-shading', key: 'shading' },
+        { id: 'fs-customer', key: 'customer' },
+        { id: 'fs-pic', key: 'pic' }
+    ];
+
+    let allItems = getAllUnifiedItems();
+
+    fields.forEach(field => {
+        const select = document.getElementById(field.id);
+        if (!select) return;
+        
+        const currentVal = select.value;
+        const uniqueVals = [...new Set(allItems.map(d => d[field.key] || '-'))].filter(x => x && x !== '-').sort();
+
+        let html = '<option value="">-- Semua --</option>';
+        uniqueVals.forEach(val => {
+            html += `<option value="${val}">${val}</option>`;
+        });
+        select.innerHTML = html;
+
+        if (uniqueVals.includes(currentVal)) {
+            select.value = currentVal;
+        }
+    });
+}
+
+window.resetFilterSTBJ = function() {
+    ['fs-status', 'fs-qr', 'fs-troli', 'fs-mesin', 'fs-shift', 'fs-jenis', 'fs-nama', 'fs-pjg', 'fs-grade', 'fs-dus', 'fs-shading', 'fs-customer', 'fs-pic'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.value = '';
+    });
+    saringTabelSTBJ();
+    toggleSidebarFilter();
+};
+
+window.saringTabelSTBJ = function() {
+    if (modeSekarang === 'mobile') {
+        renderMobileView();
+    } else {
+        applyFilters();
+    }
+};
+
+// ========================================================
+// LOGIKA TABEL DESKTOP
+// ========================================================
 function switchStatusFilter(val) { 
     statusSekarang = val; 
     if(val === 'ALL') { delete activeFilters['col-status']; } 
@@ -379,10 +851,6 @@ function switchStatusFilter(val) {
     applyFilters();
     updateFilterIcons();
 }
-
-// ============================================================================
-// DATA-DRIVEN PIPELINE (MEMORI)
-// ============================================================================
 
 function buildProcessedData() {
     processedData = [];
@@ -412,7 +880,7 @@ function buildProcessedData() {
                     'col-shift': r.shift || '-',
                     'col-jenis': r.jenis_item || '-',
                     'col-nama': r.nama_item || '-',
-                    'col-pjg': r.panjang || '-',
+                    'col-pjg': formatPanjang(r.panjang),
                     'col-grade': r.grade || '-',
                     'col-dus': r.dus || '-',
                     'col-shading': r.shading || '-',
@@ -425,7 +893,6 @@ function buildProcessedData() {
     } else if (modeSekarang === 'manual') {
         processedData = stbjManualRaw.map(r => {
             const tglInput = formatWIB(r.created_at);
-            
             let n = r.nama_item || '-';
             let jName = n;
             if(jasperData && jasperData.length > 0) {
@@ -444,7 +911,7 @@ function buildProcessedData() {
                     'col-shift': r.shift || '-',
                     'col-nama': r.nama_item || '-',
                     'col-jasper': jName,
-                    'col-pjg': r.panjang || '-',
+                    'col-pjg': formatPanjang(r.panjang),
                     'col-grade': r.grade || '-',
                     'col-dus': r.dus || '-',
                     'col-shading': r.shading || '-',
@@ -478,12 +945,13 @@ function buildProcessedData() {
             if (itemStatus === 'STBJ' || itemStatus === 'SUDAH STBJ') itemStatus = 'SUDAH STBJ';
             else if (itemStatus === 'HOLD' || itemStatus === 'HOLD STBJ') itemStatus = 'HOLD STBJ';
             
-            let key = `${r.jenis_item}_${n}_${r.panjang}_${r.grade}_${r.dus}_${r.shading}_${cust}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}_${itemStatus}`;
+            let pjgFormatted = formatPanjang(r.panjang);
+            let key = `${r.jenis_item}_${n}_${pjgFormatted}_${r.grade}_${r.dus}_${r.shading}_${cust}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}_${itemStatus}`;
             
             if(!groups[key]) {
                 groups[key] = { 
                     jenisItem: r.jenis_item || '-', namaItemAsli: n, displayNama: jName, jasperId: jId, 
-                    panjang: r.panjang || '-', grade: r.grade || '-', dus: r.dus || '-', shading: r.shading || '-', customer: cust,
+                    panjang: pjgFormatted, grade: r.grade || '-', dus: r.dus || '-', shading: r.shading || '-', customer: cust,
                     tglProduksi: r.tgl_produksi || '-', mesin: r.mesin || '-', shift: r.shift || '-',
                     qty: 0, qrcodes: [], trolis: new Set(), ket: ket, sData: sData, status: itemStatus 
                 };
@@ -594,7 +1062,6 @@ function openColumnFilter(event, colClass, colName) {
     document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
 
     let uniqueValues = new Set();
-    
     processedData.forEach(row => {
         let show = true;
         for (let c in activeFilters) {
@@ -671,12 +1138,7 @@ window.searchFilterList = function(val) {
 };
 
 function closeFilterMenu() { document.getElementById('excel-filter-menu').classList.add('hidden'); }
-
-function clearFilterForCurrentCol() {
-    delete activeFilters[currentFilterCol];
-    closeFilterMenu(); applyFilters(); updateFilterIcons();
-}
-
+function clearFilterForCurrentCol() { delete activeFilters[currentFilterCol]; closeFilterMenu(); applyFilters(); updateFilterIcons(); }
 function applyFilterForCurrentCol() {
     const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
     const totalBoxes = document.querySelectorAll('.filter-val-cb');
@@ -1010,33 +1472,10 @@ function updatePaginationUI() {
 }
 
 function changeRowsPerPage(val) {
-    const customInput = document.getElementById('input-custom-rows');
-    if (val === 'ALL') {
-        rowsPerPage = 999999; 
-        customInput.classList.add('hidden');
-    } else if (val === 'CUSTOM') {
-        customInput.classList.remove('hidden');
-        customInput.focus();
-        let customVal = parseInt(customInput.value);
-        rowsPerPage = (customVal > 0) ? customVal : rowsPerPage;
-    } else {
-        rowsPerPage = parseInt(val);
-        customInput.classList.add('hidden');
-    }
-    
+    rowsPerPage = (val === 'ALL') ? 999999 : parseInt(val);
     localStorage.setItem('wms_rows_per_page', rowsPerPage);
     currentPage = 1; 
     renderTable();
-}
-
-function setCustomRowsPerPage(val) {
-    let parsed = parseInt(val);
-    if (!isNaN(parsed) && parsed > 0) {
-        rowsPerPage = parsed;
-        localStorage.setItem('wms_rows_per_page', rowsPerPage);
-        currentPage = 1;
-        renderTable();
-    }
 }
 
 function prevPage() { if(currentPage > 1) { currentPage--; renderTable(); } }
@@ -1050,6 +1489,9 @@ function updateSelectedCount() {
     if(lbl) lbl.innerText = selectedRows.size;
 }
 
+// ========================================================
+// FUNGSI AKSI MASSAL & KATALOG
+// ========================================================
 function bukaDaftarKatalog() {
     renderKatalogList();
     document.getElementById('modal-list-katalog').classList.remove('hidden');
@@ -1147,19 +1589,7 @@ async function simpanDataJasper() {
 
         if(errorRes) throw errorRes;
         
-        const { error: errUpdateHasil } = await db.from('hasil_stbj_langsir')
-            .update({ nama_jasper: output })
-            .eq('nama_item', nama)
-            .eq('panjang', pjg)
-            .eq('grade', grade);
-            
-        if(errUpdateHasil) console.error("Gagal update hasil_stbj_langsir:", errUpdateHasil);
-        
         tutupModalJasperForm();
-        
-        document.getElementById('tbody-katalog-list').innerHTML = '<tr><td colspan="6" class="p-6 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat ulang tabel...</td></tr>';
-        lucide.createIcons();
-        
         await loadKamusDanJasper(); 
         renderKatalogList(); 
         muatDataDariSupabase(); 
@@ -1169,15 +1599,6 @@ async function simpanDataJasper() {
     } finally {
         btn.innerHTML = oriTxt; btn.disabled = false; lucide.createIcons();
     }
-}
-
-async function aksiHapusPerBaris(qrcode) {
-    if(!confirm(`Hapus permanen QRCode ini dari database?`)) return;
-    try {
-        const { error } = await db.from('hasil_stbj_langsir').delete().eq('qrcode', qrcode);
-        if(error) throw error;
-        await muatDataDariSupabase();
-    } catch(e) { alert("Gagal hapus: " + e.message); }
 }
 
 async function aksiMassal(tipe) {
@@ -1233,7 +1654,7 @@ async function aksiMassal(tipe) {
         });
         
         navigator.clipboard.writeText(textSalin);
-        alert(`Tersalin baris! Buka Excel dan Paste (Ctrl+V).`);
+        alert(`Tersalin! Buka Excel dan Paste (Ctrl+V).`);
     } 
     else if(tipe === 'hold') {
         const act = prompt(`Pilih Aksi untuk ${checkedValues.length} item:\n1 = Ubah ke HOLD STBJ\n2 = UNHOLD (Kembali ke STBJ)\n3 = Ubah ke HOLD LANGSIR`);
@@ -1272,8 +1693,7 @@ async function aksiMassal(tipe) {
                 } else {
                     let users = currentCollect.split(',').map(u => u.trim());
                     if(!users.includes(currentUser.username)) {
-                        updates.push(currentUser.username);
-                        newCollect = users.join(', ');
+                        newCollect = users.join(', ') + `, ${currentUser.username}`;
                     }
                 }
                 updates.push({ qrcode: qr, status_data: newCollect });
@@ -1355,4 +1775,31 @@ async function aksiMassal(tipe) {
         XLSX.utils.book_append_sheet(wb, ws, "STBJ_Data");
         XLSX.writeFile(wb, `STBJ_${statusSekarang}_${modeSekarang.toUpperCase()}.xlsx`);
     }
-                                                 }
+}
+
+function applyColumnOrder() {
+    if (!userColOrder || userColOrder.length === 0) return;
+    const table = document.getElementById('table-stbj-main');
+    if(!table) return;
+    const rows = table.querySelectorAll('tr');
+
+    rows.forEach(row => {
+        const cells = Array.from(row.children);
+        if (cells.length <= 1) return; 
+        const cbCell = cells.find(c => c.classList.contains('col-cb'));
+        const cellMap = {};
+        cells.forEach(c => {
+            const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
+            if (colClass) cellMap[colClass] = c;
+        });
+
+        row.innerHTML = ''; 
+        if (cbCell) row.appendChild(cbCell); 
+
+        userColOrder.forEach(colId => { if (cellMap[colId]) row.appendChild(cellMap[colId]); });
+        cells.forEach(c => {
+            const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
+            if (colClass !== 'col-cb' && !userColOrder.includes(colClass)) { row.appendChild(c); }
+        });
+    });
+}
