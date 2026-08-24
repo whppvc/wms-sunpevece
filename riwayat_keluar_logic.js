@@ -1,4 +1,4 @@
-let modeSekarang = 'qrcode'; 
+let modeSekarang = 'mobile'; // Default ke Mobile
 let rawDataRaw = [];
 let holdDataRaw = [];
 let kamusData = [];
@@ -10,13 +10,26 @@ let activeFilters = {};
 let currentFilterCol = '';
 let currentPage = 1;
 let rowsPerPage = 10; 
-let selectAllState = 0; // 0: none, 1: page, 2: all filtered
+let selectAllState = 0; 
+
+// State Khusus Mode Mobile
+let mobileLevel = 1; // 1: Customer, 2: Item, 3: Shading
+let mobileSelectedCust = '';
+let mobileSelectedItem = '';
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
+
+function getTodayDate() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'riwayat_keluar', title: 'RIWAYAT KELUAR', url: 'riwayat_keluar.html' });
     
+    // Set default date mobile
+    document.getElementById('filter-date-mobile').value = getTodayDate();
+
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
@@ -79,7 +92,7 @@ function extractPOFromSKU(id_sku) {
 async function muatDataDariSupabase() {
     const tbody = document.getElementById('tbody-keluar');
     tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data Keluar...</p></td></tr>`;
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
     
     let queryKeluar = db.from('stok_keluar').select('*').order('created_at', {ascending: false}); 
     let queryHold = db.from('hold_keluar').select('*').order('created_at', {ascending: false}); 
@@ -91,7 +104,8 @@ async function muatDataDariSupabase() {
         
         rawDataRaw = resK.data || [];
         holdDataRaw = resH.data || [];
-        renderHeaderDanTabel();
+        
+        setMode(modeSekarang);
     } catch(err) { 
         tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; 
     }
@@ -103,21 +117,255 @@ function setMode(m) {
     const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
 
-    ['qrcode', 'item', 'jasper', 'hold'].forEach(tab => {
+    ['mobile', 'qrcode', 'item', 'jasper', 'hold'].forEach(tab => {
         const el = document.getElementById('tab-mode-' + tab);
         if(el) el.className = (m === tab) ? activeClass : inactiveClass;
     });
 
     const btnHold = document.getElementById('btn-hold');
     const btnCancel = document.getElementById('btn-cancel');
+    const dateFilter = document.getElementById('mobile-date-filter');
+    
+    const viewTable = document.getElementById('view-table');
+    const viewMobile = document.getElementById('view-mobile');
+    const footerPagination = document.getElementById('footer-pagination');
 
-    if(m === 'qrcode') { btnHold.classList.remove('hidden'); btnCancel.classList.add('hidden'); }
-    else if(m === 'hold') { btnHold.classList.add('hidden'); btnCancel.classList.remove('hidden'); }
-    else { btnHold.classList.add('hidden'); btnCancel.classList.add('hidden'); }
+    if(m === 'qrcode') { 
+        btnHold.classList.remove('hidden'); btnCancel.classList.add('hidden'); 
+        dateFilter.classList.add('hidden');
+        viewTable.classList.remove('hidden'); viewMobile.classList.add('hidden');
+        footerPagination.classList.remove('hidden');
+    }
+    else if(m === 'hold') { 
+        btnHold.classList.add('hidden'); btnCancel.classList.remove('hidden'); 
+        dateFilter.classList.add('hidden');
+        viewTable.classList.remove('hidden'); viewMobile.classList.add('hidden');
+        footerPagination.classList.remove('hidden');
+    }
+    else if(m === 'mobile') {
+        btnHold.classList.add('hidden'); btnCancel.classList.add('hidden'); 
+        dateFilter.classList.remove('hidden');
+        viewTable.classList.add('hidden'); viewMobile.classList.remove('hidden');
+        footerPagination.classList.add('hidden');
+        mobileLevel = 1; // Reset ke level 1 tiap kali buka tab
+    }
+    else { 
+        btnHold.classList.add('hidden'); btnCancel.classList.add('hidden'); 
+        dateFilter.classList.add('hidden');
+        viewTable.classList.remove('hidden'); viewMobile.classList.add('hidden');
+        footerPagination.classList.remove('hidden');
+    }
 
     activeFilters = {}; 
-    renderHeaderDanTabel();
+    
+    if (m === 'mobile') {
+        renderMobileView();
+    } else {
+        renderHeaderDanTabel();
+    }
 }
+
+// ========================================================
+// LOGIKA MODE MOBILE (FOLDER VIEW)
+// ========================================================
+window.applyMobileDateFilter = function() {
+    mobileLevel = 1;
+    renderMobileView();
+};
+
+window.goToMobileLevel2 = function(cust) {
+    mobileSelectedCust = cust;
+    mobileLevel = 2;
+    renderMobileView();
+};
+
+window.goToMobileLevel3 = function(itemKey) {
+    mobileSelectedItem = itemKey;
+    mobileLevel = 3;
+    renderMobileView();
+};
+
+window.goBackMobile = function() {
+    if (mobileLevel > 1) mobileLevel--;
+    renderMobileView();
+};
+
+function renderMobileView() {
+    const container = document.getElementById('view-mobile');
+    const targetDate = document.getElementById('filter-date-mobile').value;
+
+    // 1. Filter Data (Tanggal + Filter Sidebar)
+    let mobileData = rawDataRaw.filter(r => {
+        const rowDate = r.created_at.split('T')[0];
+        if (rowDate !== targetDate) return false;
+
+        // Terapkan filter sidebar jika ada
+        const t = window.translateBarcode(r.qrcode);
+        const custAktual = r.customer_aktual || t.customer || '-';
+        const custEstimasi = r.customer_estimasi || '-';
+        const customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku);
+
+        const sv = {
+            'col-status': 'VERIFIED', 
+            'col-tujuan': customerKeluar,
+            'col-customer': custAktual,
+            'col-estimasi': custEstimasi,
+            'col-qr': r.qrcode,
+            'col-jenis': t.jenisItem,
+            'col-nama': t.namaItem,
+            'col-pjg': t.panjang,
+            'col-grade': t.grade,
+            'col-dus': t.dus,
+            'col-shading': t.shading
+        };
+
+        for (let col in activeFilters) {
+            const allowed = activeFilters[col];
+            if (!allowed.includes(sv[col])) return false;
+        }
+        return true;
+    });
+
+    if (mobileData.length === 0) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-48 bg-white rounded-xl border border-slate-200 shadow-sm mt-4">
+                <i data-lucide="folder-search" class="w-12 h-12 text-slate-300 mb-2"></i>
+                <p class="text-sm font-bold text-slate-500">Tidak ada pengiriman pada tanggal ini.</p>
+            </div>`;
+        lucide.createIcons();
+        return;
+    }
+
+    let html = '';
+
+    // LEVEL 1: CUSTOMER
+    if (mobileLevel === 1) {
+        let custMap = {};
+        mobileData.forEach(r => {
+            let cust = r.customer_keluar || extractPOFromSKU(r.id_sku) || '-';
+            if(!custMap[cust]) custMap[cust] = 0;
+            custMap[cust]++;
+        });
+
+        html += `<h3 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-2 px-1">Daftar Pengiriman (Customer)</h3>`;
+        
+        Object.keys(custMap).sort().forEach(cust => {
+            html += `
+                <div onclick="goToMobileLevel2('${cust}')" class="bg-white border border-blue-200 p-4 rounded-xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-blue-50">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                            <i data-lucide="truck" class="w-5 h-5"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <h4 class="font-black text-slate-800 text-base uppercase">${cust}</h4>
+                            <p class="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded w-max mt-1 border border-blue-100">Total: ${custMap[cust]} Dus</p>
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+                </div>
+            `;
+        });
+    } 
+    // LEVEL 2: ITEM SPEC
+    else if (mobileLevel === 2) {
+        let itemMap = {};
+        mobileData.forEach(r => {
+            let cust = r.customer_keluar || extractPOFromSKU(r.id_sku) || '-';
+            if (cust !== mobileSelectedCust) return;
+
+            const t = window.translateBarcode(r.qrcode);
+            let key = `${t.namaItem}_${t.panjang}_${t.grade}_${t.dus}`;
+            
+            if(!itemMap[key]) {
+                itemMap[key] = { nama: t.namaItem, pjg: t.panjang, grade: t.grade, dus: t.dus, qty: 0 };
+            }
+            itemMap[key].qty++;
+        });
+
+        html += `
+            <div class="flex items-center gap-3 mb-2 px-1">
+                <button onclick="goBackMobile()" class="p-1.5 bg-white border border-slate-300 rounded-md shadow-sm hover:bg-slate-50 active:scale-95 transition"><i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i></button>
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-black text-slate-400 uppercase leading-none">Customer</span>
+                    <span class="text-sm font-black text-blue-700 uppercase leading-tight">${mobileSelectedCust}</span>
+                </div>
+            </div>
+        `;
+
+        Object.keys(itemMap).sort().forEach(key => {
+            let item = itemMap[key];
+            html += `
+                <div onclick="goToMobileLevel3('${key}')" class="bg-white border border-emerald-200 p-4 rounded-xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-emerald-50">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                            <i data-lucide="box" class="w-5 h-5"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <h4 class="font-black text-slate-800 text-sm leading-snug">${item.nama} - ${item.pjg} - ${item.grade} - ${item.dus}</h4>
+                            <p class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded w-max mt-1 border border-emerald-100">Qty: ${item.qty} Dus</p>
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+                </div>
+            `;
+        });
+    }
+    // LEVEL 3: SHADING
+    else if (mobileLevel === 3) {
+        let shadingMap = {};
+        mobileData.forEach(r => {
+            let cust = r.customer_keluar || extractPOFromSKU(r.id_sku) || '-';
+            if (cust !== mobileSelectedCust) return;
+
+            const t = window.translateBarcode(r.qrcode);
+            let key = `${t.namaItem}_${t.panjang}_${t.grade}_${t.dus}`;
+            if (key !== mobileSelectedItem) return;
+
+            let shading = t.shading || '-';
+            if(!shadingMap[shading]) shadingMap[shading] = 0;
+            shadingMap[shading]++;
+        });
+
+        let itemParts = mobileSelectedItem.split('_');
+        let displayItem = `${itemParts[0]} - ${itemParts[1]} - ${itemParts[2]} - ${itemParts[3]}`;
+
+        html += `
+            <div class="flex items-center gap-3 mb-2 px-1">
+                <button onclick="goBackMobile()" class="p-1.5 bg-white border border-slate-300 rounded-md shadow-sm hover:bg-slate-50 active:scale-95 transition"><i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i></button>
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-black text-slate-400 uppercase leading-none">Rincian Item</span>
+                    <span class="text-xs font-black text-emerald-700 uppercase leading-tight">${displayItem}</span>
+                </div>
+            </div>
+        `;
+
+        Object.keys(shadingMap).sort().forEach(shading => {
+            html += `
+                <div class="bg-white border border-amber-200 p-4 rounded-xl flex justify-between items-center shadow-sm">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                            <i data-lucide="palette" class="w-5 h-5"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-slate-400 uppercase">Shading</span>
+                            <h4 class="font-black text-slate-800 text-base">${shading}</h4>
+                        </div>
+                    </div>
+                    <div class="bg-amber-50 border border-amber-200 px-3 py-1 rounded-lg">
+                        <span class="text-sm font-black text-amber-700">${shadingMap[shading]} Dus</span>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    container.innerHTML = html;
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ========================================================
+// LOGIKA TABEL STANDAR (QR, ITEM, JASPER, HOLD)
+// ========================================================
 
 function sortTable(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-keluar');
@@ -252,6 +500,12 @@ function applyFilterForCurrentCol() {
     closeFilterMenu(); saringTabelExcel(); updateFilterIcons();
 }
 function saringTabelExcel() {
+    if (modeSekarang === 'mobile') {
+        renderMobileView();
+        updateFilterIcons();
+        return;
+    }
+
     document.querySelectorAll('.text-row').forEach(row => {
         let show = true;
         for (let colClass in activeFilters) {
@@ -575,7 +829,7 @@ async function aksiMassal(tipe) {
         alert(`Tersalin! Buka Excel dan Paste (Ctrl+V).`);
     } 
     else if(tipe === 'xlsx') {
-        if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat.");
+        if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
         let ws_data = [];
         const headers = Array.from(document.querySelectorAll('#thead-keluar th')).filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb')).map(th => th.innerText.trim());
         ws_data.push(headers);
