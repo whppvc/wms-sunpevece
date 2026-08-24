@@ -44,7 +44,6 @@
         <!-- NAVIGASI TAB MENU -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
-                <!-- REVISI: Tambah Tab Mobile di paling awal -->
                 <button onclick="setMode('mobile')" id="tab-mode-mobile" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="smartphone" class="w-4 h-4"></i> MOBILE</button>
                 <button onclick="setMode('qrcode')" id="tab-mode-qrcode" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="qr-code" class="w-4 h-4"></i> MODE QRCODE</button>
                 <button onclick="setMode('item')" id="tab-mode-item" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="boxes" class="w-4 h-4"></i> RANGKUMAN ITEM</button>
@@ -55,10 +54,10 @@
             <!-- TOOLBAR -->
             <div class="p-3 sm:p-4 flex items-center justify-between bg-slate-50/50 border-t border-slate-100 w-full gap-2">
                 
-                <!-- KIRI: Aksi / Filter Tanggal -->
+                <!-- KIRI: Aksi / Filter Tanggal Mobile -->
                 <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar flex-1">
                     
-                    <!-- REVISI: Filter Tanggal Khusus Mode Mobile -->
+                    <!-- Filter Tanggal Khusus Mode Mobile -->
                     <div id="mobile-date-filter" class="flex items-center gap-2 bg-white border border-slate-300 rounded-md p-1 shadow-sm shrink-0">
                         <i data-lucide="calendar" class="w-4 h-4 text-slate-400 ml-1"></i>
                         <input type="date" id="filter-date-mobile" onchange="renderMobileView()" class="p-1.5 text-xs font-bold text-slate-700 outline-none cursor-pointer bg-transparent">
@@ -76,11 +75,13 @@
 
                 </div>
 
-                <!-- KANAN: Filter & Menu -->
+                <!-- KANAN: Tombol Filter & Menu Aksi -->
                 <div class="flex items-center gap-2 shrink-0">
-                    <!-- REVISI: Tombol Filter -->
-                    <button onclick="toggleSidebarFilter()" class="px-3 py-2 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-700 font-bold text-xs hover:bg-slate-50 transition flex items-center gap-2">
-                        <i data-lucide="filter" class="w-4 h-4"></i> <span class="hidden sm:inline">Filter</span>
+                    
+                    <!-- REVISI: Tombol Filter dengan Teks & Desain Rapi -->
+                    <button onclick="toggleSidebarFilter()" class="px-3.5 py-2 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-700 font-bold text-xs hover:bg-slate-50 transition flex items-center gap-2">
+                        <i data-lucide="filter" class="w-4 h-4 text-slate-600"></i>
+                        <span>Filter</span>
                     </button>
 
                     <div class="relative">
@@ -108,9 +109,9 @@
                 </table>
             </div>
 
-            <!-- REVISI: VIEW MOBILE (Folder/Card View) -->
+            <!-- VIEW MOBILE (Folder / Drill-Down View) -->
             <div id="view-mobile" class="flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-20">
-                <!-- Konten Mobile akan di-render di sini oleh JS -->
+                <!-- Konten Mobile di-render oleh JS -->
             </div>
 
         </div>
@@ -165,7 +166,68 @@
         </div>
     </div>
 
-    <!-- MODAL FILTER EXCEL -->
+    <!-- SIDEBAR FILTER LENGKAP DENGAN DROPDOWN (MIRIP SCAN STBJ / SCAN PIC) -->
+    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
+        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4 text-blue-600"></i> Filter Data</h3>
+            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="p-3 flex flex-col gap-3 overflow-y-auto custom-scroll flex-1">
+            <div class="grid grid-cols-2 gap-2">
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Keluar</label>
+                    <select id="fs-cust-keluar" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label>
+                    <input type="text" id="fs-qr" oninput="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50 font-mono" placeholder="Ketik QR Code...">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Cust Aktual</label>
+                    <select id="fs-cust-aktual" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Cust Estimasi</label>
+                    <select id="fs-cust-est" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label>
+                    <select id="fs-jenis" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
+                    <select id="fs-pjg" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
+                    <select id="fs-nama" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
+                    <select id="fs-grade" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label>
+                    <select id="fs-dus" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label>
+                    <select id="fs-shading" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PIC Keluar</label>
+                    <select id="fs-pic" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label>
+                    <input type="text" id="fs-ket" oninput="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50" placeholder="Ketik Keterangan...">
+                </div>
+            </div>
+            <button onclick="resetFilterRiwayat()" class="mt-2 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg text-xs uppercase transition shrink-0">RESET FILTER</button>
+        </div>
+    </div>
+
+    <!-- MODAL FILTER EXCEL (UNTUK TABEL DESKTOP) -->
     <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm overflow-hidden">
         <div class="p-3 border-b border-slate-100 flex justify-between items-center rounded-t-lg">
             <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
@@ -183,6 +245,9 @@
             <button onclick="applyFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-700 transition shadow-sm">Terapkan</button>
         </div>
     </div>
+
+    <!-- OVERLAY KLIK LUAR -->
+    <div id="overlay-klik-luar" onclick="tutupSemuaPopups()" class="hidden fixed inset-0 z-[50] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="wms_parser.js"></script>
     <script src="riwayat_keluar_logic.js"></script>
