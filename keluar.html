@@ -117,11 +117,16 @@
     <!-- MODAL PINJAM ESTIMASI -->
     <div id="modal-pinjam-estimasi" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] p-4 backdrop-blur-sm transition-opacity">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 p-5">
-            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+            <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100">
                 <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="users" class="w-5 h-5 text-indigo-600"></i> PILIH PINJAM CUSTOMER</h3>
                 <button type="button" onclick="tutupModalPinjamEstimasi()" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-            <p class="text-xs font-bold text-slate-500 mb-4">Pilih Customer Estimasi yang tersedia di gudang untuk dipotong stoknya.</p>
+            
+            <!-- INFORMASI BATCH GROUPING -->
+            <div class="bg-indigo-50 border border-indigo-200 p-2.5 rounded-lg mb-4">
+                <p class="text-xs font-bold text-indigo-800" id="lbl-batch-pinjam-info">Pilihan ini akan diterapkan ke semua kardus serupa di layar.</p>
+            </div>
+
             <input type="hidden" id="pinjam-id-item">
             <input type="hidden" id="pinjam-is-aktual">
             <div class="flex flex-col gap-4">
@@ -132,7 +137,7 @@
                     </select>
                 </div>
                 <button type="button" onclick="simpanPinjamEstimasi()" class="mt-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-black shadow transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-4 border-indigo-800">
-                    <i data-lucide="check-circle" class="w-4 h-4"></i> KONFIRMASI PINJAM
+                    <i data-lucide="check-circle" class="w-4 h-4"></i> TERAPKAN KE SEMUA ITEM SERUPA
                 </button>
             </div>
         </div>
@@ -176,4 +181,4 @@
     <script src="wms_parser.js"></script>
     <script src="keluar_logic.js"></script>
 </body>
-    </html>
+                                                                                                                          </html>
