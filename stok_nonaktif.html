@@ -7,49 +7,171 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <script src="global.js"></script>
+    
     <style>
-        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; background-color: #f8fafc; }
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; touch-action: pan-y; background-color: #f8fafc; }
         .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .table-container { position: relative; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        .hdr-std { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; padding: 0.75rem 1rem !important; font-size: 0.75rem !important; font-weight: 600 !important; text-transform: uppercase !important; white-space: nowrap !important; position: sticky !important; top: 0 !important; z-index: 20 !important; }
-        
-        .sticky-col { position: sticky !important; left: 0 !important; z-index: 30 !important; }
-        th.sticky-col { z-index: 40 !important; background-color: #1e293b !important; }
-        tr.bg-white td.sticky-col { background-color: #ffffff !important; }
-        tr.bg-slate-50 td.sticky-col { background-color: #f8fafc !important; }
+        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
+        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
+
+        .hdr-std { 
+            text-align: center !important; 
+            padding: 0.5rem 0.75rem !important; 
+            font-size: 0.75rem !important; 
+            font-weight: 600 !important; 
+            text-transform: uppercase !important; 
+            letter-spacing: 0.05em !important; 
+            white-space: nowrap !important; 
+            border-bottom: 1px solid #e2e8f0 !important; 
+            background-clip: padding-box !important; 
+        }
+
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
-        tr.selected-row td.sticky-col { background-color: #ccfbf1 !important; }
+        body:not(.disable-hover) tr.r-row:not(.selected-row):hover td { background-color: rgba(var(--tbl-row-hover), 1) !important; color: #4f46e5 !important; }
+        
+        .resizer {
+            position: absolute;
+            top: 0; right: 0; width: 5px;
+            cursor: col-resize; user-select: none;
+            height: 100%; z-index: 50;
+        }
+        .resizer:hover, .resizing { background-color: rgba(59, 130, 246, 0.5); }
     </style>
 </head>
 <body class="font-sans text-slate-800">
+
     <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
-        <!-- TOOLBAR ATAS -->
-        <div class="shrink-0 bg-white p-3 flex items-center justify-between border-b border-slate-200 shadow-sm w-full z-20">
-            <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar">
-                <button onclick="bukaModalScan()" class="shrink-0 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-md shadow-sm text-xs uppercase transition flex items-center gap-2 active:scale-95"><i data-lucide="scan-line" class="w-4 h-4"></i> Tambahkan Item</button>
-                <button onclick="muatData()" class="shrink-0 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-md shadow-sm text-xs uppercase transition flex items-center gap-2 active:scale-95 border border-slate-300"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh</button>
-                
-                <button onclick="cancelNonaktifMassal()" id="btn-cancel" class="shrink-0 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-md shadow-sm text-xs uppercase transition flex items-center gap-2 active:scale-95"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Cancel Nonaktif</button>
-                <button onclick="prosesBSMassal()" id="btn-bs" class="shrink-0 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-md shadow-sm text-xs uppercase transition flex items-center gap-2 active:scale-95"><i data-lucide="package-x" class="w-4 h-4"></i> Proses BS</button>
+        <!-- HEADER SECTION (TABS & TOOLBAR) -->
+        <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-sm w-full">
+            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
+                <button onclick="switchTab('scan')" id="tab-scan" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="scan-line" class="w-4 h-4"></i> 1. SCAN NONAKTIF</button>
+                <button onclick="switchTab('tabel')" id="tab-tabel" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="table" class="w-4 h-4"></i> 2. TABEL NONAKTIF</button>
+            </div>
+
+            <!-- TOOLBAR KHUSUS TAB 1: SCAN -->
+            <div id="toolbar-scan" class="flex justify-between items-center px-4 py-3 bg-white border-b border-slate-200">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" onchange="toggleAllStaging(this.checked)" class="w-5 h-5 accent-rose-600 rounded cursor-pointer border-slate-400" id="cb-all-staging">
+                    <label for="cb-all-staging" class="text-xs font-black text-slate-600 uppercase tracking-wider cursor-pointer">Pilih Semua</label>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="bg-rose-50 border border-rose-300 px-3 py-1.5 rounded-lg text-rose-800 text-xs font-black shadow-sm uppercase tracking-wider">
+                        Total Scan: <span id="lbl-total-scan" class="text-slate-900 text-sm ml-1">0</span> Dus
+                    </div>
+                    <button onclick="toggleSidebarFilter()" class="p-2 bg-white border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition shadow-sm active:scale-95">
+                        <i data-lucide="filter" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- TOOLBAR KHUSUS TAB 2: TABEL NONAKTIF -->
+            <div id="toolbar-tabel" class="hidden p-3 sm:p-4 flex items-center justify-between bg-slate-50/50 border-b border-slate-200 w-full gap-2">
+                <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar">
+                    <!-- REFRESH DATA -->
+                    <button onclick="muatDataTabel()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-teal-700">
+                        <div class="bg-teal-800 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="refresh-cw" class="w-4 h-4"></i></div>
+                        <div class="bg-teal-700 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-teal-600 transition">Refresh</div>
+                    </button>
+
+                    <!-- CANCEL NONAKTIF (RETUR KE GUDANG) -->
+                    <button onclick="cancelNonaktifMassal()" id="btn-cancel-nonaktif" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-amber-600">
+                        <div class="bg-amber-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
+                        <div class="bg-amber-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-amber-500 transition">Cancel Nonaktif</div>
+                    </button>
+
+                    <!-- PROSES BS -->
+                    <button onclick="prosesBSMassal()" id="btn-bs-massal" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-slate-800">
+                        <div class="bg-slate-950 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="package-x" class="w-4 h-4"></i></div>
+                        <div class="bg-slate-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-slate-700 transition">Proses BS</div>
+                    </button>
+                </div>
+
+                <!-- DROPDOWN AKSI KANAN -->
+                <div class="relative shrink-0">
+                    <button onclick="toggleActionMenu(event)" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition" title="Menu Aksi">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <div id="mobile-action-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
+                        <button onclick="salinData(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
+                        <button onclick="downloadXLS(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
+                        <button onclick="toggleSidebarKolom(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-blue-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</button>
+                        <button onclick="bukaModalTableDesign(); toggleActionMenu(event)" class="text-left px-4 py-3 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="palette" class="w-4 h-4 text-purple-600"></i> Table Design</button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- AREA TABEL -->
-        <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
-            <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-xl shadow-sm border border-slate-300">
+        <!-- AREA KONTEN -->
+        <div class="flex-1 min-h-0 bg-slate-100 p-3 sm:p-4 overflow-hidden flex flex-col relative z-0">
+            
+            <!-- VIEW 1: SCAN CARD VIEW (MIRIP SCAN STBJ / OPNAME) -->
+            <div id="view-scan" class="flex-1 min-h-0 bg-slate-200 p-2 overflow-hidden flex flex-col relative rounded-xl border border-slate-300 shadow-inner">
+                <div class="flex-1 min-h-0 bg-white rounded-lg shadow-sm border border-slate-300 overflow-y-auto custom-scroll" id="scroll-container-scan">
+                    <div id="tbody-scan-cards" class="flex flex-col gap-0 w-full p-2">
+                        <div class="p-10 text-center font-medium text-slate-400 h-full flex flex-col items-center justify-center">
+                            <i data-lucide="package-x" class="w-12 h-12 mx-auto mb-3 opacity-30"></i> 
+                            Belum ada kardus di-scan.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: TABEL DATABASE NONAKTIF -->
+            <div id="view-tabel" class="hidden flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-xl shadow-sm border border-slate-300">
                 <table class="w-full text-left whitespace-nowrap" id="main-table">
                     <thead class="sticky top-0 z-50 shadow-sm" id="thead-nonaktif"></thead>
                     <tbody id="tbody-nonaktif" class="text-slate-800"></tbody>
                 </table>
             </div>
+
         </div>
 
-        <!-- FOOTER PAGINASI -->
-        <div class="shrink-0 w-full bg-white p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
+        <!-- FOOTER ACTION TAB 1: SCAN (4 KOTAK BOTTOM BAR) -->
+        <div id="footer-scan-action" class="shrink-0 w-full bg-slate-50 p-2 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300 pb-4">
+            <div class="grid grid-cols-4 gap-2 h-[55px]">
+                
+                <!-- KOTAK 1: ADD -->
+                <button onclick="bukaModalAdd()" class="w-full h-full bg-[#0f172a] hover:bg-black text-white flex flex-col justify-center items-center shadow-md active:scale-95 transition rounded border-b-4 border-slate-900" title="Scan Barcode Baru">
+                    <i data-lucide="plus" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                </button>
+
+                <!-- KOTAK 2: VERIFIKASI -->
+                <button onclick="verifikasiNonaktif()" id="btn-verifikasi" class="w-full h-full bg-blue-600 hover:bg-blue-700 text-white font-black shadow-md flex flex-col items-center justify-center gap-1 text-[9px] sm:text-[11px] cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-blue-800 leading-none">
+                    <i data-lucide="shield-check" class="w-4 h-4 sm:w-5 sm:h-5"></i> Verifikasi
+                </button>
+
+                <!-- KOTAK 3: SIMPAN NONAKTIF -->
+                <button id="btn-save" onclick="simpanNonaktifKeDB()" class="w-full h-full bg-rose-700 hover:bg-rose-800 text-white font-black shadow-md flex flex-col items-center justify-center gap-1 text-[9px] sm:text-[11px] cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-rose-900 leading-none">
+                    <i data-lucide="package-x" class="w-4 h-4 sm:w-5 sm:h-5"></i> Nonaktifkan
+                </button>
+
+                <!-- KOTAK 4: LAINNYA (DROPUP) -->
+                <div class="relative w-full h-full">
+                    <button onclick="toggleMoreMenu(event)" class="w-full h-full bg-slate-700 hover:bg-slate-800 text-white font-black shadow-md flex flex-col items-center justify-center gap-1 text-[9px] sm:text-[11px] cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-slate-900 leading-none">
+                        <i data-lucide="more-horizontal" class="w-4 h-4 sm:w-5 sm:h-5"></i> Lainnya
+                    </button>
+                    
+                    <div id="dropup-more" class="hidden absolute bottom-full right-0 mb-2 w-48 bg-white shadow-2xl rounded-xl border border-slate-200 z-50 flex flex-col overflow-hidden">
+                        <button onclick="undoHapusStaging(); toggleMoreMenu(event)" class="text-left px-5 py-4 border-b border-slate-100 text-sm font-bold text-rose-600 flex items-center gap-3 hover:bg-slate-50 active:bg-slate-100 transition"><i data-lucide="rotate-ccw" class="w-5 h-5"></i> Undo Hapus</button>
+                        <button onclick="resetLayarScan(); toggleMoreMenu(event)" class="text-left px-5 py-4 text-sm font-bold text-slate-700 flex items-center gap-3 hover:bg-slate-50 active:bg-slate-100 transition"><i data-lucide="trash" class="w-5 h-5 text-slate-500"></i> Bersihkan Layar</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- FOOTER PAGINASI TAB 2: TABEL NONAKTIF -->
+        <div id="footer-tabel-pagination" class="hidden shrink-0 w-full bg-white p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
             <div class="flex items-center gap-2 flex-wrap justify-center">
                 <span class="bg-blue-50 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-medium ml-1">0</span></span>
                 <span class="bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded text-emerald-800 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-medium ml-1">0</span></span>
@@ -72,24 +194,29 @@
                 </div>
             </div>
         </div>
+
     </div>
 
-    <!-- MODAL SCAN -->
-    <div id="modal-scan" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
-            <h3 class="text-lg font-black mb-2 flex items-center gap-2 text-rose-600"><i data-lucide="package-x"></i> Nonaktifkan Item</h3>
-            <p class="text-xs font-bold text-slate-500 mb-5">Scan QRCode fisik barang yang rusak/bermasalah.</p>
-            <div class="space-y-4 mb-6">
-                <textarea id="input-qr" rows="4" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-rose-600 font-mono font-bold text-sm bg-slate-50 custom-scroll" placeholder="Scan barcode di sini..." autocomplete="off" oninput="autoEnterScan(this)"></textarea>
+    <!-- MODAL ADD SCAN NONAKTIF -->
+    <div id="modal-add-scan" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[60] p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 p-5">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="scan-line" class="w-5 h-5 text-rose-600"></i> SCAN ITEM RUSAK / NONAKTIF</h3>
+                <button type="button" onclick="tutupModalAdd()" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-            <div class="flex gap-2">
-                <button type="button" onclick="document.getElementById('modal-scan').classList.add('hidden')" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase hover:bg-slate-300 transition">Batal</button>
-                <button type="button" onclick="prosesScan()" id="btn-proses-scan" class="w-2/3 py-3 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 flex justify-center items-center gap-2"><i data-lucide="search"></i> Cek Item</button>
-            </div>
+            <form id="form-scan" class="flex flex-col gap-4">
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Scan Fisik Kardus</label>
+                    <textarea id="input-qrcode" rows="4" class="w-full p-2.5 border-2 border-slate-200 rounded-xl outline-none focus:border-rose-600 font-mono font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition custom-scroll" placeholder="Arahkan scanner atau paste QR Code..." oninput="autoEnterScan(this)" required></textarea>
+                </div>
+                <button type="submit" class="mt-2 w-full bg-rose-700 hover:bg-rose-800 text-white py-3 rounded-xl font-black shadow transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-4 border-rose-900">
+                    <i data-lucide="plus-square" class="w-4 h-4"></i> TAMBAHKAN KODE
+                </button>
+            </form>
         </div>
     </div>
 
-    <!-- MODAL PILIH ESTIMASI -->
+    <!-- MODAL PILIH ESTIMASI (JIKA ADA BEBERAPA ALOKASI) -->
     <div id="modal-estimasi" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
             <h3 class="text-lg font-black mb-2 flex items-center gap-2 text-indigo-600"><i data-lucide="users"></i> Pilih Customer Estimasi</h3>
@@ -99,12 +226,36 @@
             </div>
             <div class="flex gap-2">
                 <button type="button" onclick="document.getElementById('modal-estimasi').classList.add('hidden')" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase hover:bg-slate-300 transition">Batal</button>
-                <button type="button" onclick="eksekusiNonaktif()" id="btn-eksekusi" class="w-2/3 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 flex justify-center items-center gap-2"><i data-lucide="save"></i> Simpan Nonaktif</button>
+                <button type="button" onclick="eksekusiPilihEstimasi()" class="w-2/3 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 flex justify-center items-center gap-2"><i data-lucide="save"></i> Konfirmasi</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL FILTER EXCEL -->
+    <!-- SIDEBAR FILTER LENGKAP -->
+    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
+        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data</h3>
+            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="p-3 flex flex-col gap-3 overflow-y-auto custom-scroll flex-1">
+            <div class="grid grid-cols-2 gap-2">
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label><select id="fs-status" onchange="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="fs-qr" oninput="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50 font-mono" placeholder="Ketik QR Code..."></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label><select id="fs-area" onchange="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><select id="fs-jenis" onchange="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><select id="fs-nama" onchange="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><select id="fs-pjg" onchange="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><select id="fs-grade" onchange="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><select id="fs-dus" onchange="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><select id="fs-shading" onchange="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Aktual</label><select id="fs-cust" onchange="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Estimasi</label><select id="fs-est" onchange="saringTabel()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select></div>
+            </div>
+            <button onclick="resetFilter()" class="mt-2 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg text-xs uppercase transition shrink-0">RESET FILTER</button>
+        </div>
+    </div>
+
+    <!-- MODAL FILTER EXCEL (TABEL MODE) -->
     <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[120] flex flex-col font-sans text-sm overflow-hidden">
         <div class="p-3 border-b border-slate-100 flex justify-between items-center rounded-t-lg">
             <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
@@ -123,6 +274,25 @@
         </div>
     </div>
 
+    <!-- SIDEBAR ATUR KOLOM -->
+    <div id="sidebar-kolom" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
+        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Urutan Kolom</h3>
+            <button onclick="toggleSidebarKolom()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="p-3 bg-blue-50 border-b border-blue-100 text-xs text-blue-800 font-medium leading-relaxed">
+            Tahan dan geser (Drag & Drop) kotak di bawah ini untuk mengatur urutan kolom.
+        </div>
+        <div class="p-3 flex flex-col gap-2 overflow-y-auto custom-scroll flex-1" id="kolom-drag-container"></div>
+        <div class="p-4 border-t border-slate-200 bg-slate-50 flex gap-2">
+            <button onclick="resetUrutanKolom()" class="w-1/3 py-2.5 bg-white border border-slate-300 text-slate-600 font-bold rounded-md text-xs uppercase transition hover:bg-slate-100 shadow-sm">Reset</button>
+            <button onclick="simpanUrutanKolom()" class="w-2/3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-md text-xs uppercase transition shadow-sm flex justify-center items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Simpan</button>
+        </div>
+    </div>
+
+    <!-- OVERLAY -->
+    <div id="overlay-klik-luar" onclick="tutupSemuaPopups()" class="hidden fixed inset-0 z-[50] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
+
     <script>
         function autoEnterScan(el) {
             let val = el.value;
@@ -131,6 +301,7 @@
             }
         }
     </script>
+    <script src="wms_parser.js"></script>
     <script src="stok_nonaktif_logic.js"></script>
 </body>
-    </html>
+                            </html>
