@@ -54,18 +54,17 @@
 
     <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
-        <!-- HEADER SECTION -->
+        <!-- HEADER SECTION (SUBMENU BAR) -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
-                <!-- TAB MOBILE (Hanya tampil di HP) -->
+                <!-- REVISI TAB STRUKTUR BARU -->
                 <button onclick="setMode('mobile')" id="tab-mode-mobile" class="sm:hidden px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="smartphone" class="w-4 h-4"></i> MOBILE</button>
-                <button onclick="setMode('qrcode')" id="tab-mode-qrcode" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="qr-code" class="w-4 h-4"></i> MODE QRCODE</button>
-                <button onclick="setMode('item')" id="tab-mode-item" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="boxes" class="w-4 h-4"></i> MODE NAMA ITEM</button>
-                <button onclick="setMode('jasper')" id="tab-mode-jasper" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="file-text" class="w-4 h-4"></i> MODE JASPER</button>
+                <button onclick="setMode('qrcode')" id="tab-mode-qrcode" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="qr-code" class="w-4 h-4"></i> QRCODE</button>
+                <button onclick="setMode('jasper')" id="tab-mode-jasper" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="table" class="w-4 h-4"></i> TABEL</button>
                 <button onclick="setMode('manual')" id="tab-mode-manual" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="keyboard" class="w-4 h-4"></i> TABEL MANUAL</button>
             </div>
 
-            <!-- TOOLBAR DESKTOP -->
+            <!-- TOOLBAR DESKTOP (UNTUK TABEL & MANUAL) -->
             <div id="desktop-toolbar" class="p-3 sm:p-4 flex items-center bg-slate-50/50 border-t border-slate-100 w-full">
                 <div class="flex items-center gap-3 shrink-0">
                     <label id="lbl-pilih-tabel" class="text-[11px] font-black text-slate-500 uppercase tracking-wide">Filter Status:</label>
@@ -111,7 +110,7 @@
         <!-- AREA KONTEN -->
         <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
             
-            <!-- VIEW TABEL (Mode Desktop) -->
+            <!-- VIEW 1: TABEL DESKTOP (TABEL & MANUAL) -->
             <div id="view-table" class="hidden flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-t-xl shadow-sm border border-slate-300">
                 <table class="w-full text-left whitespace-nowrap" id="table-stbj-main">
                     <thead class="sticky top-0 z-50 shadow-sm" id="thead-stbj"></thead>
@@ -119,14 +118,95 @@
                 </table>
             </div>
 
-            <!-- VIEW MOBILE (Folder / Drill-Down View) -->
+            <!-- VIEW 2: SUBMENU BARU "QRCODE" (SEARCH & CARD VIEW MULTI-BARCODE) -->
+            <div id="view-qrcode-search" class="hidden flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-4">
+                
+                <!-- PANEL PENCARIAN -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <h3 class="font-black text-sm text-slate-800 uppercase flex items-center gap-2"><i data-lucide="search" class="w-4 h-4 text-blue-600"></i> Pencarian Detail QRCode & Spesifikasi</h3>
+                        <button onclick="resetQRSearchFilter()" class="text-xs font-bold text-rose-600 hover:underline">Reset Form</button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="md:col-span-3">
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Cari Beberapa Barcode / QRCode Sekaligus (Pisahkan Spasi / Enter / Koma)</label>
+                            <textarea id="qs-qr" rows="2" class="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:border-blue-600 font-mono text-xs font-bold bg-slate-50 custom-scroll" placeholder="Tempel atau ketik kode barcode di sini..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label>
+                            <select id="qs-status" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase cursor-pointer">
+                                <option value="">-- Semua Status --</option>
+                                <option value="STBJ">STBJ MASUK</option>
+                                <option value="HOLD STBJ">HOLD STBJ</option>
+                                <option value="IN GUDANG">IN GUDANG</option>
+                                <option value="HOLD LANGSIR">HOLD LANGSIR</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
+                            <select id="qs-nama" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua --</option></select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Jasper</label>
+                            <select id="qs-jasper" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua --</option></select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
+                            <select id="qs-pjg" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua --</option></select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
+                            <select id="qs-grade" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua --</option></select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label>
+                            <select id="qs-dus" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua --</option></select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label>
+                            <input type="text" id="qs-shading" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase" placeholder="Ketik Shading...">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Bawaan</label>
+                            <select id="qs-cust" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua --</option></select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="eksekusiQRSearch()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-xs uppercase rounded-lg shadow-md transition flex items-center justify-center gap-2">
+                                <i data-lucide="search" class="w-4 h-4"></i> CARI DATA
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DAFTAR HASIL SEARCH (CARD VIEW) -->
+                <div class="flex justify-between items-center px-1">
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-wider">Hasil Pencarian: <strong class="text-blue-700" id="lbl-qr-search-count">0 Kardus</strong></span>
+                </div>
+
+                <div id="container-qr-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pb-8">
+                    <!-- Cards di-render oleh JS -->
+                </div>
+
+                <!-- PAGINASI HASIL SEARCH QRCODE -->
+                <div id="footer-qr-search-pagination" class="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm mt-auto">
+                    <span class="text-xs font-bold text-slate-600">Hal <strong id="lbl-qr-cur-page" class="text-blue-600">1</strong> / <span id="lbl-qr-total-page">1</span></span>
+                    <div class="flex gap-2">
+                        <button onclick="prevQRSearchPage()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                        <button onclick="nextQRSearchPage()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- VIEW 3: VIEW MOBILE (DRILL-DOWN FOLDER / CARD VIEW) -->
             <div id="view-mobile" class="flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-32">
                 <!-- Konten Mobile di-render oleh JS -->
             </div>
 
         </div>
 
-        <!-- FOOTER PAGINASI (Desktop) -->
+        <!-- FOOTER PAGINASI DESKTOP TABEL -->
         <div id="footer-pagination" class="hidden shrink-0 w-full bg-white p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
             <div class="flex items-center gap-2 flex-wrap justify-center">
                 <span class="bg-blue-50 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-medium ml-1">0</span></span>
@@ -152,20 +232,20 @@
             </div>
         </div>
 
-        <!-- FOOTER FREEZE LEVEL 6 MOBILE (PILIH SEMUA & TOMBOL AKSI BERDASARKAN MODE) -->
+        <!-- FOOTER FREEZE LEVEL 6 MOBILE -->
         <div id="mobile-lvl6-footer" class="hidden shrink-0 w-full bg-white px-4 py-3.5 z-40 shadow-[0_-8px_25px_rgba(0,0,0,0.15)] border-t border-slate-300 flex justify-between items-center">
             <label class="flex items-center gap-3 cursor-pointer select-none">
                 <input type="checkbox" id="cb-all-lvl6" onchange="toggleSelectAllLvl6(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-400">
                 <span class="text-xs font-black text-slate-800 uppercase tracking-wider">Pilih Semua</span>
             </label>
 
-            <!-- TOMBOL MODE NORMAL (SCAN/MANUAL/ALL) -->
+            <!-- TOMBOL MODE NORMAL -->
             <button id="btn-cancel-stbj-lvl6" onclick="cancelSTBJMobile()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 transition border-b-4 border-rose-900 cursor-pointer">
                 <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
                 <span>Cancel STBJ</span>
             </button>
 
-            <!-- TOMBOL KHUSUS MODE TABEL HOLD (CANCEL HOLD & HAPUS ITEM) -->
+            <!-- TOMBOL KHUSUS MODE TABEL HOLD -->
             <div id="group-btn-hold-lvl6" class="hidden flex items-center gap-2">
                 <button id="btn-cancel-hold-lvl6" onclick="cancelHoldMobile()" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-black text-xs uppercase rounded-xl shadow-md flex items-center gap-1.5 transition border-b-4 border-amber-700 cursor-pointer">
                     <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
@@ -180,7 +260,7 @@
 
     </div>
 
-    <!-- SIDEBAR FILTER LENGKAP DENGAN DROPDOWN -->
+    <!-- SIDEBAR FILTER LENGKAP -->
     <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
             <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4 text-blue-600"></i> Filter Data STBJ</h3>
