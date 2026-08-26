@@ -94,7 +94,7 @@ window.toggleActionMenuMobile = function(e) {
     if(menu) menu.classList.toggle('hidden');
 };
 
-// REVISI: Kontrol Modal Pop-up Filter Tengah
+// Kontrol Modal Pop-up Filter Tengah
 window.bukaModalFilterPopup = function() {
     updateFilterDropdowns();
     document.getElementById('modal-filter-stbj').classList.remove('hidden');
@@ -221,7 +221,7 @@ function setMode(m) {
 
         if(btnCollect) btnCollect.classList.remove('hidden'); 
         if(btnCollectMob) btnCollectMob.classList.remove('hidden'); 
-        if(btnHold) btnHold.classList.add('hidden');
+        if(btnHold) btnHold.classList.remove('hidden');
         if(btnHapus) btnHapus.classList.toggle('hidden', !isCreator);
 
         renderHeaderDanTabel();
@@ -232,7 +232,7 @@ function setMode(m) {
 }
 
 // ========================================================
-// LOGIKA MODE MOBILE (DRILL-DOWN 6 TINGKAT DENGAN KISI 2)
+// LOGIKA MODE MOBILE (DRILL-DOWN 6 TINGKAT)
 // ========================================================
 function getAllUnifiedItems() {
     let list = [];
@@ -287,6 +287,7 @@ function getAllUnifiedItems() {
 
 function matchesActiveFilters(item) {
     const f = {
+        tgl: document.getElementById('fs-tgl')?.value || '',
         status: document.getElementById('fs-status')?.value || '',
         qr: document.getElementById('fs-qr')?.value.toLowerCase() || '',
         troli: document.getElementById('fs-troli')?.value || '',
@@ -302,6 +303,7 @@ function matchesActiveFilters(item) {
         pic: document.getElementById('fs-pic')?.value || ''
     };
 
+    if (f.tgl && item.tglProduksi !== f.tgl) return false;
     if (f.status && item.status !== f.status) return false;
     if (f.qr && !item.qrcode.toLowerCase().includes(f.qr)) return false;
     if (f.troli && item.troli !== f.troli) return false;
@@ -590,7 +592,7 @@ function renderMobileView() {
     let html = '';
 
     // ==========================================
-    // LEVEL 1: KOTAK PILIHAN (KISI 2 MENYAMPING & TEKS POLOS)
+    // LEVEL 1: KOTAK PILIHAN (KISI 2 MENYAMPING)
     // ==========================================
     if (mobileLevel === 1) {
         let totalScan = 0;
@@ -776,7 +778,7 @@ function renderMobileView() {
     }
 
     // ==========================================
-    // LEVEL 4: SPESIFIKASI ITEM
+    // LEVEL 4: SPESIFIKASI ITEM (NAMA-PJG-GRADE-DUS)
     // ==========================================
     else if (mobileLevel === 4) {
         let [mSel, sSel] = mobileSelectedMesinShift.split('_');
@@ -841,8 +843,7 @@ function renderMobileView() {
             if (mobileSelectedSource === 'MANUAL' && r.source !== 'MANUAL') return false;
             if (mobileSelectedSource === 'HOLD' && !r.status.includes('HOLD')) return false;
             return r.tglProduksi === mobileSelectedTgl && r.mesin === mSel && r.shift === sSel &&
-                   r.namaItem === namaSel && r.panjang === pjgSel && r.grade === gradeSel && r.dus === dusSel &&
-                   r.shading === mobileSelectedShading;
+                   r.namaItem === namaSel && r.panjang === pjgSel && r.grade === gradeSel && r.dus === dusSel;
         });
 
         let shadingMap = {};
@@ -979,10 +980,11 @@ function renderMobileView() {
 }
 
 // ========================================================
-// LOGIKA FILTER DROPDOWN
+// LOGIKA FILTER DROPDOWN & DESKTOP SYNC
 // ========================================================
 function updateFilterDropdowns() {
     const fields = [
+        { id: 'fs-tgl', key: 'tglProduksi' },
         { id: 'fs-status', key: 'status' },
         { id: 'fs-troli', key: 'troli' },
         { id: 'fs-mesin', key: 'mesin' },
@@ -1019,18 +1021,55 @@ function updateFilterDropdowns() {
 }
 
 window.resetFilterSTBJ = function() {
-    ['fs-status', 'fs-qr', 'fs-troli', 'fs-mesin', 'fs-shift', 'fs-jenis', 'fs-nama', 'fs-pjg', 'fs-grade', 'fs-dus', 'fs-shading', 'fs-customer', 'fs-pic'].forEach(id => {
+    ['fs-tgl', 'fs-status', 'fs-qr', 'fs-troli', 'fs-mesin', 'fs-shift', 'fs-jenis', 'fs-nama', 'fs-pjg', 'fs-grade', 'fs-dus', 'fs-shading', 'fs-customer', 'fs-pic'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.value = '';
     });
+    activeFilters = {};
     saringTabelSTBJ();
 };
 
+// REVISI: Logika Sinkronisasi Filter Modal ke Desktop dan Mobile
 window.saringTabelSTBJ = function() {
+    const getVal = id => document.getElementById(id)?.value || '';
+
+    const mappings = [
+        { id: 'fs-tgl', col: 'col-tgl' },
+        { id: 'fs-status', col: 'col-status' },
+        { id: 'fs-troli', col: 'col-troli' },
+        { id: 'fs-mesin', col: 'col-mesin' },
+        { id: 'fs-shift', col: 'col-shift' },
+        { id: 'fs-jenis', col: 'col-jenis' },
+        { id: 'fs-nama', col: 'col-nama' },
+        { id: 'fs-pjg', col: 'col-pjg' },
+        { id: 'fs-grade', col: 'col-grade' },
+        { id: 'fs-dus', col: 'col-dus' },
+        { id: 'fs-shading', col: 'col-shading' },
+        { id: 'fs-customer', col: 'col-customer' },
+        { id: 'fs-pic', col: 'col-pic' }
+    ];
+
+    mappings.forEach(m => {
+        const val = getVal(m.id);
+        if (val) {
+            activeFilters[m.col] = [val];
+        } else {
+            delete activeFilters[m.col];
+        }
+    });
+
+    const qrVal = getVal('fs-qr').toLowerCase().trim();
+    if (qrVal) {
+        activeFilters['col-qr-text'] = qrVal;
+    } else {
+        delete activeFilters['col-qr-text'];
+    }
+
     if (modeSekarang === 'mobile') {
         renderMobileView();
     } else {
         applyFilters();
+        updateFilterIcons();
     }
 };
 
@@ -1114,7 +1153,8 @@ function buildProcessedData() {
                 'col-customer': g.customer,
                 'col-qty': g.qty.toString(),
                 'col-qty-lembar': qtyLembar.toString(),
-                'col-ket': displayKet
+                'col-ket': displayKet,
+                'col-qr': g.qrcodes.join(' ')
             }
         };
     });
@@ -1122,9 +1162,16 @@ function buildProcessedData() {
     applyFilters();
 }
 
+// REVISI: Filter mendukung multi-kriteria dan pencarian teks QR
 function applyFilters() {
     filteredData = processedData.filter(row => {
         for (let colClass in activeFilters) {
+            if (colClass === 'col-qr-text') {
+                const qrVal = activeFilters['col-qr-text'];
+                const qr = (row.searchValues['col-qr'] || '').toLowerCase();
+                if (!qr.includes(qrVal)) return false;
+                continue;
+            }
             const allowed = activeFilters[colClass];
             const val = row.searchValues[colClass] || '';
             if (!allowed.includes(val)) return false;
@@ -1192,7 +1239,7 @@ function openColumnFilter(event, colClass, colName) {
     processedData.forEach(row => {
         let show = true;
         for (let c in activeFilters) {
-            if (c !== colClass && !activeFilters[c].includes(row.searchValues[c])) {
+            if (c !== colClass && c !== 'col-qr-text' && !activeFilters[c].includes(row.searchValues[c])) {
                 show = false; break;
             }
         }
@@ -1265,7 +1312,14 @@ window.searchFilterList = function(val) {
 };
 
 function closeFilterMenu() { document.getElementById('excel-filter-menu').classList.add('hidden'); }
-function clearFilterForCurrentCol() { delete activeFilters[currentFilterCol]; closeFilterMenu(); saringTabelExcel(); updateFilterIcons(); }
+
+function clearFilterForCurrentCol() { 
+    delete activeFilters[currentFilterCol]; 
+    closeFilterMenu(); 
+    applyFilters(); 
+    updateFilterIcons(); 
+}
+
 function applyFilterForCurrentCol() {
     const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
     const totalBoxes = document.querySelectorAll('.filter-val-cb');
@@ -1277,7 +1331,9 @@ function applyFilterForCurrentCol() {
         activeFilters[currentFilterCol] = selectedVals;
     }
     
-    closeFilterMenu(); applyFilters(); updateFilterIcons();
+    closeFilterMenu(); 
+    applyFilters(); 
+    updateFilterIcons();
 }
 
 function updateFilterIcons() {
