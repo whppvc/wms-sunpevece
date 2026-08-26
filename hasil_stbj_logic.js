@@ -28,7 +28,7 @@ let filterTimeout;
 
 // State Khusus Mode Mobile (Drill-Down 6 Tingkat)
 let mobileLevel = 1; 
-let mobileSelectedSource = ''; // 'ALL', 'SCAN', 'MANUAL'
+let mobileSelectedSource = ''; // 'ALL', 'SCAN', 'MANUAL', 'HOLD'
 let mobileSelectedTgl = '';
 let mobileSelectedMesinShift = ''; // `${mesin}_${shift}`
 let mobileSelectedItemSpec = ''; // `${nama}_${pjg}_${grade}_${dus}`
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const actionMenu = document.getElementById('mobile-action-menu');
         if (actionMenu && !actionMenu.classList.contains('hidden')) {
-            if (!actionMenu.contains(e.target) && !actionMenu.closest('button[onclick^="toggleActionMenuMobile"]')) {
+            if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenuMobile"]')) {
                 actionMenu.classList.add('hidden');
             }
         }
@@ -199,11 +199,17 @@ function setMode(m) {
         }
     });
     
-    const isMobile = m === 'mobile';
+    const isMobile = (m === 'mobile');
     document.getElementById('view-mobile').classList.toggle('hidden', !isMobile);
     document.getElementById('view-table').classList.toggle('hidden', isMobile);
     document.getElementById('desktop-toolbar').classList.toggle('hidden', isMobile);
     document.getElementById('footer-pagination').classList.toggle('hidden', isMobile);
+    
+    const lvl6Footer = document.getElementById('mobile-lvl6-footer');
+    if (lvl6Footer && !isMobile) {
+        lvl6Footer.classList.add('hidden');
+        lvl6Footer.style.display = 'none';
+    }
 
     const btnCollect = document.getElementById('btn-massal-collect');
     const btnCollectMob = document.getElementById('btn-massal-collect-mob');
@@ -236,7 +242,7 @@ function setMode(m) {
 }
 
 // ========================================================
-// LOGIKA MODE MOBILE (DRILL-DOWN 6 TINGKAT)
+// LOGIKA MODE MOBILE (DRILL-DOWN 6 TINGKAT DENGAN KOTAK HOLD)
 // ========================================================
 function getAllUnifiedItems() {
     let list = [];
@@ -324,7 +330,7 @@ function matchesActiveFilters(item) {
 }
 
 window.goToMobileLevel2 = function(source) {
-    mobileSelectedSource = source; // 'ALL', 'SCAN', 'MANUAL'
+    mobileSelectedSource = source; // 'ALL', 'SCAN', 'MANUAL', 'HOLD'
     mobileLevel = 2;
     renderMobileView();
 };
@@ -366,9 +372,95 @@ window.setMobileAllDate = function() {
     renderMobileView();
 };
 
+window.toggleSelectAllLvl6 = function(checked) {
+    document.querySelectorAll('.cb-stbj-lvl6').forEach(cb => {
+        cb.checked = checked;
+        const card = cb.closest('.card-stbj-lvl6');
+        if (card) {
+            if (checked) card.classList.add('border-blue-500', 'bg-blue-50/40');
+            else card.classList.remove('border-blue-500', 'bg-blue-50/40');
+        }
+    });
+};
+
+window.highlightLvl6Card = function(cb) {
+    const card = cb.closest('.card-stbj-lvl6');
+    if (card) {
+        if (cb.checked) card.classList.add('border-blue-500', 'bg-blue-50/40');
+        else card.classList.remove('border-blue-500', 'bg-blue-50/40');
+    }
+};
+
+// REVISI: Fungsi Cancel STBJ Mobile (Mengubah Status menjadi HOLD LANGSIR)
+window.cancelSTBJMobile = async function() {
+    const checkedBoxes = document.querySelectorAll('.cb-stbj-lvl6:checked');
+    if (checkedBoxes.length === 0) return alert("Pilih / centang minimal 1 kardus yang ingin di-cancel STBJ!");
+
+    const qrsToCancel = [];
+    checkedBoxes.forEach(cb => {
+        const qr = cb.value;
+        const src = cb.getAttribute('data-source');
+        if (src === 'SCAN' && qr !== '-') {
+            qrsToCancel.push(qr);
+        }
+    });
+
+    if (qrsToCancel.length === 0) {
+        return alert("Item manual tidak dapat di-cancel STBJ ke Hold Langsir.");
+    }
+
+    if (!confirm(`Yakin ingin membatalkan (Cancel) ${qrsToCancel.length} item STBJ ini?\nData akan langsung masuk ke status 'HOLD LANGSIR'.`)) return;
+
+    const btn = document.getElementById('btn-cancel-stbj-lvl6');
+    const oriText = btn ? btn.innerHTML : '';
+    if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Memproses...'; btn.disabled = true; }
+
+    try {
+        const { error } = await db.from('hasil_stbj_langsir')
+            .update({ 
+                status: 'HOLD LANGSIR', 
+                keterangan: 'Cancel STBJ Mobile' 
+            })
+            .in('qrcode', qrsToCancel);
+
+        if (error) throw error;
+
+        // Update lokal
+        rawDataRaw.forEach(r => {
+            if (qrsToCancel.includes(r.qrcode)) {
+                r.status = 'HOLD LANGSIR';
+                r.keterangan = 'Cancel STBJ Mobile';
+            }
+        });
+
+        alert(`✅ SUKSES!\n${qrsToCancel.length} kardus berhasil di-cancel STBJ dan statusnya diubah menjadi 'HOLD LANGSIR'.`);
+        renderMobileView();
+
+    } catch (e) {
+        alert("Gagal memproses cancel STBJ: " + e.message);
+    } finally {
+        if(btn) { btn.innerHTML = oriText; btn.disabled = false; }
+        lucide.createIcons();
+    }
+};
+
 function renderMobileView() {
     const container = document.getElementById('view-mobile');
     const targetDate = document.getElementById('filter-date-mobile')?.value || '';
+    const lvl6Footer = document.getElementById('mobile-lvl6-footer');
+
+    // REVISI: Kontrol Tampilan Footer Freeze Level 6
+    if (lvl6Footer) {
+        if (modeSekarang === 'mobile' && mobileLevel === 6) {
+            lvl6Footer.classList.remove('hidden');
+            lvl6Footer.style.display = 'flex';
+            const cbAllLvl6 = document.getElementById('cb-all-lvl6');
+            if (cbAllLvl6) cbAllLvl6.checked = false;
+        } else {
+            lvl6Footer.classList.add('hidden');
+            lvl6Footer.style.display = 'none';
+        }
+    }
 
     // Ambil data gabungan & saring berdasarkan filter
     let allItems = getAllUnifiedItems().filter(r => {
@@ -379,7 +471,7 @@ function renderMobileView() {
         return matchesActiveFilters(r);
     });
 
-    // Toolbar Header Filter Mobile (Selalu ada di Level 1)
+    // Toolbar Header Filter Mobile (Level 1)
     let toolbarHtml = `
         <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-2 mb-2">
             <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-xl p-1 shadow-inner">
@@ -409,12 +501,15 @@ function renderMobileView() {
     let html = '';
 
     // ==========================================
-    // LEVEL 1: PILIHAN SUMBER DATA (A/B/C)
+    // LEVEL 1: PILIHAN SUMBER DATA (A / B / C / D TABEL HOLD)
     // ==========================================
     if (mobileLevel === 1) {
         let totalScan = 0;
         let totalManual = 0;
+        let totalHold = 0;
+
         allItems.forEach(r => {
+            if (r.status.includes('HOLD')) totalHold += r.qty;
             if (r.source === 'SCAN') totalScan += r.qty;
             else if (r.source === 'MANUAL') totalManual += r.qty;
         });
@@ -475,17 +570,38 @@ function renderMobileView() {
                 <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
             </div>
         `;
+
+        // REVISI: Pilihan D: Tabel Hold
+        html += `
+            <div onclick="goToMobileLevel2('HOLD')" class="bg-white border border-amber-300 p-4 rounded-2xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-amber-50">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md">
+                        <i data-lucide="pause-circle" class="w-6 h-6"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-black text-amber-600 uppercase tracking-wider">Kategori D</span>
+                        <h4 class="font-black text-slate-800 text-base leading-tight">Tabel Hold (STBJ & Langsir)</h4>
+                        <p class="text-[11px] font-bold text-amber-700 mt-1">${totalHold} Dus Dalam Penahanan</p>
+                    </div>
+                </div>
+                <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+            </div>
+        `;
     }
 
     // ==========================================
     // LEVEL 2: TANGGAL PRODUKSI
     // ==========================================
     else if (mobileLevel === 2) {
-        let sourceLabel = mobileSelectedSource === 'ALL' ? 'Hasil Scan + Manual' : (mobileSelectedSource === 'SCAN' ? 'Hasil Scan Saja' : 'Manual Saja');
+        let sourceLabel = 'Hasil Scan + Manual';
+        if (mobileSelectedSource === 'SCAN') sourceLabel = 'Hasil Scan Saja';
+        else if (mobileSelectedSource === 'MANUAL') sourceLabel = 'Input Manual Saja';
+        else if (mobileSelectedSource === 'HOLD') sourceLabel = 'Tabel Hold STBJ & Langsir';
 
         let dataLvl2 = allItems.filter(r => {
             if (mobileSelectedSource === 'SCAN') return r.source === 'SCAN';
             if (mobileSelectedSource === 'MANUAL') return r.source === 'MANUAL';
+            if (mobileSelectedSource === 'HOLD') return r.status.includes('HOLD');
             return true;
         });
 
@@ -536,6 +652,7 @@ function renderMobileView() {
         let dataLvl3 = allItems.filter(r => {
             if (mobileSelectedSource === 'SCAN' && r.source !== 'SCAN') return false;
             if (mobileSelectedSource === 'MANUAL' && r.source !== 'MANUAL') return false;
+            if (mobileSelectedSource === 'HOLD' && !r.status.includes('HOLD')) return false;
             return r.tglProduksi === mobileSelectedTgl;
         });
 
@@ -589,6 +706,7 @@ function renderMobileView() {
         let dataLvl4 = allItems.filter(r => {
             if (mobileSelectedSource === 'SCAN' && r.source !== 'SCAN') return false;
             if (mobileSelectedSource === 'MANUAL' && r.source !== 'MANUAL') return false;
+            if (mobileSelectedSource === 'HOLD' && !r.status.includes('HOLD')) return false;
             return r.tglProduksi === mobileSelectedTgl && r.mesin === mSel && r.shift === sSel;
         });
 
@@ -643,6 +761,7 @@ function renderMobileView() {
         let dataLvl5 = allItems.filter(r => {
             if (mobileSelectedSource === 'SCAN' && r.source !== 'SCAN') return false;
             if (mobileSelectedSource === 'MANUAL' && r.source !== 'MANUAL') return false;
+            if (mobileSelectedSource === 'HOLD' && !r.status.includes('HOLD')) return false;
             return r.tglProduksi === mobileSelectedTgl && r.mesin === mSel && r.shift === sSel &&
                    r.namaItem === namaSel && r.panjang === pjgSel && r.grade === gradeSel && r.dus === dusSel;
         });
@@ -693,7 +812,7 @@ function renderMobileView() {
     }
 
     // ==========================================
-    // LEVEL 6: PO & DETAIL KARDUS FISIK
+    // REVISI LEVEL 6: PO & DETAIL KARDUS DENGAN CHECKBOX & FREEZE TOP
     // ==========================================
     else if (mobileLevel === 6) {
         let [mSel, sSel] = mobileSelectedMesinShift.split('_');
@@ -702,6 +821,7 @@ function renderMobileView() {
         let detailItems = allItems.filter(r => {
             if (mobileSelectedSource === 'SCAN' && r.source !== 'SCAN') return false;
             if (mobileSelectedSource === 'MANUAL' && r.source !== 'MANUAL') return false;
+            if (mobileSelectedSource === 'HOLD' && !r.status.includes('HOLD')) return false;
             return r.tglProduksi === mobileSelectedTgl && r.mesin === mSel && r.shift === sSel &&
                    r.namaItem === namaSel && r.panjang === pjgSel && r.grade === gradeSel && r.dus === dusSel &&
                    r.shading === mobileSelectedShading;
@@ -721,8 +841,6 @@ function renderMobileView() {
             </div>
         `;
 
-        let count = detailItems.length;
-
         detailItems.forEach(d => {
             const waktuSTBJ = formatWIB(d.created_at);
 
@@ -732,16 +850,18 @@ function renderMobileView() {
             else if (d.status === 'MANUAL') badgeStatusClass = 'bg-purple-100 text-purple-700 border-purple-200';
 
             html += `
-                <div class="bg-white border border-slate-300 rounded-2xl p-4 mb-2 relative transition w-full flex flex-col shadow-sm">
+                <div class="card-stbj-lvl6 bg-white border border-slate-300 rounded-2xl p-4 mb-2 relative transition w-full flex flex-col shadow-sm">
                     
+                    <!-- TOP HEADER: KOTAK CENTANG (CHECKBOX), CUSTOMER, STATUS -->
                     <div class="flex justify-between items-center mb-3 pb-2.5 border-b border-slate-100">
-                        <div class="flex items-center gap-2">
-                            <span class="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-black">${count--}</span>
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" value="${d.qrcode}" data-source="${d.source}" onchange="highlightLvl6Card(this)" class="cb-stbj-lvl6 cursor-pointer w-5 h-5 accent-blue-600 rounded border-slate-400">
                             <span class="font-black text-sm text-orange-600 uppercase">Customer: ${d.customer}</span>
                         </div>
                         <span class="font-bold px-2.5 py-0.5 text-[10px] rounded-md border ${badgeStatusClass} uppercase">${d.status}</span>
                     </div>
                     
+                    <!-- QRCODE BANNER -->
                     ${d.qrcode !== '-' ? `
                     <div class="font-mono font-black text-slate-900 text-sm break-all leading-tight bg-slate-100 p-2.5 rounded-xl border border-slate-200 text-center mb-3">
                         ${d.qrcode}
@@ -750,6 +870,7 @@ function renderMobileView() {
                         INPUT MANUAL (TANPA SCAN)
                     </div>`}
                     
+                    <!-- GRID INFORMASI -->
                     <div class="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                         <div class="flex flex-col">
                             <span class="text-[10px] font-black text-slate-400 uppercase">Waktu Input / STBJ</span>
@@ -760,7 +881,8 @@ function renderMobileView() {
                             <span class="font-black text-slate-800">${d.troli}</span>
                         </div>
                         <div class="flex flex-col">
-                            <span class="text-[10px] font-black text-slate-400 uppercase">Qty Kardus</span>
+                            <!-- REVISI: Teks diganti menjadi Qty Dus -->
+                            <span class="text-[10px] font-black text-slate-400 uppercase">Qty Dus</span>
                             <span class="font-black text-emerald-700 text-sm">${d.qty} Dus</span>
                         </div>
                         <div class="flex flex-col">
