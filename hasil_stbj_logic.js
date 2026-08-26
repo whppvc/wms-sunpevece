@@ -1,8 +1,6 @@
-
-
-// Otomatis deteksi mode perangkat saat buka halaman (Layar < 640px = Mobile, >= 640px = Desktop QR Code)
+// Otomatis deteksi mode perangkat saat buka halaman (Layar < 640px = Mobile, >= 640px = Desktop Tabel)
 const isMobileDevice = window.innerWidth < 640;
-let modeSekarang = isMobileDevice ? 'mobile' : 'qrcode';
+let modeSekarang = isMobileDevice ? 'mobile' : 'jasper'; // Default Desktop ke 'jasper' (Tabel)
 
 let statusSekarang = 'ALL'; 
 let rawDataRaw = [];
@@ -34,6 +32,11 @@ let mobileSelectedTgl = '';
 let mobileSelectedMesinShift = ''; // `${mesin}_${shift}`
 let mobileSelectedItemSpec = ''; // `${nama}_${pjg}_${grade}_${dus}`
 let mobileSelectedShading = '';
+
+// State Khusus Submenu Baru "QRCODE" (Pencarian & Pagination)
+let qrSearchResults = [];
+let qrSearchCurPage = 1;
+const qrSearchRowsPerPage = 12;
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'admin'};
 
@@ -178,6 +181,7 @@ async function muatDataDariSupabase() {
 
         rawDataRaw = data || [];
         updateFilterDropdowns();
+        populateQRSearchDropdowns();
         setMode(modeSekarang);
     } catch(err) { 
         tbody.innerHTML = `<tr><td colspan="23" class="p-10 text-center text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; 
@@ -189,7 +193,7 @@ function setMode(m) {
     const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
 
-    ['mobile', 'qrcode', 'item', 'jasper', 'manual'].forEach(tab => {
+    ['mobile', 'qrcode', 'jasper', 'manual'].forEach(tab => {
         const el = document.getElementById('tab-mode-' + tab);
         if(el) {
             if(tab === 'mobile') {
@@ -201,10 +205,14 @@ function setMode(m) {
     });
     
     const isMobile = (m === 'mobile');
+    const isQRSearch = (m === 'qrcode');
+
     document.getElementById('view-mobile').classList.toggle('hidden', !isMobile);
-    document.getElementById('view-table').classList.toggle('hidden', isMobile);
-    document.getElementById('desktop-toolbar').classList.toggle('hidden', isMobile);
-    document.getElementById('footer-pagination').classList.toggle('hidden', isMobile);
+    document.getElementById('view-qrcode-search').classList.toggle('hidden', !isQRSearch);
+    document.getElementById('view-table').classList.toggle('hidden', isMobile || isQRSearch);
+    
+    document.getElementById('desktop-toolbar').classList.toggle('hidden', isMobile || isQRSearch);
+    document.getElementById('footer-pagination').classList.toggle('hidden', isMobile || isQRSearch);
     
     const lvl6Footer = document.getElementById('mobile-lvl6-footer');
     if (lvl6Footer && !isMobile) {
@@ -212,14 +220,16 @@ function setMode(m) {
         lvl6Footer.style.display = 'none';
     }
 
-    const btnCollect = document.getElementById('btn-massal-collect');
-    const btnCollectMob = document.getElementById('btn-massal-collect-mob');
-    const btnHold = document.getElementById('btn-hold-mob');
-    const btnHapus = document.getElementById('btn-hapus-mob');
-    const isCreator = currentUser && currentUser.role && currentUser.role.toLowerCase() === 'creator';
+    if (isQRSearch) {
+        eksekusiQRSearch(); // Otomatis muat data pencarian QR awal
+    } else if (!isMobile) {
+        const btnCollect = document.getElementById('btn-massal-collect');
+        const btnCollectMob = document.getElementById('btn-massal-collect-mob');
+        const btnHold = document.getElementById('btn-hold-mob');
+        const btnHapus = document.getElementById('btn-hapus-mob');
+        const isCreator = currentUser && currentUser.role && currentUser.role.toLowerCase() === 'creator';
 
-    if (!isMobile) {
-        if (m === 'item' || m === 'jasper') {
+        if (m === 'jasper') {
             if(btnCollect) btnCollect.classList.remove('hidden'); 
             if(btnCollectMob) btnCollectMob.classList.remove('hidden'); 
             if(btnHold) btnHold.classList.add('hidden');
@@ -228,11 +238,6 @@ function setMode(m) {
             if(btnCollect) btnCollect.classList.add('hidden'); 
             if(btnCollectMob) btnCollectMob.classList.add('hidden'); 
             if(btnHold) btnHold.classList.add('hidden');
-            if(btnHapus) btnHapus.classList.toggle('hidden', !isCreator);
-        } else {
-            if(btnCollect) btnCollect.classList.add('hidden'); 
-            if(btnCollectMob) btnCollectMob.classList.add('hidden'); 
-            if(btnHold) btnHold.classList.remove('hidden');
             if(btnHapus) btnHapus.classList.toggle('hidden', !isCreator);
         }
         renderHeaderDanTabel();
@@ -243,7 +248,189 @@ function setMode(m) {
 }
 
 // ========================================================
-// LOGIKA MODE MOBILE (DRILL-DOWN 6 TINGKAT DENGAN KOTAK HOLD)
+// LOGIKA SUBMENU BARU: "QRCODE" (SEARCH & CARD VIEW MULTI)
+// ========================================================
+function populateQRSearchDropdowns() {
+    const getUniq = (arr, key) => [...new Set(arr.map(r => r[key]).filter(Boolean))].sort();
+    
+    const fill = (id, list) => {
+        const sel = document.getElementById(id);
+        if(!sel) return;
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">-- Semua --</option>' + list.map(v => `<option value="${v}">${v}</option>`).join('');
+        if(list.includes(cur)) sel.value = cur;
+    };
+
+    fill('qs-nama', getUniq(rawDataRaw, 'nama_item'));
+    fill('qs-pjg', getUniq(rawDataRaw, 'panjang').map(formatPanjang));
+    fill('qs-grade', getUniq(rawDataRaw, 'grade'));
+    fill('qs-dus', getUniq(rawDataRaw, 'dus'));
+    fill('qs-cust', getUniq(rawDataRaw, 'customer'));
+    if(jasperData) fill('qs-jasper', getUniq(jasperData, 'nama_jasper'));
+}
+
+window.resetQRSearchFilter = function() {
+    ['qs-qr', 'qs-status', 'qs-nama', 'qs-jasper', 'qs-pjg', 'qs-grade', 'qs-dus', 'qs-shading', 'qs-cust'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.value = '';
+    });
+    eksekusiQRSearch();
+};
+
+window.eksekusiQRSearch = function() {
+    const rawQrInput = document.getElementById('qs-qr')?.value.trim() || '';
+    const qrs = rawQrInput ? rawQrInput.split(/[\s,;]+/).map(q => q.trim().toLowerCase()).filter(Boolean) : [];
+
+    const f = {
+        status: document.getElementById('qs-status')?.value || '',
+        nama: document.getElementById('qs-nama')?.value || '',
+        jasper: document.getElementById('qs-jasper')?.value || '',
+        pjg: document.getElementById('qs-pjg')?.value || '',
+        grade: document.getElementById('qs-grade')?.value || '',
+        dus: document.getElementById('qs-dus')?.value || '',
+        shading: document.getElementById('qs-shading')?.value.toUpperCase().trim() || '',
+        cust: document.getElementById('qs-cust')?.value || ''
+    };
+
+    qrSearchResults = rawDataRaw.filter(r => {
+        if(qrs.length > 0) {
+            let qrCode = (r.qrcode || '').toLowerCase();
+            let matchAny = qrs.some(q => qrCode.includes(q));
+            if(!matchAny) return false;
+        }
+
+        if(f.status && r.status !== f.status) return false;
+        if(f.nama && r.nama_item !== f.nama) return false;
+        if(f.pjg && formatPanjang(r.panjang) !== f.pjg) return false;
+        if(f.grade && r.grade !== f.grade) return false;
+        if(f.dus && r.dus !== f.dus) return false;
+        if(f.shading && !(r.shading || '').toUpperCase().includes(f.shading)) return false;
+        if(f.cust && r.customer !== f.cust) return false;
+
+        if(f.jasper) {
+            let cJasper = (jasperData || []).find(j => j.nama_item === r.nama_item && j.panjang === r.panjang && j.grade === r.grade);
+            let jName = cJasper ? cJasper.nama_jasper : `JAS-${r.nama_item}`;
+            if(jName !== f.jasper) return false;
+        }
+
+        return true;
+    });
+
+    qrSearchCurPage = 1;
+    renderQRSearchCards();
+};
+
+function renderQRSearchCards() {
+    const container = document.getElementById('container-qr-cards');
+    const totalCountLbl = document.getElementById('lbl-qr-search-count');
+    const curPageLbl = document.getElementById('lbl-qr-cur-page');
+    const totalPageLbl = document.getElementById('lbl-qr-total-page');
+
+    if(!container) return;
+
+    totalCountLbl.innerText = `${qrSearchResults.length} Kardus`;
+    const totalPages = Math.ceil(qrSearchResults.length / qrSearchRowsPerPage) || 1;
+    
+    if(qrSearchCurPage > totalPages) qrSearchCurPage = totalPages;
+    if(qrSearchCurPage < 1) qrSearchCurPage = 1;
+
+    curPageLbl.innerText = qrSearchCurPage;
+    totalPageLbl.innerText = totalPages;
+
+    const start = (qrSearchCurPage - 1) * qrSearchRowsPerPage;
+    const paginated = qrSearchResults.slice(start, start + qrSearchRowsPerPage);
+
+    if(paginated.length === 0) {
+        container.innerHTML = `
+            <div class="col-span-full flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-slate-200 text-center">
+                <i data-lucide="package-search" class="w-12 h-12 text-slate-300 mb-2"></i>
+                <h4 class="font-bold text-slate-700 text-sm">Tidak ada kardus cocok dengan kriteria pencarian</h4>
+            </div>`;
+        lucide.createIcons();
+        return;
+    }
+
+    let html = '';
+    paginated.forEach((r, idx) => {
+        const waktuSTBJ = formatWIB(r.created_at);
+        const pjgFormatted = formatPanjang(r.panjang);
+
+        let badgeStatusClass = 'bg-blue-100 text-blue-700 border-blue-200';
+        if (r.status === 'IN GUDANG') badgeStatusClass = 'bg-emerald-100 text-emerald-700 border-emerald-200';
+        else if ((r.status || '').includes('HOLD')) badgeStatusClass = 'bg-amber-100 text-amber-700 border-amber-200';
+
+        let cJasper = (jasperData || []).find(j => j.nama_item === r.nama_item && j.panjang === r.panjang && j.grade === r.grade);
+        let jName = cJasper ? cJasper.nama_jasper : `JAS-${r.nama_item}`;
+
+        html += `
+            <div class="bg-white border border-slate-300 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:border-blue-400 transition">
+                <div>
+                    <div class="flex justify-between items-center mb-2.5 pb-2 border-b border-slate-100">
+                        <span class="text-xs font-black text-slate-400">#${start + idx + 1}</span>
+                        <span class="font-bold px-2.5 py-0.5 text-[10px] rounded-md border ${badgeStatusClass} uppercase">${r.status || '-'}</span>
+                    </div>
+
+                    <div class="font-mono font-black text-slate-900 text-xs break-all leading-tight bg-slate-100 p-2.5 rounded-xl border border-slate-200 text-center mb-3">
+                        ${r.qrcode}
+                    </div>
+
+                    <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mb-2.5">
+                        <span class="text-[10px] font-black uppercase text-blue-600 block mb-0.5">${r.jenis_item || '-'}</span>
+                        <h4 class="font-black text-slate-900 text-sm leading-snug">${r.nama_item} - ${pjgFormatted} - ${r.grade} - ${r.dus}</h4>
+                        <span class="text-xs font-black text-purple-700 block mt-1">Jasper: ${jName}</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-x-2 gap-y-2 text-xs">
+                        <div>
+                            <span class="text-[10px] font-black text-slate-400 uppercase block">Shading</span>
+                            <span class="font-bold text-indigo-700">${r.shading || '-'}</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-black text-slate-400 uppercase block">Customer Bawaan</span>
+                            <span class="font-bold text-orange-600 uppercase">${r.customer || '-'}</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-black text-slate-400 uppercase block">Produksi</span>
+                            <span class="font-bold text-slate-700">${r.tgl_produksi || '-'} (M${r.mesin}/S${r.shift})</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-black text-slate-400 uppercase block">Troli</span>
+                            <span class="font-bold text-slate-800">${r.troli || '-'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3 pt-2.5 border-t border-slate-100 flex justify-between items-center text-[10px] font-bold text-slate-400">
+                    <span>${waktuSTBJ}</span>
+                    <span>PIC: <strong class="text-slate-700 uppercase">${r.pic_input || '-'}</strong></span>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+    lucide.createIcons();
+}
+
+window.prevQRSearchPage = function() {
+    if(qrSearchCurPage > 1) {
+        qrSearchCurPage--;
+        renderQRSearchCards();
+        document.getElementById('view-qrcode-search').scrollTop = 0;
+    }
+};
+
+window.nextQRSearchPage = function() {
+    const totalPages = Math.ceil(qrSearchResults.length / qrSearchRowsPerPage) || 1;
+    if(qrSearchCurPage < totalPages) {
+        qrSearchCurPage++;
+        renderQRSearchCards();
+        document.getElementById('view-qrcode-search').scrollTop = 0;
+    }
+};
+
+// ========================================================
+// LOGIKA MODE MOBILE (DRILL-DOWN 6 TINGKAT DENGAN KISI 2)
 // ========================================================
 function getAllUnifiedItems() {
     let list = [];
@@ -426,7 +613,6 @@ window.cancelSTBJMobile = async function() {
 
         if (error) throw error;
 
-        // Update data lokal
         rawDataRaw.forEach(r => {
             if (qrsToCancel.includes(r.qrcode)) {
                 r.status = 'HOLD LANGSIR';
@@ -445,7 +631,7 @@ window.cancelSTBJMobile = async function() {
     }
 };
 
-// REVISI: Fungsi Cancel Hold Mobile (Mengembalikan status menjadi STBJ)
+// Fungsi Cancel Hold Mobile (Mengembalikan status menjadi STBJ)
 window.cancelHoldMobile = async function() {
     const checkedBoxes = document.querySelectorAll('.cb-stbj-lvl6:checked');
     if (checkedBoxes.length === 0) return alert("Pilih / centang minimal 1 kardus hold yang ingin di-cancel!");
@@ -463,7 +649,7 @@ window.cancelHoldMobile = async function() {
         return alert("Tidak ada item scan valid untuk di-unhold.");
     }
 
-    if (!confirm(`Kembalikan ${qrsToUnhold.length} item hold ini ke status 'STBJ' biasa?`)) return;
+    if (!confirm(`Kembalikan status ${qrsToUnhold.length} item hold ini menjadi 'STBJ'?`)) return;
 
     const btn = document.getElementById('btn-cancel-hold-lvl6');
     const oriText = btn ? btn.innerHTML : '';
@@ -479,7 +665,6 @@ window.cancelHoldMobile = async function() {
 
         if (error) throw error;
 
-        // Update data lokal
         rawDataRaw.forEach(r => {
             if (qrsToUnhold.includes(r.qrcode)) {
                 r.status = 'STBJ';
@@ -498,7 +683,7 @@ window.cancelHoldMobile = async function() {
     }
 };
 
-// REVISI: Fungsi Hapus Item Hold Mobile (Hapus Permanen dari Database)
+// Fungsi Hapus Item Hold Mobile (Hapus Permanen)
 window.hapusItemHoldMobile = async function() {
     const checkedBoxes = document.querySelectorAll('.cb-stbj-lvl6:checked');
     if (checkedBoxes.length === 0) return alert("Pilih / centang minimal 1 kardus yang ingin dihapus!");
@@ -524,7 +709,6 @@ window.hapusItemHoldMobile = async function() {
 
         if (error) throw error;
 
-        // Hapus dari data lokal
         rawDataRaw = rawDataRaw.filter(r => !qrsToDelete.includes(r.qrcode));
 
         alert(`✅ SUKSES!\n${qrsToDelete.length} kardus hold telah dihapus permanen dari database.`);
@@ -543,7 +727,6 @@ function renderMobileView() {
     const targetDate = document.getElementById('filter-date-mobile')?.value || '';
     const lvl6Footer = document.getElementById('mobile-lvl6-footer');
 
-    // REVISI: Kontrol Tampilan Footer Freeze Level 6 Berdasarkan Kategori Sumber
     if (lvl6Footer) {
         if (modeSekarang === 'mobile' && mobileLevel === 6) {
             lvl6Footer.classList.remove('hidden');
@@ -568,7 +751,6 @@ function renderMobileView() {
         }
     }
 
-    // Ambil data gabungan & saring berdasarkan filter
     let allItems = getAllUnifiedItems().filter(r => {
         if (targetDate) {
             const rowDate = (r.created_at || '').split('T')[0];
@@ -577,7 +759,6 @@ function renderMobileView() {
         return matchesActiveFilters(r);
     });
 
-    // Toolbar Header Filter Mobile (Level 1)
     let toolbarHtml = `
         <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-2 mb-2">
             <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-xl p-1 shadow-inner">
@@ -607,7 +788,7 @@ function renderMobileView() {
     let html = '';
 
     // ==========================================
-    // LEVEL 1: PILIHAN SUMBER DATA (A / B / C / D TABEL HOLD)
+    // LEVEL 1: REVISI KOTAK PILIHAN (KISI 2 MENYAMPING & TEKS POLOS)
     // ==========================================
     if (mobileLevel === 1) {
         let totalScan = 0;
@@ -626,73 +807,62 @@ function renderMobileView() {
             <span class="text-xs font-black text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">${totalScan + totalManual} Total Dus</span>
         </div>`;
 
-        // Pilihan A: Gabungan
+        // GRID 2 MENYAMPING
+        html += `<div class="grid grid-cols-2 gap-3">`;
+
+        // 1. Hasil Scan + Manual
         html += `
-            <div onclick="goToMobileLevel2('ALL')" class="bg-white border border-blue-200 p-4 rounded-2xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-blue-50">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                        <i data-lucide="layers" class="w-6 h-6"></i>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-[10px] font-black text-blue-600 uppercase tracking-wider">Kategori A</span>
-                        <h4 class="font-black text-slate-800 text-base leading-tight">Hasil Scan + Manual</h4>
-                        <p class="text-[11px] font-bold text-slate-500 mt-1">${totalScan + totalManual} Dus Total</p>
-                    </div>
+            <div onclick="goToMobileLevel2('ALL')" class="bg-white border border-blue-200 p-4 rounded-2xl flex flex-col justify-between shadow-sm active:scale-95 transition cursor-pointer hover:bg-blue-50 h-36">
+                <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
+                    <i data-lucide="layers" class="w-5 h-5"></i>
                 </div>
-                <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+                <div>
+                    <h4 class="font-black text-slate-800 text-sm leading-snug">Hasil Scan + Manual</h4>
+                    <p class="text-[11px] font-black text-blue-600 mt-1">${totalScan + totalManual} Dus</p>
+                </div>
             </div>
         `;
 
-        // Pilihan B: Scan Saja
+        // 2. Hasil Scan Saja
         html += `
-            <div onclick="goToMobileLevel2('SCAN')" class="bg-white border border-indigo-200 p-4 rounded-2xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-indigo-50">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                        <i data-lucide="qr-code" class="w-6 h-6"></i>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-[10px] font-black text-indigo-600 uppercase tracking-wider">Kategori B</span>
-                        <h4 class="font-black text-slate-800 text-base leading-tight">Hasil Scan Saja</h4>
-                        <p class="text-[11px] font-bold text-slate-500 mt-1">${totalScan} Dus dari Barcode</p>
-                    </div>
+            <div onclick="goToMobileLevel2('SCAN')" class="bg-white border border-indigo-200 p-4 rounded-2xl flex flex-col justify-between shadow-sm active:scale-95 transition cursor-pointer hover:bg-indigo-50 h-36">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shrink-0">
+                    <i data-lucide="qr-code" class="w-5 h-5"></i>
                 </div>
-                <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+                <div>
+                    <h4 class="font-black text-slate-800 text-sm leading-snug">Hasil Scan Saja</h4>
+                    <p class="text-[11px] font-black text-indigo-600 mt-1">${totalScan} Dus</p>
+                </div>
             </div>
         `;
 
-        // Pilihan C: Manual Saja
+        // 3. Manual Saja
         html += `
-            <div onclick="goToMobileLevel2('MANUAL')" class="bg-white border border-purple-200 p-4 rounded-2xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-purple-50">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                        <i data-lucide="keyboard" class="w-6 h-6"></i>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-[10px] font-black text-purple-600 uppercase tracking-wider">Kategori C</span>
-                        <h4 class="font-black text-slate-800 text-base leading-tight">Input Manual Saja</h4>
-                        <p class="text-[11px] font-bold text-slate-500 mt-1">${totalManual} Dus dari Form</p>
-                    </div>
+            <div onclick="goToMobileLevel2('MANUAL')" class="bg-white border border-purple-200 p-4 rounded-2xl flex flex-col justify-between shadow-sm active:scale-95 transition cursor-pointer hover:bg-purple-50 h-36">
+                <div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-md shrink-0">
+                    <i data-lucide="keyboard" class="w-5 h-5"></i>
                 </div>
-                <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+                <div>
+                    <h4 class="font-black text-slate-800 text-sm leading-snug">Manual Saja</h4>
+                    <p class="text-[11px] font-black text-purple-600 mt-1">${totalManual} Dus</p>
+                </div>
             </div>
         `;
 
-        // Pilihan D: Tabel Hold
+        // 4. Tabel Hold
         html += `
-            <div onclick="goToMobileLevel2('HOLD')" class="bg-white border border-amber-300 p-4 rounded-2xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-amber-50">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md">
-                        <i data-lucide="pause-circle" class="w-6 h-6"></i>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-[10px] font-black text-amber-600 uppercase tracking-wider">Kategori D</span>
-                        <h4 class="font-black text-slate-800 text-base leading-tight">Tabel Hold (STBJ & Langsir)</h4>
-                        <p class="text-[11px] font-bold text-amber-700 mt-1">${totalHold} Dus Dalam Penahanan</p>
-                    </div>
+            <div onclick="goToMobileLevel2('HOLD')" class="bg-white border border-amber-300 p-4 rounded-2xl flex flex-col justify-between shadow-sm active:scale-95 transition cursor-pointer hover:bg-amber-50 h-36">
+                <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md shrink-0">
+                    <i data-lucide="pause-circle" class="w-5 h-5"></i>
                 </div>
-                <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+                <div>
+                    <h4 class="font-black text-slate-800 text-sm leading-snug">Tabel Hold</h4>
+                    <p class="text-[11px] font-black text-amber-700 mt-1">${totalHold} Dus</p>
+                </div>
             </div>
         `;
+
+        html += `</div>`;
     }
 
     // ==========================================
@@ -804,7 +974,7 @@ function renderMobileView() {
     }
 
     // ==========================================
-    // LEVEL 4: SPESIFIKASI ITEM (NAMA-PJG-GRADE-DUS)
+    // LEVEL 4: SPESIFIKASI ITEM
     // ==========================================
     else if (mobileLevel === 4) {
         let [mSel, sSel] = mobileSelectedMesinShift.split('_');
@@ -918,7 +1088,7 @@ function renderMobileView() {
     }
 
     // ==========================================
-    // LEVEL 6: PO & DETAIL KARDUS DENGAN CHECKBOX & FREEZE FOOTER
+    // LEVEL 6: DETAIL KARDUS FISIK DENGAN CHECKBOX & STICKY TOP
     // ==========================================
     else if (mobileLevel === 6) {
         let [mSel, sSel] = mobileSelectedMesinShift.split('_');
@@ -958,7 +1128,6 @@ function renderMobileView() {
             html += `
                 <div class="card-stbj-lvl6 bg-white border border-slate-300 rounded-2xl p-4 mb-2 relative transition w-full flex flex-col shadow-sm">
                     
-                    <!-- TOP HEADER: KOTAK CENTANG (CHECKBOX), CUSTOMER, STATUS -->
                     <div class="flex justify-between items-center mb-3 pb-2.5 border-b border-slate-100">
                         <label class="flex items-center gap-3 cursor-pointer">
                             <input type="checkbox" value="${d.qrcode}" data-source="${d.source}" onchange="highlightLvl6Card(this)" class="cb-stbj-lvl6 cursor-pointer w-5 h-5 accent-blue-600 rounded border-slate-400">
@@ -967,7 +1136,6 @@ function renderMobileView() {
                         <span class="font-bold px-2.5 py-0.5 text-[10px] rounded-md border ${badgeStatusClass} uppercase">${d.status}</span>
                     </div>
                     
-                    <!-- QRCODE BANNER -->
                     ${d.qrcode !== '-' ? `
                     <div class="font-mono font-black text-slate-900 text-sm break-all leading-tight bg-slate-100 p-2.5 rounded-xl border border-slate-200 text-center mb-3">
                         ${d.qrcode}
@@ -976,7 +1144,6 @@ function renderMobileView() {
                         INPUT MANUAL (TANPA SCAN)
                     </div>`}
                     
-                    <!-- GRID INFORMASI -->
                     <div class="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                         <div class="flex flex-col">
                             <span class="text-[10px] font-black text-slate-400 uppercase">Waktu Input / STBJ</span>
@@ -1066,7 +1233,7 @@ window.saringTabelSTBJ = function() {
 };
 
 // ========================================================
-// LOGIKA TABEL DESKTOP
+// LOGIKA TABEL DESKTOP (TABEL JASPER & MANUAL)
 // ========================================================
 function switchStatusFilter(val) { 
     statusSekarang = val; 
@@ -1083,41 +1250,7 @@ function buildProcessedData() {
     processedData = [];
     selectedRows.clear(); 
 
-    if (modeSekarang === 'qrcode') {
-        processedData = rawDataRaw.map(r => {
-            const tglSTBJ = formatWIB(r.created_at);
-            const tglLangsir = formatWIB(r.waktu_langsir);
-            
-            let statData = r.status_data && r.status_data !== 'BELUM' ? r.status_data : '-';
-            let displayStatus = r.status || '-';
-            if(displayStatus === 'STBJ' || displayStatus === 'SUDAH STBJ') displayStatus = 'SUDAH STBJ';
-
-            return {
-                _id: r.qrcode,
-                raw: r,
-                searchValues: {
-                    'col-status': displayStatus,
-                    'col-status-data': statData,
-                    'col-waktu': tglSTBJ,
-                    'col-waktu-langsir': tglLangsir,
-                    'col-troli': r.troli || '-',
-                    'col-qr': r.qrcode,
-                    'col-tgl': r.tgl_produksi || '-',
-                    'col-mesin': r.mesin || '-',
-                    'col-shift': r.shift || '-',
-                    'col-jenis': r.jenis_item || '-',
-                    'col-nama': r.nama_item || '-',
-                    'col-pjg': formatPanjang(r.panjang),
-                    'col-grade': r.grade || '-',
-                    'col-dus': r.dus || '-',
-                    'col-shading': r.shading || '-',
-                    'col-customer': r.customer || '-',
-                    'col-ket': r.keterangan || '-',
-                    'col-pic': r.pic_input || '-'
-                }
-            };
-        });
-    } else if (modeSekarang === 'manual') {
+    if (modeSekarang === 'manual') {
         processedData = stbjManualRaw.map(r => {
             const tglInput = formatWIB(r.created_at);
             let n = r.nama_item || '-';
@@ -1149,7 +1282,7 @@ function buildProcessedData() {
             };
         });
     } else {
-        const isJasper = modeSekarang === 'jasper';
+        // Mode 'jasper' (Tabel Agregasi)
         let groups = {};
         
         rawDataRaw.forEach(r => {
@@ -1157,13 +1290,11 @@ function buildProcessedData() {
             let jName = n;
             let jId = '';
             
-            if(isJasper) {
-                if(jasperData && jasperData.length > 0) {
-                    const cJasper = jasperData.find(j => j.nama_item === r.nama_item && j.panjang === r.panjang && j.grade === r.grade);
-                    if(cJasper) { jName = cJasper.nama_jasper; jId = cJasper.id; } 
-                    else { jName = `JAS-${r.nama_item}`; }
-                } else { jName = `JAS-${r.nama_item}`; }
-            }
+            if(jasperData && jasperData.length > 0) {
+                const cJasper = jasperData.find(j => j.nama_item === r.nama_item && j.panjang === r.panjang && j.grade === r.grade);
+                if(cJasper) { jName = cJasper.nama_jasper; jId = cJasper.id; } 
+                else { jName = `JAS-${r.nama_item}`; }
+            } else { jName = `JAS-${r.nama_item}`; }
             
             let ket = r.keterangan || 'TANPA_KETERANGAN';
             let sData = r.status_data || 'BELUM';
@@ -1479,63 +1610,7 @@ window.highlightRow = function(cb, id) {
 function renderHeaderDanTabel() {
     const thead = document.getElementById('thead-stbj');
     
-    if(modeSekarang === 'qrcode') {
-        thead.innerHTML = `
-            <tr>
-                <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
-                </th>
-                ${thSort('Status Item', 'col-status text-center')}
-                ${thSort('Collect', 'col-status-data text-center')}
-                ${thSort('Waktu STBJ', 'col-waktu text-center')}
-                ${thSort('Waktu Langsir', 'col-waktu-langsir text-center')}
-                ${thSort('Troli', 'col-troli text-center')}
-                ${thSort('QRCode', 'col-qr')}
-                ${thSort('Tgl Produksi', 'col-tgl text-center')}
-                ${thSort('Mesin', 'col-mesin text-center')}
-                ${thSort('Shift', 'col-shift text-center')}
-                ${thSort('Jenis Item', 'col-jenis')}
-                ${thSort('Nama Item', 'col-nama')}
-                ${thSort('Pjg', 'col-pjg text-center')}
-                ${thSort('Grade', 'col-grade text-center')}
-                ${thSort('Dus', 'col-dus text-center')}
-                ${thSort('Shading', 'col-shading text-center')}
-                ${thSort('Customer Bawaan', 'col-customer')}
-                ${thSort('Keterangan', 'col-ket text-center')}
-                ${thSort('PIC Input', 'col-pic')}
-            </tr>`;
-    } 
-    else if(modeSekarang === 'item' || modeSekarang === 'jasper') {
-        const isJasper = modeSekarang === 'jasper';
-        thead.innerHTML = `
-            <tr>
-                <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
-                </th>
-                <th class="hdr-std col-status hidden">Status Data</th>
-                ${thSort('Collect', 'col-status-data text-center')}
-                <th class="hdr-std col-waktu hidden">Waktu Scan</th>
-                ${thSort('Troli', 'col-troli text-center')}
-                <th class="hdr-std col-qr hidden">QRCode</th>
-                ${thSort('Tgl Produksi', 'col-tgl text-center')}
-                ${thSort('Mesin', 'col-mesin text-center')}
-                ${thSort('Shift', 'col-shift text-center')}
-                ${thSort('Jenis Item', 'col-jenis')}
-                ${thSort('Nama Item', 'col-nama')}
-                ${isJasper ? thSort('Nama Jasper', 'col-jasper text-purple-300') : ''}
-                ${isJasper ? '<th class="hdr-std w-10 text-center col-btn-edit">Edit</th>' : ''}
-                ${thSort('Panjang', 'col-pjg text-center')}
-                ${thSort('Grade', 'col-grade text-center')}
-                ${thSort('Dus', 'col-dus text-center')}
-                ${thSort('Shading', 'col-shading text-center')}
-                ${thSort('Customer Bawaan', 'col-customer')}
-                ${thSort('QTY (DUS)', 'col-qty text-center')}
-                ${thSort('QTY (LEMBAR)', 'col-qty-lembar text-center')}
-                ${thSort('Keterangan', 'col-ket text-center')}
-                <th class="hdr-std col-pic hidden">PIC Input</th>
-            </tr>`;
-    }
-    else if (modeSekarang === 'manual') {
+    if(modeSekarang === 'manual') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
@@ -1554,6 +1629,35 @@ function renderHeaderDanTabel() {
                 ${thSort('Customer', 'col-customer')}
                 ${thSort('QTY (DUS)', 'col-qty text-center')}
                 ${thSort('Keterangan', 'col-ket text-center')}
+            </tr>`;
+    } else {
+        // Mode 'jasper' (Tabel Agregasi)
+        thead.innerHTML = `
+            <tr>
+                <th class="hdr-std w-10 col-cb text-center sticky-col">
+                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+                </th>
+                <th class="hdr-std col-status hidden">Status Data</th>
+                ${thSort('Collect', 'col-status-data text-center')}
+                <th class="hdr-std col-waktu hidden">Waktu Scan</th>
+                ${thSort('Troli', 'col-troli text-center')}
+                <th class="hdr-std col-qr hidden">QRCode</th>
+                ${thSort('Tgl Produksi', 'col-tgl text-center')}
+                ${thSort('Mesin', 'col-mesin text-center')}
+                ${thSort('Shift', 'col-shift text-center')}
+                ${thSort('Jenis Item', 'col-jenis')}
+                ${thSort('Nama Item', 'col-nama')}
+                ${thSort('Nama Jasper', 'col-jasper text-purple-300')}
+                <th class="hdr-std w-10 text-center col-btn-edit">Edit</th>
+                ${thSort('Panjang', 'col-pjg text-center')}
+                ${thSort('Grade', 'col-grade text-center')}
+                ${thSort('Dus', 'col-dus text-center')}
+                ${thSort('Shading', 'col-shading text-center')}
+                ${thSort('Customer Bawaan', 'col-customer')}
+                ${thSort('QTY (DUS)', 'col-qty text-center')}
+                ${thSort('QTY (LEMBAR)', 'col-qty-lembar text-center')}
+                ${thSort('Keterangan', 'col-ket text-center')}
+                <th class="hdr-std col-pic hidden">PIC Input</th>
             </tr>`;
     }
     
@@ -1578,40 +1682,7 @@ function renderTable() {
         const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
         const trClass = `transition text-row text-[13px] ${stripeClass} ${isSelected ? 'selected-row' : ''}`;
         
-        if (modeSekarang === 'qrcode') {
-            const sv = row.searchValues;
-            
-            let textColor = "text-slate-600";
-            if(sv['col-status'] === 'SUDAH STBJ') textColor = "text-slate-900"; 
-            else if(sv['col-status'] === 'HOLD STBJ' || sv['col-status'] === 'HOLD LANGSIR') textColor = "text-orange-600"; 
-            else if(sv['col-status'] === 'IN GUDANG') textColor = "text-emerald-600"; 
-            else if(sv['col-status'] === 'RETUR' || sv['col-status'] === 'FORMAT SALAH') textColor = "text-rose-600";
-
-            let statDataHtml = sv['col-status-data'] !== '-' ? `<span class="text-indigo-600 font-medium uppercase">${sv['col-status-data']}</span>` : '-';
-
-            h += `
-                <tr class="${trClass}">
-                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${row._id}')" value="${row._id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
-                    <td class="px-4 py-3 text-center col-status ${hiddenCols.includes('col-status')?'col-hidden':''}"><span class="font-black ${textColor}">${sv['col-status']}</span></td>
-                    <td class="px-4 py-3 text-center col-status-data ${hiddenCols.includes('col-status-data')?'col-hidden':''}">${statDataHtml}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-waktu ${hiddenCols.includes('col-waktu')?'col-hidden':''}">${sv['col-waktu']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-waktu-langsir ${hiddenCols.includes('col-waktu-langsir')?'col-hidden':''}">${sv['col-waktu-langsir']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-troli ${hiddenCols.includes('col-troli')?'col-hidden':''}">${sv['col-troli']}</td>
-                    <td class="px-4 py-3 text-left font-mono font-bold text-slate-900 col-qr ${hiddenCols.includes('col-qr')?'col-hidden':''}">${sv['col-qr']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}">${sv['col-tgl']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}">${sv['col-mesin']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}">${sv['col-shift']}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
-                    <td class="px-4 py-3 text-left font-semibold text-slate-900 col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}">${sv['col-pjg']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}">${sv['col-grade']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}">${sv['col-dus']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}">${sv['col-shading']}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-customer ${hiddenCols.includes('col-customer')?'col-hidden':''}">${sv['col-customer']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-600 col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-500 col-pic ${hiddenCols.includes('col-pic')?'col-hidden':''}">${sv['col-pic']}</td>
-                </tr>`;
-        } else if (modeSekarang === 'manual') {
+        if (modeSekarang === 'manual') {
             const sv = row.searchValues;
             h += `
                 <tr class="${trClass}">
@@ -1631,19 +1702,16 @@ function renderTable() {
                     <td class="px-4 py-3 text-center font-medium text-slate-600 col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
                 </tr>`;
         } else {
+            // Mode 'jasper' (Tabel Agregasi)
             const r = row.raw;
             const sv = row.searchValues;
-            const isJasper = modeSekarang === 'jasper';
             
             let statDataHtml = sv['col-status-data'] !== '-' ? `<span class="text-indigo-600 font-medium uppercase">${sv['col-status-data']}</span>` : '-';
             
-            let btnEditJasper = '';
-            if(isJasper) {
-                const jData = encodeURIComponent(JSON.stringify({
-                    id: r.jasperId, nama_item: r.namaItemAsli, panjang: r.panjang, grade: r.grade, nama_jasper: r.displayNama
-                }));
-                btnEditJasper = `<td class="px-4 py-3 text-center col-btn-edit ${hiddenCols.includes('col-btn-edit')?'col-hidden':''}"><button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>`;
-            }
+            const jData = encodeURIComponent(JSON.stringify({
+                id: r.jasperId, nama_item: r.namaItemAsli, panjang: r.panjang, grade: r.grade, nama_jasper: r.displayNama
+            }));
+            let btnEditJasper = `<td class="px-4 py-3 text-center col-btn-edit ${hiddenCols.includes('col-btn-edit')?'col-hidden':''}"><button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>`;
 
             h += `
                 <tr class="${trClass}">
@@ -1658,7 +1726,7 @@ function renderTable() {
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}">${sv['col-shift']}</td>
                     <td class="px-4 py-3 text-left font-medium text-slate-900 col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
                     <td class="px-4 py-3 text-left font-semibold text-slate-900 col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
-                    ${isJasper ? `<td class="px-4 py-3 text-left font-black text-purple-700 col-jasper ${hiddenCols.includes('col-jasper')?'col-hidden':''}">${sv['col-jasper']}</td>` : ''}
+                    <td class="px-4 py-3 text-left font-black text-purple-700 col-jasper ${hiddenCols.includes('col-jasper')?'col-hidden':''}">${sv['col-jasper']}</td>
                     ${btnEditJasper}
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}">${sv['col-pjg']}</td>
                     <td class="px-4 py-3 text-center font-medium text-slate-900 col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}">${sv['col-grade']}</td>
@@ -1684,11 +1752,7 @@ function updatePaginationUI() {
     const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
     
     let sumQty = 0;
-    if (modeSekarang === 'qrcode') {
-        sumQty = totalFiltered;
-    } else {
-        filteredData.forEach(r => { sumQty += parseInt(r.searchValues['col-qty']) || 0; });
-    }
+    filteredData.forEach(r => { sumQty += parseInt(r.searchValues['col-qty']) || 0; });
 
     document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
     document.getElementById('lbl-total-qty').innerText = sumQty;
