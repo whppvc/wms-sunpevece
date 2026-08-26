@@ -1,6 +1,6 @@
 // Otomatis deteksi mode perangkat saat buka halaman (Layar < 640px = Mobile, >= 640px = Desktop Tabel)
 const isMobileDevice = window.innerWidth < 640;
-let modeSekarang = isMobileDevice ? 'mobile' : 'tabel'; // Default Desktop ke 'tabel'
+let modeSekarang = isMobileDevice ? 'mobile' : 'tabel'; 
 
 let statusSekarang = 'ALL'; 
 let rawDataRaw = [];
@@ -94,14 +94,16 @@ window.toggleActionMenuMobile = function(e) {
     if(menu) menu.classList.toggle('hidden');
 };
 
-window.toggleSidebarFilter = function() {
-    const sidebar = document.getElementById('sidebar-filter');
-    const overlay = document.getElementById('overlay-klik-luar');
-    sidebar.classList.toggle('translate-x-full');
-    overlay.classList.toggle('hidden');
-    if (!sidebar.classList.contains('translate-x-full')) {
-        updateFilterDropdowns();
-    }
+// REVISI: Kontrol Modal Pop-up Filter Tengah
+window.bukaModalFilterPopup = function() {
+    updateFilterDropdowns();
+    document.getElementById('modal-filter-stbj').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+};
+
+window.tutupModalFilterPopup = function() {
+    document.getElementById('modal-filter-stbj').classList.add('hidden');
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
 };
 
 function toggleSidebarKolom() {
@@ -115,9 +117,7 @@ function toggleSidebarKolom() {
 }
 
 function tutupPopups() {
-    const sidebar = document.getElementById('sidebar-filter');
-    if(sidebar) sidebar.classList.add('translate-x-full');
-
+    tutupModalFilterPopup();
     const sidebarK = document.getElementById('sidebar-kolom');
     if(sidebarK) sidebarK.classList.add('translate-x-full');
 
@@ -569,7 +569,7 @@ function renderMobileView() {
                 <button onclick="setMobileAllDate()" class="px-2.5 py-1 ${targetDate === '' ? 'bg-blue-600 text-white font-black' : 'bg-slate-200 text-slate-700 font-bold'} hover:bg-blue-700 hover:text-white rounded-lg text-[10px] uppercase transition" title="Tampilkan Semua Tanggal">Semua</button>
             </div>
 
-            <button onclick="toggleSidebarFilter()" class="px-4 py-2 bg-white rounded-xl border border-slate-300 shadow-sm active:scale-95 text-slate-700 font-bold text-xs hover:bg-slate-50 transition flex items-center gap-2">
+            <button onclick="bukaModalFilterPopup()" class="px-4 py-2 bg-white rounded-xl border border-slate-300 shadow-sm active:scale-95 text-slate-700 font-bold text-xs hover:bg-slate-50 transition flex items-center gap-2">
                 <i data-lucide="filter" class="w-4 h-4 text-blue-600"></i>
                 <span>Filter</span>
             </button>
@@ -590,7 +590,7 @@ function renderMobileView() {
     let html = '';
 
     // ==========================================
-    // LEVEL 1: KOTAK PILIHAN (KISI 2 MENYAMPING)
+    // LEVEL 1: KOTAK PILIHAN (KISI 2 MENYAMPING & TEKS POLOS)
     // ==========================================
     if (mobileLevel === 1) {
         let totalScan = 0;
@@ -841,7 +841,8 @@ function renderMobileView() {
             if (mobileSelectedSource === 'MANUAL' && r.source !== 'MANUAL') return false;
             if (mobileSelectedSource === 'HOLD' && !r.status.includes('HOLD')) return false;
             return r.tglProduksi === mobileSelectedTgl && r.mesin === mSel && r.shift === sSel &&
-                   r.namaItem === namaSel && r.panjang === pjgSel && r.grade === gradeSel && r.dus === dusSel;
+                   r.namaItem === namaSel && r.panjang === pjgSel && r.grade === gradeSel && r.dus === dusSel &&
+                   r.shading === mobileSelectedShading;
         });
 
         let shadingMap = {};
@@ -978,7 +979,7 @@ function renderMobileView() {
 }
 
 // ========================================================
-// LOGIKA FILTER SIDEBAR DROPDOWN LENGKAP
+// LOGIKA FILTER DROPDOWN
 // ========================================================
 function updateFilterDropdowns() {
     const fields = [
@@ -1023,7 +1024,6 @@ window.resetFilterSTBJ = function() {
         if(el) el.value = '';
     });
     saringTabelSTBJ();
-    toggleSidebarFilter();
 };
 
 window.saringTabelSTBJ = function() {
@@ -1035,7 +1035,7 @@ window.saringTabelSTBJ = function() {
 };
 
 // ========================================================
-// LOGIKA TABEL DESKTOP (TABEL)
+// LOGIKA TABEL DESKTOP (TABEL HASIL STBJ)
 // ========================================================
 function switchStatusFilter(val) { 
     statusSekarang = val; 
@@ -1052,7 +1052,6 @@ function buildProcessedData() {
     processedData = [];
     selectedRows.clear(); 
 
-    // Mode 'tabel' (Tabel Agregasi Utama)
     let groups = {};
     
     rawDataRaw.forEach(r => {
@@ -1266,7 +1265,7 @@ window.searchFilterList = function(val) {
 };
 
 function closeFilterMenu() { document.getElementById('excel-filter-menu').classList.add('hidden'); }
-function clearFilterForCurrentCol() { delete activeFilters[currentFilterCol]; closeFilterMenu(); applyFilters(); updateFilterIcons(); }
+function clearFilterForCurrentCol() { delete activeFilters[currentFilterCol]; closeFilterMenu(); saringTabelExcel(); updateFilterIcons(); }
 function applyFilterForCurrentCol() {
     const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
     const totalBoxes = document.querySelectorAll('.filter-val-cb');
@@ -1638,12 +1637,8 @@ async function aksiMassal(tipe) {
             const rowData = [];
             headers.forEach(h => {
                 let colClass = '';
-                if(h === 'Status Item') colClass = 'col-status';
-                else if(h === 'Collect') colClass = 'col-status-data';
-                else if(h === 'Waktu STBJ') colClass = 'col-waktu';
-                else if(h === 'Waktu Langsir') colClass = 'col-waktu-langsir';
+                if(h === 'Collect') colClass = 'col-status-data';
                 else if(h === 'Troli') colClass = 'col-troli';
-                else if(h === 'QRCode') colClass = 'col-qr';
                 else if(h === 'Tgl Produksi') colClass = 'col-tgl';
                 else if(h === 'Mesin') colClass = 'col-mesin';
                 else if(h === 'Shift') colClass = 'col-shift';
@@ -1695,7 +1690,7 @@ async function aksiMassal(tipe) {
         const btn = document.getElementById('btn-massal-collect');
         const btnMob = document.getElementById('btn-massal-collect-mob');
         if(btn) { btn.innerHTML = '<div class="bg-indigo-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="animate-spin w-4 h-4"></i></div><div class="bg-indigo-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-indigo-700 transition">Collect</div>'; btn.disabled = true; }
-        if(btnMob) { btnMob.innerHTML = '<i data-lucide="check-square" class="w-4 h-4 text-indigo-700"></i> Collect'; btnMob.disabled = true; }
+        if(btnMob) { btnMob.innerHTML = '<i data-lucide="check-square" class="w-4 h-4 text-indigo-700"></i> Memproses...'; btnMob.disabled = true; }
         
         let updates = [];
         checkedValues.forEach(qr => {
@@ -1782,7 +1777,7 @@ async function aksiMassal(tipe) {
         let ws = XLSX.utils.aoa_to_sheet(ws_data);
         let wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "STBJ_Data");
-        XLSX.writeFile(wb, `STBJ_${statusSekarang}_${modeSekarang.toUpperCase()}.xlsx`);
+        XLSX.writeFile(wb, `STBJ_${statusSekarang}_TABEL.xlsx`);
     }
 }
 
