@@ -1,27 +1,31 @@
 // ============================================================================
-// WMS SUNPEVECE - GLOBAL SCRIPT & ROUTE GUARD
+// WMS SUNPEVECE - GLOBAL SCRIPT, ROUTE GUARD & PERMISSION ACCESS CONTROL
 // ============================================================================
 
 // ==========================================
-// 0. ROUTE GUARD (PENJAGA KEAMANAN HALAMAN)
+// 0. ROUTE GUARD AWAL (PENJAGA KEAMANAN SESI)
 // ==========================================
 (function checkSecurity() {
     const path = window.location.pathname;
-    const isLoginPage = path.endsWith('index.html') || path === '/';
+    const isLoginPage = path.endsWith('index.html') || path === '/' || path.endsWith('/');
     const isSettingPage = path.endsWith('setting.html');
     const sessionString = localStorage.getItem('user_session');
 
+    // Jika belum login dan mencoba buka halaman selain login
     if (!sessionString && !isLoginPage) {
         window.location.replace('index.html');
     } 
+    // Jika sudah login dan membuka halaman login
     else if (sessionString && isLoginPage) {
         window.location.replace('menu.html');
     }
 
+    // Proteksi halaman setting khusus role 'creator'
     if (sessionString && isSettingPage) {
         try {
             const user = JSON.parse(sessionString);
             if (!user.role || user.role.toLowerCase() !== 'creator') {
+                alert("Akses Ditolak! Menu Pengaturan hanya dapat diakses oleh Creator.");
                 window.location.replace('menu.html'); 
             }
         } catch(e) {
@@ -39,7 +43,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==========================================
-// MENU LENGKAP WMS
+// DAFTAR MENU LENGKAP WMS
 // ==========================================
 const APP_MENUS = [
     { id: 'dashboard', title: 'Dashboard Utama', icon: 'layout-dashboard', url: 'menu.html' },
@@ -227,12 +231,16 @@ function applyTableDesign() {
 }
 applyTableDesign();
 
+// ==========================================
+// INISIALISASI MODERN LAYOUT & PERMISSION CHECK
+// ==========================================
 async function initModernLayout(pageMeta) {
     const sessionString = localStorage.getItem('user_session');
     if (!sessionString) return; 
     
     const user = JSON.parse(sessionString);
     const initial = user.username.charAt(0).toUpperCase();
+    const isCreator = user.role && user.role.toLowerCase() === 'creator';
     
     const isExpanded = localStorage.getItem('sidebar_expanded') === 'true';
     const expandedClass = isExpanded ? 'expanded' : '';
@@ -240,15 +248,36 @@ async function initModernLayout(pageMeta) {
 
     let allowedMenus = [];
     try {
-        const { data } = await db.from('menu_access').select('*');
-        if(data) allowedMenus = data;
+        const { data, error } = await db.from('menu_access').select('*');
+        if(!error && data) allowedMenus = data;
     } catch(e) { console.error("Gagal load menu access", e); }
 
+    // ========================================================
+    // REVISI KEAMANAN: CEK AKSES HALAMAN SAAT INI (PAGE GUARD)
+    // ========================================================
+    if (pageMeta && pageMeta.id && pageMeta.id !== 'dashboard') {
+        const pageRule = allowedMenus.find(r => r.menu_id === pageMeta.id);
+        
+        // Jika aturan ditemukan dan user bukan Creator, validasi izin user
+        if (pageRule && !isCreator) {
+            const allowedUsers = pageRule.allowed_users ? pageRule.allowed_users.split(',').map(u => u.trim()) : [];
+            if (!allowedUsers.includes(user.username)) {
+                alert(`⛔ AKSES DITOLAK!\n\nAkun Anda (${user.username}) tidak memiliki izin untuk membuka menu "${pageMeta.title}".`);
+                window.location.replace('menu.html');
+                return;
+            }
+        }
+    }
+
+    // Filter daftar menu sidebar untuk user saat ini
     const filteredMenus = APP_MENUS.filter(menu => {
         if(menu.isDivider) return true; 
+        if(isCreator) return true; // Creator selalu bisa melihat semua menu
+
         const rule = allowedMenus.find(r => r.menu_id === menu.id);
-        if(!rule) return true; 
-        const allowedUsers = rule.allowed_users ? rule.allowed_users.split(',') : [];
+        if(!rule) return true; // Default diizinkan jika belum dikonfigurasi
+        
+        const allowedUsers = rule.allowed_users ? rule.allowed_users.split(',').map(u => u.trim()) : [];
         return allowedUsers.includes(user.username);
     });
 
@@ -659,7 +688,7 @@ window.saveTableDesign = function() {
 };
 
 // ==========================================
-// FUNGSI SISTEM PESAN (INBOX BARU)
+// FUNGSI SISTEM PESAN (INBOX NOTIFIKASI)
 // ==========================================
 let inboxDataGlobal = [];
 
@@ -974,4 +1003,4 @@ window.terimaRequestPO = async function(idReq, qrcode, customerBaru) {
     } catch(err) {
         alert("Gagal memproses persetujuan: " + err.message);
     }
-}
+     }
