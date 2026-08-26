@@ -10,6 +10,13 @@ let selectAllState = 0;
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
 
+function formatPanjang(pjg) {
+    if (!pjg || pjg === '-') return '-';
+    let str = String(pjg).trim().toUpperCase();
+    if (!str.endsWith('M')) str += 'M';
+    return str;
+}
+
 function formatWIB(isoString) {
     if (!isoString || isoString === '-') return '-';
     try {
@@ -84,8 +91,10 @@ window.renderTabel = function() {
     
     if(rawData.length === 0) { tbody.innerHTML = `<tr><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada data.</td></tr>`; return; }
 
-    tbody.innerHTML = rawData.map((r, i) => {
+    tbody.innerHTML = rawData.map((r) => {
         const rowDataStr = encodeURIComponent(JSON.stringify(r));
+        const pjgFormatted = formatPanjang(r.panjang);
+
         return `
             <tr class="transition r-row text-[13px] bg-white even:bg-slate-50 border-b border-slate-200">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.id}" data-row="${rowDataStr}" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
@@ -94,7 +103,7 @@ window.renderTabel = function() {
                 <td class="px-4 py-3 font-mono font-bold text-rose-600 col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 col-jenis" data-search="${r.jenis_item || '-'}">${r.jenis_item || '-'}</td>
                 <td class="px-4 py-3 font-semibold text-slate-800 col-nama" data-search="${r.nama_item || '-'}">${r.nama_item || '-'}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 col-pjg" data-search="${r.panjang || '-'}">${r.panjang || '-'}</td>
+                <td class="px-4 py-3 font-medium text-slate-700 col-pjg" data-search="${pjgFormatted}">${pjgFormatted}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 col-grade" data-search="${r.grade || '-'}">${r.grade || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 col-dus" data-search="${r.dus || '-'}">${r.dus || '-'}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 col-shading" data-search="${r.shading || '-'}">${r.shading || '-'}</td>
@@ -120,7 +129,7 @@ window.prosesScan = async function() {
     const qrRaw = document.getElementById('input-qr').value.trim();
     if(!qrRaw) return alert("Masukkan QR Code!");
     
-    // Ambil QR pertama jika user scan massal (karena nonaktif diproses satu per satu)
+    // Ambil QR pertama jika user scan massal
     const qr = qrRaw.split(/[\r\n; ]+/)[0].trim();
 
     const btn = document.getElementById('btn-proses-scan'); const ori = btn.innerHTML;
@@ -137,7 +146,7 @@ window.prosesScan = async function() {
         const { data: aktualData, error: errAktual } = await db.from('stok_aktual')
             .select('id, customer_estimasi, qty')
             .eq('nama_item', globalData.nama_item)
-            .eq('panjang', globalData.panjang)
+            .eq('panjang', formatPanjang(globalData.panjang))
             .eq('grade', globalData.grade)
             .eq('dus', globalData.dus)
             .eq('shading', globalData.shading)
@@ -180,21 +189,21 @@ window.eksekusiNonaktif = async function() {
 async function prosesEksekusiNonaktif(custEst) {
     try {
         const d = tempScannedData;
+        const pjgFormatted = formatPanjang(d.panjang);
 
-        // 1. Insert ke stok_nonaktif
+        // 1. Insert ke stok_nonaktif (HANYA MENGIRIMKAN KOLOM YANG TERSEDIA DI DB)
         const payloadNonaktif = {
             qrcode: d.qrcode,
             posisi: d.area,
             jenis_item: d.jenis_item,
             nama_item: d.nama_item,
-            panjang: d.panjang,
+            panjang: pjgFormatted,
             grade: d.grade,
             dus: d.dus,
             shading: d.shading,
             customer_aktual: d.customer_aktual,
             customer_estimasi: custEst,
-            keterangan: 'Barang Rusak / BS',
-            pic_input: currentUser.username
+            keterangan: 'Barang Rusak / BS'
         };
 
         const { error: errInsert } = await db.from('stok_nonaktif').insert([payloadNonaktif]);
@@ -204,9 +213,9 @@ async function prosesEksekusiNonaktif(custEst) {
         await db.from('stok_global').delete().eq('qrcode', d.qrcode);
         await db.from('stok_qr').delete().eq('qrcode', d.qrcode);
 
-        // 3. Update stok_aktual (Kurangi 1)
+        // 3. Update stok_aktual (Kurangi 1 secara incremental)
         const { data: ext } = await db.from('stok_aktual').select('id, qty')
-            .eq('nama_item', d.nama_item).eq('panjang', d.panjang).eq('grade', d.grade)
+            .eq('nama_item', d.nama_item).eq('panjang', pjgFormatted).eq('grade', d.grade)
             .eq('dus', d.dus).eq('shading', d.shading).eq('area', d.area)
             .eq('customer_aktual', d.customer_aktual).eq('customer_estimasi', custEst)
             .limit(1);
@@ -252,19 +261,20 @@ window.cancelNonaktifMassal = async function() {
         checked.forEach(cb => { 
             const d = JSON.parse(decodeURIComponent(cb.getAttribute('data-row')));
             idsToDelete.push(d.id);
+            const pjgFormatted = formatPanjang(d.panjang);
 
-            let id_sku = `${d.posisi}_${d.nama_item}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_-_${d.customer_aktual}_Aman`;
+            let id_sku = `${d.posisi}_${d.nama_item}_${pjgFormatted}_${d.grade}_${d.dus}_${d.shading}_-_${d.customer_aktual}_Aman`;
 
             insertsGlobal.push({
                 qrcode: d.qrcode,
                 area: d.posisi,
                 id_sku: id_sku,
-                tgl_produksi: '-', // Default karena tidak tersimpan di stok_nonaktif
+                tgl_produksi: '-',
                 mesin: '-',
                 shift: '-',
                 jenis_item: d.jenis_item,
                 nama_item: d.nama_item,
-                panjang: d.panjang,
+                panjang: pjgFormatted,
                 grade: d.grade,
                 dus: d.dus,
                 shading: d.shading,
@@ -279,10 +289,10 @@ window.cancelNonaktifMassal = async function() {
                 qrcode: d.qrcode, id_sku: id_sku, area: d.posisi, keterangan: '-'
             });
 
-            let keyAkt = `${d.nama_item}_${d.panjang}_${d.grade}_${d.dus}_${d.shading}_${d.posisi}_${d.customer_aktual}_${d.customer_estimasi}`;
+            let keyAkt = `${d.nama_item}_${pjgFormatted}_${d.grade}_${d.dus}_${d.shading}_${d.posisi}_${d.customer_aktual}_${d.customer_estimasi}`;
             if(!mapAktual[keyAkt]) {
                 mapAktual[keyAkt] = {
-                    id_sku: id_sku, jenis_item: d.jenis_item, nama_item: d.nama_item, panjang: d.panjang,
+                    id_sku: id_sku, jenis_item: d.jenis_item, nama_item: d.nama_item, panjang: pjgFormatted,
                     grade: d.grade, dus: d.dus, shading: d.shading, area: d.posisi,
                     customer_aktual: d.customer_aktual, customer_estimasi: d.customer_estimasi,
                     keterangan: '-', kondisi: 'Aman', qty: 0
@@ -338,8 +348,6 @@ window.prosesBSMassal = async function() {
     });
 
     try {
-        // Karena item sudah dihapus dari global dan aktual saat dinonaktifkan,
-        // Proses BS hanya perlu menghapus datanya dari tabel stok_nonaktif (Clear history)
         const { error } = await db.from('stok_nonaktif').delete().in('id', idsToDelete);
         if(error) throw error;
         
