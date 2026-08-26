@@ -80,7 +80,6 @@
             <h3 class="text-lg font-black mb-2 flex items-center gap-2 text-rose-600"><i data-lucide="package-x"></i> Nonaktifkan Item</h3>
             <p class="text-xs font-bold text-slate-500 mb-5">Scan QRCode fisik barang yang rusak/bermasalah.</p>
             <div class="space-y-4 mb-6">
-                <!-- REVISI: Mengubah input text menjadi textarea agar bisa menampung scan massal dan menambahkan logika auto-enter -->
                 <textarea id="input-qr" rows="4" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-rose-600 font-mono font-bold text-sm bg-slate-50 custom-scroll" placeholder="Scan barcode di sini..." autocomplete="off" oninput="autoEnterScan(this)"></textarea>
             </div>
             <div class="flex gap-2">
@@ -125,10 +124,8 @@
     </div>
 
     <script>
-        // REVISI: Fungsi Auto Enter saat mendeteksi akhiran barcode WMS (/0001)
         function autoEnterScan(el) {
             let val = el.value;
-            // Jika diakhiri dengan /0001 atau /0001 N, dan belum ada Enter (\n) setelahnya
             if (val.match(/\/0001( N)?$/)) {
                 el.value = val + '\n';
             }
@@ -136,4 +133,4 @@
     </script>
     <script src="stok_nonaktif_logic.js"></script>
 </body>
-                    </html>
+    </html>
