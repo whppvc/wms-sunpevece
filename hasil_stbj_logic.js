@@ -1,4 +1,5 @@
 
+
 // Otomatis deteksi mode perangkat saat buka halaman (Layar < 640px = Mobile, >= 640px = Desktop QR Code)
 const isMobileDevice = window.innerWidth < 640;
 let modeSekarang = isMobileDevice ? 'mobile' : 'qrcode';
@@ -76,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const actionMenu = document.getElementById('mobile-action-menu');
         if (actionMenu && !actionMenu.classList.contains('hidden')) {
-            if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenuMobile"]')) {
+            if (!actionMenu.contains(e.target) && !actionMenu.closest('button[onclick^="toggleActionMenuMobile"]')) {
                 actionMenu.classList.add('hidden');
             }
         }
@@ -391,7 +392,7 @@ window.highlightLvl6Card = function(cb) {
     }
 };
 
-// REVISI: Fungsi Cancel STBJ Mobile (Mengubah Status menjadi HOLD LANGSIR)
+// Fungsi Cancel STBJ Mobile (Mengubah Status menjadi HOLD LANGSIR di hasil_stbj_langsir)
 window.cancelSTBJMobile = async function() {
     const checkedBoxes = document.querySelectorAll('.cb-stbj-lvl6:checked');
     if (checkedBoxes.length === 0) return alert("Pilih / centang minimal 1 kardus yang ingin di-cancel STBJ!");
@@ -409,7 +410,7 @@ window.cancelSTBJMobile = async function() {
         return alert("Item manual tidak dapat di-cancel STBJ ke Hold Langsir.");
     }
 
-    if (!confirm(`Yakin ingin membatalkan (Cancel) ${qrsToCancel.length} item STBJ ini?\nData akan langsung masuk ke status 'HOLD LANGSIR'.`)) return;
+    if (!confirm(`Yakin ingin membatalkan (Cancel) ${qrsToCancel.length} item STBJ ini?\nStatus barang akan diubah menjadi 'HOLD LANGSIR'.`)) return;
 
     const btn = document.getElementById('btn-cancel-stbj-lvl6');
     const oriText = btn ? btn.innerHTML : '';
@@ -425,7 +426,7 @@ window.cancelSTBJMobile = async function() {
 
         if (error) throw error;
 
-        // Update lokal
+        // Update data lokal
         rawDataRaw.forEach(r => {
             if (qrsToCancel.includes(r.qrcode)) {
                 r.status = 'HOLD LANGSIR';
@@ -433,11 +434,104 @@ window.cancelSTBJMobile = async function() {
             }
         });
 
-        alert(`✅ SUKSES!\n${qrsToCancel.length} kardus berhasil di-cancel STBJ dan statusnya diubah menjadi 'HOLD LANGSIR'.`);
+        alert(`✅ SUKSES!\n${qrsToCancel.length} kardus berhasil di-cancel STBJ dan masuk ke 'HOLD LANGSIR'.`);
         renderMobileView();
 
     } catch (e) {
         alert("Gagal memproses cancel STBJ: " + e.message);
+    } finally {
+        if(btn) { btn.innerHTML = oriText; btn.disabled = false; }
+        lucide.createIcons();
+    }
+};
+
+// REVISI: Fungsi Cancel Hold Mobile (Mengembalikan status menjadi STBJ)
+window.cancelHoldMobile = async function() {
+    const checkedBoxes = document.querySelectorAll('.cb-stbj-lvl6:checked');
+    if (checkedBoxes.length === 0) return alert("Pilih / centang minimal 1 kardus hold yang ingin di-cancel!");
+
+    const qrsToUnhold = [];
+    checkedBoxes.forEach(cb => {
+        const qr = cb.value;
+        const src = cb.getAttribute('data-source');
+        if (src === 'SCAN' && qr !== '-') {
+            qrsToUnhold.push(qr);
+        }
+    });
+
+    if (qrsToUnhold.length === 0) {
+        return alert("Tidak ada item scan valid untuk di-unhold.");
+    }
+
+    if (!confirm(`Kembalikan ${qrsToUnhold.length} item hold ini ke status 'STBJ' biasa?`)) return;
+
+    const btn = document.getElementById('btn-cancel-hold-lvl6');
+    const oriText = btn ? btn.innerHTML : '';
+    if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Memproses...'; btn.disabled = true; }
+
+    try {
+        const { error } = await db.from('hasil_stbj_langsir')
+            .update({ 
+                status: 'STBJ', 
+                keterangan: 'Unhold dari Mobile' 
+            })
+            .in('qrcode', qrsToUnhold);
+
+        if (error) throw error;
+
+        // Update data lokal
+        rawDataRaw.forEach(r => {
+            if (qrsToUnhold.includes(r.qrcode)) {
+                r.status = 'STBJ';
+                r.keterangan = 'Unhold dari Mobile';
+            }
+        });
+
+        alert(`✅ SUKSES!\n${qrsToUnhold.length} kardus berhasil dikembalikan ke status 'STBJ'.`);
+        renderMobileView();
+
+    } catch (e) {
+        alert("Gagal memproses cancel hold: " + e.message);
+    } finally {
+        if(btn) { btn.innerHTML = oriText; btn.disabled = false; }
+        lucide.createIcons();
+    }
+};
+
+// REVISI: Fungsi Hapus Item Hold Mobile (Hapus Permanen dari Database)
+window.hapusItemHoldMobile = async function() {
+    const checkedBoxes = document.querySelectorAll('.cb-stbj-lvl6:checked');
+    if (checkedBoxes.length === 0) return alert("Pilih / centang minimal 1 kardus yang ingin dihapus!");
+
+    const qrsToDelete = [];
+    checkedBoxes.forEach(cb => {
+        const qr = cb.value;
+        if (qr && qr !== '-') qrsToDelete.push(qr);
+    });
+
+    if (qrsToDelete.length === 0) return alert("Tidak ada item valid untuk dihapus.");
+
+    if (!confirm(`⚠️ PERINGATAN!\n\nApakah Anda yakin ingin menghapus permanen ${qrsToDelete.length} item hold ini dari database hasil_stbj_langsir?`)) return;
+
+    const btn = document.getElementById('btn-hapus-hold-lvl6');
+    const oriText = btn ? btn.innerHTML : '';
+    if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menghapus...'; btn.disabled = true; }
+
+    try {
+        const { error } = await db.from('hasil_stbj_langsir')
+            .delete()
+            .in('qrcode', qrsToDelete);
+
+        if (error) throw error;
+
+        // Hapus dari data lokal
+        rawDataRaw = rawDataRaw.filter(r => !qrsToDelete.includes(r.qrcode));
+
+        alert(`✅ SUKSES!\n${qrsToDelete.length} kardus hold telah dihapus permanen dari database.`);
+        renderMobileView();
+
+    } catch (e) {
+        alert("Gagal menghapus data: " + e.message);
     } finally {
         if(btn) { btn.innerHTML = oriText; btn.disabled = false; }
         lucide.createIcons();
@@ -449,13 +543,25 @@ function renderMobileView() {
     const targetDate = document.getElementById('filter-date-mobile')?.value || '';
     const lvl6Footer = document.getElementById('mobile-lvl6-footer');
 
-    // REVISI: Kontrol Tampilan Footer Freeze Level 6
+    // REVISI: Kontrol Tampilan Footer Freeze Level 6 Berdasarkan Kategori Sumber
     if (lvl6Footer) {
         if (modeSekarang === 'mobile' && mobileLevel === 6) {
             lvl6Footer.classList.remove('hidden');
             lvl6Footer.style.display = 'flex';
+            
             const cbAllLvl6 = document.getElementById('cb-all-lvl6');
             if (cbAllLvl6) cbAllLvl6.checked = false;
+
+            const btnCancelStbj = document.getElementById('btn-cancel-stbj-lvl6');
+            const groupBtnHold = document.getElementById('group-btn-hold-lvl6');
+
+            if (mobileSelectedSource === 'HOLD') {
+                if(btnCancelStbj) btnCancelStbj.classList.add('hidden');
+                if(groupBtnHold) { groupBtnHold.classList.remove('hidden'); groupBtnHold.style.display = 'flex'; }
+            } else {
+                if(btnCancelStbj) btnCancelStbj.classList.remove('hidden');
+                if(groupBtnHold) { groupBtnHold.classList.add('hidden'); groupBtnHold.style.display = 'none'; }
+            }
         } else {
             lvl6Footer.classList.add('hidden');
             lvl6Footer.style.display = 'none';
@@ -571,7 +677,7 @@ function renderMobileView() {
             </div>
         `;
 
-        // REVISI: Pilihan D: Tabel Hold
+        // Pilihan D: Tabel Hold
         html += `
             <div onclick="goToMobileLevel2('HOLD')" class="bg-white border border-amber-300 p-4 rounded-2xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-amber-50">
                 <div class="flex items-center gap-4">
@@ -812,7 +918,7 @@ function renderMobileView() {
     }
 
     // ==========================================
-    // REVISI LEVEL 6: PO & DETAIL KARDUS DENGAN CHECKBOX & FREEZE TOP
+    // LEVEL 6: PO & DETAIL KARDUS DENGAN CHECKBOX & FREEZE FOOTER
     // ==========================================
     else if (mobileLevel === 6) {
         let [mSel, sSel] = mobileSelectedMesinShift.split('_');
@@ -854,10 +960,10 @@ function renderMobileView() {
                     
                     <!-- TOP HEADER: KOTAK CENTANG (CHECKBOX), CUSTOMER, STATUS -->
                     <div class="flex justify-between items-center mb-3 pb-2.5 border-b border-slate-100">
-                        <div class="flex items-center gap-3">
+                        <label class="flex items-center gap-3 cursor-pointer">
                             <input type="checkbox" value="${d.qrcode}" data-source="${d.source}" onchange="highlightLvl6Card(this)" class="cb-stbj-lvl6 cursor-pointer w-5 h-5 accent-blue-600 rounded border-slate-400">
                             <span class="font-black text-sm text-orange-600 uppercase">Customer: ${d.customer}</span>
-                        </div>
+                        </label>
                         <span class="font-bold px-2.5 py-0.5 text-[10px] rounded-md border ${badgeStatusClass} uppercase">${d.status}</span>
                     </div>
                     
@@ -881,7 +987,6 @@ function renderMobileView() {
                             <span class="font-black text-slate-800">${d.troli}</span>
                         </div>
                         <div class="flex flex-col">
-                            <!-- REVISI: Teks diganti menjadi Qty Dus -->
                             <span class="text-[10px] font-black text-slate-400 uppercase">Qty Dus</span>
                             <span class="font-black text-emerald-700 text-sm">${d.qty} Dus</span>
                         </div>
