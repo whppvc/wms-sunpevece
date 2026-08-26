@@ -120,7 +120,7 @@
             </div>
 
             <!-- VIEW MOBILE (Folder / Drill-Down View) -->
-            <div id="view-mobile" class="flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-24">
+            <div id="view-mobile" class="flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-32">
                 <!-- Konten Mobile di-render oleh JS -->
             </div>
 
@@ -150,6 +150,19 @@
                     <button onclick="nextPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                 </div>
             </div>
+        </div>
+
+        <!-- FOOTER FREEZE LEVEL 6 MOBILE (PILIH SEMUA & TOMBOL CANCEL STBJ) -->
+        <div id="mobile-lvl6-footer" class="hidden shrink-0 w-full bg-white px-4 py-3.5 z-40 shadow-[0_-8px_25px_rgba(0,0,0,0.15)] border-t border-slate-300 flex justify-between items-center">
+            <label class="flex items-center gap-3 cursor-pointer select-none">
+                <input type="checkbox" id="cb-all-lvl6" onchange="toggleSelectAllLvl6(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-400">
+                <span class="text-xs font-black text-slate-800 uppercase tracking-wider">Pilih Semua</span>
+            </label>
+
+            <button id="btn-cancel-stbj-lvl6" onclick="cancelSTBJMobile()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 transition border-b-4 border-rose-900 cursor-pointer">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                <span>Cancel STBJ</span>
+            </button>
         </div>
 
     </div>
@@ -322,9 +335,9 @@
         </div>
     </div>
 
-    <!-- OVERLAY KLIK LUAR -->
+    <!-- OVERLAY -->
     <div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-[50] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="hasil_stbj_logic.js"></script>
 </body>
-                        </html>
+                            </html>
