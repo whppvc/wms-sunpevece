@@ -1,6 +1,6 @@
 // Otomatis deteksi mode perangkat saat buka halaman (Layar < 640px = Mobile, >= 640px = Desktop Tabel)
 const isMobileDevice = window.innerWidth < 640;
-let modeSekarang = isMobileDevice ? 'mobile' : 'jasper'; // Default Desktop ke 'jasper' (Tabel)
+let modeSekarang = isMobileDevice ? 'mobile' : 'tabel'; // Default Desktop ke 'tabel'
 
 let statusSekarang = 'ALL'; 
 let rawDataRaw = [];
@@ -32,11 +32,6 @@ let mobileSelectedTgl = '';
 let mobileSelectedMesinShift = ''; // `${mesin}_${shift}`
 let mobileSelectedItemSpec = ''; // `${nama}_${pjg}_${grade}_${dus}`
 let mobileSelectedShading = '';
-
-// State Khusus Submenu Baru "QRCODE" (Pencarian & Pagination)
-let qrSearchResults = [];
-let qrSearchCurPage = 1;
-const qrSearchRowsPerPage = 12;
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'admin'};
 
@@ -181,7 +176,6 @@ async function muatDataDariSupabase() {
 
         rawDataRaw = data || [];
         updateFilterDropdowns();
-        populateQRSearchDropdowns();
         setMode(modeSekarang);
     } catch(err) { 
         tbody.innerHTML = `<tr><td colspan="23" class="p-10 text-center text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; 
@@ -193,7 +187,7 @@ function setMode(m) {
     const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
 
-    ['mobile', 'qrcode', 'jasper', 'manual'].forEach(tab => {
+    ['mobile', 'tabel'].forEach(tab => {
         const el = document.getElementById('tab-mode-' + tab);
         if(el) {
             if(tab === 'mobile') {
@@ -205,14 +199,12 @@ function setMode(m) {
     });
     
     const isMobile = (m === 'mobile');
-    const isQRSearch = (m === 'qrcode');
 
     document.getElementById('view-mobile').classList.toggle('hidden', !isMobile);
-    document.getElementById('view-qrcode-search').classList.toggle('hidden', !isQRSearch);
-    document.getElementById('view-table').classList.toggle('hidden', isMobile || isQRSearch);
+    document.getElementById('view-table').classList.toggle('hidden', isMobile);
     
-    document.getElementById('desktop-toolbar').classList.toggle('hidden', isMobile || isQRSearch);
-    document.getElementById('footer-pagination').classList.toggle('hidden', isMobile || isQRSearch);
+    document.getElementById('desktop-toolbar').classList.toggle('hidden', isMobile);
+    document.getElementById('footer-pagination').classList.toggle('hidden', isMobile);
     
     const lvl6Footer = document.getElementById('mobile-lvl6-footer');
     if (lvl6Footer && !isMobile) {
@@ -220,214 +212,24 @@ function setMode(m) {
         lvl6Footer.style.display = 'none';
     }
 
-    if (isQRSearch) {
-        eksekusiQRSearch(); // Otomatis muat data pencarian QR awal
-    } else if (!isMobile) {
+    if (!isMobile) {
         const btnCollect = document.getElementById('btn-massal-collect');
         const btnCollectMob = document.getElementById('btn-massal-collect-mob');
         const btnHold = document.getElementById('btn-hold-mob');
         const btnHapus = document.getElementById('btn-hapus-mob');
         const isCreator = currentUser && currentUser.role && currentUser.role.toLowerCase() === 'creator';
 
-        if (m === 'jasper') {
-            if(btnCollect) btnCollect.classList.remove('hidden'); 
-            if(btnCollectMob) btnCollectMob.classList.remove('hidden'); 
-            if(btnHold) btnHold.classList.add('hidden');
-            if(btnHapus) btnHapus.classList.add('hidden');
-        } else if (m === 'manual') {
-            if(btnCollect) btnCollect.classList.add('hidden'); 
-            if(btnCollectMob) btnCollectMob.classList.add('hidden'); 
-            if(btnHold) btnHold.classList.add('hidden');
-            if(btnHapus) btnHapus.classList.toggle('hidden', !isCreator);
-        }
+        if(btnCollect) btnCollect.classList.remove('hidden'); 
+        if(btnCollectMob) btnCollectMob.classList.remove('hidden'); 
+        if(btnHold) btnHold.classList.add('hidden');
+        if(btnHapus) btnHapus.classList.toggle('hidden', !isCreator);
+
         renderHeaderDanTabel();
     } else {
         mobileLevel = 1;
         renderMobileView();
     }
 }
-
-// ========================================================
-// LOGIKA SUBMENU BARU: "QRCODE" (SEARCH & CARD VIEW MULTI)
-// ========================================================
-function populateQRSearchDropdowns() {
-    const getUniq = (arr, key) => [...new Set(arr.map(r => r[key]).filter(Boolean))].sort();
-    
-    const fill = (id, list) => {
-        const sel = document.getElementById(id);
-        if(!sel) return;
-        const cur = sel.value;
-        sel.innerHTML = '<option value="">-- Semua --</option>' + list.map(v => `<option value="${v}">${v}</option>`).join('');
-        if(list.includes(cur)) sel.value = cur;
-    };
-
-    fill('qs-nama', getUniq(rawDataRaw, 'nama_item'));
-    fill('qs-pjg', getUniq(rawDataRaw, 'panjang').map(formatPanjang));
-    fill('qs-grade', getUniq(rawDataRaw, 'grade'));
-    fill('qs-dus', getUniq(rawDataRaw, 'dus'));
-    fill('qs-cust', getUniq(rawDataRaw, 'customer'));
-    if(jasperData) fill('qs-jasper', getUniq(jasperData, 'nama_jasper'));
-}
-
-window.resetQRSearchFilter = function() {
-    ['qs-qr', 'qs-status', 'qs-nama', 'qs-jasper', 'qs-pjg', 'qs-grade', 'qs-dus', 'qs-shading', 'qs-cust'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.value = '';
-    });
-    eksekusiQRSearch();
-};
-
-window.eksekusiQRSearch = function() {
-    const rawQrInput = document.getElementById('qs-qr')?.value.trim() || '';
-    const qrs = rawQrInput ? rawQrInput.split(/[\s,;]+/).map(q => q.trim().toLowerCase()).filter(Boolean) : [];
-
-    const f = {
-        status: document.getElementById('qs-status')?.value || '',
-        nama: document.getElementById('qs-nama')?.value || '',
-        jasper: document.getElementById('qs-jasper')?.value || '',
-        pjg: document.getElementById('qs-pjg')?.value || '',
-        grade: document.getElementById('qs-grade')?.value || '',
-        dus: document.getElementById('qs-dus')?.value || '',
-        shading: document.getElementById('qs-shading')?.value.toUpperCase().trim() || '',
-        cust: document.getElementById('qs-cust')?.value || ''
-    };
-
-    qrSearchResults = rawDataRaw.filter(r => {
-        if(qrs.length > 0) {
-            let qrCode = (r.qrcode || '').toLowerCase();
-            let matchAny = qrs.some(q => qrCode.includes(q));
-            if(!matchAny) return false;
-        }
-
-        if(f.status && r.status !== f.status) return false;
-        if(f.nama && r.nama_item !== f.nama) return false;
-        if(f.pjg && formatPanjang(r.panjang) !== f.pjg) return false;
-        if(f.grade && r.grade !== f.grade) return false;
-        if(f.dus && r.dus !== f.dus) return false;
-        if(f.shading && !(r.shading || '').toUpperCase().includes(f.shading)) return false;
-        if(f.cust && r.customer !== f.cust) return false;
-
-        if(f.jasper) {
-            let cJasper = (jasperData || []).find(j => j.nama_item === r.nama_item && j.panjang === r.panjang && j.grade === r.grade);
-            let jName = cJasper ? cJasper.nama_jasper : `JAS-${r.nama_item}`;
-            if(jName !== f.jasper) return false;
-        }
-
-        return true;
-    });
-
-    qrSearchCurPage = 1;
-    renderQRSearchCards();
-};
-
-function renderQRSearchCards() {
-    const container = document.getElementById('container-qr-cards');
-    const totalCountLbl = document.getElementById('lbl-qr-search-count');
-    const curPageLbl = document.getElementById('lbl-qr-cur-page');
-    const totalPageLbl = document.getElementById('lbl-qr-total-page');
-
-    if(!container) return;
-
-    totalCountLbl.innerText = `${qrSearchResults.length} Kardus`;
-    const totalPages = Math.ceil(qrSearchResults.length / qrSearchRowsPerPage) || 1;
-    
-    if(qrSearchCurPage > totalPages) qrSearchCurPage = totalPages;
-    if(qrSearchCurPage < 1) qrSearchCurPage = 1;
-
-    curPageLbl.innerText = qrSearchCurPage;
-    totalPageLbl.innerText = totalPages;
-
-    const start = (qrSearchCurPage - 1) * qrSearchRowsPerPage;
-    const paginated = qrSearchResults.slice(start, start + qrSearchRowsPerPage);
-
-    if(paginated.length === 0) {
-        container.innerHTML = `
-            <div class="col-span-full flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-slate-200 text-center">
-                <i data-lucide="package-search" class="w-12 h-12 text-slate-300 mb-2"></i>
-                <h4 class="font-bold text-slate-700 text-sm">Tidak ada kardus cocok dengan kriteria pencarian</h4>
-            </div>`;
-        lucide.createIcons();
-        return;
-    }
-
-    let html = '';
-    paginated.forEach((r, idx) => {
-        const waktuSTBJ = formatWIB(r.created_at);
-        const pjgFormatted = formatPanjang(r.panjang);
-
-        let badgeStatusClass = 'bg-blue-100 text-blue-700 border-blue-200';
-        if (r.status === 'IN GUDANG') badgeStatusClass = 'bg-emerald-100 text-emerald-700 border-emerald-200';
-        else if ((r.status || '').includes('HOLD')) badgeStatusClass = 'bg-amber-100 text-amber-700 border-amber-200';
-
-        let cJasper = (jasperData || []).find(j => j.nama_item === r.nama_item && j.panjang === r.panjang && j.grade === r.grade);
-        let jName = cJasper ? cJasper.nama_jasper : `JAS-${r.nama_item}`;
-
-        html += `
-            <div class="bg-white border border-slate-300 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:border-blue-400 transition">
-                <div>
-                    <div class="flex justify-between items-center mb-2.5 pb-2 border-b border-slate-100">
-                        <span class="text-xs font-black text-slate-400">#${start + idx + 1}</span>
-                        <span class="font-bold px-2.5 py-0.5 text-[10px] rounded-md border ${badgeStatusClass} uppercase">${r.status || '-'}</span>
-                    </div>
-
-                    <div class="font-mono font-black text-slate-900 text-xs break-all leading-tight bg-slate-100 p-2.5 rounded-xl border border-slate-200 text-center mb-3">
-                        ${r.qrcode}
-                    </div>
-
-                    <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mb-2.5">
-                        <span class="text-[10px] font-black uppercase text-blue-600 block mb-0.5">${r.jenis_item || '-'}</span>
-                        <h4 class="font-black text-slate-900 text-sm leading-snug">${r.nama_item} - ${pjgFormatted} - ${r.grade} - ${r.dus}</h4>
-                        <span class="text-xs font-black text-purple-700 block mt-1">Jasper: ${jName}</span>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-x-2 gap-y-2 text-xs">
-                        <div>
-                            <span class="text-[10px] font-black text-slate-400 uppercase block">Shading</span>
-                            <span class="font-bold text-indigo-700">${r.shading || '-'}</span>
-                        </div>
-                        <div>
-                            <span class="text-[10px] font-black text-slate-400 uppercase block">Customer Bawaan</span>
-                            <span class="font-bold text-orange-600 uppercase">${r.customer || '-'}</span>
-                        </div>
-                        <div>
-                            <span class="text-[10px] font-black text-slate-400 uppercase block">Produksi</span>
-                            <span class="font-bold text-slate-700">${r.tgl_produksi || '-'} (M${r.mesin}/S${r.shift})</span>
-                        </div>
-                        <div>
-                            <span class="text-[10px] font-black text-slate-400 uppercase block">Troli</span>
-                            <span class="font-bold text-slate-800">${r.troli || '-'}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-3 pt-2.5 border-t border-slate-100 flex justify-between items-center text-[10px] font-bold text-slate-400">
-                    <span>${waktuSTBJ}</span>
-                    <span>PIC: <strong class="text-slate-700 uppercase">${r.pic_input || '-'}</strong></span>
-                </div>
-            </div>
-        `;
-    });
-
-    container.innerHTML = html;
-    lucide.createIcons();
-}
-
-window.prevQRSearchPage = function() {
-    if(qrSearchCurPage > 1) {
-        qrSearchCurPage--;
-        renderQRSearchCards();
-        document.getElementById('view-qrcode-search').scrollTop = 0;
-    }
-};
-
-window.nextQRSearchPage = function() {
-    const totalPages = Math.ceil(qrSearchResults.length / qrSearchRowsPerPage) || 1;
-    if(qrSearchCurPage < totalPages) {
-        qrSearchCurPage++;
-        renderQRSearchCards();
-        document.getElementById('view-qrcode-search').scrollTop = 0;
-    }
-};
 
 // ========================================================
 // LOGIKA MODE MOBILE (DRILL-DOWN 6 TINGKAT DENGAN KISI 2)
@@ -788,7 +590,7 @@ function renderMobileView() {
     let html = '';
 
     // ==========================================
-    // LEVEL 1: REVISI KOTAK PILIHAN (KISI 2 MENYAMPING & TEKS POLOS)
+    // LEVEL 1: KOTAK PILIHAN (KISI 2 MENYAMPING)
     // ==========================================
     if (mobileLevel === 1) {
         let totalScan = 0;
@@ -1088,7 +890,7 @@ function renderMobileView() {
     }
 
     // ==========================================
-    // LEVEL 6: DETAIL KARDUS FISIK DENGAN CHECKBOX & STICKY TOP
+    // LEVEL 6: DETAIL KARDUS DENGAN CHECKBOX & FREEZE FOOTER
     // ==========================================
     else if (mobileLevel === 6) {
         let [mSel, sSel] = mobileSelectedMesinShift.split('_');
@@ -1233,7 +1035,7 @@ window.saringTabelSTBJ = function() {
 };
 
 // ========================================================
-// LOGIKA TABEL DESKTOP (TABEL JASPER & MANUAL)
+// LOGIKA TABEL DESKTOP (TABEL)
 // ========================================================
 function switchStatusFilter(val) { 
     statusSekarang = val; 
@@ -1250,106 +1052,74 @@ function buildProcessedData() {
     processedData = [];
     selectedRows.clear(); 
 
-    if (modeSekarang === 'manual') {
-        processedData = stbjManualRaw.map(r => {
-            const tglInput = formatWIB(r.created_at);
-            let n = r.nama_item || '-';
-            let jName = n;
-            if(jasperData && jasperData.length > 0) {
-                const cJasper = jasperData.find(j => j.nama_item === r.nama_item && j.panjang === r.panjang && j.grade === r.grade);
-                if(cJasper) { jName = cJasper.nama_jasper; } 
-                else { jName = `JAS-${r.nama_item}`; }
-            } else { jName = `JAS-${r.nama_item}`; }
-
-            return {
-                _id: r.id.toString(),
-                raw: r,
-                searchValues: {
-                    'col-waktu': tglInput,
-                    'col-tgl': r.tgl_produksi || '-',
-                    'col-mesin': r.mesin || '-',
-                    'col-shift': r.shift || '-',
-                    'col-nama': r.nama_item || '-',
-                    'col-jasper': jName,
-                    'col-pjg': formatPanjang(r.panjang),
-                    'col-grade': r.grade || '-',
-                    'col-dus': r.dus || '-',
-                    'col-shading': r.shading || '-',
-                    'col-customer': r.customer || '-',
-                    'col-qty': r.qty || '0',
-                    'col-ket': r.keterangan || '-'
-                }
-            };
-        });
-    } else {
-        // Mode 'jasper' (Tabel Agregasi)
-        let groups = {};
+    // Mode 'tabel' (Tabel Agregasi Utama)
+    let groups = {};
+    
+    rawDataRaw.forEach(r => {
+        let n = r.nama_item || '-';
+        let jName = n;
+        let jId = '';
         
-        rawDataRaw.forEach(r => {
-            let n = r.nama_item || '-';
-            let jName = n;
-            let jId = '';
-            
-            if(jasperData && jasperData.length > 0) {
-                const cJasper = jasperData.find(j => j.nama_item === r.nama_item && j.panjang === r.panjang && j.grade === r.grade);
-                if(cJasper) { jName = cJasper.nama_jasper; jId = cJasper.id; } 
-                else { jName = `JAS-${r.nama_item}`; }
-            } else { jName = `JAS-${r.nama_item}`; }
-            
-            let ket = r.keterangan || 'TANPA_KETERANGAN';
-            let sData = r.status_data || 'BELUM';
-            let cust = r.customer || '-';
-            let itemStatus = r.status || '-';
-            if (itemStatus === 'STBJ' || itemStatus === 'SUDAH STBJ') itemStatus = 'SUDAH STBJ';
-            else if (itemStatus === 'HOLD' || itemStatus === 'HOLD STBJ') itemStatus = 'HOLD STBJ';
-            
-            let pjgFormatted = formatPanjang(r.panjang);
-            let key = `${r.jenis_item}_${n}_${pjgFormatted}_${r.grade}_${r.dus}_${r.shading}_${cust}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}_${itemStatus}`;
-            
-            if(!groups[key]) {
-                groups[key] = { 
-                    jenisItem: r.jenis_item || '-', namaItemAsli: n, displayNama: jName, jasperId: jId, 
-                    panjang: pjgFormatted, grade: r.grade || '-', dus: r.dus || '-', shading: r.shading || '-', customer: cust,
-                    tglProduksi: r.tgl_produksi || '-', mesin: r.mesin || '-', shift: r.shift || '-',
-                    qty: 0, qrcodes: [], trolis: new Set(), ket: ket, sData: sData, status: itemStatus 
-                };
-            }
-            groups[key].qty++; 
-            groups[key].qrcodes.push(r.qrcode);
-            if(r.troli) groups[key].trolis.add(r.troli);
-        });
-
-        processedData = Object.values(groups).map(g => {
-            const gabunganTroli = Array.from(g.trolis).join(', ') || '-';
-            const displayKet = (g.ket === 'TANPA_KETERANGAN') ? '-' : g.ket; 
-            let statData = g.sData && g.sData !== 'BELUM' ? g.sData : '-';
-            let qtyLembar = hitungQtyLembar(g.jenisItem, g.namaItemAsli, g.qty);
-
-            return {
-                _id: g.qrcodes.join(','),
-                raw: g,
-                searchValues: {
-                    'col-status': g.status,
-                    'col-status-data': statData,
-                    'col-troli': gabunganTroli,
-                    'col-tgl': g.tglProduksi,
-                    'col-mesin': g.mesin,
-                    'col-shift': g.shift,
-                    'col-jenis': g.jenisItem,
-                    'col-nama': g.namaItemAsli,
-                    'col-jasper': g.displayNama,
-                    'col-pjg': g.panjang,
-                    'col-grade': g.grade,
-                    'col-dus': g.dus,
-                    'col-shading': g.shading,
-                    'col-customer': g.customer,
-                    'col-qty': g.qty.toString(),
-                    'col-qty-lembar': qtyLembar.toString(),
-                    'col-ket': displayKet
-                }
+        if(jasperData && jasperData.length > 0) {
+            const cJasper = jasperData.find(j => j.nama_item === r.nama_item && j.panjang === r.panjang && j.grade === r.grade);
+            if(cJasper) { jName = cJasper.nama_jasper; jId = cJasper.id; } 
+            else { jName = `JAS-${r.nama_item}`; }
+        } else { jName = `JAS-${r.nama_item}`; }
+        
+        let ket = r.keterangan || 'TANPA_KETERANGAN';
+        let sData = r.status_data || 'BELUM';
+        let cust = r.customer || '-';
+        let itemStatus = r.status || '-';
+        if (itemStatus === 'STBJ' || itemStatus === 'SUDAH STBJ') itemStatus = 'SUDAH STBJ';
+        else if (itemStatus === 'HOLD' || itemStatus === 'HOLD STBJ') itemStatus = 'HOLD STBJ';
+        
+        let pjgFormatted = formatPanjang(r.panjang);
+        let key = `${r.jenis_item}_${n}_${pjgFormatted}_${r.grade}_${r.dus}_${r.shading}_${cust}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}_${itemStatus}`;
+        
+        if(!groups[key]) {
+            groups[key] = { 
+                jenisItem: r.jenis_item || '-', namaItemAsli: n, displayNama: jName, jasperId: jId, 
+                panjang: pjgFormatted, grade: r.grade || '-', dus: r.dus || '-', shading: r.shading || '-', customer: cust,
+                tglProduksi: r.tgl_produksi || '-', mesin: r.mesin || '-', shift: r.shift || '-',
+                qty: 0, qrcodes: [], trolis: new Set(), ket: ket, sData: sData, status: itemStatus 
             };
-        });
-    }
+        }
+        groups[key].qty++; 
+        groups[key].qrcodes.push(r.qrcode);
+        if(r.troli) groups[key].trolis.add(r.troli);
+    });
+
+    processedData = Object.values(groups).map(g => {
+        const gabunganTroli = Array.from(g.trolis).join(', ') || '-';
+        const displayKet = (g.ket === 'TANPA_KETERANGAN') ? '-' : g.ket; 
+        let statData = g.sData && g.sData !== 'BELUM' ? g.sData : '-';
+        let qtyLembar = hitungQtyLembar(g.jenisItem, g.namaItemAsli, g.qty);
+
+        return {
+            _id: g.qrcodes.join(','),
+            raw: g,
+            searchValues: {
+                'col-status': g.status,
+                'col-status-data': statData,
+                'col-troli': gabunganTroli,
+                'col-tgl': g.tglProduksi,
+                'col-mesin': g.mesin,
+                'col-shift': g.shift,
+                'col-jenis': g.jenisItem,
+                'col-nama': g.namaItemAsli,
+                'col-jasper': g.displayNama,
+                'col-pjg': g.panjang,
+                'col-grade': g.grade,
+                'col-dus': g.dus,
+                'col-shading': g.shading,
+                'col-customer': g.customer,
+                'col-qty': g.qty.toString(),
+                'col-qty-lembar': qtyLembar.toString(),
+                'col-ket': displayKet
+            }
+        };
+    });
+
     applyFilters();
 }
 
@@ -1610,56 +1380,33 @@ window.highlightRow = function(cb, id) {
 function renderHeaderDanTabel() {
     const thead = document.getElementById('thead-stbj');
     
-    if(modeSekarang === 'manual') {
-        thead.innerHTML = `
-            <tr>
-                <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
-                </th>
-                ${thSort('Waktu Input', 'col-waktu text-center')}
-                ${thSort('Tgl Produksi', 'col-tgl text-center')}
-                ${thSort('Mesin', 'col-mesin text-center')}
-                ${thSort('Shift', 'col-shift text-center')}
-                ${thSort('Nama Item', 'col-nama')}
-                ${thSort('Nama Jasper', 'col-jasper text-purple-300')}
-                ${thSort('Pjg', 'col-pjg text-center')}
-                ${thSort('Grade', 'col-grade text-center')}
-                ${thSort('Dus', 'col-dus text-center')}
-                ${thSort('Shading', 'col-shading text-center')}
-                ${thSort('Customer', 'col-customer')}
-                ${thSort('QTY (DUS)', 'col-qty text-center')}
-                ${thSort('Keterangan', 'col-ket text-center')}
-            </tr>`;
-    } else {
-        // Mode 'jasper' (Tabel Agregasi)
-        thead.innerHTML = `
-            <tr>
-                <th class="hdr-std w-10 col-cb text-center sticky-col">
-                    <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
-                </th>
-                <th class="hdr-std col-status hidden">Status Data</th>
-                ${thSort('Collect', 'col-status-data text-center')}
-                <th class="hdr-std col-waktu hidden">Waktu Scan</th>
-                ${thSort('Troli', 'col-troli text-center')}
-                <th class="hdr-std col-qr hidden">QRCode</th>
-                ${thSort('Tgl Produksi', 'col-tgl text-center')}
-                ${thSort('Mesin', 'col-mesin text-center')}
-                ${thSort('Shift', 'col-shift text-center')}
-                ${thSort('Jenis Item', 'col-jenis')}
-                ${thSort('Nama Item', 'col-nama')}
-                ${thSort('Nama Jasper', 'col-jasper text-purple-300')}
-                <th class="hdr-std w-10 text-center col-btn-edit">Edit</th>
-                ${thSort('Panjang', 'col-pjg text-center')}
-                ${thSort('Grade', 'col-grade text-center')}
-                ${thSort('Dus', 'col-dus text-center')}
-                ${thSort('Shading', 'col-shading text-center')}
-                ${thSort('Customer Bawaan', 'col-customer')}
-                ${thSort('QTY (DUS)', 'col-qty text-center')}
-                ${thSort('QTY (LEMBAR)', 'col-qty-lembar text-center')}
-                ${thSort('Keterangan', 'col-ket text-center')}
-                <th class="hdr-std col-pic hidden">PIC Input</th>
-            </tr>`;
-    }
+    thead.innerHTML = `
+        <tr>
+            <th class="hdr-std w-10 col-cb text-center sticky-col">
+                <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+            </th>
+            <th class="hdr-std col-status hidden">Status Data</th>
+            ${thSort('Collect', 'col-status-data text-center')}
+            <th class="hdr-std col-waktu hidden">Waktu Scan</th>
+            ${thSort('Troli', 'col-troli text-center')}
+            <th class="hdr-std col-qr hidden">QRCode</th>
+            ${thSort('Tgl Produksi', 'col-tgl text-center')}
+            ${thSort('Mesin', 'col-mesin text-center')}
+            ${thSort('Shift', 'col-shift text-center')}
+            ${thSort('Jenis Item', 'col-jenis')}
+            ${thSort('Nama Item', 'col-nama')}
+            ${thSort('Nama Jasper', 'col-jasper text-purple-300')}
+            <th class="hdr-std w-10 text-center col-btn-edit">Edit</th>
+            ${thSort('Panjang', 'col-pjg text-center')}
+            ${thSort('Grade', 'col-grade text-center')}
+            ${thSort('Dus', 'col-dus text-center')}
+            ${thSort('Shading', 'col-shading text-center')}
+            ${thSort('Customer Bawaan', 'col-customer')}
+            ${thSort('QTY (DUS)', 'col-qty text-center')}
+            ${thSort('QTY (LEMBAR)', 'col-qty-lembar text-center')}
+            ${thSort('Keterangan', 'col-ket text-center')}
+            <th class="hdr-std col-pic hidden">PIC Input</th>
+        </tr>`;
     
     buildProcessedData();
 }
@@ -1682,63 +1429,41 @@ function renderTable() {
         const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
         const trClass = `transition text-row text-[13px] ${stripeClass} ${isSelected ? 'selected-row' : ''}`;
         
-        if (modeSekarang === 'manual') {
-            const sv = row.searchValues;
-            h += `
-                <tr class="${trClass}">
-                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${row._id}')" value="${row._id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-waktu ${hiddenCols.includes('col-waktu')?'col-hidden':''}">${sv['col-waktu']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}">${sv['col-tgl']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}">${sv['col-mesin']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}">${sv['col-shift']}</td>
-                    <td class="px-4 py-3 text-left font-semibold text-slate-900 col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
-                    <td class="px-4 py-3 text-left font-black text-purple-700 col-jasper ${hiddenCols.includes('col-jasper')?'col-hidden':''}">${sv['col-jasper']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}">${sv['col-pjg']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}">${sv['col-grade']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}">${sv['col-dus']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}">${sv['col-shading']}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-customer ${hiddenCols.includes('col-customer')?'col-hidden':''}">${sv['col-customer']}</td>
-                    <td class="px-4 py-3 text-center font-black text-purple-600 col-qty ${hiddenCols.includes('col-qty')?'col-hidden':''}">${sv['col-qty']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-600 col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
-                </tr>`;
-        } else {
-            // Mode 'jasper' (Tabel Agregasi)
-            const r = row.raw;
-            const sv = row.searchValues;
-            
-            let statDataHtml = sv['col-status-data'] !== '-' ? `<span class="text-indigo-600 font-medium uppercase">${sv['col-status-data']}</span>` : '-';
-            
-            const jData = encodeURIComponent(JSON.stringify({
-                id: r.jasperId, nama_item: r.namaItemAsli, panjang: r.panjang, grade: r.grade, nama_jasper: r.displayNama
-            }));
-            let btnEditJasper = `<td class="px-4 py-3 text-center col-btn-edit ${hiddenCols.includes('col-btn-edit')?'col-hidden':''}"><button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>`;
+        const r = row.raw;
+        const sv = row.searchValues;
+        
+        let statDataHtml = sv['col-status-data'] !== '-' ? `<span class="text-indigo-600 font-medium uppercase">${sv['col-status-data']}</span>` : '-';
+        
+        const jData = encodeURIComponent(JSON.stringify({
+            id: r.jasperId, nama_item: r.namaItemAsli, panjang: r.panjang, grade: r.grade, nama_jasper: r.displayNama
+        }));
+        let btnEditJasper = `<td class="px-4 py-3 text-center col-btn-edit ${hiddenCols.includes('col-btn-edit')?'col-hidden':''}"><button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>`;
 
-            h += `
-                <tr class="${trClass}">
-                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${row._id}')" value="${row._id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
-                    <td class="px-4 py-3 hidden col-status">${sv['col-status']}</td>
-                    <td class="px-4 py-3 text-center col-status-data ${hiddenCols.includes('col-status-data')?'col-hidden':''}">${statDataHtml}</td>
-                    <td class="px-4 py-3 hidden col-waktu">-</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-troli ${hiddenCols.includes('col-troli')?'col-hidden':''}">${sv['col-troli']}</td>
-                    <td class="px-4 py-3 hidden col-qr">-</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}">${sv['col-tgl']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}">${sv['col-mesin']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}">${sv['col-shift']}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
-                    <td class="px-4 py-3 text-left font-semibold text-slate-900 col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
-                    <td class="px-4 py-3 text-left font-black text-purple-700 col-jasper ${hiddenCols.includes('col-jasper')?'col-hidden':''}">${sv['col-jasper']}</td>
-                    ${btnEditJasper}
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}">${sv['col-pjg']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}">${sv['col-grade']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}">${sv['col-dus']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}">${sv['col-shading']}</td>
-                    <td class="px-4 py-3 text-left font-medium text-slate-900 col-customer ${hiddenCols.includes('col-customer')?'col-hidden':''}">${sv['col-customer']}</td>
-                    <td class="px-4 py-3 text-center font-black text-emerald-600 col-qty ${hiddenCols.includes('col-qty')?'col-hidden':''}">${sv['col-qty']}</td>
-                    <td class="px-4 py-3 text-center font-black text-emerald-600 col-qty-lembar ${hiddenCols.includes('col-qty-lembar')?'col-hidden':''}">${sv['col-qty-lembar']}</td>
-                    <td class="px-4 py-3 text-center font-medium text-slate-900 col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
-                    <td class="px-4 py-3 hidden col-pic">-</td>
-                </tr>`;
-        }
+        h += `
+            <tr class="${trClass}">
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${row._id}')" value="${row._id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
+                <td class="px-4 py-3 hidden col-status">${sv['col-status']}</td>
+                <td class="px-4 py-3 text-center col-status-data ${hiddenCols.includes('col-status-data')?'col-hidden':''}">${statDataHtml}</td>
+                <td class="px-4 py-3 hidden col-waktu">-</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-troli ${hiddenCols.includes('col-troli')?'col-hidden':''}">${sv['col-troli']}</td>
+                <td class="px-4 py-3 hidden col-qr">-</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}">${sv['col-tgl']}</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}">${sv['col-mesin']}</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}">${sv['col-shift']}</td>
+                <td class="px-4 py-3 text-left font-medium text-slate-900 col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
+                <td class="px-4 py-3 text-left font-semibold text-slate-900 col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
+                <td class="px-4 py-3 text-left font-black text-purple-700 col-jasper ${hiddenCols.includes('col-jasper')?'col-hidden':''}">${sv['col-jasper']}</td>
+                ${btnEditJasper}
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}">${sv['col-pjg']}</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}">${sv['col-grade']}</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}">${sv['col-dus']}</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}">${sv['col-shading']}</td>
+                <td class="px-4 py-3 text-left font-medium text-slate-900 col-customer ${hiddenCols.includes('col-customer')?'col-hidden':''}">${sv['col-customer']}</td>
+                <td class="px-4 py-3 text-center font-black text-emerald-600 col-qty ${hiddenCols.includes('col-qty')?'col-hidden':''}">${sv['col-qty']}</td>
+                <td class="px-4 py-3 text-center font-black text-emerald-600 col-qty-lembar ${hiddenCols.includes('col-qty-lembar')?'col-hidden':''}">${sv['col-qty-lembar']}</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
+                <td class="px-4 py-3 hidden col-pic">-</td>
+            </tr>`;
     });
     
     tbody.innerHTML = h;
@@ -1970,7 +1695,7 @@ async function aksiMassal(tipe) {
         const btn = document.getElementById('btn-massal-collect');
         const btnMob = document.getElementById('btn-massal-collect-mob');
         if(btn) { btn.innerHTML = '<div class="bg-indigo-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="animate-spin w-4 h-4"></i></div><div class="bg-indigo-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-indigo-700 transition">Collect</div>'; btn.disabled = true; }
-        if(btnMob) { btnMob.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-indigo-700"></i> Memproses...'; btnMob.disabled = true; }
+        if(btnMob) { btnMob.innerHTML = '<i data-lucide="check-square" class="w-4 h-4 text-indigo-700"></i> Collect'; btnMob.disabled = true; }
         
         let updates = [];
         checkedValues.forEach(qr => {
@@ -2015,16 +1740,9 @@ async function aksiMassal(tipe) {
         if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Proses...'; btn.disabled = true; }
 
         try {
-            let errorRes;
-            if (modeSekarang === 'manual') {
-                const { error } = await db.from('stbj_manual').delete().in('id', checkedValues);
-                errorRes = error;
-            } else {
-                const { error } = await db.from('hasil_stbj_langsir').delete().in('qrcode', checkedValues);
-                errorRes = error;
-            }
+            const { error } = await db.from('hasil_stbj_langsir').delete().in('qrcode', checkedValues);
+            if(error) throw error;
             
-            if(errorRes) throw errorRes;
             alert(`Berhasil menghapus ${checkedValues.length} data.`);
             await muatDataDariSupabase();
         } catch(e) { 
