@@ -57,51 +57,40 @@
         <!-- HEADER SECTION (SUBMENU BAR) -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
-                <!-- 2 TAB UTAMA -->
+                <!-- REVISI JUDUL TABEL HASIL STBJ -->
                 <button onclick="setMode('mobile')" id="tab-mode-mobile" class="sm:hidden px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="smartphone" class="w-4 h-4"></i> MOBILE</button>
-                <button onclick="setMode('tabel')" id="tab-mode-tabel" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="table" class="w-4 h-4"></i> TABEL</button>
+                <button onclick="setMode('tabel')" id="tab-mode-tabel" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="table" class="w-4 h-4"></i> TABEL HASIL STBJ</button>
             </div>
 
-            <!-- TOOLBAR DESKTOP (TABEL) -->
-            <div id="desktop-toolbar" class="p-3 sm:p-4 flex items-center bg-slate-50/50 border-t border-slate-100 w-full">
-                <div class="flex items-center gap-3 shrink-0">
-                    <label id="lbl-pilih-tabel" class="text-[11px] font-black text-slate-500 uppercase tracking-wide">Filter Status:</label>
-                    <select id="select-status" onchange="switchStatusFilter(this.value)" class="p-2 sm:p-2.5 bg-white border border-slate-300 rounded-md font-black text-xs text-slate-800 outline-none cursor-pointer uppercase focus:border-blue-500 transition shadow-sm">
-                        <option value="ALL">SEMUA DATA</option> 
-                        <option value="STBJ">STBJ MASUK</option> 
-                        <option value="HOLD STBJ">HOLD STBJ</option>
-                        <option value="IN GUDANG">IN GUDANG</option>
-                        <option value="HOLD LANGSIR">HOLD LANGSIR</option>
-                    </select>
-                </div>
+            <!-- TOOLBAR DESKTOP -->
+            <div id="desktop-toolbar" class="p-3 sm:p-4 flex items-center justify-end bg-slate-50/50 border-t border-slate-100 w-full gap-2">
+                <button onclick="bukaDaftarKatalog()" class="hidden sm:flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-purple-800">
+                    <div class="bg-purple-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="database" class="w-4 h-4"></i></div>
+                    <div class="bg-purple-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide hover:bg-purple-700 transition">Katalog Jasper</div>
+                </button>
+                
+                <button onclick="aksiMassal('collect')" id="btn-massal-collect" class="hidden sm:flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-indigo-800">
+                    <div class="bg-indigo-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="check-square" class="w-4 h-4"></i></div>
+                    <div class="bg-indigo-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide hover:bg-indigo-700 transition">Collect</div>
+                </button>
 
-                <div class="flex items-center gap-2 ml-auto relative">
-                    <button onclick="bukaDaftarKatalog()" class="hidden sm:flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-purple-800">
-                        <div class="bg-purple-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="database" class="w-4 h-4"></i></div>
-                        <div class="bg-purple-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide hover:bg-purple-700 transition">Katalog Jasper</div>
+                <div class="relative">
+                    <button onclick="toggleActionMenuMobile(event)" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition" title="Menu Aksi">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
                     </button>
                     
-                    <button onclick="aksiMassal('collect')" id="btn-massal-collect" class="hidden sm:flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-indigo-800">
-                        <div class="bg-indigo-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="check-square" class="w-4 h-4"></i></div>
-                        <div class="bg-indigo-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide hover:bg-indigo-700 transition">Collect</div>
-                    </button>
-
-                    <div class="relative">
-                        <button onclick="toggleActionMenuMobile(event)" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition" title="Menu Aksi">
-                            <i data-lucide="menu" class="w-5 h-5"></i>
-                        </button>
+                    <div id="mobile-action-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
+                        <!-- REVISI: TOMBOL FILTER DALAM TOMBOL INDUK -->
+                        <button onclick="bukaModalFilterPopup(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-blue-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data</button>
+                        <button onclick="bukaDaftarKatalog(); toggleActionMenuMobile(event)" class="sm:hidden text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="database" class="w-4 h-4"></i> Katalog Jasper</button>
+                        <button onclick="aksiMassal('collect'); toggleActionMenuMobile(event)" id="btn-massal-collect-mob" class="hidden sm:hidden text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-indigo-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="check-square" class="w-4 h-4"></i> Collect</button>
                         
-                        <div id="mobile-action-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
-                            <button onclick="bukaDaftarKatalog(); toggleActionMenuMobile(event)" class="sm:hidden text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="database" class="w-4 h-4"></i> Katalog Jasper</button>
-                            <button onclick="aksiMassal('collect'); toggleActionMenuMobile(event)" id="btn-massal-collect-mob" class="hidden sm:hidden text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-indigo-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="check-square" class="w-4 h-4"></i> Collect</button>
-                            
-                            <button onclick="aksiMassal('hapus'); toggleActionMenuMobile(event)" id="btn-hapus-mob" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-rose-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Item</button>
-                            <button onclick="aksiMassal('hold'); toggleActionMenuMobile(event)" id="btn-hold-mob" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-amber-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="settings-2" class="w-4 h-4"></i> Ubah Status</button>
-                            <button onclick="salinData(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
-                            <button onclick="downloadXLS(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
-                            <button onclick="toggleSidebarKolom(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-blue-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</button>
-                            <button onclick="bukaModalTableDesign(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="palette" class="w-4 h-4 text-purple-600"></i> Table Design</button>
-                        </div>
+                        <button onclick="aksiMassal('hapus'); toggleActionMenuMobile(event)" id="btn-hapus-mob" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-rose-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Item</button>
+                        <button onclick="aksiMassal('hold'); toggleActionMenuMobile(event)" id="btn-hold-mob" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-amber-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="settings-2" class="w-4 h-4"></i> Ubah Status</button>
+                        <button onclick="salinData(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
+                        <button onclick="downloadXLS(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
+                        <button onclick="toggleSidebarKolom(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-blue-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</button>
+                        <button onclick="bukaModalTableDesign(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="palette" class="w-4 h-4 text-purple-600"></i> Table Design</button>
                     </div>
                 </div>
             </div>
@@ -110,7 +99,7 @@
         <!-- AREA KONTEN -->
         <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
             
-            <!-- VIEW 1: TABEL DESKTOP (TABEL) -->
+            <!-- VIEW 1: TABEL DESKTOP -->
             <div id="view-table" class="hidden flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-t-xl shadow-sm border border-slate-300">
                 <table class="w-full text-left whitespace-nowrap" id="table-stbj-main">
                     <thead class="sticky top-0 z-50 shadow-sm" id="thead-stbj"></thead>
@@ -179,73 +168,80 @@
 
     </div>
 
-    <!-- SIDEBAR FILTER LENGKAP -->
-    <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
-        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4 text-blue-600"></i> Filter Data STBJ</h3>
-            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
-        </div>
-        <div class="p-3 flex flex-col gap-3 overflow-y-auto custom-scroll flex-1">
-            <div class="grid grid-cols-2 gap-2">
-                <div class="col-span-2">
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status STBJ</label>
-                    <select id="fs-status" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label>
-                    <input type="text" id="fs-qr" oninput="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50 font-mono" placeholder="Ketik QR Code...">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label>
-                    <select id="fs-troli" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label>
-                    <select id="fs-mesin" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label>
-                    <select id="fs-shift" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label>
-                    <select id="fs-jenis" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
-                    <select id="fs-nama" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
-                    <select id="fs-pjg" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
-                    <select id="fs-grade" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label>
-                    <select id="fs-dus" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label>
-                    <select id="fs-shading" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Bawaan</label>
-                    <select id="fs-customer" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PIC Input</label>
-                    <select id="fs-pic" onchange="saringTabelSTBJ()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+    <!-- REVISI: MODAL FILTER POP-UP ELEGAN (MIRIP INPUT MANUAL STBJ) -->
+    <div id="modal-filter-stbj" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-slate-200 flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-blue-50 rounded-t-2xl">
+                <h3 class="text-base font-black flex items-center gap-2 text-blue-900"><i data-lucide="filter" class="w-5 h-5 text-blue-600"></i> Filter Data STBJ</h3>
+                <button type="button" onclick="tutupModalFilterPopup()" class="text-slate-400 hover:text-red-600 bg-white p-1.5 rounded-md transition shadow-sm"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto custom-scroll p-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status STBJ</label>
+                        <select id="fs-status" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua Status --</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Troli</label>
+                        <select id="fs-troli" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua Troli --</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mesin</label>
+                        <select id="fs-mesin" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua Mesin --</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shift</label>
+                        <select id="fs-shift" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua Shift --</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label>
+                        <select id="fs-jenis" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua Jenis --</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
+                        <select id="fs-nama" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua Item --</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
+                        <select id="fs-pjg" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua Panjang --</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
+                        <select id="fs-grade" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua Grade --</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label>
+                        <select id="fs-dus" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua Dus --</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label>
+                        <select id="fs-shading" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua Shading --</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Bawaan</label>
+                        <select id="fs-customer" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua Customer --</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PIC Input</label>
+                        <select id="fs-pic" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua PIC --</option></select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode (Spesifik)</label>
+                        <input type="text" id="fs-qr" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-mono font-bold bg-slate-50" placeholder="Ketik barcode di sini...">
+                    </div>
                 </div>
             </div>
-            <button onclick="resetFilterSTBJ()" class="mt-2 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg text-xs uppercase transition shrink-0">RESET FILTER</button>
+
+            <div class="p-4 border-t border-slate-100 bg-white flex gap-2 rounded-b-2xl">
+                <button type="button" onclick="resetFilterSTBJ()" class="w-1/3 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase hover:bg-slate-300 transition">Reset</button>
+                <button type="button" onclick="saringTabelSTBJ(); tutupModalFilterPopup()" class="w-2/3 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 flex justify-center items-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> Terapkan Filter</button>
+            </div>
         </div>
     </div>
 
-    <!-- MODAL FILTER EXCEL (DESKTOP) -->
-    <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm overflow-hidden">
+    <!-- MODAL FILTER EXCEL HEADER -->
+    <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[120] flex flex-col font-sans text-sm overflow-hidden">
         <div class="p-3 border-b border-slate-100 flex justify-between items-center rounded-t-lg">
             <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
             <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
@@ -352,5 +348,4 @@
 
     <script src="hasil_stbj_logic.js"></script>
 </body>
-</html>
-
+                                                                                                                                                     </html>
