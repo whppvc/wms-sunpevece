@@ -57,14 +57,12 @@
         <!-- HEADER SECTION (SUBMENU BAR) -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
-                <!-- REVISI TAB STRUKTUR BARU -->
+                <!-- 2 TAB UTAMA -->
                 <button onclick="setMode('mobile')" id="tab-mode-mobile" class="sm:hidden px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="smartphone" class="w-4 h-4"></i> MOBILE</button>
-                <button onclick="setMode('qrcode')" id="tab-mode-qrcode" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="qr-code" class="w-4 h-4"></i> QRCODE</button>
-                <button onclick="setMode('jasper')" id="tab-mode-jasper" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="table" class="w-4 h-4"></i> TABEL</button>
-                <button onclick="setMode('manual')" id="tab-mode-manual" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="keyboard" class="w-4 h-4"></i> TABEL MANUAL</button>
+                <button onclick="setMode('tabel')" id="tab-mode-tabel" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="table" class="w-4 h-4"></i> TABEL</button>
             </div>
 
-            <!-- TOOLBAR DESKTOP (UNTUK TABEL & MANUAL) -->
+            <!-- TOOLBAR DESKTOP (TABEL) -->
             <div id="desktop-toolbar" class="p-3 sm:p-4 flex items-center bg-slate-50/50 border-t border-slate-100 w-full">
                 <div class="flex items-center gap-3 shrink-0">
                     <label id="lbl-pilih-tabel" class="text-[11px] font-black text-slate-500 uppercase tracking-wide">Filter Status:</label>
@@ -88,20 +86,22 @@
                         <div class="bg-indigo-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide hover:bg-indigo-700 transition">Collect</div>
                     </button>
 
-                    <button onclick="toggleActionMenuMobile(event)" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition">
-                        <i data-lucide="menu" class="w-5 h-5"></i>
-                    </button>
-                    
-                    <div id="mobile-action-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
-                        <button onclick="bukaDaftarKatalog(); toggleActionMenuMobile(event)" class="sm:hidden text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="database" class="w-4 h-4"></i> Katalog Jasper</button>
-                        <button onclick="aksiMassal('collect'); toggleActionMenuMobile(event)" id="btn-massal-collect-mob" class="hidden sm:hidden text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-indigo-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="check-square" class="w-4 h-4"></i> Collect</button>
+                    <div class="relative">
+                        <button onclick="toggleActionMenuMobile(event)" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition" title="Menu Aksi">
+                            <i data-lucide="menu" class="w-5 h-5"></i>
+                        </button>
                         
-                        <button onclick="aksiMassal('hapus'); toggleActionMenuMobile(event)" id="btn-hapus-mob" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-rose-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Item</button>
-                        <button onclick="aksiMassal('hold'); toggleActionMenuMobile(event)" id="btn-hold-mob" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-amber-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="settings-2" class="w-4 h-4"></i> Ubah Status</button>
-                        <button onclick="salinData(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
-                        <button onclick="downloadXLS(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
-                        <button onclick="toggleSidebarKolom(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-blue-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</button>
-                        <button onclick="bukaModalTableDesign(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="palette" class="w-4 h-4 text-purple-600"></i> Table Design</button>
+                        <div id="mobile-action-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
+                            <button onclick="bukaDaftarKatalog(); toggleActionMenuMobile(event)" class="sm:hidden text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="database" class="w-4 h-4"></i> Katalog Jasper</button>
+                            <button onclick="aksiMassal('collect'); toggleActionMenuMobile(event)" id="btn-massal-collect-mob" class="hidden sm:hidden text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-indigo-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="check-square" class="w-4 h-4"></i> Collect</button>
+                            
+                            <button onclick="aksiMassal('hapus'); toggleActionMenuMobile(event)" id="btn-hapus-mob" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-rose-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Item</button>
+                            <button onclick="aksiMassal('hold'); toggleActionMenuMobile(event)" id="btn-hold-mob" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-amber-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="settings-2" class="w-4 h-4"></i> Ubah Status</button>
+                            <button onclick="salinData(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
+                            <button onclick="downloadXLS(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
+                            <button onclick="toggleSidebarKolom(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-blue-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</button>
+                            <button onclick="bukaModalTableDesign(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="palette" class="w-4 h-4 text-purple-600"></i> Table Design</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -110,7 +110,7 @@
         <!-- AREA KONTEN -->
         <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
             
-            <!-- VIEW 1: TABEL DESKTOP (TABEL & MANUAL) -->
+            <!-- VIEW 1: TABEL DESKTOP (TABEL) -->
             <div id="view-table" class="hidden flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-t-xl shadow-sm border border-slate-300">
                 <table class="w-full text-left whitespace-nowrap" id="table-stbj-main">
                     <thead class="sticky top-0 z-50 shadow-sm" id="thead-stbj"></thead>
@@ -118,88 +118,7 @@
                 </table>
             </div>
 
-            <!-- VIEW 2: SUBMENU BARU "QRCODE" (SEARCH & CARD VIEW MULTI-BARCODE) -->
-            <div id="view-qrcode-search" class="hidden flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-4">
-                
-                <!-- PANEL PENCARIAN -->
-                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
-                    <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-                        <h3 class="font-black text-sm text-slate-800 uppercase flex items-center gap-2"><i data-lucide="search" class="w-4 h-4 text-blue-600"></i> Pencarian Detail QRCode & Spesifikasi</h3>
-                        <button onclick="resetQRSearchFilter()" class="text-xs font-bold text-rose-600 hover:underline">Reset Form</button>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div class="md:col-span-3">
-                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Cari Beberapa Barcode / QRCode Sekaligus (Pisahkan Spasi / Enter / Koma)</label>
-                            <textarea id="qs-qr" rows="2" class="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:border-blue-600 font-mono text-xs font-bold bg-slate-50 custom-scroll" placeholder="Tempel atau ketik kode barcode di sini..."></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label>
-                            <select id="qs-status" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase cursor-pointer">
-                                <option value="">-- Semua Status --</option>
-                                <option value="STBJ">STBJ MASUK</option>
-                                <option value="HOLD STBJ">HOLD STBJ</option>
-                                <option value="IN GUDANG">IN GUDANG</option>
-                                <option value="HOLD LANGSIR">HOLD LANGSIR</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
-                            <select id="qs-nama" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua --</option></select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Jasper</label>
-                            <select id="qs-jasper" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua --</option></select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
-                            <select id="qs-pjg" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua --</option></select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
-                            <select id="qs-grade" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua --</option></select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label>
-                            <select id="qs-dus" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua --</option></select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label>
-                            <input type="text" id="qs-shading" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase" placeholder="Ketik Shading...">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Bawaan</label>
-                            <select id="qs-cust" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua --</option></select>
-                        </div>
-                        <div class="flex items-end">
-                            <button onclick="eksekusiQRSearch()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-xs uppercase rounded-lg shadow-md transition flex items-center justify-center gap-2">
-                                <i data-lucide="search" class="w-4 h-4"></i> CARI DATA
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- DAFTAR HASIL SEARCH (CARD VIEW) -->
-                <div class="flex justify-between items-center px-1">
-                    <span class="text-xs font-black text-slate-500 uppercase tracking-wider">Hasil Pencarian: <strong class="text-blue-700" id="lbl-qr-search-count">0 Kardus</strong></span>
-                </div>
-
-                <div id="container-qr-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pb-8">
-                    <!-- Cards di-render oleh JS -->
-                </div>
-
-                <!-- PAGINASI HASIL SEARCH QRCODE -->
-                <div id="footer-qr-search-pagination" class="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm mt-auto">
-                    <span class="text-xs font-bold text-slate-600">Hal <strong id="lbl-qr-cur-page" class="text-blue-600">1</strong> / <span id="lbl-qr-total-page">1</span></span>
-                    <div class="flex gap-2">
-                        <button onclick="prevQRSearchPage()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                        <button onclick="nextQRSearchPage()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- VIEW 3: VIEW MOBILE (DRILL-DOWN FOLDER / CARD VIEW) -->
+            <!-- VIEW 2: VIEW MOBILE (DRILL-DOWN FOLDER / CARD VIEW) -->
             <div id="view-mobile" class="flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-32">
                 <!-- Konten Mobile di-render oleh JS -->
             </div>
