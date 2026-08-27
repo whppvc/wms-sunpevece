@@ -79,7 +79,6 @@
                     </button>
                     
                     <div id="mobile-action-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
-                        <!-- TOMBOL FILTER DALAM TOMBOL INDUK -->
                         <button onclick="bukaModalFilterPopup(); toggleActionMenuMobile(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-blue-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data</button>
                         <button onclick="bukaDaftarKatalog(); toggleActionMenuMobile(event)" class="sm:hidden text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="database" class="w-4 h-4"></i> Katalog Jasper</button>
                         <button onclick="aksiMassal('collect'); toggleActionMenuMobile(event)" id="btn-massal-collect-mob" class="hidden sm:hidden text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-indigo-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="check-square" class="w-4 h-4"></i> Collect</button>
@@ -167,7 +166,7 @@
 
     </div>
 
-    <!-- REVISI: MODAL FILTER POP-UP ELEGAN DENGAN FILTER TANGGAL PRODUKSI -->
+    <!-- MODAL FILTER POP-UP ELEGAN -->
     <div id="modal-filter-stbj" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-slate-200 flex flex-col max-h-[90vh]">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-blue-50 rounded-t-2xl">
@@ -177,7 +176,6 @@
             
             <div class="flex-1 overflow-y-auto custom-scroll p-5">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- REVISI: FILTER TANGGAL PRODUKSI DITAMBAHKAN -->
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Tanggal Produksi</label>
                         <select id="fs-tgl" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg outline-none font-bold bg-slate-50 uppercase cursor-pointer"><option value="">-- Semua Tanggal --</option></select>
@@ -352,5 +350,4 @@
 
     <script src="hasil_stbj_logic.js"></script>
 </body>
-</html>
-
+    </html>
