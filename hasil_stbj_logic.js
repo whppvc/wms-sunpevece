@@ -1,3 +1,5 @@
+
+
 // Otomatis deteksi mode perangkat saat buka halaman (Layar < 640px = Mobile, >= 640px = Desktop Tabel)
 const isMobileDevice = window.innerWidth < 640;
 let modeSekarang = isMobileDevice ? 'mobile' : 'tabel'; 
@@ -1349,4 +1351,266 @@ function renderKatalogList() {
 
 function saringKatalogList() {
     const query = document.getElementById('f-kat-search').value.toLowerCase();
-    document.querySelectorA
+    document.querySelectorAll('.row-katalog').forEach(row => {
+        const text = row.getAttribute('data-search');
+        row.style.display = text.includes(query) ? '' : 'none';
+    });
+}
+
+function bukaModalKatalogForm(isEdit = false, encodedData = null) {
+    document.getElementById('modal-list-katalog').classList.add('hidden');
+    document.getElementById('modal-katalog').classList.remove('hidden');
+    
+    const title = document.getElementById('title-modal-jasper');
+    title.innerHTML = isEdit 
+        ? '<i data-lucide="edit" class="w-4 h-4 text-purple-600"></i> EDIT DATA JASPER' 
+        : '<i data-lucide="plus-circle" class="w-4 h-4 text-purple-600"></i> TAMBAH JASPER BARU';
+    
+    if(isEdit && encodedData) {
+        const d = JSON.parse(decodeURIComponent(encodedData));
+        document.getElementById('j-id').value = d.id || ''; 
+        document.getElementById('j-nama').value = d.nama_item || '';
+        document.getElementById('j-pjg').value = d.panjang || '';
+        document.getElementById('j-grade').value = d.grade || '';
+        document.getElementById('j-output').value = d.nama_jasper || '';
+    } else {
+        document.getElementById('j-id').value = '';
+        document.getElementById('j-nama').value = '';
+        document.getElementById('j-pjg').value = '';
+        document.getElementById('j-grade').value = '';
+        document.getElementById('j-output').value = '';
+    }
+}
+
+function tutupModalJasperForm() { document.getElementById('modal-katalog').classList.add('hidden'); }
+
+async function simpanDataJasper() {
+    const id = document.getElementById('j-id').value;
+    const nama = document.getElementById('j-nama').value.trim();
+    const pjg = document.getElementById('j-pjg').value.trim();
+    const grade = document.getElementById('j-grade').value.trim();
+    const output = document.getElementById('j-output').value.trim();
+
+    if(!nama || !output) return alert("PERHATIAN: Nama Item Master dan Nama Output Jasper Wajib Diisi!");
+
+    const btn = document.getElementById('btn-save-jasper');
+    const oriTxt = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> MENYIMPAN...';
+    btn.disabled = true;
+
+    const payload = { nama_item: nama, panjang: pjg, grade: grade, nama_jasper: output };
+
+    try {
+        let errorRes;
+        if(id) {
+            const { error } = await db.from('nama_jasper').update(payload).eq('id', id);
+            errorRes = error;
+        } else {
+            const { error } = await db.from('nama_jasper').insert([payload]);
+            errorRes = error;
+        }
+
+        if(errorRes) throw errorRes;
+        
+        tutupModalJasperForm();
+        await loadKamusDanJasper(); 
+        renderKatalogList(); 
+        muatDataDariSupabase(); 
+    } catch(e) {
+        alert("GAGAL MENYIMPAN: " + e.message);
+    } finally {
+        btn.innerHTML = oriTxt; btn.disabled = false; lucide.createIcons();
+    }
+}
+
+async function aksiMassal(tipe) {
+    let checkedValues = [];
+    selectedRows.forEach(id => {
+        id.split(',').forEach(v => { if(v) checkedValues.push(v); });
+    });
+    
+    if(checkedValues.length === 0) return alert("Centang baris tabel terlebih dahulu!");
+
+    if(tipe === 'salin') {
+        let textSalin = "";
+        const headers = Array.from(document.querySelectorAll('#thead-stbj th'))
+            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-btn') && !th.classList.contains('col-btn-edit'))
+            .map(th => th.innerText.trim().replace(/\n/g, ' '));
+        textSalin += headers.join('\t') + '\n';
+
+        let exportData = filteredData.filter(r => selectedRows.has(r._id));
+        exportData.forEach(row => {
+            const sv = row.searchValues;
+            const rowData = [];
+            headers.forEach(h => {
+                let colClass = '';
+                if(h === 'Collect') colClass = 'col-status-data';
+                else if(h === 'Troli') colClass = 'col-troli';
+                else if(h === 'Tgl Produksi') colClass = 'col-tgl';
+                else if(h === 'Mesin') colClass = 'col-mesin';
+                else if(h === 'Shift') colClass = 'col-shift';
+                else if(h === 'Jenis Item') colClass = 'col-jenis';
+                else if(h === 'Nama Item') colClass = 'col-nama';
+                else if(h === 'Nama Jasper') colClass = 'col-jasper';
+                else if(h === 'Pjg' || h === 'Panjang') colClass = 'col-pjg';
+                else if(h === 'Grade') colClass = 'col-grade';
+                else if(h === 'Dus') colClass = 'col-dus';
+                else if(h === 'Shading') colClass = 'col-shading';
+                else if(h === 'Customer Bawaan') colClass = 'col-customer';
+                else if(h === 'QTY (DUS)') colClass = 'col-qty';
+                else if(h === 'QTY (LEMBAR)') colClass = 'col-qty-lembar';
+                else if(h === 'Keterangan') colClass = 'col-ket';
+                else if(h === 'PIC Input') colClass = 'col-pic';
+
+                if(colClass) {
+                    let val = sv[colClass] || '-';
+                    let cleanVal = String(val).replace(/<[^>]*>?/gm, '').trim();
+                    rowData.push(cleanVal);
+                }
+            });
+            textSalin += rowData.join('\t') + '\n';
+        });
+        
+        navigator.clipboard.writeText(textSalin);
+        alert(`Tersalin! Buka Excel dan Paste (Ctrl+V).`);
+    } 
+    else if(tipe === 'hold') {
+        const act = prompt(`Pilih Aksi untuk ${checkedValues.length} item:\n1 = Ubah ke HOLD STBJ\n2 = UNHOLD (Kembali ke STBJ)\n3 = Ubah ke HOLD LANGSIR`);
+        if (act === null) return;
+        
+        let newStatus = '';
+        if (act === '1') newStatus = 'HOLD STBJ';
+        else if (act === '2') newStatus = 'STBJ';
+        else if (act === '3') newStatus = 'HOLD LANGSIR';
+        else return alert("Pilihan tidak valid. Ketik 1, 2, atau 3.");
+
+        const { error } = await db.from('hasil_stbj_langsir').update({status: newStatus}).in('qrcode', checkedValues);
+        if(!error) {
+            alert(`Berhasil mengubah status menjadi ${newStatus}`);
+            muatDataDariSupabase();
+        } else {
+            alert("Gagal update status: " + error.message);
+        }
+    }
+    else if (tipe === 'collect') {
+        if(!confirm(`Tandai ${checkedValues.length} QrCode sebagai COLLECTED oleh ${currentUser.username}?`)) return;
+        const btn = document.getElementById('btn-massal-collect');
+        const btnMob = document.getElementById('btn-massal-collect-mob');
+        if(btn) { btn.innerHTML = '<div class="bg-indigo-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="animate-spin w-4 h-4"></i></div><div class="bg-indigo-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-indigo-700 transition">Collect</div>'; btn.disabled = true; }
+        if(btnMob) { btnMob.innerHTML = '<i data-lucide="check-square" class="w-4 h-4 text-indigo-700"></i> Memproses...'; btnMob.disabled = true; }
+        
+        let updates = [];
+        checkedValues.forEach(qr => {
+            let row = rawDataRaw.find(r => r.qrcode === qr);
+            if(row) {
+                let currentCollect = row.status_data || '';
+                let newCollect = currentCollect;
+                
+                if(currentCollect === 'BELUM' || currentCollect === 'Collected' || currentCollect === '') {
+                    newCollect = currentUser.username;
+                } else {
+                    let users = currentCollect.split(',').map(u => u.trim());
+                    if(!users.includes(currentUser.username)) {
+                        newCollect = users.join(', ') + `, ${currentUser.username}`;
+                    }
+                }
+                updates.push({ qrcode: qr, status_data: newCollect });
+            }
+        });
+
+        try {
+            const chunkSize = 50;
+            for (let i = 0; i < updates.length; i += chunkSize) {
+                const chunk = updates.slice(i, i + chunkSize);
+                await Promise.all(chunk.map(u => db.from('hasil_stbj_langsir').update({ status_data: u.status_data }).eq('qrcode', u.qrcode)));
+            }
+            await muatDataDariSupabase();
+        } catch (error) {
+            alert("Gagal Update: " + error.message);
+        }
+        
+        if(btn) { btn.innerHTML = '<div class="bg-indigo-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="check-square" class="w-4 h-4"></i></div><div class="bg-indigo-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-indigo-700 transition">Collect</div>'; btn.disabled = false; }
+        if(btnMob) { btnMob.innerHTML = '<i data-lucide="check-square" class="w-4 h-4 text-indigo-700"></i> Collect'; btnMob.disabled = false; }
+        lucide.createIcons();
+    }
+    else if(tipe === 'hapus') {
+        if(currentUser.role.toLowerCase() !== 'creator') return alert("Akses ditolak! Hanya Creator yang dapat menghapus data.");
+        if(!confirm(`Yakin ingin menghapus permanen ${checkedValues.length} data ini dari database?`)) return;
+        
+        const btn = document.getElementById('btn-hapus-mob'); 
+        const ori = btn ? btn.innerHTML : '';
+        if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Proses...'; btn.disabled = true; }
+
+        try {
+            const { error } = await db.from('hasil_stbj_langsir').delete().in('qrcode', checkedValues);
+            if(error) throw error;
+            
+            alert(`Berhasil menghapus ${checkedValues.length} data.`);
+            await muatDataDariSupabase();
+        } catch(e) { 
+            alert("Gagal hapus: " + e.message); 
+        } finally {
+            if(btn) { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
+        }
+    }
+    else if(tipe === 'xlsx') {
+        if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
+        
+        let ws_data = [];
+        const activeHeaders = [];
+        
+        document.querySelectorAll('#thead-stbj th').forEach(th => {
+            if(window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-btn') && !th.classList.contains('col-btn-edit')) {
+                const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
+                let headerText = th.innerText.trim().replace(/\n/g, ' ');
+                activeHeaders.push({ text: headerText, colClass: colClass });
+            }
+        });
+
+        ws_data.push(activeHeaders.map(h => h.text));
+
+        let exportData = filteredData.filter(r => selectedRows.has(r._id));
+        exportData.forEach(row => {
+            const sv = row.searchValues;
+            const rowData = [];
+            activeHeaders.forEach(h => {
+                let val = sv[h.colClass] || '-';
+                let cleanVal = String(val).replace(/<[^>]*>?/gm, '').trim();
+                rowData.push(cleanVal);
+            });
+            ws_data.push(rowData);
+        });
+
+        let ws = XLSX.utils.aoa_to_sheet(ws_data);
+        let wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "STBJ_Data");
+        XLSX.writeFile(wb, `STBJ_${statusSekarang}_TABEL.xlsx`);
+    }
+}
+
+function applyColumnOrder() {
+    if (!userColOrder || userColOrder.length === 0) return;
+    const table = document.getElementById('table-stbj-main');
+    if(!table) return;
+    const rows = table.querySelectorAll('tr');
+
+    rows.forEach(row => {
+        const cells = Array.from(row.children);
+        if (cells.length <= 1) return; 
+        const cbCell = cells.find(c => c.classList.contains('col-cb'));
+        const cellMap = {};
+        cells.forEach(c => {
+            const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
+            if (colClass) cellMap[colClass] = c;
+        });
+
+        row.innerHTML = ''; 
+        if (cbCell) row.appendChild(cbCell); 
+
+        userColOrder.forEach(colId => { if (cellMap[colId]) row.appendChild(cellMap[colId]); });
+        cells.forEach(c => {
+            const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
+            if (colClass !== 'col-cb' && !userColOrder.includes(colClass)) { row.appendChild(c); }
+        });
+    });
+}
