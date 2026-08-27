@@ -1242,4 +1242,111 @@ function renderTable() {
         const jData = encodeURIComponent(JSON.stringify({
             id: r.jasperId, nama_item: r.namaItemAsli, panjang: r.panjang, grade: r.grade, nama_jasper: r.displayNama
         }));
-        let btnEditJasper = `<td class="px-4 py-3 text-center col-btn-edit ${hiddenCols.includes('col-btn-edit')?'col-hidden':''}"><button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-
+        let btnEditJasper = `<td class="px-4 py-3 text-center col-btn-edit ${hiddenCols.includes('col-btn-edit')?'col-hidden':''}"><button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>`;
+
+        h += `
+            <tr class="${trClass}">
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${row._id}')" value="${row._id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
+                <td class="px-4 py-3 hidden col-status">${sv['col-status']}</td>
+                <td class="px-4 py-3 text-center col-status-data ${hiddenCols.includes('col-status-data')?'col-hidden':''}">${statDataHtml}</td>
+                <td class="px-4 py-3 hidden col-waktu">-</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-troli ${hiddenCols.includes('col-troli')?'col-hidden':''}">${sv['col-troli']}</td>
+                <td class="px-4 py-3 hidden col-qr">-</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}">${sv['col-tgl']}</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}">${sv['col-mesin']}</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}">${sv['col-shift']}</td>
+                <td class="px-4 py-3 text-left font-medium text-slate-900 col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
+                <td class="px-4 py-3 text-left font-semibold text-slate-900 col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
+                <td class="px-4 py-3 text-left font-black text-purple-700 col-jasper ${hiddenCols.includes('col-jasper')?'col-hidden':''}">${sv['col-jasper']}</td>
+                ${btnEditJasper}
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}">${sv['col-pjg']}</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}">${sv['col-grade']}</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}">${sv['col-dus']}</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}">${sv['col-shading']}</td>
+                <td class="px-4 py-3 text-left font-medium text-slate-900 col-customer ${hiddenCols.includes('col-customer')?'col-hidden':''}">${sv['col-customer']}</td>
+                <td class="px-4 py-3 text-center font-black text-emerald-600 col-qty ${hiddenCols.includes('col-qty')?'col-hidden':''}">${sv['col-qty']}</td>
+                <td class="px-4 py-3 text-center font-black text-emerald-600 col-qty-lembar ${hiddenCols.includes('col-qty-lembar')?'col-hidden':''}">${sv['col-qty-lembar']}</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
+                <td class="px-4 py-3 hidden col-pic">-</td>
+            </tr>`;
+    });
+    
+    tbody.innerHTML = h;
+    applyColumnOrder();
+    lucide.createIcons();
+    updatePaginationUI();
+}
+
+function updatePaginationUI() {
+    const totalFiltered = filteredData.length;
+    const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
+    
+    let sumQty = 0;
+    filteredData.forEach(r => { sumQty += parseInt(r.searchValues['col-qty']) || 0; });
+
+    document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
+    document.getElementById('lbl-total-qty').innerText = sumQty;
+    document.getElementById('lbl-halaman').innerText = currentPage;
+    document.getElementById('lbl-total-halaman').innerText = totalPages;
+    
+    updateSelectedCount();
+}
+
+function changeRowsPerPage(val) {
+    rowsPerPage = (val === 'ALL') ? 999999 : parseInt(val);
+    localStorage.setItem('wms_rows_per_page', rowsPerPage);
+    currentPage = 1; 
+    renderTable();
+}
+
+function prevPage() { if(currentPage > 1) { currentPage--; renderTable(); } }
+function nextPage() { 
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
+    if(currentPage < totalPages) { currentPage++; renderTable(); } 
+}
+
+function updateSelectedCount() {
+    const lbl = document.getElementById('lbl-pilih-baris');
+    if(lbl) lbl.innerText = selectedRows.size;
+}
+
+// ========================================================
+// FUNGSI AKSI MASSAL & KATALOG
+// ========================================================
+function bukaDaftarKatalog() {
+    renderKatalogList();
+    document.getElementById('modal-list-katalog').classList.remove('hidden');
+}
+
+function renderKatalogList() {
+    const tbody = document.getElementById('tbody-katalog-list');
+    if (!jasperData || jasperData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-slate-400 font-bold border-b border-slate-200">Katalog Jasper Kosong di Database.</td></tr>'; 
+        return;
+    }
+
+    let html = '';
+    jasperData.forEach((d, i) => {
+        const jData = encodeURIComponent(JSON.stringify(d));
+        const searchStr = `${d.nama_item} ${d.panjang} ${d.grade} ${d.nama_jasper}`.toLowerCase();
+        html += `
+        <tr class="hover:bg-slate-50 transition text-center row-katalog border-b border-slate-200" data-search="${searchStr}">
+            <td class="p-2 border-r border-slate-200">
+                <button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md shadow-sm transition active:scale-95 mx-auto flex" title="Edit Baris Ini">
+                    <i data-lucide="edit-3" class="w-4 h-4"></i>
+                </button>
+            </td>
+            <td class="p-3 font-bold text-slate-400 border-r border-slate-200">${i+1}</td>
+            <td class="p-3 font-black text-black text-left border-r border-slate-200">${d.nama_item}</td>
+            <td class="p-3 font-black text-black border-r border-slate-200">${d.panjang || '-'}</td>
+            <td class="p-3 font-black text-black border-r border-slate-200">${d.grade || '-'}</td>
+            <td class="p-3 font-black text-purple-700 bg-purple-50/50">${d.nama_jasper}</td>
+        </tr>`;
+    });
+    tbody.innerHTML = html;
+    lucide.createIcons(); 
+}
+
+function saringKatalogList() {
+    const query = document.getElementById('f-kat-search').value.toLowerCase();
+    document.querySelectorA
