@@ -47,6 +47,27 @@ function formatWIB(isoString) {
     } catch(e) { return isoString; }
 }
 
+// REVISI KRUSIAL: Auto-Chunking Fetcher untuk menembus batasan 1000 baris Supabase
+async function fetchAllRows(tableName, orderCol = 'created_at') {
+    let allData = [];
+    let page = 0;
+    const pageSize = 1000;
+    while (true) {
+        const { data, error } = await db
+            .from(tableName)
+            .select('*')
+            .order(orderCol, { ascending: false })
+            .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allData.push(...data);
+        if (data.length < pageSize) break;
+        page++;
+    }
+    return allData;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'riwayat_keluar', title: 'RIWAYAT KELUAR', url: 'riwayat_keluar.html' });
     
@@ -144,24 +165,23 @@ function extractAreaFromSKU(id_sku) {
 
 async function muatDataDariSupabase() {
     const tbody = document.getElementById('tbody-keluar');
-    tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Data Keluar...</p></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Semua Data Riwayat Keluar...</p></td></tr>`;
     if(typeof lucide !== 'undefined') lucide.createIcons();
-    
-    let queryKeluar = db.from('stok_keluar').select('*').order('created_at', {ascending: false}); 
-    let queryHold = db.from('hold_keluar').select('*').order('created_at', {ascending: false}); 
 
     try {
-        const [resK, resH] = await Promise.all([queryKeluar, queryHold]);
-        if(resK.error) throw resK.error;
-        if(resH.error) throw resH.error;
+        // REVISI: Mengambil seluruh baris tanpa batas 1000 menggunakan fetchAllRows
+        const [dataKeluar, dataHold] = await Promise.all([
+            fetchAllRows('stok_keluar'),
+            fetchAllRows('hold_keluar')
+        ]);
         
-        rawDataRaw = resK.data || [];
-        holdDataRaw = resH.data || [];
+        rawDataRaw = dataKeluar || [];
+        holdDataRaw = dataHold || [];
         
         updateFilterDropdowns();
         setMode(modeSekarang);
     } catch(err) { 
-        tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-red-500 font-bold">Gagal memuat data: ${err.message}</td></tr>`; 
     }
 }
 
@@ -388,7 +408,7 @@ function renderMobileView() {
     const targetDate = document.getElementById('filter-date-mobile').value;
     const lvl4Footer = document.getElementById('mobile-lvl4-footer');
 
-    // REVISI: Kontrol Tampilan Footer Freeze Level 4 Pasti Muncul di Level 4
+    // Kontrol Tampilan Footer Freeze Level 4 Pasti Muncul di Level 4
     if (lvl4Footer) {
         if (modeSekarang === 'mobile' && mobileLevel === 4) {
             lvl4Footer.classList.remove('hidden');
@@ -441,7 +461,7 @@ function renderMobileView() {
 
         html += `<div class="flex justify-between items-center mb-1 px-1">
             <h3 class="text-xs font-black text-slate-500 uppercase tracking-wider">Daftar Pengiriman (Customer)</h3>
-            <span class="text-xs font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">${mobileData.length} Total Dus</span>
+            <span class="text-xs font-black text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">${mobileData.length} Total Dus</span>
         </div>`;
         
         Object.keys(custMap).sort().forEach(cust => {
@@ -563,7 +583,7 @@ function renderMobileView() {
         });
     }
     // ==========================================
-    // REVISI LEVEL 4: DETAIL KARDUS FISIK DENGAN STICKY HEADER
+    // LEVEL 4: DETAIL KARDUS FISIK DENGAN STICKY HEADER
     // ==========================================
     else if (mobileLevel === 4) {
         let detailItems = mobileData.filter(r => {
@@ -584,9 +604,7 @@ function renderMobileView() {
                     <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
                 </button>
                 <div class="flex flex-col overflow-hidden">
-                    <!-- CUSTOMER TUJUAN DIPERBESAR -->
                     <span class="text-base font-black text-rose-700 uppercase leading-snug truncate">${mobileSelectedCust}</span>
-                    <!-- SPESIFIKASI ITEM & SHADING DIPERBESAR -->
                     <span class="text-xs sm:text-sm font-black text-slate-800 uppercase leading-snug truncate">${displayItem} • Shading: <span class="text-amber-600 font-black">${mobileSelectedShading}</span></span>
                 </div>
             </div>
@@ -915,7 +933,7 @@ function updateFilterIcons() {
     document.querySelectorAll('.filter-icon').forEach(icon => { icon.classList.remove('text-amber-400', 'opacity-100'); icon.classList.add('opacity-40', 'text-white'); });
     for (let colClass in activeFilters) {
         const th = document.querySelector(`th.${colClass}`);
-        if (th) { const icon = th.querySelector('.filter-icon'); if (icon) { icon.classList.remove('text-white', 'opacity-40'); icon.classList.add('text-amber-400', 'opacity-100'); } }
+        if (th) { const icon = th.querySelector('.filter-icon'); if (icon) { icon.classList.remove('opacity-40', 'text-white'); icon.classList.add('text-amber-400', 'opacity-100'); } }
     }
 }
 
@@ -1349,4 +1367,4 @@ async function eksekusiCancelHold() {
         document.getElementById('modal-cancel-hold').classList.add('hidden');
     } catch(e) { alert("GAGAL RETUR: " + e.message); }
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
-                }
+            }
