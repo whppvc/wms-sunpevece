@@ -68,12 +68,15 @@ document.addEventListener('submit', function(e) {
     if (e.target && e.target.id === 'form-scan') {
         e.preventDefault();
         const customerKeluar = document.getElementById('select-customer-keluar').value;
+        const tripInput = document.getElementById('input-trip').value.trim();
         const inputEl = document.getElementById('input-qrcode');
         const rawInput = inputEl.value.trim();
         
         if(!customerKeluar) return alert("Pilih Customer Keluar (Tujuan) terlebih dahulu!");
+        if(!tripInput) return alert("Masukkan Trip ke berapa!");
         if(!rawInput) return;
 
+        const tripFormatted = "Trip " + tripInput;
         const codes = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
         
         codes.forEach(code => {
@@ -84,6 +87,7 @@ document.addEventListener('submit', function(e) {
                 id: ++globalRowId, 
                 qrcode: code, 
                 customer_keluar: customerKeluar,
+                trip: tripFormatted,
                 keterangan: '-', 
                 status_verif: isLocalDuplicate ? 'DUPLIKAT SCAN' : 'BELUM CEK', 
                 area: '-',
@@ -102,6 +106,7 @@ document.addEventListener('submit', function(e) {
         
         renderTable();
         
+        // Hanya kosongkan QR Code, biarkan Customer dan Trip tetap terisi untuk scan batch selanjutnya
         inputEl.value = ''; 
         inputEl.focus();
         
@@ -121,7 +126,8 @@ function getMatchingGroup(item) {
         d.shading === item.shading &&
         d.area === item.area &&
         d.customer_aktual_db === item.customer_aktual_db &&
-        d.customer_keluar === item.customer_keluar
+        d.customer_keluar === item.customer_keluar &&
+        d.trip === item.trip
     );
 }
 
@@ -251,6 +257,10 @@ function renderTable() {
                         <span class="text-[10px] font-black text-slate-400 uppercase">Cust Estimasi</span>
                         <span class="text-sm font-bold text-purple-600 uppercase col-cust-estimasi">${d.customer_estimasi_db}</span>
                     </div>
+                    <div class="flex flex-col col-span-2">
+                        <span class="text-[10px] font-black text-slate-400 uppercase">Trip Pengiriman</span>
+                        <span class="text-sm font-bold text-slate-700 col-trip">${d.trip}</span>
+                    </div>
                 </div>
                 
                 <div class="flex flex-row justify-start items-center mt-auto pt-2 border-t border-slate-100">
@@ -272,6 +282,7 @@ function updateFilterDropdowns() {
     const fields = {
         'fs-status': 'status_verif', 
         'fs-cust-keluar': 'customer_keluar',
+        'fs-trip': 'trip',
         'fs-cust-aktual': 'customer_aktual_db',
         'fs-cust-estimasi': 'customer_estimasi_db',
         'fs-jenis': 'jenisItem',
@@ -346,7 +357,7 @@ window.tutupPopups = function() {
 };
 
 window.resetFilterKeluar = function() {
-    const ids = ['fs-status','fs-cust-keluar','fs-cust-aktual','fs-cust-estimasi','fs-qr','fs-jenis','fs-nama','fs-pjg','fs-grade','fs-dus','fs-shading'];
+    const ids = ['fs-status','fs-cust-keluar','fs-trip','fs-cust-aktual','fs-cust-estimasi','fs-qr','fs-jenis','fs-nama','fs-pjg','fs-grade','fs-dus','fs-shading'];
     ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; });
     window.saringTabelKeluar(); window.toggleSidebarFilter();
 };
@@ -355,6 +366,7 @@ window.saringTabelKeluar = function() {
     const f = {
         status: document.getElementById('fs-status')?.value || '',
         cust: document.getElementById('fs-cust-keluar')?.value || '',
+        trip: document.getElementById('fs-trip')?.value || '',
         custAktual: document.getElementById('fs-cust-aktual')?.value || '',
         custEstimasi: document.getElementById('fs-cust-estimasi')?.value || '',
         qr: document.getElementById('fs-qr')?.value.toLowerCase() || '',
@@ -370,8 +382,8 @@ window.saringTabelKeluar = function() {
     document.querySelectorAll('.row-keluar').forEach(row => {
         let show = true;
         
-        const exactFields = ['status', 'cust', 'custAktual', 'custEstimasi', 'jenis', 'nama', 'pjg', 'grade', 'dus', 'shading'];
-        const classMap = { status: 'col-status', cust: 'col-cust-keluar', custAktual: 'col-cust-aktual', custEstimasi: 'col-cust-estimasi', jenis: 'col-jenis', nama: 'col-nama', pjg: 'col-pjg', grade: 'col-grade', dus: 'col-dus', shading: 'col-shading' };
+        const exactFields = ['status', 'cust', 'trip', 'custAktual', 'custEstimasi', 'jenis', 'nama', 'pjg', 'grade', 'dus', 'shading'];
+        const classMap = { status: 'col-status', cust: 'col-cust-keluar', trip: 'col-trip', custAktual: 'col-cust-aktual', custEstimasi: 'col-cust-estimasi', jenis: 'col-jenis', nama: 'col-nama', pjg: 'col-pjg', grade: 'col-grade', dus: 'col-dus', shading: 'col-shading' };
         
         for(let key of exactFields) {
             if(f[key]) {
@@ -646,7 +658,8 @@ window.simpanKeluar = async function() {
             customer_aktual: d.customer_aktual_db,
             customer_estimasi: targetEstimasiDeduct, 
             keterangan: d.keterangan,
-            customer_keluar: d.customer_keluar
+            customer_keluar: d.customer_keluar,
+            trip: d.trip
         });
 
         if (d.is_pinjam_aktual || (d.need_pinjam_estimasi && d.pinjam_estimasi_selected !== d.customer_keluar)) {
