@@ -1,11 +1,10 @@
-// Otomatis deteksi mode perangkat saat buka halaman (Layar < 640px = Mobile, >= 640px = Desktop QR Code)
+// Otomatis deteksi mode perangkat saat buka halaman
 const isMobileDevice = window.innerWidth < 640;
-let modeSekarang = isMobileDevice ? 'mobile' : 'qrcode';
+let modeSekarang = isMobileDevice ? 'mobile' : 'item';
 
 let rawDataRaw = [];
 let holdDataRaw = [];
 let kamusData = [];
-let jasperData = [];
 let sortState = {}; 
 let globalCheckedCancel = []; 
 
@@ -14,10 +13,13 @@ let currentFilterCol = '';
 let currentPage = 1;
 let rowsPerPage = 10; 
 let selectAllState = 0; 
+let userColOrder = []; 
+let hiddenCols = []; 
 
-// State Khusus Mode Mobile (Drill-Down sampai Level 4)
-let mobileLevel = 1; // 1: Customer, 2: Item Spec, 3: Shading, 4: Detail Kartu Fisik
+// State Khusus Mode Mobile (Drill-Down sampai Level 5)
+let mobileLevel = 1; // 1: Customer, 2: Trip, 3: Item Spec, 4: Shading, 5: Detail Kartu Fisik
 let mobileSelectedCust = '';
+let mobileSelectedTrip = '';
 let mobileSelectedItem = '';
 let mobileSelectedShading = '';
 
@@ -47,7 +49,7 @@ function formatWIB(isoString) {
     } catch(e) { return isoString; }
 }
 
-// REVISI KRUSIAL: Auto-Chunking Fetcher untuk menembus batasan 1000 baris Supabase
+// Auto-Chunking Fetcher untuk menembus batasan 1000 baris Supabase
 async function fetchAllRows(tableName, orderCol = 'created_at') {
     let allData = [];
     let page = 0;
@@ -92,8 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     setTimeout(async () => {
-        await loadKamusDanJasper();
+        await loadKamus();
         await loadAreasForCancel(); 
+        loadUserPreferences();
         await muatDataDariSupabase();
     }, 200);
 });
@@ -124,7 +127,32 @@ window.tutupSemuaPopups = function() {
     const modalCancel = document.getElementById('modal-cancel-hold');
     if(modalCancel) modalCancel.classList.add('hidden');
     
+    if(document.getElementById('sidebar-kolom')) document.getElementById('sidebar-kolom').classList.add('translate-x-full');
+    
     closeFilterMenu();
+};
+
+window.loadUserPreferences = function() {
+    const savedOrder = localStorage.getItem(`col_order_rkeluar_${currentUser.username}`);
+    if (savedOrder) { try { userColOrder = JSON.parse(savedOrder); } catch(e) { userColOrder = []; } } else { userColOrder = []; }
+    
+    const savedHidden = localStorage.getItem(`col_hidden_rkeluar_${currentUser.username}`);
+    if (savedHidden) { try { hiddenCols = JSON.parse(savedHidden); } catch(e) { hiddenCols = []; } } else { hiddenCols = []; }
+    
+    const savedRows = localStorage.getItem('wms_rows_per_page');
+    if(savedRows) {
+        rowsPerPage = parseInt(savedRows);
+        const sel = document.getElementById('select-rows-per-page');
+        if(sel) {
+            let found = false;
+            Array.from(sel.options).forEach(opt => { if(opt.value == rowsPerPage) { opt.selected = true; found = true; } });
+            if(!found) {
+                sel.value = 'CUSTOM';
+                const inp = document.getElementById('input-custom-rows');
+                if(inp) { inp.classList.remove('hidden'); inp.value = rowsPerPage; }
+            }
+        }
+    }
 };
 
 async function loadAreasForCancel() {
@@ -139,16 +167,12 @@ async function loadAreasForCancel() {
     } catch (e) { console.error("Gagal load area:", e); }
 }
 
-async function loadKamusDanJasper() {
+async function loadKamus() {
     const { data: d2 } = await db.from('master_2').select('*'); 
     if(d2) {
         kamusData = d2;
         window.masterData = { kamus: d2 };
     }
-    try {
-        const { data: dj } = await db.from('nama_jasper').select('*').order('created_at', {ascending: false});
-        if(dj) jasperData = dj;
-    } catch(e) {}
 }
 
 function extractPOFromSKU(id_sku) {
@@ -169,7 +193,6 @@ async function muatDataDariSupabase() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
-        // REVISI: Mengambil seluruh baris tanpa batas 1000 menggunakan fetchAllRows
         const [dataKeluar, dataHold] = await Promise.all([
             fetchAllRows('stok_keluar'),
             fetchAllRows('hold_keluar')
@@ -191,7 +214,7 @@ function setMode(m) {
     const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
 
-    ['mobile', 'qrcode', 'item', 'jasper', 'hold'].forEach(tab => {
+    ['mobile', 'item', 'hold'].forEach(tab => {
         const el = document.getElementById('tab-mode-' + tab);
         if(el) {
             if(tab === 'mobile') {
@@ -202,44 +225,37 @@ function setMode(m) {
         }
     });
 
-    const btnHold = document.getElementById('btn-hold');
     const btnCancel = document.getElementById('btn-cancel');
     const dateFilter = document.getElementById('mobile-date-filter');
     
     const viewTable = document.getElementById('view-table');
     const viewMobile = document.getElementById('view-mobile');
     const footerPagination = document.getElementById('footer-pagination');
-    const lvl4Footer = document.getElementById('mobile-lvl4-footer');
+    const lvl5Footer = document.getElementById('mobile-lvl5-footer');
 
-    if(m === 'qrcode') { 
-        btnHold.classList.remove('hidden'); btnCancel.classList.add('hidden'); 
+    if(m === 'hold') { 
+        btnCancel.classList.remove('hidden'); 
         dateFilter.classList.add('hidden');
         viewTable.classList.remove('hidden'); viewMobile.classList.add('hidden');
         footerPagination.classList.remove('hidden');
-        if(lvl4Footer) { lvl4Footer.classList.add('hidden'); lvl4Footer.style.display = 'none'; }
-    }
-    else if(m === 'hold') { 
-        btnHold.classList.add('hidden'); btnCancel.classList.remove('hidden'); 
-        dateFilter.classList.add('hidden');
-        viewTable.classList.remove('hidden'); viewMobile.classList.add('hidden');
-        footerPagination.classList.remove('hidden');
-        if(lvl4Footer) { lvl4Footer.classList.add('hidden'); lvl4Footer.style.display = 'none'; }
+        if(lvl5Footer) { lvl5Footer.classList.add('hidden'); lvl5Footer.style.display = 'none'; }
     }
     else if(m === 'mobile') {
-        btnHold.classList.add('hidden'); btnCancel.classList.add('hidden'); 
+        btnCancel.classList.add('hidden'); 
         dateFilter.classList.remove('hidden');
         viewTable.classList.add('hidden'); viewMobile.classList.remove('hidden');
         footerPagination.classList.add('hidden');
         mobileLevel = 1; 
     }
     else { 
-        btnHold.classList.add('hidden'); btnCancel.classList.add('hidden'); 
+        btnCancel.classList.add('hidden'); 
         dateFilter.classList.add('hidden');
         viewTable.classList.remove('hidden'); viewMobile.classList.add('hidden');
         footerPagination.classList.remove('hidden');
-        if(lvl4Footer) { lvl4Footer.classList.add('hidden'); lvl4Footer.style.display = 'none'; }
+        if(lvl5Footer) { lvl5Footer.classList.add('hidden'); lvl5Footer.style.display = 'none'; }
     }
 
+    activeFilters = {};
     if (m === 'mobile') {
         renderMobileView();
     } else {
@@ -248,7 +264,7 @@ function setMode(m) {
 }
 
 // ========================================================
-// LOGIKA MODE MOBILE (DRILL-DOWN FOLDER: LEVEL 1 s/d LEVEL 4)
+// LOGIKA MODE MOBILE (DRILL-DOWN FOLDER: LEVEL 1 s/d LEVEL 5)
 // ========================================================
 window.goToMobileLevel2 = function(cust) {
     mobileSelectedCust = cust;
@@ -256,15 +272,21 @@ window.goToMobileLevel2 = function(cust) {
     renderMobileView();
 };
 
-window.goToMobileLevel3 = function(itemKey) {
-    mobileSelectedItem = itemKey;
+window.goToMobileLevel3 = function(trip) {
+    mobileSelectedTrip = trip;
     mobileLevel = 3;
     renderMobileView();
 };
 
-window.goToMobileLevel4 = function(shading) {
-    mobileSelectedShading = shading;
+window.goToMobileLevel4 = function(itemKey) {
+    mobileSelectedItem = itemKey;
     mobileLevel = 4;
+    renderMobileView();
+};
+
+window.goToMobileLevel5 = function(shading) {
+    mobileSelectedShading = shading;
+    mobileLevel = 5;
     renderMobileView();
 };
 
@@ -287,6 +309,7 @@ function mapItemForFilter(r) {
         qrcode: r.qrcode,
         id_sku: r.id_sku,
         customerKeluar: customerKeluar,
+        trip: r.trip || '-',
         customerAktual: custAktual,
         customerEstimasi: custEstimasi,
         jenisItem: r.jenis_item || t.jenisItem || '-',
@@ -308,6 +331,7 @@ function mapItemForFilter(r) {
 function matchesActiveFilters(item) {
     const f = {
         custKeluar: document.getElementById('fs-cust-keluar')?.value || '',
+        trip: document.getElementById('fs-trip')?.value || '',
         qr: document.getElementById('fs-qr')?.value.toLowerCase() || '',
         custAktual: document.getElementById('fs-cust-aktual')?.value || '',
         custEst: document.getElementById('fs-cust-est')?.value || '',
@@ -322,6 +346,7 @@ function matchesActiveFilters(item) {
     };
 
     if (f.custKeluar && item.customerKeluar !== f.custKeluar) return false;
+    if (f.trip && item.trip !== f.trip) return false;
     if (f.qr && !item.qrcode.toLowerCase().includes(f.qr)) return false;
     if (f.custAktual && item.customerAktual !== f.custAktual) return false;
     if (f.custEst && item.customerEstimasi !== f.custEst) return false;
@@ -337,10 +362,10 @@ function matchesActiveFilters(item) {
     return true;
 }
 
-window.toggleSelectAllLvl4 = function(checked) {
-    document.querySelectorAll('.cb-lvl4').forEach(cb => {
+window.toggleSelectAllLvl5 = function(checked) {
+    document.querySelectorAll('.cb-lvl5').forEach(cb => {
         cb.checked = checked;
-        const card = cb.closest('.card-lvl4');
+        const card = cb.closest('.card-lvl5');
         if (card) {
             if (checked) card.classList.add('border-blue-500', 'bg-blue-50/50');
             else card.classList.remove('border-blue-500', 'bg-blue-50/50');
@@ -348,8 +373,8 @@ window.toggleSelectAllLvl4 = function(checked) {
     });
 };
 
-window.highlightLvl4Card = function(cb) {
-    const card = cb.closest('.card-lvl4');
+window.highlightLvl5Card = function(cb) {
+    const card = cb.closest('.card-lvl5');
     if (card) {
         if (cb.checked) card.classList.add('border-blue-500', 'bg-blue-50/50');
         else card.classList.remove('border-blue-500', 'bg-blue-50/50');
@@ -358,14 +383,14 @@ window.highlightLvl4Card = function(cb) {
 
 // Fungsi Cancel Keluar Mobile (Hapus dari stok_keluar -> Masuk hold_keluar)
 window.cancelKeluarMobile = async function() {
-    const checkedBoxes = document.querySelectorAll('.cb-lvl4:checked');
+    const checkedBoxes = document.querySelectorAll('.cb-lvl5:checked');
     if (checkedBoxes.length === 0) return alert("Pilih / centang minimal 1 kardus yang ingin di-cancel keluar!");
 
     const qrsToCancel = Array.from(checkedBoxes).map(cb => cb.value);
 
     if (!confirm(`Yakin ingin membatalkan (Cancel) ${qrsToCancel.length} item ini dari status Keluar?\nItem akan langsung dipindahkan ke Tabel Hold Keluar.`)) return;
 
-    const btn = document.getElementById('btn-cancel-mobile-lvl4');
+    const btn = document.getElementById('btn-cancel-mobile-lvl5');
     const oriText = btn ? btn.innerHTML : '';
     if(btn) { btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Memproses...'; btn.disabled = true; }
 
@@ -373,6 +398,7 @@ window.cancelKeluarMobile = async function() {
         qrcode: r.qrcode,
         id_sku: r.id_sku,
         customer_keluar: r.customer_keluar,
+        trip: r.trip,
         customer_aktual: r.customer_aktual,
         customer_estimasi: r.customer_estimasi,
         keterangan: 'DI-CANCEL dari Mobile Riwayat',
@@ -406,18 +432,18 @@ window.cancelKeluarMobile = async function() {
 function renderMobileView() {
     const container = document.getElementById('view-mobile');
     const targetDate = document.getElementById('filter-date-mobile').value;
-    const lvl4Footer = document.getElementById('mobile-lvl4-footer');
+    const lvl5Footer = document.getElementById('mobile-lvl5-footer');
 
-    // Kontrol Tampilan Footer Freeze Level 4 Pasti Muncul di Level 4
-    if (lvl4Footer) {
-        if (modeSekarang === 'mobile' && mobileLevel === 4) {
-            lvl4Footer.classList.remove('hidden');
-            lvl4Footer.style.display = 'flex';
-            const cbAllLvl4 = document.getElementById('cb-all-lvl4');
-            if (cbAllLvl4) cbAllLvl4.checked = false;
+    // Kontrol Tampilan Footer Freeze Level 5 Pasti Muncul di Level 5
+    if (lvl5Footer) {
+        if (modeSekarang === 'mobile' && mobileLevel === 5) {
+            lvl5Footer.classList.remove('hidden');
+            lvl5Footer.style.display = 'flex';
+            const cbAllLvl5 = document.getElementById('cb-all-lvl5');
+            if (cbAllLvl5) cbAllLvl5.checked = false;
         } else {
-            lvl4Footer.classList.add('hidden');
-            lvl4Footer.style.display = 'none';
+            lvl5Footer.classList.add('hidden');
+            lvl5Footer.style.display = 'none';
         }
     }
 
@@ -482,18 +508,15 @@ function renderMobileView() {
         });
     } 
     // ==========================================
-    // LEVEL 2: SPESIFIKASI ITEM (FREEZE HEADER)
+    // LEVEL 2: TRIP PENGIRIMAN
     // ==========================================
     else if (mobileLevel === 2) {
-        let itemMap = {};
+        let tripMap = {};
         mobileData.forEach(r => {
             if (r.customerKeluar !== mobileSelectedCust) return;
-
-            let key = `${r.namaItem}_${r.panjang}_${r.grade}_${r.dus}`;
-            if(!itemMap[key]) {
-                itemMap[key] = { nama: r.namaItem, pjg: r.panjang, grade: r.grade, dus: r.dus, qty: 0 };
-            }
-            itemMap[key].qty++;
+            let trip = r.trip || '-';
+            if(!tripMap[trip]) tripMap[trip] = 0;
+            tripMap[trip]++;
         });
 
         html += `
@@ -509,10 +532,56 @@ function renderMobileView() {
             </div>
         `;
 
+        Object.keys(tripMap).sort().forEach(trip => {
+            html += `
+                <div onclick="goToMobileLevel3('${trip}')" class="bg-white border border-indigo-200 p-4 rounded-xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-indigo-50">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 shadow-inner">
+                            <i data-lucide="truck-fast" class="w-5 h-5"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <h4 class="font-black text-slate-800 text-base uppercase leading-tight">${trip}</h4>
+                            <p class="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded w-max mt-1 border border-indigo-100">${tripMap[trip]} Dus</p>
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="text-slate-400 w-5 h-5"></i>
+                </div>
+            `;
+        });
+    }
+    // ==========================================
+    // LEVEL 3: SPESIFIKASI ITEM (FREEZE HEADER)
+    // ==========================================
+    else if (mobileLevel === 3) {
+        let itemMap = {};
+        mobileData.forEach(r => {
+            if (r.customerKeluar !== mobileSelectedCust) return;
+            if (r.trip !== mobileSelectedTrip) return;
+
+            let key = `${r.namaItem}_${r.panjang}_${r.grade}_${r.dus}`;
+            if(!itemMap[key]) {
+                itemMap[key] = { nama: r.namaItem, pjg: r.panjang, grade: r.grade, dus: r.dus, qty: 0 };
+            }
+            itemMap[key].qty++;
+        });
+
+        html += `
+            <!-- STICKY / FREEZE HEADER LEVEL 3 -->
+            <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-sm -mx-4 px-4 py-2.5 border-b border-slate-200 shadow-sm flex items-center gap-3 mb-2">
+                <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
+                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
+                </button>
+                <div class="flex flex-col overflow-hidden">
+                    <span class="text-[10px] font-black text-slate-400 uppercase leading-none">${mobileSelectedCust}</span>
+                    <span class="text-base font-black text-blue-700 uppercase leading-tight truncate">${mobileSelectedTrip}</span>
+                </div>
+            </div>
+        `;
+
         Object.keys(itemMap).sort().forEach(key => {
             let item = itemMap[key];
             html += `
-                <div onclick="goToMobileLevel3('${key}')" class="bg-white border border-emerald-200 p-4 rounded-xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-emerald-50">
+                <div onclick="goToMobileLevel4('${key}')" class="bg-white border border-emerald-200 p-4 rounded-xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-emerald-50">
                     <div class="flex items-center gap-4">
                         <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 shadow-inner">
                             <i data-lucide="box" class="w-5 h-5"></i>
@@ -528,12 +597,13 @@ function renderMobileView() {
         });
     }
     // ==========================================
-    // LEVEL 3: SHADING (FREEZE HEADER)
+    // LEVEL 4: SHADING (FREEZE HEADER)
     // ==========================================
-    else if (mobileLevel === 3) {
+    else if (mobileLevel === 4) {
         let shadingMap = {};
         mobileData.forEach(r => {
             if (r.customerKeluar !== mobileSelectedCust) return;
+            if (r.trip !== mobileSelectedTrip) return;
 
             let key = `${r.namaItem}_${r.panjang}_${r.grade}_${r.dus}`;
             if (key !== mobileSelectedItem) return;
@@ -547,13 +617,13 @@ function renderMobileView() {
         let displayItem = `${itemParts[0]} - ${itemParts[1]} - ${itemParts[2]} - ${itemParts[3]}`;
 
         html += `
-            <!-- STICKY / FREEZE HEADER LEVEL 3 -->
+            <!-- STICKY / FREEZE HEADER LEVEL 4 -->
             <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-sm -mx-4 px-4 py-2.5 border-b border-slate-200 shadow-sm flex items-center gap-3 mb-2">
                 <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
                     <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
                 </button>
                 <div class="flex flex-col overflow-hidden">
-                    <span class="text-base font-black text-rose-700 uppercase leading-snug truncate">${mobileSelectedCust}</span>
+                    <span class="text-base font-black text-rose-700 uppercase leading-snug truncate">${mobileSelectedCust} (${mobileSelectedTrip})</span>
                     <span class="text-xs sm:text-sm font-black text-slate-800 uppercase leading-snug truncate">${displayItem}</span>
                 </div>
             </div>
@@ -561,7 +631,7 @@ function renderMobileView() {
 
         Object.keys(shadingMap).sort().forEach(shading => {
             html += `
-                <div onclick="goToMobileLevel4('${shading}')" class="bg-white border border-amber-200 p-4 rounded-xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-amber-50">
+                <div onclick="goToMobileLevel5('${shading}')" class="bg-white border border-amber-200 p-4 rounded-xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-amber-50">
                     <div class="flex items-center gap-4">
                         <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 shadow-inner">
                             <i data-lucide="palette" class="w-5 h-5"></i>
@@ -583,11 +653,12 @@ function renderMobileView() {
         });
     }
     // ==========================================
-    // LEVEL 4: DETAIL KARDUS FISIK DENGAN STICKY HEADER
+    // LEVEL 5: DETAIL KARDUS FISIK DENGAN STICKY HEADER
     // ==========================================
-    else if (mobileLevel === 4) {
+    else if (mobileLevel === 5) {
         let detailItems = mobileData.filter(r => {
             if (r.customerKeluar !== mobileSelectedCust) return false;
+            if (r.trip !== mobileSelectedTrip) return false;
             let key = `${r.namaItem}_${r.panjang}_${r.grade}_${r.dus}`;
             if (key !== mobileSelectedItem) return false;
             if (r.shading !== mobileSelectedShading) return false;
@@ -598,13 +669,13 @@ function renderMobileView() {
         let displayItem = `${itemParts[0]} - ${itemParts[1]} - ${itemParts[2]} - ${itemParts[3]}`;
 
         html += `
-            <!-- STICKY / FREEZE HEADER LEVEL 4: TULISAN DIPERBESAR DAN RAPI TERKUNCI DI ATAS -->
+            <!-- STICKY / FREEZE HEADER LEVEL 5: TULISAN DIPERBESAR DAN RAPI TERKUNCI DI ATAS -->
             <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center gap-3 mb-3">
                 <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
                     <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
                 </button>
                 <div class="flex flex-col overflow-hidden">
-                    <span class="text-base font-black text-rose-700 uppercase leading-snug truncate">${mobileSelectedCust}</span>
+                    <span class="text-base font-black text-rose-700 uppercase leading-snug truncate">${mobileSelectedCust} (${mobileSelectedTrip})</span>
                     <span class="text-xs sm:text-sm font-black text-slate-800 uppercase leading-snug truncate">${displayItem} • Shading: <span class="text-amber-600 font-black">${mobileSelectedShading}</span></span>
                 </div>
             </div>
@@ -614,12 +685,12 @@ function renderMobileView() {
             const waktuKeluar = formatWIB(d.created_at);
 
             html += `
-                <div class="card-lvl4 bg-white border border-slate-300 rounded-2xl p-4 mb-2 relative transition w-full flex flex-col shadow-sm">
+                <div class="card-lvl5 bg-white border border-slate-300 rounded-2xl p-4 mb-2 relative transition w-full flex flex-col shadow-sm">
                     
                     <!-- TOP HEADER: KOTAK CENTANG (CHECKBOX) & STATUS -->
                     <div class="flex justify-between items-center mb-3 pb-2.5 border-b border-slate-100">
                         <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" value="${d.qrcode}" onchange="highlightLvl4Card(this)" class="cb-lvl4 cursor-pointer w-5 h-5 accent-blue-600 rounded border-slate-400">
+                            <input type="checkbox" value="${d.qrcode}" onchange="highlightLvl5Card(this)" class="cb-lvl5 cursor-pointer w-5 h-5 accent-blue-600 rounded border-slate-400">
                             <span class="font-mono text-xs font-black text-slate-500 uppercase">PILIH DUS</span>
                         </label>
                         <span class="font-bold px-2.5 py-0.5 text-[10px] rounded-md border bg-emerald-600 text-white border-emerald-700 shadow-sm">KELUAR</span>
@@ -673,6 +744,7 @@ function updateFilterDropdowns() {
 
     const fields = [
         { id: 'fs-cust-keluar', key: 'customerKeluar' },
+        { id: 'fs-trip', key: 'trip' },
         { id: 'fs-cust-aktual', key: 'customerAktual' },
         { id: 'fs-cust-est', key: 'customerEstimasi' },
         { id: 'fs-jenis', key: 'jenisItem' },
@@ -706,7 +778,7 @@ function updateFilterDropdowns() {
 }
 
 window.resetFilterRiwayat = function() {
-    ['fs-cust-keluar', 'fs-qr', 'fs-cust-aktual', 'fs-cust-est', 'fs-jenis', 'fs-nama', 'fs-pjg', 'fs-grade', 'fs-dus', 'fs-shading', 'fs-pic', 'fs-ket'].forEach(id => {
+    ['fs-cust-keluar', 'fs-trip', 'fs-qr', 'fs-cust-aktual', 'fs-cust-est', 'fs-jenis', 'fs-nama', 'fs-pjg', 'fs-grade', 'fs-dus', 'fs-shading', 'fs-pic', 'fs-ket'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.value = '';
     });
@@ -725,6 +797,7 @@ window.saringTabelRiwayat = function() {
 function saringTabelDesktop() {
     const f = {
         custKeluar: document.getElementById('fs-cust-keluar')?.value || '',
+        trip: document.getElementById('fs-trip')?.value || '',
         qr: document.getElementById('fs-qr')?.value.toLowerCase() || '',
         custAktual: document.getElementById('fs-cust-aktual')?.value || '',
         custEst: document.getElementById('fs-cust-est')?.value || '',
@@ -750,6 +823,7 @@ function saringTabelDesktop() {
         };
 
         if(!checkMatch('col-tujuan', f.custKeluar)) show = false;
+        if(!checkMatch('col-trip', f.trip)) show = false;
         if(!checkMatch('col-customer', f.custAktual)) show = false;
         if(!checkMatch('col-estimasi', f.custEst)) show = false;
         if(!checkMatch('col-jenis', f.jenis)) show = false;
@@ -781,7 +855,7 @@ function saringTabelDesktop() {
 }
 
 // ========================================================
-// LOGIKA TABEL DESKTOP (QR, ITEM, JASPER, HOLD)
+// LOGIKA TABEL DESKTOP (ITEM, HOLD)
 // ========================================================
 function sortTable(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-keluar');
@@ -805,15 +879,14 @@ function sortTable(colIndex, headerEl) {
 
 const thSort = (label, cls = "") => {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
-    const noFilter = ['col-cb', 'col-btn'].includes(colClass);
+    const isHidden = hiddenCols.includes(colClass) ? 'col-hidden' : '';
+    const noFilter = ['col-cb', 'col-no'].includes(colClass);
     
     if (noFilter) {
-        return `<th class="hdr-std ${cls} select-none text-center">
-            <div class="flex items-center justify-center w-full">${label}</div>
-        </th>`;
+        return `<th class="hdr-std ${cls} ${isHidden} select-none text-center"><div class="flex items-center justify-center w-full">${label}</div></th>`;
     }
 
-    return `<th class="hdr-std ${cls} select-none group">
+    return `<th class="hdr-std ${cls} ${isHidden} select-none group">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
             <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable(this.closest('th').cellIndex, this.closest('th'))" title="Sort ${label}">${label}</span>
             <div class="flex items-center gap-1 shrink-0">
@@ -1009,10 +1082,34 @@ function highlightRow(cb, skipStateReset = false) {
 }
 
 function changeRowsPerPage(val) {
-    if (val === 'ALL') { rowsPerPage = 999999; } 
-    else { rowsPerPage = parseInt(val); }
+    const customInput = document.getElementById('input-custom-rows');
+    if (val === 'ALL') {
+        rowsPerPage = 999999; 
+        if(customInput) customInput.classList.add('hidden');
+    } else if (val === 'CUSTOM') {
+        if(customInput) {
+            customInput.classList.remove('hidden');
+            customInput.focus();
+            let customVal = parseInt(customInput.value);
+            rowsPerPage = (customVal > 0) ? customVal : rowsPerPage;
+        }
+    } else {
+        rowsPerPage = parseInt(val);
+        if(customInput) customInput.classList.add('hidden');
+    }
     localStorage.setItem('wms_rows_per_page', rowsPerPage);
-    currentPage = 1; applyPagination();
+    currentPage = 1; 
+    applyPagination();
+}
+
+function setCustomRowsPerPage(val) {
+    let parsed = parseInt(val);
+    if (!isNaN(parsed) && parsed > 0) {
+        rowsPerPage = parsed;
+        localStorage.setItem('wms_rows_per_page', rowsPerPage);
+        currentPage = 1;
+        applyPagination();
+    }
 }
 
 function applyPagination() {
@@ -1035,7 +1132,7 @@ function applyPagination() {
         else row.classList.add('stripe-2');
 
         const qtyCell = row.querySelector('.col-qty');
-        if (qtyCell && (modeSekarang === 'item' || modeSekarang === 'jasper')) { 
+        if (qtyCell && modeSekarang === 'item') { 
             sumQty += parseInt(qtyCell.getAttribute('data-search') || qtyCell.innerText) || 0; 
         } else { 
             sumQty += 1; 
@@ -1079,7 +1176,7 @@ function renderHeaderDanTabel() {
     let targetData = modeSekarang === 'hold' ? holdDataRaw : rawDataRaw;
     const rowClassBase = "transition text-row text-[13px]";
 
-    if(modeSekarang === 'qrcode' || modeSekarang === 'hold') {
+    if(modeSekarang === 'hold') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
@@ -1087,6 +1184,7 @@ function renderHeaderDanTabel() {
                 </th>
                 ${thSort('Waktu Keluar', 'col-waktu')}
                 ${thSort('QRCode', 'col-qr')}
+                ${thSort('Trip', 'col-trip')}
                 ${thSort('Tgl Produksi', 'col-tgl')}
                 ${thSort('Mesin', 'col-mesin')}
                 ${thSort('Shift', 'col-shift')}
@@ -1103,7 +1201,7 @@ function renderHeaderDanTabel() {
                 ${thSort('PIC Keluar', 'col-pic')}
             </tr>`;
         
-        if(targetData.length === 0) { tbody.innerHTML = '<tr><td colspan="17" class="p-10 text-center font-medium text-slate-400">Tidak ada data.</td></tr>'; applyPagination(); return; }
+        if(targetData.length === 0) { tbody.innerHTML = '<tr><td colspan="18" class="p-10 text-center font-medium text-slate-400">Tidak ada data.</td></tr>'; applyPagination(); return; }
         
         let h = '';
         targetData.forEach((r) => {
@@ -1119,28 +1217,28 @@ function renderHeaderDanTabel() {
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.qrcode}" onchange="highlightRow(this)" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 text-slate-600 font-medium text-left col-waktu" data-search="${tglKeluar}">${tglKeluar}</td>
-                    <td class="px-4 py-3 font-mono font-bold text-slate-900 text-left tracking-wider col-qr" data-search="${r.qrcode}">${r.qrcode}</td>
-                    <td class="px-4 py-3 font-medium text-slate-600 text-left col-tgl" data-search="${td.tglProduksi}">${td.tglProduksi}</td>
-                    <td class="px-4 py-3 font-medium text-slate-600 text-left col-mesin" data-search="${td.mesin}">${td.mesin}</td>
-                    <td class="px-4 py-3 font-medium text-slate-600 text-left col-shift" data-search="${td.shift}">${td.shift}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${td.jenisItem}">${td.jenisItem}</td>
-                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${td.namaItem}">${td.namaItem}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${pjgFormatted}">${pjgFormatted}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${td.grade}">${td.grade}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${td.dus}">${td.dus}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${td.shading}">${td.shading}</td>
-                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-customer" data-search="${custAktual}">${custAktual}</td>
-                    <td class="px-4 py-3 font-medium text-purple-600 text-left col-estimasi" data-search="${custEstimasi}">${custEstimasi}</td>
-                    <td class="px-4 py-3 font-black text-amber-600 text-left col-tujuan" data-search="${customerKeluar}">${customerKeluar}</td>
-                    <td class="px-4 py-3 text-slate-500 font-medium text-left col-ket" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
-                    <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 text-left col-pic" data-search="${r.pic_keluar || r.pic_input || '-'}">${r.pic_keluar || r.pic_input || '-'}</td>
+                    <td class="px-4 py-3 text-slate-600 font-medium text-left col-waktu ${hiddenCols.includes('col-waktu')?'col-hidden':''}" data-search="${tglKeluar}">${tglKeluar}</td>
+                    <td class="px-4 py-3 font-mono font-bold text-slate-900 text-left tracking-wider col-qr ${hiddenCols.includes('col-qr')?'col-hidden':''}" data-search="${r.qrcode}">${r.qrcode}</td>
+                    <td class="px-4 py-3 font-black text-indigo-700 text-center col-trip ${hiddenCols.includes('col-trip')?'col-hidden':''}" data-search="${r.trip || '-'}">${r.trip || '-'}</td>
+                    <td class="px-4 py-3 font-medium text-slate-600 text-left col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}" data-search="${td.tglProduksi}">${td.tglProduksi}</td>
+                    <td class="px-4 py-3 font-medium text-slate-600 text-left col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}" data-search="${td.mesin}">${td.mesin}</td>
+                    <td class="px-4 py-3 font-medium text-slate-600 text-left col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}" data-search="${td.shift}">${td.shift}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}" data-search="${td.jenisItem}">${td.jenisItem}</td>
+                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}" data-search="${td.namaItem}">${td.namaItem}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}" data-search="${pjgFormatted}">${pjgFormatted}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}" data-search="${td.grade}">${td.grade}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}" data-search="${td.dus}">${td.dus}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}" data-search="${td.shading}">${td.shading}</td>
+                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-customer ${hiddenCols.includes('col-customer')?'col-hidden':''}" data-search="${custAktual}">${custAktual}</td>
+                    <td class="px-4 py-3 font-medium text-purple-600 text-left col-estimasi ${hiddenCols.includes('col-estimasi')?'col-hidden':''}" data-search="${custEstimasi}">${custEstimasi}</td>
+                    <td class="px-4 py-3 font-black text-amber-600 text-left col-tujuan ${hiddenCols.includes('col-tujuan')?'col-hidden':''}" data-search="${customerKeluar}">${customerKeluar}</td>
+                    <td class="px-4 py-3 text-slate-500 font-medium text-left col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}" data-search="${r.keterangan || '-'}">${r.keterangan || '-'}</td>
+                    <td class="px-4 py-3 font-medium uppercase text-xs text-slate-400 text-left col-pic ${hiddenCols.includes('col-pic')?'col-hidden':''}" data-search="${r.pic_keluar || r.pic_input || '-'}">${r.pic_keluar || r.pic_input || '-'}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
     } 
-    else if(modeSekarang === 'item' || modeSekarang === 'jasper') {
-        const isJasper = modeSekarang === 'jasper';
+    else if(modeSekarang === 'item') {
         thead.innerHTML = `
             <tr>
                 <th class="hdr-std w-10 col-cb text-center sticky-col">
@@ -1150,7 +1248,7 @@ function renderHeaderDanTabel() {
                 ${thSort('Mesin', 'col-mesin')}
                 ${thSort('Shift', 'col-shift')}
                 ${thSort('Jenis Item', 'col-jenis')}
-                ${thSort(isJasper ? 'Nama Barang Jasper' : 'Nama Item', 'col-nama')}
+                ${thSort('Nama Item', 'col-nama')}
                 ${thSort('Pjg', 'col-pjg')}
                 ${thSort('Grade', 'col-grade')}
                 ${thSort('Dus', 'col-dus')}
@@ -1158,6 +1256,7 @@ function renderHeaderDanTabel() {
                 ${thSort('Customer Aktual', 'col-customer')}
                 ${thSort('Customer Estimasi', 'col-estimasi text-purple-300')}
                 ${thSort('Customer Keluar', 'col-tujuan text-amber-300')}
+                ${thSort('Trip', 'col-trip')}
                 ${thSort('QTY KELUAR (DUS)', 'col-qty text-emerald-300')}
                 ${thSort('Keterangan', 'col-ket')}
             </tr>`;
@@ -1165,25 +1264,26 @@ function renderHeaderDanTabel() {
         let groups = {};
         targetData.forEach(r => {
             let t = window.translateBarcode(r.qrcode); 
-            let n = isJasper ? t.jasper : t.namaItem;
+            let n = t.namaItem;
             
             let ket = r.keterangan || 'TANPA_KETERANGAN';
             let custAktual = r.customer_aktual || t.customer || '-';
             let custEstimasi = r.customer_estimasi || '-';
             let customerKeluar = r.customer_keluar || extractPOFromSKU(r.id_sku) || '-';
             let pjgFormatted = formatPanjang(r.panjang || t.panjang);
+            let trip = r.trip || '-';
             
-            let key = `${t.jenisItem}_${n}_${pjgFormatted}_${t.grade}_${t.dus}_${t.shading}_${custAktual}_${custEstimasi}_${customerKeluar}_${t.tglProduksi}_${t.mesin}_${t.shift}_${ket}`;
+            let key = `${t.jenisItem}_${n}_${pjgFormatted}_${t.grade}_${t.dus}_${t.shading}_${custAktual}_${custEstimasi}_${customerKeluar}_${trip}_${t.tglProduksi}_${t.mesin}_${t.shift}_${ket}`;
             
             if(!groups[key]) {
-                groups[key] = { ...t, panjang: pjgFormatted, displayNama: n, qty: 0, qrcodes: [], tj: customerKeluar, ket: ket, custAktual: custAktual, custEstimasi: custEstimasi };
+                groups[key] = { ...t, panjang: pjgFormatted, displayNama: n, qty: 0, qrcodes: [], tj: customerKeluar, trip: trip, ket: ket, custAktual: custAktual, custEstimasi: custEstimasi };
             }
             groups[key].qty++; 
             groups[key].qrcodes.push(r.qrcode);
         });
 
         let arr = Object.values(groups);
-        if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="15" class="p-10 text-center font-medium text-slate-400">Kosong.</td></tr>'; applyPagination(); return; }
+        if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="16" class="p-10 text-center font-medium text-slate-400">Kosong.</td></tr>'; applyPagination(); return; }
 
         let h = '';
         arr.forEach((r) => {
@@ -1191,27 +1291,31 @@ function renderHeaderDanTabel() {
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.qrcodes.join(',')}" onchange="highlightRow(this)" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 font-medium text-slate-600 text-left col-tgl" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
-                    <td class="px-4 py-3 font-medium text-slate-600 text-left col-mesin" data-search="${r.mesin}">${r.mesin}</td>
-                    <td class="px-4 py-3 font-medium text-slate-600 text-left col-shift" data-search="${r.shift}">${r.shift}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis" data-search="${r.jenisItem}">${r.jenisItem}</td>
-                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama" data-search="${r.displayNama}">${r.displayNama}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg" data-search="${r.panjang}">${r.panjang}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade" data-search="${r.grade}">${r.grade}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus" data-search="${r.dus}">${r.dus}</td>
-                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading" data-search="${r.shading}">${r.shading}</td>
-                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-customer" data-search="${r.custAktual}">${r.custAktual}</td>
-                    <td class="px-4 py-3 font-medium text-purple-600 text-left col-estimasi" data-search="${r.custEstimasi}">${r.custEstimasi}</td>
-                    <td class="px-4 py-3 font-black text-amber-600 text-left col-tujuan" data-search="${r.tj}">${r.tj}</td>
-                    <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty" data-search="${r.qty}">${r.qty}</td>
-                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket" data-search="${displayKet}">${displayKet}</td>
+                    <td class="px-4 py-3 font-medium text-slate-600 text-left col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
+                    <td class="px-4 py-3 font-medium text-slate-600 text-left col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}" data-search="${r.mesin}">${r.mesin}</td>
+                    <td class="px-4 py-3 font-medium text-slate-600 text-left col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}" data-search="${r.shift}">${r.shift}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}" data-search="${r.jenisItem}">${r.jenisItem}</td>
+                    <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}" data-search="${r.displayNama}">${r.displayNama}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}" data-search="${r.panjang}">${r.panjang}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}" data-search="${r.grade}">${r.grade}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}" data-search="${r.dus}">${r.dus}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}" data-search="${r.shading}">${r.shading}</td>
+                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-customer ${hiddenCols.includes('col-customer')?'col-hidden':''}" data-search="${r.custAktual}">${r.custAktual}</td>
+                    <td class="px-4 py-3 font-medium text-purple-600 text-left col-estimasi ${hiddenCols.includes('col-estimasi')?'col-hidden':''}" data-search="${r.custEstimasi}">${r.custEstimasi}</td>
+                    <td class="px-4 py-3 font-black text-amber-600 text-left col-tujuan ${hiddenCols.includes('col-tujuan')?'col-hidden':''}" data-search="${r.tj}">${r.tj}</td>
+                    <td class="px-4 py-3 font-black text-indigo-700 text-center col-trip ${hiddenCols.includes('col-trip')?'col-hidden':''}" data-search="${r.trip}">${r.trip}</td>
+                    <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty ${hiddenCols.includes('col-qty')?'col-hidden':''}" data-search="${r.qty}">${r.qty}</td>
+                    <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}" data-search="${displayKet}">${displayKet}</td>
                 </tr>`;
         });
         tbody.innerHTML = h;
     }
+    
+    applyColumnOrder();
     lucide.createIcons(); 
     updateSelectAllUI();
     saringTabelDesktop();
+    initResizableColumns();
 }
 
 async function aksiMassal(tipe) {
@@ -1221,11 +1325,10 @@ async function aksiMassal(tipe) {
 
     if(tipe === 'salin') {
         let textSalin = "";
-        if (modeSekarang === 'item' || modeSekarang === 'jasper') {
-            textSalin = "Tgl Produksi\tMesin\tShift\tJenis Item\tNama Item\tPjg\tGrade\tDus\tShading\tCustomer Aktual\tCustomer Estimasi\tCustomer Keluar\tQTY KELUAR\tKeterangan\n";
-        } else {
-            textSalin = "Waktu Keluar\tQRCode\tTgl Produksi\tMesin\tShift\tJenis Item\tNama Item\tPjg\tGrade\tDus\tShading\tCustomer Aktual\tCustomer Estimasi\tCustomer Keluar\tKeterangan\tPIC Keluar\n";
-        }
+        const headers = Array.from(document.querySelectorAll('#thead-keluar th'))
+            .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb'))
+            .map(th => th.innerText.trim().replace(/\n/g, ' '));
+        textSalin += headers.join('\t') + '\n';
 
         document.querySelectorAll('.row-cb:checked').forEach(cb => {
             const tr = cb.closest('tr'); const rowData = [];
@@ -1259,30 +1362,6 @@ async function aksiMassal(tipe) {
         let wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Keluar_Data");
         XLSX.writeFile(wb, `Riwayat_Keluar.xlsx`);
-    }
-    else if(tipe === 'hold') {
-        if(modeSekarang !== 'qrcode') return alert("HOLD hanya bisa dilakukan dari Mode QRCODE.");
-        if(!confirm(`Yakin ingin menahan (HOLD) ${checkedValues.length} item ini?\n\n(Hanya memindahkan riwayat, TIDAK MENGEMBALIKAN barang ke Gudang).`)) return;
-        
-        const btn = document.getElementById('btn-hold'); const ori = btn.innerHTML;
-        btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> PROSES...'; btn.disabled = true;
-
-        const dataPindah = rawDataRaw.filter(r => checkedValues.includes(r.qrcode)).map(r => ({
-            qrcode: r.qrcode, id_sku: r.id_sku, customer_keluar: r.customer_keluar, 
-            customer_aktual: r.customer_aktual, customer_estimasi: r.customer_estimasi,
-            keterangan: 'DI-HOLD dari Riwayat', pic_input: r.pic_keluar || r.pic_input
-        }));
-
-        try {
-            const { error: errAdd } = await db.from('hold_keluar').insert(dataPindah);
-            if(errAdd) throw errAdd;
-            const { error: errDel } = await db.from('stok_keluar').delete().in('qrcode', checkedValues);
-            if(errDel) throw errDel;
-            
-            alert(`Berhasil Memindahkan ${checkedValues.length} Item ke TABEL HOLD.`);
-            muatDataDariSupabase();
-        } catch(e) { alert("GAGAL HOLD: " + e.message); }
-        finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
     }
     else if(tipe === 'cancel') {
         if(modeSekarang !== 'hold') return alert("CANCEL hanya bisa dilakukan dari Tabel Hold.");
@@ -1367,4 +1446,108 @@ async function eksekusiCancelHold() {
         document.getElementById('modal-cancel-hold').classList.add('hidden');
     } catch(e) { alert("GAGAL RETUR: " + e.message); }
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
-            }
+}
+
+// ==========================================
+// ATUR KOLOM (DRAG & DROP + HIDE)
+// ==========================================
+window.toggleSidebarKolom = function() {
+    const sidebar = document.getElementById('sidebar-kolom'); const overlay = document.getElementById('overlay-klik-luar');
+    if (sidebar.classList.contains('translate-x-full')) { sidebar.classList.remove('translate-x-full'); overlay.classList.remove('hidden'); window.renderDragList(); } 
+    else { sidebar.classList.add('translate-x-full'); overlay.classList.add('hidden'); }
+};
+
+window.renderDragList = function() {
+    const container = document.getElementById('kolom-drag-container'); if(!container) return; container.innerHTML = '';
+    const headers = Array.from(document.querySelectorAll('#thead-keluar th'));
+    headers.forEach(th => {
+        const colClass = Array.from(th.classList).find(c => c.startsWith('col-')) || ''; 
+        const label = th.innerText.trim() || 'Kolom';
+        if(!colClass || colClass === 'col-cb') return;
+
+        const isHidden = window.hiddenCols.includes(colClass);
+        const eyeIcon = isHidden ? 'eye-off' : 'eye';
+        const eyeColor = isHidden ? 'text-slate-300' : 'text-blue-600';
+
+        const div = document.createElement('div'); div.className = 'drag-item flex items-center justify-between p-3 bg-white border border-slate-200 rounded-md shadow-sm hover:border-blue-400 transition cursor-grab'; div.draggable = true; div.setAttribute('data-col', colClass);
+        div.innerHTML = `
+            <span class="font-bold text-slate-700 text-xs">${label}</span>
+            <div class="flex items-center gap-3">
+                <button onclick="toggleHideCol(event, '${colClass}')" class="p-1 hover:bg-slate-100 rounded"><i data-lucide="${eyeIcon}" class="w-4 h-4 ${eyeColor}"></i></button>
+                <i data-lucide="grip-vertical" class="w-4 h-4 text-slate-400"></i>
+            </div>
+        `;
+        div.addEventListener('dragstart', () => { div.classList.add('dragging'); }); div.addEventListener('dragend', () => { div.classList.remove('dragging'); });
+        container.appendChild(div);
+    });
+    lucide.createIcons();
+    container.addEventListener('dragover', e => {
+        e.preventDefault(); const afterElement = window.getDragAfterElement(container, e.clientY); const draggable = document.querySelector('.dragging');
+        if (draggable) { if (afterElement == null) { container.appendChild(draggable); } else { container.insertBefore(draggable, afterElement); } }
+    });
+};
+
+window.toggleHideCol = function(e, colClass) {
+    e.stopPropagation();
+    if(window.hiddenCols.includes(colClass)) {
+        window.hiddenCols = window.hiddenCols.filter(c => c !== colClass);
+    } else {
+        window.hiddenCols.push(colClass);
+    }
+    window.renderDragList();
+};
+
+window.getDragAfterElement = function(container, y) {
+    const draggableElements = [...container.querySelectorAll('.drag-item:not(.dragging)')];
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect(); const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } else { return closest; }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+};
+
+window.simpanUrutanKolom = function() {
+    const items = document.querySelectorAll('.drag-item'); let newOrder = []; items.forEach(item => newOrder.push(item.getAttribute('data-col')));
+    window.userColOrder = newOrder; 
+    localStorage.setItem(`col_order_rkeluar_${currentUser.username}`, JSON.stringify(newOrder));
+    localStorage.setItem(`col_hidden_rkeluar_${currentUser.username}`, JSON.stringify(window.hiddenCols));
+    alert("Pengaturan kolom berhasil disimpan!"); window.toggleSidebarKolom(); window.renderHeaderDanTabel(); 
+};
+
+window.resetUrutanKolom = function() {
+    if(!confirm("Kembalikan pengaturan kolom ke default?")) return;
+    window.userColOrder = []; window.hiddenCols = [];
+    localStorage.removeItem(`col_order_rkeluar_${currentUser.username}`);
+    localStorage.removeItem(`col_hidden_rkeluar_${currentUser.username}`);
+    alert("Pengaturan dikembalikan ke default."); window.toggleSidebarKolom(); window.renderHeaderDanTabel();
+};
+
+window.applyColumnOrder = function() {
+    if (!window.userColOrder || window.userColOrder.length === 0) return;
+    const table = document.getElementById('table-keluar-main');
+    if(!table) return;
+    const rows = table.querySelectorAll('tr');
+    rows.forEach(row => {
+        const cells = Array.from(row.children); if (cells.length <= 1) return; 
+        const cbCell = cells.find(c => c.classList.contains('col-cb'));
+        const cellMap = {}; cells.forEach(c => { const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-')); if (colClass) cellMap[colClass] = c; });
+        row.innerHTML = ''; 
+        if (cbCell) row.appendChild(cbCell);
+        window.userColOrder.forEach(colId => { if (cellMap[colId]) { row.appendChild(cellMap[colId]); } });
+        cells.forEach(c => { const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-')); if (colClass !== 'col-cb' && !window.userColOrder.includes(colClass)) { row.appendChild(c); } });
+    });
+};
+
+window.initResizableColumns = function() {
+    const cols = document.querySelectorAll('#table-keluar-main th');
+    cols.forEach(col => {
+        const existing = col.querySelector('.resizer'); if(existing) existing.remove();
+        const resizer = document.createElement('div'); resizer.classList.add('resizer'); col.appendChild(resizer);
+        let x = 0; let w = 0;
+        resizer.addEventListener('mousedown', function(e) {
+            x = e.clientX; w = parseInt(window.getComputedStyle(col).width, 10);
+            document.addEventListener('mousemove', mouseMoveHandler); document.addEventListener('mouseup', mouseUpHandler); resizer.classList.add('resizing');
+        });
+        const mouseMoveHandler = function(e) { const dx = e.clientX - x; col.style.width = `${w + dx}px`; col.style.minWidth = `${w + dx}px`; };
+        const mouseUpHandler = function() { document.removeEventListener('mousemove', mouseMoveHandler); document.removeEventListener('mouseup', mouseUpHandler); resizer.classList.remove('resizing'); };
+    });
+};
