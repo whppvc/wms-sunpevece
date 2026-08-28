@@ -1,4 +1,3 @@
-// Otomatis deteksi mode perangkat saat buka halaman
 const isMobileDevice = window.innerWidth < 640;
 let modeSekarang = isMobileDevice ? 'mobile' : 'item';
 
@@ -16,8 +15,7 @@ let selectAllState = 0;
 let userColOrder = []; 
 let hiddenCols = []; 
 
-// State Khusus Mode Mobile (Drill-Down sampai Level 5)
-let mobileLevel = 1; // 1: Customer, 2: Trip, 3: Item Spec, 4: Shading, 5: Detail Kartu Fisik
+let mobileLevel = 1; 
 let mobileSelectedCust = '';
 let mobileSelectedTrip = '';
 let mobileSelectedItem = '';
@@ -49,7 +47,6 @@ function formatWIB(isoString) {
     } catch(e) { return isoString; }
 }
 
-// Auto-Chunking Fetcher untuk menembus batasan 1000 baris Supabase
 async function fetchAllRows(tableName, orderCol = 'created_at') {
     let allData = [];
     let page = 0;
@@ -73,7 +70,6 @@ async function fetchAllRows(tableName, orderCol = 'created_at') {
 document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'riwayat_keluar', title: 'RIWAYAT KELUAR', url: 'riwayat_keluar.html' });
     
-    // Set default date mobile ke hari ini
     const dateInput = document.getElementById('filter-date-mobile');
     if(dateInput) dateInput.value = getTodayDate();
 
@@ -263,32 +259,10 @@ function setMode(m) {
     }
 }
 
-// ========================================================
-// LOGIKA MODE MOBILE (DRILL-DOWN FOLDER: LEVEL 1 s/d LEVEL 5)
-// ========================================================
-window.goToMobileLevel2 = function(cust) {
-    mobileSelectedCust = cust;
-    mobileLevel = 2;
-    renderMobileView();
-};
-
-window.goToMobileLevel3 = function(trip) {
-    mobileSelectedTrip = trip;
-    mobileLevel = 3;
-    renderMobileView();
-};
-
-window.goToMobileLevel4 = function(itemKey) {
-    mobileSelectedItem = itemKey;
-    mobileLevel = 4;
-    renderMobileView();
-};
-
-window.goToMobileLevel5 = function(shading) {
-    mobileSelectedShading = shading;
-    mobileLevel = 5;
-    renderMobileView();
-};
+window.goToMobileLevel2 = function(cust) { mobileSelectedCust = cust; mobileLevel = 2; renderMobileView(); };
+window.goToMobileLevel3 = function(trip) { mobileSelectedTrip = trip; mobileLevel = 3; renderMobileView(); };
+window.goToMobileLevel4 = function(itemKey) { mobileSelectedItem = itemKey; mobileLevel = 4; renderMobileView(); };
+window.goToMobileLevel5 = function(shading) { mobileSelectedShading = shading; mobileLevel = 5; renderMobileView(); };
 
 window.goBackMobile = function() {
     if (mobileLevel > 1) {
@@ -381,7 +355,6 @@ window.highlightLvl5Card = function(cb) {
     }
 };
 
-// Fungsi Cancel Keluar Mobile (Hapus dari stok_keluar -> Masuk hold_keluar)
 window.cancelKeluarMobile = async function() {
     const checkedBoxes = document.querySelectorAll('.cb-lvl5:checked');
     if (checkedBoxes.length === 0) return alert("Pilih / centang minimal 1 kardus yang ingin di-cancel keluar!");
@@ -406,15 +379,12 @@ window.cancelKeluarMobile = async function() {
     }));
 
     try {
-        // 1. Masukkan ke tabel hold_keluar
         const { error: errAdd } = await db.from('hold_keluar').insert(itemsToHold);
         if (errAdd) throw errAdd;
 
-        // 2. Hapus dari tabel stok_keluar
         const { error: errDel } = await db.from('stok_keluar').delete().in('qrcode', qrsToCancel);
         if (errDel) throw errDel;
 
-        // 3. Update data lokal
         rawDataRaw = rawDataRaw.filter(r => !qrsToCancel.includes(r.qrcode));
         holdDataRaw.push(...itemsToHold);
 
@@ -434,7 +404,6 @@ function renderMobileView() {
     const targetDate = document.getElementById('filter-date-mobile').value;
     const lvl5Footer = document.getElementById('mobile-lvl5-footer');
 
-    // Kontrol Tampilan Footer Freeze Level 5 Pasti Muncul di Level 5
     if (lvl5Footer) {
         if (modeSekarang === 'mobile' && mobileLevel === 5) {
             lvl5Footer.classList.remove('hidden');
@@ -449,7 +418,6 @@ function renderMobileView() {
 
     let targetData = modeSekarang === 'hold' ? holdDataRaw : rawDataRaw;
 
-    // Filter Tanggal dan Sidebar Filter
     let mobileData = [];
     targetData.forEach(r => {
         const rowDate = (r.created_at || '').split('T')[0];
@@ -474,9 +442,6 @@ function renderMobileView() {
 
     let html = '';
 
-    // ==========================================
-    // LEVEL 1: CUSTOMER KELUAR
-    // ==========================================
     if (mobileLevel === 1) {
         let custMap = {};
         mobileData.forEach(r => {
@@ -507,9 +472,6 @@ function renderMobileView() {
             `;
         });
     } 
-    // ==========================================
-    // LEVEL 2: TRIP PENGIRIMAN
-    // ==========================================
     else if (mobileLevel === 2) {
         let tripMap = {};
         mobileData.forEach(r => {
@@ -520,7 +482,6 @@ function renderMobileView() {
         });
 
         html += `
-            <!-- STICKY / FREEZE HEADER LEVEL 2 -->
             <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-sm -mx-4 px-4 py-2.5 border-b border-slate-200 shadow-sm flex items-center gap-3 mb-2">
                 <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
                     <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
@@ -549,9 +510,6 @@ function renderMobileView() {
             `;
         });
     }
-    // ==========================================
-    // LEVEL 3: SPESIFIKASI ITEM (FREEZE HEADER)
-    // ==========================================
     else if (mobileLevel === 3) {
         let itemMap = {};
         mobileData.forEach(r => {
@@ -566,7 +524,6 @@ function renderMobileView() {
         });
 
         html += `
-            <!-- STICKY / FREEZE HEADER LEVEL 3 -->
             <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-sm -mx-4 px-4 py-2.5 border-b border-slate-200 shadow-sm flex items-center gap-3 mb-2">
                 <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
                     <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
@@ -596,9 +553,6 @@ function renderMobileView() {
             `;
         });
     }
-    // ==========================================
-    // LEVEL 4: SHADING (FREEZE HEADER)
-    // ==========================================
     else if (mobileLevel === 4) {
         let shadingMap = {};
         mobileData.forEach(r => {
@@ -617,7 +571,6 @@ function renderMobileView() {
         let displayItem = `${itemParts[0]} - ${itemParts[1]} - ${itemParts[2]} - ${itemParts[3]}`;
 
         html += `
-            <!-- STICKY / FREEZE HEADER LEVEL 4 -->
             <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-sm -mx-4 px-4 py-2.5 border-b border-slate-200 shadow-sm flex items-center gap-3 mb-2">
                 <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
                     <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
@@ -652,9 +605,6 @@ function renderMobileView() {
             `;
         });
     }
-    // ==========================================
-    // LEVEL 5: DETAIL KARDUS FISIK DENGAN STICKY HEADER
-    // ==========================================
     else if (mobileLevel === 5) {
         let detailItems = mobileData.filter(r => {
             if (r.customerKeluar !== mobileSelectedCust) return false;
@@ -669,7 +619,6 @@ function renderMobileView() {
         let displayItem = `${itemParts[0]} - ${itemParts[1]} - ${itemParts[2]} - ${itemParts[3]}`;
 
         html += `
-            <!-- STICKY / FREEZE HEADER LEVEL 5: TULISAN DIPERBESAR DAN RAPI TERKUNCI DI ATAS -->
             <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center gap-3 mb-3">
                 <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
                     <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
@@ -686,8 +635,6 @@ function renderMobileView() {
 
             html += `
                 <div class="card-lvl5 bg-white border border-slate-300 rounded-2xl p-4 mb-2 relative transition w-full flex flex-col shadow-sm">
-                    
-                    <!-- TOP HEADER: KOTAK CENTANG (CHECKBOX) & STATUS -->
                     <div class="flex justify-between items-center mb-3 pb-2.5 border-b border-slate-100">
                         <label class="flex items-center gap-3 cursor-pointer">
                             <input type="checkbox" value="${d.qrcode}" onchange="highlightLvl5Card(this)" class="cb-lvl5 cursor-pointer w-5 h-5 accent-blue-600 rounded border-slate-400">
@@ -696,32 +643,26 @@ function renderMobileView() {
                         <span class="font-bold px-2.5 py-0.5 text-[10px] rounded-md border bg-emerald-600 text-white border-emerald-700 shadow-sm">KELUAR</span>
                     </div>
                     
-                    <!-- 1. QRCODE -->
                     <div class="font-mono font-black text-slate-900 text-sm break-all leading-tight bg-slate-100 p-2.5 rounded-xl border border-slate-200 text-center mb-3">
                         ${d.qrcode}
                     </div>
                     
-                    <!-- 2. GRID 4 VARIABEL UTAMA -->
                     <div class="grid grid-cols-2 gap-x-3 gap-y-3">
-                        <!-- WAKTU SCAN KELUAR -->
                         <div class="flex flex-col">
                             <span class="text-[10px] font-black text-slate-400 uppercase">Waktu Scan Keluar</span>
                             <span class="text-xs font-bold text-slate-700">${waktuKeluar}</span>
                         </div>
                         
-                        <!-- ASAL AREA / ASAL LOKASI PENYIMPANAN -->
                         <div class="flex flex-col">
                             <span class="text-[10px] font-black text-slate-400 uppercase">Asal Area</span>
                             <span class="text-xs font-black text-emerald-700 uppercase">${d.area || '-'}</span>
                         </div>
 
-                        <!-- CUSTOMER AKTUAL -->
                         <div class="flex flex-col">
                             <span class="text-[10px] font-black text-slate-400 uppercase">Customer Aktual</span>
                             <span class="text-xs font-bold text-orange-600 uppercase">${d.customerAktual}</span>
                         </div>
                         
-                        <!-- CUSTOMER ESTIMASI -->
                         <div class="flex flex-col">
                             <span class="text-[10px] font-black text-slate-400 uppercase">Customer Estimasi</span>
                             <span class="text-xs font-bold text-purple-600 uppercase">${d.customerEstimasi}</span>
@@ -736,9 +677,6 @@ function renderMobileView() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// ========================================================
-// LOGIKA FILTER SIDEBAR (DROPDOWN DINAMIS)
-// ========================================================
 function updateFilterDropdowns() {
     let targetData = modeSekarang === 'hold' ? holdDataRaw : rawDataRaw;
 
@@ -854,9 +792,6 @@ function saringTabelDesktop() {
     applyPagination();
 }
 
-// ========================================================
-// LOGIKA TABEL DESKTOP (ITEM, HOLD)
-// ========================================================
 function sortTable(colIndex, headerEl) {
     const tbody = document.getElementById('tbody-keluar');
     const rows = Array.from(tbody.querySelectorAll('tr.text-row'));
@@ -1010,7 +945,6 @@ function updateFilterIcons() {
     }
 }
 
-// Tri-State Checkbox
 window.cycleSelectAll = function() {
     selectAllState = (selectAllState + 1) % 3;
     updateSelectAllUI();
@@ -1386,7 +1320,7 @@ async function eksekusiCancelHold() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> RETUR STOK...'; btn.disabled = true;
 
     const dataReturn = holdDataRaw.filter(r => globalCheckedCancel.includes(r.qrcode));
-    let insertsStokQr = [];
+    let insertsGlobal = [];
     let aktualUpdates = {};
 
     dataReturn.forEach(item => {
@@ -1405,16 +1339,30 @@ async function eksekusiCancelHold() {
             aktualUpdates[key].qty++;
         }
 
-        insertsStokQr.push({
+        // Masukkan kembali ke stok_global (bukan stok_qr)
+        insertsGlobal.push({
             qrcode: item.qrcode,
             id_sku: item.id_sku,
-            area: areaCancel, 
-            keterangan: ketCancel 
+            area: areaCancel,
+            tgl_produksi: item.tgl_produksi || '-',
+            mesin: item.mesin || '-',
+            shift: item.shift || '-',
+            jenis_item: item.jenis_item || '-',
+            nama_item: item.nama_item,
+            panjang: item.panjang,
+            grade: item.grade,
+            dus: item.dus,
+            shading: item.shading,
+            customer_aktual: customerAktual,
+            keterangan: ketCancel,
+            kondisi: 'Aman',
+            pic_input: currentUser.username,
+            jalur_masuk: 'cancel-hold'
         });
     });
 
     try {
-        const { error: e1 } = await db.from('stok_qr').insert(insertsStokQr);
+        const { error: e1 } = await db.from('stok_global').insert(insertsGlobal);
         if(e1) throw e1;
 
         for(let key in aktualUpdates) {
@@ -1448,9 +1396,6 @@ async function eksekusiCancelHold() {
     finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
 }
 
-// ==========================================
-// ATUR KOLOM (DRAG & DROP + HIDE)
-// ==========================================
 window.toggleSidebarKolom = function() {
     const sidebar = document.getElementById('sidebar-kolom'); const overlay = document.getElementById('overlay-klik-luar');
     if (sidebar.classList.contains('translate-x-full')) { sidebar.classList.remove('translate-x-full'); overlay.classList.remove('hidden'); window.renderDragList(); } 
