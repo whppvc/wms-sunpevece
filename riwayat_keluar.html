@@ -36,6 +36,15 @@
         }
 
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
+        .col-hidden { display: none !important; }
+        
+        .resizer {
+            position: absolute;
+            top: 0; right: 0; width: 5px;
+            cursor: col-resize; user-select: none;
+            height: 100%; z-index: 50;
+        }
+        .resizer:hover, .resizing { background-color: rgba(59, 130, 246, 0.5); }
     </style>
 </head>
 <body class="font-sans text-slate-800">
@@ -46,9 +55,7 @@
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
                 <!-- TAB MOBILE HANYA MUNCUL DI LAYAR HP (sm:hidden) -->
                 <button onclick="setMode('mobile')" id="tab-mode-mobile" class="sm:hidden px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="smartphone" class="w-4 h-4"></i> MOBILE</button>
-                <button onclick="setMode('qrcode')" id="tab-mode-qrcode" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="qr-code" class="w-4 h-4"></i> MODE QRCODE</button>
                 <button onclick="setMode('item')" id="tab-mode-item" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="boxes" class="w-4 h-4"></i> RANGKUMAN ITEM</button>
-                <button onclick="setMode('jasper')" id="tab-mode-jasper" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="file-text" class="w-4 h-4"></i> RANGKUMAN JASPER</button>
                 <button onclick="setMode('hold')" id="tab-mode-hold" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="pause-circle" class="w-4 h-4"></i> TABEL HOLD KELUAR</button>
             </div>
 
@@ -63,11 +70,6 @@
                         <i data-lucide="calendar" class="w-4 h-4 text-slate-400 ml-1"></i>
                         <input type="date" id="filter-date-mobile" onchange="renderMobileView()" class="p-1.5 text-xs font-bold text-slate-700 outline-none cursor-pointer bg-transparent">
                     </div>
-
-                    <button onclick="aksiMassal('hold')" id="btn-hold" class="hidden group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-amber-700">
-                        <div class="bg-amber-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="pause-circle" class="w-4 h-4"></i></div>
-                        <div class="bg-amber-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-amber-500 transition">Hold Item</div>
-                    </button>
                     
                     <button onclick="aksiMassal('cancel')" id="btn-cancel" class="hidden group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-rose-700">
                         <div class="bg-rose-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
@@ -91,6 +93,7 @@
                         <div id="mobile-action-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
                             <button onclick="aksiMassal('salin'); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
                             <button onclick="aksiMassal('xlsx'); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
+                            <button onclick="toggleSidebarKolom(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-blue-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</button>
                             <button onclick="bukaModalTableDesign(); toggleActionMenu(event)" class="text-left px-4 py-3 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="palette" class="w-4 h-4 text-purple-600"></i> Table Design</button>
                         </div>
                     </div>
@@ -101,7 +104,7 @@
         <!-- AREA KONTEN -->
         <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
             
-            <!-- VIEW TABEL (Untuk Mode QR, Item, Jasper, Hold) -->
+            <!-- VIEW TABEL (Untuk Mode Item, Hold) -->
             <div id="view-table" class="hidden flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-t-xl shadow-sm border border-slate-300">
                 <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-keluar-main">
                     <thead class="sticky top-0 z-50 shadow-sm" id="thead-keluar"></thead>
@@ -142,14 +145,14 @@
             </div>
         </div>
 
-        <!-- FOOTER FREEZE LEVEL 4 MOBILE (PILIH SEMUA & TOMBOL CANCEL KELUAR) -->
-        <div id="mobile-lvl4-footer" class="hidden shrink-0 w-full bg-white px-4 py-3.5 z-40 shadow-[0_-8px_25px_rgba(0,0,0,0.15)] border-t border-slate-300 flex justify-between items-center">
+        <!-- FOOTER FREEZE LEVEL 5 MOBILE (PILIH SEMUA & TOMBOL CANCEL KELUAR) -->
+        <div id="mobile-lvl5-footer" class="hidden shrink-0 w-full bg-white px-4 py-3.5 z-40 shadow-[0_-8px_25px_rgba(0,0,0,0.15)] border-t border-slate-300 flex justify-between items-center">
             <label class="flex items-center gap-3 cursor-pointer select-none">
-                <input type="checkbox" id="cb-all-lvl4" onchange="toggleSelectAllLvl4(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-400">
+                <input type="checkbox" id="cb-all-lvl5" onchange="toggleSelectAllLvl5(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-400">
                 <span class="text-xs font-black text-slate-800 uppercase tracking-wider">Pilih Semua</span>
             </label>
 
-            <button id="btn-cancel-mobile-lvl4" onclick="cancelKeluarMobile()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 transition border-b-4 border-rose-900 cursor-pointer">
+            <button id="btn-cancel-mobile-lvl5" onclick="cancelKeluarMobile()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 transition border-b-4 border-rose-900 cursor-pointer">
                 <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
                 <span>Cancel Keluar</span>
             </button>
@@ -180,7 +183,7 @@
         </div>
     </div>
 
-    <!-- SIDEBAR FILTER LENGKAP DENGAN DROPDOWN -->
+    <!-- SIDEBAR FILTER LENGKAP -->
     <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
             <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4 text-blue-600"></i> Filter Data</h3>
@@ -191,6 +194,10 @@
                 <div class="col-span-2">
                     <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Keluar</label>
                     <select id="fs-cust-keluar" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Trip Pengiriman</label>
+                    <select id="fs-trip" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
                 </div>
                 <div class="col-span-2">
                     <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label>
@@ -241,7 +248,7 @@
         </div>
     </div>
 
-    <!-- MODAL FILTER EXCEL (UNTUK TABEL DESKTOP) -->
+    <!-- MODAL FILTER EXCEL -->
     <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm overflow-hidden">
         <div class="p-3 border-b border-slate-100 flex justify-between items-center rounded-t-lg">
             <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
@@ -260,10 +267,26 @@
         </div>
     </div>
 
+    <!-- SIDEBAR ATUR KOLOM -->
+    <div id="sidebar-kolom" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
+        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</h3>
+            <button onclick="toggleSidebarKolom()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="p-3 bg-blue-50 border-b border-blue-100 text-xs text-blue-800 font-medium leading-relaxed">
+            Geser kotak untuk mengatur urutan. Klik ikon mata untuk menyembunyikan kolom.
+        </div>
+        <div class="p-3 flex flex-col gap-2 overflow-y-auto custom-scroll flex-1" id="kolom-drag-container"></div>
+        <div class="p-4 border-t border-slate-200 bg-slate-50 flex gap-2">
+            <button onclick="resetUrutanKolom()" class="w-1/3 py-2.5 bg-white border border-slate-300 text-slate-600 font-bold rounded-md text-xs uppercase transition hover:bg-slate-100 shadow-sm">Reset</button>
+            <button onclick="simpanUrutanKolom()" class="w-2/3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-md text-xs uppercase transition shadow-sm flex justify-center items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Simpan</button>
+        </div>
+    </div>
+
     <!-- OVERLAY KLIK LUAR -->
     <div id="overlay-klik-luar" onclick="tutupSemuaPopups()" class="hidden fixed inset-0 z-[50] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="wms_parser.js"></script>
     <script src="riwayat_keluar_logic.js"></script>
 </body>
-                        </html>
+</html>
