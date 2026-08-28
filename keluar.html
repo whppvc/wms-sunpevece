@@ -104,6 +104,10 @@
                     </select>
                 </div>
                 <div>
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Trip Ke</label>
+                    <input type="number" id="input-trip" min="1" class="w-full p-3 border-2 border-slate-200 rounded-xl font-bold outline-none focus:border-rose-600 text-slate-800 bg-slate-50 text-sm" placeholder="Contoh: 1" required>
+                </div>
+                <div>
                     <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Scan Fisik Kardus</label>
                     <textarea id="input-qrcode" rows="4" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-rose-600 font-mono font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition custom-scroll" placeholder="Arahkan scanner atau paste QR Code..." oninput="autoEnterScan(this)" required></textarea>
                 </div>
@@ -153,8 +157,9 @@
             <div class="grid grid-cols-2 gap-2">
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label><select id="fs-status" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Keluar</label><select id="fs-cust-keluar" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
-                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="fs-qr" oninput="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50" placeholder="Ketik QR Code..."></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Trip</label><select id="fs-trip" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Aktual</label><select id="fs-cust-aktual" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="fs-qr" oninput="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50" placeholder="Ketik QR Code..."></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Estimasi</label><select id="fs-cust-estimasi" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
                 <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><select id="fs-jenis" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
                 <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><select id="fs-nama" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
@@ -181,4 +186,4 @@
     <script src="wms_parser.js"></script>
     <script src="keluar_logic.js"></script>
 </body>
-                                                                                                                          </html>
+    </html>
