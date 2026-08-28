@@ -3,182 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WMS - Riwayat Keluar</title>
+    <title>WMS - Barang Keluar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <script src="global.js"></script>
     
     <style>
         html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden !important; touch-action: pan-y; background-color: #f8fafc; }
-        .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scroll::-webkit-scrollbar { width: 8px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .table-container { position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
-        .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
-
-        .hdr-std { 
-            text-align: center !important; 
-            padding: 0.5rem 0.75rem !important; 
-            font-size: 0.75rem !important; 
-            font-weight: 600 !important; 
-            text-transform: uppercase !important; 
-            letter-spacing: 0.05em !important; 
-            white-space: nowrap !important; 
-            border-bottom: 1px solid #e2e8f0 !important; 
-            background-clip: padding-box !important; 
-        }
-
-        tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
-        .col-hidden { display: none !important; }
-        
-        .resizer {
-            position: absolute;
-            top: 0; right: 0; width: 5px;
-            cursor: col-resize; user-select: none;
-            height: 100%; z-index: 50;
-        }
-        .resizer:hover, .resizing { background-color: rgba(59, 130, 246, 0.5); }
+        .selected-row { border-color: #2563eb !important; background-color: #dbeafe !important; }
     </style>
 </head>
 <body class="font-sans text-slate-800">
+
     <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
-        <!-- NAVIGASI TAB MENU -->
-        <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
-            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
-                <!-- TAB MOBILE HANYA MUNCUL DI LAYAR HP (sm:hidden) -->
-                <button onclick="setMode('mobile')" id="tab-mode-mobile" class="sm:hidden px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="smartphone" class="w-4 h-4"></i> MOBILE</button>
-                <button onclick="setMode('item')" id="tab-mode-item" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="boxes" class="w-4 h-4"></i> RANGKUMAN ITEM</button>
-                <button onclick="setMode('hold')" id="tab-mode-hold" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="pause-circle" class="w-4 h-4"></i> TABEL HOLD KELUAR</button>
-            </div>
-
-            <!-- TOOLBAR -->
-            <div class="p-3 sm:p-4 flex items-center justify-between bg-slate-50/50 border-t border-slate-100 w-full gap-2">
-                
-                <!-- KIRI: Aksi / Filter Tanggal Mobile -->
-                <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar flex-1">
-                    
-                    <!-- Filter Tanggal Khusus Mode Mobile -->
-                    <div id="mobile-date-filter" class="flex items-center gap-2 bg-white border border-slate-300 rounded-md p-1 shadow-sm shrink-0">
-                        <i data-lucide="calendar" class="w-4 h-4 text-slate-400 ml-1"></i>
-                        <input type="date" id="filter-date-mobile" onchange="renderMobileView()" class="p-1.5 text-xs font-bold text-slate-700 outline-none cursor-pointer bg-transparent">
-                    </div>
-                    
-                    <button onclick="aksiMassal('cancel')" id="btn-cancel" class="hidden group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-rose-700">
-                        <div class="bg-rose-700 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
-                        <div class="bg-rose-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-rose-500 transition">Cancel Keluar</div>
-                    </button>
-
+        <!-- INFO BAR ATAS -->
+        <div class="shrink-0 bg-white flex flex-col z-20 shadow-[0_4px_10px_-3px_rgba(0,0,0,0.05)] border-b border-slate-200">
+            <div class="flex justify-between items-center px-3 py-3 bg-white border-b border-slate-200">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" onchange="toggleAll(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-400" id="cb-all">
+                    <label for="cb-all" class="text-[11px] font-black text-slate-500 uppercase tracking-wide cursor-pointer">Pilih Semua</label>
                 </div>
-
-                <!-- KANAN: Tombol Filter & Menu Aksi -->
-                <div class="flex items-center gap-2 shrink-0">
-                    
-                    <button onclick="toggleSidebarFilter()" class="px-3.5 py-2 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-700 font-bold text-xs hover:bg-slate-50 transition flex items-center gap-2">
-                        <i data-lucide="filter" class="w-4 h-4 text-slate-600"></i>
-                        <span>Filter</span>
+                <div class="flex items-center gap-2">
+                    <div class="bg-cyan-50 border border-cyan-300 px-3 py-1.5 rounded text-cyan-800 text-[11px] font-black shadow-sm uppercase tracking-wider">
+                        Total Qty: <span id="lbl-tampil-baris" class="text-slate-900 text-[13px] ml-1">0</span> Dus
+                    </div>
+                    <button onclick="toggleSidebarFilter()" class="p-1.5 bg-white border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition shadow-sm active:scale-95">
+                        <i data-lucide="filter" class="w-5 h-5"></i>
                     </button>
+                </div>
+            </div>
+        </div>
 
-                    <div class="relative">
-                        <button onclick="toggleActionMenu(event)" class="p-2 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition" title="Menu Aksi">
-                            <i data-lucide="menu" class="w-5 h-5"></i>
-                        </button>
-                        <div id="mobile-action-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
-                            <button onclick="aksiMassal('salin'); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
-                            <button onclick="aksiMassal('xlsx'); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
-                            <button onclick="toggleSidebarKolom(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-blue-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</button>
-                            <button onclick="bukaModalTableDesign(); toggleActionMenu(event)" class="text-left px-4 py-3 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="palette" class="w-4 h-4 text-purple-600"></i> Table Design</button>
-                        </div>
+        <!-- MIDDLE SCROLL SECTION (CARD VIEW) -->
+        <div class="flex-1 min-h-0 bg-slate-200 p-2 overflow-hidden flex flex-col relative z-0">
+            <div class="flex-1 min-h-0 bg-white border border-slate-300 shadow-inner overflow-y-auto custom-scroll" id="scroll-container">
+                <div id="tbody-keluar" class="flex flex-col gap-0 w-full">
+                    <div class="p-10 text-center font-medium text-slate-400 h-full flex flex-col items-center justify-center">
+                        <i data-lucide="package-search" class="w-12 h-12 mx-auto mb-3 opacity-30"></i> 
+                        Belum ada data di-scan.
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- AREA KONTEN -->
-        <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
-            
-            <!-- VIEW TABEL (Untuk Mode Item, Hold) -->
-            <div id="view-table" class="hidden flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-t-xl shadow-sm border border-slate-300">
-                <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="table-keluar-main">
-                    <thead class="sticky top-0 z-50 shadow-sm" id="thead-keluar"></thead>
-                    <tbody id="tbody-keluar" class="text-slate-700"></tbody>
-                </table>
-            </div>
+        <!-- FOOTER ACTION (4 KOTAK BOTTOM BAR) -->
+        <div class="shrink-0 w-full bg-slate-50 p-2 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300 pb-4">
+            <div class="grid grid-cols-4 gap-2 h-[55px]">
+                
+                <!-- KOTAK 1: ADD -->
+                <button onclick="bukaModalAdd()" class="w-full h-full bg-[#0f172a] hover:bg-black text-white flex flex-col justify-center items-center shadow-md active:scale-95 transition rounded border-b-4 border-slate-900">
+                    <i data-lucide="plus" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                </button>
 
-            <!-- VIEW MOBILE (Folder / Drill-Down View) -->
-            <div id="view-mobile" class="flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-32">
-                <!-- Konten Mobile di-render oleh JS -->
-            </div>
+                <!-- KOTAK 2: VERIFIKASI -->
+                <button onclick="verifikasiKeluar()" id="btn-verifikasi" class="w-full h-full bg-blue-600 hover:bg-blue-700 text-white font-black shadow-md flex flex-col items-center justify-center gap-1 text-[9px] sm:text-[11px] cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-blue-800 leading-none">
+                    <i data-lucide="shield-check" class="w-4 h-4 sm:w-5 sm:h-5"></i> Verifikasi
+                </button>
 
+                <!-- KOTAK 3: SIMPAN KELUAR -->
+                <button id="btn-save" onclick="simpanKeluar()" class="w-full h-full bg-rose-700 hover:bg-rose-800 text-white font-black shadow-md flex flex-col items-center justify-center gap-1 text-[9px] sm:text-[11px] cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-rose-900 leading-none">
+                    <i data-lucide="truck-fast" class="w-4 h-4 sm:w-5 sm:h-5"></i> Proses Keluar
+                </button>
+
+                <!-- KOTAK 4: LAINNYA (DROPUP) -->
+                <div class="relative w-full h-full">
+                    <button onclick="toggleMoreMenu(event)" class="w-full h-full bg-slate-700 hover:bg-slate-800 text-white font-black shadow-md flex flex-col items-center justify-center gap-1 text-[9px] sm:text-[11px] cursor-pointer transition active:scale-95 uppercase rounded border-b-4 border-slate-900 leading-none">
+                        <i data-lucide="more-horizontal" class="w-4 h-4 sm:w-5 sm:h-5"></i> Lainnya
+                    </button>
+                    
+                    <div id="dropup-more" class="hidden absolute bottom-full right-0 mb-2 w-48 bg-white shadow-2xl rounded-xl border border-slate-200 z-50 flex flex-col overflow-hidden">
+                        <button onclick="undoHapusKeluar(); toggleMoreMenu(event)" class="text-left px-5 py-4 border-b border-slate-100 text-sm font-bold text-rose-600 flex items-center gap-3 hover:bg-slate-50 active:bg-slate-100 transition"><i data-lucide="rotate-ccw" class="w-5 h-5"></i> Undo Hapus</button>
+                    </div>
+                </div>
+
+            </div>
         </div>
         
-        <!-- FOOTER PAGINATION (Mode Desktop) -->
-        <div id="footer-pagination" class="hidden shrink-0 w-full bg-white p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
-            <div class="flex items-center gap-2 flex-wrap justify-center">
-                <span class="bg-blue-50 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-medium ml-1">0</span></span>
-                <span class="bg-amber-50 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-amber-900 font-medium ml-1">0</span></span>
-                <span class="bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded text-emerald-800 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-medium ml-1">0</span></span>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-1 bg-white border border-slate-300 p-1 rounded shadow-sm">
-                    <span class="text-[10px] font-bold text-slate-500 uppercase px-1">Baris:</span>
-                    <select id="select-rows-per-page" onchange="changeRowsPerPage(this.value)" class="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 rounded outline-none cursor-pointer px-1 py-0.5 transition">
-                        <option value="10" selected>10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                        <option value="ALL">Semua</option>
-                    </select>
-                </div>
-                <div class="flex items-center gap-2 bg-white border border-slate-300 p-1 rounded shadow-sm">
-                    <button onclick="prevPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                    <span class="px-2 font-black text-xs text-slate-600 tracking-wide uppercase">Hal <span id="lbl-halaman" class="text-blue-600">1</span> / <span id="lbl-total-halaman">1</span></span>
-                    <button onclick="nextPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
-                </div>
-            </div>
-        </div>
-
-        <!-- FOOTER FREEZE LEVEL 5 MOBILE (PILIH SEMUA & TOMBOL CANCEL KELUAR) -->
-        <div id="mobile-lvl5-footer" class="hidden shrink-0 w-full bg-white px-4 py-3.5 z-40 shadow-[0_-8px_25px_rgba(0,0,0,0.15)] border-t border-slate-300 flex justify-between items-center">
-            <label class="flex items-center gap-3 cursor-pointer select-none">
-                <input type="checkbox" id="cb-all-lvl5" onchange="toggleSelectAllLvl5(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-400">
-                <span class="text-xs font-black text-slate-800 uppercase tracking-wider">Pilih Semua</span>
-            </label>
-
-            <button id="btn-cancel-mobile-lvl5" onclick="cancelKeluarMobile()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 transition border-b-4 border-rose-900 cursor-pointer">
-                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-                <span>Cancel Keluar</span>
-            </button>
-        </div>
-
     </div>
 
-    <!-- MODAL CANCEL KELUAR (RETURN STOK DARI TABEL HOLD) -->
-    <div id="modal-cancel-hold" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[100] px-4 backdrop-blur-sm">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200">
-            <h3 class="text-lg font-black mb-4 flex items-center gap-2 text-rose-600"><i data-lucide="rotate-ccw"></i> Cancel Item Keluar</h3>
-            <div class="space-y-4 mb-6">
+    <!-- MODAL ADD SCAN -->
+    <div id="modal-add-scan" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[60] p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 p-5">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="scan-line" class="w-5 h-5 text-rose-600"></i> INPUT BARANG KELUAR</h3>
+                <button type="button" onclick="tutupModalAdd()" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <form id="form-scan" class="flex flex-col gap-4">
                 <div>
-                    <label class="block text-xs font-black uppercase tracking-wide mb-2 text-slate-600">Pilih Area Kembali</label>
-                    <select id="cancel-area" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-rose-600 font-bold text-slate-800 uppercase bg-slate-50 cursor-pointer">
-                        <option value="">-- Memuat Area... --</option>
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Customer Keluar (Tujuan)</label>
+                    <select id="select-customer-keluar" class="w-full p-3 border-2 border-slate-200 rounded-xl font-bold outline-none focus:border-rose-600 text-slate-800 cursor-pointer bg-slate-50 text-sm uppercase" required>
+                        <option value="">-- Memuat Customer... --</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-black uppercase tracking-wide mb-2 text-slate-600">Keterangan</label>
-                    <input type="text" id="cancel-ket" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-rose-600 font-bold text-slate-800 bg-slate-50 placeholder-slate-400" placeholder="Cth: Batal kirim / Retur gudang...">
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Trip Ke</label>
+                    <input type="number" id="input-trip" min="1" class="w-full p-3 border-2 border-slate-200 rounded-xl font-bold outline-none focus:border-rose-600 text-slate-800 bg-slate-50 text-sm" placeholder="Contoh: 1" required>
                 </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Scan Fisik Kardus</label>
+                    <textarea id="input-qrcode" rows="4" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-rose-600 font-mono font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 transition custom-scroll" placeholder="Arahkan scanner atau paste QR Code..." oninput="autoEnterScan(this)" required></textarea>
+                </div>
+                <button type="submit" class="mt-2 w-full bg-rose-700 hover:bg-rose-800 text-white py-3 rounded-xl font-black shadow transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-4 border-rose-900">
+                    <i data-lucide="plus-square" class="w-4 h-4"></i> TAMBAHKAN KODE
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL PINJAM ESTIMASI -->
+    <div id="modal-pinjam-estimasi" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 p-5">
+            <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100">
+                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="users" class="w-5 h-5 text-indigo-600"></i> PILIH PINJAM CUSTOMER</h3>
+                <button type="button" onclick="tutupModalPinjamEstimasi()" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-            <div class="flex gap-2">
-                <button type="button" onclick="document.getElementById('modal-cancel-hold').classList.add('hidden')" class="w-1/2 py-3 bg-slate-200 text-slate-700 font-black rounded-xl hover:bg-slate-300 transition cursor-pointer text-xs uppercase">BATAL</button>
-                <button type="button" onclick="eksekusiCancelHold()" id="btn-submit-cancel" class="w-1/2 py-3 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-md transition flex justify-center items-center gap-2 cursor-pointer active:scale-95 text-xs uppercase border-b-4 border-rose-800"><i data-lucide="save" class="w-4 h-4"></i> PROSES</button>
+            
+            <!-- INFORMASI BATCH GROUPING -->
+            <div class="bg-indigo-50 border border-indigo-200 p-2.5 rounded-lg mb-4">
+                <p class="text-xs font-bold text-indigo-800" id="lbl-batch-pinjam-info">Pilihan ini akan diterapkan ke semua kardus serupa di layar.</p>
+            </div>
+
+            <input type="hidden" id="pinjam-id-item">
+            <input type="hidden" id="pinjam-is-aktual">
+            <div class="flex flex-col gap-4">
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Customer Estimasi Tersedia</label>
+                    <select id="select-pinjam-estimasi" class="w-full p-3 border-2 border-slate-200 rounded-xl font-bold outline-none focus:border-indigo-600 text-slate-800 cursor-pointer bg-slate-50 text-sm uppercase">
+                        <option value="">-- Memuat Data... --</option>
+                    </select>
+                </div>
+                <button type="button" onclick="simpanPinjamEstimasi()" class="mt-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-black shadow transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-4 border-indigo-800">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i> TERAPKAN KE SEMUA ITEM SERUPA
+                </button>
             </div>
         </div>
     </div>
@@ -186,108 +150,40 @@
     <!-- SIDEBAR FILTER LENGKAP -->
     <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4 text-blue-600"></i> Filter Data</h3>
+            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4"></i> Filter Data</h3>
             <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
         <div class="p-3 flex flex-col gap-3 overflow-y-auto custom-scroll flex-1">
             <div class="grid grid-cols-2 gap-2">
-                <div class="col-span-2">
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Keluar</label>
-                    <select id="fs-cust-keluar" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Trip Pengiriman</label>
-                    <select id="fs-trip" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label>
-                    <input type="text" id="fs-qr" oninput="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50 font-mono" placeholder="Ketik QR Code...">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Cust Aktual</label>
-                    <select id="fs-cust-aktual" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Cust Estimasi</label>
-                    <select id="fs-cust-est" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label>
-                    <select id="fs-jenis" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
-                    <select id="fs-pjg" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
-                    <select id="fs-nama" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
-                    <select id="fs-grade" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label>
-                    <select id="fs-dus" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label>
-                    <select id="fs-shading" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">PIC Keluar</label>
-                    <select id="fs-pic" onchange="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Keterangan</label>
-                    <input type="text" id="fs-ket" oninput="saringTabelRiwayat()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50" placeholder="Ketik Keterangan...">
-                </div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</label><select id="fs-status" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Keluar</label><select id="fs-cust-keluar" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Trip</label><select id="fs-trip" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Aktual</label><select id="fs-cust-aktual" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">QRCode</label><input type="text" id="fs-qr" oninput="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none bg-slate-50" placeholder="Ketik QR Code..."></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Estimasi</label><select id="fs-cust-estimasi" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Jenis Item</label><select id="fs-jenis" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div class="col-span-2"><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label><select id="fs-nama" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label><select id="fs-pjg" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label><select id="fs-grade" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label><select id="fs-dus" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
+                <div><label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label><select id="fs-shading" onchange="saringTabelKeluar()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50"><option value="">-- Semua --</option></select></div>
             </div>
-            <button onclick="resetFilterRiwayat()" class="mt-2 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg text-xs uppercase transition shrink-0">RESET FILTER</button>
+            <button onclick="resetFilterKeluar()" class="mt-2 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black rounded text-xs uppercase transition shrink-0">RESET FILTER</button>
         </div>
     </div>
 
-    <!-- MODAL FILTER EXCEL -->
-    <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm overflow-hidden">
-        <div class="p-3 border-b border-slate-100 flex justify-between items-center rounded-t-lg">
-            <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
-            <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-rose-500 bg-white border border-slate-200 p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
-        </div>
-        <div class="p-2 border-b border-slate-200 bg-white">
-            <div class="relative">
-                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2"></i>
-                <input type="text" id="filter-search-input" oninput="searchFilterList(this.value)" class="w-full pl-8 p-1.5 text-xs font-bold border border-slate-300 bg-slate-50 rounded focus:border-blue-500 focus:bg-white outline-none transition" placeholder="Cari Spesifik...">
-            </div>
-        </div>
-        <div class="p-2 max-h-48 overflow-y-auto flex flex-col gap-1 text-xs bg-white custom-scroll" id="filter-values-list"></div>
-        <div class="p-2 border-t border-slate-200 bg-slate-50 flex justify-between gap-2 rounded-b-lg">
-            <button onclick="clearFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100 transition shadow-sm">Reset</button>
-            <button onclick="applyFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-700 transition shadow-sm">Terapkan</button>
-        </div>
-    </div>
+    <!-- OVERLAY -->
+    <div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-[50] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
-    <!-- SIDEBAR ATUR KOLOM -->
-    <div id="sidebar-kolom" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
-        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-            <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</h3>
-            <button onclick="toggleSidebarKolom()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
-        </div>
-        <div class="p-3 bg-blue-50 border-b border-blue-100 text-xs text-blue-800 font-medium leading-relaxed">
-            Geser kotak untuk mengatur urutan. Klik ikon mata untuk menyembunyikan kolom.
-        </div>
-        <div class="p-3 flex flex-col gap-2 overflow-y-auto custom-scroll flex-1" id="kolom-drag-container"></div>
-        <div class="p-4 border-t border-slate-200 bg-slate-50 flex gap-2">
-            <button onclick="resetUrutanKolom()" class="w-1/3 py-2.5 bg-white border border-slate-300 text-slate-600 font-bold rounded-md text-xs uppercase transition hover:bg-slate-100 shadow-sm">Reset</button>
-            <button onclick="simpanUrutanKolom()" class="w-2/3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-md text-xs uppercase transition shadow-sm flex justify-center items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Simpan</button>
-        </div>
-    </div>
-
-    <!-- OVERLAY KLIK LUAR -->
-    <div id="overlay-klik-luar" onclick="tutupSemuaPopups()" class="hidden fixed inset-0 z-[50] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
-
+    <script>
+        function autoEnterScan(el) {
+            let val = el.value;
+            if (val.match(/\/0001( N)?$/)) {
+                el.value = val + '\n';
+            }
+        }
+    </script>
     <script src="wms_parser.js"></script>
-    <script src="riwayat_keluar_logic.js"></script>
+    <script src="keluar_logic.js"></script>
 </body>
-</html>
-
+    </html>
