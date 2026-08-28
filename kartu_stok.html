@@ -69,8 +69,6 @@
             height: 100%; z-index: 50;
         }
         .resizer:hover, .resizing { background-color: rgba(59, 130, 246, 0.5); }
-
-        /* REVISI: Class untuk menyembunyikan kolom */
         .col-hidden { display: none !important; }
     </style>
 </head>
@@ -124,7 +122,6 @@
                     <div id="mobile-action-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
                         <button onclick="salinData(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
                         <button onclick="downloadXLS(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
-                        <button onclick="sinkronisasiUlangStokAktual(true); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="database-backup" class="w-4 h-4 text-teal-600"></i> Sinkron DB</button>
                         <button onclick="toggleSidebarKolom(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-blue-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</button>
                         <button onclick="bukaModalTableDesign(); toggleActionMenu(event)" class="text-left px-4 py-3 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="palette" class="w-4 h-4 text-purple-600"></i> Table Design</button>
                     </div>
@@ -192,7 +189,7 @@
         </div>
     </div>
 
-    <!-- MODAL LIHAT PO -->
+    <!-- MODAL LIHAT CUSTOMER AKTUAL -->
     <div id="modal-lihat-po" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/40 z-[100] px-4 backdrop-blur-sm">
         <div class="bg-white shadow-2xl w-full max-w-sm border border-slate-200 rounded-xl overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
@@ -240,7 +237,7 @@
         </div>
     </div>
 
-    <!-- MODAL GANTI PO (CUSTOMER ESTIMASI) -->
+    <!-- MODAL GANTI CUSTOMER ESTIMASI -->
     <div id="modal-po" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/40 z-[80] px-4 backdrop-blur-sm">
         <div class="bg-white p-6 shadow-2xl w-full max-w-sm border border-slate-200 rounded-xl">
             <h3 class="text-base font-semibold mb-4 flex items-center gap-2 text-slate-800"><i data-lucide="tags" class="text-indigo-800 w-5 h-5"></i> Ganti Customer Estimasi</h3>
@@ -272,13 +269,11 @@
             </div>
             <div class="p-5 overflow-y-auto custom-scroll space-y-4">
                 
-                <!-- Info Item Asal -->
                 <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
                     <h4 class="text-xs font-black text-slate-500 uppercase mb-2 border-b border-slate-200 pb-1">Item Dipilih (Sumber)</h4>
                     <p id="req-info-asal" class="text-sm font-bold text-slate-700 leading-relaxed">-</p>
                 </div>
 
-                <!-- Form Request Target -->
                 <div class="bg-rose-50 p-3 rounded-lg border border-rose-200">
                     <h4 class="text-xs font-black text-rose-700 uppercase mb-3 border-b border-rose-200 pb-1">Item Request (Target)</h4>
                     <p class="text-[10px] font-bold text-rose-500 mb-3 italic">*Kosongkan inputan jika tidak ada perubahan pada variabel tersebut.</p>
@@ -306,7 +301,6 @@
                     </div>
                 </div>
 
-                <!-- Qty & Hasil -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase">Qty Request (Dus)</label>
@@ -332,7 +326,7 @@
             <button onclick="toggleSidebarKolom()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
         <div class="p-3 bg-blue-50 border-b border-blue-100 text-xs text-blue-800 font-medium leading-relaxed">
-            Tahan dan geser (Drag & Drop) kotak di bawah ini untuk mengatur urutan kolom. Paling atas adalah kolom paling kiri.
+            Tahan dan geser (Drag & Drop) kotak di bawah ini untuk mengatur urutan kolom.
         </div>
         <div class="p-3 flex flex-col gap-2 overflow-y-auto custom-scroll flex-1" id="kolom-drag-container"></div>
         <div class="p-4 border-t border-slate-200 bg-slate-50 flex gap-2">
