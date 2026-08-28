@@ -9,8 +9,8 @@ let dataKSArea = [];
 let dataKSGlobal = [];
 let dataKSNonaktif = []; 
 
-let processedData = []; // Data yang aktif sesuai tab
-let filteredData = [];  // Data setelah difilter & disort
+let processedData = []; 
+let filteredData = [];  
 
 let sourcePOContext = ''; 
 let currentBreakdownData = [];
@@ -25,8 +25,9 @@ let currentFilterCol = '';
 let selectAllState = 0; 
 let userColOrder = []; 
 let hiddenCols = []; 
-let selectedRows = new Set(); // Menyimpan ID baris yang dicentang
+let selectedRows = new Set(); 
 let selectedForReq = null; 
+let selectedForAction = []; // Deklarasi variabel aksi agar tidak throw ReferenceError
 
 let processedGantiKeys = new Set();
 let processedGlobalKeys = new Set();
@@ -67,7 +68,8 @@ function loadUserPreferences() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
+    // REVISI KRUSIAL: Wajib await initModernLayout agar DOM selesai dibangun
+    await initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
     
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
@@ -84,31 +86,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Keyboard Navigation for Filter Menu
-    const filterMenuEl = document.getElementById('excel-filter-menu');
-    if (filterMenuEl) {
-        filterMenuEl.addEventListener('keydown', function(e) {
-            const searchInput = document.getElementById('filter-search-input');
-            const visibleLabels = Array.from(document.querySelectorAll('.filter-val-item')).filter(lbl => lbl.style.display !== 'none');
-            const visibleCbs = visibleLabels.map(lbl => lbl.querySelector('input[type="checkbox"]'));
-            const selectAllCb = document.getElementById('filter-select-all');
-            if(selectAllCb && selectAllCb.closest('label').style.display !== 'none') visibleCbs.unshift(selectAllCb);
-
-            const currentIndex = visibleCbs.indexOf(document.activeElement);
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                if (document.activeElement === searchInput && visibleCbs.length > 0) visibleCbs[0].focus();
-                else if (currentIndex >= 0 && currentIndex < visibleCbs.length - 1) visibleCbs[currentIndex + 1].focus();
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (currentIndex === 0) searchInput.focus();
-                else if (currentIndex > 0) visibleCbs[currentIndex - 1].focus();
-            } else if (e.key === 'Enter') {
-                e.preventDefault(); applyFilterForCurrentCol();
-            }
-        });
-    }
-
     await loadMasterData();
     loadUserPreferences(); 
     setTimeout(muatDataStok, 200);
@@ -120,7 +97,6 @@ function toggleActionMenu(e) {
     if(menu) menu.classList.toggle('hidden');
 }
 
-// REVISI: Fungsi untuk bypass limit 1000 baris Supabase
 async function fetchAllRows(baseQuery) {
     let allData = [];
     let page = 0;
@@ -212,10 +188,6 @@ function translateBarcode(barcode) {
     return data;
 }
 
-function sinkronisasiUlangStokAktual(tampilkanAlert = false) {
-    alert("Fungsi Sinkronisasi Wipe & Rebuild dinonaktifkan untuk menjaga integritas data Customer Aktual hasil editan user.\n\nSistem kini menggunakan metode Incremental Update (+/-) secara otomatis setiap kali ada transaksi.");
-}
-
 async function muatDataStok() {
     const tbody = document.getElementById('tbody-ks');
     if(!tbody) return;
@@ -224,7 +196,6 @@ async function muatDataStok() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
-        // REVISI: Gunakan fetchAllRows untuk stok_global agar menembus limit 1000
         const [stokGlobalData, resAktual, resLembaran, resGanti] = await Promise.all([
             fetchAllRows(db.from('stok_global').select('*')), 
             db.from('stok_aktual').select('*'),
@@ -302,6 +273,7 @@ async function muatDataStok() {
             return {
                 ...a,
                 _id: a.id.toString(),
+                id: a.id,
                 pjg: a.panjang || '-', jenis: a.jenis_item || '-', nama: a.nama_item || '-',
                 qrcodes: qrMap[key] || [], id_sku_base: a.id_sku || '-', id_po: a.id_po || '-',
                 po_aktual: a.customer_aktual || '-', customer_estimasi: a.customer_estimasi || '-',
@@ -356,17 +328,12 @@ function setModeKS(m) {
     buildProcessedData();
 }
 
-// ============================================================================
-// DATA-DRIVEN PIPELINE (MEMORI) - REVISI UNTUK PERFORMA
-// ============================================================================
-
 function buildProcessedData() {
     if (modeKS === 'qr') processedData = dataKSQR;
     else if (modeKS === 'area') processedData = dataKSArea;
     else if (modeKS === 'global') processedData = dataKSGlobal;
     else if (modeKS === 'nonaktif') processedData = dataKSNonaktif;
 
-    // Buat searchValues untuk mempermudah filter dan sort
     processedData.forEach(r => {
         if (modeKS === 'qr') {
             let baseSpec = `${r.nama}_${r.pjg}_${r.grade}_${r.dus}_${r.shading}`;
@@ -751,22 +718,26 @@ function updateSelectAllUI() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// REVISI KRUSIAL: highlightRow tanpa re-render yang memutus event
 function highlightRow(cb, id) {
+    const tr = cb.closest('tr');
     if (cb.checked) {
         selectedRows.add(id);
+        if(tr) tr.classList.add('selected-row');
     } else {
         selectedRows.delete(id);
+        if(tr) tr.classList.remove('selected-row');
     }
     
     if(!cb.checked && selectAllState !== 0) {
         selectAllState = 0;
         updateSelectAllUI();
     }
-    renderTableBody(); // Re-render to apply selected class
+    updateSelectedCount();
 }
 
 // ========================================================
-// FILTER EXCEL PRO (SMART FILTERING & POSITIONING)
+// FILTER EXCEL PRO
 // ========================================================
 window.openColumnFilter = function(event, colClass, colName) {
     event.stopPropagation();
@@ -810,13 +781,8 @@ window.openColumnFilter = function(event, colClass, colName) {
     let topPos = btnRect.bottom + 4; 
     let leftPos = btnRect.left; 
 
-    if (leftPos + menuWidth > window.innerWidth) {
-        leftPos = btnRect.right - menuWidth;
-    }
-    
-    if (leftPos < 10) {
-        leftPos = 10;
-    }
+    if (leftPos + menuWidth > window.innerWidth) leftPos = btnRect.right - menuWidth;
+    if (leftPos < 10) leftPos = 10;
 
     menu.style.position = 'fixed'; 
     menu.style.top = `${topPos}px`;
@@ -895,7 +861,7 @@ function updateFilterIcons() {
 }
 
 // ==========================================
-// ATUR KOLOM (DRAG & DROP + HIDE)
+// ATUR KOLOM
 // ==========================================
 window.toggleSidebarKolom = function() {
     const sidebar = document.getElementById('sidebar-kolom');
@@ -1173,7 +1139,7 @@ window.bukaBreakdown = function(gKey) {
         
         return `
             <tr class="transition bd-row text-[13px] ${stripeClass}">
-                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-id="${a.id}" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
                 <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi">${a.customer_estimasi}</td>
@@ -1223,17 +1189,18 @@ window.bukaModalLihatPO = function(encodedPOs) {
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
 };
 
+// REVISI KRUSIAL: siapkanGantiPO yang aman dan langsung menampung data terpilih
 window.siapkanGantiPO = function(context) {
-    let checkboxes = [];
+    selectedForAction = [];
+    let totalDus = 0;
+
     if(context === 'main') {
         if(modeKS === 'global' || modeKS === 'nonaktif') return;
         
-        // Ambil data dari filteredData berdasarkan selectedRows
-        selectedForAction = [];
-        let totalDus = 0;
         filteredData.forEach(r => {
             if(selectedRows.has(r._id)) {
                 selectedForAction.push({
+                    id: r.id, 
                     id_sku: r.id_sku_base,
                     nama_item: r.nama,
                     pjg: r.pjg,
@@ -1251,15 +1218,19 @@ window.siapkanGantiPO = function(context) {
             }
         });
         
-        if(selectedForAction.length === 0) return alert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya.');
+        if(selectedForAction.length === 0) {
+            return alert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya!');
+        }
 
     } else { 
-        checkboxes = document.querySelectorAll('.cb-bd:checked'); 
-        if(checkboxes.length === 0) return alert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya.');
+        const checkboxes = document.querySelectorAll('.cb-bd:checked'); 
+        if(checkboxes.length === 0) {
+            return alert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya!');
+        }
         
-        selectedForAction = []; let totalDus = 0;
         checkboxes.forEach(cb => {
             selectedForAction.push({ 
+                id: cb.dataset.id ? parseInt(cb.dataset.id) : null,
                 id_sku: cb.dataset.idsku, 
                 nama_item: cb.dataset.nama,
                 pjg: cb.dataset.pjg,
@@ -1280,7 +1251,8 @@ window.siapkanGantiPO = function(context) {
     sourcePOContext = context;
     document.getElementById('input-new-po').value = '';
     const inputQty = document.getElementById('input-qty-ganti');
-    inputQty.value = totalDus; inputQty.max = totalDus; 
+    inputQty.value = totalDus; 
+    inputQty.max = totalDus; 
 
     document.getElementById('modal-po').classList.remove('hidden');
     document.getElementById('overlay-klik-luar').classList.remove('hidden');
@@ -1293,6 +1265,7 @@ window.tutupModalPO = function() {
     }
 };
 
+// REVISI KRUSIAL: eksekusiGantiPO menggunakan ID spesifik yang pasti akurat
 window.eksekusiGantiPO = async function() {
     const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
     if(!newPO) return alert("Silakan Pilih Customer Baru dari daftar dropdown!");
@@ -1303,8 +1276,10 @@ window.eksekusiGantiPO = async function() {
     let maxDus = selectedForAction.reduce((sum, row) => sum + row.qty, 0);
     if(qtyDiminta > maxDus) return alert(`Maksimal jatah adalah ${maxDus} dus!`);
 
-    const btn = document.getElementById('btn-simpan-po'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
+    const btn = document.getElementById('btn-simpan-po'); 
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; 
+    btn.disabled = true;
 
     try {
         let qtySisaUntukDiupdate = qtyDiminta; 
@@ -1315,33 +1290,38 @@ window.eksekusiGantiPO = async function() {
             let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
             qtySisaUntukDiupdate -= qtyPotong;
 
-            const { data: oldRows, error: errOld } = await db.from('stok_aktual')
-                .select('*')
-                .eq('nama_item', row.nama_item)
-                .eq('panjang', row.pjg)
-                .eq('grade', row.grade)
-                .eq('dus', row.dus)
-                .eq('shading', row.shading)
-                .eq('area', row.area)
-                .eq('customer_aktual', row.po_aktual)
-                .eq('customer_estimasi', row.customer_estimasi)
-                .eq('keterangan', row.keterangan)
-                .eq('kondisi', row.kondisi) 
-                .limit(1);
-            
-            if (errOld) throw errOld;
+            let oldRow = null;
+            if (row.id) {
+                const { data, error } = await db.from('stok_aktual').select('*').eq('id', row.id).single();
+                if (!error && data) oldRow = data;
+            }
 
-            if (oldRows && oldRows.length > 0) {
-                let oldRow = oldRows[0];
+            if (!oldRow) {
+                const { data } = await db.from('stok_aktual')
+                    .select('*')
+                    .eq('nama_item', row.nama_item)
+                    .eq('panjang', row.pjg)
+                    .eq('grade', row.grade)
+                    .eq('dus', row.dus)
+                    .eq('shading', row.shading)
+                    .eq('area', row.area)
+                    .eq('customer_aktual', row.po_aktual)
+                    .eq('customer_estimasi', row.customer_estimasi)
+                    .limit(1);
                 
+                if (data && data.length > 0) oldRow = data[0];
+            }
+
+            if (oldRow) {
                 let sisaQty = oldRow.qty - qtyPotong;
                 if (sisaQty <= 0) {
                     await db.from('stok_aktual').delete().eq('id', oldRow.id);
                 } else {
-                    await db.from('stok_aktual').update({qty: sisaQty}).eq('id', oldRow.id);
+                    await db.from('stok_aktual').update({ qty: sisaQty }).eq('id', oldRow.id);
                 }
 
-                const { data: newRows, error: errNew } = await db.from('stok_aktual')
+                // Cek baris tujuan baru
+                const { data: newRows } = await db.from('stok_aktual')
                     .select('id, qty')
                     .eq('nama_item', oldRow.nama_item)
                     .eq('panjang', oldRow.panjang)
@@ -1351,14 +1331,10 @@ window.eksekusiGantiPO = async function() {
                     .eq('area', oldRow.area)
                     .eq('customer_aktual', oldRow.customer_aktual)
                     .eq('customer_estimasi', newPO)
-                    .eq('keterangan', oldRow.keterangan)
-                    .eq('kondisi', oldRow.kondisi) 
                     .limit(1);
 
-                if (errNew) throw errNew;
-
                 if (newRows && newRows.length > 0) {
-                    await db.from('stok_aktual').update({qty: newRows[0].qty + qtyPotong}).eq('id', newRows[0].id);
+                    await db.from('stok_aktual').update({ qty: newRows[0].qty + qtyPotong }).eq('id', newRows[0].id);
                 } else {
                     let insertData = { ...oldRow };
                     delete insertData.id; 
@@ -1373,12 +1349,14 @@ window.eksekusiGantiPO = async function() {
         tutupModalPO(); 
         if(sourcePOContext === 'breakdown') tutupModalBreakdown();
         
+        alert("✅ Berhasil mengganti Customer Estimasi!");
         await muatDataStok();
-        alert("Berhasil mengganti Customer Estimasi!");
     } catch (error) { 
         alert("GAGAL UPDATE: " + error.message); 
     } finally { 
-        btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons(); 
+        btn.innerHTML = ori; 
+        btn.disabled = false; 
+        if(typeof lucide !== 'undefined') lucide.createIcons(); 
     }
 };
 
@@ -1475,7 +1453,6 @@ window.siapkanReqKonversi = function() {
         `;
     }
 
-    // Reset Form Input
     ['req-nama-item', 'req-panjang', 'req-grade', 'req-dus', 'req-shading', 'req-qty', 'req-qty-hasil'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.value = '';
@@ -1518,7 +1495,6 @@ window.eksekusiReqKonversi = async function() {
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
 
     try {
-        // 1. Generate Kode Konversi: K-DDMMYYXX
         const now = new Date();
         const yy = String(now.getFullYear()).slice(-2);
         const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -1542,7 +1518,6 @@ window.eksekusiReqKonversi = async function() {
         }
         const kodeKonversi = `${prefix}${String(seq).padStart(2, '0')}`;
 
-        // 2. Cari baris normal di stok_aktual berdasarkan ID
         const { data: origRow, error: errOrig } = await db.from('stok_aktual')
             .select('*')
             .eq('id', selectedForReq.id)
@@ -1550,7 +1525,6 @@ window.eksekusiReqKonversi = async function() {
 
         if (errOrig || !origRow) throw new Error("Gagal menemukan baris stok asal di database.");
 
-        // 3. Potong saldo asal
         let newOrigQty = origRow.qty - qtyReq;
         if(newOrigQty <= 0) {
             await db.from('stok_aktual').delete().eq('id', origRow.id);
@@ -1558,7 +1532,6 @@ window.eksekusiReqKonversi = async function() {
             await db.from('stok_aktual').update({ qty: newOrigQty }).eq('id', origRow.id);
         }
 
-        // 4. Masukkan baris pecahan baru bertanda konversi = KODE KONVERSI
         let splitRow = { ...origRow };
         delete splitRow.id;
         delete splitRow.created_at;
@@ -1566,7 +1539,6 @@ window.eksekusiReqKonversi = async function() {
         splitRow.konversi = kodeKonversi; 
         await db.from('stok_aktual').insert([splitRow]);
 
-        // 5. Masukkan data ke request_konversi
         const payload = {
             kode_konversi: kodeKonversi,
             aktifitas_konversi: 'req',
@@ -1597,7 +1569,7 @@ window.eksekusiReqKonversi = async function() {
         if(error) throw error;
         
         tutupModalReqKonversi();
-        alert(`Berhasil membuat Request Konversi dengan Kode: ${kodeKonversi}`);
+        alert(`✅ Berhasil membuat Request Konversi dengan Kode: ${kodeKonversi}`);
         await muatDataStok();
     } catch(e) {
         alert("Gagal menyimpan request: " + e.message);
