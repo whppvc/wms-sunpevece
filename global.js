@@ -11,16 +11,13 @@
     const isSettingPage = path.endsWith('setting.html');
     const sessionString = localStorage.getItem('user_session');
 
-    // Jika belum login dan mencoba buka halaman selain login
     if (!sessionString && !isLoginPage) {
         window.location.replace('index.html');
     } 
-    // Jika sudah login dan membuka halaman login
     else if (sessionString && isLoginPage) {
         window.location.replace('menu.html');
     }
 
-    // Proteksi halaman setting khusus role 'creator'
     if (sessionString && isSettingPage) {
         try {
             const user = JSON.parse(sessionString);
@@ -43,7 +40,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==========================================
-// DAFTAR MENU LENGKAP WMS
+// DAFTAR MENU LENGKAP WMS (TERMASUK PENYESUAIAN)
 // ==========================================
 const APP_MENUS = [
     { id: 'dashboard', title: 'Dashboard Utama', icon: 'layout-dashboard', url: 'menu.html' },
@@ -54,6 +51,7 @@ const APP_MENUS = [
     { id: 'riwayat_langsir', title: 'Riwayat Langsir', icon: 'history', url: 'riwayat_langsir.html' },
     { isDivider: true, title: 'INVENTORY' },
     { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers', url: 'kartu_stok.html' },
+    { id: 'penyesuaian', title: 'Penyesuaian Stok', icon: 'sliders-horizontal', url: 'penyesuaian.html' },
     { id: 'ganti_customer', title: 'Table Ganti Customer', icon: 'user-cog', url: 'ganti_customer.html' },
     { id: 'req_konversi', title: 'Tabel Request Konversi', icon: 'replace', url: 'req_konversi.html' },
     { id: 'input_opname', title: 'Input Stok Opname', icon: 'clipboard-check', url: 'input_opname.html' },
@@ -134,7 +132,6 @@ style.innerHTML = `
     }
     #app-sidebar:not(.expanded) .sidebar-item:hover .sidebar-tooltip { visibility: visible; opacity: 1; margin-left: 15px; }
 
-    /* GLOBAL TABLE DESIGN CLASSES */
     .hdr-std { 
         background-color: var(--tbl-hdr-bg) !important; 
         color: var(--tbl-hdr-text) !important; 
@@ -232,7 +229,7 @@ function applyTableDesign() {
 applyTableDesign();
 
 // ==========================================
-// INISIALISASI MODERN LAYOUT & PERMISSION CHECK
+// INISIALISASI MODERN LAYOUT
 // ==========================================
 async function initModernLayout(pageMeta) {
     const sessionString = localStorage.getItem('user_session');
@@ -252,13 +249,8 @@ async function initModernLayout(pageMeta) {
         if(!error && data) allowedMenus = data;
     } catch(e) { console.error("Gagal load menu access", e); }
 
-    // ========================================================
-    // REVISI KEAMANAN: CEK AKSES HALAMAN SAAT INI (PAGE GUARD)
-    // ========================================================
     if (pageMeta && pageMeta.id && pageMeta.id !== 'dashboard') {
         const pageRule = allowedMenus.find(r => r.menu_id === pageMeta.id);
-        
-        // Jika aturan ditemukan dan user bukan Creator, validasi izin user
         if (pageRule && !isCreator) {
             const allowedUsers = pageRule.allowed_users ? pageRule.allowed_users.split(',').map(u => u.trim()) : [];
             if (!allowedUsers.includes(user.username)) {
@@ -269,13 +261,12 @@ async function initModernLayout(pageMeta) {
         }
     }
 
-    // Filter daftar menu sidebar untuk user saat ini
     const filteredMenus = APP_MENUS.filter(menu => {
         if(menu.isDivider) return true; 
-        if(isCreator) return true; // Creator selalu bisa melihat semua menu
+        if(isCreator) return true;
 
         const rule = allowedMenus.find(r => r.menu_id === menu.id);
-        if(!rule) return true; // Default diizinkan jika belum dikonfigurasi
+        if(!rule) return true; 
         
         const allowedUsers = rule.allowed_users ? rule.allowed_users.split(',').map(u => u.trim()) : [];
         return allowedUsers.includes(user.username);
@@ -519,8 +510,7 @@ async function initModernLayout(pageMeta) {
                                 </div>
                             </div>
                             <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-medium" id="read-body">Isi pesan...</div>
-                            <div id="read-action-container" class="mt-6 pt-4 border-t border-slate-100 hidden">
-                            </div>
+                            <div id="read-action-container" class="mt-6 pt-4 border-t border-slate-100 hidden"></div>
                         </div>
                     </div>
                 </div>
@@ -594,9 +584,6 @@ async function initModernLayout(pageMeta) {
     setTimeout(cekNotifikasiInbox, 1000); 
 }
 
-// ==========================================
-// FUNGSI UI & INTERAKSI
-// ==========================================
 window.toggleSidebar = function() { 
     document.getElementById('app-sidebar').classList.toggle('-translate-x-full'); 
     document.getElementById('sidebar-overlay').classList.toggle('hidden'); 
@@ -642,9 +629,6 @@ document.addEventListener('click', (e) => {
     if (dropdown && !e.target.closest('.relative')) dropdown.classList.add('hidden'); 
 });
 
-// ==========================================
-// FUNGSI TABLE DESIGN CUSTOMIZER
-// ==========================================
 window.bukaModalTableDesign = function() {
     document.getElementById('td-zebra').checked = tempDesign.isZebra;
     document.getElementById('td-hover').checked = tempDesign.isHover !== false;
@@ -687,9 +671,6 @@ window.saveTableDesign = function() {
     if(typeof applyPagination === 'function') applyPagination();
 };
 
-// ==========================================
-// FUNGSI SISTEM PESAN (INBOX NOTIFIKASI)
-// ==========================================
 let inboxDataGlobal = [];
 
 async function cekNotifikasiInbox() {
@@ -1003,4 +984,4 @@ window.terimaRequestPO = async function(idReq, qrcode, customerBaru) {
     } catch(err) {
         alert("Gagal memproses persetujuan: " + err.message);
     }
-     }
+    }
