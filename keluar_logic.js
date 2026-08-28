@@ -48,6 +48,51 @@ window.tutupModalAdd = function() {
     document.getElementById('modal-add-scan').classList.add('hidden');
 };
 
+// ==========================================
+// LOGIKA CANCEL KELUAR (SCAN)
+// ==========================================
+window.bukaModalCancelKeluar = function() {
+    document.getElementById('input-qr-cancel').value = '';
+    document.getElementById('modal-cancel-keluar').classList.remove('hidden');
+    setTimeout(() => document.getElementById('input-qr-cancel').focus(), 100);
+};
+
+window.tutupModalCancelKeluar = function() {
+    document.getElementById('modal-cancel-keluar').classList.add('hidden');
+};
+
+window.prosesCancelKeluarScan = async function() {
+    const rawInput = document.getElementById('input-qr-cancel').value.trim();
+    if(!rawInput) return alert("Masukkan QR Code terlebih dahulu!");
+
+    const qrs = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
+    
+    if(!confirm(`Yakin ingin membatalkan (Cancel) ${qrs.length} item ini?\nItem akan dipindahkan dari Stok Keluar ke tabel Hold Keluar.`)) return;
+
+    const btn = document.getElementById('btn-proses-cancel-scan');
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Memproses...';
+    btn.disabled = true;
+
+    try {
+        const { error } = await db.rpc('cancel_keluar_to_hold', {
+            p_qrs: qrs,
+            p_pic: currentUser.username
+        });
+
+        if (error) throw error;
+
+        alert(`✅ SUKSES!\n${qrs.length} item berhasil dipindahkan ke tabel Hold Keluar.`);
+        tutupModalCancelKeluar();
+    } catch (e) {
+        alert("Gagal memproses cancel: " + e.message);
+    } finally {
+        btn.innerHTML = ori;
+        btn.disabled = false;
+        lucide.createIcons();
+    }
+};
+
 async function loadInitialData() {
     try {
         const { data: mData2 } = await db.from('master_2').select('*');
@@ -106,7 +151,6 @@ document.addEventListener('submit', function(e) {
         
         renderTable();
         
-        // Hanya kosongkan QR Code, biarkan Customer dan Trip tetap terisi untuk scan batch selanjutnya
         inputEl.value = ''; 
         inputEl.focus();
         
@@ -353,6 +397,7 @@ window.tutupPopups = function() {
     document.getElementById('sidebar-filter').classList.add('translate-x-full');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
     window.tutupModalAdd();
+    window.tutupModalCancelKeluar();
     window.tutupModalPinjamEstimasi();
 };
 
