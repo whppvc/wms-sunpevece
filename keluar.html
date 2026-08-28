@@ -79,8 +79,10 @@
                         <i data-lucide="more-horizontal" class="w-4 h-4 sm:w-5 sm:h-5"></i> Lainnya
                     </button>
                     
-                    <div id="dropup-more" class="hidden absolute bottom-full right-0 mb-2 w-48 bg-white shadow-2xl rounded-xl border border-slate-200 z-50 flex flex-col overflow-hidden">
-                        <button onclick="undoHapusKeluar(); toggleMoreMenu(event)" class="text-left px-5 py-4 border-b border-slate-100 text-sm font-bold text-rose-600 flex items-center gap-3 hover:bg-slate-50 active:bg-slate-100 transition"><i data-lucide="rotate-ccw" class="w-5 h-5"></i> Undo Hapus</button>
+                    <div id="dropup-more" class="hidden absolute bottom-full right-0 mb-2 w-56 bg-white shadow-2xl rounded-xl border border-slate-200 z-50 flex flex-col overflow-hidden">
+                        <button onclick="undoHapusKeluar(); toggleMoreMenu(event)" class="text-left px-5 py-4 border-b border-slate-100 text-sm font-bold text-slate-700 flex items-center gap-3 hover:bg-slate-50 active:bg-slate-100 transition"><i data-lucide="rotate-ccw" class="w-5 h-5 text-slate-500"></i> Undo Hapus</button>
+                        <!-- TOMBOL BARU: CANCEL KELUAR -->
+                        <button onclick="bukaModalCancelKeluar(); toggleMoreMenu(event)" class="text-left px-5 py-4 border-b border-slate-100 text-sm font-bold text-amber-600 flex items-center gap-3 hover:bg-slate-50 active:bg-slate-100 transition"><i data-lucide="scan-line" class="w-5 h-5"></i> Cancel Keluar (Scan)</button>
                     </div>
                 </div>
 
@@ -115,6 +117,25 @@
                     <i data-lucide="plus-square" class="w-4 h-4"></i> TAMBAHKAN KODE
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL CANCEL KELUAR SCAN -->
+    <div id="modal-cancel-keluar" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 p-5">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+                <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="scan-line" class="w-5 h-5 text-amber-600"></i> SCAN CANCEL KELUAR</h3>
+                <button type="button" onclick="tutupModalCancelKeluar()" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="flex flex-col gap-4">
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1.5 text-slate-500">Scan Fisik Kardus yang di-Cancel</label>
+                    <textarea id="input-qr-cancel" rows="5" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-amber-500 font-mono font-bold text-slate-800 text-sm bg-slate-50 placeholder-slate-400 custom-scroll" placeholder="Scan barcode di sini..."></textarea>
+                </div>
+                <button type="button" onclick="prosesCancelKeluarScan()" id="btn-proses-cancel-scan" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-xl font-black shadow transition active:scale-95 flex items-center justify-center gap-2 text-sm uppercase border-b-4 border-amber-800">
+                    <i data-lucide="arrow-right-left" class="w-4 h-4"></i> Pindahkan ke Hold
+                </button>
+            </div>
         </div>
     </div>
 
@@ -186,4 +207,4 @@
     <script src="wms_parser.js"></script>
     <script src="keluar_logic.js"></script>
 </body>
-    </html>
+</html>
