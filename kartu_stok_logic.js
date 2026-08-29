@@ -38,6 +38,7 @@ let isMobileFilterOpen = true;
 let searchedQRResults = [];
 let globalSearchFilters = { nama: '', pjg: '', grade: '', dus: '', shading: '', area: '', cust: '', est: '' };
 let hasExecutedGlobalSearch = false;
+let activeDetailQRs = [];
 
 let filterTimeout;
 
@@ -164,10 +165,9 @@ function updateDatalists() {
 
     const getU = key => [...new Set(dataKSArea.map(d => d[key] || '-'))].filter(x => x && x !== '-').sort();
     
-    // Gabungkan list customer dari master_2 dan stok_aktual agar pencarian Customer Estimasi & Aktual 100% lengkap
+    // Gabungkan list customer dari master_2 dan stok_aktual agar Customer Estimasi & Aktual 100% lengkap dan sama persis
     const masterCusts = (masterData.kamus || []).map(d => (d.customer || '').trim()).filter(Boolean);
-    const allAktualCusts = [...new Set([...getU('po_aktual'), ...masterCusts])].sort();
-    const allEstimasiCusts = [...new Set([...getU('customer_estimasi'), ...masterCusts])].sort();
+    const allCustomers = [...new Set([...getU('po_aktual'), ...getU('customer_estimasi'), ...masterCusts])].sort();
 
     populateDL('dl-nama-item', getU('nama'));
     populateDL('dl-panjang', getU('pjg'));
@@ -175,8 +175,8 @@ function updateDatalists() {
     populateDL('dl-dus', getU('dus'));
     populateDL('dl-shading', getU('shading'));
     populateDL('dl-area', getU('area'));
-    populateDL('dl-cust-aktual', allAktualCusts);
-    populateDL('dl-cust-estimasi', allEstimasiCusts);
+    populateDL('dl-cust-aktual', allCustomers);
+    populateDL('dl-cust-estimasi', allCustomers);
 }
 
 async function muatDataStok() {
@@ -268,7 +268,7 @@ function setModeKS(m) {
 
     const isPencarian = (m === 'pencarian');
     
-    // REVISI KRUSIAL: Sembunyikan Toolbar Utama saat di submenu Pencarian Item
+    // Sembunyikan Toolbar Utama saat di submenu Pencarian Item
     const toolbarMain = document.getElementById('toolbar-main-ks');
     if (toolbarMain) toolbarMain.classList.toggle('hidden', isPencarian);
 
@@ -584,6 +584,16 @@ function changeRowsPerPage(val) {
     renderTableBody();
 }
 
+function setCustomRowsPerPage(val) {
+    let parsed = parseInt(val);
+    if (!isNaN(parsed) && parsed > 0) {
+        rowsPerPage = parsed;
+        localStorage.setItem('wms_rows_per_page', rowsPerPage);
+        currentPage = 1;
+        renderTableBody();
+    }
+}
+
 function prevPage() { if(currentPage > 1) { currentPage--; renderTableBody(); } }
 function nextPage() { 
     const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
@@ -685,6 +695,63 @@ window.toggleMobileFilterBox = function() {
     }
 };
 
+window.bukaDetailQRGlobal = function(encodedData) {
+    const d = JSON.parse(decodeURIComponent(encodedData));
+    const pjgFormatted = formatPanjang(d.pjg || d.panjang);
+
+    // Cari semua QR code fisik dari stok_global yang cocok
+    const matchedQRs = stokGlobalRaw.filter(g => 
+        g.nama_item === d.nama && 
+        formatPanjang(g.panjang) === pjgFormatted && 
+        g.grade === d.grade && 
+        g.dus === d.dus && 
+        g.shading === d.shading && 
+        g.area === d.area && 
+        g.customer_aktual === d.po_aktual
+    );
+
+    activeDetailQRs = matchedQRs.map(g => g.qrcode);
+
+    document.getElementById('qr-global-title-item').innerText = `${d.nama} - ${pjgFormatted} - ${d.grade}`;
+    document.getElementById('qr-global-subtitle-item').innerText = `Dus: ${d.dus} • Shading: ${d.shading} • Area: ${d.area} • Customer: ${d.po_aktual}`;
+    document.getElementById('qr-global-count-badge').innerText = `Total: ${matchedQRs.length} Dus Fisik`;
+
+    const container = document.getElementById('qr-global-list-container');
+    if (matchedQRs.length === 0) {
+        container.innerHTML = `
+            <div class="p-8 text-center font-bold text-slate-400">
+                <i data-lucide="package-search" class="w-10 h-10 mx-auto mb-2 text-slate-300"></i>
+                Tidak ditemukan fisik QR Code di stok global.
+            </div>
+        `;
+    } else {
+        container.innerHTML = matchedQRs.map((g, idx) => `
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-1.5 mb-1">
+                    <span class="text-xs font-black text-slate-800">#${idx+1}</span>
+                    <span class="text-[10px] font-bold text-slate-400">Tgl: ${g.tgl_produksi || '-'} • M:${g.mesin || '-'} S:${g.shift || '-'}</span>
+                </div>
+                <div class="font-mono font-black text-slate-900 text-xs break-all bg-slate-50 p-2 rounded-lg border border-slate-200">
+                    ${g.qrcode}
+                </div>
+                <div class="text-[11px] font-medium text-slate-500 mt-0.5 flex justify-between">
+                    <span>Keterangan: <strong class="text-slate-700">${g.keterangan || '-'}</strong></span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+    document.getElementById('modal-detail-qr-global').classList.remove('hidden');
+};
+
+window.salinSemuaQRDetail = function() {
+    if(!activeDetailQRs || activeDetailQRs.length === 0) return alert("Tidak ada QR Code untuk disalin.");
+    navigator.clipboard.writeText(activeDetailQRs.join('\n')).then(() => {
+        alert(`✅ ${activeDetailQRs.length} QR Code berhasil disalin ke clipboard!`);
+    });
+};
+
 window.eksekusiCariQR = async function() {
     const rawInput = document.getElementById('input-search-qrcodes').value.trim();
     if(!rawInput) return alert("Masukkan QR Code terlebih dahulu!");
@@ -696,7 +763,6 @@ window.eksekusiCariQR = async function() {
         if(error) throw error;
 
         const globalFound = globalData || [];
-
         const { data: nonaktifData } = await db.from('stok_nonaktif').select('*').in('qrcode', qrs);
         const nonaktifFound = nonaktifData || [];
 
@@ -1017,11 +1083,15 @@ function renderMobilePencarian() {
             `;
         } else {
             results.forEach(d => {
+                const encodedData = encodeURIComponent(JSON.stringify(d));
                 html += `
-                    <div class="bg-white border border-slate-300 rounded-2xl p-4 mb-2 shadow-sm flex flex-col">
+                    <div onclick="bukaDetailQRGlobal('${encodedData}')" class="bg-white border border-slate-300 rounded-2xl p-4 mb-2 shadow-sm flex flex-col active:scale-98 transition cursor-pointer hover:border-indigo-400">
                         <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100">
                             <span class="font-black text-sm text-emerald-700 uppercase">Area: ${d.area}</span>
-                            <span class="font-black text-sm text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-100">${d.qty} Dus</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-black text-sm text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-100">${d.qty} Dus</span>
+                                <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg flex items-center gap-1"><i data-lucide="qr-code" class="w-3 h-3"></i> Lihat QR</span>
+                            </div>
                         </div>
                         
                         <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mb-3">
@@ -1126,6 +1196,7 @@ function renderDesktopPencarian() {
                     <thead class="sticky top-0 z-40 bg-slate-800 text-white shadow-sm">
                         <tr>
                             <th class="hdr-std w-12 text-center">No</th>
+                            <th class="hdr-std w-12 text-center">Detail QR</th>
                             <th class="hdr-std">Area</th>
                             <th class="hdr-std">Jenis Item</th>
                             <th class="hdr-std">Nama Item</th>
@@ -1141,12 +1212,19 @@ function renderDesktopPencarian() {
                     </thead>
                     <tbody class="text-slate-700">
                         ${!hasExecutedGlobalSearch ? `
-                            <tr><td colspan="12" class="p-12 text-center font-bold text-slate-400">Ketik variabel pada kolom di atas lalu klik "Terapkan Pencarian".</td></tr>
+                            <tr><td colspan="13" class="p-12 text-center font-bold text-slate-400">Ketik variabel pada kolom di atas lalu klik "Terapkan Pencarian".</td></tr>
                         ` : (results.length === 0 ? `
-                            <tr><td colspan="12" class="p-12 text-center font-bold text-slate-400">Tidak ada stok yang cocok dengan kriteria pencarian.</td></tr>
-                        ` : results.map((d, i) => `
+                            <tr><td colspan="13" class="p-12 text-center font-bold text-slate-400">Tidak ada stok yang cocok dengan kriteria pencarian.</td></tr>
+                        ` : results.map((d, i) => {
+                            const encodedData = encodeURIComponent(JSON.stringify(d));
+                            return `
                             <tr class="transition text-[13px] border-b border-slate-200 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-blue-50">
                                 <td class="px-4 py-3 font-bold text-slate-400 text-center">${i+1}</td>
+                                <td class="px-4 py-3 text-center">
+                                    <button onclick="bukaDetailQRGlobal('${encodedData}')" class="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition shadow-sm flex items-center justify-center mx-auto" title="Lihat Rincian QR Code">
+                                        <i data-lucide="qr-code" class="w-4 h-4"></i>
+                                    </button>
+                                </td>
                                 <td class="px-4 py-3 font-semibold text-slate-800 text-left">${d.area}</td>
                                 <td class="px-4 py-3 font-medium text-slate-700 text-left">${d.jenis}</td>
                                 <td class="px-4 py-3 font-semibold text-slate-900 text-left">${d.nama}</td>
@@ -1158,8 +1236,8 @@ function renderDesktopPencarian() {
                                 <td class="px-4 py-3 font-semibold text-purple-700 text-left">${d.customer_estimasi}</td>
                                 <td class="px-4 py-3 font-medium text-slate-500 text-left">${d.keterangan || '-'}</td>
                                 <td class="px-4 py-3 font-black text-emerald-700 text-center text-sm">${d.qty}</td>
-                            </tr>
-                        `).join(''))}
+                            </tr>`;
+                        }).join(''))}
                     </tbody>
                 </table>
             </div>
@@ -1393,6 +1471,7 @@ function tutupSemuaPopups() {
     document.getElementById('modal-ganti-keterangan').classList.add('hidden');
     document.getElementById('modal-req-konversi').classList.add('hidden');
     document.getElementById('modal-scan-cari-qr').classList.add('hidden');
+    document.getElementById('modal-detail-qr-global').classList.add('hidden');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
     if(document.getElementById('sidebar-kolom')) {
         document.getElementById('sidebar-kolom').classList.add('translate-x-full');
