@@ -155,30 +155,6 @@ async function loadMasterData() {
     } catch (e) { console.error("Gagal load master_2:", e); }
 }
 
-function updateDatalists() {
-    const populateDL = (dlId, uniqueArray) => {
-        const dl = document.getElementById(dlId);
-        if (dl) {
-            dl.innerHTML = uniqueArray.map(val => `<option value="${val}">`).join('');
-        }
-    };
-
-    const getU = key => [...new Set(dataKSArea.map(d => d[key] || '-'))].filter(x => x && x !== '-').sort();
-    
-    // Gabungkan list customer dari master_2 dan stok_aktual agar Customer Estimasi & Aktual 100% lengkap dan sama persis
-    const masterCusts = (masterData.kamus || []).map(d => (d.customer || '').trim()).filter(Boolean);
-    const allCustomers = [...new Set([...getU('po_aktual'), ...getU('customer_estimasi'), ...masterCusts])].sort();
-
-    populateDL('dl-nama-item', getU('nama'));
-    populateDL('dl-panjang', getU('pjg'));
-    populateDL('dl-grade', getU('grade'));
-    populateDL('dl-dus', getU('dus'));
-    populateDL('dl-shading', getU('shading'));
-    populateDL('dl-area', getU('area'));
-    populateDL('dl-cust-aktual', allCustomers);
-    populateDL('dl-cust-estimasi', allCustomers);
-}
-
 async function muatDataStok() {
     const tbody = document.getElementById('tbody-ks');
     if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke database...</p></td></tr>`;
@@ -247,7 +223,6 @@ async function muatDataStok() {
 
         dataKSNonaktif = stokLembaranRaw.map(r => ({ ...r, _id: r.id.toString() })); 
 
-        updateDatalists();
         setModeKS(modeKS);
     } catch(e) { 
         if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-medium">Gagal mengolah data: ${e.message}</td></tr>`; 
@@ -558,105 +533,8 @@ function renderTableBody() {
     updatePaginationUI();
 }
 
-function updatePaginationUI() {
-    const totalFiltered = filteredData.length;
-    const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
-    
-    let sumQty = 0;
-    if (modeKS === 'nonaktif') {
-        sumQty = totalFiltered;
-    } else {
-        filteredData.forEach(r => { sumQty += parseInt(r.searchValues['col-qty']) || 0; });
-    }
-
-    document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
-    document.getElementById('lbl-total-qty').innerText = sumQty;
-    document.getElementById('lbl-halaman').innerText = currentPage;
-    document.getElementById('lbl-total-halaman').innerText = totalPages;
-    
-    updateSelectedCount();
-}
-
-function changeRowsPerPage(val) {
-    rowsPerPage = (val === 'ALL') ? 999999 : parseInt(val);
-    localStorage.setItem('wms_rows_per_page', rowsPerPage);
-    currentPage = 1; 
-    renderTableBody();
-}
-
-function setCustomRowsPerPage(val) {
-    let parsed = parseInt(val);
-    if (!isNaN(parsed) && parsed > 0) {
-        rowsPerPage = parsed;
-        localStorage.setItem('wms_rows_per_page', rowsPerPage);
-        currentPage = 1;
-        renderTableBody();
-    }
-}
-
-function prevPage() { if(currentPage > 1) { currentPage--; renderTableBody(); } }
-function nextPage() { 
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
-    if(currentPage < totalPages) { currentPage++; renderTableBody(); } 
-}
-
-function updateSelectedCount() {
-    const lbl = document.getElementById('lbl-pilih-baris');
-    if(lbl) lbl.innerText = selectedRows.size;
-}
-
-function cycleSelectAll() {
-    selectAllState = (selectAllState + 1) % 3;
-    if (selectAllState === 0) {
-        selectedRows.clear();
-    } else if (selectAllState === 1) {
-        selectedRows.clear();
-        const startIndex = (currentPage - 1) * rowsPerPage;
-        const endIndex = startIndex + rowsPerPage;
-        filteredData.slice(startIndex, endIndex).forEach(r => selectedRows.add(r._id));
-    } else if (selectAllState === 2) {
-        filteredData.forEach(r => selectedRows.add(r._id));
-    }
-    updateSelectAllUI();
-    renderTableBody(); 
-}
-
-function updateSelectAllUI() {
-    const btn = document.getElementById('btn-select-all');
-    if(!btn) return;
-    
-    if (selectAllState === 0) {
-        btn.innerHTML = '';
-        btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto';
-    } else if (selectAllState === 1) {
-        btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
-        btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto';
-    } else if (selectAllState === 2) {
-        btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>';
-        btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
-    }
-    if(typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function highlightRow(cb, id) {
-    const tr = cb.closest('tr');
-    if (cb.checked) {
-        selectedRows.add(id);
-        if(tr) tr.classList.add('selected-row');
-    } else {
-        selectedRows.delete(id);
-        if(tr) tr.classList.remove('selected-row');
-    }
-    
-    if(!cb.checked && selectAllState !== 0) {
-        selectAllState = 0;
-        updateSelectAllUI();
-    }
-    updateSelectedCount();
-}
-
 // ============================================================================
-// LOGIKA PENCARIAN ITEM (MOBILE & DESKTOP DENGAN INPUT KETIK & AUTO-COMPLETE)
+// LOGIKA PENCARIAN ITEM
 // ============================================================================
 window.pilihPencarian = function(subMode) {
     const isMobile = window.innerWidth < 640;
@@ -763,6 +641,7 @@ window.eksekusiCariQR = async function() {
         if(error) throw error;
 
         const globalFound = globalData || [];
+
         const { data: nonaktifData } = await db.from('stok_nonaktif').select('*').in('qrcode', qrs);
         const nonaktifFound = nonaktifData || [];
 
@@ -926,7 +805,7 @@ function renderMobilePencarian() {
                         <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md"><i data-lucide="globe" class="w-5 h-5"></i></div>
                         <div>
                             <h4 class="font-black text-slate-800 text-sm leading-tight">Cari Item Global</h4>
-                            <p class="text-[10px] font-bold text-slate-400 mt-1">Ketik variabel & filter</p>
+                            <p class="text-[10px] font-bold text-slate-400 mt-1">Pilih variabel & filter</p>
                         </div>
                     </div>
                 </div>
@@ -995,6 +874,23 @@ function renderMobilePencarian() {
     else if (mobilePencarianSubMode === 'global') {
         const results = getFilteredGlobalSearchResults();
 
+        const getOpts = (key, selVal) => {
+            const list = [...new Set(dataKSArea.map(d => d[key] || '-'))].filter(x => x && x !== '-').sort();
+            let out = '<option value="">-- Semua --</option>';
+            list.forEach(v => { out += `<option value="${v}" ${v === selVal ? 'selected' : ''}>${v}</option>`; });
+            return out;
+        };
+
+        const masterCusts = (masterData.kamus || []).map(d => (d.customer || '').trim()).filter(Boolean);
+        const getU = key => [...new Set(dataKSArea.map(d => d[key] || '-'))].filter(x => x && x !== '-').sort();
+        const allCustomers = [...new Set([...getU('po_aktual'), ...getU('customer_estimasi'), ...masterCusts])].sort();
+
+        const getCustOpts = (selVal) => {
+            let out = '<option value="">-- Semua Customer --</option>';
+            allCustomers.forEach(v => { out += `<option value="${v}" ${v === selVal ? 'selected' : ''}>${v}</option>`; });
+            return out;
+        };
+
         html += `
             <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center justify-between gap-3 mb-2">
                 <div class="flex items-center gap-2">
@@ -1008,7 +904,7 @@ function renderMobilePencarian() {
                 <span class="text-xs font-black text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">${results.length} Dus Ditemukan</span>
             </div>
 
-            <!-- FORM FILTER KETIK COLLAPSIBLE DENGAN AUTO-COMPLETE (DATALIST) -->
+            <!-- FORM FILTER DROPDOWN COLLAPSIBLE -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-3">
                 <button type="button" onclick="toggleMobileFilterBox()" class="w-full p-3.5 bg-slate-50 flex justify-between items-center border-b border-slate-100 transition active:bg-slate-100">
                     <span class="text-xs font-black text-slate-700 uppercase flex items-center gap-2"><i data-lucide="filter" class="w-4 h-4 text-blue-600"></i> Filter Pencarian</span>
@@ -1022,35 +918,35 @@ function renderMobilePencarian() {
                     <div class="grid grid-cols-2 gap-2">
                         <div class="col-span-2">
                             <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
-                            <input type="text" id="m-f-nama" list="dl-nama-item" value="${globalSearchFilters.nama}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik nama item..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                            <select id="m-f-nama" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500 cursor-pointer">${getOpts('nama', globalSearchFilters.nama)}</select>
                         </div>
                         <div>
                             <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
-                            <input type="text" id="m-f-pjg" list="dl-panjang" value="${globalSearchFilters.pjg}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Cth: 4M" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                            <select id="m-f-pjg" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500 cursor-pointer">${getOpts('pjg', globalSearchFilters.pjg)}</select>
                         </div>
                         <div>
                             <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
-                            <input type="text" id="m-f-grade" list="dl-grade" value="${globalSearchFilters.grade}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Cth: BAGUS" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                            <select id="m-f-grade" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500 cursor-pointer">${getOpts('grade', globalSearchFilters.grade)}</select>
                         </div>
                         <div>
                             <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label>
-                            <input type="text" id="m-f-dus" list="dl-dus" value="${globalSearchFilters.dus}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik merk..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                            <select id="m-f-dus" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500 cursor-pointer">${getOpts('dus', globalSearchFilters.dus)}</select>
                         </div>
                         <div>
                             <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label>
-                            <input type="text" id="m-f-shading" list="dl-shading" value="${globalSearchFilters.shading}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik shading..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                            <select id="m-f-shading" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500 cursor-pointer">${getOpts('shading', globalSearchFilters.shading)}</select>
                         </div>
                         <div>
                             <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label>
-                            <input type="text" id="m-f-area" list="dl-area" value="${globalSearchFilters.area}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik area..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                            <select id="m-f-area" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500 cursor-pointer">${getOpts('area', globalSearchFilters.area)}</select>
                         </div>
                         <div>
                             <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Aktual</label>
-                            <input type="text" id="m-f-cust" list="dl-cust-aktual" value="${globalSearchFilters.cust}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik cust aktual..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                            <select id="m-f-cust" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500 cursor-pointer">${getCustOpts(globalSearchFilters.cust)}</select>
                         </div>
-                        <div>
+                        <div class="col-span-2">
                             <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Estimasi</label>
-                            <input type="text" id="m-f-cust-est" list="dl-cust-estimasi" value="${globalSearchFilters.est}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik cust estimasi..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                            <select id="m-f-cust-est" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500 cursor-pointer">${getCustOpts(globalSearchFilters.est)}</select>
                         </div>
                     </div>
                     
@@ -1071,7 +967,7 @@ function renderMobilePencarian() {
                 <div class="flex flex-col items-center justify-center h-48 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
                     <i data-lucide="filter" class="w-10 h-10 text-slate-300 mb-2"></i>
                     <h4 class="font-bold text-slate-700 text-sm">Gunakan form di atas untuk mencari</h4>
-                    <p class="text-[11px] text-slate-400 mt-1">Ketik variabel yang diinginkan lalu tekan Tampilkan Hasil.</p>
+                    <p class="text-[11px] text-slate-400 mt-1">Pilih variabel yang diinginkan lalu tekan Tampilkan Hasil.</p>
                 </div>
             `;
         } else if (results.length === 0) {
@@ -1153,40 +1049,57 @@ function renderDesktopPencarian() {
     if (desktopPencarianSubMode === 'global') {
         const results = getFilteredGlobalSearchResults();
 
+        const getOpts = (key, selVal) => {
+            const list = [...new Set(dataKSArea.map(d => d[key] || '-'))].filter(x => x && x !== '-').sort();
+            let out = '<option value="">-- Semua --</option>';
+            list.forEach(v => { out += `<option value="${v}" ${v === selVal ? 'selected' : ''}>${v}</option>`; });
+            return out;
+        };
+
+        const masterCusts = (masterData.kamus || []).map(d => (d.customer || '').trim()).filter(Boolean);
+        const getU = key => [...new Set(dataKSArea.map(d => d[key] || '-'))].filter(x => x && x !== '-').sort();
+        const allCustomers = [...new Set([...getU('po_aktual'), ...getU('customer_estimasi'), ...masterCusts])].sort();
+
+        const getCustOpts = (selVal) => {
+            let out = '<option value="">-- Semua --</option>';
+            allCustomers.forEach(v => { out += `<option value="${v}" ${v === selVal ? 'selected' : ''}>${v}</option>`; });
+            return out;
+        };
+
         html += `
-            <!-- BILAH FILTER KETIK AUTO-COMPLETE DESKTOP -->
+            <!-- BILAH FILTER DROPDOWN DESKTOP -->
             <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm grid grid-cols-4 lg:grid-cols-8 gap-2 shrink-0">
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Nama Item</label>
-                    <input type="text" id="pc-f-nama" list="dl-nama-item" value="${globalSearchFilters.nama}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik Item..." class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
+                    <select id="pc-f-nama" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('nama', globalSearchFilters.nama)}</select>
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Panjang</label>
-                    <input type="text" id="pc-f-pjg" list="dl-panjang" value="${globalSearchFilters.pjg}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Cth: 4M" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
+                    <select id="pc-f-pjg" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('pjg', globalSearchFilters.pjg)}</select>
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Grade</label>
-                    <input type="text" id="pc-f-grade" list="dl-grade" value="${globalSearchFilters.grade}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Cth: BAGUS" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
+                    <select id="pc-f-grade" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('grade', globalSearchFilters.grade)}</select>
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Dus</label>
-                    <input type="text" id="pc-f-dus" list="dl-dus" value="${globalSearchFilters.dus}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik Merk..." class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
+                    <select id="pc-f-dus" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('dus', globalSearchFilters.dus)}</select>
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Shading</label>
-                    <input type="text" id="pc-f-shading" list="dl-shading" value="${globalSearchFilters.shading}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik Shading..." class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
+                    <select id="pc-f-shading" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('shading', globalSearchFilters.shading)}</select>
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Area</label>
-                    <input type="text" id="pc-f-area" list="dl-area" value="${globalSearchFilters.area}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik Area..." class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
+                    <select id="pc-f-area" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('area', globalSearchFilters.area)}</select>
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Cust Aktual</label>
-                    <input type="text" id="pc-f-cust" list="dl-cust-aktual" value="${globalSearchFilters.cust}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik Cust..." class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
+                    <select id="pc-f-cust" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getCustOpts(globalSearchFilters.cust)}</select>
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Cust Estimasi</label>
-                    <input type="text" id="pc-f-cust-est" list="dl-cust-estimasi" value="${globalSearchFilters.est}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik Est..." class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
+                    <select id="pc-f-cust-est" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getCustOpts(globalSearchFilters.est)}</select>
                 </div>
             </div>
 
@@ -1212,7 +1125,7 @@ function renderDesktopPencarian() {
                     </thead>
                     <tbody class="text-slate-700">
                         ${!hasExecutedGlobalSearch ? `
-                            <tr><td colspan="13" class="p-12 text-center font-bold text-slate-400">Ketik variabel pada kolom di atas lalu klik "Terapkan Pencarian".</td></tr>
+                            <tr><td colspan="13" class="p-12 text-center font-bold text-slate-400">Pilih variabel pada dropdown di atas lalu klik "Terapkan Pencarian".</td></tr>
                         ` : (results.length === 0 ? `
                             <tr><td colspan="13" class="p-12 text-center font-bold text-slate-400">Tidak ada stok yang cocok dengan kriteria pencarian.</td></tr>
                         ` : results.map((d, i) => {
@@ -1889,7 +1802,7 @@ window.eksekusiReqKonversi = async function() {
 };
 
 // ==========================================
-// EXCEL FILTER & COLUMN REORDERING
+// EXCEL FILTER PRO
 // ==========================================
 window.openColumnFilter = function(event, colClass, colName) {
     event.stopPropagation();
@@ -2180,5 +2093,5 @@ window.resetUrutanKolom = function() {
     alert("Pengaturan dikembalikan ke default.");
     toggleSidebarKolom(); 
     renderTableHeaders();
-    renderTableBody();
+    renderTableBody(); 
 };
