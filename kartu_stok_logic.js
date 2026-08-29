@@ -163,6 +163,11 @@ function updateDatalists() {
     };
 
     const getU = key => [...new Set(dataKSArea.map(d => d[key] || '-'))].filter(x => x && x !== '-').sort();
+    
+    // Gabungkan list customer dari master_2 dan stok_aktual agar pencarian Customer Estimasi & Aktual 100% lengkap
+    const masterCusts = (masterData.kamus || []).map(d => (d.customer || '').trim()).filter(Boolean);
+    const allAktualCusts = [...new Set([...getU('po_aktual'), ...masterCusts])].sort();
+    const allEstimasiCusts = [...new Set([...getU('customer_estimasi'), ...masterCusts])].sort();
 
     populateDL('dl-nama-item', getU('nama'));
     populateDL('dl-panjang', getU('pjg'));
@@ -170,8 +175,8 @@ function updateDatalists() {
     populateDL('dl-dus', getU('dus'));
     populateDL('dl-shading', getU('shading'));
     populateDL('dl-area', getU('area'));
-    populateDL('dl-cust-aktual', getU('po_aktual'));
-    populateDL('dl-cust-estimasi', getU('customer_estimasi'));
+    populateDL('dl-cust-aktual', allAktualCusts);
+    populateDL('dl-cust-estimasi', allEstimasiCusts);
 }
 
 async function muatDataStok() {
@@ -263,12 +268,16 @@ function setModeKS(m) {
 
     const isPencarian = (m === 'pencarian');
     
+    // REVISI KRUSIAL: Sembunyikan Toolbar Utama saat di submenu Pencarian Item
+    const toolbarMain = document.getElementById('toolbar-main-ks');
+    if (toolbarMain) toolbarMain.classList.toggle('hidden', isPencarian);
+
     document.getElementById('wrapper-table-ks').classList.toggle('hidden', isPencarian);
     document.getElementById('view-pencarian-desktop').classList.toggle('hidden', !isPencarian || isMobile);
     document.getElementById('view-pencarian-mobile').classList.toggle('hidden', !isPencarian || !isMobile);
     document.getElementById('footer-ks').classList.toggle('hidden', isPencarian);
     
-    // Tombol Toolbar
+    // Tombol Toolbar Utama
     const btnGantiPO = document.getElementById('btn-ganti-po-main');
     if(btnGantiPO) btnGantiPO.classList.toggle('hidden', m === 'global' || m === 'nonaktif' || isPencarian);
     
@@ -281,10 +290,6 @@ function setModeKS(m) {
     const btnProsesGanti = document.getElementById('btn-proses-ganti-main');
     if(btnProsesGanti) btnProsesGanti.classList.toggle('hidden', m !== 'area');
 
-    // REVISI: Tombol Induk (Garis 3) HANYA di-hide saat di submenu Pencarian Item
-    const actionMenuContainer = document.getElementById('action-menu-container');
-    if(actionMenuContainer) actionMenuContainer.classList.toggle('hidden', isPencarian);
-    
     activeFilters = {}; 
     sortState = { col: null, isAsc: true };
     selectedRows.clear();
@@ -641,7 +646,7 @@ function highlightRow(cb, id) {
 }
 
 // ============================================================================
-// LOGIKA PENCARIAN ITEM (MOBILE & DESKTOP DENGAN INPUT KETIK & DROPDOWN)
+// LOGIKA PENCARIAN ITEM (MOBILE & DESKTOP DENGAN INPUT KETIK & AUTO-COMPLETE)
 // ============================================================================
 window.pilihPencarian = function(subMode) {
     const isMobile = window.innerWidth < 640;
@@ -792,7 +797,7 @@ window.eksekusiCariGlobal = function(isDesktop = false) {
         shading: document.getElementById(`${prefix}shading`)?.value.trim().toUpperCase() || '',
         area: document.getElementById(`${prefix}area`)?.value.trim().toUpperCase() || '',
         cust: document.getElementById(`${prefix}cust`)?.value.trim().toUpperCase() || '',
-        est: document.getElementById(`${prefix}est`)?.value.trim().toUpperCase() || ''
+        est: document.getElementById(`${prefix}cust-est`)?.value.trim().toUpperCase() || ''
     };
 
     hasExecutedGlobalSearch = true;
@@ -802,7 +807,7 @@ window.eksekusiCariGlobal = function(isDesktop = false) {
 
 window.resetCariGlobal = function(isDesktop = false) {
     const prefix = isDesktop ? 'pc-f-' : 'm-f-';
-    ['nama', 'pjg', 'grade', 'dus', 'shading', 'area', 'cust', 'est'].forEach(k => {
+    ['nama', 'pjg', 'grade', 'dus', 'shading', 'area', 'cust', 'cust-est'].forEach(k => {
         const el = document.getElementById(`${prefix}${k}`);
         if (el) el.value = '';
     });
@@ -977,9 +982,9 @@ function renderMobilePencarian() {
                             <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Aktual</label>
                             <input type="text" id="m-f-cust" list="dl-cust-aktual" value="${globalSearchFilters.cust}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik cust aktual..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
                         </div>
-                        <div class="col-span-2">
+                        <div>
                             <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Estimasi</label>
-                            <input type="text" id="m-f-est" list="dl-cust-estimasi" value="${globalSearchFilters.est}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik cust estimasi..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                            <input type="text" id="m-f-cust-est" list="dl-cust-estimasi" value="${globalSearchFilters.est}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik cust estimasi..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
                         </div>
                     </div>
                     
@@ -1078,47 +1083,40 @@ function renderDesktopPencarian() {
     if (desktopPencarianSubMode === 'global') {
         const results = getFilteredGlobalSearchResults();
 
-        const getOpts = (key, selVal) => {
-            const list = [...new Set(dataKSArea.map(d => d[key] || '-'))].filter(x => x && x !== '-').sort();
-            let out = '<option value="">-- Semua --</option>';
-            list.forEach(v => { out += `<option value="${v}" ${v === selVal ? 'selected' : ''}>${v}</option>`; });
-            return out;
-        };
-
         html += `
-            <!-- BILAH FILTER DROPDOWN DESKTOP -->
+            <!-- BILAH FILTER KETIK AUTO-COMPLETE DESKTOP -->
             <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm grid grid-cols-4 lg:grid-cols-8 gap-2 shrink-0">
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Nama Item</label>
-                    <select id="pc-f-nama" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('nama', globalSearchFilters.nama)}</select>
+                    <input type="text" id="pc-f-nama" list="dl-nama-item" value="${globalSearchFilters.nama}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik Item..." class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Panjang</label>
-                    <select id="pc-f-pjg" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('pjg', globalSearchFilters.pjg)}</select>
+                    <input type="text" id="pc-f-pjg" list="dl-panjang" value="${globalSearchFilters.pjg}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Cth: 4M" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Grade</label>
-                    <select id="pc-f-grade" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('grade', globalSearchFilters.grade)}</select>
+                    <input type="text" id="pc-f-grade" list="dl-grade" value="${globalSearchFilters.grade}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Cth: BAGUS" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Dus</label>
-                    <select id="pc-f-dus" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('dus', globalSearchFilters.dus)}</select>
+                    <input type="text" id="pc-f-dus" list="dl-dus" value="${globalSearchFilters.dus}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik Merk..." class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Shading</label>
-                    <select id="pc-f-shading" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('shading', globalSearchFilters.shading)}</select>
+                    <input type="text" id="pc-f-shading" list="dl-shading" value="${globalSearchFilters.shading}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik Shading..." class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Area</label>
-                    <select id="pc-f-area" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('area', globalSearchFilters.area)}</select>
+                    <input type="text" id="pc-f-area" list="dl-area" value="${globalSearchFilters.area}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik Area..." class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Cust Aktual</label>
-                    <select id="pc-f-cust" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('po_aktual', globalSearchFilters.cust)}</select>
+                    <input type="text" id="pc-f-cust" list="dl-cust-aktual" value="${globalSearchFilters.cust}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik Cust..." class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Cust Estimasi</label>
-                    <select id="pc-f-est" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('customer_estimasi', globalSearchFilters.est)}</select>
+                    <input type="text" id="pc-f-cust-est" list="dl-cust-estimasi" value="${globalSearchFilters.est}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik Est..." class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none uppercase focus:border-blue-500">
                 </div>
             </div>
 
@@ -1143,7 +1141,7 @@ function renderDesktopPencarian() {
                     </thead>
                     <tbody class="text-slate-700">
                         ${!hasExecutedGlobalSearch ? `
-                            <tr><td colspan="12" class="p-12 text-center font-bold text-slate-400">Pilih variabel pada dropdown di atas lalu klik "Terapkan Pencarian".</td></tr>
+                            <tr><td colspan="12" class="p-12 text-center font-bold text-slate-400">Ketik variabel pada kolom di atas lalu klik "Terapkan Pencarian".</td></tr>
                         ` : (results.length === 0 ? `
                             <tr><td colspan="12" class="p-12 text-center font-bold text-slate-400">Tidak ada stok yang cocok dengan kriteria pencarian.</td></tr>
                         ` : results.map((d, i) => `
@@ -1222,9 +1220,9 @@ function renderDesktopPencarian() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// ========================================================
+// ==========================================
 // LOGIKA GANTI KETERANGAN (KS AREA & KS GLOBAL)
-// ========================================================
+// ==========================================
 window.bukaModalGantiKet = function(context) {
     selectedForActionKet = [];
 
