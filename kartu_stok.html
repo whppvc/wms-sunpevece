@@ -110,7 +110,7 @@
                         <div class="bg-emerald-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-emerald-700 transition">Proses Label Customer</div>
                     </button>
 
-                    <!-- MENU AKSI 3 GARIS (HANYA MUNCUL DI SUBMENU UTAMA, HILANG DI PENCARIAN) -->
+                    <!-- MENU AKSI 3 GARIS -->
                     <div id="action-menu-container" class="relative ml-auto shrink-0">
                         <button onclick="toggleActionMenu(event)" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition" title="Menu Aksi">
                             <i data-lucide="menu" class="w-5 h-5"></i>
@@ -140,10 +140,10 @@
             </div>
 
             <!-- VIEW 2: VIEW PENCARIAN KHUSUS PC (DESKTOP) -->
-            <div id="view-pencarian-desktop" class="hidden flex-1 min-h-0 flex flex-col gap-3"></div>
+            <div id="view-pencarian-desktop" class="hidden flex-1 min-h-0 flex flex-col gap-3 h-full overflow-hidden"></div>
 
             <!-- VIEW 3: VIEW PENCARIAN KHUSUS HP (MOBILE) -->
-            <div id="view-pencarian-mobile" class="hidden flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-32"></div>
+            <div id="view-pencarian-mobile" class="hidden flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-36 h-full"></div>
 
         </div>
 
@@ -174,6 +174,16 @@
         </div>
 
     </div>
+
+    <!-- DATALISTS AUTO-COMPLETE (ANTI-PASSWORD KEYRING TRIGGER) -->
+    <datalist id="dl-nama-item"></datalist>
+    <datalist id="dl-panjang"></datalist>
+    <datalist id="dl-grade"></datalist>
+    <datalist id="dl-dus"></datalist>
+    <datalist id="dl-shading"></datalist>
+    <datalist id="dl-area"></datalist>
+    <datalist id="dl-cust-aktual"></datalist>
+    <datalist id="dl-cust-estimasi"></datalist>
 
     <!-- MODAL RINCIAN QR CODE HASIL CARI GLOBAL -->
     <div id="modal-detail-qr-global" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-4 backdrop-blur-sm">
