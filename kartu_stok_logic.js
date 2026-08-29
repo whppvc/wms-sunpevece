@@ -31,9 +31,12 @@ let selectedForActionKet = [];
 let processedGantiKeys = new Set();
 let processedGlobalKeys = new Set();
 
-// State Pencarian Item
-let mobilePencarianMode = 'menu'; // 'menu', 'qr', 'global'
+// State Khusus Pencarian Item
+let mobilePencarianSubMode = 'menu'; // 'menu', 'qr', 'global'
+let desktopPencarianSubMode = 'global'; // 'qr', 'global'
 let searchedQRResults = [];
+let globalSearchFilters = { nama: '', pjg: '', grade: '', dus: '', shading: '', area: '', cust: '', est: '' };
+let hasExecutedGlobalSearch = false;
 
 let filterTimeout;
 
@@ -150,6 +153,26 @@ async function loadMasterData() {
     } catch (e) { console.error("Gagal load master_2:", e); }
 }
 
+function updateDatalists() {
+    const populateDL = (dlId, uniqueArray) => {
+        const dl = document.getElementById(dlId);
+        if (dl) {
+            dl.innerHTML = uniqueArray.map(val => `<option value="${val}">`).join('');
+        }
+    };
+
+    const getU = key => [...new Set(dataKSArea.map(d => d[key] || '-'))].filter(x => x && x !== '-').sort();
+
+    populateDL('dl-nama-item', getU('nama'));
+    populateDL('dl-panjang', getU('pjg'));
+    populateDL('dl-grade', getU('grade'));
+    populateDL('dl-dus', getU('dus'));
+    populateDL('dl-shading', getU('shading'));
+    populateDL('dl-area', getU('area'));
+    populateDL('dl-cust-aktual', getU('po_aktual'));
+    populateDL('dl-cust-estimasi', getU('customer_estimasi'));
+}
+
 async function muatDataStok() {
     const tbody = document.getElementById('tbody-ks');
     if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke database...</p></td></tr>`;
@@ -218,6 +241,7 @@ async function muatDataStok() {
 
         dataKSNonaktif = stokLembaranRaw.map(r => ({ ...r, _id: r.id.toString() })); 
 
+        updateDatalists();
         setModeKS(modeKS);
     } catch(e) { 
         if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-medium">Gagal mengolah data: ${e.message}</td></tr>`; 
@@ -237,11 +261,11 @@ function setModeKS(m) {
     });
 
     const isPencarian = (m === 'pencarian');
-    const isMobilePencarian = isPencarian && isMobile;
-
-    document.getElementById('wrapper-table-ks').classList.toggle('hidden', isMobilePencarian);
-    document.getElementById('view-pencarian-mobile').classList.toggle('hidden', !isMobilePencarian);
-    document.getElementById('footer-ks').classList.toggle('hidden', isMobilePencarian);
+    
+    document.getElementById('wrapper-table-ks').classList.toggle('hidden', isPencarian);
+    document.getElementById('view-pencarian-desktop').classList.toggle('hidden', !isPencarian || isMobile);
+    document.getElementById('view-pencarian-mobile').classList.toggle('hidden', !isPencarian || !isMobile);
+    document.getElementById('footer-ks').classList.toggle('hidden', isPencarian);
     
     // Tombol Toolbar
     const btnGantiPO = document.getElementById('btn-ganti-po-main');
@@ -263,9 +287,13 @@ function setModeKS(m) {
     
     loadUserPreferences(); 
     
-    if (isMobilePencarian) {
-        mobilePencarianMode = 'menu';
-        renderMobilePencarian();
+    if (isPencarian) {
+        if (isMobile) {
+            mobilePencarianSubMode = 'menu';
+            renderMobilePencarian();
+        } else {
+            renderDesktopPencarian();
+        }
     } else {
         buildProcessedData();
     }
@@ -275,10 +303,9 @@ function buildProcessedData() {
     if (modeKS === 'area') processedData = dataKSArea;
     else if (modeKS === 'global') processedData = dataKSGlobal;
     else if (modeKS === 'nonaktif') processedData = dataKSNonaktif;
-    else if (modeKS === 'pencarian') processedData = dataKSArea;
 
     processedData.forEach(r => {
-        if (modeKS === 'area' || modeKS === 'pencarian') {
+        if (modeKS === 'area') {
             r.searchValues = {
                 'col-area': r.area, 'col-jenis': r.jenis, 'col-nama': r.nama, 'col-pjg': r.pjg,
                 'col-grade': r.grade, 'col-dus': r.dus, 'col-shading': r.shading, 'col-po': r.po_aktual,
@@ -380,7 +407,7 @@ function renderTableHeaders() {
             <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
         </th>`;
 
-    if(modeKS === 'area' || modeKS === 'pencarian') {
+    if(modeKS === 'area') {
         h += `${thSort('Area', 'col-area')}
               ${thSort('Jenis Item', 'col-jenis')}
               ${thSort('Nama Item', 'col-nama')}
@@ -444,14 +471,14 @@ function renderTableBody() {
         
         let customRowClass = "transition row-ks text-[13px]";
         if (modeKS === 'nonaktif') customRowClass += " !bg-red-100 !text-red-900 font-bold";
-        else if ((modeKS === 'area' || modeKS === 'pencarian') && sv['col-konversi'] !== '-') customRowClass += " !bg-rose-100 !text-rose-900 font-bold";
+        else if (modeKS === 'area' && sv['col-konversi'] !== '-') customRowClass += " !bg-rose-100 !text-rose-900 font-bold";
         else customRowClass += (i % 2 === 0 ? ' stripe-1' : ' stripe-2');
 
         if (isSelected) customRowClass += ' selected-row';
 
         h += `<tr class="${customRowClass}">`;
 
-        if (modeKS === 'area' || modeKS === 'pencarian') {
+        if (modeKS === 'area') {
             let isProcessing = processedGantiKeys.has(`${r.id_sku_base}_${r.customer_estimasi}_${r.area}`);
             let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
 
@@ -497,7 +524,7 @@ function renderTableBody() {
             `;
         } else if (modeKS === 'nonaktif') {
             h += `
-                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${r._id}')" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${r._id}')" value="${r.id}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
                 <td class="px-4 py-3 font-semibold text-left col-area ${hiddenCols.includes('col-area')?'col-hidden':''}">${sv['col-area']}</td>
                 <td class="px-4 py-3 font-mono font-bold text-left col-qr ${hiddenCols.includes('col-qr')?'col-hidden':''}">${sv['col-qr']}</td>
                 <td class="px-4 py-3 font-medium text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
@@ -544,6 +571,16 @@ function changeRowsPerPage(val) {
     localStorage.setItem('wms_rows_per_page', rowsPerPage);
     currentPage = 1; 
     renderTableBody();
+}
+
+function setCustomRowsPerPage(val) {
+    let parsed = parseInt(val);
+    if (!isNaN(parsed) && parsed > 0) {
+        rowsPerPage = parsed;
+        localStorage.setItem('wms_rows_per_page', rowsPerPage);
+        currentPage = 1;
+        renderTableBody();
+    }
 }
 
 function prevPage() { if(currentPage > 1) { currentPage--; renderTableBody(); } }
@@ -607,17 +644,28 @@ function highlightRow(cb, id) {
     updateSelectedCount();
 }
 
-// ========================================================
-// LOGIKA PENCARIAN ITEM (MOBILE DRILL-DOWN & MODAL SCAN)
-// ========================================================
-window.pilihPencarianMobile = function(subMode) {
-    mobilePencarianMode = subMode;
-    if (subMode === 'qr') {
-        document.getElementById('input-search-qrcodes').value = '';
-        document.getElementById('modal-scan-cari-qr').classList.remove('hidden');
-        setTimeout(() => document.getElementById('input-search-qrcodes').focus(), 100);
+// ============================================================================
+// LOGIKA PENCARIAN ITEM (MOBILE & DESKTOP DENGAN INPUT KETIK AUTO-COMPLETE)
+// ============================================================================
+window.pilihPencarian = function(subMode) {
+    const isMobile = window.innerWidth < 640;
+    if (isMobile) {
+        mobilePencarianSubMode = subMode;
+        if (subMode === 'qr') {
+            document.getElementById('input-search-qrcodes').value = '';
+            document.getElementById('modal-scan-cari-qr').classList.remove('hidden');
+            setTimeout(() => document.getElementById('input-search-qrcodes').focus(), 100);
+        }
+        renderMobilePencarian();
+    } else {
+        desktopPencarianSubMode = subMode;
+        if (subMode === 'qr') {
+            document.getElementById('input-search-qrcodes').value = '';
+            document.getElementById('modal-scan-cari-qr').classList.remove('hidden');
+            setTimeout(() => document.getElementById('input-search-qrcodes').focus(), 100);
+        }
+        renderDesktopPencarian();
     }
-    renderMobilePencarian();
 };
 
 window.eksekusiCariQR = async function() {
@@ -631,12 +679,9 @@ window.eksekusiCariQR = async function() {
         if(error) throw error;
 
         const globalFound = globalData || [];
-        const foundSet = new Set(globalFound.map(d => d.qrcode));
 
-        // Cek juga di stok_nonaktif
         const { data: nonaktifData } = await db.from('stok_nonaktif').select('*').in('qrcode', qrs);
         const nonaktifFound = nonaktifData || [];
-        const nonaktifSet = new Set(nonaktifFound.map(d => d.qrcode));
 
         searchedQRResults = [];
         qrs.forEach(code => {
@@ -644,7 +689,6 @@ window.eksekusiCariQR = async function() {
             const n = nonaktifFound.find(d => d.qrcode === code);
             
             if (g) {
-                // Cari customer estimasi di stok_aktual
                 let estTarget = g.customer_aktual || '-';
                 const aktMatch = stokAktualRaw.find(a => 
                     a.nama_item === g.nama_item && a.panjang === formatPanjang(g.panjang) && 
@@ -712,26 +756,82 @@ window.eksekusiCariQR = async function() {
         });
 
         document.getElementById('modal-scan-cari-qr').classList.add('hidden');
-        renderMobilePencarian();
+        
+        if (window.innerWidth < 640) {
+            mobilePencarianSubMode = 'qr';
+            renderMobilePencarian();
+        } else {
+            desktopPencarianSubMode = 'qr';
+            renderDesktopPencarian();
+        }
 
     } catch(e) {
         alert("Gagal mencari data: " + e.message);
     }
 };
 
+window.eksekusiCariGlobal = function(isDesktop = false) {
+    const prefix = isDesktop ? 'pc-f-' : 'm-f-';
+    globalSearchFilters = {
+        nama: document.getElementById(`${prefix}nama`)?.value.trim().toUpperCase() || '',
+        pjg: document.getElementById(`${prefix}pjg`)?.value.trim().toUpperCase() || '',
+        grade: document.getElementById(`${prefix}grade`)?.value.trim().toUpperCase() || '',
+        dus: document.getElementById(`${prefix}dus`)?.value.trim().toUpperCase() || '',
+        shading: document.getElementById(`${prefix}shading`)?.value.trim().toUpperCase() || '',
+        area: document.getElementById(`${prefix}area`)?.value.trim().toUpperCase() || '',
+        cust: document.getElementById(`${prefix}cust`)?.value.trim().toUpperCase() || '',
+        est: document.getElementById(`${prefix}est`)?.value.trim().toUpperCase() || ''
+    };
+
+    hasExecutedGlobalSearch = true;
+    if (isDesktop) renderDesktopPencarian();
+    else renderMobilePencarian();
+};
+
+window.resetCariGlobal = function(isDesktop = false) {
+    const prefix = isDesktop ? 'pc-f-' : 'm-f-';
+    ['nama', 'pjg', 'grade', 'dus', 'shading', 'area', 'cust', 'est'].forEach(k => {
+        const el = document.getElementById(`${prefix}${k}`);
+        if (el) el.value = '';
+    });
+    globalSearchFilters = { nama: '', pjg: '', grade: '', dus: '', shading: '', area: '', cust: '', est: '' };
+    hasExecutedGlobalSearch = false;
+    if (isDesktop) renderDesktopPencarian();
+    else renderMobilePencarian();
+};
+
+function getFilteredGlobalSearchResults() {
+    if (!hasExecutedGlobalSearch) return [];
+    
+    return dataKSArea.filter(r => {
+        if (globalSearchFilters.nama && !r.nama.toUpperCase().includes(globalSearchFilters.nama)) return false;
+        if (globalSearchFilters.pjg && !r.pjg.toUpperCase().includes(globalSearchFilters.pjg)) return false;
+        if (globalSearchFilters.grade && !r.grade.toUpperCase().includes(globalSearchFilters.grade)) return false;
+        if (globalSearchFilters.dus && !r.dus.toUpperCase().includes(globalSearchFilters.dus)) return false;
+        if (globalSearchFilters.shading && !r.shading.toUpperCase().includes(globalSearchFilters.shading)) return false;
+        if (globalSearchFilters.area && !r.area.toUpperCase().includes(globalSearchFilters.area)) return false;
+        if (globalSearchFilters.cust && !r.po_aktual.toUpperCase().includes(globalSearchFilters.cust)) return false;
+        if (globalSearchFilters.est && !r.customer_estimasi.toUpperCase().includes(globalSearchFilters.est)) return false;
+        return true;
+    });
+}
+
+// ==========================================
+// RENDER PENCARIAN HP (MOBILE)
+// ==========================================
 function renderMobilePencarian() {
     const container = document.getElementById('view-pencarian-mobile');
     if(!container) return;
 
     let html = '';
 
-    // LEVEL 1: MENU 2 KISI MENYAMPING
-    if (mobilePencarianMode === 'menu') {
+    // LEVEL 1: MENU UTAMA 2 KISI
+    if (mobilePencarianSubMode === 'menu') {
         html += `
             <div class="mb-2">
                 <h3 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">Pilih Mode Pencarian</h3>
                 <div class="grid grid-cols-2 gap-3">
-                    <div onclick="pilihPencarianMobile('qr')" class="bg-white border border-indigo-200 p-5 rounded-2xl flex flex-col justify-between shadow-sm active:scale-95 transition cursor-pointer hover:bg-indigo-50 h-40">
+                    <div onclick="pilihPencarian('qr')" class="bg-white border border-indigo-200 p-5 rounded-2xl flex flex-col justify-between shadow-sm active:scale-95 transition cursor-pointer hover:bg-indigo-50 h-40">
                         <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md"><i data-lucide="scan-line" class="w-5 h-5"></i></div>
                         <div>
                             <h4 class="font-black text-slate-800 text-sm leading-tight">Cari Item QRCode</h4>
@@ -739,11 +839,11 @@ function renderMobilePencarian() {
                         </div>
                     </div>
                     
-                    <div onclick="pilihPencarianMobile('global')" class="bg-white border border-blue-200 p-5 rounded-2xl flex flex-col justify-between shadow-sm active:scale-95 transition cursor-pointer hover:bg-blue-50 h-40">
-                        <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md"><i data-lucide="globe" class="w-5 h-5"></i></div>
+                    <div onclick="pilihPencarian('global')" class="bg-white border border-blue-200 p-5 rounded-2xl flex flex-col justify-between shadow-sm active:scale-95 transition cursor-pointer hover:bg-blue-50 h-40">
+                        <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md"><i data-lucide="globe" class="w-5 h-5"></i></div>
                         <div>
                             <h4 class="font-black text-slate-800 text-sm leading-tight">Cari Item Global</h4>
-                            <p class="text-[10px] font-bold text-slate-400 mt-1">Filter spesifikasi lengkap</p>
+                            <p class="text-[10px] font-bold text-slate-400 mt-1">Ketik variabel & filter</p>
                         </div>
                     </div>
                 </div>
@@ -751,15 +851,13 @@ function renderMobilePencarian() {
         `;
     } 
     // LEVEL 2A: HASIL PENCARIAN QR CODE
-    else if (mobilePencarianMode === 'qr') {
+    else if (mobilePencarianSubMode === 'qr') {
         html += `
             <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center justify-between gap-3 mb-3">
-                <button onclick="pilihPencarianMobile('menu')" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
-                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
+                <button onclick="pilihPencarian('menu')" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
+                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Menu
                 </button>
-                <div class="flex items-center gap-2">
-                    <button onclick="pilihPencarianMobile('qr')" class="px-3 py-2 bg-indigo-600 text-white font-black text-xs uppercase rounded-xl shadow-sm flex items-center gap-1"><i data-lucide="scan-line" class="w-3.5 h-3.5"></i> Scan Ulang</button>
-                </div>
+                <button onclick="pilihPencarian('qr')" class="px-3 py-2 bg-indigo-600 text-white font-black text-xs uppercase rounded-xl shadow-sm flex items-center gap-1"><i data-lucide="scan-line" class="w-3.5 h-3.5"></i> Scan Ulang</button>
             </div>
         `;
 
@@ -767,8 +865,8 @@ function renderMobilePencarian() {
             html += `
                 <div class="flex flex-col items-center justify-center h-56 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
                     <i data-lucide="package-search" class="w-12 h-12 text-slate-300 mb-2"></i>
-                    <h4 class="font-bold text-slate-700 text-sm">Belum ada QR Code yang di-scan</h4>
-                    <button onclick="pilihPencarianMobile('qr')" class="mt-3 px-4 py-2 bg-indigo-600 text-white font-black text-xs uppercase rounded-xl">Mulai Scan</button>
+                    <h4 class="font-bold text-slate-700 text-sm">Belum ada QR Code di-scan</h4>
+                    <button onclick="pilihPencarian('qr')" class="mt-3 px-4 py-2 bg-indigo-600 text-white font-black text-xs uppercase rounded-xl">Mulai Scan</button>
                 </div>
             `;
         } else {
@@ -796,8 +894,8 @@ function renderMobilePencarian() {
                         </div>
                         
                         <div class="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                            <div class="flex flex-col"><span class="text-[10px] font-black text-slate-400 uppercase">Cust Aktual</span><span class="font-bold text-orange-600">${d.customerAktual}</span></div>
-                            <div class="flex flex-col"><span class="text-[10px] font-black text-slate-400 uppercase">Cust Estimasi</span><span class="font-bold text-purple-700">${d.customerEstimasi}</span></div>
+                            <div class="flex flex-col"><span class="text-[10px] font-black text-slate-400 uppercase">Customer Aktual</span><span class="font-bold text-orange-600">${d.customerAktual}</span></div>
+                            <div class="flex flex-col"><span class="text-[10px] font-black text-slate-400 uppercase">Customer Estimasi</span><span class="font-bold text-purple-700">${d.customerEstimasi}</span></div>
                             <div class="flex flex-col col-span-2"><span class="text-[10px] font-black text-slate-400 uppercase">Keterangan</span><span class="font-medium text-slate-700">${d.keterangan}</span></div>
                         </div>
                     </div>
@@ -805,79 +903,73 @@ function renderMobilePencarian() {
             });
         }
     }
-    // LEVEL 2B: PENCARIAN GLOBAL (FILTER DROPDOWN LENGKAP TANPA QR)
-    else if (mobilePencarianMode === 'global') {
-        const fNama = document.getElementById('m-f-nama')?.value || '';
-        const fPjg = document.getElementById('m-f-pjg')?.value || '';
-        const fGrade = document.getElementById('m-f-grade')?.value || '';
-        const fDus = document.getElementById('m-f-dus')?.value || '';
-        const fArea = document.getElementById('m-f-area')?.value || '';
-        const fCust = document.getElementById('m-f-cust')?.value || '';
-
-        let results = dataKSArea.filter(r => {
-            if (fNama && r.nama !== fNama) return false;
-            if (fPjg && r.pjg !== fPjg) return false;
-            if (fGrade && r.grade !== fGrade) return false;
-            if (fDus && r.dus !== fDus) return false;
-            if (fArea && r.area !== fArea) return false;
-            if (fCust && r.po_aktual !== fCust) return false;
-            return true;
-        });
-
-        // Kumpulkan data unik untuk dropdown filter
-        let uNama = [...new Set(dataKSArea.map(d => d.nama))].sort();
-        let uPjg = [...new Set(dataKSArea.map(d => d.pjg))].sort();
-        let uGrade = [...new Set(dataKSArea.map(d => d.grade))].sort();
-        let uDus = [...new Set(dataKSArea.map(d => d.dus))].sort();
-        let uArea = [...new Set(dataKSArea.map(d => d.area))].sort();
-        let uCust = [...new Set(dataKSArea.map(d => d.po_aktual))].sort();
-
-        const makeOpts = (arr, selVal) => {
-            let res = '<option value="">-- Semua --</option>';
-            arr.forEach(v => { res += `<option value="${v}" ${v === selVal ? 'selected' : ''}>${v}</option>`; });
-            return res;
-        };
+    // LEVEL 2B: PENCARIAN GLOBAL MOBILE
+    else if (mobilePencarianSubMode === 'global') {
+        const results = getFilteredGlobalSearchResults();
 
         html += `
-            <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center justify-between gap-3 mb-3">
-                <button onclick="pilihPencarianMobile('menu')" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
-                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
+            <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center justify-between gap-3 mb-2">
+                <button onclick="pilihPencarian('menu')" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
+                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Menu
                 </button>
                 <span class="text-xs font-black text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">${results.length} Item Ditemukan</span>
             </div>
 
-            <!-- FORM FILTER DROPDOWN -->
+            <!-- FORM FILTER KETIK DENGAN AUTO-COMPLETE (DATALIST) -->
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3 mb-3">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                    <h4 class="text-xs font-black text-slate-700 uppercase flex items-center gap-1.5"><i data-lucide="filter" class="w-4 h-4 text-blue-600"></i> Filter Pencarian</h4>
+                    <button onclick="resetCariGlobal(false)" class="text-[10px] font-bold text-slate-400 hover:text-red-500 uppercase">Reset Form</button>
+                </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div class="col-span-2">
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
-                        <select id="m-f-nama" onchange="renderMobilePencarian()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50">${makeOpts(uNama, fNama)}</select>
+                        <input type="text" id="m-f-nama" list="dl-nama-item" value="${globalSearchFilters.nama}" placeholder="Ketik nama item..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
-                        <select id="m-f-pjg" onchange="renderMobilePencarian()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50">${makeOpts(uPjg, fPjg)}</select>
+                        <input type="text" id="m-f-pjg" list="dl-panjang" value="${globalSearchFilters.pjg}" placeholder="Cth: 4M" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
-                        <select id="m-f-grade" onchange="renderMobilePencarian()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50">${makeOpts(uGrade, fGrade)}</select>
+                        <input type="text" id="m-f-grade" list="dl-grade" value="${globalSearchFilters.grade}" placeholder="Cth: BAGUS" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label>
-                        <select id="m-f-dus" onchange="renderMobilePencarian()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50">${makeOpts(uDus, fDus)}</select>
+                        <input type="text" id="m-f-dus" list="dl-dus" value="${globalSearchFilters.dus}" placeholder="Ketik merk..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label>
+                        <input type="text" id="m-f-shading" list="dl-shading" value="${globalSearchFilters.shading}" placeholder="Ketik shading..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label>
-                        <select id="m-f-area" onchange="renderMobilePencarian()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50">${makeOpts(uArea, fArea)}</select>
+                        <input type="text" id="m-f-area" list="dl-area" value="${globalSearchFilters.area}" placeholder="Ketik area..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Aktual</label>
+                        <input type="text" id="m-f-cust" list="dl-cust-aktual" value="${globalSearchFilters.cust}" placeholder="Ketik cust aktual..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
                     </div>
                     <div class="col-span-2">
-                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Aktual</label>
-                        <select id="m-f-cust" onchange="renderMobilePencarian()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50">${makeOpts(uCust, fCust)}</select>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Estimasi</label>
+                        <input type="text" id="m-f-est" list="dl-cust-estimasi" value="${globalSearchFilters.est}" placeholder="Ketik cust estimasi..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
                     </div>
                 </div>
+                <button onclick="eksekusiCariGlobal(false)" class="w-full py-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-xs uppercase rounded-xl shadow-md transition flex items-center justify-center gap-2 border-b-4 border-blue-900">
+                    <i data-lucide="search" class="w-4 h-4"></i> TAMPILKAN HASIL
+                </button>
             </div>
         `;
 
-        if (results.length === 0) {
+        if (!hasExecutedGlobalSearch) {
+            html += `
+                <div class="flex flex-col items-center justify-center h-48 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
+                    <i data-lucide="filter" class="w-10 h-10 text-slate-300 mb-2"></i>
+                    <h4 class="font-bold text-slate-700 text-sm">Gunakan form di atas untuk mencari</h4>
+                    <p class="text-[11px] text-slate-400 mt-1">Ketik variabel yang Anda inginkan lalu tekan tombol Tampilkan Hasil.</p>
+                </div>
+            `;
+        } else if (results.length === 0) {
             html += `
                 <div class="flex flex-col items-center justify-center h-48 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
                     <i data-lucide="package-x" class="w-10 h-10 text-slate-300 mb-2"></i>
@@ -902,14 +994,183 @@ function renderMobilePencarian() {
                         </div>
 
                         <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                            <div class="flex flex-col"><span class="text-[10px] font-black text-slate-400 uppercase">Cust Aktual</span><span class="font-bold text-orange-600">${d.po_aktual}</span></div>
-                            <div class="flex flex-col"><span class="text-[10px] font-black text-slate-400 uppercase">Cust Estimasi</span><span class="font-bold text-purple-700">${d.customer_estimasi}</span></div>
+                            <div class="flex flex-col"><span class="text-[10px] font-black text-slate-400 uppercase">Customer Aktual</span><span class="font-bold text-orange-600">${d.po_aktual}</span></div>
+                            <div class="flex flex-col"><span class="text-[10px] font-black text-slate-400 uppercase">Customer Estimasi</span><span class="font-bold text-purple-700">${d.customer_estimasi}</span></div>
                             <div class="flex flex-col col-span-2 mt-1"><span class="text-[10px] font-black text-slate-400 uppercase">Keterangan</span><span class="font-medium text-slate-600">${d.keterangan || '-'}</span></div>
                         </div>
                     </div>
                 `;
             });
         }
+    }
+
+    container.innerHTML = html;
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ==========================================
+// RENDER PENCARIAN PC (DESKTOP)
+// ==========================================
+function renderDesktopPencarian() {
+    const container = document.getElementById('view-pencarian-desktop');
+    if(!container) return;
+
+    let html = `
+        <!-- SUB-NAVIGASI DESKTOP -->
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between gap-4 shrink-0">
+            <div class="flex items-center gap-2">
+                <button onclick="pilihPencarian('global')" class="px-5 py-2.5 ${desktopPencarianSubMode === 'global' ? 'bg-blue-600 text-white font-black' : 'bg-slate-100 text-slate-600 font-bold hover:bg-slate-200'} rounded-lg text-xs uppercase transition flex items-center gap-2">
+                    <i data-lucide="globe" class="w-4 h-4"></i> Cari Item Global
+                </button>
+                <button onclick="pilihPencarian('qr')" class="px-5 py-2.5 ${desktopPencarianSubMode === 'qr' ? 'bg-indigo-600 text-white font-black' : 'bg-slate-100 text-slate-600 font-bold hover:bg-slate-200'} rounded-lg text-xs uppercase transition flex items-center gap-2">
+                    <i data-lucide="scan-line" class="w-4 h-4"></i> Cari Item QRCode
+                </button>
+            </div>
+            ${desktopPencarianSubMode === 'qr' ? `
+                <button onclick="pilihPencarian('qr')" class="px-4 py-2 bg-indigo-600 text-white font-black text-xs uppercase rounded-lg shadow-sm flex items-center gap-1.5"><i data-lucide="scan-line" class="w-4 h-4"></i> Scan Ulang</button>
+            ` : `
+                <div class="flex items-center gap-2">
+                    <button onclick="resetCariGlobal(true)" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs uppercase rounded-lg transition">Reset</button>
+                    <button onclick="eksekusiCariGlobal(true)" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase rounded-lg shadow-sm transition flex items-center gap-1.5"><i data-lucide="search" class="w-4 h-4"></i> Terapkan Pencarian</button>
+                </div>
+            `}
+        </div>
+    `;
+
+    if (desktopPencarianSubMode === 'global') {
+        const results = getFilteredGlobalSearchResults();
+
+        html += `
+            <!-- BILAH FILTER KETIK DESKTOP -->
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm grid grid-cols-4 lg:grid-cols-8 gap-2 shrink-0">
+                <div>
+                    <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Nama Item</label>
+                    <input type="text" id="pc-f-nama" list="dl-nama-item" value="${globalSearchFilters.nama}" placeholder="Semua Item" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Panjang</label>
+                    <input type="text" id="pc-f-pjg" list="dl-panjang" value="${globalSearchFilters.pjg}" placeholder="Semua Pjg" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Grade</label>
+                    <input type="text" id="pc-f-grade" list="dl-grade" value="${globalSearchFilters.grade}" placeholder="Semua Grade" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Dus</label>
+                    <input type="text" id="pc-f-dus" list="dl-dus" value="${globalSearchFilters.dus}" placeholder="Semua Dus" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Shading</label>
+                    <input type="text" id="pc-f-shading" list="dl-shading" value="${globalSearchFilters.shading}" placeholder="Semua Shading" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Area</label>
+                    <input type="text" id="pc-f-area" list="dl-area" value="${globalSearchFilters.area}" placeholder="Semua Area" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Customer Aktual</label>
+                    <input type="text" id="pc-f-cust" list="dl-cust-aktual" value="${globalSearchFilters.cust}" placeholder="Semua Cust" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Customer Estimasi</label>
+                    <input type="text" id="pc-f-est" list="dl-cust-estimasi" value="${globalSearchFilters.est}" placeholder="Semua Est" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <!-- TABEL HASIL PENCARIAN GLOBAL DESKTOP -->
+            <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-xl shadow-sm border border-slate-300">
+                <table class="w-full text-left whitespace-nowrap">
+                    <thead class="sticky top-0 z-40 bg-slate-800 text-white shadow-sm">
+                        <tr>
+                            <th class="hdr-std w-12 text-center">No</th>
+                            <th class="hdr-std">Area</th>
+                            <th class="hdr-std">Jenis Item</th>
+                            <th class="hdr-std">Nama Item</th>
+                            <th class="hdr-std">Panjang</th>
+                            <th class="hdr-std">Grade</th>
+                            <th class="hdr-std">Dus</th>
+                            <th class="hdr-std">Shading</th>
+                            <th class="hdr-std">Customer Aktual</th>
+                            <th class="hdr-std text-purple-300">Customer Estimasi</th>
+                            <th class="hdr-std">Keterangan</th>
+                            <th class="hdr-std text-emerald-400 text-center">Total Qty (Dus)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-slate-700">
+                        ${!hasExecutedGlobalSearch ? `
+                            <tr><td colspan="12" class="p-12 text-center font-bold text-slate-400">Gunakan form pencarian di atas lalu klik "Terapkan Pencarian".</td></tr>
+                        ` : (results.length === 0 ? `
+                            <tr><td colspan="12" class="p-12 text-center font-bold text-slate-400">Tidak ada stok yang cocok dengan kriteria pencarian.</td></tr>
+                        ` : results.map((d, i) => `
+                            <tr class="transition text-[13px] border-b border-slate-200 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-blue-50">
+                                <td class="px-4 py-3 font-bold text-slate-400 text-center">${i+1}</td>
+                                <td class="px-4 py-3 font-semibold text-slate-800 text-left">${d.area}</td>
+                                <td class="px-4 py-3 font-medium text-slate-700 text-left">${d.jenis}</td>
+                                <td class="px-4 py-3 font-semibold text-slate-900 text-left">${d.nama}</td>
+                                <td class="px-4 py-3 font-medium text-slate-700 text-center">${d.pjg}</td>
+                                <td class="px-4 py-3 font-medium text-slate-700 text-center">${d.grade}</td>
+                                <td class="px-4 py-3 font-medium text-slate-700 text-center">${d.dus}</td>
+                                <td class="px-4 py-3 font-medium text-slate-700 text-center">${d.shading}</td>
+                                <td class="px-4 py-3 font-semibold text-slate-900 text-left">${d.po_aktual}</td>
+                                <td class="px-4 py-3 font-semibold text-purple-700 text-left">${d.customer_estimasi}</td>
+                                <td class="px-4 py-3 font-medium text-slate-500 text-left">${d.keterangan || '-'}</td>
+                                <td class="px-4 py-3 font-black text-emerald-700 text-center text-sm">${d.qty}</td>
+                            </tr>
+                        `).join(''))}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else {
+        // TABEL HASIL PENCARIAN QR CODE DESKTOP
+        html += `
+            <div class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-xl shadow-sm border border-slate-300">
+                <table class="w-full text-left whitespace-nowrap">
+                    <thead class="sticky top-0 z-40 bg-slate-800 text-white shadow-sm">
+                        <tr>
+                            <th class="hdr-std w-12 text-center">No</th>
+                            <th class="hdr-std">Area</th>
+                            <th class="hdr-std">QRCode</th>
+                            <th class="hdr-std">Tgl Produksi</th>
+                            <th class="hdr-std">Mesin</th>
+                            <th class="hdr-std">Shift</th>
+                            <th class="hdr-std">Nama Item</th>
+                            <th class="hdr-std">Panjang</th>
+                            <th class="hdr-std">Grade</th>
+                            <th class="hdr-std">Dus</th>
+                            <th class="hdr-std">Shading</th>
+                            <th class="hdr-std">Customer Aktual</th>
+                            <th class="hdr-std text-purple-300">Customer Estimasi</th>
+                            <th class="hdr-std">Keterangan</th>
+                            <th class="hdr-std text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-slate-700">
+                        ${searchedQRResults.length === 0 ? `
+                            <tr><td colspan="15" class="p-12 text-center font-bold text-slate-400">Belum ada QR Code yang dicari. Klik tombol "Cari Item QRCode" untuk mulai scan.</td></tr>
+                        ` : searchedQRResults.map((d, i) => `
+                            <tr class="transition text-[13px] border-b border-slate-200 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-indigo-50">
+                                <td class="px-4 py-3 font-bold text-slate-400 text-center">${i+1}</td>
+                                <td class="px-4 py-3 font-semibold text-emerald-700 text-left">${d.area}</td>
+                                <td class="px-4 py-3 font-mono font-bold text-slate-900 text-left">${d.qrcode}</td>
+                                <td class="px-4 py-3 font-medium text-slate-700 text-center">${d.tglProduksi}</td>
+                                <td class="px-4 py-3 font-medium text-slate-700 text-center">${d.mesin}</td>
+                                <td class="px-4 py-3 font-medium text-slate-700 text-center">${d.shift}</td>
+                                <td class="px-4 py-3 font-semibold text-slate-900 text-left">${d.namaItem}</td>
+                                <td class="px-4 py-3 font-medium text-slate-700 text-center">${d.panjang}</td>
+                                <td class="px-4 py-3 font-medium text-slate-700 text-center">${d.grade}</td>
+                                <td class="px-4 py-3 font-medium text-slate-700 text-center">${d.dus}</td>
+                                <td class="px-4 py-3 font-medium text-slate-700 text-center">${d.shading}</td>
+                                <td class="px-4 py-3 font-semibold text-slate-900 text-left">${d.customerAktual}</td>
+                                <td class="px-4 py-3 font-semibold text-purple-700 text-left">${d.customerEstimasi}</td>
+                                <td class="px-4 py-3 font-medium text-slate-500 text-left">${d.keterangan || '-'}</td>
+                                <td class="px-4 py-3 text-center"><span class="px-2.5 py-0.5 rounded text-[10px] font-bold border ${d.badgeClass}">${d.status}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
     }
 
     container.innerHTML = html;
@@ -965,7 +1226,6 @@ window.eksekusiGantiKet = async function() {
             let oldKet = item.keterangan || '-';
             let pjgFormatted = formatPanjang(item.panjang || item.pjg);
 
-            // 1. UPDATE STOK_GLOBAL (Perbarui fisik gudang)
             let newSku = `${item.area}_${item.nama_item || item.nama}_${pjgFormatted}_${item.grade}_${item.dus}_${item.shading}_${newKet}_${item.customer_aktual || item.po_aktual}_${item.kondisi || 'Aman'}`;
 
             await db.from('stok_global')
@@ -978,7 +1238,6 @@ window.eksekusiGantiKet = async function() {
                 .eq('area', item.area)
                 .eq('customer_aktual', item.customer_aktual || item.po_aktual);
 
-            // 2. INCREMENTAL UPDATE STOK_AKTUAL
             if (item.id) {
                 await db.from('stok_aktual').update({ keterangan: newKet, id_sku: newSku }).eq('id', item.id);
             } else {
