@@ -85,12 +85,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 closeFilterMenu();
             }
         }
+        const actionMenu = document.getElementById('mobile-action-menu');
+        if (actionMenu && !actionMenu.classList.contains('hidden')) {
+            if (!actionMenu.contains(e.target) && !actionMenu.closest('button[onclick^="toggleActionMenu"]')) {
+                actionMenu.classList.add('hidden');
+            }
+        }
     });
 
     await loadMasterData();
     loadUserPreferences(); 
     setTimeout(muatDataStok, 200);
 });
+
+function toggleActionMenu(e) {
+    if(e) e.stopPropagation();
+    const menu = document.getElementById('mobile-action-menu');
+    if(menu) menu.classList.toggle('hidden');
+}
 
 async function fetchAllRows(baseQuery) {
     let allData = [];
@@ -256,6 +268,7 @@ function setModeKS(m) {
     document.getElementById('view-pencarian-mobile').classList.toggle('hidden', !isPencarian || !isMobile);
     document.getElementById('footer-ks').classList.toggle('hidden', isPencarian);
     
+    // Tombol Toolbar
     const btnGantiPO = document.getElementById('btn-ganti-po-main');
     if(btnGantiPO) btnGantiPO.classList.toggle('hidden', m === 'global' || m === 'nonaktif' || isPencarian);
     
@@ -267,6 +280,10 @@ function setModeKS(m) {
     
     const btnProsesGanti = document.getElementById('btn-proses-ganti-main');
     if(btnProsesGanti) btnProsesGanti.classList.toggle('hidden', m !== 'area');
+
+    // REVISI: Tombol Induk (Garis 3) HANYA di-hide saat di submenu Pencarian Item
+    const actionMenuContainer = document.getElementById('action-menu-container');
+    if(actionMenuContainer) actionMenuContainer.classList.toggle('hidden', isPencarian);
     
     activeFilters = {}; 
     sortState = { col: null, isAsc: true };
@@ -531,6 +548,7 @@ function renderTableBody() {
     
     tbody.innerHTML = h;
     applyColumnOrder();
+    initResizableColumns();
     if(typeof lucide !== 'undefined') lucide.createIcons();
     updatePaginationUI();
 }
@@ -1378,6 +1396,9 @@ function tutupSemuaPopups() {
     document.getElementById('modal-req-konversi').classList.add('hidden');
     document.getElementById('modal-scan-cari-qr').classList.add('hidden');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
+    if(document.getElementById('sidebar-kolom')) {
+        document.getElementById('sidebar-kolom').classList.add('translate-x-full');
+    }
 }
 
 window.bukaBreakdown = function(gKey) {
@@ -1791,7 +1812,7 @@ window.eksekusiReqKonversi = async function() {
 };
 
 // ==========================================
-// EXCEL FILTER PRO
+// EXCEL FILTER & COLUMN REORDERING
 // ==========================================
 window.openColumnFilter = function(event, colClass, colName) {
     event.stopPropagation();
@@ -1910,3 +1931,177 @@ function updateFilterIcons() {
         }
     }
 }
+
+// ==========================================
+// FUNGSI SISTEM URUTAN KOLOM & RESIZE
+// ==========================================
+function applyColumnOrder() {
+    if (!userColOrder || userColOrder.length === 0) return;
+    const table = document.getElementById('main-table');
+    if(!table) return;
+    const rows = table.querySelectorAll('tr');
+
+    rows.forEach(row => {
+        const cells = Array.from(row.children);
+        if (cells.length <= 1) return; 
+
+        const cbCell = cells.find(c => c.classList.contains('col-cb'));
+        const openCell = cells.find(c => c.classList.contains('col-open'));
+        const prosesCell = cells.find(c => c.classList.contains('col-proses'));
+
+        const cellMap = {};
+        cells.forEach(c => {
+            const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
+            if (colClass) cellMap[colClass] = c;
+        });
+
+        row.innerHTML = ''; 
+        if (cbCell) row.appendChild(cbCell); 
+        if (openCell) row.appendChild(openCell); 
+
+        userColOrder.forEach(colId => {
+            if (cellMap[colId]) row.appendChild(cellMap[colId]);
+        });
+
+        cells.forEach(c => {
+            const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
+            if (colClass !== 'col-cb' && colClass !== 'col-open' && colClass !== 'col-proses' && !userColOrder.includes(colClass)) {
+                row.appendChild(c);
+            }
+        });
+
+        if (prosesCell) row.appendChild(prosesCell);
+    });
+}
+
+function initResizableColumns() {
+    const cols = document.querySelectorAll('#main-table th');
+    cols.forEach(col => {
+        const existing = col.querySelector('.resizer');
+        if(existing) existing.remove();
+
+        const resizer = document.createElement('div');
+        resizer.classList.add('resizer');
+        col.appendChild(resizer);
+
+        let x = 0; let w = 0;
+        resizer.addEventListener('mousedown', function(e) {
+            x = e.clientX;
+            w = parseInt(window.getComputedStyle(col).width, 10);
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+            resizer.classList.add('resizing');
+        });
+        const mouseMoveHandler = function(e) {
+            const dx = e.clientX - x;
+            col.style.width = `${w + dx}px`;
+            col.style.minWidth = `${w + dx}px`;
+        };
+        const mouseUpHandler = function() {
+            document.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
+            resizer.classList.remove('resizing');
+        };
+    });
+}
+
+window.toggleSidebarKolom = function() {
+    const sidebar = document.getElementById('sidebar-kolom');
+    const overlay = document.getElementById('overlay-klik-luar');
+    if (sidebar.classList.contains('translate-x-full')) {
+        sidebar.classList.remove('translate-x-full'); 
+        overlay.classList.remove('hidden'); 
+        renderDragList();
+    } else {
+        sidebar.classList.add('translate-x-full'); 
+        overlay.classList.add('hidden');
+    }
+};
+
+window.renderDragList = function() {
+    const container = document.getElementById('kolom-drag-container');
+    container.innerHTML = '';
+    
+    const headers = Array.from(document.querySelectorAll('#thead-ks th')).filter(th => 
+        !th.classList.contains('col-cb') && !th.classList.contains('col-open') && !th.classList.contains('col-proses')
+    );
+    
+    headers.forEach(th => {
+        const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
+        const label = th.innerText.trim() || 'Kolom';
+        if(!colClass) return;
+
+        const isHidden = hiddenCols.includes(colClass);
+        const eyeIcon = isHidden ? 'eye-off' : 'eye';
+        const eyeColor = isHidden ? 'text-slate-300' : 'text-blue-600';
+
+        const div = document.createElement('div');
+        div.className = 'drag-item flex items-center justify-between p-3 bg-white border border-slate-200 rounded-md shadow-sm hover:border-blue-400 transition cursor-grab';
+        div.draggable = true; 
+        div.setAttribute('data-col', colClass);
+        div.innerHTML = `
+            <span class="font-bold text-slate-700 text-xs">${label}</span>
+            <div class="flex items-center gap-3">
+                <button onclick="toggleHideCol(event, '${colClass}')" class="p-1 hover:bg-slate-100 rounded"><i data-lucide="${eyeIcon}" class="w-4 h-4 ${eyeColor}"></i></button>
+                <i data-lucide="grip-vertical" class="w-4 h-4 text-slate-400"></i>
+            </div>
+        `;
+        div.addEventListener('dragstart', () => { div.classList.add('dragging'); });
+        div.addEventListener('dragend', () => { div.classList.remove('dragging'); });
+        container.appendChild(div);
+    });
+    lucide.createIcons();
+    
+    container.addEventListener('dragover', e => {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(container, e.clientY);
+        const draggable = document.querySelector('.dragging');
+        if (afterElement == null) { container.appendChild(draggable); } 
+        else { container.insertBefore(draggable, afterElement); }
+    });
+};
+
+window.toggleHideCol = function(e, colClass) {
+    e.stopPropagation();
+    if(hiddenCols.includes(colClass)) hiddenCols = hiddenCols.filter(c => c !== colClass);
+    else hiddenCols.push(colClass);
+    renderDragList();
+};
+
+window.getDragAfterElement = function(container, y) {
+    const draggableElements = [...container.querySelectorAll('.drag-item:not(.dragging)')];
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } 
+        else { return closest; }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+};
+
+window.simpanUrutanKolom = function() {
+    const items = document.querySelectorAll('.drag-item');
+    let newOrder = [];
+    items.forEach(item => newOrder.push(item.getAttribute('data-col')));
+    userColOrder = newOrder;
+    
+    localStorage.setItem(`col_order_ks_${modeKS}_${currentUser.username}`, JSON.stringify(newOrder));
+    localStorage.setItem(`col_hidden_ks_${modeKS}_${currentUser.username}`, JSON.stringify(hiddenCols));
+    
+    alert("Pengaturan kolom berhasil disimpan!");
+    toggleSidebarKolom(); 
+    renderTableHeaders();
+    renderTableBody(); 
+};
+
+window.resetUrutanKolom = function() {
+    if(!confirm("Kembalikan pengaturan kolom ke default?")) return;
+    userColOrder = [];
+    hiddenCols = [];
+    localStorage.removeItem(`col_order_ks_${modeKS}_${currentUser.username}`);
+    localStorage.removeItem(`col_hidden_ks_${modeKS}_${currentUser.username}`);
+    
+    alert("Pengaturan dikembalikan ke default.");
+    toggleSidebarKolom(); 
+    renderTableHeaders();
+    renderTableBody();
+};
