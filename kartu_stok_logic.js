@@ -34,6 +34,7 @@ let processedGlobalKeys = new Set();
 // State Khusus Pencarian Item
 let mobilePencarianSubMode = 'menu'; // 'menu', 'qr', 'global'
 let desktopPencarianSubMode = 'global'; // 'qr', 'global'
+let isMobileFilterOpen = true;
 let searchedQRResults = [];
 let globalSearchFilters = { nama: '', pjg: '', grade: '', dus: '', shading: '', area: '', cust: '', est: '' };
 let hasExecutedGlobalSearch = false;
@@ -84,24 +85,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 closeFilterMenu();
             }
         }
-        const actionMenu = document.getElementById('mobile-action-menu');
-        if (actionMenu && !actionMenu.classList.contains('hidden')) {
-            if (!actionMenu.contains(e.target) && !actionMenu.closest('button[onclick^="toggleActionMenu"]')) {
-                actionMenu.classList.add('hidden');
-            }
-        }
     });
 
     await loadMasterData();
     loadUserPreferences(); 
     setTimeout(muatDataStok, 200);
 });
-
-function toggleActionMenu(e) {
-    if(e) e.stopPropagation();
-    const menu = document.getElementById('mobile-action-menu');
-    if(menu) menu.classList.toggle('hidden');
-}
 
 async function fetchAllRows(baseQuery) {
     let allData = [];
@@ -267,7 +256,6 @@ function setModeKS(m) {
     document.getElementById('view-pencarian-mobile').classList.toggle('hidden', !isPencarian || !isMobile);
     document.getElementById('footer-ks').classList.toggle('hidden', isPencarian);
     
-    // Tombol Toolbar
     const btnGantiPO = document.getElementById('btn-ganti-po-main');
     if(btnGantiPO) btnGantiPO.classList.toggle('hidden', m === 'global' || m === 'nonaktif' || isPencarian);
     
@@ -573,16 +561,6 @@ function changeRowsPerPage(val) {
     renderTableBody();
 }
 
-function setCustomRowsPerPage(val) {
-    let parsed = parseInt(val);
-    if (!isNaN(parsed) && parsed > 0) {
-        rowsPerPage = parsed;
-        localStorage.setItem('wms_rows_per_page', rowsPerPage);
-        currentPage = 1;
-        renderTableBody();
-    }
-}
-
 function prevPage() { if(currentPage > 1) { currentPage--; renderTableBody(); } }
 function nextPage() { 
     const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
@@ -645,7 +623,7 @@ function highlightRow(cb, id) {
 }
 
 // ============================================================================
-// LOGIKA PENCARIAN ITEM (MOBILE & DESKTOP DENGAN INPUT KETIK AUTO-COMPLETE)
+// LOGIKA PENCARIAN ITEM (MOBILE & DESKTOP DENGAN INPUT KETIK & DROPDOWN)
 // ============================================================================
 window.pilihPencarian = function(subMode) {
     const isMobile = window.innerWidth < 640;
@@ -665,6 +643,22 @@ window.pilihPencarian = function(subMode) {
             setTimeout(() => document.getElementById('input-search-qrcodes').focus(), 100);
         }
         renderDesktopPencarian();
+    }
+};
+
+window.toggleMobileFilterBox = function() {
+    isMobileFilterOpen = !isMobileFilterOpen;
+    const body = document.getElementById('body-mobile-filter');
+    const icon = document.getElementById('icon-toggle-filter');
+    const lbl = document.getElementById('lbl-toggle-status');
+    if (body) {
+        body.classList.toggle('hidden', !isMobileFilterOpen);
+    }
+    if (icon) {
+        icon.style.transform = isMobileFilterOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+    if (lbl) {
+        lbl.innerText = isMobileFilterOpen ? 'Tutup' : 'Buka';
     }
 };
 
@@ -850,14 +844,19 @@ function renderMobilePencarian() {
             </div>
         `;
     } 
-    // LEVEL 2A: HASIL PENCARIAN QR CODE
+    // LEVEL 2A: HASIL PENCARIAN QR CODE MOBILE
     else if (mobilePencarianSubMode === 'qr') {
         html += `
             <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center justify-between gap-3 mb-3">
-                <button onclick="pilihPencarian('menu')" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
-                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Menu
-                </button>
-                <button onclick="pilihPencarian('qr')" class="px-3 py-2 bg-indigo-600 text-white font-black text-xs uppercase rounded-xl shadow-sm flex items-center gap-1"><i data-lucide="scan-line" class="w-3.5 h-3.5"></i> Scan Ulang</button>
+                <div class="flex items-center gap-2">
+                    <button onclick="pilihPencarian('menu')" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
+                        <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Menu
+                    </button>
+                    <button onclick="muatDataStok()" class="p-2.5 bg-teal-700 hover:bg-teal-800 active:scale-95 text-white rounded-xl shadow-sm transition flex items-center gap-1 text-xs font-black shrink-0">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh
+                    </button>
+                </div>
+                <button onclick="pilihPencarian('qr')" class="px-3.5 py-2 bg-indigo-600 text-white font-black text-xs uppercase rounded-xl shadow-sm flex items-center gap-1 active:scale-95 transition"><i data-lucide="scan-line" class="w-3.5 h-3.5"></i> Scan Ulang</button>
             </div>
         `;
 
@@ -866,7 +865,7 @@ function renderMobilePencarian() {
                 <div class="flex flex-col items-center justify-center h-56 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
                     <i data-lucide="package-search" class="w-12 h-12 text-slate-300 mb-2"></i>
                     <h4 class="font-bold text-slate-700 text-sm">Belum ada QR Code di-scan</h4>
-                    <button onclick="pilihPencarian('qr')" class="mt-3 px-4 py-2 bg-indigo-600 text-white font-black text-xs uppercase rounded-xl">Mulai Scan</button>
+                    <button onclick="pilihPencarian('qr')" class="mt-3 px-5 py-2.5 bg-indigo-600 text-white font-black text-xs uppercase rounded-xl shadow-md">Mulai Scan</button>
                 </div>
             `;
         } else {
@@ -909,55 +908,72 @@ function renderMobilePencarian() {
 
         html += `
             <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center justify-between gap-3 mb-2">
-                <button onclick="pilihPencarian('menu')" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
-                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Menu
-                </button>
-                <span class="text-xs font-black text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">${results.length} Item Ditemukan</span>
+                <div class="flex items-center gap-2">
+                    <button onclick="pilihPencarian('menu')" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
+                        <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Menu
+                    </button>
+                    <button onclick="muatDataStok()" class="p-2.5 bg-teal-700 hover:bg-teal-800 active:scale-95 text-white rounded-xl shadow-sm transition flex items-center gap-1 text-xs font-black shrink-0">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh
+                    </button>
+                </div>
+                <span class="text-xs font-black text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">${results.length} Dus Ditemukan</span>
             </div>
 
-            <!-- FORM FILTER KETIK DENGAN AUTO-COMPLETE (DATALIST) -->
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3 mb-3">
-                <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-                    <h4 class="text-xs font-black text-slate-700 uppercase flex items-center gap-1.5"><i data-lucide="filter" class="w-4 h-4 text-blue-600"></i> Filter Pencarian</h4>
-                    <button onclick="resetCariGlobal(false)" class="text-[10px] font-bold text-slate-400 hover:text-red-500 uppercase">Reset Form</button>
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div class="col-span-2">
-                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
-                        <input type="text" id="m-f-nama" list="dl-nama-item" value="${globalSearchFilters.nama}" placeholder="Ketik nama item..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+            <!-- FORM FILTER KETIK COLLAPSIBLE DENGAN AUTO-COMPLETE (DATALIST) -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-3">
+                <button type="button" onclick="toggleMobileFilterBox()" class="w-full p-3.5 bg-slate-50 flex justify-between items-center border-b border-slate-100 transition active:bg-slate-100">
+                    <span class="text-xs font-black text-slate-700 uppercase flex items-center gap-2"><i data-lucide="filter" class="w-4 h-4 text-blue-600"></i> Filter Pencarian</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] font-bold text-slate-400" id="lbl-toggle-status">${isMobileFilterOpen ? 'Tutup' : 'Buka'}</span>
+                        <i data-lucide="chevron-up" id="icon-toggle-filter" class="w-4 h-4 text-slate-500 transition-transform ${isMobileFilterOpen ? '' : 'rotate-180'}"></i>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
-                        <input type="text" id="m-f-pjg" list="dl-panjang" value="${globalSearchFilters.pjg}" placeholder="Cth: 4M" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
-                        <input type="text" id="m-f-grade" list="dl-grade" value="${globalSearchFilters.grade}" placeholder="Cth: BAGUS" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label>
-                        <input type="text" id="m-f-dus" list="dl-dus" value="${globalSearchFilters.dus}" placeholder="Ketik merk..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label>
-                        <input type="text" id="m-f-shading" list="dl-shading" value="${globalSearchFilters.shading}" placeholder="Ketik shading..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label>
-                        <input type="text" id="m-f-area" list="dl-area" value="${globalSearchFilters.area}" placeholder="Ketik area..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Aktual</label>
-                        <input type="text" id="m-f-cust" list="dl-cust-aktual" value="${globalSearchFilters.cust}" placeholder="Ketik cust aktual..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
-                    </div>
-                    <div class="col-span-2">
-                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Estimasi</label>
-                        <input type="text" id="m-f-est" list="dl-cust-estimasi" value="${globalSearchFilters.est}" placeholder="Ketik cust estimasi..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
-                    </div>
-                </div>
-                <button onclick="eksekusiCariGlobal(false)" class="w-full py-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-xs uppercase rounded-xl shadow-md transition flex items-center justify-center gap-2 border-b-4 border-blue-900">
-                    <i data-lucide="search" class="w-4 h-4"></i> TAMPILKAN HASIL
                 </button>
+                
+                <div id="body-mobile-filter" class="p-4 space-y-3 ${isMobileFilterOpen ? '' : 'hidden'}">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="col-span-2">
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
+                            <input type="text" id="m-f-nama" list="dl-nama-item" value="${globalSearchFilters.nama}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik nama item..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
+                            <input type="text" id="m-f-pjg" list="dl-panjang" value="${globalSearchFilters.pjg}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Cth: 4M" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
+                            <input type="text" id="m-f-grade" list="dl-grade" value="${globalSearchFilters.grade}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Cth: BAGUS" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label>
+                            <input type="text" id="m-f-dus" list="dl-dus" value="${globalSearchFilters.dus}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik merk..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Shading</label>
+                            <input type="text" id="m-f-shading" list="dl-shading" value="${globalSearchFilters.shading}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik shading..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label>
+                            <input type="text" id="m-f-area" list="dl-area" value="${globalSearchFilters.area}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik area..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Aktual</label>
+                            <input type="text" id="m-f-cust" list="dl-cust-aktual" value="${globalSearchFilters.cust}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik cust aktual..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Estimasi</label>
+                            <input type="text" id="m-f-est" list="dl-cust-estimasi" value="${globalSearchFilters.est}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Ketik cust estimasi..." class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 outline-none uppercase focus:border-blue-500">
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2 pt-1">
+                        <button onclick="resetCariGlobal(false)" class="w-1/3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-xs uppercase rounded-xl transition active:scale-95">
+                            Reset
+                        </button>
+                        <button onclick="eksekusiCariGlobal(false)" class="w-2/3 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase rounded-xl shadow-md transition flex items-center justify-center gap-2 border-b-4 border-blue-900 active:scale-95">
+                            <i data-lucide="search" class="w-4 h-4"></i> TAMPILKAN HASIL
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
 
@@ -966,7 +982,7 @@ function renderMobilePencarian() {
                 <div class="flex flex-col items-center justify-center h-48 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
                     <i data-lucide="filter" class="w-10 h-10 text-slate-300 mb-2"></i>
                     <h4 class="font-bold text-slate-700 text-sm">Gunakan form di atas untuk mencari</h4>
-                    <p class="text-[11px] text-slate-400 mt-1">Ketik variabel yang Anda inginkan lalu tekan tombol Tampilkan Hasil.</p>
+                    <p class="text-[11px] text-slate-400 mt-1">Ketik variabel yang diinginkan lalu tekan Tampilkan Hasil.</p>
                 </div>
             `;
         } else if (results.length === 0) {
@@ -1027,11 +1043,15 @@ function renderDesktopPencarian() {
                 </button>
             </div>
             ${desktopPencarianSubMode === 'qr' ? `
-                <button onclick="pilihPencarian('qr')" class="px-4 py-2 bg-indigo-600 text-white font-black text-xs uppercase rounded-lg shadow-sm flex items-center gap-1.5"><i data-lucide="scan-line" class="w-4 h-4"></i> Scan Ulang</button>
+                <div class="flex items-center gap-2">
+                    <button onclick="muatDataStok()" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs uppercase rounded-lg transition flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh</button>
+                    <button onclick="pilihPencarian('qr')" class="px-4 py-2 bg-indigo-600 text-white font-black text-xs uppercase rounded-lg shadow-sm flex items-center gap-1.5"><i data-lucide="scan-line" class="w-4 h-4"></i> Scan Ulang</button>
+                </div>
             ` : `
                 <div class="flex items-center gap-2">
                     <button onclick="resetCariGlobal(true)" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs uppercase rounded-lg transition">Reset</button>
-                    <button onclick="eksekusiCariGlobal(true)" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase rounded-lg shadow-sm transition flex items-center gap-1.5"><i data-lucide="search" class="w-4 h-4"></i> Terapkan Pencarian</button>
+                    <button onclick="eksekusiCariGlobal(true)" class="px-5 py-2 bg-slate-900 hover:bg-black text-white font-black text-xs uppercase rounded-lg shadow-sm transition flex items-center gap-1.5 border-b-2 border-black"><i data-lucide="search" class="w-4 h-4"></i> Terapkan Pencarian</button>
+                    <button onclick="muatDataStok()" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs uppercase rounded-lg transition flex items-center gap-1.5 ml-1"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh</button>
                 </div>
             `}
         </div>
@@ -1040,40 +1060,47 @@ function renderDesktopPencarian() {
     if (desktopPencarianSubMode === 'global') {
         const results = getFilteredGlobalSearchResults();
 
+        const getOpts = (key, selVal) => {
+            const list = [...new Set(dataKSArea.map(d => d[key] || '-'))].filter(x => x && x !== '-').sort();
+            let out = '<option value="">-- Semua --</option>';
+            list.forEach(v => { out += `<option value="${v}" ${v === selVal ? 'selected' : ''}>${v}</option>`; });
+            return out;
+        };
+
         html += `
-            <!-- BILAH FILTER KETIK DESKTOP -->
-            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm grid grid-cols-4 lg:grid-cols-8 gap-2 shrink-0">
+            <!-- BILAH FILTER DROPDOWN DESKTOP -->
+            <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm grid grid-cols-4 lg:grid-cols-8 gap-2 shrink-0">
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Nama Item</label>
-                    <input type="text" id="pc-f-nama" list="dl-nama-item" value="${globalSearchFilters.nama}" placeholder="Semua Item" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                    <select id="pc-f-nama" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('nama', globalSearchFilters.nama)}</select>
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Panjang</label>
-                    <input type="text" id="pc-f-pjg" list="dl-panjang" value="${globalSearchFilters.pjg}" placeholder="Semua Pjg" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                    <select id="pc-f-pjg" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('pjg', globalSearchFilters.pjg)}</select>
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Grade</label>
-                    <input type="text" id="pc-f-grade" list="dl-grade" value="${globalSearchFilters.grade}" placeholder="Semua Grade" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                    <select id="pc-f-grade" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('grade', globalSearchFilters.grade)}</select>
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Dus</label>
-                    <input type="text" id="pc-f-dus" list="dl-dus" value="${globalSearchFilters.dus}" placeholder="Semua Dus" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                    <select id="pc-f-dus" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('dus', globalSearchFilters.dus)}</select>
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Shading</label>
-                    <input type="text" id="pc-f-shading" list="dl-shading" value="${globalSearchFilters.shading}" placeholder="Semua Shading" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                    <select id="pc-f-shading" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('shading', globalSearchFilters.shading)}</select>
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Area</label>
-                    <input type="text" id="pc-f-area" list="dl-area" value="${globalSearchFilters.area}" placeholder="Semua Area" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                    <select id="pc-f-area" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('area', globalSearchFilters.area)}</select>
                 </div>
                 <div>
-                    <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Customer Aktual</label>
-                    <input type="text" id="pc-f-cust" list="dl-cust-aktual" value="${globalSearchFilters.cust}" placeholder="Semua Cust" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                    <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Cust Aktual</label>
+                    <select id="pc-f-cust" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('po_aktual', globalSearchFilters.cust)}</select>
                 </div>
                 <div>
-                    <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Customer Estimasi</label>
-                    <input type="text" id="pc-f-est" list="dl-cust-estimasi" value="${globalSearchFilters.est}" placeholder="Semua Est" class="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-md bg-slate-50 uppercase outline-none focus:border-blue-500">
+                    <label class="block text-[9px] font-black uppercase text-slate-400 mb-1">Cust Estimasi</label>
+                    <select id="pc-f-est" class="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">${getOpts('customer_estimasi', globalSearchFilters.est)}</select>
                 </div>
             </div>
 
@@ -1098,7 +1125,7 @@ function renderDesktopPencarian() {
                     </thead>
                     <tbody class="text-slate-700">
                         ${!hasExecutedGlobalSearch ? `
-                            <tr><td colspan="12" class="p-12 text-center font-bold text-slate-400">Gunakan form pencarian di atas lalu klik "Terapkan Pencarian".</td></tr>
+                            <tr><td colspan="12" class="p-12 text-center font-bold text-slate-400">Pilih variabel pada dropdown di atas lalu klik "Terapkan Pencarian".</td></tr>
                         ` : (results.length === 0 ? `
                             <tr><td colspan="12" class="p-12 text-center font-bold text-slate-400">Tidak ada stok yang cocok dengan kriteria pencarian.</td></tr>
                         ` : results.map((d, i) => `
@@ -1351,9 +1378,6 @@ function tutupSemuaPopups() {
     document.getElementById('modal-req-konversi').classList.add('hidden');
     document.getElementById('modal-scan-cari-qr').classList.add('hidden');
     document.getElementById('overlay-klik-luar').classList.add('hidden');
-    if(document.getElementById('sidebar-kolom')) {
-        document.getElementById('sidebar-kolom').classList.add('translate-x-full');
-    }
 }
 
 window.bukaBreakdown = function(gKey) {
@@ -1767,7 +1791,7 @@ window.eksekusiReqKonversi = async function() {
 };
 
 // ==========================================
-// EXCEL FILTER & COLUMN SYSTEM
+// EXCEL FILTER PRO
 // ==========================================
 window.openColumnFilter = function(event, colClass, colName) {
     event.stopPropagation();
@@ -1885,142 +1909,4 @@ function updateFilterIcons() {
             }
         }
     }
-}
-
-window.toggleSidebarKolom = function() {
-    const sidebar = document.getElementById('sidebar-kolom');
-    const overlay = document.getElementById('overlay-klik-luar');
-    if (sidebar.classList.contains('translate-x-full')) {
-        sidebar.classList.remove('translate-x-full'); 
-        overlay.classList.remove('hidden'); 
-        renderDragList();
-    } else {
-        sidebar.classList.add('translate-x-full'); 
-        overlay.classList.add('hidden');
-    }
-};
-
-window.renderDragList = function() {
-    const container = document.getElementById('kolom-drag-container');
-    container.innerHTML = '';
-    
-    const headers = Array.from(document.querySelectorAll('#thead-ks th')).filter(th => 
-        !th.classList.contains('col-cb') && !th.classList.contains('col-open') && !th.classList.contains('col-proses')
-    );
-    
-    headers.forEach(th => {
-        const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
-        const label = th.innerText.trim() || 'Kolom';
-        if(!colClass) return;
-
-        const isHidden = hiddenCols.includes(colClass);
-        const eyeIcon = isHidden ? 'eye-off' : 'eye';
-        const eyeColor = isHidden ? 'text-slate-300' : 'text-blue-600';
-
-        const div = document.createElement('div');
-        div.className = 'drag-item flex items-center justify-between p-3 bg-white border border-slate-200 rounded-md shadow-sm hover:border-blue-400 transition cursor-grab';
-        div.draggable = true; 
-        div.setAttribute('data-col', colClass);
-        div.innerHTML = `
-            <span class="font-bold text-slate-700 text-xs">${label}</span>
-            <div class="flex items-center gap-3">
-                <button onclick="toggleHideCol(event, '${colClass}')" class="p-1 hover:bg-slate-100 rounded"><i data-lucide="${eyeIcon}" class="w-4 h-4 ${eyeColor}"></i></button>
-                <i data-lucide="grip-vertical" class="w-4 h-4 text-slate-400"></i>
-            </div>
-        `;
-        div.addEventListener('dragstart', () => { div.classList.add('dragging'); });
-        div.addEventListener('dragend', () => { div.classList.remove('dragging'); });
-        container.appendChild(div);
-    });
-    lucide.createIcons();
-    
-    container.addEventListener('dragover', e => {
-        e.preventDefault();
-        const afterElement = getDragAfterElement(container, e.clientY);
-        const draggable = document.querySelector('.dragging');
-        if (afterElement == null) { container.appendChild(draggable); } 
-        else { container.insertBefore(draggable, afterElement); }
-    });
-};
-
-window.toggleHideCol = function(e, colClass) {
-    e.stopPropagation();
-    if(hiddenCols.includes(colClass)) hiddenCols = hiddenCols.filter(c => c !== colClass);
-    else hiddenCols.push(colClass);
-    renderDragList();
-};
-
-window.getDragAfterElement = function(container, y) {
-    const draggableElements = [...container.querySelectorAll('.drag-item:not(.dragging)')];
-    return draggableElements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } 
-        else { return closest; }
-    }, { offset: Number.NEGATIVE_INFINITY }).element;
-};
-
-window.simpanUrutanKolom = function() {
-    const items = document.querySelectorAll('.drag-item');
-    let newOrder = [];
-    items.forEach(item => newOrder.push(item.getAttribute('data-col')));
-    userColOrder = newOrder;
-    
-    localStorage.setItem(`col_order_ks_${modeKS}_${currentUser.username}`, JSON.stringify(newOrder));
-    localStorage.setItem(`col_hidden_ks_${modeKS}_${currentUser.username}`, JSON.stringify(hiddenCols));
-    
-    alert("Pengaturan kolom berhasil disimpan!");
-    toggleSidebarKolom(); 
-    renderTableHeaders();
-    renderTableBody(); 
-};
-
-window.resetUrutanKolom = function() {
-    if(!confirm("Kembalikan pengaturan kolom ke default?")) return;
-    userColOrder = [];
-    hiddenCols = [];
-    localStorage.removeItem(`col_order_ks_${modeKS}_${currentUser.username}`);
-    localStorage.removeItem(`col_hidden_ks_${modeKS}_${currentUser.username}`);
-    
-    alert("Pengaturan dikembalikan ke default.");
-    toggleSidebarKolom(); 
-    renderTableHeaders();
-    renderTableBody();
-};
-
-function applyColumnOrder() {
-    if (!userColOrder || userColOrder.length === 0) return;
-
-    const table = document.getElementById('main-table');
-    if(!table) return;
-    const rows = table.querySelectorAll('tr');
-
-    rows.forEach(row => {
-        const cells = Array.from(row.children);
-        if (cells.length <= 1) return; 
-
-        const cbCell = cells.find(c => c.classList.contains('col-cb'));
-        const openCell = cells.find(c => c.classList.contains('col-open'));
-        
-        const cellMap = {};
-        cells.forEach(c => {
-            const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
-            if (colClass) cellMap[colClass] = c;
-        });
-
-        row.innerHTML = ''; 
-        if (cbCell) row.appendChild(cbCell); 
-        if (openCell) row.appendChild(openCell); 
-
-        userColOrder.forEach(colId => {
-            if (cellMap[colId]) row.appendChild(cellMap[colId]);
-        });
-
-        cells.forEach(c => {
-            const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
-            if (colClass !== 'col-cb' && colClass !== 'col-open' && !userColOrder.includes(colClass)) {
-                row.appendChild(c);
-            }
-        });
-    });
 }
