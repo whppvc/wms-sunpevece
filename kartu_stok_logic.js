@@ -1,10 +1,9 @@
 let modeKS = 'area'; 
-let stokQRRaw = []; 
+let stokGlobalRaw = []; 
 let stokAktualRaw = []; 
 let stokLembaranRaw = [];
 
 // Data Arrays
-let dataKSQR = []; 
 let dataKSArea = []; 
 let dataKSGlobal = [];
 let dataKSNonaktif = []; 
@@ -16,7 +15,6 @@ let sourcePOContext = '';
 let currentBreakdownData = [];
 let sortState = { col: null, isAsc: true };
 let masterData = { kamus: [] };
-let poDistributionMap = {}; 
 
 let currentPage = 1;
 let rowsPerPage = 10; 
@@ -27,10 +25,15 @@ let userColOrder = [];
 let hiddenCols = []; 
 let selectedRows = new Set(); 
 let selectedForReq = null; 
-let selectedForAction = []; // Deklarasi variabel aksi agar tidak throw ReferenceError
+let selectedForAction = []; 
+let selectedForActionKet = [];
 
 let processedGantiKeys = new Set();
 let processedGlobalKeys = new Set();
+
+// State Pencarian Item
+let mobilePencarianMode = 'menu'; // 'menu', 'qr', 'global'
+let searchedQRResults = [];
 
 let filterTimeout;
 
@@ -41,6 +44,13 @@ function safeJSONParse(data, fallback = null) {
 }
 
 const currentUser = safeJSONParse(localStorage.getItem('user_session'), { username: 'Admin', role: 'admin' });
+
+function formatPanjang(pjg) {
+    if (!pjg || pjg === '-') return '-';
+    let str = String(pjg).trim().toUpperCase();
+    if (!str.endsWith('M')) str += 'M';
+    return str;
+}
 
 function loadUserPreferences() {
     const savedOrder = localStorage.getItem(`col_order_ks_${modeKS}_${currentUser.username}`);
@@ -56,19 +66,12 @@ function loadUserPreferences() {
         rowsPerPage = parseInt(savedRows);
         const sel = document.getElementById('select-rows-per-page');
         if(sel) {
-            let found = false;
-            Array.from(sel.options).forEach(opt => { if(opt.value == rowsPerPage) { opt.selected = true; found = true; } });
-            if(!found) {
-                sel.value = 'CUSTOM';
-                const inp = document.getElementById('input-custom-rows');
-                if(inp) { inp.classList.remove('hidden'); inp.value = rowsPerPage; }
-            }
+            Array.from(sel.options).forEach(opt => { if(opt.value == rowsPerPage) opt.selected = true; });
         }
     }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // REVISI KRUSIAL: Wajib await initModernLayout agar DOM selesai dibangun
     await initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
     
     document.addEventListener('click', function(e) {
@@ -113,13 +116,10 @@ async function fetchAllRows(baseQuery) {
 
 async function loadMasterData() {
     try {
-        const {data, error} = await db.from('master_2').select('*');
+        const { data } = await db.from('master_2').select('*');
         if (data) {
             masterData.kamus = data; 
-            let poSet = new Set(); 
-            let namaSet = new Set();
-            let gradeSet = new Set();
-            let dusSet = new Set();
+            let poSet = new Set(), namaSet = new Set(), gradeSet = new Set(), dusSet = new Set();
 
             data.forEach(d => { 
                 if(d.customer) poSet.add(d.customer.trim()); 
@@ -135,64 +135,24 @@ async function loadMasterData() {
                 selPO.innerHTML = htmlPO;
             }
 
-            const selNama = document.getElementById('req-nama-item');
-            if(selNama) {
-                let htmlNama = '<option value="">-- Tetap --</option>';
-                Array.from(namaSet).sort().forEach(n => { htmlNama += `<option value="${n}">${n}</option>`; });
-                selNama.innerHTML = htmlNama;
-            }
-            const selGrade = document.getElementById('req-grade');
-            if(selGrade) {
-                let htmlGrade = '<option value="">-- Tetap --</option>';
-                Array.from(gradeSet).sort().forEach(g => { htmlGrade += `<option value="${g}">${g}</option>`; });
-                selGrade.innerHTML = htmlGrade;
-            }
-            const selDus = document.getElementById('req-dus');
-            if(selDus) {
-                let htmlDus = '<option value="">-- Tetap --</option>';
-                Array.from(dusSet).sort().forEach(d => { htmlDus += `<option value="${d}">${d}</option>`; });
-                selDus.innerHTML = htmlDus;
-            }
+            const fillSel = (id, setArr) => {
+                const sel = document.getElementById(id);
+                if(sel) {
+                    let html = '<option value="">-- Tetap --</option>';
+                    Array.from(setArr).sort().forEach(n => { html += `<option value="${n}">${n}</option>`; });
+                    sel.innerHTML = html;
+                }
+            };
+            fillSel('req-nama-item', namaSet);
+            fillSel('req-grade', gradeSet);
+            fillSel('req-dus', dusSet);
         }
-    } catch (e) { console.error("Gagal memuat master data:", e); }
-}
-
-function translateBarcode(barcode) {
-    let data = { tglProduksi: '-', mesin: '-', shift: '-', jenisItem: '-', namaItem: '-', panjang: '-', grade: '-', dus: '-', shading: '-', customer: '-' };
-    if(!barcode) return data;
-    const parts = barcode.split('/'); if (parts.length < 1) return data;
-    const h = barcode.charAt(0).toUpperCase();
-    if (h === 'P') data.jenisItem = 'Plafon'; else if (h === 'L') data.jenisItem = 'List'; else if (h === 'W') data.jenisItem = 'WPC'; else data.jenisItem = h;
-
-    data.namaItem = parts[0] || '-'; 
-    data.shading = parts[1] || '-';
-    
-    if(parts[2] && parts[2].length >= 4) {
-        let p2 = parts[2];
-        let digitPjg = (p2.length === 5) ? 2 : 1; let rawPjg = p2.substring(0, digitPjg);
-        data.panjang = (digitPjg === 1) ? rawPjg + "M" : rawPjg[0] + "." + rawPjg[1] + "M";
-        let rawGrade = p2.substring(digitPjg, digitPjg + 1); data.grade = rawGrade === '1' ? 'BAGUS' : (rawGrade === '2' ? 'A' : rawGrade);
-        data.dus = p2.substring(p2.length - 2);
-    }
-    
-    if(parts[3] && parts[3].length >= 5) {
-        let p3 = parts[3];
-        const dayOfYear = parseInt(p3.substring(0, 3)); const realYear = parseInt('20' + p3.substring(3, 5).split('').reverse().join(''));
-        if (!isNaN(dayOfYear) && !isNaN(realYear)) {
-            const dateObj = new Date(realYear, 0); dateObj.setDate(dayOfYear);
-            data.tglProduksi = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}/${dateObj.getFullYear()}`;
-        }
-        let sisaString = p3.substring(5); let match = sisaString.match(/(C.*?)(S.*?)(P.*)/);
-        if(match) { data.mesin = match[1]; data.shift = match[2]; data.customer = match[3]; }
-    }
-    return data;
+    } catch (e) { console.error("Gagal load master_2:", e); }
 }
 
 async function muatDataStok() {
     const tbody = document.getElementById('tbody-ks');
-    if(!tbody) return;
-    
-    tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke database...</p></td></tr>`;
+    if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke database...</p></td></tr>`;
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
@@ -205,7 +165,7 @@ async function muatDataStok() {
         
         if(resAktual.error) throw resAktual.error;
         
-        stokQRRaw = stokGlobalData || []; 
+        stokGlobalRaw = stokGlobalData || []; 
         stokAktualRaw = resAktual.data || [];
         stokLembaranRaw = resLembaran.data || [];
 
@@ -222,62 +182,21 @@ async function muatDataStok() {
             });
         }
 
-        let aktualMap = {};
-        stokAktualRaw.forEach(a => {
-            let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}`;
-            if(!aktualMap[key]) aktualMap[key] = {};
-            let custAktual = a.customer_aktual || '-';
-            if(!aktualMap[key][custAktual]) aktualMap[key][custAktual] = 0;
-            aktualMap[key][custAktual] += (a.qty || 0);
-        });
-        poDistributionMap = aktualMap;
-
-        let qrMap = {};
-        stokQRRaw.forEach(r => {
-            let p = r.id_sku ? r.id_sku.split('_') : [];
-            let t = translateBarcode(r.qrcode);
-            let area = p[0] || r.area || '-';
-            let nama = p[1] || r.nama_item || t.namaItem;
-            let pjg = p[2] || r.panjang || t.panjang;
-            let grade = p[3] || r.grade || t.grade;
-            let dus = p[4] || r.dus || t.dus;
-            let shading = p[5] || r.shading || t.shading;
-            let ket = p[6] || r.keterangan || '-'; 
-            let po = p[7] || r.customer_aktual || t.customer || '-'; 
-            let kondisi = p[8] || r.kondisi || 'Aman'; 
-
-            let key = `${nama}_${pjg}_${grade}_${dus}_${shading}_${area}_${po}_${ket}_${kondisi}`;
-            if(!qrMap[key]) qrMap[key] = [];
-            qrMap[key].push(r.qrcode);
-        });
-
-        dataKSQR = stokQRRaw.filter(r => r.kondisi !== 'NONAKTIF').map(r => {
-            let p = r.id_sku ? r.id_sku.split('_') : [];
-            let t = translateBarcode(r.qrcode);
-            return {
-                _id: r.qrcode,
-                qrcode: r.qrcode || '-', id_sku: r.id_sku || '-', id_po: r.id_po || '-', area: p[0] || r.area || '-', 
-                tglProduksi: r.tgl_produksi || t.tglProduksi || '-', mesin: r.mesin || t.mesin || '-', shift: r.shift || t.shift || '-', 
-                jenis: r.jenis_item || t.jenisItem || '-', nama: p[1] || r.nama_item || t.namaItem || '-',
-                pjg: p[2] || r.panjang || t.panjang || '-', grade: p[3] || r.grade || t.grade || '-', 
-                dus: p[4] || r.dus || t.dus || '-', shading: p[5] || r.shading || t.shading || '-',
-                po_aktual: p[7] || r.customer_aktual || t.customer || '-', 
-                ket: p[6] || r.keterangan || '-', 
-                kondisi: p[8] || r.kondisi || 'Aman', 
-                id: r.id 
-            };
-        });
-
         dataKSArea = stokAktualRaw.filter(a => a.kondisi !== 'NONAKTIF').map(a => {
-            let key = `${a.nama_item}_${a.panjang}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_aktual}_${a.keterangan}_${a.kondisi}`; 
+            let pjgFormatted = formatPanjang(a.panjang);
             return {
                 ...a,
                 _id: a.id.toString(),
                 id: a.id,
-                pjg: a.panjang || '-', jenis: a.jenis_item || '-', nama: a.nama_item || '-',
-                qrcodes: qrMap[key] || [], id_sku_base: a.id_sku || '-', id_po: a.id_po || '-',
-                po_aktual: a.customer_aktual || '-', customer_estimasi: a.customer_estimasi || '-',
-                kondisi: a.kondisi || 'Aman', konversi: a.konversi || null, qty: a.qty || 0
+                pjg: pjgFormatted, 
+                jenis: a.jenis_item || '-', 
+                nama: a.nama_item || '-',
+                id_sku_base: a.id_sku || '-',
+                po_aktual: a.customer_aktual || '-', 
+                customer_estimasi: a.customer_estimasi || '-',
+                kondisi: a.kondisi || 'Aman', 
+                konversi: a.konversi || null, 
+                qty: a.qty || 0
             };
         });
 
@@ -285,7 +204,12 @@ async function muatDataStok() {
         dataKSArea.forEach(a => {
             let gKey = `${a.jenis}_${a.nama}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.customer_estimasi}_${a.keterangan}_${a.kondisi}`;
             if(!globalMap[gKey]) {
-                globalMap[gKey] = { _id: gKey, gKey: gKey, jenis: a.jenis, nama: a.nama, pjg: a.pjg, grade: a.grade, dus: a.dus, shading: a.shading, po: a.po_aktual, customer_estimasi: a.customer_estimasi, ket: a.keterangan, kondisi: a.kondisi, qty: 0, areas: [] };
+                globalMap[gKey] = { 
+                    _id: gKey, gKey: gKey, jenis: a.jenis, nama: a.nama, pjg: a.pjg, 
+                    grade: a.grade, dus: a.dus, shading: a.shading, po: a.po_aktual, 
+                    customer_estimasi: a.customer_estimasi, ket: a.keterangan, kondisi: a.kondisi, 
+                    qty: 0, areas: [] 
+                };
             }
             globalMap[gKey].qty += a.qty;
             globalMap[gKey].areas.push(a);
@@ -296,23 +220,36 @@ async function muatDataStok() {
 
         setModeKS(modeKS);
     } catch(e) { 
-        tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-medium">Gagal mengolah data: ${e.message}</td></tr>`; 
+        if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-medium">Gagal mengolah data: ${e.message}</td></tr>`; 
     }
 }
 
 function setModeKS(m) {
     modeKS = m;
+    const isMobile = window.innerWidth < 640;
+    
     const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     
-    ['qr', 'global', 'area', 'nonaktif'].forEach(tab => {
+    ['area', 'global', 'pencarian', 'nonaktif'].forEach(tab => {
         const el = document.getElementById('tab-' + tab);
         if(el) el.className = (m === tab) ? activeClass : inactiveClass;
     });
+
+    const isPencarian = (m === 'pencarian');
+    const isMobilePencarian = isPencarian && isMobile;
+
+    document.getElementById('wrapper-table-ks').classList.toggle('hidden', isMobilePencarian);
+    document.getElementById('view-pencarian-mobile').classList.toggle('hidden', !isMobilePencarian);
+    document.getElementById('footer-ks').classList.toggle('hidden', isMobilePencarian);
     
+    // Tombol Toolbar
     const btnGantiPO = document.getElementById('btn-ganti-po-main');
-    if(btnGantiPO) btnGantiPO.classList.toggle('hidden', m === 'global' || m === 'nonaktif');
+    if(btnGantiPO) btnGantiPO.classList.toggle('hidden', m === 'global' || m === 'nonaktif' || isPencarian);
     
+    const btnGantiKet = document.getElementById('btn-ganti-ket-main');
+    if(btnGantiKet) btnGantiKet.classList.toggle('hidden', m === 'nonaktif' || isPencarian);
+
     const btnReqKonv = document.getElementById('btn-req-konversi-main');
     if(btnReqKonv) btnReqKonv.classList.toggle('hidden', m !== 'area');
     
@@ -325,39 +262,33 @@ function setModeKS(m) {
     selectAllState = 0;
     
     loadUserPreferences(); 
-    buildProcessedData();
+    
+    if (isMobilePencarian) {
+        mobilePencarianMode = 'menu';
+        renderMobilePencarian();
+    } else {
+        buildProcessedData();
+    }
 }
 
 function buildProcessedData() {
-    if (modeKS === 'qr') processedData = dataKSQR;
-    else if (modeKS === 'area') processedData = dataKSArea;
+    if (modeKS === 'area') processedData = dataKSArea;
     else if (modeKS === 'global') processedData = dataKSGlobal;
     else if (modeKS === 'nonaktif') processedData = dataKSNonaktif;
+    else if (modeKS === 'pencarian') processedData = dataKSArea;
 
     processedData.forEach(r => {
-        if (modeKS === 'qr') {
-            let baseSpec = `${r.nama}_${r.pjg}_${r.grade}_${r.dus}_${r.shading}`;
-            let poDist = poDistributionMap[baseSpec];
-            let poArr = [];
-            if(poDist) { for(let po in poDist) { poArr.push(`${po} (${poDist[po]} Dus)`); } }
-            let poString = poArr.length > 0 ? poArr.join(' | ') : 'KOSONG';
-
-            r.searchValues = {
-                'col-area': r.area, 'col-qr': r.qrcode, 'col-tgl': r.tglProduksi, 'col-mesin': r.mesin,
-                'col-shift': r.shift, 'col-jenis': r.jenis, 'col-nama': r.nama, 'col-pjg': r.pjg,
-                'col-grade': r.grade, 'col-dus': r.dus, 'col-shading': r.shading, 'col-po': poString, 'col-ket': r.ket
-            };
-        } else if (modeKS === 'area') {
+        if (modeKS === 'area' || modeKS === 'pencarian') {
             r.searchValues = {
                 'col-area': r.area, 'col-jenis': r.jenis, 'col-nama': r.nama, 'col-pjg': r.pjg,
                 'col-grade': r.grade, 'col-dus': r.dus, 'col-shading': r.shading, 'col-po': r.po_aktual,
-                'col-estimasi': r.customer_estimasi, 'col-ket': r.keterangan, 'col-konversi': r.konversi || '-', 'col-qty': r.qty.toString()
+                'col-estimasi': r.customer_estimasi, 'col-ket': r.keterangan || '-', 'col-konversi': r.konversi || '-', 'col-qty': r.qty.toString()
             };
         } else if (modeKS === 'global') {
             r.searchValues = {
                 'col-jenis': r.jenis, 'col-nama': r.nama, 'col-pjg': r.pjg, 'col-grade': r.grade,
                 'col-dus': r.dus, 'col-shading': r.shading, 'col-po': r.po, 'col-estimasi': r.customer_estimasi,
-                'col-ket': r.ket, 'col-qty': r.qty.toString()
+                'col-ket': r.ket || '-', 'col-qty': r.qty.toString()
             };
         } else if (modeKS === 'nonaktif') {
             r.searchValues = {
@@ -449,21 +380,7 @@ function renderTableHeaders() {
             <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
         </th>`;
 
-    if(modeKS === 'qr') {
-        h += `${thSort('Area', 'col-area')}
-              ${thSort('QRCode', 'col-qr')}
-              ${thSort('Tgl Produksi', 'col-tgl')}
-              ${thSort('Mesin', 'col-mesin')}
-              ${thSort('Shift', 'col-shift')}
-              ${thSort('Jenis Item', 'col-jenis')}
-              ${thSort('Nama Item', 'col-nama')}
-              ${thSort('Panjang', 'col-pjg')}
-              ${thSort('Grade', 'col-grade')}
-              ${thSort('Dus', 'col-dus')}
-              ${thSort('Shading', 'col-shading')}
-              ${thSort('Customer Aktual', 'col-po')}
-              ${thSort('Keterangan', 'col-ket')}`;
-    } else if(modeKS === 'area') {
+    if(modeKS === 'area' || modeKS === 'pencarian') {
         h += `${thSort('Area', 'col-area')}
               ${thSort('Jenis Item', 'col-jenis')}
               ${thSort('Nama Item', 'col-nama')}
@@ -526,41 +443,20 @@ function renderTableBody() {
         const sv = r.searchValues;
         
         let customRowClass = "transition row-ks text-[13px]";
-        if (modeKS === 'nonaktif') customRowClass += " !bg-red-100 !text-red-900 font-bold is-nonaktif";
-        else if (modeKS === 'area' && sv['col-konversi'] !== '-') customRowClass += " !bg-rose-100 !text-rose-900 font-bold is-konversi";
+        if (modeKS === 'nonaktif') customRowClass += " !bg-red-100 !text-red-900 font-bold";
+        else if ((modeKS === 'area' || modeKS === 'pencarian') && sv['col-konversi'] !== '-') customRowClass += " !bg-rose-100 !text-rose-900 font-bold";
         else customRowClass += (i % 2 === 0 ? ' stripe-1' : ' stripe-2');
 
         if (isSelected) customRowClass += ' selected-row';
 
         h += `<tr class="${customRowClass}">`;
 
-        if (modeKS === 'qr') {
-            const safeQRs = JSON.stringify([r.qrcode]).replace(/"/g, "&quot;");
-            let btnPO = `<button onclick="bukaModalLihatPO('${encodeURIComponent(sv['col-po'])}')" class="bg-white text-slate-700 border border-slate-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-50 transition flex items-center justify-center gap-1 shadow-sm"><i data-lucide="eye" class="w-3 h-3 text-slate-400"></i> Lihat Customer</button>`;
-
-            h += `
-                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${r._id}')" data-idsku="${r.id_sku}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-ket="${r.ket}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
-                <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area ${hiddenCols.includes('col-area')?'col-hidden':''}">${sv['col-area']}</td>
-                <td class="px-4 py-3 font-mono font-medium text-slate-800 text-left col-qr ${hiddenCols.includes('col-qr')?'col-hidden':''}">${sv['col-qr']}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}">${sv['col-tgl']}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}">${sv['col-mesin']}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}">${sv['col-shift']}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
-                <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}">${sv['col-pjg']}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}">${sv['col-grade']}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}">${sv['col-dus']}</td>
-                <td class="px-4 py-3 font-medium text-slate-700 text-left col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}">${sv['col-shading']}</td>
-                <td class="px-4 py-3 text-left col-po ${hiddenCols.includes('col-po')?'col-hidden':''}">${btnPO}</td>
-                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
-            `;
-        } else if (modeKS === 'area') {
-            const safeQRs = JSON.stringify(r.qrcodes).replace(/"/g, "&quot;");
+        if (modeKS === 'area' || modeKS === 'pencarian') {
             let isProcessing = processedGantiKeys.has(`${r.id_sku_base}_${r.customer_estimasi}_${r.area}`);
             let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
 
             h += `
-                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${r._id}')" data-id="${r.id}" data-idsku="${r.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${r.jenis}" data-nama="${r.nama}" data-pjg="${r.pjg}" data-grade="${r.grade}" data-dus="${r.dus}" data-shading="${r.shading}" data-area="${r.area}" data-po="${r.po_aktual}" data-estimasi="${r.customer_estimasi}" data-qty="${r.qty}" data-ket="${r.keterangan}" data-kondisi="${r.kondisi}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${r._id}')" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
                 <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area ${hiddenCols.includes('col-area')?'col-hidden':''}">${sv['col-area']}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
@@ -601,7 +497,7 @@ function renderTableBody() {
             `;
         } else if (modeKS === 'nonaktif') {
             h += `
-                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${r._id}')" value="${r.id}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${r._id}')" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
                 <td class="px-4 py-3 font-semibold text-left col-area ${hiddenCols.includes('col-area')?'col-hidden':''}">${sv['col-area']}</td>
                 <td class="px-4 py-3 font-mono font-bold text-left col-qr ${hiddenCols.includes('col-qr')?'col-hidden':''}">${sv['col-qr']}</td>
                 <td class="px-4 py-3 font-medium text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
@@ -629,7 +525,7 @@ function updatePaginationUI() {
     const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
     
     let sumQty = 0;
-    if (modeKS === 'qr' || modeKS === 'nonaktif') {
+    if (modeKS === 'nonaktif') {
         sumQty = totalFiltered;
     } else {
         filteredData.forEach(r => { sumQty += parseInt(r.searchValues['col-qty']) || 0; });
@@ -644,34 +540,10 @@ function updatePaginationUI() {
 }
 
 function changeRowsPerPage(val) {
-    const customInput = document.getElementById('input-custom-rows');
-    if (val === 'ALL') {
-        rowsPerPage = 999999; 
-        if(customInput) customInput.classList.add('hidden');
-    } else if (val === 'CUSTOM') {
-        if(customInput) {
-            customInput.classList.remove('hidden');
-            customInput.focus();
-            let customVal = parseInt(customInput.value);
-            rowsPerPage = (customVal > 0) ? customVal : rowsPerPage;
-        }
-    } else {
-        rowsPerPage = parseInt(val);
-        if(customInput) customInput.classList.add('hidden');
-    }
+    rowsPerPage = (val === 'ALL') ? 999999 : parseInt(val);
     localStorage.setItem('wms_rows_per_page', rowsPerPage);
     currentPage = 1; 
     renderTableBody();
-}
-
-function setCustomRowsPerPage(val) {
-    let parsed = parseInt(val);
-    if (!isNaN(parsed) && parsed > 0) {
-        rowsPerPage = parsed;
-        localStorage.setItem('wms_rows_per_page', rowsPerPage);
-        currentPage = 1;
-        renderTableBody();
-    }
 }
 
 function prevPage() { if(currentPage > 1) { currentPage--; renderTableBody(); } }
@@ -718,7 +590,6 @@ function updateSelectAllUI() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// REVISI KRUSIAL: highlightRow tanpa re-render yang memutus event
 function highlightRow(cb, id) {
     const tr = cb.closest('tr');
     if (cb.checked) {
@@ -737,15 +608,914 @@ function highlightRow(cb, id) {
 }
 
 // ========================================================
-// FILTER EXCEL PRO
+// LOGIKA PENCARIAN ITEM (MOBILE DRILL-DOWN & MODAL SCAN)
 // ========================================================
+window.pilihPencarianMobile = function(subMode) {
+    mobilePencarianMode = subMode;
+    if (subMode === 'qr') {
+        document.getElementById('input-search-qrcodes').value = '';
+        document.getElementById('modal-scan-cari-qr').classList.remove('hidden');
+        setTimeout(() => document.getElementById('input-search-qrcodes').focus(), 100);
+    }
+    renderMobilePencarian();
+};
+
+window.eksekusiCariQR = async function() {
+    const rawInput = document.getElementById('input-search-qrcodes').value.trim();
+    if(!rawInput) return alert("Masukkan QR Code terlebih dahulu!");
+
+    const qrs = rawInput.split(/[\r\n; ]+/).map(q => q.trim()).filter(q => q);
+    
+    try {
+        const { data: globalData, error } = await db.from('stok_global').select('*').in('qrcode', qrs);
+        if(error) throw error;
+
+        const globalFound = globalData || [];
+        const foundSet = new Set(globalFound.map(d => d.qrcode));
+
+        // Cek juga di stok_nonaktif
+        const { data: nonaktifData } = await db.from('stok_nonaktif').select('*').in('qrcode', qrs);
+        const nonaktifFound = nonaktifData || [];
+        const nonaktifSet = new Set(nonaktifFound.map(d => d.qrcode));
+
+        searchedQRResults = [];
+        qrs.forEach(code => {
+            const g = globalFound.find(d => d.qrcode === code);
+            const n = nonaktifFound.find(d => d.qrcode === code);
+            
+            if (g) {
+                // Cari customer estimasi di stok_aktual
+                let estTarget = g.customer_aktual || '-';
+                const aktMatch = stokAktualRaw.find(a => 
+                    a.nama_item === g.nama_item && a.panjang === formatPanjang(g.panjang) && 
+                    a.grade === g.grade && a.dus === g.dus && a.shading === g.shading && 
+                    a.area === g.area && a.customer_aktual === g.customer_aktual
+                );
+                if (aktMatch && aktMatch.customer_estimasi) {
+                    estTarget = aktMatch.customer_estimasi;
+                }
+
+                searchedQRResults.push({
+                    qrcode: g.qrcode,
+                    area: g.area || '-',
+                    tglProduksi: g.tgl_produksi || '-',
+                    mesin: g.mesin || '-',
+                    shift: g.shift || '-',
+                    namaItem: g.nama_item || '-',
+                    panjang: formatPanjang(g.panjang),
+                    grade: g.grade || '-',
+                    dus: g.dus || '-',
+                    shading: g.shading || '-',
+                    customerAktual: g.customer_aktual || '-',
+                    customerEstimasi: estTarget,
+                    keterangan: g.keterangan || '-',
+                    status: 'TERSEDIA DI GUDANG',
+                    badgeClass: 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                });
+            } else if (n) {
+                searchedQRResults.push({
+                    qrcode: n.qrcode,
+                    area: n.posisi || '-',
+                    tglProduksi: '-',
+                    mesin: '-',
+                    shift: '-',
+                    namaItem: n.nama_item || '-',
+                    panjang: formatPanjang(n.panjang),
+                    grade: n.grade || '-',
+                    dus: n.dus || '-',
+                    shading: n.shading || '-',
+                    customerAktual: n.customer_aktual || '-',
+                    customerEstimasi: n.customer_estimasi || '-',
+                    keterangan: n.keterangan || '-',
+                    status: 'STOK NONAKTIF',
+                    badgeClass: 'bg-red-100 text-red-700 border-red-200'
+                });
+            } else {
+                searchedQRResults.push({
+                    qrcode: code,
+                    area: '?',
+                    tglProduksi: '-',
+                    mesin: '-',
+                    shift: '-',
+                    namaItem: 'Tidak Dikenal',
+                    panjang: '-',
+                    grade: '-',
+                    dus: '-',
+                    shading: '-',
+                    customerAktual: '-',
+                    customerEstimasi: '-',
+                    keterangan: '-',
+                    status: 'TIDAK DITEMUKAN',
+                    badgeClass: 'bg-slate-100 text-slate-500 border-slate-200'
+                });
+            }
+        });
+
+        document.getElementById('modal-scan-cari-qr').classList.add('hidden');
+        renderMobilePencarian();
+
+    } catch(e) {
+        alert("Gagal mencari data: " + e.message);
+    }
+};
+
+function renderMobilePencarian() {
+    const container = document.getElementById('view-pencarian-mobile');
+    if(!container) return;
+
+    let html = '';
+
+    // LEVEL 1: MENU 2 KISI MENYAMPING
+    if (mobilePencarianMode === 'menu') {
+        html += `
+            <div class="mb-2">
+                <h3 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">Pilih Mode Pencarian</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <div onclick="pilihPencarianMobile('qr')" class="bg-white border border-indigo-200 p-5 rounded-2xl flex flex-col justify-between shadow-sm active:scale-95 transition cursor-pointer hover:bg-indigo-50 h-40">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md"><i data-lucide="scan-line" class="w-5 h-5"></i></div>
+                        <div>
+                            <h4 class="font-black text-slate-800 text-sm leading-tight">Cari Item QRCode</h4>
+                            <p class="text-[10px] font-bold text-slate-400 mt-1">Scan fisik barcode barang</p>
+                        </div>
+                    </div>
+                    
+                    <div onclick="pilihPencarianMobile('global')" class="bg-white border border-blue-200 p-5 rounded-2xl flex flex-col justify-between shadow-sm active:scale-95 transition cursor-pointer hover:bg-blue-50 h-40">
+                        <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md"><i data-lucide="globe" class="w-5 h-5"></i></div>
+                        <div>
+                            <h4 class="font-black text-slate-800 text-sm leading-tight">Cari Item Global</h4>
+                            <p class="text-[10px] font-bold text-slate-400 mt-1">Filter spesifikasi lengkap</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } 
+    // LEVEL 2A: HASIL PENCARIAN QR CODE
+    else if (mobilePencarianMode === 'qr') {
+        html += `
+            <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center justify-between gap-3 mb-3">
+                <button onclick="pilihPencarianMobile('menu')" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
+                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
+                </button>
+                <div class="flex items-center gap-2">
+                    <button onclick="pilihPencarianMobile('qr')" class="px-3 py-2 bg-indigo-600 text-white font-black text-xs uppercase rounded-xl shadow-sm flex items-center gap-1"><i data-lucide="scan-line" class="w-3.5 h-3.5"></i> Scan Ulang</button>
+                </div>
+            </div>
+        `;
+
+        if (searchedQRResults.length === 0) {
+            html += `
+                <div class="flex flex-col items-center justify-center h-56 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
+                    <i data-lucide="package-search" class="w-12 h-12 text-slate-300 mb-2"></i>
+                    <h4 class="font-bold text-slate-700 text-sm">Belum ada QR Code yang di-scan</h4>
+                    <button onclick="pilihPencarianMobile('qr')" class="mt-3 px-4 py-2 bg-indigo-600 text-white font-black text-xs uppercase rounded-xl">Mulai Scan</button>
+                </div>
+            `;
+        } else {
+            searchedQRResults.forEach((d, idx) => {
+                html += `
+                    <div class="bg-white border border-slate-300 rounded-2xl p-4 mb-2 shadow-sm flex flex-col">
+                        <div class="flex justify-between items-center mb-3 pb-2.5 border-b border-slate-100">
+                            <div class="flex items-center gap-2">
+                                <span class="w-6 h-6 rounded-full bg-slate-800 text-white text-xs font-black flex items-center justify-center">${idx+1}</span>
+                                <span class="font-black text-sm text-emerald-700 uppercase">Area: ${d.area}</span>
+                            </div>
+                            <span class="font-bold px-2.5 py-0.5 text-[10px] rounded-md border ${d.badgeClass} uppercase">${d.status}</span>
+                        </div>
+                        
+                        <div class="font-mono font-black text-slate-900 text-sm break-all bg-slate-100 p-2.5 rounded-xl border border-slate-200 text-center mb-3">
+                            ${d.qrcode}
+                        </div>
+
+                        <div class="bg-blue-50/60 p-2.5 rounded-xl border border-blue-100 mb-3">
+                            <span class="text-[10px] font-black uppercase text-blue-500 block mb-0.5">Detail Item</span>
+                            <span class="text-xs font-black text-slate-900 leading-snug">
+                                ${d.namaItem} - ${d.panjang} - ${d.grade} - ${d.dus}
+                            </span>
+                            <span class="text-xs font-bold text-blue-700 block mt-0.5">Shading: ${d.shading}</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                            <div class="flex flex-col"><span class="text-[10px] font-black text-slate-400 uppercase">Cust Aktual</span><span class="font-bold text-orange-600">${d.customerAktual}</span></div>
+                            <div class="flex flex-col"><span class="text-[10px] font-black text-slate-400 uppercase">Cust Estimasi</span><span class="font-bold text-purple-700">${d.customerEstimasi}</span></div>
+                            <div class="flex flex-col col-span-2"><span class="text-[10px] font-black text-slate-400 uppercase">Keterangan</span><span class="font-medium text-slate-700">${d.keterangan}</span></div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    }
+    // LEVEL 2B: PENCARIAN GLOBAL (FILTER DROPDOWN LENGKAP TANPA QR)
+    else if (mobilePencarianMode === 'global') {
+        const fNama = document.getElementById('m-f-nama')?.value || '';
+        const fPjg = document.getElementById('m-f-pjg')?.value || '';
+        const fGrade = document.getElementById('m-f-grade')?.value || '';
+        const fDus = document.getElementById('m-f-dus')?.value || '';
+        const fArea = document.getElementById('m-f-area')?.value || '';
+        const fCust = document.getElementById('m-f-cust')?.value || '';
+
+        let results = dataKSArea.filter(r => {
+            if (fNama && r.nama !== fNama) return false;
+            if (fPjg && r.pjg !== fPjg) return false;
+            if (fGrade && r.grade !== fGrade) return false;
+            if (fDus && r.dus !== fDus) return false;
+            if (fArea && r.area !== fArea) return false;
+            if (fCust && r.po_aktual !== fCust) return false;
+            return true;
+        });
+
+        // Kumpulkan data unik untuk dropdown filter
+        let uNama = [...new Set(dataKSArea.map(d => d.nama))].sort();
+        let uPjg = [...new Set(dataKSArea.map(d => d.pjg))].sort();
+        let uGrade = [...new Set(dataKSArea.map(d => d.grade))].sort();
+        let uDus = [...new Set(dataKSArea.map(d => d.dus))].sort();
+        let uArea = [...new Set(dataKSArea.map(d => d.area))].sort();
+        let uCust = [...new Set(dataKSArea.map(d => d.po_aktual))].sort();
+
+        const makeOpts = (arr, selVal) => {
+            let res = '<option value="">-- Semua --</option>';
+            arr.forEach(v => { res += `<option value="${v}" ${v === selVal ? 'selected' : ''}>${v}</option>`; });
+            return res;
+        };
+
+        html += `
+            <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center justify-between gap-3 mb-3">
+                <button onclick="pilihPencarianMobile('menu')" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
+                    <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
+                </button>
+                <span class="text-xs font-black text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">${results.length} Item Ditemukan</span>
+            </div>
+
+            <!-- FORM FILTER DROPDOWN -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3 mb-3">
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="col-span-2">
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Nama Item</label>
+                        <select id="m-f-nama" onchange="renderMobilePencarian()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50">${makeOpts(uNama, fNama)}</select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Panjang</label>
+                        <select id="m-f-pjg" onchange="renderMobilePencarian()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50">${makeOpts(uPjg, fPjg)}</select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Grade</label>
+                        <select id="m-f-grade" onchange="renderMobilePencarian()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50">${makeOpts(uGrade, fGrade)}</select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Dus</label>
+                        <select id="m-f-dus" onchange="renderMobilePencarian()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50">${makeOpts(uDus, fDus)}</select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Area</label>
+                        <select id="m-f-area" onchange="renderMobilePencarian()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50">${makeOpts(uArea, fArea)}</select>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Customer Aktual</label>
+                        <select id="m-f-cust" onchange="renderMobilePencarian()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50">${makeOpts(uCust, fCust)}</select>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        if (results.length === 0) {
+            html += `
+                <div class="flex flex-col items-center justify-center h-48 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
+                    <i data-lucide="package-x" class="w-10 h-10 text-slate-300 mb-2"></i>
+                    <h4 class="font-bold text-slate-700 text-sm">Tidak ada item yang cocok</h4>
+                </div>
+            `;
+        } else {
+            results.forEach(d => {
+                html += `
+                    <div class="bg-white border border-slate-300 rounded-2xl p-4 mb-2 shadow-sm flex flex-col">
+                        <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100">
+                            <span class="font-black text-sm text-emerald-700 uppercase">Area: ${d.area}</span>
+                            <span class="font-black text-sm text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-100">${d.qty} Dus</span>
+                        </div>
+                        
+                        <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mb-3">
+                            <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Detail Item</span>
+                            <span class="text-xs font-black text-slate-900 leading-snug">
+                                ${d.nama} - ${d.pjg} - ${d.grade} - ${d.dus}
+                            </span>
+                            <span class="text-xs font-bold text-indigo-700 block mt-0.5">Shading: ${d.shading}</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                            <div class="flex flex-col"><span class="text-[10px] font-black text-slate-400 uppercase">Cust Aktual</span><span class="font-bold text-orange-600">${d.po_aktual}</span></div>
+                            <div class="flex flex-col"><span class="text-[10px] font-black text-slate-400 uppercase">Cust Estimasi</span><span class="font-bold text-purple-700">${d.customer_estimasi}</span></div>
+                            <div class="flex flex-col col-span-2 mt-1"><span class="text-[10px] font-black text-slate-400 uppercase">Keterangan</span><span class="font-medium text-slate-600">${d.keterangan || '-'}</span></div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    }
+
+    container.innerHTML = html;
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ========================================================
+// LOGIKA GANTI KETERANGAN (KS AREA & KS GLOBAL)
+// ========================================================
+window.bukaModalGantiKet = function(context) {
+    selectedForActionKet = [];
+
+    if (context === 'main') {
+        filteredData.forEach(r => {
+            if(selectedRows.has(r._id)) {
+                selectedForActionKet.push(r);
+            }
+        });
+        if(selectedForActionKet.length === 0) {
+            return alert("Pilih / centang minimal 1 baris item yang ingin diganti keterangannya!");
+        }
+    } else if (context === 'breakdown') {
+        const checkboxes = document.querySelectorAll('.cb-bd:checked');
+        if(checkboxes.length === 0) {
+            return alert("Centang minimal 1 baris area pada detail breakdown!");
+        }
+        checkboxes.forEach(cb => {
+            const id = cb.dataset.id ? parseInt(cb.dataset.id) : null;
+            const matchRow = dataKSArea.find(a => a.id === id);
+            if(matchRow) selectedForActionKet.push(matchRow);
+        });
+    }
+
+    document.getElementById('lbl-jml-ganti-ket').innerText = selectedForActionKet.length;
+    document.getElementById('input-keterangan-baru').value = '';
+    document.getElementById('modal-ganti-keterangan').classList.remove('hidden');
+    setTimeout(() => document.getElementById('input-keterangan-baru').focus(), 100);
+};
+
+window.eksekusiGantiKet = async function() {
+    const newKet = document.getElementById('input-keterangan-baru').value.trim() || '-';
+    if(selectedForActionKet.length === 0) return;
+
+    if(!confirm(`Ganti keterangan menjadi "${newKet}" untuk ${selectedForActionKet.length} baris terpilih?`)) return;
+
+    const btn = document.getElementById('btn-simpan-ket');
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...';
+    btn.disabled = true;
+
+    try {
+        for (let item of selectedForActionKet) {
+            let oldKet = item.keterangan || '-';
+            let pjgFormatted = formatPanjang(item.panjang || item.pjg);
+
+            // 1. UPDATE STOK_GLOBAL (Perbarui fisik gudang)
+            let newSku = `${item.area}_${item.nama_item || item.nama}_${pjgFormatted}_${item.grade}_${item.dus}_${item.shading}_${newKet}_${item.customer_aktual || item.po_aktual}_${item.kondisi || 'Aman'}`;
+
+            await db.from('stok_global')
+                .update({ keterangan: newKet, id_sku: newSku })
+                .eq('nama_item', item.nama_item || item.nama)
+                .eq('panjang', pjgFormatted)
+                .eq('grade', item.grade)
+                .eq('dus', item.dus)
+                .eq('shading', item.shading)
+                .eq('area', item.area)
+                .eq('customer_aktual', item.customer_aktual || item.po_aktual);
+
+            // 2. INCREMENTAL UPDATE STOK_AKTUAL
+            if (item.id) {
+                await db.from('stok_aktual').update({ keterangan: newKet, id_sku: newSku }).eq('id', item.id);
+            } else {
+                await db.from('stok_aktual')
+                    .update({ keterangan: newKet, id_sku: newSku })
+                    .eq('nama_item', item.nama_item || item.nama)
+                    .eq('panjang', pjgFormatted)
+                    .eq('grade', item.grade)
+                    .eq('dus', item.dus)
+                    .eq('shading', item.shading)
+                    .eq('area', item.area)
+                    .eq('customer_aktual', item.customer_aktual || item.po_aktual)
+                    .eq('keterangan', oldKet);
+            }
+        }
+
+        document.getElementById('modal-ganti-keterangan').classList.add('hidden');
+        if(!document.getElementById('modal-breakdown').classList.contains('hidden')) {
+            tutupModalBreakdown();
+        }
+
+        alert(`✅ SUKSES!\nKeterangan berhasil diubah menjadi "${newKet}".`);
+        await muatDataStok();
+
+    } catch (e) {
+        alert("Gagal mengubah keterangan: " + e.message);
+    } finally {
+        btn.innerHTML = ori;
+        btn.disabled = false;
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    }
+};
+
+// ==========================================
+// EXPORT EXCEL & SALIN DATA
+// ==========================================
+window.salinData = function() {
+    if (selectedRows.size === 0) return alert("Pilih data yang ingin disalin dengan mencentang kotak di kiri data!");
+
+    let textSalin = "";
+    const headers = Array.from(document.querySelectorAll('#thead-ks th'))
+        .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open'))
+        .map(th => th.innerText.trim().replace(/\n/g, ' '));
+    
+    textSalin += headers.join('\t') + '\n';
+
+    let exportData = filteredData.filter(r => selectedRows.has(r._id));
+    exportData.forEach(row => {
+        const sv = row.searchValues;
+        const rowData = [];
+        
+        document.querySelectorAll('#thead-ks th').forEach(th => {
+            if(window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open')) {
+                const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
+                if(colClass) {
+                    let val = sv[colClass] || '-';
+                    let cleanVal = String(val).replace(/<[^>]*>?/gm, '').trim();
+                    rowData.push(cleanVal);
+                }
+            }
+        });
+        textSalin += rowData.join('\t') + '\n';
+    });
+    
+    navigator.clipboard.writeText(textSalin);
+    alert(`Tersalin! Buka Excel dan Paste (Ctrl+V).`);
+};
+
+window.downloadXLS = function() {
+    if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
+    if (selectedRows.size === 0) return alert("Pilih minimal 1 baris data untuk di-export!");
+    
+    let ws_data = [];
+    const activeHeaders = [];
+    
+    document.querySelectorAll('#thead-ks th').forEach(th => {
+        if(window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open')) {
+            const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
+            let headerText = th.innerText.trim().replace(/\n/g, ' ');
+            activeHeaders.push({ text: headerText, colClass: colClass });
+        }
+    });
+
+    ws_data.push(activeHeaders.map(h => h.text));
+
+    let exportData = filteredData.filter(r => selectedRows.has(r._id));
+    exportData.forEach(row => {
+        const sv = row.searchValues;
+        const rowData = [];
+        activeHeaders.forEach(h => {
+            let val = sv[h.colClass] || '-';
+            let cleanVal = String(val).replace(/<[^>]*>?/gm, '').trim();
+            rowData.push(cleanVal);
+        });
+        ws_data.push(rowData);
+    });
+
+    let ws = XLSX.utils.aoa_to_sheet(ws_data);
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Kartu_Stok");
+    XLSX.writeFile(wb, `Kartu_Stok_${modeKS.toUpperCase()}.xlsx`);
+};
+
+// ==========================================
+// MODAL BREAKDOWN & GANTI PO & KONVERSI
+// ==========================================
+function tutupSemuaPopups() {
+    document.getElementById('modal-breakdown').classList.add('hidden');
+    document.getElementById('modal-po').classList.add('hidden');
+    document.getElementById('modal-ganti-keterangan').classList.add('hidden');
+    document.getElementById('modal-req-konversi').classList.add('hidden');
+    document.getElementById('modal-scan-cari-qr').classList.add('hidden');
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
+    if(document.getElementById('sidebar-kolom')) {
+        document.getElementById('sidebar-kolom').classList.add('translate-x-full');
+    }
+}
+
+window.bukaBreakdown = function(gKey) {
+    const item = dataKSGlobal.find(g => g.gKey === gKey); if(!item) return;
+
+    document.getElementById('bd-title-item').innerText = `${item.nama} | ${item.pjg} | ${item.grade} | DUS: ${item.dus} | SHADING: ${item.shading} | KET: ${item.ket}`;
+    currentBreakdownData = item.areas;
+
+    const tbody = document.getElementById('tbody-breakdown');
+    tbody.innerHTML = item.areas.map((a, i) => {
+        const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
+        
+        return `
+            <tr class="transition bd-row text-[13px] ${stripeClass}">
+                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-id="${a.id}" data-idsku="${a.id_sku_base}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
+                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
+                <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi">${a.customer_estimasi}</td>
+                <td class="px-4 py-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px]">${a.keterangan || '-'}</td>
+                <td class="px-4 py-3 font-black text-emerald-700 text-center">${a.qty}</td>
+            </tr>`;
+    }).join('');
+
+    document.getElementById('modal-breakdown').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+};
+
+window.tutupModalBreakdown = function() { 
+    document.getElementById('modal-breakdown').classList.add('hidden'); 
+    document.getElementById('overlay-klik-luar').classList.add('hidden'); 
+};
+
+window.highlightBdRow = function(cb) {
+    const tr = cb.closest('tr');
+    if(cb.checked) { tr.classList.add('selected-row'); } 
+    else { tr.classList.remove('selected-row'); }
+};
+
+window.toggleCentangBreakdown = function(checked) { 
+    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; highlightBdRow(cb); }); 
+};
+
+window.siapkanGantiPO = function(context) {
+    selectedForAction = [];
+    let totalDus = 0;
+
+    if(context === 'main') {
+        if(modeKS === 'global' || modeKS === 'nonaktif') return;
+        
+        filteredData.forEach(r => {
+            if(selectedRows.has(r._id)) {
+                selectedForAction.push({
+                    id: r.id, 
+                    id_sku: r.id_sku_base,
+                    nama_item: r.nama,
+                    pjg: r.pjg,
+                    grade: r.grade,
+                    dus: r.dus,
+                    shading: r.shading,
+                    po_aktual: r.po_aktual,
+                    customer_estimasi: r.customer_estimasi,
+                    area: r.area,
+                    keterangan: r.keterangan,
+                    kondisi: r.kondisi,
+                    qty: r.qty
+                });
+                totalDus += r.qty;
+            }
+        });
+        
+        if(selectedForAction.length === 0) {
+            return alert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya!');
+        }
+
+    } else { 
+        const checkboxes = document.querySelectorAll('.cb-bd:checked'); 
+        if(checkboxes.length === 0) {
+            return alert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya!');
+        }
+        
+        checkboxes.forEach(cb => {
+            selectedForAction.push({ 
+                id: cb.dataset.id ? parseInt(cb.dataset.id) : null,
+                id_sku: cb.dataset.idsku, 
+                nama_item: cb.dataset.nama,
+                pjg: cb.dataset.pjg,
+                grade: cb.dataset.grade,
+                dus: cb.dataset.dus,
+                shading: cb.dataset.shading,
+                po_aktual: cb.dataset.po,
+                customer_estimasi: cb.dataset.estimasi,
+                area: cb.dataset.area,
+                keterangan: cb.dataset.ket,
+                kondisi: cb.dataset.kondisi, 
+                qty: parseInt(cb.dataset.qty) || 0
+            });
+            totalDus += parseInt(cb.dataset.qty) || 0;
+        });
+    }
+
+    sourcePOContext = context;
+    document.getElementById('input-new-po').value = '';
+    const inputQty = document.getElementById('input-qty-ganti');
+    inputQty.value = totalDus; 
+    inputQty.max = totalDus; 
+
+    document.getElementById('modal-po').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+};
+
+window.tutupModalPO = function() { 
+    document.getElementById('modal-po').classList.add('hidden'); 
+    if(document.getElementById('modal-breakdown').classList.contains('hidden')) {
+        document.getElementById('overlay-klik-luar').classList.add('hidden'); 
+    }
+};
+
+window.eksekusiGantiPO = async function() {
+    const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
+    if(!newPO) return alert("Silakan Pilih Customer Baru dari daftar dropdown!");
+
+    const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
+    if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
+
+    let maxDus = selectedForAction.reduce((sum, row) => sum + row.qty, 0);
+    if(qtyDiminta > maxDus) return alert(`Maksimal jatah adalah ${maxDus} dus!`);
+
+    const btn = document.getElementById('btn-simpan-po'); 
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; 
+    btn.disabled = true;
+
+    try {
+        let qtySisaUntukDiupdate = qtyDiminta; 
+        
+        for(let row of selectedForAction) {
+            if (qtySisaUntukDiupdate <= 0) break; 
+            
+            let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
+            qtySisaUntukDiupdate -= qtyPotong;
+
+            let oldRow = null;
+            if (row.id) {
+                const { data, error } = await db.from('stok_aktual').select('*').eq('id', row.id).single();
+                if (!error && data) oldRow = data;
+            }
+
+            if (!oldRow) {
+                const { data } = await db.from('stok_aktual')
+                    .select('*')
+                    .eq('nama_item', row.nama_item)
+                    .eq('panjang', row.pjg)
+                    .eq('grade', row.grade)
+                    .eq('dus', row.dus)
+                    .eq('shading', row.shading)
+                    .eq('area', row.area)
+                    .eq('customer_aktual', row.po_aktual)
+                    .eq('customer_estimasi', row.customer_estimasi)
+                    .limit(1);
+                
+                if (data && data.length > 0) oldRow = data[0];
+            }
+
+            if (oldRow) {
+                let sisaQty = oldRow.qty - qtyPotong;
+                if (sisaQty <= 0) {
+                    await db.from('stok_aktual').delete().eq('id', oldRow.id);
+                } else {
+                    await db.from('stok_aktual').update({ qty: sisaQty }).eq('id', oldRow.id);
+                }
+
+                const { data: newRows } = await db.from('stok_aktual')
+                    .select('id, qty')
+                    .eq('nama_item', oldRow.nama_item)
+                    .eq('panjang', oldRow.panjang)
+                    .eq('grade', oldRow.grade)
+                    .eq('dus', oldRow.dus)
+                    .eq('shading', oldRow.shading)
+                    .eq('area', oldRow.area)
+                    .eq('customer_aktual', oldRow.customer_aktual)
+                    .eq('customer_estimasi', newPO)
+                    .limit(1);
+
+                if (newRows && newRows.length > 0) {
+                    await db.from('stok_aktual').update({ qty: newRows[0].qty + qtyPotong }).eq('id', newRows[0].id);
+                } else {
+                    let insertData = { ...oldRow };
+                    delete insertData.id; 
+                    delete insertData.created_at; 
+                    insertData.customer_estimasi = newPO;
+                    insertData.qty = qtyPotong;
+                    await db.from('stok_aktual').insert([insertData]);
+                }
+            }
+        }
+        
+        tutupModalPO(); 
+        if(sourcePOContext === 'breakdown') tutupModalBreakdown();
+        
+        alert("✅ Berhasil mengganti Customer Estimasi!");
+        await muatDataStok();
+    } catch (error) { 
+        alert("GAGAL UPDATE: " + error.message); 
+    } finally { 
+        btn.innerHTML = ori; 
+        btn.disabled = false; 
+        if(typeof lucide !== 'undefined') lucide.createIcons(); 
+    }
+};
+
+window.prosesLabelCustomerMassal = async function() {
+    if (selectedRows.size === 0) return alert("Pilih baris yang ingin diproses label customernya!");
+
+    let payload = [];
+    filteredData.forEach(r => {
+        if(selectedRows.has(r._id)) {
+            let poAktual = r.po_aktual;
+            let poEstimasi = r.customer_estimasi;
+            
+            if(poAktual !== poEstimasi) {
+                payload.push({
+                    id_sku: r.id_sku_base,
+                    area: r.area,
+                    jenis_item: r.jenis,
+                    nama_item: r.nama,
+                    panjang: r.pjg,
+                    grade: r.grade,
+                    dus: r.dus,
+                    shading: r.shading,
+                    keterangan: r.keterangan || '-',
+                    customer_aktual_awal: poAktual,
+                    customer_aktual_request: poEstimasi,
+                    qty_request: r.qty,
+                    qty_proses: 0,
+                    progres: 'PENDING'
+                });
+            }
+        }
+    });
+
+    if(payload.length === 0) {
+        return alert("Tidak ada baris valid untuk diproses.\nPastikan Anda memilih baris yang Customer Aktual dan Customer Estimasinya BERBEDA.");
+    }
+
+    if(!confirm(`Akan memproses ${payload.length} item ke tabel Ganti Customer.\nLanjutkan?`)) return;
+
+    const btn = document.getElementById('btn-proses-ganti-main');
+    const ori = btn.innerHTML;
+    btn.innerHTML = '<div class="bg-emerald-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="animate-spin w-4 h-4"></i></div><div class="bg-emerald-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-emerald-700 transition">Memproses...</div>';
+    btn.disabled = true;
+
+    try {
+        const { error } = await db.from('ganti_customer').insert(payload);
+        if(error) throw error;
+
+        alert(`✅ BERHASIL!\n${payload.length} item telah dikirim ke antrean Ganti Customer.`);
+        await muatDataStok(); 
+    } catch(e) {
+        alert("Gagal memproses: " + e.message);
+    } finally {
+        btn.innerHTML = ori;
+        btn.disabled = false;
+        lucide.createIcons();
+    }
+};
+
+window.siapkanReqKonversi = function() {
+    if(selectedRows.size !== 1) return alert('Silakan centang TEPAT 1 (satu) baris item yang ingin direquest konversi.');
+
+    const selectedId = Array.from(selectedRows)[0];
+    const r = filteredData.find(d => d._id === selectedId);
+    
+    if(!r) return alert("Data tidak ditemukan!");
+
+    selectedForReq = {
+        id: r.id, 
+        jenis_item: r.jenis || '-',
+        nama_item: r.nama || '-',
+        panjang: r.pjg || '-',
+        grade: r.grade || '-',
+        dus: r.dus || '-',
+        shading: r.shading || '-',
+        customer_aktual: r.po_aktual || '-',
+        customer_estimasi: r.customer_estimasi || '-', 
+        keterangan: r.keterangan || '-',
+        area: r.area || '-',
+        qty_max: r.qty || 0
+    };
+
+    const infoAsal = document.getElementById('req-info-asal');
+    if(infoAsal) {
+        infoAsal.innerHTML = `
+            <span class="text-blue-600 font-black">${selectedForReq.nama_item}</span> | 
+            ${selectedForReq.panjang} | ${selectedForReq.grade} | ${selectedForReq.dus} | ${selectedForReq.shading} | 
+            <span class="text-emerald-600 font-bold">${selectedForReq.area}</span> | 
+            <span class="text-orange-600 font-bold">${selectedForReq.customer_aktual}</span>
+        `;
+    }
+
+    ['req-nama-item', 'req-panjang', 'req-grade', 'req-dus', 'req-shading', 'req-qty', 'req-qty-hasil'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.value = '';
+    });
+
+    document.getElementById('modal-req-konversi').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+};
+
+window.tutupModalReqKonversi = function() {
+    document.getElementById('modal-req-konversi').classList.add('hidden');
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
+    selectedForReq = null;
+};
+
+window.eksekusiReqKonversi = async function() {
+    if(!selectedForReq) return alert("Data sumber tidak valid!");
+
+    const namaReq = document.getElementById('req-nama-item').value.trim() || selectedForReq.nama_item;
+    const rawPjgReq = document.getElementById('req-panjang').value.trim();
+    let pjgReq = selectedForReq.panjang;
+    if (rawPjgReq) {
+        let pUpper = rawPjgReq.toUpperCase();
+        pjgReq = pUpper.endsWith('M') ? pUpper : pUpper + 'M';
+    }
+
+    const gradeReq = document.getElementById('req-grade').value.trim() || selectedForReq.grade;
+    const dusReq = document.getElementById('req-dus').value.trim() || selectedForReq.dus;
+    const shadingReq = document.getElementById('req-shading').value.trim() || selectedForReq.shading;
+    
+    const qtyReq = parseInt(document.getElementById('req-qty').value);
+    const qtyHasil = parseInt(document.getElementById('req-qty-hasil').value);
+
+    if(isNaN(qtyReq) || qtyReq <= 0) return alert("Qty Request tidak valid!");
+    if(isNaN(qtyHasil) || qtyHasil <= 0) return alert("Qty Hasil tidak valid!");
+    if(qtyReq > selectedForReq.qty_max) return alert(`Maksimal Qty Request adalah ${selectedForReq.qty_max} dus!`);
+
+    const btn = document.getElementById('btn-save-req-konv'); const ori = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
+
+    try {
+        const now = new Date();
+        const yy = String(now.getFullYear()).slice(-2);
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const prefix = `K-${dd}${mm}${yy}`;
+
+        const { data: existingCodes } = await db.from('request_konversi').select('kode_konversi').like('kode_konversi', `${prefix}%`);
+        
+        let seq = 1;
+        if(existingCodes && existingCodes.length > 0) {
+            let seqs = existingCodes.map(c => parseInt(c.kode_konversi.replace(prefix, '')) || 0);
+            seq = Math.max(...seqs) + 1;
+        }
+        const kodeKonversi = `${prefix}${String(seq).padStart(2, '0')}`;
+
+        const { data: origRow, error: errOrig } = await db.from('stok_aktual').select('*').eq('id', selectedForReq.id).single();
+        if (errOrig || !origRow) throw new Error("Gagal menemukan baris stok asal di database.");
+
+        let newOrigQty = origRow.qty - qtyReq;
+        if(newOrigQty <= 0) {
+            await db.from('stok_aktual').delete().eq('id', origRow.id);
+        } else {
+            await db.from('stok_aktual').update({ qty: newOrigQty }).eq('id', origRow.id);
+        }
+
+        let splitRow = { ...origRow };
+        delete splitRow.id;
+        delete splitRow.created_at;
+        splitRow.qty = qtyReq;
+        splitRow.konversi = kodeKonversi; 
+        await db.from('stok_aktual').insert([splitRow]);
+
+        const payload = {
+            kode_konversi: kodeKonversi,
+            aktifitas_konversi: 'req',
+            area: selectedForReq.area,
+            jenis_item: selectedForReq.jenis_item,
+            nama_item: selectedForReq.nama_item,
+            panjang: selectedForReq.panjang,
+            grade: selectedForReq.grade,
+            dus: selectedForReq.dus,
+            shading: selectedForReq.shading,
+            keterangan: selectedForReq.keterangan,
+            "customer aktual": selectedForReq.customer_aktual,
+            customer_estimasi: selectedForReq.customer_estimasi, 
+            nama_item_req: namaReq,
+            panjang_req: pjgReq, 
+            grade_req: gradeReq,
+            dus_req: dusReq,
+            shading_req: shadingReq,
+            qty_req: qtyReq.toString(),
+            qty_hasil: qtyHasil.toString(),
+            qty_out: "0",
+            qty_in: "0",
+            progres_konversi: "PENDING",
+            pic_request: currentUser.username
+        };
+
+        const { error } = await db.from('request_konversi').insert([payload]);
+        if(error) throw error;
+        
+        tutupModalReqKonversi();
+        alert(`✅ Berhasil membuat Request Konversi dengan Kode: ${kodeKonversi}`);
+        await muatDataStok();
+    } catch(e) {
+        alert("Gagal menyimpan request: " + e.message);
+    } finally {
+        btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons();
+    }
+};
+
+// ==========================================
+// EXCEL FILTER & COLUMN SYSTEM
+// ==========================================
 window.openColumnFilter = function(event, colClass, colName) {
     event.stopPropagation();
     currentFilterCol = colClass;
     document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
 
     let uniqueValues = new Set();
-    
     processedData.forEach(row => {
         let show = true;
         for (let c in activeFilters) {
@@ -760,8 +1530,7 @@ window.openColumnFilter = function(event, colClass, colName) {
     let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
     
     sortedValues.forEach(val => {
-        let isChecked = true;
-        if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
+        let isChecked = !activeFilters[colClass] || activeFilters[colClass].includes(val);
         listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}">
             <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
             <span class="truncate text-slate-600">${val}</span>
@@ -777,7 +1546,6 @@ window.openColumnFilter = function(event, colClass, colName) {
     
     const btnRect = event.currentTarget.getBoundingClientRect();
     const menuWidth = 256; 
-    
     let topPos = btnRect.bottom + 4; 
     let leftPos = btnRect.left; 
 
@@ -860,9 +1628,6 @@ function updateFilterIcons() {
     }
 }
 
-// ==========================================
-// ATUR KOLOM
-// ==========================================
 window.toggleSidebarKolom = function() {
     const sidebar = document.getElementById('sidebar-kolom');
     const overlay = document.getElementById('overlay-klik-luar');
@@ -881,9 +1646,7 @@ window.renderDragList = function() {
     container.innerHTML = '';
     
     const headers = Array.from(document.querySelectorAll('#thead-ks th')).filter(th => 
-        !th.classList.contains('col-cb') && 
-        !th.classList.contains('col-open') && 
-        !th.classList.contains('col-proses')
+        !th.classList.contains('col-cb') && !th.classList.contains('col-open') && !th.classList.contains('col-proses')
     );
     
     headers.forEach(th => {
@@ -923,11 +1686,8 @@ window.renderDragList = function() {
 
 window.toggleHideCol = function(e, colClass) {
     e.stopPropagation();
-    if(hiddenCols.includes(colClass)) {
-        hiddenCols = hiddenCols.filter(c => c !== colClass);
-    } else {
-        hiddenCols.push(colClass);
-    }
+    if(hiddenCols.includes(colClass)) hiddenCols = hiddenCols.filter(c => c !== colClass);
+    else hiddenCols.push(colClass);
     renderDragList();
 };
 
@@ -982,7 +1742,6 @@ function applyColumnOrder() {
 
         const cbCell = cells.find(c => c.classList.contains('col-cb'));
         const openCell = cells.find(c => c.classList.contains('col-open'));
-        const prosesCell = cells.find(c => c.classList.contains('col-proses'));
         
         const cellMap = {};
         cells.forEach(c => {
@@ -995,585 +1754,14 @@ function applyColumnOrder() {
         if (openCell) row.appendChild(openCell); 
 
         userColOrder.forEach(colId => {
-            if (cellMap[colId]) {
-                row.appendChild(cellMap[colId]);
-            }
+            if (cellMap[colId]) row.appendChild(cellMap[colId]);
         });
 
         cells.forEach(c => {
             const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-'));
-            if (colClass !== 'col-cb' && colClass !== 'col-open' && colClass !== 'col-proses' && !userColOrder.includes(colClass)) {
+            if (colClass !== 'col-cb' && colClass !== 'col-open' && !userColOrder.includes(colClass)) {
                 row.appendChild(c);
             }
         });
-        
-        if (prosesCell) row.appendChild(prosesCell);
     });
 }
-
-function initResizableColumns() {
-    const cols = document.querySelectorAll('#main-table th');
-    cols.forEach(col => {
-        const existing = col.querySelector('.resizer');
-        if(existing) existing.remove();
-
-        const resizer = document.createElement('div');
-        resizer.classList.add('resizer');
-        col.appendChild(resizer);
-        
-        let x = 0; let w = 0;
-        resizer.addEventListener('mousedown', function(e) {
-            x = e.clientX;
-            w = parseInt(window.getComputedStyle(col).width, 10);
-            document.addEventListener('mousemove', mouseMoveHandler);
-            document.addEventListener('mouseup', mouseUpHandler);
-            resizer.classList.add('resizing');
-        });
-        const mouseMoveHandler = function(e) {
-            const dx = e.clientX - x;
-            col.style.width = `${w + dx}px`;
-            col.style.minWidth = `${w + dx}px`;
-        };
-        const mouseUpHandler = function() {
-            document.removeEventListener('mousemove', mouseMoveHandler);
-            document.removeEventListener('mouseup', mouseUpHandler);
-            resizer.classList.remove('resizing');
-        };
-    });
-}
-
-// ==========================================
-// EXPORT EXCEL & SALIN DATA
-// ==========================================
-window.salinData = function() {
-    if (selectedRows.size === 0) return alert("Pilih data yang ingin disalin dengan mencentang kotak di kiri data!");
-
-    let textSalin = "";
-    const headers = Array.from(document.querySelectorAll('#thead-ks th'))
-        .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open'))
-        .map(th => th.innerText.trim().replace(/\n/g, ' '));
-    
-    textSalin += headers.join('\t') + '\n';
-
-    let exportData = filteredData.filter(r => selectedRows.has(r._id));
-    exportData.forEach(row => {
-        const sv = row.searchValues;
-        const rowData = [];
-        
-        document.querySelectorAll('#thead-ks th').forEach(th => {
-            if(window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open')) {
-                const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
-                if(colClass) {
-                    let val = sv[colClass] || '-';
-                    let cleanVal = String(val).replace(/<[^>]*>?/gm, '').trim();
-                    rowData.push(cleanVal);
-                }
-            }
-        });
-        textSalin += rowData.join('\t') + '\n';
-    });
-    
-    navigator.clipboard.writeText(textSalin);
-    alert(`Tersalin! Buka Excel dan Paste (Ctrl+V).`);
-};
-
-window.downloadXLS = function() {
-    if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
-    if (selectedRows.size === 0) return alert("Pilih minimal 1 baris data untuk di-export!");
-    
-    let ws_data = [];
-    const activeHeaders = [];
-    
-    document.querySelectorAll('#thead-ks th').forEach(th => {
-        if(window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open')) {
-            const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
-            let headerText = th.innerText.trim().replace(/\n/g, ' ');
-            activeHeaders.push({ text: headerText, colClass: colClass });
-        }
-    });
-
-    ws_data.push(activeHeaders.map(h => h.text));
-
-    let exportData = filteredData.filter(r => selectedRows.has(r._id));
-    exportData.forEach(row => {
-        const sv = row.searchValues;
-        const rowData = [];
-        activeHeaders.forEach(h => {
-            let val = sv[h.colClass] || '-';
-            let cleanVal = String(val).replace(/<[^>]*>?/gm, '').trim();
-            rowData.push(cleanVal);
-        });
-        ws_data.push(rowData);
-    });
-
-    let ws = XLSX.utils.aoa_to_sheet(ws_data);
-    let wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Kartu_Stok");
-    XLSX.writeFile(wb, `Kartu_Stok_${modeKS.toUpperCase()}.xlsx`);
-};
-
-// ==========================================
-// MODAL & POPUPS
-// ==========================================
-function tutupSemuaPopups() {
-    document.getElementById('modal-lihat-po').classList.add('hidden');
-    document.getElementById('modal-breakdown').classList.add('hidden');
-    document.getElementById('modal-po').classList.add('hidden');
-    document.getElementById('modal-req-konversi').classList.add('hidden');
-    document.getElementById('overlay-klik-luar').classList.add('hidden');
-    if(document.getElementById('sidebar-kolom')) {
-        document.getElementById('sidebar-kolom').classList.add('translate-x-full');
-    }
-}
-
-window.bukaBreakdown = function(gKey) {
-    const item = dataKSGlobal.find(g => g.gKey === gKey); if(!item) return;
-
-    document.getElementById('bd-title-item').innerText = `${item.nama} | ${item.pjg} | ${item.grade} | DUS: ${item.dus} | SHADING: ${item.shading} | KET: ${item.ket}`;
-    currentBreakdownData = item.areas;
-
-    const tbody = document.getElementById('tbody-breakdown');
-    tbody.innerHTML = item.areas.map((a, i) => {
-        const safeQRs = JSON.stringify(a.qrcodes).replace(/"/g, "&quot;");
-        const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
-        
-        return `
-            <tr class="transition bd-row text-[13px] ${stripeClass}">
-                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-id="${a.id}" data-idsku="${a.id_sku_base}" data-qrs="${safeQRs}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
-                <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
-                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
-                <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi">${a.customer_estimasi}</td>
-                <td class="px-4 py-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px]">${a.keterangan}</td>
-                <td class="px-4 py-3 font-black text-emerald-700 text-center">${a.qty}</td>
-            </tr>`;
-    }).join('');
-
-    document.getElementById('modal-breakdown').classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
-};
-
-window.tutupModalBreakdown = function() { 
-    document.getElementById('modal-breakdown').classList.add('hidden'); 
-    document.getElementById('overlay-klik-luar').classList.add('hidden'); 
-};
-
-window.highlightBdRow = function(cb) {
-    const tr = cb.closest('tr');
-    if(cb.checked) { tr.classList.add('selected-row'); } 
-    else { tr.classList.remove('selected-row'); }
-};
-
-window.toggleCentangBreakdown = function(checked) { 
-    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; highlightBdRow(cb); }); 
-};
-
-window.bukaModalLihatPO = function(encodedPOs) {
-    const poStr = decodeURIComponent(encodedPOs);
-    const poArr = poStr.split('|').map(p => p.trim()).filter(p => p);
-    const ul = document.getElementById('list-po-aktual');
-    if (poArr.length === 0 || poArr[0] === 'KOSONG') {
-        ul.innerHTML = '<li class="text-slate-400 italic font-medium p-3 bg-slate-50 rounded-md text-center border border-slate-200">Tidak ada Customer Aktual tersimpan.</li>';
-    } else {
-        ul.innerHTML = poArr.map(p => {
-            let parts = p.split('(');
-            let namaPo = parts[0].trim();
-            let qtyPo = parts[1] ? parts[1].replace(')', '').trim() : '';
-            return `<li class="p-3 bg-white border border-slate-200 shadow-sm text-slate-700 font-semibold rounded-md flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 text-slate-400"></i> <span>${namaPo}</span></div> 
-                        <span class="bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-0.5 rounded text-xs font-black">${qtyPo}</span>
-                    </li>`;
-        }).join('');
-    }
-    if(typeof lucide !== 'undefined') lucide.createIcons();
-    document.getElementById('modal-lihat-po').classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
-};
-
-// REVISI KRUSIAL: siapkanGantiPO yang aman dan langsung menampung data terpilih
-window.siapkanGantiPO = function(context) {
-    selectedForAction = [];
-    let totalDus = 0;
-
-    if(context === 'main') {
-        if(modeKS === 'global' || modeKS === 'nonaktif') return;
-        
-        filteredData.forEach(r => {
-            if(selectedRows.has(r._id)) {
-                selectedForAction.push({
-                    id: r.id, 
-                    id_sku: r.id_sku_base,
-                    nama_item: r.nama,
-                    pjg: r.pjg,
-                    grade: r.grade,
-                    dus: r.dus,
-                    shading: r.shading,
-                    po_aktual: r.po_aktual,
-                    customer_estimasi: r.customer_estimasi,
-                    area: r.area,
-                    keterangan: r.keterangan,
-                    kondisi: r.kondisi,
-                    qty: r.qty
-                });
-                totalDus += r.qty;
-            }
-        });
-        
-        if(selectedForAction.length === 0) {
-            return alert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya!');
-        }
-
-    } else { 
-        const checkboxes = document.querySelectorAll('.cb-bd:checked'); 
-        if(checkboxes.length === 0) {
-            return alert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya!');
-        }
-        
-        checkboxes.forEach(cb => {
-            selectedForAction.push({ 
-                id: cb.dataset.id ? parseInt(cb.dataset.id) : null,
-                id_sku: cb.dataset.idsku, 
-                nama_item: cb.dataset.nama,
-                pjg: cb.dataset.pjg,
-                grade: cb.dataset.grade,
-                dus: cb.dataset.dus,
-                shading: cb.dataset.shading,
-                po_aktual: cb.dataset.po,
-                customer_estimasi: cb.dataset.estimasi,
-                area: cb.dataset.area,
-                keterangan: cb.dataset.ket,
-                kondisi: cb.dataset.kondisi, 
-                qty: parseInt(cb.dataset.qty) || 0
-            });
-            totalDus += parseInt(cb.dataset.qty) || 0;
-        });
-    }
-
-    sourcePOContext = context;
-    document.getElementById('input-new-po').value = '';
-    const inputQty = document.getElementById('input-qty-ganti');
-    inputQty.value = totalDus; 
-    inputQty.max = totalDus; 
-
-    document.getElementById('modal-po').classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
-};
-
-window.tutupModalPO = function() { 
-    document.getElementById('modal-po').classList.add('hidden'); 
-    if(document.getElementById('modal-breakdown').classList.contains('hidden')) {
-        document.getElementById('overlay-klik-luar').classList.add('hidden'); 
-    }
-};
-
-// REVISI KRUSIAL: eksekusiGantiPO menggunakan ID spesifik yang pasti akurat
-window.eksekusiGantiPO = async function() {
-    const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
-    if(!newPO) return alert("Silakan Pilih Customer Baru dari daftar dropdown!");
-
-    const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
-    if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
-
-    let maxDus = selectedForAction.reduce((sum, row) => sum + row.qty, 0);
-    if(qtyDiminta > maxDus) return alert(`Maksimal jatah adalah ${maxDus} dus!`);
-
-    const btn = document.getElementById('btn-simpan-po'); 
-    const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; 
-    btn.disabled = true;
-
-    try {
-        let qtySisaUntukDiupdate = qtyDiminta; 
-        
-        for(let row of selectedForAction) {
-            if (qtySisaUntukDiupdate <= 0) break; 
-            
-            let qtyPotong = Math.min(row.qty, qtySisaUntukDiupdate);
-            qtySisaUntukDiupdate -= qtyPotong;
-
-            let oldRow = null;
-            if (row.id) {
-                const { data, error } = await db.from('stok_aktual').select('*').eq('id', row.id).single();
-                if (!error && data) oldRow = data;
-            }
-
-            if (!oldRow) {
-                const { data } = await db.from('stok_aktual')
-                    .select('*')
-                    .eq('nama_item', row.nama_item)
-                    .eq('panjang', row.pjg)
-                    .eq('grade', row.grade)
-                    .eq('dus', row.dus)
-                    .eq('shading', row.shading)
-                    .eq('area', row.area)
-                    .eq('customer_aktual', row.po_aktual)
-                    .eq('customer_estimasi', row.customer_estimasi)
-                    .limit(1);
-                
-                if (data && data.length > 0) oldRow = data[0];
-            }
-
-            if (oldRow) {
-                let sisaQty = oldRow.qty - qtyPotong;
-                if (sisaQty <= 0) {
-                    await db.from('stok_aktual').delete().eq('id', oldRow.id);
-                } else {
-                    await db.from('stok_aktual').update({ qty: sisaQty }).eq('id', oldRow.id);
-                }
-
-                // Cek baris tujuan baru
-                const { data: newRows } = await db.from('stok_aktual')
-                    .select('id, qty')
-                    .eq('nama_item', oldRow.nama_item)
-                    .eq('panjang', oldRow.panjang)
-                    .eq('grade', oldRow.grade)
-                    .eq('dus', oldRow.dus)
-                    .eq('shading', oldRow.shading)
-                    .eq('area', oldRow.area)
-                    .eq('customer_aktual', oldRow.customer_aktual)
-                    .eq('customer_estimasi', newPO)
-                    .limit(1);
-
-                if (newRows && newRows.length > 0) {
-                    await db.from('stok_aktual').update({ qty: newRows[0].qty + qtyPotong }).eq('id', newRows[0].id);
-                } else {
-                    let insertData = { ...oldRow };
-                    delete insertData.id; 
-                    delete insertData.created_at; 
-                    insertData.customer_estimasi = newPO;
-                    insertData.qty = qtyPotong;
-                    await db.from('stok_aktual').insert([insertData]);
-                }
-            }
-        }
-        
-        tutupModalPO(); 
-        if(sourcePOContext === 'breakdown') tutupModalBreakdown();
-        
-        alert("✅ Berhasil mengganti Customer Estimasi!");
-        await muatDataStok();
-    } catch (error) { 
-        alert("GAGAL UPDATE: " + error.message); 
-    } finally { 
-        btn.innerHTML = ori; 
-        btn.disabled = false; 
-        if(typeof lucide !== 'undefined') lucide.createIcons(); 
-    }
-};
-
-window.prosesLabelCustomerMassal = async function() {
-    if (selectedRows.size === 0) return alert("Pilih baris yang ingin diproses label customernya!");
-
-    let payload = [];
-    let invalidCount = 0;
-
-    filteredData.forEach(r => {
-        if(selectedRows.has(r._id)) {
-            let poAktual = r.po_aktual;
-            let poEstimasi = r.customer_estimasi;
-            
-            if(poAktual !== poEstimasi) {
-                payload.push({
-                    id_sku: r.id_sku_base,
-                    area: r.area,
-                    jenis_item: r.jenis,
-                    nama_item: r.nama,
-                    panjang: r.pjg,
-                    grade: r.grade,
-                    dus: r.dus,
-                    shading: r.shading,
-                    keterangan: r.keterangan,
-                    customer_aktual_awal: poAktual,
-                    customer_aktual_request: poEstimasi,
-                    qty_request: r.qty,
-                    qty_proses: 0,
-                    progres: 'PENDING'
-                });
-            } else {
-                invalidCount++;
-            }
-        }
-    });
-
-    if(payload.length === 0) {
-        return alert("Tidak ada baris valid untuk diproses.\nPastikan Anda memilih baris yang Customer Aktual dan Customer Estimasinya BERBEDA.");
-    }
-
-    if(!confirm(`Akan memproses ${payload.length} item ke tabel Ganti Customer.\nLanjutkan?`)) return;
-
-    const btn = document.getElementById('btn-proses-ganti-main');
-    const ori = btn.innerHTML;
-    btn.innerHTML = '<div class="bg-emerald-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="loader-2" class="animate-spin w-4 h-4"></i></div><div class="bg-emerald-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-emerald-700 transition">Memproses...</div>';
-    btn.disabled = true;
-
-    try {
-        const { error } = await db.from('ganti_customer').insert(payload);
-        if(error) throw error;
-
-        alert(`✅ BERHASIL!\n${payload.length} item telah dikirim ke antrean Ganti Customer.`);
-        await muatDataStok(); 
-    } catch(e) {
-        alert("Gagal memproses: " + e.message);
-    } finally {
-        btn.innerHTML = ori;
-        btn.disabled = false;
-        lucide.createIcons();
-    }
-};
-
-window.siapkanReqKonversi = function() {
-    if(selectedRows.size !== 1) return alert('Silakan centang TEPAT 1 (satu) baris item yang ingin direquest konversi.');
-
-    const selectedId = Array.from(selectedRows)[0];
-    const r = filteredData.find(d => d._id === selectedId);
-    
-    if(!r) return alert("Data tidak ditemukan!");
-
-    selectedForReq = {
-        id: r.id, 
-        jenis_item: r.jenis || '-',
-        nama_item: r.nama || '-',
-        panjang: r.pjg || '-',
-        grade: r.grade || '-',
-        dus: r.dus || '-',
-        shading: r.shading || '-',
-        customer_aktual: r.po_aktual || '-',
-        customer_estimasi: r.customer_estimasi || '-', 
-        keterangan: r.keterangan || '-',
-        area: r.area || '-',
-        qty_max: r.qty || 0
-    };
-
-    const infoAsal = document.getElementById('req-info-asal');
-    if(infoAsal) {
-        infoAsal.innerHTML = `
-            <span class="text-blue-600">${selectedForReq.nama_item}</span> | 
-            ${selectedForReq.panjang} | ${selectedForReq.grade} | ${selectedForReq.dus} | ${selectedForReq.shading} | 
-            <span class="text-emerald-600">${selectedForReq.area}</span> | 
-            <span class="text-orange-600">${selectedForReq.customer_aktual}</span>
-        `;
-    }
-
-    ['req-nama-item', 'req-panjang', 'req-grade', 'req-dus', 'req-shading', 'req-qty', 'req-qty-hasil'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.value = '';
-    });
-
-    document.getElementById('modal-req-konversi').classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
-};
-
-window.tutupModalReqKonversi = function() {
-    document.getElementById('modal-req-konversi').classList.add('hidden');
-    document.getElementById('overlay-klik-luar').classList.add('hidden');
-    selectedForReq = null;
-};
-
-window.eksekusiReqKonversi = async function() {
-    if(!selectedForReq) return alert("Data sumber tidak valid!");
-
-    const namaReq = document.getElementById('req-nama-item').value.trim() || selectedForReq.nama_item;
-    
-    const rawPjgReq = document.getElementById('req-panjang').value.trim();
-    let pjgReq = selectedForReq.panjang;
-    if (rawPjgReq) {
-        let pUpper = rawPjgReq.toUpperCase();
-        pjgReq = pUpper.endsWith('M') ? pUpper : pUpper + 'M';
-    }
-
-    const gradeReq = document.getElementById('req-grade').value.trim() || selectedForReq.grade;
-    const dusReq = document.getElementById('req-dus').value.trim() || selectedForReq.dus;
-    const shadingReq = document.getElementById('req-shading').value.trim() || selectedForReq.shading;
-    
-    const qtyReq = parseInt(document.getElementById('req-qty').value);
-    const qtyHasil = parseInt(document.getElementById('req-qty-hasil').value);
-
-    if(isNaN(qtyReq) || qtyReq <= 0) return alert("Qty Request tidak valid!");
-    if(isNaN(qtyHasil) || qtyHasil <= 0) return alert("Qty Hasil tidak valid!");
-    if(qtyReq > selectedForReq.qty_max) return alert(`Maksimal Qty Request adalah ${selectedForReq.qty_max} dus!`);
-
-    const btn = document.getElementById('btn-save-req-konv'); const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
-
-    try {
-        const now = new Date();
-        const yy = String(now.getFullYear()).slice(-2);
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const prefix = `K-${dd}${mm}${yy}`;
-
-        const { data: existingCodes, error: errCodes } = await db
-            .from('request_konversi')
-            .select('kode_konversi')
-            .like('kode_konversi', `${prefix}%`);
-        
-        if(errCodes) throw errCodes;
-
-        let seq = 1;
-        if(existingCodes && existingCodes.length > 0) {
-            let seqs = existingCodes.map(c => {
-                let s = c.kode_konversi.replace(prefix, '');
-                return parseInt(s) || 0;
-            });
-            seq = Math.max(...seqs) + 1;
-        }
-        const kodeKonversi = `${prefix}${String(seq).padStart(2, '0')}`;
-
-        const { data: origRow, error: errOrig } = await db.from('stok_aktual')
-            .select('*')
-            .eq('id', selectedForReq.id)
-            .single();
-
-        if (errOrig || !origRow) throw new Error("Gagal menemukan baris stok asal di database.");
-
-        let newOrigQty = origRow.qty - qtyReq;
-        if(newOrigQty <= 0) {
-            await db.from('stok_aktual').delete().eq('id', origRow.id);
-        } else {
-            await db.from('stok_aktual').update({ qty: newOrigQty }).eq('id', origRow.id);
-        }
-
-        let splitRow = { ...origRow };
-        delete splitRow.id;
-        delete splitRow.created_at;
-        splitRow.qty = qtyReq;
-        splitRow.konversi = kodeKonversi; 
-        await db.from('stok_aktual').insert([splitRow]);
-
-        const payload = {
-            kode_konversi: kodeKonversi,
-            aktifitas_konversi: 'req',
-            area: selectedForReq.area,
-            jenis_item: selectedForReq.jenis_item,
-            nama_item: selectedForReq.nama_item,
-            panjang: selectedForReq.panjang,
-            grade: selectedForReq.grade,
-            dus: selectedForReq.dus,
-            shading: selectedForReq.shading,
-            keterangan: selectedForReq.keterangan,
-            "customer aktual": selectedForReq.customer_aktual,
-            customer_estimasi: selectedForReq.customer_estimasi, 
-            nama_item_req: namaReq,
-            panjang_req: pjgReq, 
-            grade_req: gradeReq,
-            dus_req: dusReq,
-            shading_req: shadingReq,
-            qty_req: qtyReq.toString(),
-            qty_hasil: qtyHasil.toString(),
-            qty_out: "0",
-            qty_in: "0",
-            progres_konversi: "PENDING",
-            pic_request: currentUser.username
-        };
-
-        const { error } = await db.from('request_konversi').insert([payload]);
-        if(error) throw error;
-        
-        tutupModalReqKonversi();
-        alert(`✅ Berhasil membuat Request Konversi dengan Kode: ${kodeKonversi}`);
-        await muatDataStok();
-    } catch(e) {
-        alert("Gagal menyimpan request: " + e.message);
-    } finally {
-        btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons();
-    }
-};
