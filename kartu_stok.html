@@ -95,7 +95,6 @@
                         <div class="bg-indigo-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-indigo-700 transition">Ganti Customer Estimasi</div>
                     </button>
 
-                    <!-- TOMBOL BARU: GANTI KETERANGAN -->
                     <button id="btn-ganti-ket-main" onclick="bukaModalGantiKet('main')" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-amber-700">
                         <div class="bg-amber-800 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="edit-3" class="w-4 h-4"></i></div>
                         <div class="bg-amber-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-amber-500 transition">Ganti Keterangan</div>
@@ -129,9 +128,9 @@
         </div>
 
         <!-- MIDDLE CONTENT SECTION -->
-        <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
+        <div class="flex-1 min-h-0 bg-slate-100 p-3 sm:p-4 overflow-hidden flex flex-col relative z-0">
             
-            <!-- VIEW 1: TABEL UMUM (KS AREA, KS GLOBAL, KS NONAKTIF, PENCARIAN DESKTOP) -->
+            <!-- VIEW 1: TABEL UMUM (KS AREA, KS GLOBAL, KS NONAKTIF) -->
             <div id="wrapper-table-ks" class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-t-xl shadow-sm border border-slate-300">
                 <table class="w-full text-left whitespace-nowrap" id="main-table">
                     <thead class="sticky top-0 z-50 shadow-sm" id="thead-ks"></thead>
@@ -139,9 +138,14 @@
                 </table>
             </div>
 
-            <!-- VIEW 2: VIEW PENCARIAN KHUSUS HP (MOBILE) -->
+            <!-- VIEW 2: VIEW PENCARIAN KHUSUS PC (DESKTOP) -->
+            <div id="view-pencarian-desktop" class="hidden flex-1 min-h-0 flex flex-col gap-3">
+                <!-- Konten pencarian PC di-render oleh JS -->
+            </div>
+
+            <!-- VIEW 3: VIEW PENCARIAN KHUSUS HP (MOBILE) -->
             <div id="view-pencarian-mobile" class="hidden flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-32">
-                <!-- Konten mobile di-render oleh JS -->
+                <!-- Konten pencarian mobile di-render oleh JS -->
             </div>
 
         </div>
@@ -173,6 +177,16 @@
         </div>
 
     </div>
+
+    <!-- DATALISTS UNTUK AUTO-COMPLETE KETIK PENCARIAN -->
+    <datalist id="dl-nama-item"></datalist>
+    <datalist id="dl-panjang"></datalist>
+    <datalist id="dl-grade"></datalist>
+    <datalist id="dl-dus"></datalist>
+    <datalist id="dl-shading"></datalist>
+    <datalist id="dl-area"></datalist>
+    <datalist id="dl-cust-aktual"></datalist>
+    <datalist id="dl-cust-estimasi"></datalist>
 
     <!-- MODAL SCAN CARI QR (KHUSUS PENCARIAN) -->
     <div id="modal-scan-cari-qr" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[100] px-4 backdrop-blur-sm">
