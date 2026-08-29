@@ -80,8 +80,8 @@
                 <button onclick="setModeKS('nonaktif')" id="tab-nonaktif" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="package-x" class="w-4 h-4"></i> KS Nonaktif</button>
             </div>
 
-            <!-- TOOLBAR UTAMA -->
-            <div class="p-3 sm:p-4 flex items-center bg-slate-50/50 border-t border-slate-100 w-full">
+            <!-- TOOLBAR UTAMA (OTOMATIS DISEMBUNYIKAN SAAT DI SUBMENU PENCARIAN ITEM) -->
+            <div id="toolbar-main-ks" class="p-3 sm:p-4 flex items-center bg-slate-50/50 border-t border-slate-100 w-full">
                 
                 <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar w-full">
                     
@@ -110,7 +110,7 @@
                         <div class="bg-emerald-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-emerald-700 transition">Proses Label Customer</div>
                     </button>
 
-                    <!-- TOMBOL INDUK (MENU AKSI 3 GARIS) - HANYA HILANG SAAT DI SUBMENU PENCARIAN -->
+                    <!-- MENU AKSI 3 GARIS -->
                     <div id="action-menu-container" class="relative ml-auto shrink-0">
                         <button onclick="toggleActionMenu(event)" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition" title="Menu Aksi">
                             <i data-lucide="menu" class="w-5 h-5"></i>
