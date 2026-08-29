@@ -110,7 +110,7 @@
                         <div class="bg-emerald-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-emerald-700 transition">Proses Label Customer</div>
                     </button>
 
-                    <!-- MENU AKSI 3 GARIS -->
+                    <!-- MENU AKSI 3 GARIS (HANYA MUNCUL DI SUBMENU UTAMA, HILANG DI PENCARIAN) -->
                     <div id="action-menu-container" class="relative ml-auto shrink-0">
                         <button onclick="toggleActionMenu(event)" class="p-2.5 bg-white rounded-md border border-slate-300 shadow-sm active:scale-95 text-slate-600 hover:bg-slate-50 transition" title="Menu Aksi">
                             <i data-lucide="menu" class="w-5 h-5"></i>
@@ -368,7 +368,8 @@
 
     <div id="overlay-klik-luar" onclick="tutupSemuaPopups()" class="hidden fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
+    <!-- SCRIPTS TERPISAH RAPI -->
     <script src="kartu_stok_logic.js"></script>
+    <script src="kartu_stok_pencarian.js"></script>
 </body>
 </html>
-
