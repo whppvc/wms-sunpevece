@@ -25,8 +25,9 @@ let selectedRows = new Set();
 
 let filterTimeout; 
 
-// State Khusus Mode Grid (Drill-Down 6 Tingkat)
+// State Khusus Mode Grid (Drill-Down 6 Tingkat & Filter Tanggal Persisten)
 let mobileLevel = 1; 
+let gridFilterDate = ''; // Menyimpan tanggal yang dipilih agar tidak hilang saat navigasi
 let mobileSelectedSource = ''; // 'ALL', 'SCAN', 'MANUAL', 'HOLD'
 let mobileSelectedTgl = '';
 let mobileSelectedMesinShift = ''; // `${mesin}_${shift}`
@@ -361,9 +362,15 @@ window.setMode = function(m) {
     if(tabGrid) tabGrid.className = isGrid ? activeClass : inactiveClass;
     if(tabTabel) tabTabel.className = !isGrid ? activeClass : inactiveClass;
 
+    // Tampilkan / Sembunyikan Konten
     document.getElementById('view-grid').classList.toggle('hidden', !isGrid);
     document.getElementById('view-table').classList.toggle('hidden', isGrid);
     
+    // Sembunyikan toolbar kanan atas di mode GRID, tampilkan di mode TABEL
+    const desktopToolbar = document.getElementById('desktop-toolbar');
+    if (desktopToolbar) desktopToolbar.classList.toggle('hidden', isGrid);
+
+    // Footer paginasi tabel
     document.getElementById('footer-pagination').classList.toggle('hidden', isGrid);
     
     const lvl6Footer = document.getElementById('mobile-lvl6-footer');
@@ -386,7 +393,6 @@ window.setMode = function(m) {
 
         renderHeaderDanTabel();
     } else {
-        mobileLevel = 1;
         renderMobileView();
     }
 };
@@ -481,6 +487,16 @@ function matchesActiveFilters(item) {
     return true;
 }
 
+window.handleGridDateChange = function(val) {
+    gridFilterDate = val;
+    renderMobileView();
+};
+
+window.setGridAllDate = function() {
+    gridFilterDate = '';
+    renderMobileView();
+};
+
 window.goToMobileLevel2 = function(source) { mobileSelectedSource = source; mobileLevel = 2; renderMobileView(); };
 window.goToMobileLevel3 = function(tgl) { mobileSelectedTgl = tgl; mobileLevel = 3; renderMobileView(); };
 window.goToMobileLevel4 = function(msKey) { mobileSelectedMesinShift = msKey; mobileLevel = 4; renderMobileView(); };
@@ -492,12 +508,6 @@ window.goBackMobile = function() {
         mobileLevel--;
         renderMobileView();
     }
-};
-
-window.setMobileAllDate = function() {
-    const inputDate = document.getElementById('filter-date-mobile');
-    if(inputDate) inputDate.value = '';
-    renderMobileView();
 };
 
 window.toggleSelectAllLvl6 = function(checked) {
@@ -655,7 +665,6 @@ window.hapusItemHoldMobile = async function() {
 
 function renderMobileView() {
     const container = document.getElementById('view-grid');
-    const targetDate = document.getElementById('filter-date-mobile')?.value || '';
     const lvl6Footer = document.getElementById('mobile-lvl6-footer');
 
     // Kontrol Tampilan Footer Freeze Level 6
@@ -684,19 +693,21 @@ function renderMobileView() {
     }
 
     let allItems = getAllUnifiedItems().filter(r => {
-        if (targetDate) {
-            const rowDate = (r.created_at || '').split('T')[0];
-            if (rowDate !== targetDate) return false;
+        if (gridFilterDate) {
+            const rowCreatedDate = (r.created_at || '').split('T')[0];
+            const rowProdDate = (r.tglProduksi || '');
+            if (rowCreatedDate !== gridFilterDate && rowProdDate !== gridFilterDate) return false;
         }
         return matchesActiveFilters(r);
     });
 
-    let toolbarHtml = `
-        <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-2 mb-2">
+    // BAR FILTER TANGGAL YANG SELALU MUNCUL DI SEMUA TINGKATAN GRID
+    let topFilterBarHtml = `
+        <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-2 mb-2 shrink-0">
             <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-xl p-1 shadow-inner">
                 <i data-lucide="calendar" class="w-4 h-4 text-slate-400 ml-1"></i>
-                <input type="date" id="filter-date-mobile" value="${targetDate}" onchange="renderMobileView()" class="p-1 text-xs font-bold text-slate-700 outline-none cursor-pointer bg-transparent">
-                <button onclick="setMobileAllDate()" class="px-2.5 py-1 ${targetDate === '' ? 'bg-blue-600 text-white font-black' : 'bg-slate-200 text-slate-700 font-bold'} hover:bg-blue-700 hover:text-white rounded-lg text-[10px] uppercase transition">Semua</button>
+                <input type="date" id="filter-date-mobile" value="${gridFilterDate}" onchange="handleGridDateChange(this.value)" class="p-1 text-xs font-bold text-slate-700 outline-none cursor-pointer bg-transparent">
+                <button onclick="setGridAllDate()" class="px-2.5 py-1 ${gridFilterDate === '' ? 'bg-blue-600 text-white font-black' : 'bg-slate-200 text-slate-700 font-bold'} hover:bg-blue-700 hover:text-white rounded-lg text-[10px] uppercase transition">Semua</button>
             </div>
 
             <button onclick="bukaModalFilterPopup()" class="px-4 py-2 bg-white rounded-xl border border-slate-300 shadow-sm active:scale-95 text-slate-700 font-bold text-xs hover:bg-slate-50 transition flex items-center gap-2">
@@ -707,16 +718,16 @@ function renderMobileView() {
     `;
 
     if (allItems.length === 0) {
-        container.innerHTML = toolbarHtml + `
+        container.innerHTML = topFilterBarHtml + `
             <div class="flex flex-col items-center justify-center h-56 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center mt-1">
                 <i data-lucide="package-x" class="w-12 h-12 text-slate-300 mb-2"></i>
-                <h4 class="font-bold text-slate-700 text-sm">Tidak ada data STBJ</h4>
+                <h4 class="font-bold text-slate-700 text-sm">Tidak ada data STBJ untuk filter ini</h4>
             </div>`;
         lucide.createIcons();
         return;
     }
 
-    let html = '';
+    let html = topFilterBarHtml;
 
     // LEVEL 1: KOTAK KISI
     if (mobileLevel === 1) {
@@ -727,7 +738,6 @@ function renderMobileView() {
             else if (r.source === 'MANUAL') totalManual += r.qty;
         });
 
-        html += toolbarHtml;
         html += `<div class="flex justify-between items-center mb-1 px-1">
             <h3 class="text-xs font-black text-slate-500 uppercase tracking-wider">Pilih Kategori STBJ</h3>
             <span class="text-xs font-black text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">${totalScan + totalManual} Total Dus</span>
