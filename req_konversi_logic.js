@@ -402,7 +402,6 @@ window.renderMobileView = function() {
             let qtyOutNum = parseInt(r.qty_out) || 0;
             let qtyInNum = parseInt(r.qty_in) || 0;
 
-            // REVISI: Logika Pewarnaan Kotak CardView Berdasarkan Status
             let cardBgClass = "bg-white border-slate-300";
             let badgeStatus = `<span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-md font-black text-[10px] border border-blue-200">REQUEST</span>`;
 
@@ -908,6 +907,8 @@ window.eksekusiSaveKonv = async function() {
                     id_sku: item.id_sku
                 });
 
+                // REVISI: Pengurangan stok_aktual saat Konversi OUT
+                // Sistem harus mencari baris yang memiliki kode konversi yang sama agar baris merah (locked) yang berkurang
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', item.nama_item).eq('panjang', item.panjang).eq('grade', item.grade)
                     .eq('dus', item.dus).eq('shading', item.shading).eq('area', item.area)
@@ -999,11 +1000,14 @@ window.eksekusiSaveKonv = async function() {
                     keterangan: ket
                 });
 
+                // REVISI: Pengamanan Konversi IN
+                // Pastikan penambahan stok_aktual mencari baris yang TIDAK TERKUNCI konversi (is null)
                 const { data: ext } = await db.from('stok_aktual').select('id, qty')
                     .eq('nama_item', nama).eq('panjang', pjg).eq('grade', grade)
                     .eq('dus', dus).eq('shading', shading).eq('area', area)
                     .eq('customer_aktual', customer)
                     .eq('keterangan', ket)
+                    .is('konversi', null) 
                     .limit(1);
                 
                 if(ext && ext.length > 0) {
@@ -1162,6 +1166,7 @@ window.cancelKonversiMassal = async function() {
             await db.from('stok_qr').insert(insertsStokQr);
         }
 
+        // REVISI: Mengembalikan baris merah (locked) menjadi baris normal (konversi = null)
         for(let req of selectedRequests) {
             const { data: rowKonv } = await db.from('stok_aktual').select('*')
                 .eq('konversi', req.kode_konversi)
@@ -1224,21 +1229,14 @@ window.highlightRow = function(checkbox, skipStateReset = false) {
 };
 
 window.changeRowsPerPage = function(val) {
-    const customInput = document.getElementById('input-custom-rows');
-    if (val === 'ALL') { window.rowsPerPage = 999999; if(customInput) customInput.classList.add('hidden'); } 
-    else if (val === 'CUSTOM') {
-        if(customInput) { customInput.classList.remove('hidden'); customInput.focus(); window.rowsPerPage = parseInt(customInput.value) || window.rowsPerPage; }
-    } else { window.rowsPerPage = parseInt(val); if(customInput) customInput.classList.add('hidden'); }
+    if (val === 'ALL') { window.rowsPerPage = 999999; } else { window.rowsPerPage = parseInt(val); }
     localStorage.setItem('wms_rows_per_page', window.rowsPerPage); window.currentPage = 1; window.applyPagination();
 };
 
-window.setCustomRowsPerPage = function(val) {
-    let parsed = parseInt(val);
-    if (!isNaN(parsed) && parsed > 0) { window.rowsPerPage = parsed; localStorage.setItem('wms_rows_per_page', window.rowsPerPage); window.currentPage = 1; window.applyPagination(); }
-};
-
 window.applyPagination = function() {
-    let tbodyId = 'tbody-req'; 
+    let tbodyId = currentTab === 'MOBILE' ? 'view-mobile' : 'tbody-req'; 
+    if(currentTab === 'MOBILE') return; 
+
     const allRows = Array.from(document.querySelectorAll(`#${tbodyId} tr.r-row`));
     allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
 
@@ -1259,6 +1257,7 @@ window.applyPagination = function() {
 
         const qtyCell = row.querySelector('.col-qty_req') || row.querySelector('.col-dus');
         if(qtyCell) { sumQty += parseInt(qtyCell.getAttribute('data-search') || qtyCell.innerText) || 0; } 
+        else { sumQty += 1; }
 
         if(index >= startIndex && index < endIndex) { row.style.display = ''; } else { row.style.display = 'none'; }
     });
