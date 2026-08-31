@@ -444,8 +444,10 @@ function renderTableBody() {
         const sv = r.searchValues;
         
         let customRowClass = "transition row-ks text-[13px]";
+        
+        // REVISI: Warna Merah Tegas untuk baris yang terkunci konversi
         if (modeKS === 'nonaktif') customRowClass += " !bg-red-100 !text-red-900 font-bold";
-        else if (modeKS === 'area' && sv['col-konversi'] !== '-') customRowClass += " !bg-rose-100 !text-rose-900 font-bold";
+        else if (modeKS === 'area' && sv['col-konversi'] !== '-') customRowClass += " !bg-red-100 !text-red-900 font-bold";
         else customRowClass += (i % 2 === 0 ? ' stripe-1' : ' stripe-2');
 
         if (isSelected) customRowClass += ' selected-row';
@@ -471,7 +473,7 @@ function renderTableBody() {
                 </td>
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi ${hiddenCols.includes('col-estimasi')?'col-hidden':''}">${sv['col-estimasi']}</td>
                 <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
-                <td class="px-4 py-3 font-bold text-rose-600 text-center col-konversi ${hiddenCols.includes('col-konversi')?'col-hidden':''}">${sv['col-konversi']}</td>
+                <td class="px-4 py-3 font-bold text-red-700 text-center col-konversi ${hiddenCols.includes('col-konversi')?'col-hidden':''}">${sv['col-konversi']}</td>
                 <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base ${hiddenCols.includes('col-qty')?'col-hidden':''}">${sv['col-qty']}</td>
             `;
         } else if (modeKS === 'global') {
@@ -567,56 +569,6 @@ function nextPage() {
 function updateSelectedCount() {
     const lbl = document.getElementById('lbl-pilih-baris');
     if(lbl) lbl.innerText = selectedRows.size;
-}
-
-window.cycleSelectAll = function() {
-    selectAllState = (selectAllState + 1) % 3;
-    if (selectAllState === 0) {
-        selectedRows.clear();
-    } else if (selectAllState === 1) {
-        selectedRows.clear();
-        const startIndex = (currentPage - 1) * rowsPerPage;
-        const endIndex = startIndex + rowsPerPage;
-        filteredData.slice(startIndex, endIndex).forEach(r => selectedRows.add(r._id));
-    } else if (selectAllState === 2) {
-        filteredData.forEach(r => selectedRows.add(r._id));
-    }
-    updateSelectAllUI();
-    renderTableBody(); 
-};
-
-window.updateSelectAllUI = function() {
-    const btn = document.getElementById('btn-select-all');
-    if(!btn) return;
-    
-    if (selectAllState === 0) {
-        btn.innerHTML = '';
-        btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto';
-    } else if (selectAllState === 1) {
-        btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
-        btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto';
-    } else if (selectAllState === 2) {
-        btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>';
-        btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
-    }
-    if(typeof lucide !== 'undefined') lucide.createIcons();
-};
-
-function highlightRow(cb, id) {
-    const tr = cb.closest('tr');
-    if (cb.checked) {
-        selectedRows.add(id);
-        if(tr) tr.classList.add('selected-row');
-    } else {
-        selectedRows.delete(id);
-        if(tr) tr.classList.remove('selected-row');
-    }
-    
-    if(!cb.checked && selectAllState !== 0) {
-        selectAllState = 0;
-        updateSelectAllUI();
-    }
-    updateSelectedCount();
 }
 
 // ==========================================
@@ -786,19 +738,6 @@ window.downloadXLS = function() {
 // ==========================================
 // MODAL BREAKDOWN & GANTI PO & KONVERSI
 // ==========================================
-function tutupSemuaPopups() {
-    document.getElementById('modal-breakdown').classList.add('hidden');
-    document.getElementById('modal-po').classList.add('hidden');
-    document.getElementById('modal-ganti-keterangan').classList.add('hidden');
-    document.getElementById('modal-req-konversi').classList.add('hidden');
-    document.getElementById('modal-scan-cari-qr').classList.add('hidden');
-    document.getElementById('modal-detail-qr-global').classList.add('hidden');
-    document.getElementById('overlay-klik-luar').classList.add('hidden');
-    if(document.getElementById('sidebar-kolom')) {
-        document.getElementById('sidebar-kolom').classList.add('translate-x-full');
-    }
-}
-
 window.bukaBreakdown = function(gKey) {
     const item = dataKSGlobal.find(g => g.gKey === gKey); if(!item) return;
 
@@ -809,13 +748,18 @@ window.bukaBreakdown = function(gKey) {
     tbody.innerHTML = item.areas.map((a, i) => {
         const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
         
+        // REVISI: Tampilkan baris merah jika terkunci untuk konversi
+        const isKonversi = a.konversi && a.konversi !== '-';
+        const rowBg = isKonversi ? '!bg-red-100 !text-red-900 font-bold' : stripeClass;
+        const ketText = isKonversi ? `[LOCKED: ${a.konversi}] ${a.keterangan || '-'}` : (a.keterangan || '-');
+
         return `
-            <tr class="transition bd-row text-[13px] ${stripeClass}">
+            <tr class="transition bd-row text-[13px] ${rowBg}">
                 <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-id="${a.id}" data-idsku="${a.id_sku_base}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
                 <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi">${a.customer_estimasi}</td>
-                <td class="px-4 py-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px]">${a.keterangan || '-'}</td>
+                <td class="px-4 py-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px] ${isKonversi ? '!text-red-800' : ''}">${ketText}</td>
                 <td class="px-4 py-3 font-black text-emerald-700 text-center">${a.qty}</td>
             </tr>`;
     }).join('');
@@ -1208,127 +1152,6 @@ window.eksekusiReqKonversi = async function() {
         btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons();
     }
 };
-
-// ==========================================
-// EXCEL FILTER PRO
-// ==========================================
-window.openColumnFilter = function(event, colClass, colName) {
-    event.stopPropagation();
-    currentFilterCol = colClass;
-    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
-
-    let uniqueValues = new Set();
-    processedData.forEach(row => {
-        let show = true;
-        for (let c in activeFilters) {
-            if (c !== colClass && !activeFilters[c].includes(row.searchValues[c])) {
-                show = false; break;
-            }
-        }
-        if (show) uniqueValues.add(row.searchValues[colClass] || '');
-    });
-
-    let sortedValues = Array.from(uniqueValues).sort();
-    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
-    
-    sortedValues.forEach(val => {
-        let isChecked = !activeFilters[colClass] || activeFilters[colClass].includes(val);
-        listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}">
-            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
-            <span class="truncate text-slate-600">${val}</span>
-        </label>`;
-    });
-
-    document.getElementById('filter-values-list').innerHTML = listHtml;
-    updateSelectAllState();
-    document.getElementById('filter-search-input').value = '';
-    
-    const menu = document.getElementById('excel-filter-menu');
-    menu.classList.remove('hidden');
-    
-    const btnRect = event.currentTarget.getBoundingClientRect();
-    const menuWidth = 256; 
-    let topPos = btnRect.bottom + 4; 
-    let leftPos = btnRect.left; 
-
-    if (leftPos + menuWidth > window.innerWidth) leftPos = btnRect.right - menuWidth;
-    if (leftPos < 10) leftPos = 10;
-
-    menu.style.position = 'fixed'; 
-    menu.style.top = `${topPos}px`;
-    menu.style.left = `${leftPos}px`;
-    
-    document.getElementById('filter-search-input').focus();
-};
-
-window.toggleAllFilterValues = function(checked) {
-    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
-    updateSelectAllState();
-};
-
-window.updateSelectAllState = function() {
-    const allCbs = document.querySelectorAll('.filter-val-cb');
-    const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
-    const selectAll = document.getElementById('filter-select-all');
-    if(!selectAll) return;
-    if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
-    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
-    else { selectAll.checked = false; selectAll.indeterminate = true; }
-};
-
-document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) updateSelectAllState(); });
-
-window.searchFilterList = function(val) {
-    clearTimeout(filterTimeout);
-    filterTimeout = setTimeout(() => {
-        const query = val.toLowerCase().split(' ').filter(x => x); 
-        requestAnimationFrame(() => {
-            document.querySelectorAll('.filter-val-item').forEach(label => {
-                const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
-                let matches = query.every(term => text.includes(term));
-                label.style.display = matches ? '' : 'none';
-            });
-        });
-    }, 150);
-};
-
-window.closeFilterMenu = function() { document.getElementById('excel-filter-menu').classList.add('hidden'); };
-
-window.clearFilterForCurrentCol = function() {
-    delete activeFilters[currentFilterCol];
-    closeFilterMenu(); applyFilters(); updateFilterIcons();
-};
-
-window.applyFilterForCurrentCol = function() {
-    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
-    const totalBoxes = document.querySelectorAll('.filter-val-cb');
-    
-    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') {
-        delete activeFilters[currentFilterCol];
-    } else {
-        let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value));
-        activeFilters[currentFilterCol] = selectedVals;
-    }
-    
-    closeFilterMenu(); applyFilters(); updateFilterIcons();
-};
-
-function updateFilterIcons() {
-    document.querySelectorAll('.filter-icon').forEach(icon => {
-        icon.classList.remove('text-amber-400', 'opacity-100');
-        icon.classList.add('opacity-40', 'text-white');
-    });
-    for (let colClass in activeFilters) {
-        const th = document.querySelector(`th.${colClass}`);
-        if (th) {
-            const icon = th.querySelector('.filter-icon');
-            if (icon) { 
-                icon.classList.remove('opacity-40', 'text-white'); 
-                icon.classList.add('text-amber-400', 'opacity-100'); 
-            }
-        }
-    }
-}
 
 // ==========================================
 // FUNGSI SISTEM URUTAN KOLOM & RESIZE
