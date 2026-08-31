@@ -90,6 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(muatDataStok, 200);
 });
 
+window.toggleActionMenu = toggleActionMenu;
 function toggleActionMenu(e) {
     if(e) e.stopPropagation();
     const menu = document.getElementById('mobile-action-menu');
@@ -146,6 +147,7 @@ async function loadMasterData() {
     } catch (e) { console.error("Gagal load master_2:", e); }
 }
 
+window.muatDataStok = muatDataStok;
 async function muatDataStok() {
     const tbody = document.getElementById('tbody-ks');
     if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke database...</p></td></tr>`;
@@ -221,6 +223,7 @@ async function muatDataStok() {
     }
 }
 
+window.setModeKS = setModeKS;
 function setModeKS(m) {
     modeKS = m;
     const isMobile = window.innerWidth < 640;
@@ -235,7 +238,6 @@ function setModeKS(m) {
 
     const isPencarian = (m === 'pencarian');
     
-    // Sembunyikan Toolbar Utama saat di submenu Pencarian Item
     const toolbarMain = document.getElementById('toolbar-main-ks');
     if (toolbarMain) toolbarMain.classList.toggle('hidden', isPencarian);
 
@@ -244,7 +246,6 @@ function setModeKS(m) {
     document.getElementById('view-pencarian-mobile').classList.toggle('hidden', !isPencarian || !isMobile);
     document.getElementById('footer-ks').classList.toggle('hidden', isPencarian);
     
-    // Tombol Toolbar Utama
     const btnGantiPO = document.getElementById('btn-ganti-po-main');
     if(btnGantiPO) btnGantiPO.classList.toggle('hidden', m === 'global' || m === 'nonaktif' || isPencarian);
     
@@ -333,6 +334,7 @@ function applySort() {
     renderTableBody();
 }
 
+window.sortTable = sortTable;
 function sortTable(colClass, headerEl) {
     let isAsc = sortState.col === colClass ? !sortState.isAsc : true;
     sortState = { col: colClass, isAsc: isAsc };
@@ -445,7 +447,6 @@ function renderTableBody() {
         
         let customRowClass = "transition row-ks text-[13px]";
         
-        // REVISI: Warna Merah Tegas untuk baris yang terkunci konversi
         if (modeKS === 'nonaktif') customRowClass += " !bg-red-100 !text-red-900 font-bold";
         else if (modeKS === 'area' && sv['col-konversi'] !== '-') customRowClass += " !bg-red-100 !text-red-900 font-bold";
         else customRowClass += (i % 2 === 0 ? ' stripe-1' : ' stripe-2');
@@ -543,6 +544,7 @@ function updatePaginationUI() {
     updateSelectedCount();
 }
 
+window.changeRowsPerPage = changeRowsPerPage;
 function changeRowsPerPage(val) {
     rowsPerPage = (val === 'ALL') ? 999999 : parseInt(val);
     localStorage.setItem('wms_rows_per_page', rowsPerPage);
@@ -550,6 +552,7 @@ function changeRowsPerPage(val) {
     renderTableBody();
 }
 
+window.setCustomRowsPerPage = setCustomRowsPerPage;
 function setCustomRowsPerPage(val) {
     let parsed = parseInt(val);
     if (!isNaN(parsed) && parsed > 0) {
@@ -560,15 +563,72 @@ function setCustomRowsPerPage(val) {
     }
 }
 
+window.prevPage = prevPage;
 function prevPage() { if(currentPage > 1) { currentPage--; renderTableBody(); } }
+
+window.nextPage = nextPage;
 function nextPage() { 
     const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
     if(currentPage < totalPages) { currentPage++; renderTableBody(); } 
 }
 
+window.updateSelectedCount = updateSelectedCount;
 function updateSelectedCount() {
     const lbl = document.getElementById('lbl-pilih-baris');
     if(lbl) lbl.innerText = selectedRows.size;
+}
+
+window.cycleSelectAll = cycleSelectAll;
+function cycleSelectAll() {
+    selectAllState = (selectAllState + 1) % 3;
+    if (selectAllState === 0) {
+        selectedRows.clear();
+    } else if (selectAllState === 1) {
+        selectedRows.clear();
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        filteredData.slice(startIndex, endIndex).forEach(r => selectedRows.add(r._id));
+    } else if (selectAllState === 2) {
+        filteredData.forEach(r => selectedRows.add(r._id));
+    }
+    updateSelectAllUI();
+    renderTableBody(); 
+}
+
+window.updateSelectAllUI = updateSelectAllUI;
+function updateSelectAllUI() {
+    const btn = document.getElementById('btn-select-all');
+    if(!btn) return;
+    
+    if (selectAllState === 0) {
+        btn.innerHTML = '';
+        btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto';
+    } else if (selectAllState === 1) {
+        btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
+        btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto';
+    } else if (selectAllState === 2) {
+        btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>';
+        btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
+    }
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+window.highlightRow = highlightRow;
+function highlightRow(cb, id) {
+    const tr = cb.closest('tr');
+    if (cb.checked) {
+        selectedRows.add(id);
+        if(tr) tr.classList.add('selected-row');
+    } else {
+        selectedRows.delete(id);
+        if(tr) tr.classList.remove('selected-row');
+    }
+    
+    if(!cb.checked && selectAllState !== 0) {
+        selectAllState = 0;
+        updateSelectAllUI();
+    }
+    updateSelectedCount();
 }
 
 // ==========================================
@@ -748,7 +808,6 @@ window.bukaBreakdown = function(gKey) {
     tbody.innerHTML = item.areas.map((a, i) => {
         const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
         
-        // REVISI: Tampilkan baris merah jika terkunci untuk konversi
         const isKonversi = a.konversi && a.konversi !== '-';
         const rowBg = isKonversi ? '!bg-red-100 !text-red-900 font-bold' : stripeClass;
         const ketText = isKonversi ? `[LOCKED: ${a.konversi}] ${a.keterangan || '-'}` : (a.keterangan || '-');
