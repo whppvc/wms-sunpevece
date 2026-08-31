@@ -1,7 +1,8 @@
+
+
 // Otomatis deteksi mode perangkat saat buka halaman (Layar < 640px = Grid, >= 640px = Tabel)
 const isMobileDevice = window.innerWidth < 640;
 let modeSekarang = isMobileDevice ? 'grid' : 'tabel'; 
-let modeTabelView = 'item'; // 'item' (Rekapitulasi Item) atau 'lengkap' (Detail Batch Produksi)
 
 let statusSekarang = 'ALL'; 
 let rawDataRaw = [];
@@ -43,7 +44,7 @@ function safeJSONParse(data, fallback = null) {
 
 const currentUser = safeJSONParse(localStorage.getItem('user_session'), {username: 'Admin', role: 'admin'});
 
-// Definisi Default Seluruh Kolom Tabel
+// Definisi Default Seluruh Kolom Tabel Standar
 const defaultColDefs = [
     { id: 'col-status-data', label: 'Collect' },
     { id: 'col-troli', label: 'Troli' },
@@ -146,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Inisialisasi tampilan awal langsung agar UI tidak kosong saat fetch berjalan
+    // Inisialisasi tampilan awal langsung
     setMode(modeSekarang);
 
     setTimeout(async () => {
@@ -384,14 +385,12 @@ window.setMode = function(m) {
     // Tampilkan / Sembunyikan Konten View
     const viewGrid = document.getElementById('view-grid');
     const viewTable = document.getElementById('view-table');
-    const barModeTabel = document.getElementById('bar-mode-tabel');
     const desktopToolbar = document.getElementById('desktop-toolbar');
     const footerPagination = document.getElementById('footer-pagination');
     const lvl6Footer = document.getElementById('mobile-lvl6-footer');
 
     if (viewGrid) viewGrid.classList.toggle('hidden', !isGrid);
     if (viewTable) viewTable.classList.toggle('hidden', isGrid);
-    if (barModeTabel) barModeTabel.classList.toggle('hidden', isGrid);
     if (desktopToolbar) desktopToolbar.classList.toggle('hidden', isGrid);
     if (footerPagination) footerPagination.classList.toggle('hidden', isGrid);
     
@@ -418,26 +417,6 @@ window.setMode = function(m) {
     } else {
         renderMobileView();
     }
-};
-
-window.setTabelModeView = function(viewMode) {
-    modeTabelView = viewMode;
-
-    const btnItem = document.getElementById('btn-mode-item');
-    const btnLengkap = document.getElementById('btn-mode-lengkap');
-    const lblDesc = document.getElementById('lbl-mode-desc');
-
-    if (viewMode === 'item') {
-        if(btnItem) btnItem.className = 'px-3 py-1 text-xs font-black rounded-md transition shadow-sm bg-blue-600 text-white';
-        if(btnLengkap) btnLengkap.className = 'px-3 py-1 text-xs font-bold text-slate-600 rounded-md hover:text-slate-900 transition';
-        if(lblDesc) lblDesc.innerText = 'Mode Item: Rekapitulasi kuantiti per spesifikasi item';
-    } else {
-        if(btnLengkap) btnLengkap.className = 'px-3 py-1 text-xs font-black rounded-md transition shadow-sm bg-blue-600 text-white';
-        if(btnItem) btnItem.className = 'px-3 py-1 text-xs font-bold text-slate-600 rounded-md hover:text-slate-900 transition';
-        if(lblDesc) lblDesc.innerText = 'Mode Lengkap: Rincian kuantiti detail per batch Tanggal Produksi, Mesin, dan Shift';
-    }
-
-    renderHeaderDanTabel();
 };
 
 // ========================================================
@@ -1043,7 +1022,7 @@ window.saringTabelSTBJ = function() {
 };
 
 // ========================================================
-// LOGIKA TABEL DESKTOP (MODE ITEM VS MODE LENGKAP)
+// LOGIKA TABEL DESKTOP
 // ========================================================
 function switchStatusFilter(val) { 
     statusSekarang = val; 
@@ -1074,22 +1053,13 @@ function buildProcessedData() {
         else if (itemStatus === 'HOLD' || itemStatus === 'HOLD STBJ') itemStatus = 'HOLD STBJ';
         
         let pjgFormatted = formatPanjang(r.panjang);
-        
-        // Pembeda Grouping Berdasarkan Mode Item vs Mode Lengkap
-        let key = '';
-        if (modeTabelView === 'item') {
-            key = `${r.jenis_item}_${n}_${pjgFormatted}_${r.grade}_${r.dus}_${r.shading}_${cust}_${ket}_${sData}_${itemStatus}`;
-        } else {
-            key = `${r.jenis_item}_${n}_${pjgFormatted}_${r.grade}_${r.dus}_${r.shading}_${cust}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}_${itemStatus}`;
-        }
+        let key = `${r.jenis_item}_${n}_${pjgFormatted}_${r.grade}_${r.dus}_${r.shading}_${cust}_${r.tgl_produksi}_${r.mesin}_${r.shift}_${ket}_${sData}_${itemStatus}`;
         
         if(!groups[key]) {
             groups[key] = { 
                 jenisItem: r.jenis_item || '-', namaItemAsli: n, displayNama: jName, jasperId: jId, 
                 panjang: pjgFormatted, grade: r.grade || '-', dus: r.dus || '-', shading: r.shading || '-', customer: cust,
-                tglProduksi: modeTabelView === 'item' ? '-' : (r.tgl_produksi || '-'), 
-                mesin: modeTabelView === 'item' ? '-' : (r.mesin || '-'), 
-                shift: modeTabelView === 'item' ? '-' : (r.shift || '-'),
+                tglProduksi: r.tgl_produksi || '-', mesin: r.mesin || '-', shift: r.shift || '-',
                 qty: 0, qrcodes: [], trolis: new Set(), ket: ket, sData: sData, status: itemStatus, pic: r.pic_input || '-' 
             };
         }
@@ -1099,7 +1069,7 @@ function buildProcessedData() {
     });
 
     processedData = Object.values(groups).map(g => {
-        const gabunganTroli = modeTabelView === 'item' ? '-' : (Array.from(g.trolis).join(', ') || '-');
+        const gabunganTroli = Array.from(g.trolis).join(', ') || '-';
         const displayKet = (g.ket === 'TANPA_KETERANGAN') ? '-' : g.ket; 
         let statData = g.sData && g.sData !== 'BELUM' ? g.sData : '-';
         let qtyLembar = hitungQtyLembar(g.jenisItem, g.namaItemAsli, g.qty);
@@ -1402,16 +1372,6 @@ function renderHeaderDanTabel() {
     const thead = document.getElementById('thead-stbj');
     if(!thead) return;
     
-    let productionHeaders = '';
-    if (modeTabelView === 'lengkap') {
-        productionHeaders = `
-            ${thSort('Troli', 'col-troli text-center')}
-            ${thSort('Tgl Produksi', 'col-tgl text-center')}
-            ${thSort('Mesin', 'col-mesin text-center')}
-            ${thSort('Shift', 'col-shift text-center')}
-        `;
-    }
-
     thead.innerHTML = `
         <tr>
             <th class="hdr-std w-10 col-cb text-center sticky-col">
@@ -1420,8 +1380,11 @@ function renderHeaderDanTabel() {
             <th class="hdr-std col-status hidden">Status Data</th>
             ${thSort('Collect', 'col-status-data text-center')}
             <th class="hdr-std col-waktu hidden">Waktu Scan</th>
-            ${productionHeaders}
+            ${thSort('Troli', 'col-troli text-center')}
             <th class="hdr-std col-qr hidden">QRCode</th>
+            ${thSort('Tgl Produksi', 'col-tgl text-center')}
+            ${thSort('Mesin', 'col-mesin text-center')}
+            ${thSort('Shift', 'col-shift text-center')}
             ${thSort('Jenis Item', 'col-jenis')}
             ${thSort('Nama Item', 'col-nama')}
             ${thSort('Nama Jasper', 'col-jasper text-purple-300')}
@@ -1471,24 +1434,17 @@ function renderTable() {
         }));
         let btnEditJasper = `<td class="px-4 py-3 text-center col-btn-edit ${hiddenCols.includes('col-btn-edit')?'col-hidden':''}"><button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>`;
 
-        let productionColsHtml = '';
-        if (modeTabelView === 'lengkap') {
-            productionColsHtml = `
-                <td class="px-4 py-3 text-center font-medium text-slate-900 col-troli ${hiddenCols.includes('col-troli')?'col-hidden':''}">${sv['col-troli']}</td>
-                <td class="px-4 py-3 text-center font-medium text-slate-900 col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}">${sv['col-tgl']}</td>
-                <td class="px-4 py-3 text-center font-medium text-slate-900 col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}">${sv['col-mesin']}</td>
-                <td class="px-4 py-3 text-center font-medium text-slate-900 col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}">${sv['col-shift']}</td>
-            `;
-        }
-
         h += `
             <tr class="${trClass}">
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${row._id}')" value="${row._id}" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
                 <td class="px-4 py-3 hidden col-status">${sv['col-status']}</td>
                 <td class="px-4 py-3 text-center col-status-data ${hiddenCols.includes('col-status-data')?'col-hidden':''}">${statDataHtml}</td>
                 <td class="px-4 py-3 hidden col-waktu">-</td>
-                ${productionColsHtml}
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-troli ${hiddenCols.includes('col-troli')?'col-hidden':''}">${sv['col-troli']}</td>
                 <td class="px-4 py-3 hidden col-qr">-</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}">${sv['col-tgl']}</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}">${sv['col-mesin']}</td>
+                <td class="px-4 py-3 text-center font-medium text-slate-900 col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}">${sv['col-shift']}</td>
                 <td class="px-4 py-3 text-left font-medium text-slate-900 col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
                 <td class="px-4 py-3 text-left font-semibold text-slate-900 col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
                 <td class="px-4 py-3 text-left font-black text-purple-700 col-jasper ${hiddenCols.includes('col-jasper')?'col-hidden':''}">${sv['col-jasper']}</td>
@@ -1833,7 +1789,7 @@ async function aksiMassal(tipe) {
         let ws = XLSX.utils.aoa_to_sheet(ws_data);
         let wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "STBJ_Data");
-        XLSX.writeFile(wb, `STBJ_${statusSekarang}_${modeTabelView.toUpperCase()}.xlsx`);
+        XLSX.writeFile(wb, `STBJ_${statusSekarang}_TABEL.xlsx`);
     }
 }
 
