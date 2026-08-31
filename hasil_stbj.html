@@ -41,13 +41,10 @@
         tr.r-row:not(.selected-row):hover td { color: #4f46e5 !important; }
         tr.r-row:not(.selected-row):hover td button { color: #4f46e5 !important; border-color: #4f46e5 !important; }
 
-        .resizer {
-            position: absolute;
-            top: 0; right: 0; width: 5px;
-            cursor: col-resize; user-select: none;
-            height: 100%; z-index: 50;
+        .drag-col-item {
+            user-select: none;
+            touch-action: none;
         }
-        .resizer:hover, .resizing { background-color: rgba(59, 130, 246, 0.5); }
     </style>
 </head>
 <body class="font-sans text-slate-800">
@@ -57,11 +54,11 @@
         <!-- HEADER SECTION (SUBMENU BAR) -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
             <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
-                <button onclick="setMode('mobile')" id="tab-mode-mobile" class="sm:hidden px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="smartphone" class="w-4 h-4"></i> MOBILE</button>
+                <button onclick="setMode('grid')" id="tab-mode-grid" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="layout-grid" class="w-4 h-4"></i> GRID HASIL STBJ</button>
                 <button onclick="setMode('tabel')" id="tab-mode-tabel" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="table" class="w-4 h-4"></i> TABEL HASIL STBJ</button>
             </div>
 
-            <!-- TOOLBAR DESKTOP -->
+            <!-- TOOLBAR ATAS -->
             <div id="desktop-toolbar" class="p-3 sm:p-4 flex items-center justify-end bg-slate-50/50 border-t border-slate-100 w-full gap-2">
                 <button onclick="bukaDaftarKatalog()" class="hidden sm:flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-purple-800">
                     <div class="bg-purple-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="database" class="w-4 h-4"></i></div>
@@ -105,9 +102,9 @@
                 </table>
             </div>
 
-            <!-- VIEW 2: VIEW MOBILE (DRILL-DOWN FOLDER / CARD VIEW) -->
-            <div id="view-mobile" class="flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-32">
-                <!-- Konten Mobile di-render oleh JS -->
+            <!-- VIEW 2: VIEW GRID (DRILL-DOWN FOLDER / CARD VIEW) -->
+            <div id="view-grid" class="flex-1 min-h-0 overflow-y-auto custom-scroll flex flex-col gap-3 pb-32">
+                <!-- Konten Grid di-render oleh JS -->
             </div>
 
         </div>
@@ -138,7 +135,7 @@
             </div>
         </div>
 
-        <!-- FOOTER FREEZE LEVEL 6 MOBILE -->
+        <!-- FOOTER FREEZE LEVEL 6 GRID -->
         <div id="mobile-lvl6-footer" class="hidden shrink-0 w-full bg-white px-4 py-3.5 z-40 shadow-[0_-8px_25px_rgba(0,0,0,0.15)] border-t border-slate-300 flex justify-between items-center">
             <label class="flex items-center gap-3 cursor-pointer select-none">
                 <input type="checkbox" id="cb-all-lvl6" onchange="toggleSelectAllLvl6(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer border-slate-400">
@@ -268,7 +265,7 @@
             <button onclick="toggleSidebarKolom()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
         <div class="p-3 bg-blue-50 border-b border-blue-100 text-xs text-blue-800 font-medium leading-relaxed">
-            Tahan dan geser (Drag & Drop) kotak di bawah ini untuk mengatur urutan kolom.
+            Centang untuk menampilkan kolom. Tahan dan geser (Drag & Drop) kotak di bawah ini untuk mengatur urutan kolom.
         </div>
         <div class="p-3 flex flex-col gap-2 overflow-y-auto custom-scroll flex-1" id="kolom-drag-container"></div>
         <div class="p-4 border-t border-slate-200 bg-slate-50 flex gap-2">
@@ -350,4 +347,4 @@
 
     <script src="hasil_stbj_logic.js"></script>
 </body>
-    </html>
+</html>
