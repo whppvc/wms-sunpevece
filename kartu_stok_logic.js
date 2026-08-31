@@ -358,10 +358,12 @@ function applySort() {
             return sortState.isAsc ? res : -res;
         });
     }
+    currentPage = 1;
     renderTableHeaders();
     renderTableBody();
 }
 
+// REVISI: Fungsi Sort dipanggil dari menu dropdown Excel
 window.sortFromMenu = function(dir) {
     if(!currentFilterCol) return;
     sortState = { col: currentFilterCol, isAsc: dir === 'asc' };
@@ -582,48 +584,43 @@ window.toggleExpandRow = function(gKey) {
 };
 
 function generateSubTableHtml(item) {
-    let trs = item.areas.map((a, i) => {
+    let rowsHtml = item.areas.map((a, i) => {
         const isKonversi = a.konversi && a.konversi !== '-';
-        const rowBg = isKonversi ? '!bg-red-100 !text-red-900 font-bold' : (i % 2 === 0 ? 'bg-white' : 'bg-slate-50');
+        const textClass = isKonversi ? 'text-red-600 font-bold' : 'text-slate-700';
         const ketText = isKonversi ? `[LOCKED: ${a.konversi}] ${a.keterangan || '-'}` : (a.keterangan || '-');
 
         return `
-            <tr class="border-b border-slate-200 text-[12px] ${rowBg}">
-                <td class="px-3 py-2 text-center border-r border-slate-200"><input type="checkbox" data-id="${a.id}" data-idsku="${a.id_sku_base}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-sub-${item.gKey} cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"></td>
-                <td class="px-3 py-2 font-bold text-slate-800 border-r border-slate-200">${a.area}</td>
-                <td class="px-3 py-2 font-semibold text-slate-900 border-r border-slate-200">${a.po_aktual}</td>
-                <td class="px-3 py-2 font-semibold text-purple-700 border-r border-slate-200">${a.customer_estimasi}</td>
-                <td class="px-3 py-2 font-medium text-slate-600 whitespace-normal min-w-[150px] border-r border-slate-200 ${isKonversi ? '!text-red-800' : ''}">${ketText}</td>
-                <td class="px-3 py-2 font-black text-emerald-700 text-center">${a.qty}</td>
-            </tr>`;
+            <div class="flex items-center justify-between py-2 border-b border-slate-200/60 last:border-0 hover:bg-slate-50 transition px-2">
+                <div class="flex items-center gap-3 w-1/3">
+                    <input type="checkbox" data-id="${a.id}" data-idsku="${a.id_sku_base}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-sub-${item.gKey} cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 shrink-0">
+                    <span class="font-bold text-slate-800 w-20 shrink-0">${a.area}</span>
+                    <span class="font-semibold text-slate-600 truncate">${a.po_aktual}</span>
+                </div>
+                <div class="flex items-center gap-3 w-1/3">
+                    <span class="font-semibold text-purple-600 truncate w-1/2">Est: ${a.customer_estimasi}</span>
+                    <span class="font-medium ${textClass} truncate w-1/2" title="${ketText}">${ketText}</span>
+                </div>
+                <div class="w-1/4 text-right">
+                    <span class="font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">${a.qty} Dus</span>
+                </div>
+            </div>`;
     }).join('');
 
     return `
-        <div class="bg-white rounded-xl border border-slate-300 shadow-md p-3 max-w-5xl mx-auto">
-            <div class="flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
-                <h4 class="font-black text-indigo-800 text-sm flex items-center gap-2"><i data-lucide="package-open" class="w-4 h-4"></i> Rincian Area Penyimpanan</h4>
-                <div class="flex gap-2">
-                    <button onclick="salinDataSubRow('${item.gKey}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] uppercase rounded-lg transition flex items-center gap-1.5"><i data-lucide="copy" class="w-3 h-3"></i> Salin</button>
-                    <button onclick="siapkanGantiPO('subrow', '${item.gKey}')" class="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold text-[10px] uppercase rounded-lg transition flex items-center gap-1.5"><i data-lucide="tags" class="w-3 h-3"></i> Ganti Customer</button>
-                    <button onclick="bukaModalGantiKet('subrow', '${item.gKey}')" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-[10px] uppercase rounded-lg transition flex items-center gap-1.5"><i data-lucide="edit-3" class="w-3 h-3"></i> Ganti Ket</button>
-                </div>
+        <div class="bg-slate-100/50 rounded-lg border border-slate-300 shadow-inner p-3 m-2 max-w-5xl mx-auto">
+            <div class="flex items-center gap-2 mb-2 pb-2 border-b border-slate-200">
+                <input type="checkbox" onchange="toggleCentangSubRow(this.checked, '${item.gKey}')" class="cursor-pointer rounded border-slate-400 text-blue-600 focus:ring-blue-500 w-4 h-4">
+                <span class="text-xs font-bold text-slate-500 uppercase">Pilih Semua Area</span>
             </div>
-            <div class="overflow-x-auto rounded-lg border border-slate-200">
-                <table class="w-full text-left whitespace-nowrap">
-                    <thead class="bg-slate-100 text-slate-700 text-[11px] uppercase font-black">
-                        <tr>
-                            <th class="px-3 py-2 text-center border-r border-slate-200 w-10"><input type="checkbox" onchange="toggleCentangSubRow(this.checked, '${item.gKey}')" class="cursor-pointer rounded border-slate-400 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"></th>
-                            <th class="px-3 py-2 border-r border-slate-200">Area</th>
-                            <th class="px-3 py-2 border-r border-slate-200">Customer Aktual</th>
-                            <th class="px-3 py-2 border-r border-slate-200 text-purple-600">Customer Estimasi</th>
-                            <th class="px-3 py-2 border-r border-slate-200">Keterangan</th>
-                            <th class="px-3 py-2 text-center text-emerald-600">Total Dus</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${trs}
-                    </tbody>
-                </table>
+            
+            <div class="flex flex-col gap-1 mb-4">
+                ${rowsHtml}
+            </div>
+
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                <button onclick="salinDataSubRow('${item.gKey}')" class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-lg transition shadow-sm flex items-center gap-1.5"><i data-lucide="copy" class="w-3.5 h-3.5"></i> Salin Detail</button>
+                <button onclick="siapkanGantiPO('subrow', '${item.gKey}')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition shadow-sm flex items-center gap-1.5"><i data-lucide="tags" class="w-3.5 h-3.5"></i> Ganti Customer</button>
+                <button onclick="bukaModalGantiKet('subrow', '${item.gKey}')" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-lg transition shadow-sm flex items-center gap-1.5"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Ganti Ket</button>
             </div>
         </div>
     `;
@@ -639,10 +636,10 @@ window.salinDataSubRow = function(gKey) {
 
     let textSalin = "Area Penyimpanan\tCustomer Aktual\tCustomer Estimasi\tKeterangan\tTotal Dus\n";
     cek.forEach(cb => {
-        const tr = cb.closest('tr');
+        const tr = cb.closest('div.flex.items-center.justify-between');
         if(tr) {
-            const cols = tr.querySelectorAll('td');
-            textSalin += `${cols[1].innerText}\t${cols[2].innerText}\t${cols[3].innerText}\t${cols[4].innerText}\t${cols[5].innerText}\n`;
+            const spans = tr.querySelectorAll('span');
+            textSalin += `${spans[0].innerText}\t${spans[1].innerText}\t${spans[2].innerText}\t${spans[3].innerText}\t${spans[4].innerText}\n`;
         }
     });
 
@@ -874,7 +871,7 @@ window.closeFilterMenu = function() { document.getElementById('excel-filter-menu
 
 window.clearFilterForCurrentCol = function() {
     delete activeFilters[currentFilterCol];
-    closeFilterMenu(); applyFilters(); 
+    closeFilterMenu(); applyFilters(); updateFilterIcons();
 };
 
 window.applyFilterForCurrentCol = function() {
@@ -895,11 +892,34 @@ window.applyFilterForCurrentCol = function() {
         activeFilters[currentFilterCol] = selectedVals;
     }
     
-    closeFilterMenu(); applyFilters(); 
+    closeFilterMenu(); applyFilters(); updateFilterIcons();
 };
 
+function updateFilterIcons() {
+    document.querySelectorAll('.filter-icon').forEach(icon => {
+        icon.classList.remove('text-amber-400', 'opacity-100');
+        icon.classList.add('text-slate-400', 'opacity-40');
+    });
+    
+    document.querySelectorAll('th.hdr-filtered').forEach(th => {
+        th.classList.remove('hdr-filtered');
+    });
+
+    for (let colClass in activeFilters) {
+        const th = document.querySelector(`th.${colClass}`);
+        if (th) {
+            th.classList.add('hdr-filtered');
+            const icon = th.querySelector('.filter-icon');
+            if (icon) { 
+                icon.classList.remove('text-slate-400', 'opacity-40'); 
+                icon.classList.add('text-amber-400', 'opacity-100'); 
+            }
+        }
+    }
+}
+
 // ==========================================
-// LOGIKA GANTI KETERANGAN (KS AREA, KS GLOBAL, SUBROW)
+// LOGIKA GANTI KETERANGAN (KS AREA & KS GLOBAL)
 // ==========================================
 window.bukaModalGantiKet = function(context, gKey = null) {
     selectedForActionKet = [];
@@ -1127,10 +1147,16 @@ window.siapkanGantiPO = function(context, gKey = null) {
     inputQty.max = totalDus; 
 
     document.getElementById('modal-po').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
 };
 
 window.tutupModalPO = function() { 
     document.getElementById('modal-po').classList.add('hidden'); 
+    if(document.getElementById('modal-breakdown') && !document.getElementById('modal-breakdown').classList.contains('hidden')) {
+        // Do nothing, let breakdown modal stay open
+    } else {
+        document.getElementById('overlay-klik-luar').classList.add('hidden'); 
+    }
 };
 
 window.eksekusiGantiPO = async function() {
@@ -1320,10 +1346,12 @@ window.siapkanReqKonversi = function() {
     });
 
     document.getElementById('modal-req-konversi').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
 };
 
 window.tutupModalReqKonversi = function() {
     document.getElementById('modal-req-konversi').classList.add('hidden');
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
     selectedForReq = null;
 };
 
@@ -1597,3 +1625,4 @@ window.resetUrutanKolom = function() {
     renderTableHeaders();
     renderTableBody(); 
 };
+
