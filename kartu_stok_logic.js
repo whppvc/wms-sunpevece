@@ -6,7 +6,6 @@ let stokLembaranRaw = [];
 // Data Arrays
 let dataKSArea = []; 
 let dataKSGlobal = [];
-let dataKSNonaktif = []; 
 
 let processedData = []; 
 let filteredData = [];  
@@ -74,7 +73,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
             if (!menu.contains(e.target) && !e.target.closest('button[title^="Filter"]')) {
-                closeFilterMenu();
+                window.closeFilterMenu();
             }
         }
         const actionMenu = document.getElementById('mobile-action-menu');
@@ -90,12 +89,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(muatDataStok, 200);
 });
 
-window.toggleActionMenu = toggleActionMenu;
-function toggleActionMenu(e) {
+window.toggleActionMenu = function(e) {
     if(e) e.stopPropagation();
     const menu = document.getElementById('mobile-action-menu');
     if(menu) menu.classList.toggle('hidden');
-}
+};
 
 async function fetchAllRows(baseQuery) {
     let allData = [];
@@ -147,17 +145,15 @@ async function loadMasterData() {
     } catch (e) { console.error("Gagal load master_2:", e); }
 }
 
-window.muatDataStok = muatDataStok;
-async function muatDataStok() {
+window.muatDataStok = async function() {
     const tbody = document.getElementById('tbody-ks');
     if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-medium text-slate-500">Menghubungkan ke database...</p></td></tr>`;
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
-        const [stokGlobalData, resAktual, resLembaran, resGanti] = await Promise.all([
+        const [stokGlobalData, resAktual, resGanti] = await Promise.all([
             fetchAllRows(db.from('stok_global').select('*')), 
             db.from('stok_aktual').select('*'),
-            db.from('stok_nonaktif').select('*').order('created_at', {ascending: false}),
             db.from('ganti_customer').select('id_sku, customer_aktual_request, area').neq('progres', 'DONE') 
         ]);
         
@@ -165,7 +161,6 @@ async function muatDataStok() {
         
         stokGlobalRaw = stokGlobalData || []; 
         stokAktualRaw = resAktual.data || [];
-        stokLembaranRaw = resLembaran.data || [];
 
         processedGantiKeys.clear();
         processedGlobalKeys.clear();
@@ -214,43 +209,25 @@ async function muatDataStok() {
         });
         dataKSGlobal = Object.values(globalMap);
 
-        dataKSNonaktif = stokLembaranRaw.map(r => ({ ...r, _id: r.id.toString() })); 
-
-        if (typeof window.updateDatalists === 'function') window.updateDatalists();
         setModeKS(modeKS);
     } catch(e) { 
         if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-medium">Gagal mengolah data: ${e.message}</td></tr>`; 
     }
-}
+};
 
-window.setModeKS = setModeKS;
-function setModeKS(m) {
+window.setModeKS = function(m) {
     modeKS = m;
-    const isMobile = window.innerWidth < 640;
     
     const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     
-    ['area', 'global', 'pencarian', 'nonaktif'].forEach(tab => {
+    ['area', 'global'].forEach(tab => {
         const el = document.getElementById('tab-' + tab);
         if(el) el.className = (m === tab) ? activeClass : inactiveClass;
     });
 
-    const isPencarian = (m === 'pencarian');
-    
-    const toolbarMain = document.getElementById('toolbar-main-ks');
-    if (toolbarMain) toolbarMain.classList.toggle('hidden', isPencarian);
-
-    document.getElementById('wrapper-table-ks').classList.toggle('hidden', isPencarian);
-    document.getElementById('view-pencarian-desktop').classList.toggle('hidden', !isPencarian || isMobile);
-    document.getElementById('view-pencarian-mobile').classList.toggle('hidden', !isPencarian || !isMobile);
-    document.getElementById('footer-ks').classList.toggle('hidden', isPencarian);
-    
     const btnGantiPO = document.getElementById('btn-ganti-po-main');
-    if(btnGantiPO) btnGantiPO.classList.toggle('hidden', m === 'global' || m === 'nonaktif' || isPencarian);
-    
-    const btnGantiKet = document.getElementById('btn-ganti-ket-main');
-    if(btnGantiKet) btnGantiKet.classList.toggle('hidden', m === 'nonaktif' || isPencarian);
+    if(btnGantiPO) btnGantiPO.classList.toggle('hidden', m === 'global');
 
     const btnReqKonv = document.getElementById('btn-req-konversi-main');
     if(btnReqKonv) btnReqKonv.classList.toggle('hidden', m !== 'area');
@@ -264,20 +241,12 @@ function setModeKS(m) {
     selectAllState = 0;
     
     loadUserPreferences(); 
-    
-    if (isPencarian) {
-        if (typeof window.initPencarianMode === 'function') {
-            window.initPencarianMode(isMobile);
-        }
-    } else {
-        buildProcessedData();
-    }
-}
+    buildProcessedData();
+};
 
 function buildProcessedData() {
     if (modeKS === 'area') processedData = dataKSArea;
     else if (modeKS === 'global') processedData = dataKSGlobal;
-    else if (modeKS === 'nonaktif') processedData = dataKSNonaktif;
 
     processedData.forEach(r => {
         if (modeKS === 'area') {
@@ -291,13 +260,6 @@ function buildProcessedData() {
                 'col-jenis': r.jenis, 'col-nama': r.nama, 'col-pjg': r.pjg, 'col-grade': r.grade,
                 'col-dus': r.dus, 'col-shading': r.shading, 'col-po': r.po, 'col-estimasi': r.customer_estimasi,
                 'col-ket': r.ket || '-', 'col-qty': r.qty.toString()
-            };
-        } else if (modeKS === 'nonaktif') {
-            r.searchValues = {
-                'col-area': r.posisi || '-', 'col-qr': r.qrcode || '-', 'col-jenis': r.jenis_item || '-',
-                'col-nama': r.nama_item || '-', 'col-pjg': r.panjang || '-', 'col-grade': r.grade || '-',
-                'col-dus': r.dus || '-', 'col-shading': r.shading || '-', 'col-po': r.customer_aktual || '-',
-                'col-estimasi': r.customer_estimasi || '-', 'col-ket': r.keterangan || '-'
             };
         }
     });
@@ -334,17 +296,16 @@ function applySort() {
     renderTableBody();
 }
 
-window.sortTable = sortTable;
-function sortTable(colClass, headerEl) {
+window.sortTable = function(colClass, headerEl) {
     let isAsc = sortState.col === colClass ? !sortState.isAsc : true;
     sortState = { col: colClass, isAsc: isAsc };
     applySort();
-}
+};
 
 function thSort(label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const isHidden = hiddenCols.includes(colClass) ? 'col-hidden' : '';
-    const noFilter = ['col-cb', 'col-open', 'col-proses'].includes(colClass);
+    const noFilter = ['col-cb', 'col-open'].includes(colClass);
     
     let sortIcon = 'arrow-up-down';
     let sortOpacity = 'opacity-30';
@@ -361,12 +322,12 @@ function thSort(label, cls = "") {
 
     return `<th class="hdr-std ${cls} ${isHidden} select-none group">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
-            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable('${colClass}', this.closest('th'))" title="Sort ${label}">${label}</span>
+            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="window.sortTable('${colClass}', this.closest('th'))" title="Sort ${label}">${label}</span>
             <div class="flex items-center gap-1 shrink-0">
-                <button onclick="sortTable('${colClass}', this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
+                <button onclick="window.sortTable('${colClass}', this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
                     <i data-lucide="${sortIcon}" class="w-3.5 h-3.5 sort-icon ${sortOpacity} group-hover:opacity-100 transition-opacity text-white"></i>
                 </button>
-                <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
+                <button onclick="window.openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
                     <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon ${filterIconColor} hover:opacity-100 transition-all"></i>
                 </button>
             </div>
@@ -380,7 +341,7 @@ function renderTableHeaders() {
 
     let h = `<tr>
         <th class="hdr-std w-10 col-cb text-center sticky-col">
-            <button id="btn-select-all" onclick="cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
+            <button id="btn-select-all" onclick="window.cycleSelectAll()" class="w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto" title="Klik untuk Pilih Semua"></button>
         </th>`;
 
     if(modeKS === 'area') {
@@ -408,22 +369,10 @@ function renderTableHeaders() {
               ${thSort('Customer Estimasi', 'col-estimasi text-purple-300')}
               ${thSort('Keterangan', 'col-ket')}
               ${thSort('TOTAL (DUS)', 'col-qty')}`;
-    } else if (modeKS === 'nonaktif') {
-        h += `${thSort('Area', 'col-area')}
-              ${thSort('QRCode', 'col-qr')}
-              ${thSort('Jenis Item', 'col-jenis')}
-              ${thSort('Nama Item', 'col-nama')}
-              ${thSort('Panjang', 'col-pjg')}
-              ${thSort('Grade', 'col-grade')}
-              ${thSort('Dus', 'col-dus')}
-              ${thSort('Shading', 'col-shading')}
-              ${thSort('Customer Aktual', 'col-po')}
-              ${thSort('Customer Estimasi', 'col-estimasi')}
-              ${thSort('Keterangan', 'col-ket')}`;
     }
     h += `</tr>`;
     thead.innerHTML = h;
-    updateSelectAllUI();
+    window.updateSelectAllUI();
 }
 
 function renderTableBody() {
@@ -446,10 +395,13 @@ function renderTableBody() {
         const sv = r.searchValues;
         
         let customRowClass = "transition row-ks text-[13px]";
+        let isKonversi = sv['col-konversi'] && sv['col-konversi'] !== '-';
         
-        if (modeKS === 'nonaktif') customRowClass += " !bg-red-100 !text-red-900 font-bold";
-        else if (modeKS === 'area' && sv['col-konversi'] !== '-') customRowClass += " !bg-red-100 !text-red-900 font-bold";
-        else customRowClass += (i % 2 === 0 ? ' stripe-1' : ' stripe-2');
+        if (modeKS === 'area' && isKonversi) {
+            customRowClass += " !bg-red-100 !text-red-900 font-bold";
+        } else {
+            customRowClass += (i % 2 === 0 ? ' stripe-1' : ' stripe-2');
+        }
 
         if (isSelected) customRowClass += ' selected-row';
 
@@ -460,7 +412,7 @@ function renderTableBody() {
             let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
 
             h += `
-                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${r._id}')" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this, '${r._id}')" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
                 <td class="px-4 py-3 font-semibold text-slate-800 text-left col-area ${hiddenCols.includes('col-area')?'col-hidden':''}">${sv['col-area']}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
@@ -483,8 +435,8 @@ function renderTableBody() {
             let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
 
             h += `
-                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${r._id}')" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
-                <td class="px-4 py-3 text-center col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
+                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="window.highlightRow(this, '${r._id}')" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
+                <td class="px-4 py-3 text-center col-open"><button onclick="window.bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}">${sv['col-pjg']}</td>
@@ -498,21 +450,6 @@ function renderTableBody() {
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi ${hiddenCols.includes('col-estimasi')?'col-hidden':''}">${sv['col-estimasi']}</td>
                 <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
                 <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base ${hiddenCols.includes('col-qty')?'col-hidden':''}">${sv['col-qty']}</td>
-            `;
-        } else if (modeKS === 'nonaktif') {
-            h += `
-                <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${r._id}')" value="${r.id}" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
-                <td class="px-4 py-3 font-semibold text-left col-area ${hiddenCols.includes('col-area')?'col-hidden':''}">${sv['col-area']}</td>
-                <td class="px-4 py-3 font-mono font-bold text-left col-qr ${hiddenCols.includes('col-qr')?'col-hidden':''}">${sv['col-qr']}</td>
-                <td class="px-4 py-3 font-medium text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
-                <td class="px-4 py-3 font-medium text-left col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
-                <td class="px-4 py-3 font-medium text-left col-panjang ${hiddenCols.includes('col-pjg')?'col-hidden':''}">${sv['col-pjg']}</td>
-                <td class="px-4 py-3 font-medium text-left col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}">${sv['col-grade']}</td>
-                <td class="px-4 py-3 font-medium text-left col-dus ${hiddenCols.includes('col-dus')?'col-hidden':''}">${sv['col-dus']}</td>
-                <td class="px-4 py-3 font-medium text-left col-shading ${hiddenCols.includes('col-shading')?'col-hidden':''}">${sv['col-shading']}</td>
-                <td class="px-4 py-3 font-medium text-left col-po ${hiddenCols.includes('col-po')?'col-hidden':''}">${sv['col-po']}</td>
-                <td class="px-4 py-3 font-medium text-left col-estimasi ${hiddenCols.includes('col-estimasi')?'col-hidden':''}">${sv['col-estimasi']}</td>
-                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
             `;
         }
         h += `</tr>`;
@@ -530,30 +467,24 @@ function updatePaginationUI() {
     const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
     
     let sumQty = 0;
-    if (modeKS === 'nonaktif') {
-        sumQty = totalFiltered;
-    } else {
-        filteredData.forEach(r => { sumQty += parseInt(r.searchValues['col-qty']) || 0; });
-    }
+    filteredData.forEach(r => { sumQty += parseInt(r.searchValues['col-qty']) || 0; });
 
     document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
     document.getElementById('lbl-total-qty').innerText = sumQty;
     document.getElementById('lbl-halaman').innerText = currentPage;
     document.getElementById('lbl-total-halaman').innerText = totalPages;
     
-    updateSelectedCount();
+    window.updateSelectedCount();
 }
 
-window.changeRowsPerPage = changeRowsPerPage;
-function changeRowsPerPage(val) {
+window.changeRowsPerPage = function(val) {
     rowsPerPage = (val === 'ALL') ? 999999 : parseInt(val);
     localStorage.setItem('wms_rows_per_page', rowsPerPage);
     currentPage = 1; 
     renderTableBody();
-}
+};
 
-window.setCustomRowsPerPage = setCustomRowsPerPage;
-function setCustomRowsPerPage(val) {
+window.setCustomRowsPerPage = function(val) {
     let parsed = parseInt(val);
     if (!isNaN(parsed) && parsed > 0) {
         rowsPerPage = parsed;
@@ -561,25 +492,20 @@ function setCustomRowsPerPage(val) {
         currentPage = 1;
         renderTableBody();
     }
-}
+};
 
-window.prevPage = prevPage;
-function prevPage() { if(currentPage > 1) { currentPage--; renderTableBody(); } }
-
-window.nextPage = nextPage;
-function nextPage() { 
+window.prevPage = function() { if(currentPage > 1) { currentPage--; renderTableBody(); } };
+window.nextPage = function() { 
     const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
     if(currentPage < totalPages) { currentPage++; renderTableBody(); } 
-}
+};
 
-window.updateSelectedCount = updateSelectedCount;
-function updateSelectedCount() {
+window.updateSelectedCount = function() {
     const lbl = document.getElementById('lbl-pilih-baris');
     if(lbl) lbl.innerText = selectedRows.size;
-}
+};
 
-window.cycleSelectAll = cycleSelectAll;
-function cycleSelectAll() {
+window.cycleSelectAll = function() {
     selectAllState = (selectAllState + 1) % 3;
     if (selectAllState === 0) {
         selectedRows.clear();
@@ -591,12 +517,11 @@ function cycleSelectAll() {
     } else if (selectAllState === 2) {
         filteredData.forEach(r => selectedRows.add(r._id));
     }
-    updateSelectAllUI();
+    window.updateSelectAllUI();
     renderTableBody(); 
-}
+};
 
-window.updateSelectAllUI = updateSelectAllUI;
-function updateSelectAllUI() {
+window.updateSelectAllUI = function() {
     const btn = document.getElementById('btn-select-all');
     if(!btn) return;
     
@@ -611,10 +536,9 @@ function updateSelectAllUI() {
         btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
     }
     if(typeof lucide !== 'undefined') lucide.createIcons();
-}
+};
 
-window.highlightRow = highlightRow;
-function highlightRow(cb, id) {
+window.highlightRow = function(cb, id) {
     const tr = cb.closest('tr');
     if (cb.checked) {
         selectedRows.add(id);
@@ -626,10 +550,175 @@ function highlightRow(cb, id) {
     
     if(!cb.checked && selectAllState !== 0) {
         selectAllState = 0;
-        updateSelectAllUI();
+        window.updateSelectAllUI();
     }
-    updateSelectedCount();
-}
+    window.updateSelectedCount();
+};
+
+// ==========================================
+// FILTER EXCEL PRO (SMART FILTERING & POSITIONING)
+// ==========================================
+window.openColumnFilter = function(event, colClass, colName) {
+    event.stopPropagation();
+    currentFilterCol = colClass;
+    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
+
+    let uniqueValues = new Set();
+    
+    processedData.forEach(row => {
+        let showBasedOnOthers = true;
+        for (let otherCol in activeFilters) {
+            if (otherCol !== colClass) { 
+                const allowed = activeFilters[otherCol];
+                const val = row.searchValues[otherCol] || '';
+                if (!allowed.includes(val)) { showBasedOnOthers = false; break; }
+            }
+        }
+        if (showBasedOnOthers) {
+            let val = row.searchValues[colClass] || '';
+            if(val !== '') uniqueValues.add(val);
+        }
+    });
+
+    let sortedValues = Array.from(uniqueValues).sort();
+    window.currentFilterValues = sortedValues;
+    window.renderFilterList('');
+
+    document.getElementById('filter-search-input').value = '';
+    
+    const menu = document.getElementById('excel-filter-menu');
+    menu.classList.remove('hidden');
+    
+    const btnRect = event.currentTarget.getBoundingClientRect();
+    const menuWidth = 256; 
+    
+    let topPos = btnRect.bottom + 4; 
+    let leftPos = btnRect.left; 
+
+    if (leftPos + menuWidth > window.innerWidth) {
+        leftPos = btnRect.right - menuWidth;
+    }
+    
+    if (leftPos < 10) {
+        leftPos = 10;
+    }
+
+    menu.style.position = 'fixed'; 
+    menu.style.top = `${topPos}px`;
+    menu.style.left = `${leftPos}px`;
+    
+    document.getElementById('filter-search-input').focus();
+};
+
+window.renderFilterList = function(searchQuery) {
+    const colClass = currentFilterCol;
+    let filteredVals = window.currentFilterValues;
+    
+    if (searchQuery) {
+        const query = searchQuery.toLowerCase().split(' ').filter(x => x);
+        filteredVals = window.currentFilterValues.filter(val => {
+            const text = String(val).toLowerCase();
+            return query.every(term => text.includes(term));
+        });
+    }
+
+    const limit = 100;
+    const displayVals = filteredVals.slice(0, limit);
+
+    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
+    
+    displayVals.forEach(val => {
+        let isChecked = true;
+        if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
+        listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}">
+            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
+            <span class="truncate text-slate-600">${val}</span>
+        </label>`;
+    });
+
+    if (filteredVals.length > limit) {
+        listHtml += `<div class="p-2 text-center text-xs font-bold text-slate-400 italic">Menampilkan 100 dari ${filteredVals.length} hasil. Ketik untuk mencari.</div>`;
+    }
+
+    document.getElementById('filter-values-list').innerHTML = listHtml;
+    window.updateSelectAllState();
+};
+
+window.searchFilterList = function(val) {
+    clearTimeout(filterTimeout);
+    filterTimeout = setTimeout(() => {
+        requestAnimationFrame(() => {
+            window.renderFilterList(val);
+        });
+    }, 150);
+};
+
+window.toggleAllFilterValues = function(checked) {
+    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
+    window.updateSelectAllState();
+};
+
+window.updateSelectAllState = function() {
+    const allCbs = document.querySelectorAll('.filter-val-cb');
+    const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
+    const selectAll = document.getElementById('filter-select-all');
+    if(!selectAll) return;
+    if(allCbs.length === checkedCbs.length && allCbs.length > 0) { selectAll.checked = true; selectAll.indeterminate = false; }
+    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
+    else { selectAll.checked = false; selectAll.indeterminate = true; }
+};
+
+document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) window.updateSelectAllState(); });
+
+window.closeFilterMenu = function() { document.getElementById('excel-filter-menu').classList.add('hidden'); };
+
+window.clearFilterForCurrentCol = function() {
+    delete activeFilters[currentFilterCol];
+    window.closeFilterMenu(); window.saringTabelExcel(); 
+};
+
+window.applyFilterForCurrentCol = function() {
+    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
+    const totalBoxes = document.querySelectorAll('.filter-val-cb');
+    
+    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') {
+        delete activeFilters[currentFilterCol];
+    } else {
+        let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value));
+        
+        if (activeFilters[currentFilterCol]) {
+            const oldVals = new Set(activeFilters[currentFilterCol]);
+            selectedVals.forEach(v => oldVals.add(v));
+            selectedVals = Array.from(oldVals);
+        }
+        
+        activeFilters[currentFilterCol] = selectedVals;
+    }
+    
+    window.closeFilterMenu(); window.saringTabelExcel(); 
+};
+
+window.saringTabelExcel = function() {
+    applyFilters();
+    window.updateFilterIcons();
+};
+
+window.updateFilterIcons = function() {
+    document.querySelectorAll('.filter-icon').forEach(icon => {
+        icon.classList.remove('text-amber-400', 'opacity-100');
+        icon.classList.add('opacity-40', 'text-white');
+    });
+    for (let colClass in activeFilters) {
+        const th = document.querySelector(`th.${colClass}`);
+        if (th) {
+            const icon = th.querySelector('.filter-icon');
+            if (icon) { 
+                icon.classList.remove('opacity-40', 'text-white'); 
+                icon.classList.add('text-amber-400', 'opacity-100'); 
+            }
+        }
+    }
+};
 
 // ==========================================
 // LOGIKA GANTI KETERANGAN (KS AREA & KS GLOBAL)
@@ -710,7 +799,7 @@ window.eksekusiGantiKet = async function() {
 
         document.getElementById('modal-ganti-keterangan').classList.add('hidden');
         if(!document.getElementById('modal-breakdown').classList.contains('hidden')) {
-            tutupModalBreakdown();
+            window.tutupModalBreakdown();
         }
 
         alert(`✅ SUKSES!\nKeterangan berhasil diubah menjadi "${newKet}".`);
@@ -814,7 +903,7 @@ window.bukaBreakdown = function(gKey) {
 
         return `
             <tr class="transition bd-row text-[13px] ${rowBg}">
-                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-id="${a.id}" data-idsku="${a.id_sku_base}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="window.highlightBdRow(this)" data-id="${a.id}" data-idsku="${a.id_sku_base}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
                 <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi">${a.customer_estimasi}</td>
@@ -840,7 +929,7 @@ window.highlightBdRow = function(cb) {
 };
 
 window.toggleCentangBreakdown = function(checked) { 
-    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; highlightBdRow(cb); }); 
+    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; window.highlightBdRow(cb); }); 
 };
 
 window.siapkanGantiPO = function(context) {
@@ -997,8 +1086,8 @@ window.eksekusiGantiPO = async function() {
             }
         }
         
-        tutupModalPO(); 
-        if(sourcePOContext === 'breakdown') tutupModalBreakdown();
+        window.tutupModalPO(); 
+        if(sourcePOContext === 'breakdown') window.tutupModalBreakdown();
         
         alert("✅ Berhasil mengganti Customer Estimasi!");
         await muatDataStok();
@@ -1202,7 +1291,7 @@ window.eksekusiReqKonversi = async function() {
         const { error } = await db.from('request_konversi').insert([payload]);
         if(error) throw error;
         
-        tutupModalReqKonversi();
+        window.tutupModalReqKonversi();
         alert(`✅ Berhasil membuat Request Konversi dengan Kode: ${kodeKonversi}`);
         await muatDataStok();
     } catch(e) {
@@ -1345,7 +1434,7 @@ window.toggleHideCol = function(e, colClass) {
     e.stopPropagation();
     if(hiddenCols.includes(colClass)) hiddenCols = hiddenCols.filter(c => c !== colClass);
     else hiddenCols.push(colClass);
-    renderDragList();
+    window.renderDragList();
 };
 
 window.getDragAfterElement = function(container, y) {
@@ -1368,7 +1457,7 @@ window.simpanUrutanKolom = function() {
     localStorage.setItem(`col_hidden_ks_${modeKS}_${currentUser.username}`, JSON.stringify(hiddenCols));
     
     alert("Pengaturan kolom berhasil disimpan!");
-    toggleSidebarKolom(); 
+    window.toggleSidebarKolom(); 
     renderTableHeaders();
     renderTableBody(); 
 };
@@ -1381,7 +1470,7 @@ window.resetUrutanKolom = function() {
     localStorage.removeItem(`col_hidden_ks_${modeKS}_${currentUser.username}`);
     
     alert("Pengaturan dikembalikan ke default.");
-    toggleSidebarKolom(); 
+    window.toggleSidebarKolom(); 
     renderTableHeaders();
     renderTableBody(); 
 };
