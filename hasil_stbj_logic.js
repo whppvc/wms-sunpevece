@@ -1,8 +1,6 @@
-
-
-// Otomatis deteksi mode perangkat saat buka halaman (Layar < 640px = Mobile, >= 640px = Desktop Tabel)
+// Otomatis deteksi mode perangkat saat buka halaman (Layar < 640px = Grid, >= 640px = Tabel)
 const isMobileDevice = window.innerWidth < 640;
-let modeSekarang = isMobileDevice ? 'mobile' : 'tabel'; 
+let modeSekarang = isMobileDevice ? 'grid' : 'tabel'; 
 
 let statusSekarang = 'ALL'; 
 let rawDataRaw = [];
@@ -27,7 +25,7 @@ let selectedRows = new Set();
 
 let filterTimeout; 
 
-// State Khusus Mode Mobile (Drill-Down 6 Tingkat)
+// State Khusus Mode Grid (Drill-Down 6 Tingkat)
 let mobileLevel = 1; 
 let mobileSelectedSource = ''; // 'ALL', 'SCAN', 'MANUAL', 'HOLD'
 let mobileSelectedTgl = '';
@@ -36,6 +34,27 @@ let mobileSelectedItemSpec = ''; // `${nama}_${pjg}_${grade}_${dus}`
 let mobileSelectedShading = '';
 
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin', role: 'admin'};
+
+// Definisi Default Seluruh Kolom Tabel
+const defaultColDefs = [
+    { id: 'col-status-data', label: 'Collect' },
+    { id: 'col-troli', label: 'Troli' },
+    { id: 'col-tgl', label: 'Tgl Produksi' },
+    { id: 'col-mesin', label: 'Mesin' },
+    { id: 'col-shift', label: 'Shift' },
+    { id: 'col-jenis', label: 'Jenis Item' },
+    { id: 'col-nama', label: 'Nama Item' },
+    { id: 'col-jasper', label: 'Nama Jasper' },
+    { id: 'col-btn-edit', label: 'Edit Jasper' },
+    { id: 'col-pjg', label: 'Panjang' },
+    { id: 'col-grade', label: 'Grade' },
+    { id: 'col-dus', label: 'Dus' },
+    { id: 'col-shading', label: 'Shading' },
+    { id: 'col-customer', label: 'Customer Bawaan' },
+    { id: 'col-qty', label: 'QTY (DUS)' },
+    { id: 'col-qty-lembar', label: 'QTY (LEMBAR)' },
+    { id: 'col-ket', label: 'Keterangan' }
+];
 
 function formatPanjang(pjg) {
     if (!pjg || pjg === '-') return '-';
@@ -57,7 +76,7 @@ function formatWIB(isoString) {
     } catch(e) { return isoString; }
 }
 
-// REVISI KRUSIAL: Auto-Chunking Fetcher untuk menembus limit 1000 baris Supabase
+// Auto-Chunking Fetcher untuk menembus limit 1000 baris Supabase
 async function fetchAllRows(tableName, filterStatus = 'ALL') {
     let allData = [];
     let page = 0;
@@ -137,17 +156,21 @@ window.tutupModalFilterPopup = function() {
     document.getElementById('overlay-klik-luar').classList.add('hidden');
 };
 
-function toggleSidebarKolom() {
+// Kontrol Sidebar Atur Kolom
+window.toggleSidebarKolom = function() {
     const sidebar = document.getElementById('sidebar-kolom');
     const overlay = document.getElementById('overlay-klik-luar');
     if (sidebar.classList.contains('translate-x-full')) {
-        sidebar.classList.remove('translate-x-full'); overlay.classList.remove('hidden'); renderDragList();
+        sidebar.classList.remove('translate-x-full'); 
+        overlay.classList.remove('hidden'); 
+        renderDragList();
     } else {
-        sidebar.classList.add('translate-x-full'); overlay.classList.add('hidden');
+        sidebar.classList.add('translate-x-full'); 
+        overlay.classList.add('hidden');
     }
-}
+};
 
-function tutupPopups() {
+window.tutupPopups = function() {
     tutupModalFilterPopup();
     const sidebarK = document.getElementById('sidebar-kolom');
     if(sidebarK) sidebarK.classList.add('translate-x-full');
@@ -156,7 +179,7 @@ function tutupPopups() {
     document.getElementById('modal-list-katalog').classList.add('hidden');
     document.getElementById('modal-katalog').classList.add('hidden');
     closeFilterMenu();
-}
+};
 
 function loadUserPreferences() {
     const savedOrder = localStorage.getItem(`col_order_stbj_${currentUser.username}`);
@@ -172,6 +195,125 @@ function loadUserPreferences() {
         if(sel) sel.value = rowsPerPage;
     }
 }
+
+// Render Daftar Kolom di Sidebar Atur Kolom (Drag & Drop + Checkbox Visibilitas)
+let draggedItem = null;
+
+function renderDragList() {
+    const container = document.getElementById('kolom-drag-container');
+    if (!container) return;
+
+    let currentCols = [];
+    if (userColOrder && userColOrder.length > 0) {
+        userColOrder.forEach(colId => {
+            const def = defaultColDefs.find(d => d.id === colId);
+            if (def) currentCols.push(def);
+        });
+        defaultColDefs.forEach(def => {
+            if (!currentCols.some(c => c.id === def.id)) currentCols.push(def);
+        });
+    } else {
+        currentCols = [...defaultColDefs];
+    }
+
+    let html = '';
+    currentCols.forEach(col => {
+        const isChecked = !hiddenCols.includes(col.id);
+        html += `
+            <div draggable="true" data-col-id="${col.id}" class="drag-col-item bg-white border border-slate-300 p-2.5 rounded-lg flex items-center justify-between shadow-sm cursor-move hover:border-blue-500 transition active:scale-[0.99]">
+                <div class="flex items-center gap-2.5">
+                    <i data-lucide="grip-vertical" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                    <span class="text-xs font-bold text-slate-700">${col.label}</span>
+                </div>
+                <input type="checkbox" class="col-visible-cb w-4 h-4 accent-blue-600 rounded cursor-pointer border-slate-300" ${isChecked ? 'checked' : ''} title="Tampilkan Kolom">
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+    lucide.createIcons();
+
+    // Event Listener Drag and Drop
+    const items = container.querySelectorAll('.drag-col-item');
+    items.forEach(item => {
+        item.addEventListener('dragstart', function(e) {
+            draggedItem = this;
+            e.dataTransfer.effectAllowed = 'move';
+            this.classList.add('opacity-50', 'bg-blue-50');
+        });
+
+        item.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        item.addEventListener('dragenter', function(e) {
+            this.classList.add('border-blue-500');
+        });
+
+        item.addEventListener('dragleave', function(e) {
+            this.classList.remove('border-blue-500');
+        });
+
+        item.addEventListener('drop', function(e) {
+            e.stopPropagation();
+            if (draggedItem !== this) {
+                const allCurrent = Array.from(container.querySelectorAll('.drag-col-item'));
+                const draggedIdx = allCurrent.indexOf(draggedItem);
+                const droppedIdx = allCurrent.indexOf(this);
+                if (draggedIdx < droppedIdx) {
+                    container.insertBefore(draggedItem, this.nextSibling);
+                } else {
+                    container.insertBefore(draggedItem, this);
+                }
+            }
+            this.classList.remove('border-blue-500');
+            return false;
+        });
+
+        item.addEventListener('dragend', function() {
+            this.classList.remove('opacity-50', 'bg-blue-50');
+            container.querySelectorAll('.drag-col-item').forEach(el => el.classList.remove('border-blue-500'));
+        });
+    });
+}
+
+window.simpanUrutanKolom = function() {
+    const container = document.getElementById('kolom-drag-container');
+    const items = container.querySelectorAll('.drag-col-item');
+    
+    let newOrder = [];
+    let newHidden = [];
+
+    items.forEach(item => {
+        const colId = item.getAttribute('data-col-id');
+        const cb = item.querySelector('.col-visible-cb');
+        newOrder.push(colId);
+        if (!cb.checked) {
+            newHidden.push(colId);
+        }
+    });
+
+    userColOrder = newOrder;
+    hiddenCols = newHidden;
+
+    localStorage.setItem(`col_order_stbj_${currentUser.username}`, JSON.stringify(userColOrder));
+    localStorage.setItem(`col_hidden_stbj_${currentUser.username}`, JSON.stringify(hiddenCols));
+
+    toggleSidebarKolom();
+    renderHeaderDanTabel();
+    alert("Urutan dan visibilitas kolom berhasil disimpan!");
+};
+
+window.resetUrutanKolom = function() {
+    localStorage.removeItem(`col_order_stbj_${currentUser.username}`);
+    localStorage.removeItem(`col_hidden_stbj_${currentUser.username}`);
+    userColOrder = [];
+    hiddenCols = [];
+    renderDragList();
+    renderHeaderDanTabel();
+    alert("Urutan kolom telah direset ke default!");
+};
 
 async function loadKamusDanJasper() {
     const { data: d2 } = await db.from('master_2').select('*'); if(d2) kamusData = d2;
@@ -191,7 +333,6 @@ async function muatDataDariSupabase() {
     lucide.createIcons();
     
     try {
-        // REVISI: Menggunakan fetchAllRows untuk menarik seluruh data tanpa batasan 1000 baris
         const [resHasil, resManual] = await Promise.all([
             fetchAllRows('hasil_stbj_langsir', statusSekarang),
             fetchAllRows('stbj_manual')
@@ -207,37 +348,31 @@ async function muatDataDariSupabase() {
     }
 }
 
-function setMode(m) {
-    modeSekarang = m;
+window.setMode = function(m) {
+    const isGrid = (m === 'grid' || m === 'mobile');
+    modeSekarang = isGrid ? 'grid' : 'tabel';
+
     const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
     const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
 
-    ['mobile', 'tabel'].forEach(tab => {
-        const el = document.getElementById('tab-mode-' + tab);
-        if(el) {
-            if(tab === 'mobile') {
-                el.className = (m === tab) ? 'sm:hidden ' + activeClass : 'sm:hidden ' + inactiveClass;
-            } else {
-                el.className = (m === tab) ? activeClass : inactiveClass;
-            }
-        }
-    });
-    
-    const isMobile = (m === 'mobile');
+    const tabGrid = document.getElementById('tab-mode-grid');
+    const tabTabel = document.getElementById('tab-mode-tabel');
 
-    document.getElementById('view-mobile').classList.toggle('hidden', !isMobile);
-    document.getElementById('view-table').classList.toggle('hidden', isMobile);
+    if(tabGrid) tabGrid.className = isGrid ? activeClass : inactiveClass;
+    if(tabTabel) tabTabel.className = !isGrid ? activeClass : inactiveClass;
+
+    document.getElementById('view-grid').classList.toggle('hidden', !isGrid);
+    document.getElementById('view-table').classList.toggle('hidden', isGrid);
     
-    document.getElementById('desktop-toolbar').classList.toggle('hidden', isMobile);
-    document.getElementById('footer-pagination').classList.toggle('hidden', isMobile);
+    document.getElementById('footer-pagination').classList.toggle('hidden', isGrid);
     
     const lvl6Footer = document.getElementById('mobile-lvl6-footer');
-    if (lvl6Footer && !isMobile) {
+    if (lvl6Footer && !isGrid) {
         lvl6Footer.classList.add('hidden');
         lvl6Footer.style.display = 'none';
     }
 
-    if (!isMobile) {
+    if (!isGrid) {
         const btnCollect = document.getElementById('btn-massal-collect');
         const btnCollectMob = document.getElementById('btn-massal-collect-mob');
         const btnHold = document.getElementById('btn-hold-mob');
@@ -254,10 +389,10 @@ function setMode(m) {
         mobileLevel = 1;
         renderMobileView();
     }
-}
+};
 
 // ========================================================
-// LOGIKA MODE MOBILE (REFACTORED DRILL-DOWN 6 TINGKAT)
+// LOGIKA MODE GRID (DRILL-DOWN 6 TINGKAT)
 // ========================================================
 function getAllUnifiedItems() {
     let list = [];
@@ -384,7 +519,6 @@ window.highlightLvl6Card = function(cb) {
     }
 };
 
-// Helper Pembentuk Kartu Drill-down Ringkas
 function makeDrillCard(title, subtitle, qtyText, clickAction, iconName = 'chevron-right') {
     return `
         <div onclick="${clickAction}" class="bg-white border border-slate-200 p-4 rounded-2xl flex justify-between items-center shadow-sm active:scale-95 transition cursor-pointer hover:bg-slate-50">
@@ -400,7 +534,6 @@ function makeDrillCard(title, subtitle, qtyText, clickAction, iconName = 'chevro
     `;
 }
 
-// Helper Sticky Header Mobile
 function makeStickyHeader(title, subtitle) {
     return `
         <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center gap-3 mb-2">
@@ -415,7 +548,7 @@ function makeStickyHeader(title, subtitle) {
     `;
 }
 
-// Fungsi Cancel STBJ Mobile (Status -> HOLD LANGSIR)
+// Cancel STBJ Mobile (Status -> HOLD LANGSIR)
 window.cancelSTBJMobile = async function() {
     const checkedBoxes = document.querySelectorAll('.cb-stbj-lvl6:checked');
     if (checkedBoxes.length === 0) return alert("Pilih minimal 1 kardus!");
@@ -431,7 +564,7 @@ window.cancelSTBJMobile = async function() {
 
     try {
         const { error } = await db.from('hasil_stbj_langsir')
-            .update({ status: 'HOLD LANGSIR', keterangan: 'Cancel STBJ Mobile' })
+            .update({ status: 'HOLD LANGSIR', keterangan: 'Cancel STBJ' })
             .in('qrcode', qrsToCancel);
 
         if (error) throw error;
@@ -439,7 +572,7 @@ window.cancelSTBJMobile = async function() {
         rawDataRaw.forEach(r => {
             if (qrsToCancel.includes(r.qrcode)) {
                 r.status = 'HOLD LANGSIR';
-                r.keterangan = 'Cancel STBJ Mobile';
+                r.keterangan = 'Cancel STBJ';
             }
         });
 
@@ -453,7 +586,7 @@ window.cancelSTBJMobile = async function() {
     }
 };
 
-// Fungsi Cancel Hold Mobile (Status -> STBJ)
+// Cancel Hold Mobile (Status -> STBJ)
 window.cancelHoldMobile = async function() {
     const checkedBoxes = document.querySelectorAll('.cb-stbj-lvl6:checked');
     if (checkedBoxes.length === 0) return alert("Pilih minimal 1 kardus hold!");
@@ -469,7 +602,7 @@ window.cancelHoldMobile = async function() {
 
     try {
         const { error } = await db.from('hasil_stbj_langsir')
-            .update({ status: 'STBJ', keterangan: 'Unhold dari Mobile' })
+            .update({ status: 'STBJ', keterangan: 'Unhold dari Grid' })
             .in('qrcode', qrsToUnhold);
 
         if (error) throw error;
@@ -477,7 +610,7 @@ window.cancelHoldMobile = async function() {
         rawDataRaw.forEach(r => {
             if (qrsToUnhold.includes(r.qrcode)) {
                 r.status = 'STBJ';
-                r.keterangan = 'Unhold dari Mobile';
+                r.keterangan = 'Unhold dari Grid';
             }
         });
 
@@ -491,7 +624,7 @@ window.cancelHoldMobile = async function() {
     }
 };
 
-// Fungsi Hapus Item Hold Mobile
+// Hapus Item Hold Mobile
 window.hapusItemHoldMobile = async function() {
     const checkedBoxes = document.querySelectorAll('.cb-stbj-lvl6:checked');
     if (checkedBoxes.length === 0) return alert("Pilih minimal 1 kardus yang ingin dihapus!");
@@ -521,13 +654,13 @@ window.hapusItemHoldMobile = async function() {
 };
 
 function renderMobileView() {
-    const container = document.getElementById('view-mobile');
+    const container = document.getElementById('view-grid');
     const targetDate = document.getElementById('filter-date-mobile')?.value || '';
     const lvl6Footer = document.getElementById('mobile-lvl6-footer');
 
     // Kontrol Tampilan Footer Freeze Level 6
     if (lvl6Footer) {
-        if (modeSekarang === 'mobile' && mobileLevel === 6) {
+        if ((modeSekarang === 'grid' || modeSekarang === 'mobile') && mobileLevel === 6) {
             lvl6Footer.classList.remove('hidden');
             lvl6Footer.style.display = 'flex';
             
@@ -585,7 +718,7 @@ function renderMobileView() {
 
     let html = '';
 
-    // LEVEL 1: KOTAK KISI 2 MENYAMPING
+    // LEVEL 1: KOTAK KISI
     if (mobileLevel === 1) {
         let totalScan = 0, totalManual = 0, totalHold = 0;
         allItems.forEach(r => {
@@ -600,7 +733,7 @@ function renderMobileView() {
             <span class="text-xs font-black text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">${totalScan + totalManual} Total Dus</span>
         </div>`;
 
-        html += `<div class="grid grid-cols-2 gap-3">
+        html += `<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div onclick="goToMobileLevel2('ALL')" class="bg-white border border-blue-200 p-4 rounded-2xl flex flex-col justify-between shadow-sm active:scale-95 transition cursor-pointer hover:bg-blue-50 h-36">
                 <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md"><i data-lucide="layers" class="w-5 h-5"></i></div>
                 <div><h4 class="font-black text-slate-800 text-sm leading-tight">Hasil Scan + Manual</h4><p class="text-[11px] font-black text-blue-600 mt-1">${totalScan + totalManual} Dus</p></div>
@@ -732,7 +865,7 @@ function renderMobileView() {
                     <div class="flex justify-between items-center mb-3 pb-2.5 border-b border-slate-100">
                         <label class="flex items-center gap-3 cursor-pointer">
                             <input type="checkbox" value="${d.qrcode}" data-source="${d.source}" onchange="highlightLvl6Card(this)" class="cb-stbj-lvl6 cursor-pointer w-5 h-5 accent-blue-600 rounded border-slate-400">
-                            <span class="font-black text-sm text-orange-600 uppercase">Customer: ${d.customer}</span>
+                            <span class="font-black text-sm text-orange-600 uppercase">Customer Bawaan: ${d.customer}</span>
                         </label>
                         <span class="font-bold px-2.5 py-0.5 text-[10px] rounded-md border ${badgeClass} uppercase">${d.status}</span>
                     </div>
@@ -830,7 +963,7 @@ window.saringTabelSTBJ = function() {
     if (qrVal) activeFilters['col-qr-text'] = qrVal;
     else delete activeFilters['col-qr-text'];
 
-    if (modeSekarang === 'mobile') {
+    if (modeSekarang === 'grid' || modeSekarang === 'mobile') {
         renderMobileView();
     } else {
         applyFilters();
@@ -839,11 +972,11 @@ window.saringTabelSTBJ = function() {
 };
 
 // ========================================================
-// LOGIKA TABEL DESKTOP (TABEL HASIL STBJ)
+// LOGIKA TABEL DESKTOP
 // ========================================================
 function switchStatusFilter(val) { 
     statusSekarang = val; 
-    muatDataDariSupabase(); // Tarik data ulang sesuai filter status
+    muatDataDariSupabase(); 
 }
 
 function buildProcessedData() {
@@ -1203,7 +1336,7 @@ function renderHeaderDanTabel() {
             ${thSort('Jenis Item', 'col-jenis')}
             ${thSort('Nama Item', 'col-nama')}
             ${thSort('Nama Jasper', 'col-jasper text-purple-300')}
-            <th class="hdr-std w-10 text-center col-btn-edit">Edit</th>
+            <th class="hdr-std w-10 text-center col-btn-edit ${hiddenCols.includes('col-btn-edit')?'col-hidden':''}">Edit</th>
             ${thSort('Panjang', 'col-pjg text-center')}
             ${thSort('Grade', 'col-grade text-center')}
             ${thSort('Dus', 'col-dus text-center')}
