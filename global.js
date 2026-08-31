@@ -51,6 +51,7 @@ const APP_MENUS = [
     { id: 'riwayat_langsir', title: 'Riwayat Langsir', icon: 'history', url: 'riwayat_langsir.html' },
     { isDivider: true, title: 'INVENTORY' },
     { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers', url: 'kartu_stok.html' },
+    { id: 'pencarian', title: 'Pencarian Item', icon: 'search', url: 'pencarian.html' },
     { id: 'penyesuaian', title: 'Penyesuaian Stok', icon: 'sliders-horizontal', url: 'penyesuaian.html' },
     { id: 'ganti_customer', title: 'Table Ganti Customer', icon: 'user-cog', url: 'ganti_customer.html' },
     { id: 'req_konversi', title: 'Tabel Request Konversi', icon: 'replace', url: 'req_konversi.html' },
