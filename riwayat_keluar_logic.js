@@ -21,7 +21,48 @@ let mobileSelectedTrip = '';
 let mobileSelectedItem = '';
 let mobileSelectedShading = '';
 
+let filterTimeout;
+
 const currentUser = JSON.parse(localStorage.getItem('user_session')) || {username: 'Admin'};
+
+// ==========================================
+// CUSTOM ALERT & NOTIFICATION SYSTEM
+// ==========================================
+window.tampilkanAlert = function(pesan, tipe = 'info') {
+    const modal = document.getElementById('modal-custom-alert');
+    const title = document.getElementById('alert-title');
+    const msg = document.getElementById('alert-message');
+    const iconContainer = document.getElementById('alert-icon-container');
+    const icon = document.getElementById('alert-icon');
+
+    if(!modal) { alert(pesan); return; }
+
+    msg.innerText = pesan;
+    modal.classList.remove('hidden');
+
+    if (tipe === 'warning') {
+        title.innerText = 'Perhatian';
+        title.className = 'text-lg font-black mb-2 text-amber-600';
+        iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-amber-100 text-amber-600';
+        icon.setAttribute('data-lucide', 'alert-triangle');
+    } else if (tipe === 'success') {
+        title.innerText = 'Berhasil';
+        title.className = 'text-lg font-black mb-2 text-emerald-600';
+        iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-emerald-100 text-emerald-600';
+        icon.setAttribute('data-lucide', 'check-circle');
+    } else if (tipe === 'error') {
+        title.innerText = 'Gagal';
+        title.className = 'text-lg font-black mb-2 text-rose-600';
+        iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-rose-100 text-rose-600';
+        icon.setAttribute('data-lucide', 'x-circle');
+    } else {
+        title.innerText = 'Informasi';
+        title.className = 'text-lg font-black mb-2 text-blue-600';
+        iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-blue-100 text-blue-600';
+        icon.setAttribute('data-lucide', 'info');
+    }
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+};
 
 function getTodayDate() {
     const d = new Date();
@@ -70,13 +111,27 @@ async function fetchAllRows(tableName, orderCol = 'created_at') {
 document.addEventListener('DOMContentLoaded', () => {
     initModernLayout({ id: 'riwayat_keluar', title: 'RIWAYAT KELUAR', url: 'riwayat_keluar.html' });
     
+    // KOMPONEN DINAMIS: TABS & FOOTER
+    const tabsData = [
+        { id: 'tab-mode-mobile', label: 'MOBILE', icon: 'smartphone', onClick: "setMode('mobile')", mobileOnly: true },
+        { id: 'tab-mode-item', label: 'RANGKUMAN ITEM', icon: 'boxes', onClick: "setMode('item')" },
+        { id: 'tab-mode-hold', label: 'TABEL HOLD KELUAR', icon: 'pause-circle', onClick: "setMode('hold')" }
+    ];
+    if (typeof window.renderSubmenuTabs === 'function') {
+        window.renderSubmenuTabs('container-submenu', tabsData, isMobileDevice ? 'tab-mode-mobile' : 'tab-mode-item');
+    }
+    
+    if (typeof window.renderTableFooter === 'function') {
+        window.renderTableFooter('container-footer', 'Total Qty (Dus)');
+    }
+
     const dateInput = document.getElementById('filter-date-mobile');
     if(dateInput) dateInput.value = getTodayDate();
 
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
-            if (!menu.contains(e.target) && !e.target.closest('button[title^="Filter"]')) {
+            if (!menu.contains(e.target) && !e.target.closest('th.cursor-pointer')) {
                 closeFilterMenu();
             }
         }
@@ -103,50 +158,30 @@ window.toggleActionMenu = function(e) {
     if(menu) menu.classList.toggle('hidden');
 };
 
-window.toggleSidebarFilter = function() {
-    const sidebar = document.getElementById('sidebar-filter');
-    const overlay = document.getElementById('overlay-klik-luar');
-    sidebar.classList.toggle('translate-x-full');
-    overlay.classList.toggle('hidden');
-    if (!sidebar.classList.contains('translate-x-full')) {
-        updateFilterDropdowns();
-    }
-};
-
 window.tutupSemuaPopups = function() {
-    const sidebar = document.getElementById('sidebar-filter');
-    if(sidebar) sidebar.classList.add('translate-x-full');
-    
-    const overlay = document.getElementById('overlay-klik-luar');
-    if(overlay) overlay.classList.add('hidden');
-    
     const modalCancel = document.getElementById('modal-cancel-hold');
     if(modalCancel) modalCancel.classList.add('hidden');
     
     if(document.getElementById('sidebar-kolom')) document.getElementById('sidebar-kolom').classList.add('translate-x-full');
-    
+    document.getElementById('overlay-klik-luar').classList.add('hidden');
     closeFilterMenu();
 };
 
 window.loadUserPreferences = function() {
     const savedOrder = localStorage.getItem(`col_order_rkeluar_${currentUser.username}`);
-    if (savedOrder) { try { userColOrder = JSON.parse(savedOrder); } catch(e) { userColOrder = []; } } else { userColOrder = []; }
+    if (savedOrder) { try { userColOrder = JSON.parse(savedOrder); } catch(e) { userColOrder = []; } } 
+    else { userColOrder = []; }
     
     const savedHidden = localStorage.getItem(`col_hidden_rkeluar_${currentUser.username}`);
-    if (savedHidden) { try { hiddenCols = JSON.parse(savedHidden); } catch(e) { hiddenCols = []; } } else { hiddenCols = []; }
+    if (savedHidden) { try { hiddenCols = JSON.parse(savedHidden); } catch(e) { hiddenCols = []; } } 
+    else { hiddenCols = []; }
     
     const savedRows = localStorage.getItem('wms_rows_per_page');
     if(savedRows) {
         rowsPerPage = parseInt(savedRows);
         const sel = document.getElementById('select-rows-per-page');
         if(sel) {
-            let found = false;
-            Array.from(sel.options).forEach(opt => { if(opt.value == rowsPerPage) { opt.selected = true; found = true; } });
-            if(!found) {
-                sel.value = 'CUSTOM';
-                const inp = document.getElementById('input-custom-rows');
-                if(inp) { inp.classList.remove('hidden'); inp.value = rowsPerPage; }
-            }
+            Array.from(sel.options).forEach(opt => { if(opt.value == rowsPerPage) opt.selected = true; });
         }
     }
 };
@@ -157,8 +192,10 @@ async function loadAreasForCancel() {
         if (data) {
             const areas = [...new Set(data.map(d => (d.nama_area || d.area || '').trim()).filter(Boolean))];
             const sel = document.getElementById('cancel-area');
-            sel.innerHTML = '<option value="">-- PILIH AREA GUDANG --</option>';
-            areas.sort().forEach(a => sel.innerHTML += `<option value="${a}">${a}</option>`);
+            if(sel) {
+                sel.innerHTML = '<option value="">-- PILIH AREA GUDANG --</option>';
+                areas.sort().forEach(a => sel.innerHTML += `<option value="${a}">${a}</option>`);
+            }
         }
     } catch (e) { console.error("Gagal load area:", e); }
 }
@@ -183,9 +220,9 @@ function extractAreaFromSKU(id_sku) {
     return parts.length > 0 ? parts[0] : '-';
 }
 
-async function muatDataDariSupabase() {
+window.muatDataDariSupabase = async function() {
     const tbody = document.getElementById('tbody-keluar');
-    tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Semua Data Riwayat Keluar...</p></td></tr>`;
+    if(tbody) tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-400"></i><p class="font-bold text-slate-400 text-sm">Menarik Semua Data Riwayat Keluar...</p></td></tr>`;
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
@@ -197,57 +234,54 @@ async function muatDataDariSupabase() {
         rawDataRaw = dataKeluar || [];
         holdDataRaw = dataHold || [];
         
-        updateFilterDropdowns();
         setMode(modeSekarang);
     } catch(err) { 
-        tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-red-500 font-bold">Gagal memuat data: ${err.message}</td></tr>`; 
+        if(tbody) tbody.innerHTML = `<tr><td colspan="22" class="p-10 text-red-500 font-bold">Gagal memuat data: ${err.message}</td></tr>`; 
     }
-}
+};
 
-function setMode(m) {
+window.setMode = function(m) {
     modeSekarang = m;
     
-    const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-    const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-
-    ['mobile', 'item', 'hold'].forEach(tab => {
-        const el = document.getElementById('tab-mode-' + tab);
-        if(el) {
-            if(tab === 'mobile') {
-                el.className = (m === tab) ? 'sm:hidden ' + activeClass : 'sm:hidden ' + inactiveClass;
-            } else {
-                el.className = (m === tab) ? activeClass : inactiveClass;
-            }
-        }
-    });
+    const tabsData = [
+        { id: 'tab-mode-mobile', label: 'MOBILE', icon: 'smartphone', onClick: "setMode('mobile')", mobileOnly: true },
+        { id: 'tab-mode-item', label: 'RANGKUMAN ITEM', icon: 'boxes', onClick: "setMode('item')" },
+        { id: 'tab-mode-hold', label: 'TABEL HOLD KELUAR', icon: 'pause-circle', onClick: "setMode('hold')" }
+    ];
+    if (typeof window.renderSubmenuTabs === 'function') {
+        window.renderSubmenuTabs('container-submenu', tabsData, 'tab-mode-' + m);
+    }
 
     const btnCancel = document.getElementById('btn-cancel');
     const dateFilter = document.getElementById('mobile-date-filter');
     
     const viewTable = document.getElementById('view-table');
     const viewMobile = document.getElementById('view-mobile');
-    const footerPagination = document.getElementById('footer-pagination');
+    const footerPagination = document.getElementById('container-footer');
     const lvl5Footer = document.getElementById('mobile-lvl5-footer');
 
     if(m === 'hold') { 
-        btnCancel.classList.remove('hidden'); 
-        dateFilter.classList.add('hidden');
-        viewTable.classList.remove('hidden'); viewMobile.classList.add('hidden');
-        footerPagination.classList.remove('hidden');
+        if(btnCancel) btnCancel.classList.remove('hidden'); 
+        if(dateFilter) dateFilter.classList.add('hidden');
+        if(viewTable) viewTable.classList.remove('hidden'); 
+        if(viewMobile) viewMobile.classList.add('hidden');
+        if(footerPagination) { footerPagination.classList.remove('hidden'); footerPagination.style.display = 'flex'; }
         if(lvl5Footer) { lvl5Footer.classList.add('hidden'); lvl5Footer.style.display = 'none'; }
     }
     else if(m === 'mobile') {
-        btnCancel.classList.add('hidden'); 
-        dateFilter.classList.remove('hidden');
-        viewTable.classList.add('hidden'); viewMobile.classList.remove('hidden');
-        footerPagination.classList.add('hidden');
+        if(btnCancel) btnCancel.classList.add('hidden'); 
+        if(dateFilter) dateFilter.classList.remove('hidden');
+        if(viewTable) viewTable.classList.add('hidden'); 
+        if(viewMobile) viewMobile.classList.remove('hidden');
+        if(footerPagination) { footerPagination.classList.add('hidden'); footerPagination.style.display = 'none'; }
         mobileLevel = 1; 
     }
     else { 
-        btnCancel.classList.add('hidden'); 
-        dateFilter.classList.add('hidden');
-        viewTable.classList.remove('hidden'); viewMobile.classList.add('hidden');
-        footerPagination.classList.remove('hidden');
+        if(btnCancel) btnCancel.classList.add('hidden'); 
+        if(dateFilter) dateFilter.classList.add('hidden');
+        if(viewTable) viewTable.classList.remove('hidden'); 
+        if(viewMobile) viewMobile.classList.add('hidden');
+        if(footerPagination) { footerPagination.classList.remove('hidden'); footerPagination.style.display = 'flex'; }
         if(lvl5Footer) { lvl5Footer.classList.add('hidden'); lvl5Footer.style.display = 'none'; }
     }
 
@@ -257,8 +291,11 @@ function setMode(m) {
     } else {
         renderHeaderDanTabel();
     }
-}
+};
 
+// ==========================================
+// LOGIKA MOBILE VIEW (DRILL DOWN)
+// ==========================================
 window.goToMobileLevel2 = function(cust) { mobileSelectedCust = cust; mobileLevel = 2; renderMobileView(); };
 window.goToMobileLevel3 = function(trip) { mobileSelectedTrip = trip; mobileLevel = 3; renderMobileView(); };
 window.goToMobileLevel4 = function(itemKey) { mobileSelectedItem = itemKey; mobileLevel = 4; renderMobileView(); };
@@ -302,40 +339,6 @@ function mapItemForFilter(r) {
     };
 }
 
-function matchesActiveFilters(item) {
-    const f = {
-        custKeluar: document.getElementById('fs-cust-keluar')?.value || '',
-        trip: document.getElementById('fs-trip')?.value || '',
-        qr: document.getElementById('fs-qr')?.value.toLowerCase() || '',
-        custAktual: document.getElementById('fs-cust-aktual')?.value || '',
-        custEst: document.getElementById('fs-cust-est')?.value || '',
-        jenis: document.getElementById('fs-jenis')?.value || '',
-        nama: document.getElementById('fs-nama')?.value || '',
-        pjg: document.getElementById('fs-pjg')?.value || '',
-        grade: document.getElementById('fs-grade')?.value || '',
-        dus: document.getElementById('fs-dus')?.value || '',
-        shading: document.getElementById('fs-shading')?.value || '',
-        pic: document.getElementById('fs-pic')?.value || '',
-        ket: document.getElementById('fs-ket')?.value.toLowerCase() || ''
-    };
-
-    if (f.custKeluar && item.customerKeluar !== f.custKeluar) return false;
-    if (f.trip && item.trip !== f.trip) return false;
-    if (f.qr && !item.qrcode.toLowerCase().includes(f.qr)) return false;
-    if (f.custAktual && item.customerAktual !== f.custAktual) return false;
-    if (f.custEst && item.customerEstimasi !== f.custEst) return false;
-    if (f.jenis && item.jenisItem !== f.jenis) return false;
-    if (f.nama && item.namaItem !== f.nama) return false;
-    if (f.pjg && item.panjang !== f.pjg) return false;
-    if (f.grade && item.grade !== f.grade) return false;
-    if (f.dus && item.dus !== f.dus) return false;
-    if (f.shading && item.shading !== f.shading) return false;
-    if (f.pic && item.pic !== f.pic) return false;
-    if (f.ket && !item.keterangan.toLowerCase().includes(f.ket)) return false;
-
-    return true;
-}
-
 window.toggleSelectAllLvl5 = function(checked) {
     document.querySelectorAll('.cb-lvl5').forEach(cb => {
         cb.checked = checked;
@@ -357,7 +360,7 @@ window.highlightLvl5Card = function(cb) {
 
 window.cancelKeluarMobile = async function() {
     const checkedBoxes = document.querySelectorAll('.cb-lvl5:checked');
-    if (checkedBoxes.length === 0) return alert("Pilih / centang minimal 1 kardus yang ingin di-cancel keluar!");
+    if (checkedBoxes.length === 0) return tampilkanAlert("Pilih / centang minimal 1 kardus yang ingin di-cancel keluar!", "warning");
 
     const qrsToCancel = Array.from(checkedBoxes).map(cb => cb.value);
 
@@ -388,20 +391,20 @@ window.cancelKeluarMobile = async function() {
         rawDataRaw = rawDataRaw.filter(r => !qrsToCancel.includes(r.qrcode));
         holdDataRaw.push(...itemsToHold);
 
-        alert(`✅ SUKSES!\n${qrsToCancel.length} kardus berhasil di-cancel dan dipindahkan ke Tabel Hold Keluar.`);
+        tampilkanAlert(`${qrsToCancel.length} kardus berhasil di-cancel dan dipindahkan ke Tabel Hold Keluar.`, "success");
         renderMobileView();
 
     } catch (e) {
-        alert("Gagal memproses cancel keluar: " + e.message);
+        tampilkanAlert("Gagal memproses cancel keluar: " + e.message, "error");
     } finally {
         if(btn) { btn.innerHTML = oriText; btn.disabled = false; }
-        lucide.createIcons();
+        if(typeof lucide !== 'undefined') lucide.createIcons();
     }
 };
 
 function renderMobileView() {
     const container = document.getElementById('view-mobile');
-    const targetDate = document.getElementById('filter-date-mobile').value;
+    const targetDate = document.getElementById('filter-date-mobile')?.value;
     const lvl5Footer = document.getElementById('mobile-lvl5-footer');
 
     if (lvl5Footer) {
@@ -424,9 +427,7 @@ function renderMobileView() {
         if (targetDate && rowDate !== targetDate) return;
 
         const mapped = mapItemForFilter(r);
-        if (matchesActiveFilters(mapped)) {
-            mobileData.push(mapped);
-        }
+        mobileData.push(mapped);
     });
 
     if (mobileData.length === 0) {
@@ -436,7 +437,7 @@ function renderMobileView() {
                 <h4 class="font-bold text-slate-700 text-sm">Tidak ada data keluar</h4>
                 <p class="text-xs text-slate-400 mt-1">Coba sesuaikan tanggal atau reset filter.</p>
             </div>`;
-        lucide.createIcons();
+        if(typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
 
@@ -677,129 +678,20 @@ function renderMobileView() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function updateFilterDropdowns() {
-    let targetData = modeSekarang === 'hold' ? holdDataRaw : rawDataRaw;
-
-    const fields = [
-        { id: 'fs-cust-keluar', key: 'customerKeluar' },
-        { id: 'fs-trip', key: 'trip' },
-        { id: 'fs-cust-aktual', key: 'customerAktual' },
-        { id: 'fs-cust-est', key: 'customerEstimasi' },
-        { id: 'fs-jenis', key: 'jenisItem' },
-        { id: 'fs-nama', key: 'namaItem' },
-        { id: 'fs-pjg', key: 'panjang' },
-        { id: 'fs-grade', key: 'grade' },
-        { id: 'fs-dus', key: 'dus' },
-        { id: 'fs-shading', key: 'shading' },
-        { id: 'fs-pic', key: 'pic' }
-    ];
-
-    let mappedData = targetData.map(mapItemForFilter);
-
-    fields.forEach(field => {
-        const select = document.getElementById(field.id);
-        if (!select) return;
-        
-        const currentVal = select.value;
-        const uniqueVals = [...new Set(mappedData.map(d => d[field.key] || '-'))].filter(x => x && x !== '-').sort();
-
-        let html = '<option value="">-- Semua --</option>';
-        uniqueVals.forEach(val => {
-            html += `<option value="${val}">${val}</option>`;
-        });
-        select.innerHTML = html;
-
-        if (uniqueVals.includes(currentVal)) {
-            select.value = currentVal;
-        }
-    });
-}
-
-window.resetFilterRiwayat = function() {
-    ['fs-cust-keluar', 'fs-trip', 'fs-qr', 'fs-cust-aktual', 'fs-cust-est', 'fs-jenis', 'fs-nama', 'fs-pjg', 'fs-grade', 'fs-dus', 'fs-shading', 'fs-pic', 'fs-ket'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.value = '';
-    });
-    saringTabelRiwayat();
-    toggleSidebarFilter();
-};
-
-window.saringTabelRiwayat = function() {
-    if (modeSekarang === 'mobile') {
-        renderMobileView();
-    } else {
-        saringTabelDesktop();
-    }
-};
-
-function saringTabelDesktop() {
-    const f = {
-        custKeluar: document.getElementById('fs-cust-keluar')?.value || '',
-        trip: document.getElementById('fs-trip')?.value || '',
-        qr: document.getElementById('fs-qr')?.value.toLowerCase() || '',
-        custAktual: document.getElementById('fs-cust-aktual')?.value || '',
-        custEst: document.getElementById('fs-cust-est')?.value || '',
-        jenis: document.getElementById('fs-jenis')?.value || '',
-        nama: document.getElementById('fs-nama')?.value || '',
-        pjg: document.getElementById('fs-pjg')?.value || '',
-        grade: document.getElementById('fs-grade')?.value || '',
-        dus: document.getElementById('fs-dus')?.value || '',
-        shading: document.getElementById('fs-shading')?.value || '',
-        pic: document.getElementById('fs-pic')?.value || '',
-        ket: document.getElementById('fs-ket')?.value.toLowerCase() || ''
-    };
-
-    document.querySelectorAll('.text-row').forEach(row => {
-        let show = true;
-
-        const checkMatch = (colCls, filterVal) => {
-            if(!filterVal) return true;
-            const cell = row.querySelector('.' + colCls);
-            if(!cell) return true;
-            let val = cell.getAttribute('data-search') || cell.innerText.trim();
-            return val === filterVal;
-        };
-
-        if(!checkMatch('col-tujuan', f.custKeluar)) show = false;
-        if(!checkMatch('col-trip', f.trip)) show = false;
-        if(!checkMatch('col-customer', f.custAktual)) show = false;
-        if(!checkMatch('col-estimasi', f.custEst)) show = false;
-        if(!checkMatch('col-jenis', f.jenis)) show = false;
-        if(!checkMatch('col-nama', f.nama)) show = false;
-        if(!checkMatch('col-pjg', f.pjg)) show = false;
-        if(!checkMatch('col-grade', f.grade)) show = false;
-        if(!checkMatch('col-dus', f.dus)) show = false;
-        if(!checkMatch('col-shading', f.shading)) show = false;
-        if(!checkMatch('col-pic', f.pic)) show = false;
-
-        if (show && f.qr) {
-            const cell = row.querySelector('.col-qr');
-            if (cell && !cell.innerText.toLowerCase().includes(f.qr)) show = false;
-        }
-
-        if (show && f.ket) {
-            const cell = row.querySelector('.col-ket');
-            if (cell && !cell.innerText.toLowerCase().includes(f.ket)) show = false;
-        }
-
-        if (show) row.classList.remove('filtered-out');
-        else row.classList.add('filtered-out');
-    });
-
-    selectAllState = 0;
-    updateSelectAllUI();
-    currentPage = 1; 
-    applyPagination();
-}
-
-function sortTable(colIndex, headerEl) {
+// ========================================================
+// LOGIKA TABEL DESKTOP (SORT & FILTER EXCEL PRO)
+// ========================================================
+function sortTable(colClass, headerEl) {
     const tbody = document.getElementById('tbody-keluar');
-    const rows = Array.from(tbody.querySelectorAll('tr.text-row'));
-    let isAsc = sortState[colIndex] !== 'asc'; sortState[colIndex] = isAsc ? 'asc' : 'desc';
+    const rows = Array.from(tbody.querySelectorAll('tr.r-row'));
+    let isAsc = sortState.col === colClass ? !sortState.isAsc : true;
+    sortState = { col: colClass, isAsc: isAsc };
     
     rows.sort((a, b) => {
-        let valA = a.cells[colIndex].getAttribute('data-search') || a.cells[colIndex].innerText.trim(); 
-        let valB = b.cells[colIndex].getAttribute('data-search') || b.cells[colIndex].innerText.trim();
+        let cellA = a.querySelector('.' + colClass);
+        let cellB = b.querySelector('.' + colClass);
+        let valA = cellA ? (cellA.getAttribute('data-search') || cellA.innerText.trim()) : ''; 
+        let valB = cellB ? (cellB.getAttribute('data-search') || cellB.innerText.trim()) : '';
         let numA = parseFloat(valA); let numB = parseFloat(valB);
         if(!isNaN(numA) && !isNaN(numB)) return isAsc ? numA - numB : numB - numA;
         return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
@@ -812,303 +704,48 @@ function sortTable(colIndex, headerEl) {
     applyPagination();
 }
 
-const thSort = (label, cls = "") => {
+window.sortFromMenu = function(dir) {
+    if(!currentFilterCol) return;
+    sortState = { col: currentFilterCol, isAsc: dir === 'asc' };
+    closeFilterMenu();
+    
+    const th = document.querySelector(`th[onclick*="'${currentFilterCol}'"]`);
+    if(th) sortTable(currentFilterCol, th);
+};
+
+function thSort(label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const isHidden = hiddenCols.includes(colClass) ? 'col-hidden' : '';
     const noFilter = ['col-cb', 'col-no'].includes(colClass);
     
+    let isFiltered = activeFilters[colClass] && activeFilters[colClass].length > 0;
+    let hdrBgClass = isFiltered ? 'hdr-filtered' : '';
+    let filterIconColor = isFiltered ? 'text-amber-400 opacity-100' : 'text-slate-400 opacity-40';
+
     if (noFilter) {
         return `<th class="hdr-std ${cls} ${isHidden} select-none text-center"><div class="flex items-center justify-center w-full">${label}</div></th>`;
     }
 
-    return `<th class="hdr-std ${cls} ${isHidden} select-none group">
+    return `<th class="hdr-std ${cls} ${isHidden} ${hdrBgClass} select-none group cursor-pointer hover:bg-slate-700 transition" onclick="openColumnFilter(event, '${colClass}', '${label}')">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
-            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable(this.closest('th').cellIndex, this.closest('th'))" title="Sort ${label}">${label}</span>
+            <span class="truncate flex-1 text-left" title="${label}">${label}</span>
             <div class="flex items-center gap-1 shrink-0">
-                <button onclick="sortTable(this.closest('th').cellIndex, this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
-                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 sort-icon opacity-40 group-hover:opacity-100 transition-opacity text-white"></i>
-                </button>
-                <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
-                    <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
-                </button>
+                <i data-lucide="chevron-down" class="w-4 h-4 filter-icon ${filterIconColor} group-hover:opacity-100 transition-all"></i>
             </div>
         </div>
     </th>`;
-};
-
-function openColumnFilter(event, colClass, colName) {
-    event.stopPropagation(); currentFilterCol = colClass;
-    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
-    let uniqueValues = new Set();
-    
-    document.querySelectorAll('#tbody-keluar tr.text-row').forEach(row => {
-        let showBasedOnOthers = true;
-        for (let otherCol in activeFilters) {
-            if (otherCol !== colClass) { 
-                const allowed = activeFilters[otherCol]; const c = row.querySelector('.' + otherCol);
-                let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
-                if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
-            }
-        }
-        if (showBasedOnOthers) {
-            let cell = row.querySelector('.' + colClass);
-            if (cell) { let val = cell.getAttribute('data-search') || cell.innerText.trim(); if(val !== '') uniqueValues.add(val); }
-        }
-    });
-
-    let sortedValues = Array.from(uniqueValues).sort();
-    let listHtml = `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-0"> <span class="font-black text-slate-800">(PILIH SEMUA)</span></label>`;
-    
-    sortedValues.forEach(val => {
-        let isChecked = true;
-        if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
-        listHtml += `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded filter-val-item" data-value="${encodeURIComponent(val)}">
-            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-0" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
-            <span class="truncate font-bold text-slate-600">${val}</span>
-        </label>`;
-    });
-
-    document.getElementById('filter-values-list').innerHTML = listHtml; updateSelectAllState();
-    document.getElementById('filter-search-input').value = '';
-    
-    const menu = document.getElementById('excel-filter-menu');
-    if(menu) {
-        menu.classList.remove('hidden');
-        
-        const btnRect = event.currentTarget.getBoundingClientRect();
-        const menuWidth = 256; 
-        
-        let topPos = btnRect.bottom + 4; 
-        let leftPos = btnRect.left; 
-
-        if (leftPos + menuWidth > window.innerWidth) {
-            leftPos = btnRect.right - menuWidth;
-        }
-        
-        if (leftPos < 10) {
-            leftPos = 10;
-        }
-
-        menu.style.position = 'fixed'; 
-        menu.style.top = `${topPos}px`;
-        menu.style.left = `${leftPos}px`;
-    }
-    const sInput = document.getElementById('filter-search-input'); if(sInput) sInput.focus();
-}
-
-function toggleAllFilterValues(checked) {
-    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
-    updateSelectAllState();
-}
-function updateSelectAllState() {
-    const allCbs = document.querySelectorAll('.filter-val-cb'); const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
-    const selectAll = document.getElementById('filter-select-all'); if(!selectAll) return;
-    if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
-    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
-    else { selectAll.checked = false; selectAll.indeterminate = true; }
-}
-
-function searchFilterList(val) {
-    const query = val.toLowerCase().split(' ').filter(x => x);
-    document.querySelectorAll('.filter-val-item').forEach(label => {
-        const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
-        label.style.display = query.every(term => text.includes(term)) ? '' : 'none';
-    });
-}
-function closeFilterMenu() { const menu = document.getElementById('excel-filter-menu'); if(menu) menu.classList.add('hidden'); }
-function clearFilterForCurrentCol() { delete activeFilters[currentFilterCol]; closeFilterMenu(); saringTabelExcel(); updateFilterIcons(); }
-function applyFilterForCurrentCol() {
-    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked'); const totalBoxes = document.querySelectorAll('.filter-val-cb');
-    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') { delete activeFilters[currentFilterCol]; } 
-    else { activeFilters[currentFilterCol] = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value)); }
-    closeFilterMenu(); saringTabelExcel(); updateFilterIcons();
-}
-function saringTabelExcel() {
-    document.querySelectorAll('.text-row').forEach(row => {
-        let show = true;
-        for (let colClass in activeFilters) {
-            const allowed = activeFilters[colClass]; const cell = row.querySelector('.' + colClass);
-            if (cell) { if (!allowed.includes(cell.getAttribute('data-search') || cell.innerText.trim())) { show = false; break; } }
-        }
-        if (show) { row.classList.remove('filtered-out'); } 
-        else { row.classList.add('filtered-out'); let cb = row.querySelector('.row-cb'); if(cb) { cb.checked = false; highlightRow(cb, true); } }
-    });
-    selectAllState = 0;
-    updateSelectAllUI();
-    currentPage = 1; applyPagination();
-}
-function updateFilterIcons() {
-    document.querySelectorAll('.filter-icon').forEach(icon => { icon.classList.remove('text-amber-400', 'opacity-100'); icon.classList.add('opacity-40', 'text-white'); });
-    for (let colClass in activeFilters) {
-        const th = document.querySelector(`th.${colClass}`);
-        if (th) { const icon = th.querySelector('.filter-icon'); if (icon) { icon.classList.remove('opacity-40', 'text-white'); icon.classList.add('text-amber-400', 'opacity-100'); } }
-    }
-}
-
-window.cycleSelectAll = function() {
-    selectAllState = (selectAllState + 1) % 3;
-    updateSelectAllUI();
-    applySelection();
-};
-
-function updateSelectAllUI() {
-    const btn = document.getElementById('btn-select-all');
-    if(!btn) return;
-    
-    if (selectAllState === 0) {
-        btn.innerHTML = '';
-        btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto';
-    } else if (selectAllState === 1) {
-        btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
-        btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto';
-    } else if (selectAllState === 2) {
-        btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>';
-        btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
-    }
-    lucide.createIcons();
-}
-
-function applySelection() {
-    const allRows = Array.from(document.querySelectorAll('#tbody-keluar tr.text-row'));
-    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
-    
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-
-    if (selectAllState === 0) {
-        allRows.forEach(row => {
-            const cb = row.querySelector('.row-cb');
-            if(cb) { cb.checked = false; highlightRow(cb, true); }
-        });
-    } else if (selectAllState === 1) {
-        allRows.forEach(row => {
-            const cb = row.querySelector('.row-cb');
-            if(cb) { cb.checked = false; highlightRow(cb, true); }
-        });
-        visibleRows.forEach((row, index) => {
-            if(index >= startIndex && index < endIndex) {
-                const cb = row.querySelector('.row-cb');
-                if(cb) { cb.checked = true; highlightRow(cb, true); }
-            }
-        });
-    } else if (selectAllState === 2) {
-        visibleRows.forEach(row => {
-            const cb = row.querySelector('.row-cb');
-            if(cb) { cb.checked = true; highlightRow(cb, true); }
-        });
-    }
-    updateSelectedCount();
-}
-
-function highlightRow(cb, skipStateReset = false) {
-    const tr = cb.closest('tr');
-    if (tr) {
-        if (cb.checked) tr.classList.add('selected-row');
-        else tr.classList.remove('selected-row');
-    }
-    
-    if(!skipStateReset && !cb.checked && selectAllState !== 0) {
-        selectAllState = 0;
-        updateSelectAllUI();
-    }
-    
-    if(!skipStateReset) updateSelectedCount();
-}
-
-function changeRowsPerPage(val) {
-    const customInput = document.getElementById('input-custom-rows');
-    if (val === 'ALL') {
-        rowsPerPage = 999999; 
-        if(customInput) customInput.classList.add('hidden');
-    } else if (val === 'CUSTOM') {
-        if(customInput) {
-            customInput.classList.remove('hidden');
-            customInput.focus();
-            let customVal = parseInt(customInput.value);
-            rowsPerPage = (customVal > 0) ? customVal : rowsPerPage;
-        }
-    } else {
-        rowsPerPage = parseInt(val);
-        if(customInput) customInput.classList.add('hidden');
-    }
-    localStorage.setItem('wms_rows_per_page', rowsPerPage);
-    currentPage = 1; 
-    applyPagination();
-}
-
-function setCustomRowsPerPage(val) {
-    let parsed = parseInt(val);
-    if (!isNaN(parsed) && parsed > 0) {
-        rowsPerPage = parsed;
-        localStorage.setItem('wms_rows_per_page', rowsPerPage);
-        currentPage = 1;
-        applyPagination();
-    }
-}
-
-function applyPagination() {
-    const allRows = Array.from(document.querySelectorAll('#tbody-keluar tr.text-row'));
-    allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
-    
-    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
-    const totalFiltered = visibleRows.length; const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
-    
-    if(currentPage > totalPages) currentPage = totalPages; 
-    if(currentPage < 1) currentPage = 1;
-
-    const startIndex = (currentPage - 1) * rowsPerPage; const endIndex = startIndex + rowsPerPage;
-    
-    let sumQty = 0;
-
-    visibleRows.forEach((row, index) => {
-        row.classList.remove('stripe-1', 'stripe-2');
-        if (index % 2 === 0) row.classList.add('stripe-1');
-        else row.classList.add('stripe-2');
-
-        const qtyCell = row.querySelector('.col-qty');
-        if (qtyCell && modeSekarang === 'item') { 
-            sumQty += parseInt(qtyCell.getAttribute('data-search') || qtyCell.innerText) || 0; 
-        } else { 
-            sumQty += 1; 
-        }
-
-        if(index >= startIndex && index < endIndex) { row.style.display = ''; } 
-        else { row.style.display = 'none'; }
-    });
-
-    if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
-    if(document.getElementById('lbl-total-qty')) document.getElementById('lbl-total-qty').innerText = sumQty;
-    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
-    if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
-    
-    if (selectAllState === 1) {
-        selectAllState = 0;
-        updateSelectAllUI();
-    }
-    
-    applySelection();
-    updateSelectedCount();
-}
-
-function prevPage() { if(currentPage > 1) { currentPage--; applyPagination(); } }
-function nextPage() { 
-    const totalVisible = document.querySelectorAll('#tbody-keluar tr.text-row:not(.filtered-out)').length;
-    if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
-}
-
-function updateSelectedCount() {
-    const count = document.querySelectorAll('.row-cb:checked').length;
-    if(document.getElementById('lbl-pilih-baris')) document.getElementById('lbl-pilih-baris').innerText = count;
 }
 
 function renderHeaderDanTabel() {
     const thead = document.getElementById('thead-keluar');
     const tbody = document.getElementById('tbody-keluar');
+    if(!thead || !tbody) return;
+    
     sortState = {};
     selectAllState = 0;
 
     let targetData = modeSekarang === 'hold' ? holdDataRaw : rawDataRaw;
-    const rowClassBase = "transition text-row text-[13px]";
+    const rowClassBase = "transition r-row text-[13px] bg-white even:bg-slate-50 border-b border-slate-200";
 
     if(modeSekarang === 'hold') {
         thead.innerHTML = `
@@ -1135,7 +772,11 @@ function renderHeaderDanTabel() {
                 ${thSort('PIC Keluar', 'col-pic')}
             </tr>`;
         
-        if(targetData.length === 0) { tbody.innerHTML = '<tr><td colspan="18" class="p-10 text-center font-medium text-slate-400">Tidak ada data.</td></tr>'; applyPagination(); return; }
+        if(targetData.length === 0) { 
+            tbody.innerHTML = '<tr><td colspan="18" class="p-10 text-center font-medium text-slate-400">Tidak ada data.</td></tr>'; 
+            applyPagination(); 
+            return; 
+        }
         
         let h = '';
         targetData.forEach((r) => {
@@ -1150,7 +791,7 @@ function renderHeaderDanTabel() {
 
             h += `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.qrcode}" onchange="highlightRow(this)" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.qrcode}" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 text-slate-600 font-medium text-left col-waktu ${hiddenCols.includes('col-waktu')?'col-hidden':''}" data-search="${tglKeluar}">${tglKeluar}</td>
                     <td class="px-4 py-3 font-mono font-bold text-slate-900 text-left tracking-wider col-qr ${hiddenCols.includes('col-qr')?'col-hidden':''}" data-search="${r.qrcode}">${r.qrcode}</td>
                     <td class="px-4 py-3 font-black text-indigo-700 text-center col-trip ${hiddenCols.includes('col-trip')?'col-hidden':''}" data-search="${r.trip || '-'}">${r.trip || '-'}</td>
@@ -1217,14 +858,18 @@ function renderHeaderDanTabel() {
         });
 
         let arr = Object.values(groups);
-        if(arr.length === 0) { tbody.innerHTML = '<tr><td colspan="16" class="p-10 text-center font-medium text-slate-400">Kosong.</td></tr>'; applyPagination(); return; }
+        if(arr.length === 0) { 
+            tbody.innerHTML = '<tr><td colspan="16" class="p-10 text-center font-medium text-slate-400">Kosong.</td></tr>'; 
+            applyPagination(); 
+            return; 
+        }
 
         let h = '';
         arr.forEach((r) => {
             const displayKet = (r.ket === 'TANPA_KETERANGAN') ? '-' : r.ket; 
             h += `
                 <tr class="${rowClassBase}">
-                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.qrcodes.join(',')}" onchange="highlightRow(this)" class="row-cb cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
+                    <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" value="${r.qrcodes.join(',')}" onchange="highlightRow(this)" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"></td>
                     <td class="px-4 py-3 font-medium text-slate-600 text-left col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}" data-search="${r.tglProduksi}">${r.tglProduksi}</td>
                     <td class="px-4 py-3 font-medium text-slate-600 text-left col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}" data-search="${r.mesin}">${r.mesin}</td>
                     <td class="px-4 py-3 font-medium text-slate-600 text-left col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}" data-search="${r.shift}">${r.shift}</td>
@@ -1246,16 +891,337 @@ function renderHeaderDanTabel() {
     }
     
     applyColumnOrder();
-    lucide.createIcons(); 
+    if(typeof lucide !== 'undefined') lucide.createIcons(); 
     updateSelectAllUI();
-    saringTabelDesktop();
+    saringTabelExcel();
     initResizableColumns();
 }
 
-async function aksiMassal(tipe) {
+window.openColumnFilter = function(event, colClass, colName) {
+    event.stopPropagation(); currentFilterCol = colClass;
+    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
+    let uniqueValues = new Set();
+    
+    document.querySelectorAll('#tbody-keluar tr.r-row').forEach(row => {
+        let showBasedOnOthers = true;
+        for (let otherCol in activeFilters) {
+            if (otherCol !== colClass) { 
+                const allowed = activeFilters[otherCol]; const c = row.querySelector('.' + otherCol);
+                let t = c ? (c.getAttribute('data-search') || c.innerText.trim()) : '';
+                if (!allowed.includes(t)) { showBasedOnOthers = false; break; }
+            }
+        }
+        if (showBasedOnOthers) {
+            let cell = row.querySelector('.' + colClass);
+            if (cell) { let val = cell.getAttribute('data-search') || cell.innerText.trim(); if(val !== '') uniqueValues.add(val); }
+        }
+    });
+
+    let sortedValues = Array.from(uniqueValues).sort();
+    window.currentFilterValues = sortedValues;
+    renderFilterList('');
+
+    document.getElementById('filter-search-input').value = '';
+    
+    const menu = document.getElementById('excel-filter-menu');
+    if(menu) {
+        menu.classList.remove('hidden');
+        const btnRect = event.currentTarget.getBoundingClientRect();
+        const menuWidth = 256; 
+        let topPos = btnRect.bottom + 4; 
+        let leftPos = btnRect.left; 
+
+        if (leftPos + menuWidth > window.innerWidth) { leftPos = btnRect.right - menuWidth; }
+        if (leftPos < 10) { leftPos = 10; }
+
+        menu.style.position = 'fixed'; 
+        menu.style.top = `${topPos}px`;
+        menu.style.left = `${leftPos}px`;
+    }
+    const sInput = document.getElementById('filter-search-input'); if(sInput) sInput.focus();
+};
+
+window.renderFilterList = function(searchQuery) {
+    const colClass = currentFilterCol;
+    let filteredVals = window.currentFilterValues;
+    
+    if (searchQuery) {
+        const query = searchQuery.toLowerCase().split(' ').filter(x => x);
+        filteredVals = window.currentFilterValues.filter(val => {
+            const text = String(val).toLowerCase();
+            return query.every(term => text.includes(term));
+        });
+    }
+
+    const limit = 100;
+    const displayVals = filteredVals.slice(0, limit);
+
+    let listHtml = `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded-lg transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-bold text-slate-800">(Pilih Semua)</span></label>`;
+    
+    displayVals.forEach(val => {
+        let isChecked = !activeFilters[colClass] || activeFilters[colClass].includes(val);
+        listHtml += `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded-lg transition filter-val-item" data-value="${encodeURIComponent(val)}">
+            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
+            <span class="truncate font-medium text-slate-700">${val}</span>
+        </label>`;
+    });
+
+    if (filteredVals.length > limit) {
+        listHtml += `<div class="p-2 text-center text-xs font-bold text-slate-400 italic">Menampilkan 100 dari ${filteredVals.length} hasil. Ketik untuk mencari.</div>`;
+    }
+
+    document.getElementById('filter-values-list').innerHTML = listHtml;
+    updateSelectAllState();
+};
+
+window.searchFilterList = function(val) {
+    clearTimeout(filterTimeout);
+    filterTimeout = setTimeout(() => {
+        requestAnimationFrame(() => {
+            renderFilterList(val);
+        });
+    }, 150);
+};
+
+window.toggleAllFilterValues = function(checked) {
+    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
+    updateSelectAllState();
+};
+
+window.updateSelectAllState = function() {
+    const allCbs = document.querySelectorAll('.filter-val-cb'); const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
+    const selectAll = document.getElementById('filter-select-all'); if(!selectAll) return;
+    if(allCbs.length === checkedCbs.length && allCbs.length > 0) { selectAll.checked = true; selectAll.indeterminate = false; }
+    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
+    else { selectAll.checked = false; selectAll.indeterminate = true; }
+};
+
+document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) updateSelectAllState(); });
+
+window.closeFilterMenu = function() { const menu = document.getElementById('excel-filter-menu'); if(menu) menu.classList.add('hidden'); };
+
+window.clearFilterForCurrentCol = function() { delete activeFilters[currentFilterCol]; closeFilterMenu(); saringTabelExcel(); };
+
+window.applyFilterForCurrentCol = function() {
+    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked'); const totalBoxes = document.querySelectorAll('.filter-val-cb');
+    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') { delete activeFilters[currentFilterCol]; } 
+    else { activeFilters[currentFilterCol] = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value)); }
+    closeFilterMenu(); saringTabelExcel(); 
+};
+
+window.saringTabelExcel = function() {
+    document.querySelectorAll('.r-row').forEach(row => {
+        let show = true;
+        for (let colClass in activeFilters) {
+            const allowedValues = activeFilters[colClass]; const cell = row.querySelector('.' + colClass);
+            if (cell) { if (!allowedValues.includes(cell.getAttribute('data-search') || cell.innerText.trim())) { show = false; break; } }
+        }
+        if (show) { row.classList.remove('filtered-out'); } 
+        else { row.classList.add('filtered-out'); let cb = row.querySelector('.cb-main'); if(cb) { cb.checked = false; highlightRow(cb, true); } }
+    });
+    selectAllState = 0;
+    updateSelectAllUI();
+    currentPage = 1; applyPagination(); updateFilterIcons();
+};
+
+window.updateFilterIcons = function() {
+    document.querySelectorAll('.filter-icon').forEach(icon => { 
+        icon.classList.remove('text-amber-400', 'opacity-100'); 
+        icon.classList.add('text-slate-400', 'opacity-40'); 
+    });
+    document.querySelectorAll('th.hdr-filtered').forEach(th => th.classList.remove('hdr-filtered'));
+
+    for (let colClass in activeFilters) {
+        const th = document.querySelector(`th.${colClass}`);
+        if (th) { 
+            th.classList.add('hdr-filtered');
+            const icon = th.querySelector('.filter-icon'); 
+            if (icon) { 
+                icon.classList.remove('text-slate-400', 'opacity-40'); 
+                icon.classList.add('text-amber-400', 'opacity-100'); 
+            } 
+        }
+    }
+};
+
+window.cycleSelectAll = function() {
+    selectAllState = (selectAllState + 1) % 3;
+    updateSelectAllUI();
+    applySelection();
+};
+
+window.updateSelectAllUI = function() {
+    const btn = document.getElementById('btn-select-all');
+    if(!btn) return;
+    
+    if (selectAllState === 0) {
+        btn.innerHTML = '';
+        btn.className = 'w-4 h-4 border border-slate-400 rounded flex items-center justify-center bg-white transition mx-auto';
+    } else if (selectAllState === 1) {
+        btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
+        btn.className = 'w-4 h-4 border border-blue-600 rounded flex items-center justify-center bg-blue-600 text-white transition mx-auto';
+    } else if (selectAllState === 2) {
+        btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>';
+        btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
+    }
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+};
+
+window.applySelection = function() {
+    const allRows = Array.from(document.querySelectorAll('#tbody-keluar tr.r-row'));
+    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
+    
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+
+    if (selectAllState === 0) {
+        allRows.forEach(row => {
+            const cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = false; highlightRow(cb, true); }
+        });
+    } else if (selectAllState === 1) {
+        allRows.forEach(row => {
+            const cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = false; highlightRow(cb, true); }
+        });
+        visibleRows.forEach((row, index) => {
+            if(index >= startIndex && index < endIndex) {
+                const cb = row.querySelector('.cb-main');
+                if(cb) { cb.checked = true; highlightRow(cb, true); }
+            }
+        });
+    } else if (selectAllState === 2) {
+        visibleRows.forEach(row => {
+            const cb = row.querySelector('.cb-main');
+            if(cb) { cb.checked = true; highlightRow(cb, true); }
+        });
+    }
+    updateSelectedCount();
+};
+
+window.highlightRow = function(cb, skipStateReset = false) {
+    const tr = cb.closest('tr');
+    if (tr) {
+        if (cb.checked) tr.classList.add('selected-row');
+        else tr.classList.remove('selected-row');
+    }
+    
+    if(!skipStateReset && !cb.checked && selectAllState !== 0) {
+        selectAllState = 0;
+        updateSelectAllUI();
+    }
+    
+    if(!skipStateReset) updateSelectedCount();
+};
+
+window.changeRowsPerPage = function(val) {
+    const customInput = document.getElementById('input-custom-rows');
+    if (val === 'ALL') {
+        rowsPerPage = 999999; 
+        if(customInput) customInput.classList.add('hidden');
+    } else if (val === 'CUSTOM') {
+        if(customInput) {
+            customInput.classList.remove('hidden');
+            customInput.focus();
+            let customVal = parseInt(customInput.value);
+            rowsPerPage = (customVal > 0) ? customVal : rowsPerPage;
+        }
+    } else {
+        rowsPerPage = parseInt(val);
+        if(customInput) customInput.classList.add('hidden');
+    }
+    localStorage.setItem('wms_rows_per_page', rowsPerPage);
+    currentPage = 1; 
+    applyPagination();
+};
+
+window.setCustomRowsPerPage = function(val) {
+    let parsed = parseInt(val);
+    if (!isNaN(parsed) && parsed > 0) {
+        rowsPerPage = parsed;
+        localStorage.setItem('wms_rows_per_page', rowsPerPage);
+        currentPage = 1;
+        applyPagination();
+    }
+};
+
+window.jumpToPage = function(val) {
+    let p = parseInt(val);
+    const totalVisible = document.querySelectorAll('#tbody-keluar tr.r-row:not(.filtered-out)').length;
+    const totalPages = Math.ceil(totalVisible / rowsPerPage) || 1;
+    if (isNaN(p) || p < 1) p = 1;
+    if (p > totalPages) p = totalPages;
+    
+    currentPage = p;
+    const inp = document.getElementById('input-page-jump');
+    if(inp) inp.value = currentPage;
+    applyPagination();
+};
+
+window.applyPagination = function() {
+    const allRows = Array.from(document.querySelectorAll('#tbody-keluar tr.r-row'));
+    allRows.forEach(row => { if(row.classList.contains('filtered-out')) row.style.display = 'none'; });
+    
+    const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
+    const totalFiltered = visibleRows.length; const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
+    
+    if(currentPage > totalPages) currentPage = totalPages; 
+    if(currentPage < 1) currentPage = 1;
+
+    const startIndex = (currentPage - 1) * rowsPerPage; const endIndex = startIndex + rowsPerPage;
+    let sumQty = 0;
+
+    visibleRows.forEach((row, index) => {
+        row.classList.remove('stripe-1', 'stripe-2');
+        if (index % 2 === 0) row.classList.add('stripe-1');
+        else row.classList.add('stripe-2');
+
+        const qtyCell = row.querySelector('.col-qty');
+        if (qtyCell && modeSekarang === 'item') { 
+            sumQty += parseInt(qtyCell.getAttribute('data-search') || qtyCell.innerText) || 0; 
+        } else { 
+            sumQty += 1; 
+        }
+
+        if(index >= startIndex && index < endIndex) { row.style.display = ''; } 
+        else { row.style.display = 'none'; }
+    });
+
+    if(document.getElementById('lbl-tampil-baris')) document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
+    if(document.getElementById('lbl-total-qty')) document.getElementById('lbl-total-qty').innerText = sumQty;
+    if(document.getElementById('lbl-halaman')) document.getElementById('lbl-halaman').innerText = currentPage;
+    if(document.getElementById('lbl-total-halaman')) document.getElementById('lbl-total-halaman').innerText = totalPages;
+    
+    const inpPage = document.getElementById('input-page-jump');
+    if(inpPage) {
+        inpPage.value = currentPage;
+        inpPage.max = totalPages;
+    }
+
+    if (selectAllState === 1) {
+        selectAllState = 0;
+        updateSelectAllUI();
+    }
+    
+    applySelection();
+    updateSelectedCount();
+};
+
+window.prevPage = function() { if(currentPage > 1) { currentPage--; applyPagination(); } };
+window.nextPage = function() { 
+    const totalVisible = document.querySelectorAll('#tbody-keluar tr.r-row:not(.filtered-out)').length;
+    if(currentPage < Math.ceil(totalVisible / rowsPerPage)) { currentPage++; applyPagination(); } 
+};
+
+window.updateSelectedCount = function() {
+    const count = document.querySelectorAll('.cb-main:checked').length;
+    if(document.getElementById('lbl-pilih-baris')) document.getElementById('lbl-pilih-baris').innerText = count;
+};
+
+window.aksiMassal = async function(tipe) {
     let checkedValues = [];
-    document.querySelectorAll('.row-cb:checked').forEach(cb => { cb.value.split(',').forEach(v => { if(v) checkedValues.push(v); }); });
-    if(checkedValues.length === 0) return alert("Centang baris tabel terlebih dahulu!");
+    document.querySelectorAll('.cb-main:checked').forEach(cb => { cb.value.split(',').forEach(v => { if(v) checkedValues.push(v); }); });
+    if(checkedValues.length === 0) return tampilkanAlert("Centang baris tabel terlebih dahulu!", "warning");
 
     if(tipe === 'salin') {
         let textSalin = "";
@@ -1264,29 +1230,37 @@ async function aksiMassal(tipe) {
             .map(th => th.innerText.trim().replace(/\n/g, ' '));
         textSalin += headers.join('\t') + '\n';
 
-        document.querySelectorAll('.row-cb:checked').forEach(cb => {
+        document.querySelectorAll('.cb-main:checked').forEach(cb => {
             const tr = cb.closest('tr'); const rowData = [];
             Array.from(tr.children).forEach(td => {
                 if(td.classList.contains('col-cb')) return;
-                if(window.getComputedStyle(td).display !== 'none') { rowData.push(td.innerText.trim().replace(/\n/g, ' ')); }
+                if(window.getComputedStyle(td).display !== 'none') { 
+                    let val = td.getAttribute('data-search') ? td.getAttribute('data-search') : td.innerText.trim();
+                    let cleanVal = String(val).replace(/<[^>]*>?/gm, '').replace(/(\r\n|\n|\r)/gm, " ").trim();
+                    rowData.push(cleanVal); 
+                }
             });
             textSalin += rowData.join('\t') + '\n';
         });
         navigator.clipboard.writeText(textSalin);
-        alert(`Tersalin! Buka Excel dan Paste (Ctrl+V).`);
+        tampilkanAlert(`Tersalin! Buka Excel dan Paste (Ctrl+V).`, "success");
     } 
     else if(tipe === 'xlsx') {
-        if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
+        if(typeof XLSX === 'undefined') return tampilkanAlert("Library Excel belum termuat, pastikan ada koneksi internet.", "error");
         let ws_data = [];
-        const headers = Array.from(document.querySelectorAll('#thead-keluar th')).filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb')).map(th => th.innerText.trim());
+        const headers = Array.from(document.querySelectorAll('#thead-keluar th')).filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb')).map(th => th.innerText.trim().replace(/\n/g, ' '));
         ws_data.push(headers);
         
-        document.querySelectorAll('.text-row').forEach(tr => {
-            if(tr.style.display !== 'none' && tr.querySelector('.row-cb:checked')) {
+        document.querySelectorAll('.r-row').forEach(tr => {
+            if(tr.style.display !== 'none' && tr.querySelector('.cb-main:checked')) {
                 const rowData = [];
                 Array.from(tr.children).forEach(td => {
                     if(td.classList.contains('col-cb')) return;
-                    if(window.getComputedStyle(td).display !== 'none') { rowData.push(`"${td.innerText.trim()}"`); }
+                    if(window.getComputedStyle(td).display !== 'none') { 
+                        let val = td.getAttribute('data-search') ? td.getAttribute('data-search') : td.innerText.trim();
+                        let cleanVal = String(val).replace(/<[^>]*>?/gm, '').replace(/(\r\n|\n|\r)/gm, " ").trim();
+                        rowData.push(`"${cleanVal}"`); 
+                    }
                 });
                 ws_data.push(rowData);
             }
@@ -1295,10 +1269,10 @@ async function aksiMassal(tipe) {
         let ws = XLSX.utils.aoa_to_sheet(ws_data);
         let wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Keluar_Data");
-        XLSX.writeFile(wb, `Riwayat_Keluar.xlsx`);
+        XLSX.writeFile(wb, `Riwayat_Keluar_${modeSekarang.toUpperCase()}.xlsx`);
     }
     else if(tipe === 'cancel') {
-        if(modeSekarang !== 'hold') return alert("CANCEL hanya bisa dilakukan dari Tabel Hold.");
+        if(modeSekarang !== 'hold') return tampilkanAlert("CANCEL hanya bisa dilakukan dari Tabel Hold.", "warning");
         
         globalCheckedCancel = checkedValues;
         
@@ -1307,14 +1281,14 @@ async function aksiMassal(tipe) {
         
         document.getElementById('modal-cancel-hold').classList.remove('hidden');
     }
-}
+};
 
-async function eksekusiCancelHold() {
+window.eksekusiCancelHold = async function() {
     const areaCancel = document.getElementById('cancel-area').value;
     const ketCancel = document.getElementById('cancel-ket').value.trim();
 
-    if(!areaCancel) return alert("Pilih Area Pengembalian terlebih dahulu!");
-    if(!ketCancel) return alert("Keterangan wajib diisi!");
+    if(!areaCancel) return tampilkanAlert("Pilih Area Pengembalian terlebih dahulu!", "warning");
+    if(!ketCancel) return tampilkanAlert("Keterangan wajib diisi!", "warning");
 
     const btn = document.getElementById('btn-submit-cancel'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> RETUR STOK...'; btn.disabled = true;
@@ -1339,7 +1313,6 @@ async function eksekusiCancelHold() {
             aktualUpdates[key].qty++;
         }
 
-        // Masukkan kembali ke stok_global (bukan stok_qr)
         insertsGlobal.push({
             qrcode: item.qrcode,
             id_sku: item.id_sku,
@@ -1367,9 +1340,9 @@ async function eksekusiCancelHold() {
 
         for(let key in aktualUpdates) {
             let u = aktualUpdates[key];
-            const {data: curData} = await db.from('stok_aktual').select('id, qty').eq('nama_item', u.nama_item).eq('panjang', u.pjg).eq('grade', u.grade).eq('dus', u.dus).eq('shading', u.shading).eq('area', areaCancel).eq('customer_aktual', u.customer_aktual).eq('customer_estimasi', u.customer_estimasi).single();
-            if(curData) {
-                await db.from('stok_aktual').update({qty: curData.qty + u.qty}).eq('id', curData.id);
+            const {data: curData} = await db.from('stok_aktual').select('id, qty').eq('nama_item', u.nama_item).eq('panjang', u.pjg).eq('grade', u.grade).eq('dus', u.dus).eq('shading', u.shading).eq('area', areaCancel).eq('customer_aktual', u.customer_aktual).eq('customer_estimasi', u.customer_estimasi).is('konversi', null).limit(1);
+            if(curData && curData.length > 0) {
+                await db.from('stok_aktual').update({qty: curData[0].qty + u.qty}).eq('id', curData[0].id);
             } else {
                 await db.from('stok_aktual').insert([{
                     area: areaCancel,
@@ -1389,20 +1362,20 @@ async function eksekusiCancelHold() {
         const { error: e3 } = await db.from('hold_keluar').delete().in('qrcode', globalCheckedCancel);
         if(e3) throw e3;
 
-        alert(`✅ SUKSES CANCEL KELUAR!\n${globalCheckedCancel.length} item telah dikembalikan ke Kartu Stok pada Area "${areaCancel}".`);
-        muatDataDariSupabase();
+        tampilkanAlert(`${globalCheckedCancel.length} item telah dikembalikan ke Kartu Stok pada Area "${areaCancel}".`, "success");
+        window.muatDataDariSupabase();
         document.getElementById('modal-cancel-hold').classList.add('hidden');
-    } catch(e) { alert("GAGAL RETUR: " + e.message); }
-    finally { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
-}
+    } catch(e) { tampilkanAlert("GAGAL RETUR: " + e.message, "error"); }
+    finally { btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons(); }
+};
 
 window.toggleSidebarKolom = function() {
     const sidebar = document.getElementById('sidebar-kolom'); const overlay = document.getElementById('overlay-klik-luar');
-    if (sidebar.classList.contains('translate-x-full')) { sidebar.classList.remove('translate-x-full'); overlay.classList.remove('hidden'); window.renderDragList(); } 
+    if (sidebar.classList.contains('translate-x-full')) { sidebar.classList.remove('translate-x-full'); overlay.classList.remove('hidden'); renderDragList(); } 
     else { sidebar.classList.add('translate-x-full'); overlay.classList.add('hidden'); }
 };
 
-window.renderDragList = function() {
+function renderDragList() {
     const container = document.getElementById('kolom-drag-container'); if(!container) return; container.innerHTML = '';
     const headers = Array.from(document.querySelectorAll('#thead-keluar th'));
     headers.forEach(th => {
@@ -1410,7 +1383,7 @@ window.renderDragList = function() {
         const label = th.innerText.trim() || 'Kolom';
         if(!colClass || colClass === 'col-cb') return;
 
-        const isHidden = window.hiddenCols.includes(colClass);
+        const isHidden = hiddenCols.includes(colClass);
         const eyeIcon = isHidden ? 'eye-off' : 'eye';
         const eyeColor = isHidden ? 'text-slate-300' : 'text-blue-600';
 
@@ -1425,49 +1398,49 @@ window.renderDragList = function() {
         div.addEventListener('dragstart', () => { div.classList.add('dragging'); }); div.addEventListener('dragend', () => { div.classList.remove('dragging'); });
         container.appendChild(div);
     });
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
     container.addEventListener('dragover', e => {
-        e.preventDefault(); const afterElement = window.getDragAfterElement(container, e.clientY); const draggable = document.querySelector('.dragging');
+        e.preventDefault(); const afterElement = getDragAfterElement(container, e.clientY); const draggable = document.querySelector('.dragging');
         if (draggable) { if (afterElement == null) { container.appendChild(draggable); } else { container.insertBefore(draggable, afterElement); } }
     });
-};
+}
 
 window.toggleHideCol = function(e, colClass) {
     e.stopPropagation();
-    if(window.hiddenCols.includes(colClass)) {
-        window.hiddenCols = window.hiddenCols.filter(c => c !== colClass);
+    if(hiddenCols.includes(colClass)) {
+        hiddenCols = hiddenCols.filter(c => c !== colClass);
     } else {
-        window.hiddenCols.push(colClass);
+        hiddenCols.push(colClass);
     }
-    window.renderDragList();
+    renderDragList();
 };
 
-window.getDragAfterElement = function(container, y) {
+function getDragAfterElement(container, y) {
     const draggableElements = [...container.querySelectorAll('.drag-item:not(.dragging)')];
     return draggableElements.reduce((closest, child) => {
         const box = child.getBoundingClientRect(); const offset = y - box.top - box.height / 2;
         if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } else { return closest; }
     }, { offset: Number.NEGATIVE_INFINITY }).element;
-};
+}
 
 window.simpanUrutanKolom = function() {
     const items = document.querySelectorAll('.drag-item'); let newOrder = []; items.forEach(item => newOrder.push(item.getAttribute('data-col')));
-    window.userColOrder = newOrder; 
+    userColOrder = newOrder; 
     localStorage.setItem(`col_order_rkeluar_${currentUser.username}`, JSON.stringify(newOrder));
-    localStorage.setItem(`col_hidden_rkeluar_${currentUser.username}`, JSON.stringify(window.hiddenCols));
-    alert("Pengaturan kolom berhasil disimpan!"); window.toggleSidebarKolom(); window.renderHeaderDanTabel(); 
+    localStorage.setItem(`col_hidden_rkeluar_${currentUser.username}`, JSON.stringify(hiddenCols));
+    tampilkanAlert("Pengaturan kolom berhasil disimpan!", "success"); window.toggleSidebarKolom(); renderHeaderDanTabel(); 
 };
 
 window.resetUrutanKolom = function() {
     if(!confirm("Kembalikan pengaturan kolom ke default?")) return;
-    window.userColOrder = []; window.hiddenCols = [];
+    userColOrder = []; hiddenCols = [];
     localStorage.removeItem(`col_order_rkeluar_${currentUser.username}`);
     localStorage.removeItem(`col_hidden_rkeluar_${currentUser.username}`);
-    alert("Pengaturan dikembalikan ke default."); window.toggleSidebarKolom(); window.renderHeaderDanTabel();
+    tampilkanAlert("Pengaturan dikembalikan ke default.", "success"); window.toggleSidebarKolom(); renderHeaderDanTabel();
 };
 
-window.applyColumnOrder = function() {
-    if (!window.userColOrder || window.userColOrder.length === 0) return;
+function applyColumnOrder() {
+    if (!userColOrder || userColOrder.length === 0) return;
     const table = document.getElementById('table-keluar-main');
     if(!table) return;
     const rows = table.querySelectorAll('tr');
@@ -1477,12 +1450,12 @@ window.applyColumnOrder = function() {
         const cellMap = {}; cells.forEach(c => { const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-')); if (colClass) cellMap[colClass] = c; });
         row.innerHTML = ''; 
         if (cbCell) row.appendChild(cbCell);
-        window.userColOrder.forEach(colId => { if (cellMap[colId]) { row.appendChild(cellMap[colId]); } });
-        cells.forEach(c => { const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-')); if (colClass !== 'col-cb' && !window.userColOrder.includes(colClass)) { row.appendChild(c); } });
+        userColOrder.forEach(colId => { if (cellMap[colId]) { row.appendChild(cellMap[colId]); } });
+        cells.forEach(c => { const colClass = Array.from(c.classList).find(cls => cls.startsWith('col-')); if (colClass !== 'col-cb' && !userColOrder.includes(colClass)) { row.appendChild(c); } });
     });
-};
+}
 
-window.initResizableColumns = function() {
+function initResizableColumns() {
     const cols = document.querySelectorAll('#table-keluar-main th');
     cols.forEach(col => {
         const existing = col.querySelector('.resizer'); if(existing) existing.remove();
@@ -1495,4 +1468,4 @@ window.initResizableColumns = function() {
         const mouseMoveHandler = function(e) { const dx = e.clientX - x; col.style.width = `${w + dx}px`; col.style.minWidth = `${w + dx}px`; };
         const mouseUpHandler = function() { document.removeEventListener('mousemove', mouseMoveHandler); document.removeEventListener('mouseup', mouseUpHandler); resizer.classList.remove('resizing'); };
     });
-};
+}
