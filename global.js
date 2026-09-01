@@ -40,39 +40,39 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==========================================
-// DAFTAR MENU LENGKAP WMS
+// DAFTAR MENU LENGKAP WMS (DENGAN WARNA ICON)
 // ==========================================
 const APP_MENUS = [
-    { id: 'dashboard', title: 'Dashboard Utama', icon: 'layout-dashboard', url: 'menu.html' },
+    { id: 'dashboard', title: 'Dashboard Utama', icon: 'layout-dashboard', url: 'menu.html', color: 'text-blue-500' },
     { isDivider: true, title: 'INBOUND' },
-    { id: 'stbj', title: 'Scan STBJ', icon: 'shield-check', url: 'stbj.html' },
-    { id: 'hasil_stbj', title: 'Hasil STBJ', icon: 'clipboard-list', url: 'hasil_stbj.html' },
-    { id: 'langsir', title: 'Langsir Gudang', icon: 'log-in', url: 'langsir.html' },
-    { id: 'riwayat_langsir', title: 'Riwayat Langsir', icon: 'history', url: 'riwayat_langsir.html' },
+    { id: 'stbj', title: 'Scan STBJ', icon: 'shield-check', url: 'stbj.html', color: 'text-amber-500' },
+    { id: 'hasil_stbj', title: 'Hasil STBJ', icon: 'clipboard-list', url: 'hasil_stbj.html', color: 'text-emerald-500' },
+    { id: 'langsir', title: 'Langsir Gudang', icon: 'log-in', url: 'langsir.html', color: 'text-purple-500' },
+    { id: 'riwayat_langsir', title: 'Riwayat Langsir', icon: 'history', url: 'riwayat_langsir.html', color: 'text-slate-400' },
     { isDivider: true, title: 'INVENTORY' },
-    { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers', url: 'kartu_stok.html' },
-    { id: 'pencarian', title: 'Pencarian Item', icon: 'search', url: 'pencarian.html' },
-    { id: 'penyesuaian', title: 'Penyesuaian Stok', icon: 'sliders-horizontal', url: 'penyesuaian.html' },
-    { id: 'ganti_customer', title: 'Table Ganti Customer', icon: 'user-cog', url: 'ganti_customer.html' },
-    { id: 'req_konversi', title: 'Tabel Request Konversi', icon: 'replace', url: 'req_konversi.html' },
-    { id: 'input_opname', title: 'Input Stok Opname', icon: 'clipboard-check', url: 'input_opname.html' },
-    { isDivider: true, title: 'MUTASI' },
-    { id: 'stok_nonaktif', title: 'Stok Nonaktif', icon: 'package-x', url: 'stok_nonaktif.html' },
-    { id: 'scan_pic', title: 'Scan PIC Area', icon: 'user-check', url: 'scan_pic.html' },
-    { id: 'riwayat_mutasi', title: 'Riwayat Konversi', icon: 'arrow-right-left', url: 'riwayat_konversi.html' },
+    { id: 'kartu_stok', title: 'Kartu Stok', icon: 'layers', url: 'kartu_stok.html', color: 'text-indigo-500' },
+    { id: 'pencarian', title: 'Pencarian Item', icon: 'search', url: 'pencarian.html', color: 'text-pink-500' },
+    { id: 'penyesuaian', title: 'Penyesuaian Stok', icon: 'sliders-horizontal', url: 'penyesuaian.html', color: 'text-orange-500' },
+    { id: 'ganti_customer', title: 'Table Ganti Customer', icon: 'user-cog', url: 'ganti_customer.html', color: 'text-teal-500' },
+    { id: 'req_konversi', title: 'Tabel Request Konversi', icon: 'replace', url: 'req_konversi.html', color: 'text-rose-500' },
+    { id: 'input_opname', title: 'Input Stok Opname', icon: 'clipboard-check', url: 'input_opname.html', color: 'text-cyan-500' },
+    { isDivider: true, title: 'PERPINDAHAN & PENYESUAIAN' }, // REVISI: Nama Kategori Diubah
+    { id: 'stok_nonaktif', title: 'Stok Nonaktif', icon: 'package-x', url: 'stok_nonaktif.html', color: 'text-red-500' },
+    { id: 'scan_pic', title: 'Scan PIC Area', icon: 'user-check', url: 'scan_pic.html', color: 'text-fuchsia-500' },
+    { id: 'riwayat_mutasi', title: 'Riwayat Konversi', icon: 'arrow-right-left', url: 'riwayat_konversi.html', color: 'text-slate-400' },
     { isDivider: true, title: 'OUTBOUND' },
-    { id: 'po', title: 'PO & Estimasi', icon: 'clipboard-check', url: 'po.html' },
-    { id: 'picking_list', title: 'Picking List', icon: 'clipboard-pen', url: 'picking_list.html' },
-    { id: 'keluar', title: 'Kirim / Keluar', icon: 'truck', url: 'keluar.html' },
-    { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html' },
+    { id: 'po', title: 'PO & Estimasi', icon: 'clipboard-check', url: 'po.html', color: 'text-blue-400' },
+    { id: 'picking_list', title: 'Picking List', icon: 'clipboard-pen', url: 'picking_list.html', color: 'text-emerald-400' },
+    { id: 'keluar', title: 'Kirim / Keluar', icon: 'truck', url: 'keluar.html', color: 'text-amber-400' },
+    { id: 'riwayat_keluar', title: 'Riwayat Keluar', icon: 'history', url: 'riwayat_keluar.html', color: 'text-slate-400' },
     { isDivider: true, title: 'REPORTS' },
-    { id: 'reports', title: 'Laporan & Rekap', icon: 'bar-chart-3', url: 'reports.html' },
+    { id: 'reports', title: 'Laporan & Rekap', icon: 'bar-chart-3', url: 'reports.html', color: 'text-indigo-400' },
     { isDivider: true, title: 'PRINT LABEL' },
-    { id: 'cetak_label', title: 'Cetak Label Barcode', icon: 'printer', url: 'cetak_label.html' },
-    { id: 'print_khusus', title: 'Cetak Label Khusus', icon: 'qr-code', url: 'print_khusus.html' },
-    { id: 'riwayat_cetak', title: 'Riwayat Cetak Label', icon: 'scroll-text', url: 'riwayat_cetak.html' },
+    { id: 'cetak_label', title: 'Cetak Label Barcode', icon: 'printer', url: 'cetak_label.html', color: 'text-purple-400' },
+    { id: 'print_khusus', title: 'Cetak Label Khusus', icon: 'qr-code', url: 'print_khusus.html', color: 'text-pink-400' },
+    { id: 'riwayat_cetak', title: 'Riwayat Cetak Label', icon: 'scroll-text', url: 'riwayat_cetak.html', color: 'text-slate-400' },
     { isDivider: true, title: 'CONFIG' },
-    { id: 'master_data', title: 'Master Data', icon: 'database', url: 'master_data.html' }
+    { id: 'master_data', title: 'Master Data', icon: 'database', url: 'master_data.html', color: 'text-teal-400' }
 ];
 
 // ==========================================
@@ -141,10 +141,10 @@ style.innerHTML = `
 
     /* Animasi Grid Menu */
     @keyframes slideDownFade {
-        from { opacity: 0; transform: translateY(-20px); }
+        from { opacity: 0; transform: translateY(-10px); }
         to { opacity: 1; transform: translateY(0); }
     }
-    .menu-grid-item { animation: slideDownFade 0.3s ease-out forwards; }
+    .menu-grid-item { animation: slideDownFade 0.2s ease-out forwards; }
 `;
 document.head.appendChild(style);
 
@@ -199,7 +199,7 @@ function applyTableDesign() {
 applyTableDesign();
 
 // ==========================================
-// INISIALISASI MODERN LAYOUT (NO SIDEBAR, GRID MENU)
+// INISIALISASI MODERN LAYOUT (NO SIDEBAR, GRID MENU, FAV MENUS)
 // ==========================================
 async function initModernLayout(pageMeta) {
     const sessionString = localStorage.getItem('user_session');
@@ -256,10 +256,12 @@ async function initModernLayout(pageMeta) {
     const layoutWrapper = document.createElement('div');
     layoutWrapper.className = 'flex flex-col h-[100dvh] bg-slate-100 overflow-hidden font-sans w-full';
 
-    // HEADER BARU (DARK NAVY) DENGAN TOMBOL LOGO
+    // HEADER BARU (DARK NAVY) DENGAN TOMBOL LOGO & MENU FAVORIT
     let headerHTML = `
         <header class="bg-[#0f172a] text-white flex items-center justify-between h-16 px-4 sm:px-6 border-b border-slate-800 z-30 shrink-0 shadow-md">
-            <div class="flex items-center gap-4">
+            
+            <!-- KIRI: LOGO & JUDUL -->
+            <div class="flex items-center gap-4 w-1/3">
                 <button onclick="toggleGridMenu()" class="flex items-center gap-3 hover:bg-slate-800 p-1.5 pr-4 rounded-xl transition cursor-pointer group">
                     <div class="bg-white p-1 rounded-lg shrink-0 flex items-center justify-center w-9 h-9 shadow-sm group-hover:scale-105 transition-transform">
                         <img src="sunpevece.png" alt="Logo" class="w-7 h-7 object-contain" onerror="this.style.display='none'">
@@ -270,7 +272,14 @@ async function initModernLayout(pageMeta) {
                     </div>
                 </button>
             </div>
-            <div class="flex items-center gap-3 sm:gap-5">
+
+            <!-- TENGAH: MENU FAVORIT (KHUSUS DESKTOP) -->
+            <div id="favorite-menus-container" class="hidden sm:flex items-center justify-center gap-2 w-1/3">
+                <!-- Akan dirender oleh JS renderFavMenus() -->
+            </div>
+
+            <!-- KANAN: PROFIL & INBOX -->
+            <div class="flex items-center justify-end gap-3 sm:gap-5 w-1/3">
                 <button onclick="bukaModalInbox()" class="relative p-2 rounded-full hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer" title="Pesan & Notifikasi">
                     <i data-lucide="mail" class="w-5 h-5"></i>
                     <span id="inbox-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0f172a]"></span>
@@ -312,17 +321,24 @@ async function initModernLayout(pageMeta) {
     
     layoutWrapper.appendChild(mainContent);
 
-    // BUILD GRID MENU MODAL
+    // BUILD GRID MENU MODAL (REVISI: Transparansi, Ukuran, Search Bar)
     let gridMenuHTML = `
-        <div id="modal-grid-menu" class="hidden fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md overflow-y-auto custom-scroll transition-opacity">
-            <div class="min-h-screen p-4 sm:p-8 flex flex-col max-w-7xl mx-auto w-full">
+        <div id="modal-grid-menu" class="hidden fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md overflow-y-auto custom-scroll transition-opacity">
+            <div class="min-h-screen p-4 sm:p-6 flex flex-col max-w-6xl mx-auto w-full">
                 
-                <div class="flex justify-between items-center mb-8 pb-4 border-b border-slate-700">
-                    <h2 class="text-2xl font-black text-white flex items-center gap-3"><i data-lucide="layout-grid" class="text-blue-500 w-8 h-8"></i> MENU NAVIGASI</h2>
-                    <button onclick="closeGridMenu()" class="p-2 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-xl transition cursor-pointer"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-slate-700 gap-4">
+                    <h2 class="text-xl font-black text-white flex items-center gap-3"><i data-lucide="layout-grid" class="text-blue-500 w-6 h-6"></i> MENU NAVIGASI</h2>
+                    
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <div class="relative flex-1 sm:w-64">
+                            <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
+                            <input type="text" oninput="filterMegaMenu(this.value)" class="w-full pl-9 p-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white outline-none focus:border-blue-500 transition" placeholder="Cari menu...">
+                        </div>
+                        <button onclick="closeGridMenu()" class="p-2 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-lg transition cursor-pointer shrink-0"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    </div>
                 </div>
                 
-                <div class="flex flex-col gap-8 pb-10">
+                <div class="flex flex-col gap-6 pb-10">
     `;
 
     let delayDelay = 0;
@@ -330,24 +346,25 @@ async function initModernLayout(pageMeta) {
         if (groupedMenus[group].length === 0) continue;
         
         gridMenuHTML += `
-            <div>
-                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 pl-1 border-l-2 border-blue-500">${group}</h3>
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            <div class="mega-menu-group">
+                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1 border-l-2 border-blue-500">${group}</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
         `;
 
         groupedMenus[group].forEach(menu => {
             const isActive = pageMeta && menu.id === pageMeta.id;
             const bgClass = isActive ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-900/50' : 'bg-slate-800 border-slate-700 hover:bg-slate-700 hover:border-slate-500';
             const textClass = isActive ? 'text-white' : 'text-slate-200 group-hover:text-white';
-            const iconClass = isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-400';
+            const iconColor = menu.color || 'text-slate-400';
+            const iconClass = isActive ? 'text-white' : `${iconColor} group-hover:text-white`;
 
             gridMenuHTML += `
-                <a href="${menu.url}" class="menu-grid-item group flex flex-col items-center justify-center p-4 sm:p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${bgClass}" style="animation-delay: ${delayDelay}ms">
-                    <i data-lucide="${menu.icon}" class="w-8 h-8 sm:w-10 sm:h-10 mb-3 transition-colors ${iconClass}"></i>
-                    <span class="text-xs sm:text-sm font-bold text-center leading-tight transition-colors ${textClass}">${menu.title}</span>
+                <a href="${menu.url}" data-title="${menu.title}" class="menu-grid-item group flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border transition-all duration-300 cursor-pointer ${bgClass}" style="animation-delay: ${delayDelay}ms">
+                    <i data-lucide="${menu.icon}" class="w-6 h-6 sm:w-8 sm:h-8 mb-2 transition-colors ${iconClass}"></i>
+                    <span class="text-[10px] sm:text-xs font-bold text-center leading-tight transition-colors ${textClass}">${menu.title}</span>
                 </a>
             `;
-            delayDelay += 20;
+            delayDelay += 15;
         });
 
         gridMenuHTML += `</div></div>`;
@@ -355,7 +372,41 @@ async function initModernLayout(pageMeta) {
 
     gridMenuHTML += `</div></div></div>`;
 
-    const modalsHTML = gridMenuHTML + `
+    // MODAL MENU FAVORIT
+    const favModalHTML = `
+        <div id="modal-fav-menus" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-4 backdrop-blur-sm">
+            <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 text-slate-800 flex flex-col max-h-[85vh]">
+                <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100 shrink-0">
+                    <h3 class="text-base font-black flex items-center gap-2 text-blue-700"><i data-lucide="star" class="w-5 h-5"></i> Atur Menu Favorit</h3>
+                    <button onclick="tutupModal('modal-fav-menus')" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+                <p class="text-xs font-bold text-slate-500 mb-4 shrink-0">Pilih maksimal 3 menu untuk ditampilkan sebagai tombol cepat di header atas.</p>
+                
+                <div class="flex-1 overflow-y-auto custom-scroll pr-2 space-y-4 mb-4">
+                    ${Object.keys(groupedMenus).map(group => `
+                        <div>
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">${group}</h4>
+                            <div class="flex flex-col gap-1.5">
+                                ${groupedMenus[group].map(m => `
+                                    <label class="flex items-center gap-3 p-2 hover:bg-slate-50 border border-transparent hover:border-slate-200 rounded-lg cursor-pointer transition">
+                                        <input type="checkbox" value="${m.id}" onchange="limitFavSelection(this)" class="cb-fav w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                                        <span class="text-xs font-bold text-slate-700 flex items-center gap-2"><i data-lucide="${m.icon}" class="w-4 h-4 ${m.color || 'text-slate-400'}"></i> ${m.title}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="flex gap-2 shrink-0 pt-3 border-t border-slate-100">
+                    <button onclick="tutupModal('modal-fav-menus')" class="w-1/3 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition text-xs uppercase">Batal</button>
+                    <button onclick="saveFavMenus()" class="w-2/3 py-2.5 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition shadow-sm text-xs uppercase flex justify-center items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Simpan Pilihan</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const modalsHTML = gridMenuHTML + favModalHTML + `
         <div id="modal-password" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm border border-slate-200 text-slate-800">
                 <h3 class="text-lg font-black mb-4 flex items-center gap-2"><i data-lucide="key-round" class="text-blue-600"></i> Ganti Password</h3>
@@ -515,13 +566,100 @@ async function initModernLayout(pageMeta) {
     document.body.appendChild(layoutWrapper);
 
     lucide.createIcons();
+    renderFavMenus(); // Render Menu Favorit di Header
     setTimeout(cekNotifikasiInbox, 1000); 
+
+    // REVISI: Event Listener Tombol Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeGridMenu();
+            tutupModal('modal-password');
+            tutupModal('modal-table-design');
+            tutupModal('modal-inbox');
+            tutupModal('modal-fav-menus');
+        }
+    });
 }
 
+// ==========================================
+// LOGIKA MENU FAVORIT
+// ==========================================
+window.openFavMenuModal = function() {
+    const user = JSON.parse(localStorage.getItem('user_session'));
+    const saved = localStorage.getItem('fav_menus_' + user.username);
+    const favArray = saved ? JSON.parse(saved) : [];
+
+    document.querySelectorAll('.cb-fav').forEach(cb => {
+        cb.checked = favArray.includes(cb.value);
+    });
+
+    document.getElementById('modal-fav-menus').classList.remove('hidden');
+};
+
+window.limitFavSelection = function(cb) {
+    const checked = document.querySelectorAll('.cb-fav:checked');
+    if (checked.length > 3) {
+        cb.checked = false;
+        alert('Maksimal hanya 3 menu favorit yang diizinkan!');
+    }
+};
+
+window.saveFavMenus = function() {
+    const user = JSON.parse(localStorage.getItem('user_session'));
+    const checked = Array.from(document.querySelectorAll('.cb-fav:checked')).map(cb => cb.value);
+    
+    localStorage.setItem('fav_menus_' + user.username, JSON.stringify(checked));
+    tutupModal('modal-fav-menus');
+    renderFavMenus();
+};
+
+window.renderFavMenus = function() {
+    const container = document.getElementById('favorite-menus-container');
+    if (!container) return;
+
+    const user = JSON.parse(localStorage.getItem('user_session'));
+    if (!user) return;
+
+    const saved = localStorage.getItem('fav_menus_' + user.username);
+    const favArray = saved ? JSON.parse(saved) : [];
+
+    if (favArray.length === 0) {
+        container.innerHTML = `
+            <button onclick="openFavMenuModal()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-full text-[10px] font-bold text-slate-300 hover:text-white transition flex items-center gap-1.5 shadow-inner">
+                <i data-lucide="plus" class="w-3 h-3"></i> Tambah Menu Favorit
+            </button>
+        `;
+    } else {
+        let html = '';
+        favArray.forEach(id => {
+            const menu = APP_MENUS.find(m => m.id === id);
+            if (menu) {
+                html += `
+                    <a href="${menu.url}" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-[10px] font-bold text-slate-200 hover:text-white transition flex items-center gap-1.5 shadow-sm">
+                        <i data-lucide="${menu.icon}" class="w-3.5 h-3.5 ${menu.color || 'text-slate-400'}"></i>
+                        <span class="hidden lg:block">${menu.title}</span>
+                    </a>
+                `;
+            }
+        });
+        html += `
+            <button onclick="openFavMenuModal()" class="p-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-400 hover:text-white transition shadow-sm ml-1" title="Edit Menu Favorit">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+            </button>
+        `;
+        container.innerHTML = html;
+    }
+    lucide.createIcons();
+};
+
+// ==========================================
+// LOGIKA MEGA MENU GRID & SEARCH
+// ==========================================
 window.toggleGridMenu = function() {
     const menu = document.getElementById('modal-grid-menu');
     if (menu.classList.contains('hidden')) {
         menu.classList.remove('hidden');
+        document.getElementById('profile-dropdown').classList.add('hidden');
     } else {
         menu.classList.add('hidden');
     }
@@ -531,6 +669,28 @@ window.closeGridMenu = function() {
     document.getElementById('modal-grid-menu').classList.add('hidden');
 };
 
+window.filterMegaMenu = function(val) {
+    const query = val.toLowerCase().trim();
+    
+    document.querySelectorAll('.menu-grid-item').forEach(item => {
+        const title = item.getAttribute('data-title').toLowerCase();
+        if (title.includes(query)) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+
+    // Sembunyikan grup jika semua item di dalamnya tersembunyi
+    document.querySelectorAll('.mega-menu-group').forEach(group => {
+        const visibleItems = group.querySelectorAll('.menu-grid-item[style="display: flex;"], .menu-grid-item:not([style*="display: none"])');
+        group.style.display = visibleItems.length > 0 ? 'block' : 'none';
+    });
+};
+
+// ==========================================
+// LOGIKA LAINNYA (Profile, Inbox, dll)
+// ==========================================
 window.toggleProfileMenu = function() { 
     document.getElementById('profile-dropdown').classList.toggle('hidden'); 
 };
