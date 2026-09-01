@@ -107,6 +107,20 @@ function loadUserPreferences() {
 document.addEventListener('DOMContentLoaded', async () => {
     await initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
     
+    // REVISI: Render Komponen Dinamis dari global.js
+    const tabsData = [
+        { id: 'tab-area', label: 'KS Area', icon: 'map', onClick: "gantiTab('area')" },
+        { id: 'tab-global', label: 'KS Global', icon: 'globe-2', onClick: "gantiTab('global')" },
+        { id: 'tab-detail', label: 'KS Detail', icon: 'list-collapse', onClick: "gantiTab('detail')" }
+    ];
+    if (typeof window.renderSubmenuTabs === 'function') {
+        window.renderSubmenuTabs('container-submenu', tabsData, 'tab-area');
+    }
+    
+    if (typeof window.renderTableFooter === 'function') {
+        window.renderTableFooter('container-footer', 'Total Qty (Dus)');
+    }
+
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
@@ -404,6 +418,7 @@ window.gantiTab = function(mode) {
     selectedRows.clear();
     selectAllState = 0;
     currentPage = 1;
+    expandedRows.clear();
     
     setModeKS(mode);
 };
@@ -411,13 +426,15 @@ window.gantiTab = function(mode) {
 function setModeKS(m) {
     modeKS = m;
     
-    const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-    const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-    
-    ['area', 'global', 'detail'].forEach(tab => {
-        const el = document.getElementById('tab-' + tab);
-        if(el) el.className = (m === tab) ? activeClass : inactiveClass;
-    });
+    // REVISI: Update UI Tabs menggunakan fungsi dinamis jika ada
+    const tabsData = [
+        { id: 'tab-area', label: 'KS Area', icon: 'map', onClick: "gantiTab('area')" },
+        { id: 'tab-global', label: 'KS Global', icon: 'globe-2', onClick: "gantiTab('global')" },
+        { id: 'tab-detail', label: 'KS Detail', icon: 'list-collapse', onClick: "gantiTab('detail')" }
+    ];
+    if (typeof window.renderSubmenuTabs === 'function') {
+        window.renderSubmenuTabs('container-submenu', tabsData, 'tab-' + m);
+    }
 
     const btnGantiPO = document.getElementById('btn-ganti-po-main');
     if(btnGantiPO) btnGantiPO.classList.toggle('hidden', m === 'global' || m === 'detail');
@@ -1069,6 +1086,7 @@ window.salinData = function() {
                 const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
                 if(colClass) {
                     let val = sv[colClass] || '-';
+                    // Bersihkan HTML tag dan newline
                     let cleanVal = String(val).replace(/<[^>]*>?/gm, '').replace(/(\r\n|\n|\r)/gm, " ").trim();
                     rowData.push(cleanVal);
                 }
