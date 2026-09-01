@@ -18,17 +18,14 @@
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .table-container { position: relative; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
 
         .hdr-filtered { background-color: #312e81 !important; color: #fbbf24 !important; }
         .col-hidden { display: none !important; }
-
-        /* Animasi Dropdown Inline */
-        .detail-row { display: none; }
-        .detail-row.open { display: table-row; animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
     </style>
 </head>
 <body class="font-sans text-slate-800">
@@ -84,9 +81,16 @@
 
         <div class="flex-1 min-h-0 bg-slate-100 p-3 sm:p-4 overflow-hidden flex flex-col relative z-0">
             <div id="wrapper-table-ks" class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-xl shadow-md border border-slate-300">
-                <table class="w-full text-left whitespace-nowrap" id="main-table">
+                <table class="w-full text-left border-separate border-spacing-0 whitespace-nowrap" id="main-table">
                     <thead class="sticky top-0 z-50 shadow-sm" id="thead-ks"></thead>
-                    <tbody id="tbody-ks" class="text-slate-800"></tbody>
+                    <tbody id="tbody-ks" class="text-slate-800">
+                        <tr>
+                            <td colspan="15" class="p-10 text-center">
+                                <i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-blue-500"></i>
+                                <p class="font-bold text-slate-500">Menyiapkan Kartu Stok...</p>
+                            </td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -235,6 +239,46 @@
             <div class="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50">
                 <button onclick="tutupModalReqKonversi()" class="px-5 py-2.5 font-bold text-slate-500 hover:text-slate-700 bg-slate-200 hover:bg-slate-300 rounded-xl transition text-xs uppercase">Batal</button>
                 <button onclick="eksekusiReqKonversi()" id="btn-save-req-konv" class="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition flex items-center gap-2 border-b-4 border-rose-800 active:scale-95"><i data-lucide="save" class="w-4 h-4"></i> Save Request</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL BREAKDOWN KS GLOBAL (AREA LIST) -->
+    <div id="modal-breakdown" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[90] px-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div class="flex flex-col">
+                    <h3 class="font-black text-slate-800 text-sm uppercase flex items-center gap-2">
+                        <i data-lucide="boxes" class="w-5 h-5 text-indigo-600"></i> Rincian Lokasi Area Gudang
+                    </h3>
+                    <p id="bd-title-item" class="text-xs font-bold text-slate-500 mt-0.5">-</p>
+                </div>
+                <button onclick="tutupModalBreakdown()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition shadow-sm"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            
+            <div class="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center px-4">
+                <div class="flex items-center gap-2">
+                    <button onclick="siapkanGantiPO('breakdown')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase rounded-lg shadow-sm transition active:scale-95 flex items-center gap-1.5"><i data-lucide="tags" class="w-3.5 h-3.5"></i> Ganti Customer Estimasi</button>
+                    <button onclick="bukaModalGantiKet('breakdown', '')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs uppercase rounded-lg shadow-sm transition active:scale-95 flex items-center gap-1.5"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Ganti Keterangan</button>
+                    <button onclick="siapkanReqKonversi('breakdown')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase rounded-lg shadow-sm transition active:scale-95 flex items-center gap-1.5"><i data-lucide="file-warning" class="w-3.5 h-3.5"></i> Req Konversi</button>
+                </div>
+                <button onclick="salinDataBreakdown()" class="px-3 py-1.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs rounded-lg shadow-sm flex items-center gap-1.5 transition active:scale-95"><i data-lucide="copy" class="w-3.5 h-3.5"></i> Salin Data</button>
+            </div>
+
+            <div class="overflow-y-auto flex-1 p-0 hide-scrollbar table-container">
+                <table class="w-full text-center border-collapse text-sm whitespace-nowrap" id="table-breakdown">
+                    <thead class="sticky top-0 bg-slate-800 text-white shadow-sm z-10">
+                        <tr>
+                            <th class="p-3 w-10 text-center"><input type="checkbox" onchange="toggleCentangBreakdown(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-0 cursor-pointer"></th>
+                            <th class="p-3 font-semibold uppercase text-xs text-left">Area Penyimpanan</th>
+                            <th class="p-3 font-semibold uppercase text-xs text-left">Customer Aktual</th>
+                            <th class="p-3 font-semibold uppercase text-xs text-left text-purple-300">Customer Estimasi</th>
+                            <th class="p-3 font-semibold uppercase text-xs text-left">Keterangan</th>
+                            <th class="p-3 font-semibold uppercase text-xs text-emerald-400">Total Dus</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-breakdown" class="text-slate-700 divide-y divide-slate-200"></tbody>
+                </table>
             </div>
         </div>
     </div>
