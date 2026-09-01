@@ -107,7 +107,7 @@ function loadUserPreferences() {
     }
 }
 
-// Fetcher Aman tanpa mutasi objek query builder berulang
+// Fetcher Aman Tanpa Mutasi Instance Query Builder
 async function fetchAllRows(tableName, selectCols = '*', filterBuilder = null) {
     let allData = [];
     let page = 0;
@@ -119,7 +119,7 @@ async function fetchAllRows(tableName, selectCols = '*', filterBuilder = null) {
         }
         const { data, error } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
         if (error) {
-            console.warn(`Query error on ${tableName}:`, error);
+            console.warn(`Query warning on ${tableName}:`, error);
             break;
         }
         if (!data || data.length === 0) break;
@@ -133,7 +133,7 @@ async function fetchAllRows(tableName, selectCols = '*', filterBuilder = null) {
 document.addEventListener('DOMContentLoaded', async () => {
     await initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
     
-    // Inisialisasi Submenu Tabs & Footer
+    // Inisialisasi Submenu Tabs & Footer Langsung
     const tabsData = [
         { id: 'tab-area', label: 'KS Area', icon: 'map', onClick: "gantiTab('area')" },
         { id: 'tab-global', label: 'KS Global', icon: 'globe-2', onClick: "gantiTab('global')" },
@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.renderTableFooter('container-footer', 'Total Qty (Dus)');
     }
 
-    // Render Header Skeleton Awal
+    // Render Skeleton Header Seketika
     renderTableHeaders();
 
     document.addEventListener('click', function(e) {
@@ -323,7 +323,6 @@ window.muatDataStok = async function() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
-        // Tarik data ringan terlebih dahulu agar tabel langsung tampil dalam sekejap
         const [resAktual, resGanti, resJasper] = await Promise.all([
             fetchAllRows('stok_aktual', '*'),
             fetchAllRows('ganti_customer', 'id_sku, customer_aktual_request, area, progres', q => q.neq('progres', 'DONE')),
@@ -403,7 +402,6 @@ async function loadStokGlobalBackground() {
         );
         stokGlobalRaw = globalData || [];
         
-        // Update Data Detail jika tab Detail sedang aktif
         if(modeKS === 'detail') {
             prosesDataKSDetail();
             buildProcessedData();
@@ -706,7 +704,7 @@ function renderTableBody() {
             
             h += `
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${r._id}')" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-400 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
-                <td class="px-4 py-3 text-center col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
+                <td class="px-4 py-3 text-center col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm cursor-pointer"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}">${sv['col-pjg']}</td>
@@ -855,164 +853,6 @@ window.highlightRow = function(cb, id) {
     }
     updateSelectedCount();
 };
-
-// ==========================================
-// FILTER EXCEL PRO
-// ==========================================
-window.openColumnFilter = function(event, colClass, colName) {
-    event.stopPropagation();
-    currentFilterCol = colClass;
-    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
-
-    let uniqueValues = new Set();
-    
-    processedData.forEach(row => {
-        let showBasedOnOthers = true;
-        for (let otherCol in activeFilters) {
-            if (otherCol !== colClass) { 
-                const allowed = activeFilters[otherCol];
-                const val = row.searchValues[otherCol] || '';
-                if (!allowed.includes(val)) { showBasedOnOthers = false; break; }
-            }
-        }
-        if (showBasedOnOthers) {
-            let val = row.searchValues[colClass] || '';
-            if(val !== '') uniqueValues.add(val);
-        }
-    });
-
-    let sortedValues = Array.from(uniqueValues).sort();
-    window.currentFilterValues = sortedValues;
-    renderFilterList('');
-
-    document.getElementById('filter-search-input').value = '';
-    
-    const menu = document.getElementById('excel-filter-menu');
-    menu.classList.remove('hidden');
-    
-    const btnRect = event.currentTarget.getBoundingClientRect();
-    const menuWidth = 256; 
-    
-    let topPos = btnRect.bottom + 4; 
-    let leftPos = btnRect.left; 
-
-    if (leftPos + menuWidth > window.innerWidth) {
-        leftPos = btnRect.right - menuWidth;
-    }
-    
-    if (leftPos < 10) {
-        leftPos = 10;
-    }
-
-    menu.style.position = 'fixed'; 
-    menu.style.top = `${topPos}px`;
-    menu.style.left = `${leftPos}px`;
-    
-    document.getElementById('filter-search-input').focus();
-};
-
-window.renderFilterList = function(searchQuery) {
-    const colClass = currentFilterCol;
-    let filteredVals = window.currentFilterValues;
-    
-    if (searchQuery) {
-        const query = searchQuery.toLowerCase().split(' ').filter(x => x);
-        filteredVals = window.currentFilterValues.filter(val => {
-            const text = String(val).toLowerCase();
-            return query.every(term => text.includes(term));
-        });
-    }
-
-    const limit = 100;
-    const displayVals = filteredVals.slice(0, limit);
-
-    let listHtml = `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded-lg transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-bold text-slate-800">(Pilih Semua)</span></label>`;
-    
-    displayVals.forEach(val => {
-        let isChecked = !activeFilters[colClass] || activeFilters[colClass].includes(val);
-        listHtml += `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded-lg transition filter-val-item" data-value="${encodeURIComponent(val)}">
-            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
-            <span class="truncate font-medium text-slate-700">${val}</span>
-        </label>`;
-    });
-
-    if (filteredVals.length > limit) {
-        listHtml += `<div class="p-2 text-center text-xs font-bold text-slate-400 italic">Menampilkan 100 dari ${filteredVals.length} hasil. Ketik untuk mencari.</div>`;
-    }
-
-    document.getElementById('filter-values-list').innerHTML = listHtml;
-    window.updateSelectAllState();
-};
-
-window.searchFilterList = function(val) {
-    clearTimeout(filterTimeout);
-    filterTimeout = setTimeout(() => {
-        requestAnimationFrame(() => {
-            window.renderFilterList(val);
-        });
-    }, 150);
-};
-
-window.toggleAllFilterValues = function(checked) {
-    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
-    window.updateSelectAllState();
-};
-
-window.updateSelectAllState = function() {
-    const allCbs = document.querySelectorAll('.filter-val-cb');
-    const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
-    const selectAll = document.getElementById('filter-select-all');
-    if(!selectAll) return;
-    if(allCbs.length === checkedCbs.length && allCbs.length > 0) { selectAll.checked = true; selectAll.indeterminate = false; }
-    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
-    else { selectAll.checked = false; selectAll.indeterminate = true; }
-};
-
-document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) window.updateSelectAllState(); });
-
-window.closeFilterMenu = function() { document.getElementById('excel-filter-menu').classList.add('hidden'); };
-
-window.clearFilterForCurrentCol = function() {
-    delete activeFilters[currentFilterCol];
-    closeFilterMenu(); applyFilters(); updateFilterIcons();
-};
-
-window.applyFilterForCurrentCol = function() {
-    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
-    const totalBoxes = document.querySelectorAll('.filter-val-cb');
-    
-    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') {
-        delete activeFilters[currentFilterCol];
-    } else {
-        let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value));
-        activeFilters[currentFilterCol] = selectedVals;
-    }
-    
-    closeFilterMenu(); applyFilters(); updateFilterIcons();
-};
-
-function updateFilterIcons() {
-    document.querySelectorAll('.filter-icon').forEach(icon => {
-        icon.classList.remove('text-amber-400', 'opacity-100');
-        icon.classList.add('text-slate-400', 'opacity-40');
-    });
-    
-    document.querySelectorAll('th.hdr-filtered').forEach(th => {
-        th.classList.remove('hdr-filtered');
-    });
-
-    for (let colClass in activeFilters) {
-        const th = document.querySelector(`th.${colClass}`);
-        if (th) {
-            th.classList.add('hdr-filtered');
-            const icon = th.querySelector('.filter-icon');
-            if (icon) { 
-                icon.classList.remove('text-slate-400', 'opacity-40'); 
-                icon.classList.add('text-amber-400', 'opacity-100'); 
-            }
-        }
-    }
-}
 
 // ==========================================
 // LOGIKA GANTI KETERANGAN
@@ -1509,7 +1349,7 @@ window.prosesLabelCustomerMassal = async function() {
     } finally {
         btn.innerHTML = ori;
         btn.disabled = false;
-        if(typeof lucide !== 'undefined') lucide.createIcons();
+        lucide.createIcons();
     }
 };
 
