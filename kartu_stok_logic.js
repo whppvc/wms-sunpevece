@@ -48,6 +48,43 @@ function formatPanjang(pjg) {
     return str;
 }
 
+// ==========================================
+// CUSTOM ALERT & NOTIFICATION SYSTEM
+// ==========================================
+window.tampilkanAlert = function(pesan, tipe = 'info') {
+    const modal = document.getElementById('modal-custom-alert');
+    const title = document.getElementById('alert-title');
+    const msg = document.getElementById('alert-message');
+    const iconContainer = document.getElementById('alert-icon-container');
+    const icon = document.getElementById('alert-icon');
+
+    msg.innerText = pesan;
+    modal.classList.remove('hidden');
+
+    if (tipe === 'warning') {
+        title.innerText = 'Perhatian';
+        title.className = 'text-lg font-black mb-2 text-amber-600';
+        iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-amber-100 text-amber-600';
+        icon.setAttribute('data-lucide', 'alert-triangle');
+    } else if (tipe === 'success') {
+        title.innerText = 'Berhasil';
+        title.className = 'text-lg font-black mb-2 text-emerald-600';
+        iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-emerald-100 text-emerald-600';
+        icon.setAttribute('data-lucide', 'check-circle');
+    } else if (tipe === 'error') {
+        title.innerText = 'Gagal';
+        title.className = 'text-lg font-black mb-2 text-rose-600';
+        iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-rose-100 text-rose-600';
+        icon.setAttribute('data-lucide', 'x-circle');
+    } else {
+        title.innerText = 'Informasi';
+        title.className = 'text-lg font-black mb-2 text-blue-600';
+        iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-blue-100 text-blue-600';
+        icon.setAttribute('data-lucide', 'info');
+    }
+    lucide.createIcons();
+};
+
 function loadUserPreferences() {
     const savedOrder = localStorage.getItem(`col_order_ks_${modeKS}_${currentUser.username}`);
     if (savedOrder) { try { userColOrder = JSON.parse(savedOrder); } catch(e) { userColOrder = []; } } 
@@ -88,7 +125,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadMasterData();
     loadUserPreferences(); 
     
-    // Tampilkan tombol Sync Data jika user adalah creator atau superadmin
     const userRole = (currentUser.role || '').toLowerCase();
     if (userRole === 'creator' || userRole === 'superadmin') {
         const btnSync = document.getElementById('btn-sync-stok');
@@ -158,13 +194,10 @@ async function loadMasterData() {
     } catch (e) { console.error("Gagal load master_2:", e); }
 }
 
-// ==========================================
-// FUNGSI SINKRONISASI STOK (WIPE & REBUILD)
-// ==========================================
 window.bukaModalSync = function() {
     const userRole = (currentUser.role || '').toLowerCase();
     if(!['creator', 'superadmin'].includes(userRole)) {
-        return alert("Akses Ditolak! Hanya Creator atau Superadmin yang dapat melakukan sinkronisasi data.");
+        return tampilkanAlert("Akses Ditolak! Hanya Creator atau Superadmin yang dapat melakukan sinkronisasi data.", "error");
     }
     
     const msg = "PERINGATAN KERAS!\n\nProses ini akan MENGHAPUS SELURUH DATA di tabel stok_aktual dan menghitung ulang dari nol berdasarkan fisik di stok_global.\n\nCatatan: Data Customer Estimasi dan Status Konversi yang sedang menggantung mungkin akan ter-reset.\n\nApakah Anda yakin ingin melanjutkan?";
@@ -182,11 +215,9 @@ window.eksekusiSyncStok = async function() {
     const txt = document.getElementById('sync-progress-text');
 
     try {
-        // 1. Tarik Stok Global
         subtitle.innerText = "Menarik data fisik gudang...";
         const globalData = await fetchAllRows(db.from('stok_global').select('*').neq('kondisi', 'NONAKTIF'));
         
-        // 2. Agregasi
         subtitle.innerText = "Menghitung akumulasi...";
         let mapAgg = {};
         globalData.forEach(g => {
@@ -204,7 +235,7 @@ window.eksekusiSyncStok = async function() {
                     shading: g.shading,
                     area: g.area,
                     customer_aktual: g.customer_aktual,
-                    customer_estimasi: g.customer_aktual, // Reset ke aktual
+                    customer_estimasi: g.customer_aktual,
                     keterangan: g.keterangan || '-',
                     kondisi: g.kondisi || 'Aman',
                     qty: 0
@@ -214,12 +245,10 @@ window.eksekusiSyncStok = async function() {
         });
         const insertData = Object.values(mapAgg);
 
-        // 3. Tarik ID Stok Aktual untuk dihapus
         subtitle.innerText = "Mempersiapkan penghapusan...";
         const aktualData = await fetchAllRows(db.from('stok_aktual').select('id'));
         const idsToDelete = aktualData.map(a => a.id);
 
-        // 4. Hapus Stok Aktual (Batch 500)
         subtitle.innerText = "Menghapus data lama...";
         let delCount = 0;
         const chunkSize = 500;
@@ -227,19 +256,18 @@ window.eksekusiSyncStok = async function() {
             const chunk = idsToDelete.slice(i, i + chunkSize);
             await db.from('stok_aktual').delete().in('id', chunk);
             delCount += chunk.length;
-            let pct = Math.round((delCount / idsToDelete.length) * 50); // 0-50%
+            let pct = Math.round((delCount / idsToDelete.length) * 50); 
             bar.style.width = pct + '%';
             txt.innerText = pct + '%';
         }
 
-        // 5. Insert Stok Aktual Baru (Batch 500)
         subtitle.innerText = "Memasukkan data baru...";
         let insCount = 0;
         for (let i = 0; i < insertData.length; i += chunkSize) {
             const chunk = insertData.slice(i, i + chunkSize);
             await db.from('stok_aktual').insert(chunk);
             insCount += chunk.length;
-            let pct = 50 + Math.round((insCount / insertData.length) * 50); // 50-100%
+            let pct = 50 + Math.round((insCount / insertData.length) * 50); 
             bar.style.width = pct + '%';
             txt.innerText = pct + '%';
         }
@@ -252,7 +280,7 @@ window.eksekusiSyncStok = async function() {
         }, 1500);
 
     } catch (e) {
-        alert("Terjadi kesalahan saat sinkronisasi: " + e.message);
+        tampilkanAlert("Terjadi kesalahan saat sinkronisasi: " + e.message, "error");
         document.getElementById('modal-sync').classList.add('hidden');
     }
 };
@@ -327,7 +355,6 @@ async function muatDataStok() {
         // 3. DATA KS DETAIL (Agregasi dari stok_aktual dengan tambahan info produksi dari stok_global)
         let detailMap = {};
         
-        // Buat map cepat untuk mencari info produksi dari stok_global
         let prodInfoMap = {};
         stokGlobalRaw.forEach(g => {
             if(g.kondisi === 'NONAKTIF') return;
@@ -365,7 +392,6 @@ async function muatDataStok() {
         });
         dataKSDetail = Object.values(detailMap);
 
-        // Jangan reset state filter & sort saat refresh
         buildProcessedData();
     } catch(e) { 
         if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-bold">Gagal mengolah data: ${e.message}</td></tr>`; 
@@ -373,7 +399,6 @@ async function muatDataStok() {
 }
 
 window.gantiTab = function(mode) {
-    // Reset state filter & sort HANYA SAAT pindah tab
     activeFilters = {}; 
     sortState = { col: null, isAsc: true };
     selectedRows.clear();
@@ -465,6 +490,7 @@ function applySort() {
             return sortState.isAsc ? res : -res;
         });
     }
+    currentPage = 1;
     renderTableHeaders();
     renderTableBody();
 }
@@ -590,8 +616,6 @@ function renderTableBody() {
         if (modeKS === 'area') {
             let isProcessing = processedGantiKeys.has(`${r.id_sku_base}_${r.customer_estimasi}_${r.area}`);
             let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
-            
-            let ketText = isKonversi ? `[LOCKED: ${sv['col-konversi']}] ${sv['col-ket']}` : sv['col-ket'];
 
             h += `
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${r._id}')" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-400 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
@@ -607,7 +631,7 @@ function renderTableBody() {
                     ${iconGanti}
                 </td>
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi ${hiddenCols.includes('col-estimasi')?'col-hidden':''}">${sv['col-estimasi']}</td>
-                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${ketText}</td>
+                <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
                 <td class="px-4 py-3 font-bold text-red-700 text-center col-konversi ${hiddenCols.includes('col-konversi')?'col-hidden':''}">${sv['col-konversi']}</td>
                 <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base ${hiddenCols.includes('col-qty')?'col-hidden':''}">${sv['col-qty']}</td>
             `;
@@ -665,7 +689,6 @@ function renderTableBody() {
     updatePaginationUI();
 }
 
-// REVISI Paginasi Baru (Input Angka)
 function updatePaginationUI() {
     const totalFiltered = filteredData.length;
     const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
@@ -944,12 +967,12 @@ window.bukaModalGantiKet = function(context, gKey = null) {
             }
         });
         if(selectedForActionKet.length === 0) {
-            return alert("Pilih / centang minimal 1 baris item yang ingin diganti keterangannya!");
+            return tampilkanAlert("Pilih / centang minimal 1 baris item yang ingin diganti keterangannya!", "warning");
         }
     } else if (context === 'breakdown') {
-        const checkboxes = document.querySelectorAll('.cb-bd:checked');
+        const checkboxes = document.querySelectorAll(`.cb-sub-${gKey}:checked`);
         if(checkboxes.length === 0) {
-            return alert("Centang minimal 1 baris area pada detail breakdown!");
+            return tampilkanAlert("Centang minimal 1 baris area pada detail breakdown!", "warning");
         }
         checkboxes.forEach(cb => {
             const id = cb.dataset.id ? parseInt(cb.dataset.id) : null;
@@ -967,8 +990,6 @@ window.bukaModalGantiKet = function(context, gKey = null) {
 window.eksekusiGantiKet = async function() {
     const newKet = document.getElementById('input-keterangan-baru').value.trim() || '-';
     if(selectedForActionKet.length === 0) return;
-
-    if(!confirm(`Ganti keterangan menjadi "${newKet}" untuk ${selectedForActionKet.length} baris terpilih?`)) return;
 
     const btn = document.getElementById('btn-simpan-ket');
     const ori = btn.innerHTML;
@@ -1010,14 +1031,14 @@ window.eksekusiGantiKet = async function() {
 
         document.getElementById('modal-ganti-keterangan').classList.add('hidden');
         if(!document.getElementById('modal-breakdown').classList.contains('hidden')) {
-            tutupModalBreakdown();
+            window.tutupModalBreakdown();
         }
 
-        alert(`✅ SUKSES!\nKeterangan berhasil diubah menjadi "${newKet}".`);
+        tampilkanAlert(`Keterangan berhasil diubah menjadi "${newKet}".`, "success");
         await muatDataStok();
 
     } catch (e) {
-        alert("Gagal mengubah keterangan: " + e.message);
+        tampilkanAlert("Gagal mengubah keterangan: " + e.message, "error");
     } finally {
         btn.innerHTML = ori;
         btn.disabled = false;
@@ -1029,12 +1050,12 @@ window.eksekusiGantiKet = async function() {
 // EXPORT EXCEL & SALIN DATA
 // ==========================================
 window.salinData = function() {
-    if (selectedRows.size === 0) return alert("Pilih data yang ingin disalin dengan mencentang kotak di kiri data!");
+    if (selectedRows.size === 0) return tampilkanAlert("Pilih data yang ingin disalin dengan mencentang kotak di kiri data!", "warning");
 
     let textSalin = "";
     const headers = Array.from(document.querySelectorAll('#thead-ks th'))
         .filter(th => window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open'))
-        .map(th => th.innerText.trim().replace(/\n/g, ' '));
+        .map(th => th.innerText.replace(/(\r\n|\n|\r)/gm, " ").trim());
     
     textSalin += headers.join('\t') + '\n';
 
@@ -1048,7 +1069,7 @@ window.salinData = function() {
                 const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
                 if(colClass) {
                     let val = sv[colClass] || '-';
-                    let cleanVal = String(val).replace(/<[^>]*>?/gm, '').trim();
+                    let cleanVal = String(val).replace(/<[^>]*>?/gm, '').replace(/(\r\n|\n|\r)/gm, " ").trim();
                     rowData.push(cleanVal);
                 }
             }
@@ -1057,13 +1078,13 @@ window.salinData = function() {
     });
     
     navigator.clipboard.writeText(textSalin).then(() => {
-        alert(`Tersalin! Buka Excel dan Paste (Ctrl+V).`);
+        tampilkanAlert(`Data berhasil disalin! Buka Excel dan Paste (Ctrl+V).`, "success");
     });
 };
 
 window.downloadXLS = function() {
-    if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
-    if (selectedRows.size === 0) return alert("Pilih minimal 1 baris data untuk di-export!");
+    if(typeof XLSX === 'undefined') return tampilkanAlert("Library Excel belum termuat, pastikan ada koneksi internet.", "error");
+    if (selectedRows.size === 0) return tampilkanAlert("Pilih minimal 1 baris data untuk di-export!", "warning");
     
     let ws_data = [];
     const activeHeaders = [];
@@ -1071,7 +1092,7 @@ window.downloadXLS = function() {
     document.querySelectorAll('#thead-ks th').forEach(th => {
         if(window.getComputedStyle(th).display !== 'none' && !th.classList.contains('col-cb') && !th.classList.contains('col-open')) {
             const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
-            let headerText = th.innerText.trim().replace(/\n/g, ' ');
+            let headerText = th.innerText.replace(/(\r\n|\n|\r)/gm, " ").trim();
             activeHeaders.push({ text: headerText, colClass: colClass });
         }
     });
@@ -1084,7 +1105,7 @@ window.downloadXLS = function() {
         const rowData = [];
         activeHeaders.forEach(h => {
             let val = sv[h.colClass] || '-';
-            let cleanVal = String(val).replace(/<[^>]*>?/gm, '').trim();
+            let cleanVal = String(val).replace(/<[^>]*>?/gm, '').replace(/(\r\n|\n|\r)/gm, " ").trim();
             rowData.push(cleanVal);
         });
         ws_data.push(rowData);
@@ -1115,7 +1136,7 @@ window.bukaBreakdown = function(gKey) {
 
         return `
             <tr class="transition bd-row text-[13px] ${rowBg}">
-                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-id="${a.id}" data-idsku="${a.id_sku_base}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-400 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="window.highlightBdRow(this)" data-id="${a.id}" data-idsku="${a.id_sku_base}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-400 focus:ring-blue-500"></td>
                 <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
                 <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi">${a.customer_estimasi}</td>
@@ -1141,25 +1162,25 @@ window.highlightBdRow = function(cb) {
 };
 
 window.toggleCentangBreakdown = function(checked) { 
-    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; highlightBdRow(cb); }); 
+    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; window.highlightBdRow(cb); }); 
 };
 
 window.salinDataBreakdown = function() {
     const cek = document.querySelectorAll('.cb-bd:checked');
-    if(cek.length === 0) return alert("Centang baris area yang ingin disalin!");
+    if(cek.length === 0) return tampilkanAlert("Centang baris area yang ingin disalin!", "warning");
 
     let textSalin = "Area Penyimpanan\tCustomer Aktual\tCustomer Estimasi\tKeterangan\tTotal Dus\n";
     cek.forEach(cb => {
         const tr = cb.closest('tr');
         if(tr) {
             const cols = tr.querySelectorAll('td');
-            textSalin += `${cols[1].innerText}\t${cols[2].innerText}\t${cols[3].innerText}\t${cols[4].innerText}\t${cols[5].innerText}\n`;
+            textSalin += `${cols[1].innerText.replace(/(\r\n|\n|\r)/gm, " ").trim()}\t${cols[2].innerText.replace(/(\r\n|\n|\r)/gm, " ").trim()}\t${cols[3].innerText.replace(/(\r\n|\n|\r)/gm, " ").trim()}\t${cols[4].innerText.replace(/(\r\n|\n|\r)/gm, " ").trim()}\t${cols[5].innerText.replace(/(\r\n|\n|\r)/gm, " ").trim()}\n`;
         }
     });
 
     navigator.clipboard.writeText(textSalin).then(() => {
-        alert("Berhasil menyalin detail area!");
-    }).catch(err => { alert("Browser menolak akses Clipboard."); });
+        tampilkanAlert("Berhasil menyalin detail area!", "success");
+    });
 };
 
 window.siapkanGantiPO = function(context) {
@@ -1191,13 +1212,13 @@ window.siapkanGantiPO = function(context) {
         });
         
         if(selectedForAction.length === 0) {
-            return alert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya!');
+            return tampilkanAlert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya!', "warning");
         }
 
     } else { 
         const checkboxes = document.querySelectorAll('.cb-bd:checked'); 
         if(checkboxes.length === 0) {
-            return alert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya!');
+            return tampilkanAlert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya!', "warning");
         }
         
         checkboxes.forEach(cb => {
@@ -1232,21 +1253,44 @@ window.siapkanGantiPO = function(context) {
 
 window.tutupModalPO = function() { 
     document.getElementById('modal-po').classList.add('hidden'); 
-    if(document.getElementById('modal-breakdown').classList.contains('hidden')) {
+    if(document.getElementById('modal-breakdown') && !document.getElementById('modal-breakdown').classList.contains('hidden')) {
+        // Do nothing, let breakdown modal stay open
+    } else {
         document.getElementById('overlay-klik-luar').classList.add('hidden'); 
     }
 };
 
-window.eksekusiGantiPO = async function() {
+window.eksekusiGantiPO = function() {
     const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
-    if(!newPO) return alert("Silakan Pilih Customer Baru dari daftar dropdown!");
+    if(!newPO) {
+        tampilkanAlert("Pilih customer dulu atau batalkan.", "warning");
+        return;
+    }
 
     const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
-    if(isNaN(qtyDiminta) || qtyDiminta <= 0) return alert("Jumlah dus tidak valid!");
+    if(isNaN(qtyDiminta) || qtyDiminta <= 0) return tampilkanAlert("Jumlah dus tidak valid!", "warning");
 
     let maxDus = selectedForAction.reduce((sum, row) => sum + row.qty, 0);
-    if(qtyDiminta > maxDus) return alert(`Maksimal jatah adalah ${maxDus} dus!`);
+    if(qtyDiminta > maxDus) return tampilkanAlert(`Maksimal jatah adalah ${maxDus} dus!`, "warning");
 
+    // Tampilkan Modal Konfirmasi 2 Pilihan
+    document.getElementById('modal-confirm-ganti-po').classList.remove('hidden');
+};
+
+window.prosesGantiPOSaja = async function() {
+    document.getElementById('modal-confirm-ganti-po').classList.add('hidden');
+    await jalankanUpdateGantiPO(false);
+};
+
+window.prosesGantiPODanLabel = async function() {
+    document.getElementById('modal-confirm-ganti-po').classList.add('hidden');
+    await jalankanUpdateGantiPO(true);
+};
+
+async function jalankanUpdateGantiPO(isProsesLabel) {
+    const newPO = document.getElementById('input-new-po').value.trim().toUpperCase();
+    const qtyDiminta = parseInt(document.getElementById('input-qty-ganti').value);
+    
     const btn = document.getElementById('btn-simpan-po'); 
     const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; 
@@ -1254,6 +1298,7 @@ window.eksekusiGantiPO = async function() {
 
     try {
         let qtySisaUntukDiupdate = qtyDiminta; 
+        let payloadLabel = [];
         
         for(let row of selectedForAction) {
             if (qtySisaUntukDiupdate <= 0) break; 
@@ -1313,25 +1358,48 @@ window.eksekusiGantiPO = async function() {
                     insertData.qty = qtyPotong;
                     await db.from('stok_aktual').insert([insertData]);
                 }
+
+                if (isProsesLabel && oldRow.customer_aktual !== newPO) {
+                    payloadLabel.push({
+                        id_sku: oldRow.id_sku,
+                        area: oldRow.area,
+                        jenis_item: oldRow.jenis_item,
+                        nama_item: oldRow.nama_item,
+                        panjang: oldRow.panjang,
+                        grade: oldRow.grade,
+                        dus: oldRow.dus,
+                        shading: oldRow.shading,
+                        keterangan: oldRow.keterangan || '-',
+                        customer_aktual_awal: oldRow.customer_aktual,
+                        customer_aktual_request: newPO,
+                        qty_request: qtyPotong,
+                        qty_proses: 0,
+                        progres: 'PENDING'
+                    });
+                }
             }
+        }
+
+        if (payloadLabel.length > 0) {
+            await db.from('ganti_customer').insert(payloadLabel);
         }
         
         tutupModalPO(); 
-        if(sourcePOContext === 'breakdown') tutupModalBreakdown();
+        if(sourcePOContext === 'breakdown') window.tutupModalBreakdown();
         
-        alert("✅ Berhasil mengganti Customer Estimasi!");
+        tampilkanAlert("Customer Estimasi berhasil diganti!", "success");
         await muatDataStok();
     } catch (error) { 
-        alert("GAGAL UPDATE: " + error.message); 
+        tampilkanAlert("GAGAL UPDATE: " + error.message, "error"); 
     } finally { 
         btn.innerHTML = ori; 
         btn.disabled = false; 
         if(typeof lucide !== 'undefined') lucide.createIcons(); 
     }
-};
+}
 
 window.prosesLabelCustomerMassal = async function() {
-    if (selectedRows.size === 0) return alert("Pilih baris yang ingin diproses label customernya!");
+    if (selectedRows.size === 0) return tampilkanAlert("Pilih baris yang ingin diproses label customernya!", "warning");
 
     let payload = [];
     filteredData.forEach(r => {
@@ -1361,7 +1429,7 @@ window.prosesLabelCustomerMassal = async function() {
     });
 
     if(payload.length === 0) {
-        return alert("Tidak ada baris valid untuk diproses.\nPastikan Anda memilih baris yang Customer Aktual dan Customer Estimasinya BERBEDA.");
+        return tampilkanAlert("Tidak ada baris valid untuk diproses.\nPastikan Anda memilih baris yang Customer Aktual dan Customer Estimasinya BERBEDA.", "warning");
     }
 
     if(!confirm(`Akan memproses ${payload.length} item ke tabel Ganti Customer.\nLanjutkan?`)) return;
@@ -1375,10 +1443,10 @@ window.prosesLabelCustomerMassal = async function() {
         const { error } = await db.from('ganti_customer').insert(payload);
         if(error) throw error;
 
-        alert(`✅ BERHASIL!\n${payload.length} item telah dikirim ke antrean Ganti Customer.`);
+        tampilkanAlert(`${payload.length} item telah dikirim ke antrean Ganti Customer.`, "success");
         await muatDataStok(); 
     } catch(e) {
-        alert("Gagal memproses: " + e.message);
+        tampilkanAlert("Gagal memproses: " + e.message, "error");
     } finally {
         btn.innerHTML = ori;
         btn.disabled = false;
@@ -1386,28 +1454,49 @@ window.prosesLabelCustomerMassal = async function() {
     }
 };
 
-window.siapkanReqKonversi = function() {
-    if(selectedRows.size !== 1) return alert('Silakan centang TEPAT 1 (satu) baris item yang ingin direquest konversi.');
+window.siapkanReqKonversi = function(context) {
+    selectedForReq = null;
 
-    const selectedId = Array.from(selectedRows)[0];
-    const r = filteredData.find(d => d._id === selectedId);
-    
-    if(!r) return alert("Data tidak ditemukan!");
+    if(context === 'main') {
+        if(selectedRows.size !== 1) return tampilkanAlert('Silakan centang TEPAT 1 (satu) baris item yang ingin direquest konversi.', "warning");
+        const selectedId = Array.from(selectedRows)[0];
+        const r = filteredData.find(d => d._id === selectedId);
+        if(!r) return tampilkanAlert("Data tidak ditemukan!", "error");
 
-    selectedForReq = {
-        id: r.id, 
-        jenis_item: r.jenis || '-',
-        nama_item: r.nama || '-',
-        panjang: r.pjg || '-',
-        grade: r.grade || '-',
-        dus: r.dus || '-',
-        shading: r.shading || '-',
-        customer_aktual: r.po_aktual || '-',
-        customer_estimasi: r.customer_estimasi || '-', 
-        keterangan: r.keterangan || '-',
-        area: r.area || '-',
-        qty_max: r.qty || 0
-    };
+        selectedForReq = {
+            id: r.id, 
+            jenis_item: r.jenis || '-',
+            nama_item: r.nama || '-',
+            panjang: r.pjg || '-',
+            grade: r.grade || '-',
+            dus: r.dus || '-',
+            shading: r.shading || '-',
+            customer_aktual: r.po_aktual || '-',
+            customer_estimasi: r.customer_estimasi || '-', 
+            keterangan: r.keterangan || '-',
+            area: r.area || '-',
+            qty_max: r.qty || 0
+        };
+    } else if (context === 'breakdown') {
+        const checkboxes = document.querySelectorAll('.cb-bd:checked');
+        if(checkboxes.length !== 1) return tampilkanAlert('Silakan centang TEPAT 1 (satu) baris area pada detail breakdown!', "warning");
+        
+        const cb = checkboxes[0];
+        selectedForReq = {
+            id: cb.dataset.id ? parseInt(cb.dataset.id) : null,
+            jenis_item: cb.dataset.jenis || '-',
+            nama_item: cb.dataset.nama || '-',
+            panjang: cb.dataset.pjg || '-',
+            grade: cb.dataset.grade || '-',
+            dus: cb.dataset.dus || '-',
+            shading: cb.dataset.shading || '-',
+            customer_aktual: cb.dataset.po || '-',
+            customer_estimasi: cb.dataset.estimasi || '-', 
+            keterangan: cb.dataset.ket || '-',
+            area: cb.dataset.area || '-',
+            qty_max: parseInt(cb.dataset.qty) || 0
+        };
+    }
 
     const infoAsal = document.getElementById('req-info-asal');
     if(infoAsal) {
@@ -1430,12 +1519,16 @@ window.siapkanReqKonversi = function() {
 
 window.tutupModalReqKonversi = function() {
     document.getElementById('modal-req-konversi').classList.add('hidden');
-    document.getElementById('overlay-klik-luar').classList.add('hidden');
+    if(document.getElementById('modal-breakdown') && !document.getElementById('modal-breakdown').classList.contains('hidden')) {
+        // Do nothing, breakdown stays open
+    } else {
+        document.getElementById('overlay-klik-luar').classList.add('hidden');
+    }
     selectedForReq = null;
 };
 
 window.eksekusiReqKonversi = async function() {
-    if(!selectedForReq) return alert("Data sumber tidak valid!");
+    if(!selectedForReq) return tampilkanAlert("Data sumber tidak valid!", "error");
 
     const namaReq = document.getElementById('req-nama-item').value.trim() || selectedForReq.nama_item;
     const rawPjgReq = document.getElementById('req-panjang').value.trim();
@@ -1452,9 +1545,9 @@ window.eksekusiReqKonversi = async function() {
     const qtyReq = parseInt(document.getElementById('req-qty').value);
     const qtyHasil = parseInt(document.getElementById('req-qty-hasil').value);
 
-    if(isNaN(qtyReq) || qtyReq <= 0) return alert("Qty Request tidak valid!");
-    if(isNaN(qtyHasil) || qtyHasil <= 0) return alert("Qty Hasil tidak valid!");
-    if(qtyReq > selectedForReq.qty_max) return alert(`Maksimal Qty Request adalah ${selectedForReq.qty_max} dus!`);
+    if(isNaN(qtyReq) || qtyReq <= 0) return tampilkanAlert("Qty Request tidak valid!", "warning");
+    if(isNaN(qtyHasil) || qtyHasil <= 0) return tampilkanAlert("Qty Hasil tidak valid!", "warning");
+    if(qtyReq > selectedForReq.qty_max) return tampilkanAlert(`Maksimal Qty Request adalah ${selectedForReq.qty_max} dus!`, "warning");
 
     const btn = document.getElementById('btn-save-req-konv'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Menyimpan...'; btn.disabled = true;
@@ -1521,11 +1614,15 @@ window.eksekusiReqKonversi = async function() {
         const { error } = await db.from('request_konversi').insert([payload]);
         if(error) throw error;
         
-        tutupModalReqKonversi();
-        alert(`✅ Berhasil membuat Request Konversi dengan Kode: ${kodeKonversi}`);
+        window.tutupModalReqKonversi();
+        if(!document.getElementById('modal-breakdown').classList.contains('hidden')) {
+            window.tutupModalBreakdown();
+        }
+
+        tampilkanAlert(`Berhasil membuat Request Konversi dengan Kode: ${kodeKonversi}`, "success");
         await muatDataStok();
     } catch(e) {
-        alert("Gagal menyimpan request: " + e.message);
+        tampilkanAlert("Gagal menyimpan request: " + e.message, "error");
     } finally {
         btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons();
     }
@@ -1686,8 +1783,8 @@ window.simpanUrutanKolom = function() {
     localStorage.setItem(`col_order_ks_${modeKS}_${currentUser.username}`, JSON.stringify(newOrder));
     localStorage.setItem(`col_hidden_ks_${modeKS}_${currentUser.username}`, JSON.stringify(hiddenCols));
     
-    alert("Pengaturan kolom berhasil disimpan!");
-    toggleSidebarKolom(); 
+    tampilkanAlert("Pengaturan kolom berhasil disimpan!", "success");
+    window.toggleSidebarKolom(); 
     renderTableHeaders();
     renderTableBody(); 
 };
@@ -1699,8 +1796,8 @@ window.resetUrutanKolom = function() {
     localStorage.removeItem(`col_order_ks_${modeKS}_${currentUser.username}`);
     localStorage.removeItem(`col_hidden_ks_${modeKS}_${currentUser.username}`);
     
-    alert("Pengaturan dikembalikan ke default.");
-    toggleSidebarKolom(); 
+    tampilkanAlert("Pengaturan dikembalikan ke default.", "success");
+    window.toggleSidebarKolom(); 
     renderTableHeaders();
     renderTableBody(); 
 };
