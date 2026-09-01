@@ -12,6 +12,7 @@ let processedData = [];
 let filteredData = [];  
 
 let sourcePOContext = ''; 
+let currentBreakdownData = [];
 let sortState = { col: null, isAsc: true };
 let masterData = { kamus: [] };
 
@@ -29,7 +30,6 @@ let selectedForActionKet = [];
 
 let processedGantiKeys = new Set();
 let processedGlobalKeys = new Set();
-let expandedRows = new Set(); // Menyimpan ID baris KS Global yang sedang terbuka (dropdown)
 
 let filterTimeout;
 
@@ -257,7 +257,7 @@ async function muatDataStok() {
         });
         dataKSDetail = Object.values(detailMap);
 
-        // Jangan reset state filter & sort saat refresh (Poin 2)
+        // Jangan reset state filter & sort saat refresh
         buildProcessedData();
     } catch(e) { 
         if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-bold">Gagal mengolah data: ${e.message}</td></tr>`; 
@@ -271,7 +271,6 @@ window.gantiTab = function(mode) {
     selectedRows.clear();
     selectAllState = 0;
     currentPage = 1;
-    expandedRows.clear();
     
     setModeKS(mode);
 };
@@ -358,12 +357,10 @@ function applySort() {
             return sortState.isAsc ? res : -res;
         });
     }
-    currentPage = 1;
     renderTableHeaders();
     renderTableBody();
 }
 
-// REVISI: Fungsi Sort dipanggil dari menu dropdown Excel
 window.sortFromMenu = function(dir) {
     if(!currentFilterCol) return;
     sortState = { col: currentFilterCol, isAsc: dir === 'asc' };
@@ -384,7 +381,6 @@ function thSort(label, cls = "") {
         return `<th class="hdr-std ${cls} ${isHidden} select-none text-center"><div class="flex items-center justify-center w-full">${label}</div></th>`;
     }
 
-    // REVISI: Header ala Spreadsheet (Klik seluruh TH akan buka menu filter)
     return `<th class="hdr-std ${cls} ${isHidden} ${hdrBgClass} select-none group cursor-pointer hover:bg-slate-700 transition" onclick="openColumnFilter(event, '${colClass}', '${label}')">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
             <span class="truncate flex-1 text-left" title="${label}">${label}</span>
@@ -509,14 +505,10 @@ function renderTableBody() {
             let checkKey = `${r.nama}_${r.pjg}_${r.grade}_${r.dus}_${r.shading}_${r.ket}_${r.po}`;
             let isProcessing = processedGlobalKeys.has(`${checkKey}_${r.customer_estimasi}`);
             let iconGanti = isProcessing ? `<div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-white rounded-full shadow-md border border-blue-300 p-1 text-blue-600" title="Sedang diproses ganti label"><i data-lucide="arrow-right-left" class="w-3 h-3"></i></div>` : '';
-            
-            let isExpanded = expandedRows.has(r.gKey);
-            let iconExpand = isExpanded ? 'chevron-up' : 'box';
-            let btnExpandClass = isExpanded ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100';
 
             h += `
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${r._id}')" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-400 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
-                <td class="px-4 py-3 text-center col-open"><button onclick="toggleExpandRow('${r.gKey}')" class="p-1.5 border rounded-md transition flex mx-auto items-center justify-center shadow-sm ${btnExpandClass}"><i data-lucide="${iconExpand}" class="w-4 h-4"></i></button></td>
+                <td class="px-4 py-3 text-center col-open"><button onclick="bukaBreakdown('${r.gKey}')" class="p-1.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-md transition flex mx-auto items-center justify-center shadow-sm"><i data-lucide="box" class="w-4 h-4"></i></button></td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}">${sv['col-jenis']}</td>
                 <td class="px-4 py-3 font-medium text-slate-800 text-left col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}">${sv['col-nama']}</td>
                 <td class="px-4 py-3 font-medium text-slate-700 text-left col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}">${sv['col-pjg']}</td>
@@ -530,19 +522,7 @@ function renderTableBody() {
                 <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi ${hiddenCols.includes('col-estimasi')?'col-hidden':''}">${sv['col-estimasi']}</td>
                 <td class="px-4 py-3 font-medium text-slate-500 text-left col-ket ${hiddenCols.includes('col-ket')?'col-hidden':''}">${sv['col-ket']}</td>
                 <td class="px-4 py-3 font-black text-emerald-700 text-center col-qty text-base ${hiddenCols.includes('col-qty')?'col-hidden':''}">${sv['col-qty']}</td>
-            </tr>`;
-
-            // REVISI: Baris Dropdown Inline (Sub-table)
-            let subRowClass = isExpanded ? 'detail-row open' : 'detail-row';
-            let subTableHtml = generateSubTableHtml(r);
-
-            h += `
-            <tr class="${subRowClass} bg-slate-100 shadow-inner border-b-2 border-slate-300" id="subrow-${r.gKey}">
-                <td colspan="15" class="p-4 border-l-4 border-indigo-500">
-                    ${subTableHtml}
-                </td>
-            </tr>`;
-
+            `;
         } else if (modeKS === 'detail') {
             h += `
                 <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this, '${r._id}')" class="cb-main cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-400 focus:ring-blue-500" ${isSelected ? 'checked' : ''}></td>
@@ -573,92 +553,13 @@ function renderTableBody() {
     updatePaginationUI();
 }
 
-// REVISI: Fungsi Expand Row Inline (Pengganti Modal Breakdown)
-window.toggleExpandRow = function(gKey) {
-    if (expandedRows.has(gKey)) {
-        expandedRows.delete(gKey);
-    } else {
-        expandedRows.add(gKey);
-    }
-    renderTableBody(); // Re-render untuk memunculkan/menyembunyikan sub-row
-};
-
-function generateSubTableHtml(item) {
-    let rowsHtml = item.areas.map((a, i) => {
-        const isKonversi = a.konversi && a.konversi !== '-';
-        const textClass = isKonversi ? 'text-red-600 font-bold' : 'text-slate-700';
-        const ketText = isKonversi ? `[LOCKED: ${a.konversi}] ${a.keterangan || '-'}` : (a.keterangan || '-');
-
-        return `
-            <div class="flex items-center justify-between py-2 border-b border-slate-200/60 last:border-0 hover:bg-slate-50 transition px-2">
-                <div class="flex items-center gap-3 w-1/3">
-                    <input type="checkbox" data-id="${a.id}" data-idsku="${a.id_sku_base}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-sub-${item.gKey} cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 shrink-0">
-                    <span class="font-bold text-slate-800 w-20 shrink-0">${a.area}</span>
-                    <span class="font-semibold text-slate-600 truncate">${a.po_aktual}</span>
-                </div>
-                <div class="flex items-center gap-3 w-1/3">
-                    <span class="font-semibold text-purple-600 truncate w-1/2">Est: ${a.customer_estimasi}</span>
-                    <span class="font-medium ${textClass} truncate w-1/2" title="${ketText}">${ketText}</span>
-                </div>
-                <div class="w-1/4 text-right">
-                    <span class="font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">${a.qty} Dus</span>
-                </div>
-            </div>`;
-    }).join('');
-
-    return `
-        <div class="bg-slate-100/50 rounded-lg border border-slate-300 shadow-inner p-3 m-2 max-w-5xl mx-auto">
-            <div class="flex items-center gap-2 mb-2 pb-2 border-b border-slate-200">
-                <input type="checkbox" onchange="toggleCentangSubRow(this.checked, '${item.gKey}')" class="cursor-pointer rounded border-slate-400 text-blue-600 focus:ring-blue-500 w-4 h-4">
-                <span class="text-xs font-bold text-slate-500 uppercase">Pilih Semua Area</span>
-            </div>
-            
-            <div class="flex flex-col gap-1 mb-4">
-                ${rowsHtml}
-            </div>
-
-            <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
-                <button onclick="salinDataSubRow('${item.gKey}')" class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-lg transition shadow-sm flex items-center gap-1.5"><i data-lucide="copy" class="w-3.5 h-3.5"></i> Salin Detail</button>
-                <button onclick="siapkanGantiPO('subrow', '${item.gKey}')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition shadow-sm flex items-center gap-1.5"><i data-lucide="tags" class="w-3.5 h-3.5"></i> Ganti Customer</button>
-                <button onclick="bukaModalGantiKet('subrow', '${item.gKey}')" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-lg transition shadow-sm flex items-center gap-1.5"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Ganti Ket</button>
-            </div>
-        </div>
-    `;
-}
-
-window.toggleCentangSubRow = function(checked, gKey) {
-    document.querySelectorAll(`.cb-sub-${gKey}`).forEach(cb => cb.checked = checked);
-};
-
-window.salinDataSubRow = function(gKey) {
-    const cek = document.querySelectorAll(`.cb-sub-${gKey}:checked`);
-    if(cek.length === 0) return alert("Centang baris area yang ingin disalin!");
-
-    let textSalin = "Area Penyimpanan\tCustomer Aktual\tCustomer Estimasi\tKeterangan\tTotal Dus\n";
-    cek.forEach(cb => {
-        const tr = cb.closest('div.flex.items-center.justify-between');
-        if(tr) {
-            const spans = tr.querySelectorAll('span');
-            textSalin += `${spans[0].innerText}\t${spans[1].innerText}\t${spans[2].innerText}\t${spans[3].innerText}\t${spans[4].innerText}\n`;
-        }
-    });
-
-    navigator.clipboard.writeText(textSalin).then(() => {
-        alert("Berhasil menyalin detail area!");
-    }).catch(err => { alert("Browser menolak akses Clipboard."); });
-};
-
 // REVISI Paginasi Baru (Input Angka)
 function updatePaginationUI() {
     const totalFiltered = filteredData.length;
     const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
     
     let sumQty = 0;
-    if (modeKS === 'nonaktif') {
-        sumQty = totalFiltered;
-    } else {
-        filteredData.forEach(r => { sumQty += parseInt(r.searchValues['col-qty']) || 0; });
-    }
+    filteredData.forEach(r => { sumQty += parseInt(r.searchValues['col-qty']) || 0; });
 
     document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
     document.getElementById('lbl-total-qty').innerText = sumQty;
@@ -871,7 +772,7 @@ window.closeFilterMenu = function() { document.getElementById('excel-filter-menu
 
 window.clearFilterForCurrentCol = function() {
     delete activeFilters[currentFilterCol];
-    closeFilterMenu(); applyFilters(); updateFilterIcons();
+    closeFilterMenu(); applyFilters(); 
 };
 
 window.applyFilterForCurrentCol = function() {
@@ -892,7 +793,7 @@ window.applyFilterForCurrentCol = function() {
         activeFilters[currentFilterCol] = selectedVals;
     }
     
-    closeFilterMenu(); applyFilters(); updateFilterIcons();
+    closeFilterMenu(); applyFilters(); 
 };
 
 function updateFilterIcons() {
@@ -933,8 +834,8 @@ window.bukaModalGantiKet = function(context, gKey = null) {
         if(selectedForActionKet.length === 0) {
             return alert("Pilih / centang minimal 1 baris item yang ingin diganti keterangannya!");
         }
-    } else if (context === 'subrow') {
-        const checkboxes = document.querySelectorAll(`.cb-sub-${gKey}:checked`);
+    } else if (context === 'breakdown') {
+        const checkboxes = document.querySelectorAll('.cb-bd:checked');
         if(checkboxes.length === 0) {
             return alert("Centang minimal 1 baris area pada detail breakdown!");
         }
@@ -996,6 +897,9 @@ window.eksekusiGantiKet = async function() {
         }
 
         document.getElementById('modal-ganti-keterangan').classList.add('hidden');
+        if(!document.getElementById('modal-breakdown').classList.contains('hidden')) {
+            tutupModalBreakdown();
+        }
 
         alert(`✅ SUKSES!\nKeterangan berhasil diubah menjadi "${newKet}".`);
         await muatDataStok();
@@ -1040,8 +944,9 @@ window.salinData = function() {
         textSalin += rowData.join('\t') + '\n';
     });
     
-    navigator.clipboard.writeText(textSalin);
-    alert(`Tersalin! Buka Excel dan Paste (Ctrl+V).`);
+    navigator.clipboard.writeText(textSalin).then(() => {
+        alert(`Tersalin! Buka Excel dan Paste (Ctrl+V).`);
+    });
 };
 
 window.downloadXLS = function() {
@@ -1080,9 +985,72 @@ window.downloadXLS = function() {
 };
 
 // ==========================================
-// MODAL GANTI PO & KONVERSI
+// MODAL BREAKDOWN & GANTI PO & KONVERSI
 // ==========================================
-window.siapkanGantiPO = function(context, gKey = null) {
+window.bukaBreakdown = function(gKey) {
+    const item = dataKSGlobal.find(g => g.gKey === gKey); if(!item) return;
+
+    document.getElementById('bd-title-item').innerText = `${item.nama} | ${item.pjg} | ${item.grade} | DUS: ${item.dus} | SHADING: ${item.shading} | KET: ${item.ket}`;
+    currentBreakdownData = item.areas;
+
+    const tbody = document.getElementById('tbody-breakdown');
+    tbody.innerHTML = item.areas.map((a, i) => {
+        const stripeClass = i % 2 === 0 ? 'stripe-1' : 'stripe-2';
+        
+        const isKonversi = a.konversi && a.konversi !== '-';
+        const rowBg = isKonversi ? '!bg-red-100 !text-red-900 font-bold' : stripeClass;
+        const ketText = isKonversi ? `[LOCKED: ${a.konversi}] ${a.keterangan || '-'}` : (a.keterangan || '-');
+
+        return `
+            <tr class="transition bd-row text-[13px] ${rowBg}">
+                <td class="px-4 py-3 text-center sticky-col"><input type="checkbox" onchange="highlightBdRow(this)" data-id="${a.id}" data-idsku="${a.id_sku_base}" data-jenis="${a.jenis}" data-nama="${a.nama}" data-pjg="${a.pjg}" data-grade="${a.grade}" data-dus="${a.dus}" data-shading="${a.shading}" data-area="${a.area}" data-po="${a.po_aktual}" data-estimasi="${a.customer_estimasi}" data-qty="${a.qty}" data-ket="${a.keterangan}" data-kondisi="${a.kondisi}" class="cb-bd cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-400 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 font-semibold text-slate-800 text-left">${a.area}</td>
+                <td class="px-4 py-3 font-semibold text-slate-900 text-left col-po">${a.po_aktual}</td>
+                <td class="px-4 py-3 font-semibold text-purple-700 text-left col-estimasi">${a.customer_estimasi}</td>
+                <td class="px-4 py-3 font-medium text-slate-600 text-left whitespace-normal min-w-[200px] ${isKonversi ? '!text-red-800' : ''}">${ketText}</td>
+                <td class="px-4 py-3 font-black text-emerald-700 text-center">${a.qty}</td>
+            </tr>`;
+    }).join('');
+
+    document.getElementById('modal-breakdown').classList.remove('hidden');
+    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+};
+
+window.tutupModalBreakdown = function() { 
+    document.getElementById('modal-breakdown').classList.add('hidden'); 
+    document.getElementById('overlay-klik-luar').classList.add('hidden'); 
+};
+
+window.highlightBdRow = function(cb) {
+    const tr = cb.closest('tr');
+    if(cb.checked) { tr.classList.add('selected-row'); } 
+    else { tr.classList.remove('selected-row'); }
+};
+
+window.toggleCentangBreakdown = function(checked) { 
+    document.querySelectorAll('.cb-bd').forEach(cb => { cb.checked = checked; highlightBdRow(cb); }); 
+};
+
+window.salinDataBreakdown = function() {
+    const cek = document.querySelectorAll('.cb-bd:checked');
+    if(cek.length === 0) return alert("Centang baris area yang ingin disalin!");
+
+    let textSalin = "Area Penyimpanan\tCustomer Aktual\tCustomer Estimasi\tKeterangan\tTotal Dus\n";
+    cek.forEach(cb => {
+        const tr = cb.closest('tr');
+        if(tr) {
+            const cols = tr.querySelectorAll('td');
+            textSalin += `${cols[1].innerText}\t${cols[2].innerText}\t${cols[3].innerText}\t${cols[4].innerText}\t${cols[5].innerText}\n`;
+        }
+    });
+
+    navigator.clipboard.writeText(textSalin).then(() => {
+        alert("Berhasil menyalin detail area!");
+    }).catch(err => { alert("Browser menolak akses Clipboard."); });
+};
+
+window.siapkanGantiPO = function(context) {
     selectedForAction = [];
     let totalDus = 0;
 
@@ -1114,8 +1082,8 @@ window.siapkanGantiPO = function(context, gKey = null) {
             return alert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya!');
         }
 
-    } else if (context === 'subrow') { 
-        const checkboxes = document.querySelectorAll(`.cb-sub-${gKey}:checked`); 
+    } else { 
+        const checkboxes = document.querySelectorAll('.cb-bd:checked'); 
         if(checkboxes.length === 0) {
             return alert('Silakan centang item / area yang ingin diganti Customer Estimasi-nya!');
         }
@@ -1152,9 +1120,7 @@ window.siapkanGantiPO = function(context, gKey = null) {
 
 window.tutupModalPO = function() { 
     document.getElementById('modal-po').classList.add('hidden'); 
-    if(document.getElementById('modal-breakdown') && !document.getElementById('modal-breakdown').classList.contains('hidden')) {
-        // Do nothing, let breakdown modal stay open
-    } else {
+    if(document.getElementById('modal-breakdown').classList.contains('hidden')) {
         document.getElementById('overlay-klik-luar').classList.add('hidden'); 
     }
 };
@@ -1239,6 +1205,7 @@ window.eksekusiGantiPO = async function() {
         }
         
         tutupModalPO(); 
+        if(sourcePOContext === 'breakdown') tutupModalBreakdown();
         
         alert("✅ Berhasil mengganti Customer Estimasi!");
         await muatDataStok();
@@ -1625,4 +1592,3 @@ window.resetUrutanKolom = function() {
     renderTableHeaders();
     renderTableBody(); 
 };
-
