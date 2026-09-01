@@ -40,7 +40,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==========================================
-// DAFTAR MENU LENGKAP WMS (TERMASUK PENYESUAIAN)
+// DAFTAR MENU LENGKAP WMS
 // ==========================================
 const APP_MENUS = [
     { id: 'dashboard', title: 'Dashboard Utama', icon: 'layout-dashboard', url: 'menu.html' },
@@ -93,45 +93,7 @@ style.innerHTML = `
     .hide-scrollbar::-webkit-scrollbar { display: none; } 
     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
-    #sidebar-menu-container::-webkit-scrollbar { width: 5px; }
-    #sidebar-menu-container::-webkit-scrollbar-track { background: transparent; }
-    #sidebar-menu-container::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-    #sidebar-menu-container::-webkit-scrollbar-thumb:hover { background: #475569; }
-
     body > div.absolute.inset-0 { padding-top: 0 !important; position: relative !important; height: 100% !important; }
-    #app-sidebar { transition: width 0.3s ease, transform 0.3s ease; }
-    
-    @media (min-width: 640px) {
-        #app-sidebar:not(.expanded) { width: 4.5rem !important; }
-        #app-sidebar:not(.expanded) .sidebar-text { display: none !important; }
-        #app-sidebar:not(.expanded) .sidebar-logo-text { display: none !important; }
-        #app-sidebar:not(.expanded) .sidebar-item { justify-content: center !important; padding: 0 !important; width: 3rem !important; margin: 0 auto !important; }
-        
-        #app-sidebar:not(.expanded) .sidebar-divider { height: 1px !important; background-color: #334155 !important; margin: 1rem 1rem !important; padding: 0 !important; }
-        #app-sidebar:not(.expanded) .sidebar-divider .sidebar-text { display: none !important; }
-        
-        #app-sidebar.expanded { width: 16rem !important; }
-        #app-sidebar.expanded .sidebar-text { display: block !important; }
-        #app-sidebar.expanded .sidebar-logo-text { display: block !important; }
-        #app-sidebar.expanded .sidebar-item { justify-content: flex-start !important; padding: 0 1rem !important; width: 100% !important; }
-        #app-sidebar.expanded #btn-expand-container { justify-content: flex-end !important; padding-right: 1rem !important; }
-    }
-    
-    @media (max-width: 639px) {
-        #app-sidebar { width: 16rem !important; }
-        .sidebar-text { display: block !important; }
-        .sidebar-logo-text { display: block !important; }
-        .sidebar-item { justify-content: flex-start !important; padding: 0 1rem !important; width: 100% !important; }
-    }
-
-    .sidebar-item { position: relative; }
-    .sidebar-tooltip {
-        visibility: hidden; opacity: 0; position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
-        margin-left: 10px; background-color: #1e293b; color: white; padding: 6px 12px; border-radius: 6px;
-        font-size: 12px; font-weight: bold; white-space: nowrap; z-index: 100; transition: all 0.2s ease;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); pointer-events: none;
-    }
-    #app-sidebar:not(.expanded) .sidebar-item:hover .sidebar-tooltip { visibility: visible; opacity: 1; margin-left: 15px; }
 
     .hdr-std { 
         background-color: var(--tbl-hdr-bg) !important; 
@@ -176,6 +138,13 @@ style.innerHTML = `
     input[type=range]:not(.custom-vertical-slider) { -webkit-appearance: none; width: 100%; background: transparent; }
     input[type=range]:not(.custom-vertical-slider)::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #4f46e5; cursor: pointer; margin-top: -6px; }
     input[type=range]:not(.custom-vertical-slider)::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #cbd5e1; border-radius: 2px; }
+
+    /* Animasi Grid Menu */
+    @keyframes slideDownFade {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .menu-grid-item { animation: slideDownFade 0.3s ease-out forwards; }
 `;
 document.head.appendChild(style);
 
@@ -230,7 +199,7 @@ function applyTableDesign() {
 applyTableDesign();
 
 // ==========================================
-// INISIALISASI MODERN LAYOUT
+// INISIALISASI MODERN LAYOUT (NO SIDEBAR, GRID MENU)
 // ==========================================
 async function initModernLayout(pageMeta) {
     const sessionString = localStorage.getItem('user_session');
@@ -239,10 +208,6 @@ async function initModernLayout(pageMeta) {
     const user = JSON.parse(sessionString);
     const initial = user.username.charAt(0).toUpperCase();
     const isCreator = user.role && user.role.toLowerCase() === 'creator';
-    
-    const isExpanded = localStorage.getItem('sidebar_expanded') === 'true';
-    const expandedClass = isExpanded ? 'expanded' : '';
-    const expandIcon = isExpanded ? 'chevron-left' : 'chevron-right';
 
     let allowedMenus = [];
     try {
@@ -273,86 +238,47 @@ async function initModernLayout(pageMeta) {
         return allowedUsers.includes(user.username);
     });
 
-    const finalMenus = [];
-    for(let i=0; i<filteredMenus.length; i++) {
-        const curr = filteredMenus[i];
-        if(curr.isDivider) {
-            if(i === filteredMenus.length - 1) continue; 
-            if(filteredMenus[i+1].isDivider) continue; 
+    // Grouping Menu untuk Grid Modal
+    let groupedMenus = {};
+    let currentGroup = 'MAIN';
+    filteredMenus.forEach(m => {
+        if(m.isDivider) {
+            currentGroup = m.title;
+        } else {
+            if(!groupedMenus[currentGroup]) groupedMenus[currentGroup] = [];
+            groupedMenus[currentGroup].push(m);
         }
-        finalMenus.push(curr);
-    }
+    });
 
     const originalNodes = Array.from(document.body.childNodes);
     document.body.innerHTML = ''; 
 
     const layoutWrapper = document.createElement('div');
-    layoutWrapper.className = 'flex h-[100dvh] bg-slate-100 overflow-hidden font-sans w-full';
+    layoutWrapper.className = 'flex flex-col h-[100dvh] bg-slate-100 overflow-hidden font-sans w-full';
 
-    let sidebarHTML = `
-        <aside id="app-sidebar" class="fixed sm:relative inset-y-0 left-0 z-[70] sm:z-40 bg-[#0f172a] flex flex-col py-4 transform -translate-x-full sm:translate-x-0 shadow-2xl sm:shadow-none border-r border-slate-800 shrink-0 ${expandedClass}">
-            <a href="menu.html" class="mb-6 flex items-center justify-center gap-3 px-4 h-10 transition cursor-pointer overflow-hidden shrink-0">
-                <div class="bg-white p-1 rounded-lg shrink-0 flex items-center justify-center w-10 h-10 shadow-md">
-                    <img src="sunpevece.png" alt="Logo" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
-                </div>
-                <span class="sidebar-logo-text text-white font-black text-lg tracking-wider whitespace-nowrap">SUNPEVECE</span>
-            </a>
-            
-            <div id="sidebar-menu-container" class="flex flex-col gap-1.5 w-full px-3 overflow-y-auto flex-1 pb-6">
-    `;
-    
-    finalMenus.forEach(menu => {
-        if (menu.isDivider) { 
-            sidebarHTML += `
-                <div class="sidebar-divider mt-5 mb-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap transition-all">
-                    <span class="sidebar-text">${menu.title}</span>
-                </div>
-            `; 
-        } else {
-            const isActive = pageMeta && menu.id === pageMeta.id;
-            const bgClass = isActive ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-white';
-            sidebarHTML += `
-                <a href="${menu.url}" data-title="${menu.title}" class="sidebar-item flex items-center h-10 rounded-xl transition-all cursor-pointer ${bgClass}">
-                    <i data-lucide="${menu.icon}" class="w-5 h-5 shrink-0 pointer-events-none"></i>
-                    <span class="sidebar-text ml-3 text-sm font-bold whitespace-nowrap pointer-events-none">${menu.title}</span>
-                </a>
-            `;
-        }
-    });
-    
-    sidebarHTML += `
-            </div>
-            <div id="btn-expand-container" class="mt-auto pt-4 px-3 w-full border-t border-slate-800 hidden sm:flex justify-center transition-all">
-                <button onclick="toggleSidebarExpand()" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition cursor-pointer bg-slate-900 border border-slate-700 shadow-sm">
-                    <i data-lucide="${expandIcon}" id="icon-expand-sidebar" class="w-5 h-5"></i>
-                </button>
-            </div>
-        </aside>
-        <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/60 z-[60] hidden backdrop-blur-sm transition-opacity sm:hidden"></div>
-    `;
-
-    let rightArea = document.createElement('div');
-    rightArea.className = 'flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden bg-slate-100';
-    
+    // HEADER BARU (DARK NAVY) DENGAN TOMBOL LOGO
     let headerHTML = `
-        <header class="bg-white text-slate-800 flex items-center justify-between h-16 px-4 sm:px-6 border-b border-slate-200 z-30 shrink-0 shadow-sm">
+        <header class="bg-[#0f172a] text-white flex items-center justify-between h-16 px-4 sm:px-6 border-b border-slate-800 z-30 shrink-0 shadow-md">
             <div class="flex items-center gap-4">
-                <button onclick="toggleSidebar()" class="sm:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition cursor-pointer">
-                    <i data-lucide="menu" class="w-6 h-6"></i>
+                <button onclick="toggleGridMenu()" class="flex items-center gap-3 hover:bg-slate-800 p-1.5 pr-4 rounded-xl transition cursor-pointer group">
+                    <div class="bg-white p-1 rounded-lg shrink-0 flex items-center justify-center w-9 h-9 shadow-sm group-hover:scale-105 transition-transform">
+                        <img src="sunpevece.png" alt="Logo" class="w-7 h-7 object-contain" onerror="this.style.display='none'">
+                    </div>
+                    <div class="flex flex-col items-start">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">WMS Menu</span>
+                        <h1 class="text-sm sm:text-base font-black tracking-wide uppercase text-white leading-none group-hover:text-blue-400 transition-colors">${pageMeta ? pageMeta.title : 'PORTAL'} <i data-lucide="chevron-down" class="inline w-4 h-4 opacity-50"></i></h1>
+                    </div>
                 </button>
-                <div class="flex items-center gap-3">
-                    <h1 class="text-base sm:text-lg font-black tracking-wide uppercase text-slate-800">${pageMeta ? pageMeta.title : 'WMS PORTAL'}</h1>
-                </div>
             </div>
             <div class="flex items-center gap-3 sm:gap-5">
-                <button onclick="bukaModalInbox()" class="relative p-2 rounded-full hover:bg-slate-100 text-slate-500 transition cursor-pointer" title="Pesan & Notifikasi">
+                <button onclick="bukaModalInbox()" class="relative p-2 rounded-full hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer" title="Pesan & Notifikasi">
                     <i data-lucide="mail" class="w-5 h-5"></i>
-                    <span id="inbox-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                    <span id="inbox-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0f172a]"></span>
                 </button>
                 <div class="relative">
-                    <button onclick="toggleProfileMenu()" class="flex items-center gap-2 p-1 hover:bg-slate-50 rounded-full transition pr-3 cursor-pointer border border-transparent hover:border-slate-200">
-                        <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black shadow-inner text-sm">${initial}</div>
-                        <span class="text-xs font-black uppercase text-slate-700 hidden sm:block">${user.username}</span>
+                    <button onclick="toggleProfileMenu()" class="flex items-center gap-2 p-1 hover:bg-slate-800 rounded-full transition pr-3 cursor-pointer border border-transparent hover:border-slate-700">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black shadow-inner text-sm border border-blue-400">${initial}</div>
+                        <span class="text-xs font-black uppercase text-slate-200 hidden sm:block">${user.username}</span>
                         <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 hidden sm:block"></i>
                     </button>
                     <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-50 text-slate-800">
@@ -369,7 +295,7 @@ async function initModernLayout(pageMeta) {
         </header>
     `;
 
-    rightArea.innerHTML = headerHTML;
+    layoutWrapper.innerHTML = headerHTML;
     
     let mainContent = document.createElement('main');
     mainContent.className = 'flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-100 relative';
@@ -384,12 +310,53 @@ async function initModernLayout(pageMeta) {
         mainContent.appendChild(node);
     });
     
-    rightArea.appendChild(mainContent);
-    layoutWrapper.innerHTML = sidebarHTML;
-    layoutWrapper.appendChild(rightArea);
+    layoutWrapper.appendChild(mainContent);
 
-    const modalsHTML = `
-        <div id="modal-password" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[90] px-4 backdrop-blur-sm">
+    // BUILD GRID MENU MODAL
+    let gridMenuHTML = `
+        <div id="modal-grid-menu" class="hidden fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md overflow-y-auto custom-scroll transition-opacity">
+            <div class="min-h-screen p-4 sm:p-8 flex flex-col max-w-7xl mx-auto w-full">
+                
+                <div class="flex justify-between items-center mb-8 pb-4 border-b border-slate-700">
+                    <h2 class="text-2xl font-black text-white flex items-center gap-3"><i data-lucide="layout-grid" class="text-blue-500 w-8 h-8"></i> MENU NAVIGASI</h2>
+                    <button onclick="closeGridMenu()" class="p-2 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-xl transition cursor-pointer"><i data-lucide="x" class="w-6 h-6"></i></button>
+                </div>
+                
+                <div class="flex flex-col gap-8 pb-10">
+    `;
+
+    let delayDelay = 0;
+    for (let group in groupedMenus) {
+        if (groupedMenus[group].length === 0) continue;
+        
+        gridMenuHTML += `
+            <div>
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 pl-1 border-l-2 border-blue-500">${group}</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        `;
+
+        groupedMenus[group].forEach(menu => {
+            const isActive = pageMeta && menu.id === pageMeta.id;
+            const bgClass = isActive ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-900/50' : 'bg-slate-800 border-slate-700 hover:bg-slate-700 hover:border-slate-500';
+            const textClass = isActive ? 'text-white' : 'text-slate-200 group-hover:text-white';
+            const iconClass = isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-400';
+
+            gridMenuHTML += `
+                <a href="${menu.url}" class="menu-grid-item group flex flex-col items-center justify-center p-4 sm:p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${bgClass}" style="animation-delay: ${delayDelay}ms">
+                    <i data-lucide="${menu.icon}" class="w-8 h-8 sm:w-10 sm:h-10 mb-3 transition-colors ${iconClass}"></i>
+                    <span class="text-xs sm:text-sm font-bold text-center leading-tight transition-colors ${textClass}">${menu.title}</span>
+                </a>
+            `;
+            delayDelay += 20;
+        });
+
+        gridMenuHTML += `</div></div>`;
+    }
+
+    gridMenuHTML += `</div></div></div>`;
+
+    const modalsHTML = gridMenuHTML + `
+        <div id="modal-password" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm border border-slate-200 text-slate-800">
                 <h3 class="text-lg font-black mb-4 flex items-center gap-2"><i data-lucide="key-round" class="text-blue-600"></i> Ganti Password</h3>
                 <input type="password" placeholder="Password Baru" class="w-full p-3 border border-slate-300 rounded-lg mb-5 font-bold outline-none focus:border-blue-600 bg-slate-50">
@@ -400,7 +367,7 @@ async function initModernLayout(pageMeta) {
             </div>
         </div>
 
-        <div id="modal-table-design" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-4 backdrop-blur-sm">
+        <div id="modal-table-design" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 text-slate-800">
                 <h3 class="text-lg font-black mb-1 flex items-center gap-2"><i data-lucide="palette" class="text-indigo-600"></i> Desain Tabel WMS</h3>
                 <p class="text-xs font-medium text-slate-500 mb-5">Pengaturan ini akan diterapkan ke seluruh tabel di WMS.</p>
@@ -465,7 +432,7 @@ async function initModernLayout(pageMeta) {
             </div>
         </div>
         
-        <div id="modal-inbox" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[100] px-2 sm:px-4 backdrop-blur-sm">
+        <div id="modal-inbox" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-2 sm:px-4 backdrop-blur-sm">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl border border-slate-200 text-slate-800 h-[85vh] flex flex-col overflow-hidden">
                 <div class="p-4 sm:p-5 flex justify-between items-center border-b border-slate-200 bg-slate-50 shrink-0">
                     <h3 class="text-base font-black flex items-center gap-2 text-slate-800"><i data-lucide="mail" class="text-blue-600"></i> KOTAK PESAN (INBOX)</h3>
@@ -547,62 +514,21 @@ async function initModernLayout(pageMeta) {
     layoutWrapper.insertAdjacentHTML('beforeend', modalsHTML);
     document.body.appendChild(layoutWrapper);
 
-    const globalTooltip = document.createElement('div');
-    globalTooltip.id = 'global-sidebar-tooltip';
-    globalTooltip.className = 'fixed hidden bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-md shadow-xl z-[9999] pointer-events-none whitespace-nowrap transition-opacity duration-200 opacity-0 border border-slate-700';
-    document.body.appendChild(globalTooltip);
-
-    document.body.addEventListener('mouseover', (e) => {
-        const item = e.target.closest('.sidebar-item');
-        if (item) {
-            const sidebar = document.getElementById('app-sidebar');
-            if (window.innerWidth >= 640 && sidebar && !sidebar.classList.contains('expanded')) {
-                const rect = item.getBoundingClientRect();
-                globalTooltip.innerText = item.getAttribute('data-title');
-                globalTooltip.style.top = (rect.top + (rect.height / 2) - 16) + 'px';
-                globalTooltip.style.left = (rect.right + 15) + 'px';
-                
-                globalTooltip.classList.remove('hidden');
-                void globalTooltip.offsetWidth; 
-                globalTooltip.classList.remove('opacity-0');
-            }
-        }
-    });
-
-    document.body.addEventListener('mouseout', (e) => {
-        const item = e.target.closest('.sidebar-item');
-        if (item) {
-            globalTooltip.classList.add('opacity-0');
-            setTimeout(() => {
-                if(globalTooltip.classList.contains('opacity-0')) {
-                    globalTooltip.classList.add('hidden');
-                }
-            }, 200);
-        }
-    });
-
     lucide.createIcons();
     setTimeout(cekNotifikasiInbox, 1000); 
 }
 
-window.toggleSidebar = function() { 
-    document.getElementById('app-sidebar').classList.toggle('-translate-x-full'); 
-    document.getElementById('sidebar-overlay').classList.toggle('hidden'); 
+window.toggleGridMenu = function() {
+    const menu = document.getElementById('modal-grid-menu');
+    if (menu.classList.contains('hidden')) {
+        menu.classList.remove('hidden');
+    } else {
+        menu.classList.add('hidden');
+    }
 };
 
-window.toggleSidebarExpand = function() {
-    const sidebar = document.getElementById('app-sidebar');
-    const icon = document.getElementById('icon-expand-sidebar');
-    sidebar.classList.toggle('expanded');
-    
-    if(sidebar.classList.contains('expanded')) {
-        localStorage.setItem('sidebar_expanded', 'true');
-        icon.setAttribute('data-lucide', 'chevron-left');
-    } else {
-        localStorage.setItem('sidebar_expanded', 'false');
-        icon.setAttribute('data-lucide', 'chevron-right');
-    }
-    lucide.createIcons();
+window.closeGridMenu = function() {
+    document.getElementById('modal-grid-menu').classList.add('hidden');
 };
 
 window.toggleProfileMenu = function() { 
@@ -985,4 +911,4 @@ window.terimaRequestPO = async function(idReq, qrcode, customerBaru) {
     } catch(err) {
         alert("Gagal memproses persetujuan: " + err.message);
     }
-    }
+}
