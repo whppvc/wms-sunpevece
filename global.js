@@ -40,7 +40,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==========================================
-// DAFTAR MENU LENGKAP WMS (DENGAN WARNA ICON)
+// DAFTAR MENU LENGKAP WMS
 // ==========================================
 const APP_MENUS = [
     { id: 'dashboard', title: 'Dashboard Utama', icon: 'layout-dashboard', url: 'menu.html', color: 'text-blue-500' },
@@ -56,7 +56,7 @@ const APP_MENUS = [
     { id: 'ganti_customer', title: 'Table Ganti Customer', icon: 'user-cog', url: 'ganti_customer.html', color: 'text-teal-500' },
     { id: 'req_konversi', title: 'Tabel Request Konversi', icon: 'replace', url: 'req_konversi.html', color: 'text-rose-500' },
     { id: 'input_opname', title: 'Input Stok Opname', icon: 'clipboard-check', url: 'input_opname.html', color: 'text-cyan-500' },
-    { isDivider: true, title: 'PERPINDAHAN & PENYESUAIAN' }, // REVISI: Nama Kategori Diubah
+    { isDivider: true, title: 'PERPINDAHAN & PENYESUAIAN' }, 
     { id: 'stok_nonaktif', title: 'Stok Nonaktif', icon: 'package-x', url: 'stok_nonaktif.html', color: 'text-red-500' },
     { id: 'scan_pic', title: 'Scan PIC Area', icon: 'user-check', url: 'scan_pic.html', color: 'text-fuchsia-500' },
     { id: 'riwayat_mutasi', title: 'Riwayat Konversi', icon: 'arrow-right-left', url: 'riwayat_konversi.html', color: 'text-slate-400' },
@@ -139,12 +139,11 @@ style.innerHTML = `
     input[type=range]:not(.custom-vertical-slider)::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #4f46e5; cursor: pointer; margin-top: -6px; }
     input[type=range]:not(.custom-vertical-slider)::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #cbd5e1; border-radius: 2px; }
 
-    /* Animasi Grid Menu */
     @keyframes slideDownFade {
         from { opacity: 0; transform: translateY(-10px); }
         to { opacity: 1; transform: translateY(0); }
     }
-    .menu-grid-item { animation: slideDownFade 0.2s ease-out forwards; }
+    .menu-grid-item { animation: slideDownFade 0.3s ease-out forwards; }
 `;
 document.head.appendChild(style);
 
@@ -199,7 +198,7 @@ function applyTableDesign() {
 applyTableDesign();
 
 // ==========================================
-// INISIALISASI MODERN LAYOUT (NO SIDEBAR, GRID MENU, FAV MENUS)
+// INISIALISASI MODERN LAYOUT
 // ==========================================
 async function initModernLayout(pageMeta) {
     const sessionString = localStorage.getItem('user_session');
@@ -238,7 +237,6 @@ async function initModernLayout(pageMeta) {
         return allowedUsers.includes(user.username);
     });
 
-    // Grouping Menu untuk Grid Modal
     let groupedMenus = {};
     let currentGroup = 'MAIN';
     filteredMenus.forEach(m => {
@@ -256,11 +254,9 @@ async function initModernLayout(pageMeta) {
     const layoutWrapper = document.createElement('div');
     layoutWrapper.className = 'flex flex-col h-[100dvh] bg-slate-100 overflow-hidden font-sans w-full';
 
-    // HEADER BARU (DARK NAVY) DENGAN TOMBOL LOGO & MENU FAVORIT
     let headerHTML = `
         <header class="bg-[#0f172a] text-white flex items-center justify-between h-16 px-4 sm:px-6 border-b border-slate-800 z-30 shrink-0 shadow-md">
             
-            <!-- KIRI: LOGO & JUDUL -->
             <div class="flex items-center gap-4 w-1/3">
                 <button onclick="toggleGridMenu()" class="flex items-center gap-3 hover:bg-slate-800 p-1.5 pr-4 rounded-xl transition cursor-pointer group">
                     <div class="bg-white p-1 rounded-lg shrink-0 flex items-center justify-center w-9 h-9 shadow-sm group-hover:scale-105 transition-transform">
@@ -273,12 +269,8 @@ async function initModernLayout(pageMeta) {
                 </button>
             </div>
 
-            <!-- TENGAH: MENU FAVORIT (KHUSUS DESKTOP) -->
-            <div id="favorite-menus-container" class="hidden sm:flex items-center justify-center gap-2 w-1/3">
-                <!-- Akan dirender oleh JS renderFavMenus() -->
-            </div>
+            <div id="favorite-menus-container" class="hidden sm:flex items-center justify-center gap-2 w-1/3"></div>
 
-            <!-- KANAN: PROFIL & INBOX -->
             <div class="flex items-center justify-end gap-3 sm:gap-5 w-1/3">
                 <button onclick="bukaModalInbox()" class="relative p-2 rounded-full hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer" title="Pesan & Notifikasi">
                     <i data-lucide="mail" class="w-5 h-5"></i>
@@ -321,7 +313,6 @@ async function initModernLayout(pageMeta) {
     
     layoutWrapper.appendChild(mainContent);
 
-    // BUILD GRID MENU MODAL (REVISI: Transparansi, Ukuran, Search Bar)
     let gridMenuHTML = `
         <div id="modal-grid-menu" class="hidden fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md overflow-y-auto custom-scroll transition-opacity">
             <div class="min-h-screen p-4 sm:p-6 flex flex-col max-w-6xl mx-auto w-full">
@@ -372,7 +363,6 @@ async function initModernLayout(pageMeta) {
 
     gridMenuHTML += `</div></div></div>`;
 
-    // MODAL MENU FAVORIT
     const favModalHTML = `
         <div id="modal-fav-menus" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 text-slate-800 flex flex-col max-h-[85vh]">
@@ -380,7 +370,7 @@ async function initModernLayout(pageMeta) {
                     <h3 class="text-base font-black flex items-center gap-2 text-blue-700"><i data-lucide="star" class="w-5 h-5"></i> Atur Menu Favorit</h3>
                     <button onclick="tutupModal('modal-fav-menus')" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
-                <p class="text-xs font-bold text-slate-500 mb-4 shrink-0">Pilih maksimal 3 menu untuk ditampilkan sebagai tombol cepat di header atas.</p>
+                <p class="text-xs font-bold text-slate-500 mb-4 shrink-0">Pilih maksimal 7 menu untuk ditampilkan sebagai tombol cepat di header atas.</p>
                 
                 <div class="flex-1 overflow-y-auto custom-scroll pr-2 space-y-4 mb-4">
                     ${Object.keys(groupedMenus).map(group => `
@@ -566,10 +556,9 @@ async function initModernLayout(pageMeta) {
     document.body.appendChild(layoutWrapper);
 
     lucide.createIcons();
-    renderFavMenus(); // Render Menu Favorit di Header
+    renderFavMenus(); 
     setTimeout(cekNotifikasiInbox, 1000); 
 
-    // REVISI: Event Listener Tombol Escape
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeGridMenu();
@@ -580,6 +569,75 @@ async function initModernLayout(pageMeta) {
         }
     });
 }
+
+// ==========================================
+// ENGINE KOMPONEN DINAMIS (TABS & FOOTER)
+// ==========================================
+window.renderSubmenuTabs = function(containerId, tabsArray, activeTabId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+
+    let html = '<div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">';
+    tabsArray.forEach(t => {
+        const cls = (t.id === activeTabId) ? activeClass : inactiveClass;
+        const hiddenCls = t.mobileOnly ? 'sm:hidden ' : '';
+        html += `<button onclick="${t.onClick}" id="${t.id}" class="${hiddenCls}${cls}"><i data-lucide="${t.icon}" class="w-4 h-4"></i> ${t.label}</button>`;
+    });
+    html += '</div>';
+    
+    container.innerHTML = html;
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+};
+
+window.renderTableFooter = function(containerId, labelQty = "Total Qty (Dus)") {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="flex items-center gap-4 w-full md:w-1/3">
+            <div class="flex-1 flex flex-col items-center bg-blue-50 border border-blue-200 py-1.5 rounded-lg">
+                <span class="text-[10px] font-bold text-slate-500 uppercase">Tampil Baris</span>
+                <span id="lbl-tampil-baris" class="text-xl font-bold text-blue-600 leading-none mt-0.5">0</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center bg-amber-50 border border-amber-200 py-1.5 rounded-lg">
+                <span class="text-[10px] font-bold text-slate-500 uppercase">${labelQty}</span>
+                <span id="lbl-total-qty" class="text-xl font-bold text-amber-600 leading-none mt-0.5">0</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center bg-emerald-50 border border-emerald-200 py-1.5 rounded-lg">
+                <span class="text-[10px] font-bold text-slate-500 uppercase">Baris Dipilih</span>
+                <span id="lbl-pilih-baris" class="text-xl font-bold text-emerald-600 leading-none mt-0.5">0</span>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 bg-white border border-slate-300 p-1.5 rounded-lg shadow-sm">
+                <span class="text-xs font-bold text-slate-500 uppercase px-2">Baris per hal:</span>
+                <select id="select-rows-per-page" onchange="changeRowsPerPage(this.value)" class="text-sm font-black text-blue-700 bg-blue-50 border border-blue-200 rounded outline-none cursor-pointer px-2 py-1 transition">
+                    <option value="10" selected>10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="ALL">Semua</option>
+                </select>
+            </div>
+            
+            <div class="flex items-center gap-1 bg-white border border-slate-300 p-1.5 rounded-lg shadow-sm">
+                <button onclick="prevPage()" class="px-3 py-1.5 bg-slate-100 text-slate-700 font-bold text-xs uppercase rounded hover:bg-slate-200 active:scale-95 transition">Prev</button>
+                
+                <div class="flex items-center px-2 gap-2">
+                    <span class="text-xs font-bold text-slate-500 uppercase">Hal</span>
+                    <input type="number" id="input-page-jump" onchange="jumpToPage(this.value)" class="w-14 text-center p-1 border border-slate-300 rounded font-black text-blue-700 outline-none focus:border-blue-500 bg-slate-50" value="1" min="1">
+                    <span class="text-xs font-bold text-slate-500 uppercase">dari <span id="lbl-total-halaman" class="text-slate-800 font-black">1</span></span>
+                </div>
+
+                <button onclick="nextPage()" class="px-3 py-1.5 bg-slate-100 text-slate-700 font-bold text-xs uppercase rounded hover:bg-slate-200 active:scale-95 transition">Next</button>
+            </div>
+        </div>
+    `;
+};
 
 // ==========================================
 // LOGIKA MENU FAVORIT
@@ -598,9 +656,9 @@ window.openFavMenuModal = function() {
 
 window.limitFavSelection = function(cb) {
     const checked = document.querySelectorAll('.cb-fav:checked');
-    if (checked.length > 3) {
+    if (checked.length > 7) {
         cb.checked = false;
-        alert('Maksimal hanya 3 menu favorit yang diizinkan!');
+        alert('Maksimal hanya 7 menu favorit yang diizinkan!');
     }
 };
 
@@ -681,394 +739,8 @@ window.filterMegaMenu = function(val) {
         }
     });
 
-    // Sembunyikan grup jika semua item di dalamnya tersembunyi
     document.querySelectorAll('.mega-menu-group').forEach(group => {
         const visibleItems = group.querySelectorAll('.menu-grid-item[style="display: flex;"], .menu-grid-item:not([style*="display: none"])');
         group.style.display = visibleItems.length > 0 ? 'block' : 'none';
     });
 };
-
-// ==========================================
-// LOGIKA LAINNYA (Profile, Inbox, dll)
-// ==========================================
-window.toggleProfileMenu = function() { 
-    document.getElementById('profile-dropdown').classList.toggle('hidden'); 
-};
-
-window.bukaModal = function(id) { 
-    document.getElementById(id).classList.remove('hidden'); 
-    document.getElementById('profile-dropdown').classList.add('hidden'); 
-};
-
-window.tutupModal = function(id) { 
-    document.getElementById(id).classList.add('hidden'); 
-};
-
-window.logout = function() { 
-    if(confirm('Yakin ingin keluar dari sistem?')) { 
-        localStorage.removeItem('user_session'); 
-        window.location.href = 'index.html'; 
-    } 
-};
-
-document.addEventListener('click', (e) => { 
-    const dropdown = document.getElementById('profile-dropdown'); 
-    if (dropdown && !e.target.closest('.relative')) dropdown.classList.add('hidden'); 
-});
-
-window.bukaModalTableDesign = function() {
-    document.getElementById('td-zebra').checked = tempDesign.isZebra;
-    document.getElementById('td-hover').checked = tempDesign.isHover !== false;
-    document.getElementById('td-opacity').value = tempDesign.opacity;
-    document.getElementById('lbl-opacity').innerText = tempDesign.opacity + '%';
-    updateDesignUI();
-    bukaModal('modal-table-design');
-};
-
-window.setTdColor = function(type, val, text = null) {
-    if(type === 'hdr') { tempDesign.hdrBg = val; tempDesign.hdrText = text; }
-    if(type === 'rowTheme') tempDesign.rowTheme = val;
-    if(type === 'hoverTheme') tempDesign.hoverTheme = val;
-    updateDesignUI();
-};
-
-function updateDesignUI() {
-    document.querySelectorAll('[id^="btn-hdr-"], [id^="btn-row-"], [id^="btn-hov-"]').forEach(btn => btn.innerHTML = '');
-    
-    const btnHdr = document.getElementById(`btn-hdr-${tempDesign.hdrBg}`);
-    if(btnHdr) btnHdr.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i>';
-    
-    const btnRow = document.getElementById(`btn-row-${tempDesign.rowTheme}`);
-    if(btnRow) btnRow.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
-    
-    const btnHov = document.getElementById(`btn-hov-${tempDesign.hoverTheme}`);
-    if(btnHov) btnHov.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
-    
-    lucide.createIcons();
-}
-
-window.saveTableDesign = function() {
-    tempDesign.isZebra = document.getElementById('td-zebra').checked;
-    tempDesign.isHover = document.getElementById('td-hover').checked;
-    tempDesign.opacity = document.getElementById('td-opacity').value;
-    localStorage.setItem('wms_table_design', JSON.stringify(tempDesign));
-    applyTableDesign();
-    tutupModal('modal-table-design');
-    
-    if(typeof applyPagination === 'function') applyPagination();
-};
-
-let inboxDataGlobal = [];
-
-async function cekNotifikasiInbox() {
-    const user = JSON.parse(localStorage.getItem('user_session'));
-    if(!user) return;
-
-    try {
-        const { count: msgCount } = await db.from('app_messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('recipient', user.username)
-            .eq('status', 'UNREAD');
-
-        let reqCount = 0;
-        const canApprove = user.role === 'Admin' || user.role === 'CS' || user.username.toLowerCase().includes('admin');
-        if (canApprove) {
-            const { count } = await db.from('request_ganti_customer')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'PENDING');
-            reqCount = count || 0;
-        }
-
-        const totalUnread = (msgCount || 0) + reqCount;
-        const badge = document.getElementById('inbox-badge');
-        
-        if (badge && totalUnread > 0) badge.classList.remove('hidden');
-        else if (badge) badge.classList.add('hidden');
-    } catch(e) { console.error("Gagal cek notif:", e); }
-}
-
-window.bukaModalInbox = async function() {
-    tutupModal('profile-dropdown');
-    document.getElementById('modal-inbox').classList.remove('hidden');
-    
-    document.getElementById('inbox-view-list').classList.remove('hidden');
-    document.getElementById('inbox-view-read').classList.add('hidden');
-    document.getElementById('inbox-view-compose').classList.add('hidden');
-    
-    await loadInboxData();
-};
-
-window.kembaliKeListInbox = function() {
-    document.getElementById('inbox-view-list').classList.remove('hidden');
-    document.getElementById('inbox-view-read').classList.add('hidden');
-    document.getElementById('inbox-view-compose').classList.add('hidden');
-    
-    loadInboxData(); 
-};
-
-async function loadInboxData() {
-    const tbody = document.getElementById('tbody-inbox');
-    if(!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i> Memuat pesan...</td></tr>';
-    lucide.createIcons();
-
-    const user = JSON.parse(localStorage.getItem('user_session'));
-    let tempInbox = [];
-
-    try {
-        const { data: msgs, error: errMsgs } = await db.from('app_messages')
-            .select('*')
-            .eq('recipient', user.username)
-            .order('created_at', { ascending: false });
-        
-        if(errMsgs) throw errMsgs;
-        
-        if(msgs) {
-            msgs.forEach(m => {
-                tempInbox.push({
-                    id: m.id,
-                    type: 'MESSAGE',
-                    created_at: m.created_at,
-                    sender: m.sender,
-                    subject: m.subject,
-                    body: m.body,
-                    status: m.status
-                });
-            });
-        }
-
-        const canApprove = user.role === 'Admin' || user.role === 'CS' || user.username.toLowerCase().includes('admin');
-        if (canApprove) {
-            const { data: reqs, error: errReqs } = await db.from('request_ganti_customer')
-                .select('*')
-                .eq('status', 'PENDING')
-                .order('created_at', { ascending: false });
-            
-            if(reqs) {
-                reqs.forEach(r => {
-                    tempInbox.push({
-                        id: r.id,
-                        type: 'REQ_CUSTOMER',
-                        created_at: r.created_at,
-                        sender: r.pic_request || 'Sistem',
-                        subject: `Request Ganti Customer: ${r.qrcode}`,
-                        body: `Pengajuan ganti customer untuk kardus:\n\nQR Code: ${r.qrcode}\nCustomer Lama: ${r.customer_awal}\nCustomer Baru (Request): ${r.customer_request}\nKeterangan: ${r.keterangan || '-'}`,
-                        status: 'UNREAD', 
-                        meta: r 
-                    });
-                });
-            }
-        }
-
-        tempInbox.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        inboxDataGlobal = tempInbox;
-        renderInboxTable();
-
-    } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-red-500 font-bold">Gagal memuat: ${err.message}</td></tr>`;
-    }
-}
-
-function renderInboxTable() {
-    const tbody = document.getElementById('tbody-inbox');
-    
-    if(inboxDataGlobal.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-400 font-bold"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> Kotak pesan kosong.</td></tr>';
-        lucide.createIcons();
-        return;
-    }
-
-    let html = '';
-    inboxDataGlobal.forEach((d, index) => {
-        const dt = new Date(d.created_at);
-        const tgl = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
-        
-        const isUnread = d.status === 'UNREAD';
-        const textClass = isUnread ? 'font-black text-slate-900' : 'font-medium text-slate-500';
-        const badge = isUnread 
-            ? '<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-200">Baru</span>'
-            : '<span class="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200">Dibaca</span>';
-
-        const iconType = d.type === 'REQ_CUSTOMER' ? '<i data-lucide="file-warning" class="w-4 h-4 text-orange-500 inline mr-1"></i>' : '';
-
-        html += `
-            <tr class="border-b border-slate-200 hover:bg-slate-50 transition cursor-pointer group">
-                <td class="p-3 text-center" onclick="event.stopPropagation()">
-                    <input type="checkbox" value="${d.id}" data-type="${d.type}" class="cb-inbox rounded text-blue-500 focus:ring-0 cursor-pointer w-4 h-4 border-slate-300">
-                </td>
-                <td class="p-3 text-xs text-center ${textClass}" onclick="bacaPesan(${index})">${tgl}</td>
-                <td class="p-3 text-sm text-center ${textClass}" onclick="bacaPesan(${index})">${d.sender}</td>
-                <td class="p-3 text-sm text-center ${textClass} truncate max-w-[200px]" onclick="bacaPesan(${index})">${iconType}${d.subject}</td>
-                <td class="p-3 text-center" onclick="bacaPesan(${index})">${badge}</td>
-            </tr>
-        `;
-    });
-    
-    tbody.innerHTML = html;
-    lucide.createIcons();
-}
-
-window.toggleAllInbox = function(checked) {
-    document.querySelectorAll('.cb-inbox').forEach(cb => cb.checked = checked);
-};
-
-window.bacaPesan = async function(index) {
-    const msg = inboxDataGlobal[index];
-    if(!msg) return;
-
-    const dt = new Date(msg.created_at);
-    document.getElementById('read-subject').innerText = msg.subject;
-    document.getElementById('read-sender').innerText = msg.sender;
-    document.getElementById('read-date').innerText = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
-    document.getElementById('read-body').innerText = msg.body;
-
-    const actionContainer = document.getElementById('read-action-container');
-    actionContainer.innerHTML = '';
-    actionContainer.classList.add('hidden');
-
-    if (msg.type === 'REQ_CUSTOMER') {
-        actionContainer.classList.remove('hidden');
-        actionContainer.innerHTML = `
-            <button onclick="terimaRequestPO(${msg.meta.id}, '${msg.meta.qrcode}', '${msg.meta.customer_request}')" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2 text-sm">
-                <i data-lucide="check-circle" class="w-4 h-4"></i> TERIMA REQUEST INI
-            </button>
-        `;
-        lucide.createIcons();
-    } 
-    else if (msg.type === 'MESSAGE' && msg.status === 'UNREAD') {
-        try {
-            await db.from('app_messages').update({ status: 'READ' }).eq('id', msg.id);
-            msg.status = 'READ'; 
-            cekNotifikasiInbox(); 
-        } catch(e) { console.error("Gagal update status read:", e); }
-    }
-
-    document.getElementById('inbox-view-list').classList.add('hidden');
-    document.getElementById('inbox-view-read').classList.remove('hidden');
-}
-
-window.bukaBuatPesan = async function() {
-    document.getElementById('inbox-view-list').classList.add('hidden');
-    document.getElementById('inbox-view-compose').classList.remove('hidden');
-    
-    document.getElementById('compose-subject').value = '';
-    document.getElementById('compose-body').value = '';
-    
-    const sel = document.getElementById('compose-recipient');
-    sel.innerHTML = '<option value="">Memuat...</option>';
-    
-    try {
-        const { data, error } = await db.from('app_users').select('username, role').order('username');
-        if(error) throw error;
-        
-        const currentUser = JSON.parse(localStorage.getItem('user_session'));
-        let html = '<option value="">-- Pilih Penerima --</option>';
-        
-        data.forEach(u => {
-            if(u.username !== currentUser.username) {
-                html += `<option value="${u.username}">${u.username} - ${u.role || 'User'}</option>`;
-            }
-        });
-        sel.innerHTML = html;
-    } catch(e) {
-        sel.innerHTML = '<option value="">Gagal memuat user</option>';
-    }
-}
-
-window.kirimPesan = async function() {
-    const currentUser = JSON.parse(localStorage.getItem('user_session'));
-    const recipient = document.getElementById('compose-recipient').value;
-    const subject = document.getElementById('compose-subject').value.trim();
-    const body = document.getElementById('compose-body').value.trim();
-
-    if(!recipient) return alert("Pilih penerima pesan!");
-    if(!subject) return alert("Perihal tidak boleh kosong!");
-    if(!body) return alert("Isi pesan tidak boleh kosong!");
-
-    const btn = document.getElementById('btn-kirim-pesan');
-    const ori = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Mengirim...';
-    btn.disabled = true;
-
-    try {
-        const { error } = await db.from('app_messages').insert([{
-            sender: currentUser.username,
-            recipient: recipient,
-            subject: subject,
-            body: body,
-            status: 'UNREAD'
-        }]);
-
-        if(error) throw error;
-        
-        alert("Pesan berhasil dikirim!");
-        kembaliKeListInbox();
-    } catch(e) {
-        alert("Gagal mengirim pesan: " + e.message);
-    } finally {
-        btn.innerHTML = ori;
-        btn.disabled = false;
-        lucide.createIcons();
-    }
-}
-
-window.hapusPesanMassal = async function() {
-    const checked = document.querySelectorAll('.cb-inbox:checked');
-    if(checked.length === 0) return alert("Pilih pesan yang ingin dihapus!");
-    
-    if(!confirm(`Yakin ingin menghapus ${checked.length} pesan ini?`)) return;
-
-    let idsMsg = [];
-    let idsReq = [];
-
-    checked.forEach(cb => {
-        if(cb.getAttribute('data-type') === 'MESSAGE') idsMsg.push(cb.value);
-        else if(cb.getAttribute('data-type') === 'REQ_CUSTOMER') idsReq.push(cb.value);
-    });
-
-    try {
-        if(idsMsg.length > 0) {
-            await db.from('app_messages').delete().in('id', idsMsg);
-        }
-        if(idsReq.length > 0) {
-            await db.from('request_ganti_customer').update({ status: 'DITOLAK' }).in('id', idsReq);
-        }
-        
-        alert("Pesan berhasil dihapus.");
-        loadInboxData();
-        cekNotifikasiInbox();
-    } catch(e) {
-        alert("Gagal menghapus pesan: " + e.message);
-    }
-}
-
-window.terimaRequestPO = async function(idReq, qrcode, customerBaru) {
-    if(!confirm(`Yakin ingin mengganti Customer untuk kardus ${qrcode} menjadi ${customerBaru}?`)) return;
-
-    try {
-        const { data: stokData, error: errStok } = await db.from('stok_global').select('id_sku').eq('qrcode', qrcode).single();
-        if(errStok || !stokData) throw new Error("Gagal mengambil kartu stok dari gudang (mungkin barang sudah keluar/terhapus).");
-
-        let id_sku = stokData.id_sku;
-        let parts = id_sku.split('_');
-        
-        if(parts.length >= 8) {
-            parts[7] = customerBaru; 
-        } 
-        
-        let sku_baru = parts.join('_'); 
-
-        const { error: errUpdate } = await db.from('stok_global').update({ id_sku: sku_baru, customer_aktual: customerBaru }).eq('qrcode', qrcode);
-        if(errUpdate) throw errUpdate;
-
-        const { error: errReq } = await db.from('request_ganti_customer').update({ status: 'SELESAI' }).eq('id', idReq);
-        if(errReq) throw errReq;
-
-        alert("Request berhasil disetujui! Customer telah diganti.");
-        kembaliKeListInbox(); 
-        cekNotifikasiInbox(); 
-
-    } catch(err) {
-        alert("Gagal memproses persetujuan: " + err.message);
-    }
-}
