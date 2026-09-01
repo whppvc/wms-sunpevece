@@ -56,7 +56,7 @@ const APP_MENUS = [
     { id: 'ganti_customer', title: 'Table Ganti Customer', icon: 'user-cog', url: 'ganti_customer.html', color: 'text-teal-500' },
     { id: 'req_konversi', title: 'Tabel Request Konversi', icon: 'replace', url: 'req_konversi.html', color: 'text-rose-500' },
     { id: 'input_opname', title: 'Input Stok Opname', icon: 'clipboard-check', url: 'input_opname.html', color: 'text-cyan-500' },
-    { isDivider: true, title: 'PERPINDAHAN & PENYESUAIAN' }, 
+    { isDivider: true, title: 'PERPINDAHAN & PENYESUAIAN' }, // REVISI: Nama Kategori Diubah
     { id: 'stok_nonaktif', title: 'Stok Nonaktif', icon: 'package-x', url: 'stok_nonaktif.html', color: 'text-red-500' },
     { id: 'scan_pic', title: 'Scan PIC Area', icon: 'user-check', url: 'scan_pic.html', color: 'text-fuchsia-500' },
     { id: 'riwayat_mutasi', title: 'Riwayat Konversi', icon: 'arrow-right-left', url: 'riwayat_konversi.html', color: 'text-slate-400' },
@@ -141,10 +141,10 @@ style.innerHTML = `
 
     /* Animasi Grid Menu */
     @keyframes slideDownFade {
-        from { opacity: 0; transform: translateY(-20px); }
+        from { opacity: 0; transform: translateY(-10px); }
         to { opacity: 1; transform: translateY(0); }
     }
-    .menu-grid-item { animation: slideDownFade 0.3s ease-out forwards; }
+    .menu-grid-item { animation: slideDownFade 0.2s ease-out forwards; }
 `;
 document.head.appendChild(style);
 
@@ -321,7 +321,7 @@ async function initModernLayout(pageMeta) {
     
     layoutWrapper.appendChild(mainContent);
 
-    // BUILD GRID MENU MODAL
+    // BUILD GRID MENU MODAL (REVISI: Transparansi, Ukuran, Search Bar)
     let gridMenuHTML = `
         <div id="modal-grid-menu" class="hidden fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md overflow-y-auto custom-scroll transition-opacity">
             <div class="min-h-screen p-4 sm:p-6 flex flex-col max-w-6xl mx-auto w-full">
@@ -372,7 +372,7 @@ async function initModernLayout(pageMeta) {
 
     gridMenuHTML += `</div></div></div>`;
 
-    // MODAL MENU FAVORIT (REVISI MAKSIMAL 7)
+    // MODAL MENU FAVORIT
     const favModalHTML = `
         <div id="modal-fav-menus" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 text-slate-800 flex flex-col max-h-[85vh]">
@@ -380,7 +380,7 @@ async function initModernLayout(pageMeta) {
                     <h3 class="text-base font-black flex items-center gap-2 text-blue-700"><i data-lucide="star" class="w-5 h-5"></i> Atur Menu Favorit</h3>
                     <button onclick="tutupModal('modal-fav-menus')" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
-                <p class="text-xs font-bold text-slate-500 mb-4 shrink-0">Pilih maksimal 7 menu untuk ditampilkan sebagai tombol cepat di header atas.</p>
+                <p class="text-xs font-bold text-slate-500 mb-4 shrink-0">Pilih maksimal 3 menu untuk ditampilkan sebagai tombol cepat di header atas.</p>
                 
                 <div class="flex-1 overflow-y-auto custom-scroll pr-2 space-y-4 mb-4">
                     ${Object.keys(groupedMenus).map(group => `
@@ -582,7 +582,7 @@ async function initModernLayout(pageMeta) {
 }
 
 // ==========================================
-// LOGIKA MENU FAVORIT (REVISI MAKSIMAL 7)
+// LOGIKA MENU FAVORIT
 // ==========================================
 window.openFavMenuModal = function() {
     const user = JSON.parse(localStorage.getItem('user_session'));
@@ -598,9 +598,9 @@ window.openFavMenuModal = function() {
 
 window.limitFavSelection = function(cb) {
     const checked = document.querySelectorAll('.cb-fav:checked');
-    if (checked.length > 7) {
+    if (checked.length > 3) {
         cb.checked = false;
-        alert('Maksimal hanya 7 menu favorit yang diizinkan!');
+        alert('Maksimal hanya 3 menu favorit yang diizinkan!');
     }
 };
 
@@ -681,6 +681,7 @@ window.filterMegaMenu = function(val) {
         }
     });
 
+    // Sembunyikan grup jika semua item di dalamnya tersembunyi
     document.querySelectorAll('.mega-menu-group').forEach(group => {
         const visibleItems = group.querySelectorAll('.menu-grid-item[style="display: flex;"], .menu-grid-item:not([style*="display: none"])');
         group.style.display = visibleItems.length > 0 ? 'block' : 'none';
