@@ -58,6 +58,8 @@ window.tampilkanAlert = function(pesan, tipe = 'info') {
     const iconContainer = document.getElementById('alert-icon-container');
     const icon = document.getElementById('alert-icon');
 
+    if(!modal) { alert(pesan); return; }
+
     msg.innerText = pesan;
     modal.classList.remove('hidden');
 
@@ -82,7 +84,7 @@ window.tampilkanAlert = function(pesan, tipe = 'info') {
         iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-blue-100 text-blue-600';
         icon.setAttribute('data-lucide', 'info');
     }
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
 };
 
 function loadUserPreferences() {
@@ -104,10 +106,33 @@ function loadUserPreferences() {
     }
 }
 
+// Fetcher Aman tanpa mutasi objek query builder
+async function fetchAllRows(tableName, selectCols = '*') {
+    let allData = [];
+    let page = 0;
+    const pageSize = 1000;
+    while (true) {
+        const { data, error } = await db
+            .from(tableName)
+            .select(selectCols)
+            .range(page * pageSize, (page + 1) * pageSize - 1);
+            
+        if (error) {
+            console.warn(`Query error on ${tableName}:`, error);
+            break;
+        }
+        if (!data || data.length === 0) break;
+        allData.push(...data);
+        if (data.length < pageSize) break;
+        page++;
+    }
+    return allData;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     await initModernLayout({ id: 'kartu_stok', title: 'KARTU STOK', url: 'kartu_stok.html' });
     
-    // REVISI: Render Komponen Dinamis dari global.js
+    // Inisialisasi Submenu Tabs & Footer
     const tabsData = [
         { id: 'tab-area', label: 'KS Area', icon: 'map', onClick: "gantiTab('area')" },
         { id: 'tab-global', label: 'KS Global', icon: 'globe-2', onClick: "gantiTab('global')" },
@@ -120,6 +145,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof window.renderTableFooter === 'function') {
         window.renderTableFooter('container-footer', 'Total Qty (Dus)');
     }
+
+    // Render Header Skeleton Awal
+    renderTableHeaders();
 
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
@@ -148,29 +176,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    setTimeout(muatDataStok, 200);
+    setTimeout(muatDataStok, 100);
 });
 
-window.toggleActionMenu = toggleActionMenu;
-function toggleActionMenu(e) {
+window.toggleActionMenu = function(e) {
     if(e) e.stopPropagation();
     const menu = document.getElementById('mobile-action-menu');
     if(menu) menu.classList.toggle('hidden');
-}
-
-async function fetchAllRows(baseQuery) {
-    let allData = [];
-    let page = 0;
-    const pageSize = 1000;
-    while (true) {
-        const { data, error } = await baseQuery.range(page * pageSize, (page + 1) * pageSize - 1);
-        if (error) throw error;
-        allData.push(...data);
-        if (data.length < pageSize) break;
-        page++;
-    }
-    return allData;
-}
+};
 
 async function loadMasterData() {
     try {
@@ -230,13 +243,14 @@ window.eksekusiSyncStok = async function() {
 
     try {
         subtitle.innerText = "Menarik data fisik gudang...";
-        const globalData = await fetchAllRows(db.from('stok_global').select('*').neq('kondisi', 'NONAKTIF'));
+        const globalData = await fetchAllRows('stok_global');
+        const filteredGlobal = globalData.filter(g => g.kondisi !== 'NONAKTIF');
         
         subtitle.innerText = "Menghitung akumulasi...";
         let mapAgg = {};
-        globalData.forEach(g => {
+        filteredGlobal.forEach(g => {
             let pjg = formatPanjang(g.panjang);
-            let key = `${g.nama_item}_${pjg}_${g.grade}_${g.dus}_${g.shading}_${g.area}_${g.customer_aktual}_${g.keterangan}`;
+            let key = `${g.nama_item}_${pjg}_${g.grade}_${g.dus}_${g.shading}_${g.area}_${g.customer_aktual}_${g.keterangan || '-'}`;
             
             if(!mapAgg[key]) {
                 mapAgg[key] = {
@@ -260,7 +274,7 @@ window.eksekusiSyncStok = async function() {
         const insertData = Object.values(mapAgg);
 
         subtitle.innerText = "Mempersiapkan penghapusan...";
-        const aktualData = await fetchAllRows(db.from('stok_aktual').select('id'));
+        const aktualData = await fetchAllRows('stok_aktual', 'id');
         const idsToDelete = aktualData.map(a => a.id);
 
         subtitle.innerText = "Menghapus data lama...";
@@ -270,7 +284,7 @@ window.eksekusiSyncStok = async function() {
             const chunk = idsToDelete.slice(i, i + chunkSize);
             await db.from('stok_aktual').delete().in('id', chunk);
             delCount += chunk.length;
-            let pct = Math.round((delCount / idsToDelete.length) * 50); 
+            let pct = Math.round((delCount / (idsToDelete.length || 1)) * 50); 
             bar.style.width = pct + '%';
             txt.innerText = pct + '%';
         }
@@ -281,7 +295,7 @@ window.eksekusiSyncStok = async function() {
             const chunk = insertData.slice(i, i + chunkSize);
             await db.from('stok_aktual').insert(chunk);
             insCount += chunk.length;
-            let pct = 50 + Math.round((insCount / insertData.length) * 50); 
+            let pct = 50 + Math.round((insCount / (insertData.length || 1)) * 50); 
             bar.style.width = pct + '%';
             txt.innerText = pct + '%';
         }
@@ -299,18 +313,17 @@ window.eksekusiSyncStok = async function() {
     }
 };
 
-window.muatDataStok = muatDataStok;
-async function muatDataStok() {
+window.muatDataStok = async function() {
     const tbody = document.getElementById('tbody-ks');
     if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-blue-500"></i><p class="font-bold text-slate-500">Menghubungkan ke database...</p></td></tr>`;
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
         const [stokGlobalData, resAktual, resGanti, resJasper] = await Promise.all([
-            fetchAllRows(db.from('stok_global').select('*')), 
-            fetchAllRows(db.from('stok_aktual').select('*')),
-            fetchAllRows(db.from('ganti_customer').select('id_sku, customer_aktual_request, area').neq('progres', 'DONE')),
-            fetchAllRows(db.from('nama_jasper').select('*'))
+            fetchAllRows('stok_global'), 
+            fetchAllRows('stok_aktual'),
+            fetchAllRows('ganti_customer', 'id_sku, customer_aktual_request, area, progres'),
+            fetchAllRows('nama_jasper')
         ]);
         
         stokGlobalRaw = stokGlobalData || []; 
@@ -320,7 +333,7 @@ async function muatDataStok() {
         processedGantiKeys.clear();
         processedGlobalKeys.clear();
         if (resGanti) {
-            resGanti.forEach(g => {
+            resGanti.filter(g => g.progres !== 'DONE').forEach(g => {
                 processedGantiKeys.add(`${g.id_sku}_${g.customer_aktual_request}_${g.area}`);
                 let parts = (g.id_sku || '').split('_');
                 if(parts.length >= 8) {
@@ -368,12 +381,11 @@ async function muatDataStok() {
 
         // 3. DATA KS DETAIL (Agregasi dari stok_aktual dengan tambahan info produksi dari stok_global)
         let detailMap = {};
-        
         let prodInfoMap = {};
         stokGlobalRaw.forEach(g => {
             if(g.kondisi === 'NONAKTIF') return;
             let pjgFormatted = formatPanjang(g.panjang);
-            let key = `${g.nama_item}_${pjgFormatted}_${g.grade}_${g.dus}_${g.shading}_${g.area}_${g.customer_aktual}_${g.keterangan}`;
+            let key = `${g.nama_item}_${pjgFormatted}_${g.grade}_${g.dus}_${g.shading}_${g.area}_${g.customer_aktual}_${g.keterangan || '-'}`;
             if(!prodInfoMap[key]) {
                 prodInfoMap[key] = { tgl: g.tgl_produksi || '-', mesin: g.mesin || '-', shift: g.shift || '-' };
             }
@@ -381,7 +393,7 @@ async function muatDataStok() {
 
         dataKSArea.forEach(a => {
             let pjgFormatted = formatPanjang(a.panjang);
-            let prodKey = `${a.nama_item}_${pjgFormatted}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_aktual}_${a.keterangan}`;
+            let prodKey = `${a.nama_item}_${pjgFormatted}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_aktual}_${a.keterangan || '-'}`;
             let prodInfo = prodInfoMap[prodKey] || { tgl: '-', mesin: '-', shift: '-' };
 
             let jName = a.nama_item || '-';
@@ -410,7 +422,7 @@ async function muatDataStok() {
     } catch(e) { 
         if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-bold">Gagal mengolah data: ${e.message}</td></tr>`; 
     }
-}
+};
 
 window.gantiTab = function(mode) {
     activeFilters = {}; 
@@ -418,7 +430,6 @@ window.gantiTab = function(mode) {
     selectedRows.clear();
     selectAllState = 0;
     currentPage = 1;
-    expandedRows.clear();
     
     setModeKS(mode);
 };
@@ -426,7 +437,6 @@ window.gantiTab = function(mode) {
 function setModeKS(m) {
     modeKS = m;
     
-    // REVISI: Update UI Tabs menggunakan fungsi dinamis jika ada
     const tabsData = [
         { id: 'tab-area', label: 'KS Area', icon: 'map', onClick: "gantiTab('area')" },
         { id: 'tab-global', label: 'KS Global', icon: 'globe-2', onClick: "gantiTab('global')" },
@@ -713,15 +723,18 @@ function updatePaginationUI() {
     let sumQty = 0;
     filteredData.forEach(r => { sumQty += parseInt(r.searchValues['col-qty']) || 0; });
 
-    document.getElementById('lbl-tampil-baris').innerText = totalFiltered;
-    document.getElementById('lbl-total-qty').innerText = sumQty;
-    
+    const lblTampil = document.getElementById('lbl-tampil-baris');
+    const lblQty = document.getElementById('lbl-total-qty');
     const inpPage = document.getElementById('input-page-jump');
+    const lblTotHal = document.getElementById('lbl-total-halaman');
+
+    if(lblTampil) lblTampil.innerText = totalFiltered;
+    if(lblQty) lblQty.innerText = sumQty;
     if(inpPage) {
         inpPage.value = currentPage;
         inpPage.max = totalPages;
     }
-    document.getElementById('lbl-total-halaman').innerText = totalPages;
+    if(lblTotHal) lblTotHal.innerText = totalPages;
     
     updateSelectedCount();
 }
@@ -740,7 +753,8 @@ window.jumpToPage = function(val) {
     if (p > totalPages) p = totalPages;
     
     currentPage = p;
-    document.getElementById('input-page-jump').value = currentPage;
+    const inp = document.getElementById('input-page-jump');
+    if(inp) inp.value = currentPage;
     renderTableBody();
 };
 
@@ -878,8 +892,7 @@ window.renderFilterList = function(searchQuery) {
     let listHtml = `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded-lg transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-bold text-slate-800">(Pilih Semua)</span></label>`;
     
     displayVals.forEach(val => {
-        let isChecked = true;
-        if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
+        let isChecked = !activeFilters[colClass] || activeFilters[colClass].includes(val);
         listHtml += `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded-lg transition filter-val-item" data-value="${encodeURIComponent(val)}">
             <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
             <span class="truncate font-medium text-slate-700">${val}</span>
@@ -935,13 +948,6 @@ window.applyFilterForCurrentCol = function() {
         delete activeFilters[currentFilterCol];
     } else {
         let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value));
-        
-        if (activeFilters[currentFilterCol]) {
-            const oldVals = new Set(activeFilters[currentFilterCol]);
-            selectedVals.forEach(v => oldVals.add(v));
-            selectedVals = Array.from(oldVals);
-        }
-        
         activeFilters[currentFilterCol] = selectedVals;
     }
     
@@ -987,7 +993,7 @@ window.bukaModalGantiKet = function(context, gKey = null) {
             return tampilkanAlert("Pilih / centang minimal 1 baris item yang ingin diganti keterangannya!", "warning");
         }
     } else if (context === 'breakdown') {
-        const checkboxes = document.querySelectorAll(`.cb-sub-${gKey}:checked`);
+        const checkboxes = document.querySelectorAll('.cb-bd:checked');
         if(checkboxes.length === 0) {
             return tampilkanAlert("Centang minimal 1 baris area pada detail breakdown!", "warning");
         }
@@ -1086,7 +1092,6 @@ window.salinData = function() {
                 const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
                 if(colClass) {
                     let val = sv[colClass] || '-';
-                    // Bersihkan HTML tag dan newline
                     let cleanVal = String(val).replace(/<[^>]*>?/gm, '').replace(/(\r\n|\n|\r)/gm, " ").trim();
                     rowData.push(cleanVal);
                 }
@@ -1272,7 +1277,7 @@ window.siapkanGantiPO = function(context) {
 window.tutupModalPO = function() { 
     document.getElementById('modal-po').classList.add('hidden'); 
     if(document.getElementById('modal-breakdown') && !document.getElementById('modal-breakdown').classList.contains('hidden')) {
-        // Do nothing, let breakdown modal stay open
+        // Do nothing
     } else {
         document.getElementById('overlay-klik-luar').classList.add('hidden'); 
     }
@@ -1291,7 +1296,6 @@ window.eksekusiGantiPO = function() {
     let maxDus = selectedForAction.reduce((sum, row) => sum + row.qty, 0);
     if(qtyDiminta > maxDus) return tampilkanAlert(`Maksimal jatah adalah ${maxDus} dus!`, "warning");
 
-    // Tampilkan Modal Konfirmasi 2 Pilihan
     document.getElementById('modal-confirm-ganti-po').classList.remove('hidden');
 };
 
@@ -1468,7 +1472,7 @@ window.prosesLabelCustomerMassal = async function() {
     } finally {
         btn.innerHTML = ori;
         btn.disabled = false;
-        lucide.createIcons();
+        if(typeof lucide !== 'undefined') lucide.createIcons();
     }
 };
 
@@ -1538,7 +1542,7 @@ window.siapkanReqKonversi = function(context) {
 window.tutupModalReqKonversi = function() {
     document.getElementById('modal-req-konversi').classList.add('hidden');
     if(document.getElementById('modal-breakdown') && !document.getElementById('modal-breakdown').classList.contains('hidden')) {
-        // Do nothing, breakdown stays open
+        // Do nothing
     } else {
         document.getElementById('overlay-klik-luar').classList.add('hidden');
     }
@@ -1732,7 +1736,7 @@ window.toggleSidebarKolom = function() {
     }
 };
 
-window.renderDragList = function() {
+function renderDragList() {
     const container = document.getElementById('kolom-drag-container');
     container.innerHTML = '';
     
@@ -1764,7 +1768,7 @@ window.renderDragList = function() {
         div.addEventListener('dragend', () => { div.classList.remove('dragging'); });
         container.appendChild(div);
     });
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
     
     container.addEventListener('dragover', e => {
         e.preventDefault();
@@ -1773,7 +1777,7 @@ window.renderDragList = function() {
         if (afterElement == null) { container.appendChild(draggable); } 
         else { container.insertBefore(draggable, afterElement); }
     });
-};
+}
 
 window.toggleHideCol = function(e, colClass) {
     e.stopPropagation();
@@ -1782,7 +1786,7 @@ window.toggleHideCol = function(e, colClass) {
     renderDragList();
 };
 
-window.getDragAfterElement = function(container, y) {
+function getDragAfterElement(container, y) {
     const draggableElements = [...container.querySelectorAll('.drag-item:not(.dragging)')];
     return draggableElements.reduce((closest, child) => {
         const box = child.getBoundingClientRect();
@@ -1790,7 +1794,7 @@ window.getDragAfterElement = function(container, y) {
         if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } 
         else { return closest; }
     }, { offset: Number.NEGATIVE_INFINITY }).element;
-};
+}
 
 window.simpanUrutanKolom = function() {
     const items = document.querySelectorAll('.drag-item');
