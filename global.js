@@ -1,5 +1,5 @@
 // ============================================================================
-// WMS SUNPEVECE - GLOBAL SCRIPT, ROUTE GUARD & PERMISSION ACCESS CONTROL
+// WMS SUNPEVECE - GLOBAL SCRIPT, ROUTE GUARD, DESIGN & UI COMPONENTS
 // ============================================================================
 
 // ==========================================
@@ -134,10 +134,6 @@ style.innerHTML = `
     body:not(.disable-hover) tr.text-row:hover td.sticky-col,
     body:not(.disable-hover) tr.r-row:hover td.sticky-col { background-color: rgb(var(--tbl-row-hover)) !important; }
     tr.selected-row td.sticky-col { background-color: #ccfbf1 !important; }
-    
-    input[type=range]:not(.custom-vertical-slider) { -webkit-appearance: none; width: 100%; background: transparent; }
-    input[type=range]:not(.custom-vertical-slider)::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #4f46e5; cursor: pointer; margin-top: -6px; }
-    input[type=range]:not(.custom-vertical-slider)::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #cbd5e1; border-radius: 2px; }
 
     @keyframes slideDownFade {
         from { opacity: 0; transform: translateY(-10px); }
@@ -318,7 +314,7 @@ async function initModernLayout(pageMeta) {
             <div class="min-h-screen p-4 sm:p-6 flex flex-col max-w-6xl mx-auto w-full">
                 
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-slate-700 gap-4">
-                    <h2 class="text-xl font-black text-white flex items-center gap-3"><i data-lucide="layout-grid" class="text-blue-500 w-6 h-6"></i> MENU WMS </h2>
+                    <h2 class="text-xl font-black text-white flex items-center gap-3"><i data-lucide="layout-grid" class="text-blue-500 w-6 h-6"></i> MENU NAVIGASI</h2>
                     
                     <div class="flex items-center gap-3 w-full sm:w-auto">
                         <div class="relative flex-1 sm:w-64">
@@ -400,10 +396,10 @@ async function initModernLayout(pageMeta) {
         <div id="modal-password" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm border border-slate-200 text-slate-800">
                 <h3 class="text-lg font-black mb-4 flex items-center gap-2"><i data-lucide="key-round" class="text-blue-600"></i> Ganti Password</h3>
-                <input type="password" placeholder="Password Baru" class="w-full p-3 border border-slate-300 rounded-lg mb-5 font-bold outline-none focus:border-blue-600 bg-slate-50">
+                <input type="password" id="input-new-password-global" placeholder="Password Baru" class="w-full p-3 border border-slate-300 rounded-lg mb-5 font-bold outline-none focus:border-blue-600 bg-slate-50">
                 <div class="flex gap-2">
                     <button onclick="tutupModal('modal-password')" class="w-1/2 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200 transition">Batal</button>
-                    <button onclick="tutupModal('modal-password'); alert('Fungsi ini akan segera disambungkan ke DB');" class="w-1/2 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-sm">Simpan</button>
+                    <button onclick="tutupModal('modal-password'); alert('Fitur ini akan segera aktif.');" class="w-1/2 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-sm">Simpan</button>
                 </div>
             </div>
         </div>
@@ -501,54 +497,6 @@ async function initModernLayout(pageMeta) {
                         </table>
                     </div>
                 </div>
-                
-                <div id="inbox-view-read" class="hidden flex-1 flex flex-col overflow-hidden bg-slate-50">
-                    <div class="p-3 bg-white border-b border-slate-200 flex items-center gap-3 shrink-0">
-                        <button onclick="kembaliKeListInbox()" class="p-2 hover:bg-slate-100 text-slate-600 rounded-md transition"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
-                        <h4 class="font-black text-slate-800 text-sm truncate" id="read-subject">Subjek Pesan</h4>
-                    </div>
-                    <div class="p-4 sm:p-6 overflow-y-auto custom-scroll flex-1">
-                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                            <div class="flex justify-between items-start mb-6 pb-4 border-b border-slate-100">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-black text-lg"><i data-lucide="user" class="w-5 h-5"></i></div>
-                                    <div>
-                                        <p class="font-bold text-slate-800 text-sm" id="read-sender">Pengirim</p>
-                                        <p class="text-xs font-medium text-slate-500" id="read-date">Tanggal</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-medium" id="read-body">Isi pesan...</div>
-                            <div id="read-action-container" class="mt-6 pt-4 border-t border-slate-100 hidden"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="inbox-view-compose" class="hidden flex-1 flex flex-col overflow-hidden bg-slate-50">
-                    <div class="p-3 bg-white border-b border-slate-200 flex items-center gap-3 shrink-0">
-                        <button onclick="kembaliKeListInbox()" class="p-2 hover:bg-slate-100 text-slate-600 rounded-md transition"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
-                        <h4 class="font-black text-slate-800 text-sm">Tulis Pesan Baru</h4>
-                    </div>
-                    <div class="p-4 sm:p-6 overflow-y-auto custom-scroll flex-1">
-                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kepada</label>
-                                <select id="compose-recipient" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:border-blue-500 font-semibold text-sm bg-slate-50 cursor-pointer"></select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Perihal</label>
-                                <input type="text" id="compose-subject" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:border-blue-500 font-bold text-sm bg-slate-50" placeholder="Judul pesan...">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Isi Pesan</label>
-                                <textarea id="compose-body" rows="8" class="w-full p-3 border border-slate-300 rounded-lg outline-none focus:border-blue-500 font-medium text-sm bg-slate-50 custom-scroll" placeholder="Tulis pesan Anda di sini..."></textarea>
-                            </div>
-                            <div class="flex justify-end pt-2">
-                                <button onclick="kirimPesan()" id="btn-kirim-pesan" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2 text-sm"><i data-lucide="send" class="w-4 h-4"></i> Kirim Pesan</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     `;
@@ -557,8 +505,8 @@ async function initModernLayout(pageMeta) {
 
     lucide.createIcons();
     renderFavMenus(); 
-    setTimeout(cekNotifikasiInbox, 1000); 
 
+    // Handle ESC Key to Close Any Open Modal
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeGridMenu();
@@ -566,9 +514,68 @@ async function initModernLayout(pageMeta) {
             tutupModal('modal-table-design');
             tutupModal('modal-inbox');
             tutupModal('modal-fav-menus');
+            const pDd = document.getElementById('profile-dropdown');
+            if (pDd) pDd.classList.add('hidden');
         }
     });
 }
+
+// ==========================================
+// EXPOSE GLOBAL UI CONTROLLERS KE WINDOW
+// ==========================================
+window.toggleProfileMenu = function(e) {
+    if(e) e.stopPropagation();
+    const dd = document.getElementById('profile-dropdown');
+    if (dd) dd.classList.toggle('hidden');
+};
+
+window.logout = function() {
+    localStorage.removeItem('user_session');
+    window.location.replace('index.html');
+};
+
+window.bukaModal = function(id) {
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('hidden');
+};
+
+window.tutupModal = function(id) {
+    const el = document.getElementById(id);
+    if(el) el.classList.add('hidden');
+};
+
+window.bukaModalInbox = function() {
+    window.bukaModal('modal-inbox');
+};
+
+window.bukaModalTableDesign = function() {
+    document.getElementById('td-zebra').checked = tempDesign.isZebra;
+    document.getElementById('td-hover').checked = tempDesign.isHover !== false;
+    document.getElementById('td-opacity').value = tempDesign.opacity;
+    document.getElementById('lbl-opacity').innerText = tempDesign.opacity + '%';
+    window.bukaModal('modal-table-design');
+};
+
+window.setTdColor = function(type, val1, val2) {
+    if (type === 'hdr') {
+        tempDesign.hdrBg = val1;
+        tempDesign.hdrText = val2;
+    } else if (type === 'rowTheme') {
+        tempDesign.rowTheme = val1;
+    } else if (type === 'hoverTheme') {
+        tempDesign.hoverTheme = val1;
+    }
+};
+
+window.saveTableDesign = function() {
+    tempDesign.isZebra = document.getElementById('td-zebra').checked;
+    tempDesign.isHover = document.getElementById('td-hover').checked;
+    tempDesign.opacity = parseInt(document.getElementById('td-opacity').value);
+    
+    localStorage.setItem('wms_table_design', JSON.stringify(tempDesign));
+    applyTableDesign();
+    window.tutupModal('modal-table-design');
+};
 
 // ==========================================
 // ENGINE KOMPONEN DINAMIS (TABS & FOOTER)
@@ -651,7 +658,7 @@ window.openFavMenuModal = function() {
         cb.checked = favArray.includes(cb.value);
     });
 
-    document.getElementById('modal-fav-menus').classList.remove('hidden');
+    window.bukaModal('modal-fav-menus');
 };
 
 window.limitFavSelection = function(cb) {
@@ -667,7 +674,7 @@ window.saveFavMenus = function() {
     const checked = Array.from(document.querySelectorAll('.cb-fav:checked')).map(cb => cb.value);
     
     localStorage.setItem('fav_menus_' + user.username, JSON.stringify(checked));
-    tutupModal('modal-fav-menus');
+    window.tutupModal('modal-fav-menus');
     renderFavMenus();
 };
 
@@ -683,7 +690,7 @@ window.renderFavMenus = function() {
 
     if (favArray.length === 0) {
         container.innerHTML = `
-            <button onclick="openFavMenuModal()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-full text-[10px] font-bold text-slate-300 hover:text-white transition flex items-center gap-1.5 shadow-inner">
+            <button onclick="openFavMenuModal()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-full text-[10px] font-bold text-slate-300 hover:text-white transition flex items-center gap-1.5 shadow-inner cursor-pointer">
                 <i data-lucide="plus" class="w-3 h-3"></i> Tambah Menu Favorit
             </button>
         `;
@@ -701,7 +708,7 @@ window.renderFavMenus = function() {
             }
         });
         html += `
-            <button onclick="openFavMenuModal()" class="p-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-400 hover:text-white transition shadow-sm ml-1" title="Edit Menu Favorit">
+            <button onclick="openFavMenuModal()" class="p-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-400 hover:text-white transition shadow-sm ml-1 cursor-pointer" title="Edit Menu Favorit">
                 <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
             </button>
         `;
