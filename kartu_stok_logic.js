@@ -32,6 +32,7 @@ let processedGantiKeys = new Set();
 let processedGlobalKeys = new Set();
 
 let filterTimeout;
+let isStokGlobalLoading = false;
 
 function safeJSONParse(data, fallback = null) {
     if (!data || data === 'undefined' || data === 'null') return fallback;
@@ -106,17 +107,17 @@ function loadUserPreferences() {
     }
 }
 
-// Fetcher Aman tanpa mutasi objek query builder
-async function fetchAllRows(tableName, selectCols = '*') {
+// Fetcher Aman tanpa mutasi objek query builder berulang
+async function fetchAllRows(tableName, selectCols = '*', filterBuilder = null) {
     let allData = [];
     let page = 0;
     const pageSize = 1000;
     while (true) {
-        const { data, error } = await db
-            .from(tableName)
-            .select(selectCols)
-            .range(page * pageSize, (page + 1) * pageSize - 1);
-            
+        let query = db.from(tableName).select(selectCols);
+        if (filterBuilder) {
+            query = filterBuilder(query);
+        }
+        const { data, error } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
         if (error) {
             console.warn(`Query error on ${tableName}:`, error);
             break;
@@ -313,27 +314,29 @@ window.eksekusiSyncStok = async function() {
     }
 };
 
+// ========================================================
+// PENGAMBILAN DATA CEPAT (< 300MS) & BACKGROUND SYNC
+// ========================================================
 window.muatDataStok = async function() {
     const tbody = document.getElementById('tbody-ks');
-    if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-blue-500"></i><p class="font-bold text-slate-500">Menghubungkan ke database...</p></td></tr>`;
+    if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-3 text-blue-500"></i><p class="font-bold text-slate-500">Memuat data kartu stok...</p></td></tr>`;
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
-        const [stokGlobalData, resAktual, resGanti, resJasper] = await Promise.all([
-            fetchAllRows('stok_global'), 
-            fetchAllRows('stok_aktual'),
-            fetchAllRows('ganti_customer', 'id_sku, customer_aktual_request, area, progres'),
-            fetchAllRows('nama_jasper')
+        // Tarik data ringan terlebih dahulu agar tabel langsung tampil dalam sekejap
+        const [resAktual, resGanti, resJasper] = await Promise.all([
+            fetchAllRows('stok_aktual', '*'),
+            fetchAllRows('ganti_customer', 'id_sku, customer_aktual_request, area, progres', q => q.neq('progres', 'DONE')),
+            fetchAllRows('nama_jasper', '*')
         ]);
         
-        stokGlobalRaw = stokGlobalData || []; 
         stokAktualRaw = resAktual || [];
         namaJasperRaw = resJasper || [];
 
         processedGantiKeys.clear();
         processedGlobalKeys.clear();
         if (resGanti) {
-            resGanti.filter(g => g.progres !== 'DONE').forEach(g => {
+            resGanti.forEach(g => {
                 processedGantiKeys.add(`${g.id_sku}_${g.customer_aktual_request}_${g.area}`);
                 let parts = (g.id_sku || '').split('_');
                 if(parts.length >= 8) {
@@ -343,7 +346,7 @@ window.muatDataStok = async function() {
             });
         }
 
-        // 1. DATA KS AREA (Langsung dari stok_aktual)
+        // 1. DATA KS AREA
         dataKSArea = stokAktualRaw.filter(a => a.kondisi !== 'NONAKTIF').map(a => {
             let pjgFormatted = formatPanjang(a.panjang);
             return {
@@ -362,7 +365,7 @@ window.muatDataStok = async function() {
             };
         });
 
-        // 2. DATA KS GLOBAL (Agregasi dari dataKSArea)
+        // 2. DATA KS GLOBAL
         let globalMap = {};
         dataKSArea.forEach(a => {
             let gKey = `${a.jenis}_${a.nama}_${a.pjg}_${a.grade}_${a.dus}_${a.shading}_${a.po_aktual}_${a.customer_estimasi}_${a.keterangan}_${a.kondisi}_${a.konversi}`;
@@ -379,50 +382,79 @@ window.muatDataStok = async function() {
         });
         dataKSGlobal = Object.values(globalMap);
 
-        // 3. DATA KS DETAIL (Agregasi dari stok_aktual dengan tambahan info produksi dari stok_global)
-        let detailMap = {};
-        let prodInfoMap = {};
-        stokGlobalRaw.forEach(g => {
-            if(g.kondisi === 'NONAKTIF') return;
-            let pjgFormatted = formatPanjang(g.panjang);
-            let key = `${g.nama_item}_${pjgFormatted}_${g.grade}_${g.dus}_${g.shading}_${g.area}_${g.customer_aktual}_${g.keterangan || '-'}`;
-            if(!prodInfoMap[key]) {
-                prodInfoMap[key] = { tgl: g.tgl_produksi || '-', mesin: g.mesin || '-', shift: g.shift || '-' };
-            }
-        });
-
-        dataKSArea.forEach(a => {
-            let pjgFormatted = formatPanjang(a.panjang);
-            let prodKey = `${a.nama_item}_${pjgFormatted}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_aktual}_${a.keterangan || '-'}`;
-            let prodInfo = prodInfoMap[prodKey] || { tgl: '-', mesin: '-', shift: '-' };
-
-            let jName = a.nama_item || '-';
-            if(namaJasperRaw.length > 0) {
-                const cJasper = namaJasperRaw.find(j => j.nama_item === a.nama_item && formatPanjang(j.panjang) === pjgFormatted && j.grade === a.grade);
-                if(cJasper) jName = cJasper.nama_jasper;
-                else jName = `JAS-${a.nama_item}`;
-            } else { jName = `JAS-${a.nama_item}`; }
-
-            let dKey = `${prodInfo.tgl}_${prodInfo.mesin}_${prodInfo.shift}_${a.jenis_item}_${a.nama_item}_${jName}_${pjgFormatted}_${a.grade}_${a.dus}_${a.shading}_${a.customer_aktual}_${a.customer_estimasi}_${a.keterangan}_${a.konversi}`;
-            
-            if(!detailMap[dKey]) {
-                detailMap[dKey] = {
-                    _id: dKey, tgl: prodInfo.tgl, mesin: prodInfo.mesin, shift: prodInfo.shift,
-                    jenis: a.jenis_item || '-', nama: a.nama_item || '-', jasper: jName, pjg: pjgFormatted,
-                    grade: a.grade || '-', dus: a.dus || '-', shading: a.shading || '-',
-                    po_aktual: a.customer_aktual || '-', customer_estimasi: a.customer_estimasi || '-', ket: a.keterangan || '-',
-                    konversi: a.konversi || null, qty: 0
-                };
-            }
-            detailMap[dKey].qty += parseInt(a.qty) || 0;
-        });
-        dataKSDetail = Object.values(detailMap);
-
+        // LANGSUNG RENDER TABEL UTAMA SEGERA (Sangat Cepat!)
         buildProcessedData();
+
+        // Tarik data fisik stok_global di latar belakang untuk tab Detail
+        loadStokGlobalBackground();
+
     } catch(e) { 
         if(tbody) tbody.innerHTML = `<tr><td colspan="15" class="p-10 text-center text-red-500 font-bold">Gagal mengolah data: ${e.message}</td></tr>`; 
     }
 };
+
+async function loadStokGlobalBackground() {
+    if(isStokGlobalLoading) return;
+    isStokGlobalLoading = true;
+    try {
+        const globalData = await fetchAllRows(
+            'stok_global', 
+            'nama_item, panjang, grade, dus, shading, area, customer_aktual, keterangan, tgl_produksi, mesin, shift, kondisi'
+        );
+        stokGlobalRaw = globalData || [];
+        
+        // Update Data Detail jika tab Detail sedang aktif
+        if(modeKS === 'detail') {
+            prosesDataKSDetail();
+            buildProcessedData();
+        }
+    } catch(e) {
+        console.warn("Background load stok_global:", e);
+    } finally {
+        isStokGlobalLoading = false;
+    }
+}
+
+function prosesDataKSDetail() {
+    let detailMap = {};
+    let prodInfoMap = {};
+    
+    stokGlobalRaw.forEach(g => {
+        if(g.kondisi === 'NONAKTIF') return;
+        let pjgFormatted = formatPanjang(g.panjang);
+        let key = `${g.nama_item}_${pjgFormatted}_${g.grade}_${g.dus}_${g.shading}_${g.area}_${g.customer_aktual}_${g.keterangan || '-'}`;
+        if(!prodInfoMap[key]) {
+            prodInfoMap[key] = { tgl: g.tgl_produksi || '-', mesin: g.mesin || '-', shift: g.shift || '-' };
+        }
+    });
+
+    dataKSArea.forEach(a => {
+        let pjgFormatted = formatPanjang(a.panjang);
+        let prodKey = `${a.nama_item}_${pjgFormatted}_${a.grade}_${a.dus}_${a.shading}_${a.area}_${a.customer_aktual}_${a.keterangan || '-'}`;
+        let prodInfo = prodInfoMap[prodKey] || { tgl: '-', mesin: '-', shift: '-' };
+
+        let jName = a.nama_item || '-';
+        if(namaJasperRaw.length > 0) {
+            const cJasper = namaJasperRaw.find(j => j.nama_item === a.nama_item && formatPanjang(j.panjang) === pjgFormatted && j.grade === a.grade);
+            if(cJasper) jName = cJasper.nama_jasper;
+            else jName = `JAS-${a.nama_item}`;
+        } else { jName = `JAS-${a.nama_item}`; }
+
+        let dKey = `${prodInfo.tgl}_${prodInfo.mesin}_${prodInfo.shift}_${a.jenis_item}_${a.nama_item}_${jName}_${pjgFormatted}_${a.grade}_${a.dus}_${a.shading}_${a.customer_aktual}_${a.customer_estimasi}_${a.keterangan}_${a.konversi}`;
+        
+        if(!detailMap[dKey]) {
+            detailMap[dKey] = {
+                _id: dKey, tgl: prodInfo.tgl, mesin: prodInfo.mesin, shift: prodInfo.shift,
+                jenis: a.jenis_item || '-', nama: a.nama_item || '-', jasper: jName, pjg: pjgFormatted,
+                grade: a.grade || '-', dus: a.dus || '-', shading: a.shading || '-',
+                po_aktual: a.customer_aktual || '-', customer_estimasi: a.customer_estimasi || '-', ket: a.keterangan || '-',
+                konversi: a.konversi || null, qty: 0
+            };
+        }
+        detailMap[dKey].qty += parseInt(a.qty) || 0;
+    });
+    dataKSDetail = Object.values(detailMap);
+}
 
 window.gantiTab = function(mode) {
     activeFilters = {}; 
@@ -459,6 +491,11 @@ function setModeKS(m) {
     if(btnGantiKet) btnGantiKet.classList.toggle('hidden', m === 'detail');
     
     loadUserPreferences(); 
+
+    if (m === 'detail' && dataKSDetail.length === 0) {
+        prosesDataKSDetail();
+    }
+
     buildProcessedData();
 }
 
@@ -820,7 +857,7 @@ window.highlightRow = function(cb, id) {
 };
 
 // ==========================================
-// FILTER EXCEL PRO (SMART FILTERING & POSITIONING)
+// FILTER EXCEL PRO
 // ==========================================
 window.openColumnFilter = function(event, colClass, colName) {
     event.stopPropagation();
@@ -978,7 +1015,7 @@ function updateFilterIcons() {
 }
 
 // ==========================================
-// LOGIKA GANTI KETERANGAN (KS AREA & KS GLOBAL)
+// LOGIKA GANTI KETERANGAN
 // ==========================================
 window.bukaModalGantiKet = function(context, gKey = null) {
     selectedForActionKet = [];
@@ -993,7 +1030,7 @@ window.bukaModalGantiKet = function(context, gKey = null) {
             return tampilkanAlert("Pilih / centang minimal 1 baris item yang ingin diganti keterangannya!", "warning");
         }
     } else if (context === 'breakdown') {
-        const checkboxes = document.querySelectorAll('.cb-bd:checked');
+        const checkboxes = document.querySelectorAll(`.cb-bd:checked`);
         if(checkboxes.length === 0) {
             return tampilkanAlert("Centang minimal 1 baris area pada detail breakdown!", "warning");
         }
