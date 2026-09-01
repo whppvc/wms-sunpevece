@@ -23,7 +23,6 @@
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
 
-        /* DESAIN TABEL 3D REALISTIC */
         #main-table, #table-breakdown { border-collapse: separate; border-spacing: 0; }
         #main-table th, #main-table td, #table-breakdown th, #table-breakdown td { border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; }
         #main-table th:first-child, #main-table td:first-child, #table-breakdown th:first-child, #table-breakdown td:first-child { border-left: 1px solid #cbd5e1; }
@@ -102,7 +101,6 @@
                         <div class="bg-teal-700 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-teal-600 transition">Refresh Data</div>
                     </button>
 
-                    <!-- TOMBOL BARU: SESUAIKAN DATA (HANYA CREATOR/SUPERADMIN) -->
                     <button id="btn-sync-stok" onclick="bukaModalSync()" class="hidden group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-red-800">
                         <div class="bg-red-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="refresh-ccw" class="w-4 h-4"></i></div>
                         <div class="bg-red-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-red-700 transition">Sesuaikan Data</div>
@@ -149,15 +147,12 @@
 
         <!-- MIDDLE CONTENT SECTION -->
         <div class="flex-1 min-h-0 bg-slate-100 p-3 sm:p-4 overflow-hidden flex flex-col relative z-0">
-            
-            <!-- VIEW TABEL UMUM -->
             <div id="wrapper-table-ks" class="flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-xl shadow-md border border-slate-300">
                 <table class="w-full text-left whitespace-nowrap" id="main-table">
                     <thead class="sticky top-0 z-50 shadow-sm" id="thead-ks"></thead>
                     <tbody id="tbody-ks" class="text-slate-800"></tbody>
                 </table>
             </div>
-
         </div>
 
         <!-- FOOTER PAGINATION -->
@@ -165,21 +160,21 @@
             
             <!-- STATISTIK BESAR -->
             <div class="flex items-center gap-4 w-full md:w-1/3">
-                <div class="flex-1 flex flex-col items-center bg-slate-50 border border-slate-200 py-1.5 rounded-lg">
+                <div class="flex-1 flex flex-col items-center bg-blue-50 border border-blue-200 py-1.5 rounded-lg">
                     <span class="text-[10px] font-bold text-slate-500 uppercase">Tampil Baris</span>
                     <span id="lbl-tampil-baris" class="text-xl font-bold text-blue-600 leading-none mt-0.5">0</span>
                 </div>
-                <div class="flex-1 flex flex-col items-center bg-slate-50 border border-slate-200 py-1.5 rounded-lg">
+                <div class="flex-1 flex flex-col items-center bg-amber-50 border border-amber-200 py-1.5 rounded-lg">
                     <span class="text-[10px] font-bold text-slate-500 uppercase">Total Dus</span>
                     <span id="lbl-total-qty" class="text-xl font-bold text-amber-600 leading-none mt-0.5">0</span>
                 </div>
-                <div class="flex-1 flex flex-col items-center bg-slate-50 border border-slate-200 py-1.5 rounded-lg">
+                <div class="flex-1 flex flex-col items-center bg-emerald-50 border border-emerald-200 py-1.5 rounded-lg">
                     <span class="text-[10px] font-bold text-slate-500 uppercase">Baris Dipilih</span>
                     <span id="lbl-pilih-baris" class="text-xl font-bold text-emerald-600 leading-none mt-0.5">0</span>
                 </div>
             </div>
             
-            <!-- PAGINASI -->
+            <!-- PAGINASI BARU -->
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-2 bg-white border border-slate-300 p-1.5 rounded-lg shadow-sm">
                     <span class="text-xs font-bold text-slate-500 uppercase px-2">Baris per hal:</span>
@@ -206,6 +201,37 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- MODAL CUSTOM ALERT / NOTIFIKASI -->
+    <div id="modal-custom-alert" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[200] px-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 text-center flex flex-col items-center">
+            <div id="alert-icon-container" class="w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                <i id="alert-icon" data-lucide="info" class="w-8 h-8"></i>
+            </div>
+            <h3 class="text-lg font-black mb-2 text-slate-800" id="alert-title">Perhatian</h3>
+            <p class="text-sm font-semibold text-slate-500 mb-6 leading-relaxed" id="alert-message">Pesan alert di sini.</p>
+            <button onclick="document.getElementById('modal-custom-alert').classList.add('hidden')" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95">Tutup</button>
+        </div>
+    </div>
+
+    <!-- MODAL KONFIRMASI GANTI PO (2 PILIHAN) -->
+    <div id="modal-confirm-ganti-po" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[150] px-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 text-center">
+            <i data-lucide="help-circle" class="w-12 h-12 text-indigo-600 mx-auto mb-4"></i>
+            <h3 class="text-lg font-black mb-2 text-slate-800">Pilih Tindakan Lanjutan</h3>
+            <p class="text-sm font-semibold text-slate-500 mb-6 leading-relaxed">Anda akan mengganti Customer Estimasi. Apakah Anda ingin langsung memprosesnya ke antrean Label Customer?</p>
+            
+            <div class="flex flex-col gap-3">
+                <button onclick="prosesGantiPOSaja()" class="w-full py-3.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 font-black rounded-xl border border-indigo-200 transition active:scale-95 text-xs uppercase flex items-center justify-center gap-2">
+                    <i data-lucide="save" class="w-4 h-4"></i> Ganti Customer Saja
+                </button>
+                <button onclick="prosesGantiPODanLabel()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-md transition active:scale-95 text-xs uppercase border-b-4 border-indigo-800 flex items-center justify-center gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i> Ganti & Proses Label Customer
+                </button>
+                <button onclick="document.getElementById('modal-confirm-ganti-po').classList.add('hidden')" class="mt-2 w-full py-2.5 text-slate-400 hover:text-slate-600 font-bold text-xs uppercase transition">Batal</button>
+            </div>
+        </div>
     </div>
 
     <!-- MODAL PROGRESS SYNC DATA -->
@@ -246,7 +272,6 @@
             <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-rose-500 bg-white border border-slate-200 p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
         </div>
         
-        <!-- Opsi Sorting -->
         <div class="p-2 border-b border-slate-200 flex flex-col gap-1 bg-white">
             <button onclick="sortFromMenu('asc')" class="text-left px-3 py-2 hover:bg-slate-100 rounded-lg text-xs font-bold text-slate-700 flex items-center gap-2 transition"><i data-lucide="arrow-down-a-z" class="w-4 h-4 text-blue-600"></i> Urutkan A ke Z</button>
             <button onclick="sortFromMenu('desc')" class="text-left px-3 py-2 hover:bg-slate-100 rounded-lg text-xs font-bold text-slate-700 flex items-center gap-2 transition"><i data-lucide="arrow-up-z-a" class="w-4 h-4 text-blue-600"></i> Urutkan Z ke A</button>
@@ -266,19 +291,15 @@
     </div>
 
     <!-- MODAL BREAKDOWN AREA (KS GLOBAL) -->
-    <div id="modal-breakdown" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/40 z-[70] px-4 backdrop-blur-sm">
+    <div id="modal-breakdown" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] px-4 backdrop-blur-sm">
         <div class="bg-white shadow-2xl w-full max-w-6xl border border-slate-200 flex flex-col max-h-[85vh] rounded-2xl overflow-hidden">
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="font-bold text-slate-800 flex flex-col gap-1 text-sm">
-                    <span class="flex items-center gap-2"><i data-lucide="package-open" class="w-5 h-5 text-blue-600"></i> Detail Area Item</span>
-                    <span id="bd-title-item" class="text-xs text-blue-600 font-black ml-7"></span>
-                </h3>
-                <button onclick="tutupModalBreakdown()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded-lg transition shadow-sm"><i data-lucide="x" class="w-5 h-5"></i></button>
-            </div>
-            <div class="p-3 bg-white border-b border-slate-200 flex gap-2 overflow-x-auto hide-scrollbar">
-                <button onclick="salinDataBreakdown()" class="px-4 py-2 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-2 shadow-sm transition rounded-lg shrink-0"><i data-lucide="copy" class="w-4 h-4"></i> Salin Detail</button>
-                <button onclick="siapkanGantiPO('breakdown')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition rounded-lg shrink-0"><i data-lucide="tags" class="w-4 h-4"></i> Ganti Customer Estimasi</button>
-                <button onclick="bukaModalGantiKet('breakdown')" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition rounded-lg shrink-0"><i data-lucide="edit-3" class="w-4 h-4"></i> Ganti Keterangan</button>
+            <div class="p-3 bg-white border-b border-slate-200 flex justify-between items-center gap-2 overflow-x-auto hide-scrollbar">
+                <div class="flex gap-2">
+                    <button onclick="siapkanGantiPO('breakdown')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition rounded-lg shrink-0"><i data-lucide="tags" class="w-4 h-4"></i> Ganti Customer Estimasi</button>
+                    <button onclick="bukaModalGantiKet('breakdown')" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition rounded-lg shrink-0"><i data-lucide="edit-3" class="w-4 h-4"></i> Ganti Keterangan</button>
+                    <button onclick="siapkanReqKonversi('breakdown')" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition rounded-lg shrink-0"><i data-lucide="file-warning" class="w-4 h-4"></i> Request Konversi</button>
+                </div>
+                <button onclick="tutupModalBreakdown()" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded-lg transition shadow-sm shrink-0"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             <div class="overflow-y-auto flex-1 custom-scroll bg-slate-100 p-2">
                 <div class="bg-white rounded-xl border border-slate-300 shadow-sm overflow-hidden">
@@ -286,11 +307,16 @@
                         <thead class="sticky top-0 z-50 shadow-sm">
                             <tr>
                                 <th class="hdr-std w-10 text-center sticky-col"><input type="checkbox" onchange="toggleCentangBreakdown(this.checked)" class="cursor-pointer rounded border-slate-400 text-blue-600 focus:ring-blue-500 w-4 h-4"></th>
-                                <th class="hdr-std">Area Penyimpanan</th>
+                                <th class="hdr-std">Area</th>
+                                <th class="hdr-std">Nama Item</th>
+                                <th class="hdr-std">Pjg</th>
+                                <th class="hdr-std">Grade</th>
+                                <th class="hdr-std">Dus</th>
+                                <th class="hdr-std">Shading</th>
                                 <th class="hdr-std">Customer Aktual</th>
                                 <th class="hdr-std text-purple-300">Customer Estimasi</th>
                                 <th class="hdr-std">Keterangan</th>
-                                <th class="hdr-std text-emerald-400 text-center">Total Dus (QTY)</th>
+                                <th class="hdr-std text-emerald-400 text-center">Jumlah</th>
                             </tr>
                         </thead>
                         <tbody id="tbody-breakdown" class="text-slate-700"></tbody>
@@ -307,13 +333,13 @@
             <div class="space-y-4 mb-6">
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-2">Pilih Customer Estimasi Baru</label>
-                    <select id="input-new-po" class="w-full p-3 border-2 border-slate-200 outline-none focus:border-indigo-600 text-sm text-slate-800 uppercase bg-white cursor-pointer rounded-xl transition">
+                    <select id="input-new-po" class="w-full p-3 border-2 border-slate-200 outline-none focus:border-indigo-600 text-sm text-slate-800 uppercase bg-slate-50 cursor-pointer rounded-xl transition">
                         <option value="">-- MEMUAT CUSTOMER... --</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-2">Jumlah Dus yang Diganti</label>
-                    <input type="number" id="input-qty-ganti" autocomplete="off" class="w-full p-3 border-2 border-slate-200 outline-none focus:border-indigo-600 text-sm font-black text-slate-800 bg-white rounded-xl transition" placeholder="Contoh: 5" min="1">
+                    <input type="number" id="input-qty-ganti" autocomplete="off" class="w-full p-3 border-2 border-slate-200 outline-none focus:border-indigo-600 text-sm font-black text-slate-800 bg-slate-50 rounded-xl transition" placeholder="Contoh: 5" min="1">
                 </div>
             </div>
             <div class="flex gap-2 justify-end">
