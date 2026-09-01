@@ -1,5 +1,3 @@
-
-
 // Otomatis deteksi mode perangkat saat buka halaman (Layar < 640px = Grid, >= 640px = Tabel)
 const isMobileDevice = window.innerWidth < 640;
 let modeSekarang = isMobileDevice ? 'grid' : 'tabel'; 
@@ -29,11 +27,11 @@ let filterTimeout;
 
 // State Khusus Mode Grid (Drill-Down 6 Tingkat & Filter Tanggal Persisten)
 let mobileLevel = 1; 
-let gridFilterDate = ''; // Menyimpan tanggal yang dipilih agar tidak hilang saat navigasi
-let mobileSelectedSource = ''; // 'ALL', 'SCAN', 'MANUAL', 'HOLD'
+let gridFilterDate = ''; 
+let mobileSelectedSource = ''; 
 let mobileSelectedTgl = '';
-let mobileSelectedMesinShift = ''; // `${mesin}_${shift}`
-let mobileSelectedItemSpec = ''; // `${nama}_${pjg}_${grade}_${dus}`
+let mobileSelectedMesinShift = ''; 
+let mobileSelectedItemSpec = ''; 
 let mobileSelectedShading = '';
 
 function safeJSONParse(data, fallback = null) {
@@ -43,6 +41,45 @@ function safeJSONParse(data, fallback = null) {
 }
 
 const currentUser = safeJSONParse(localStorage.getItem('user_session'), {username: 'Admin', role: 'admin'});
+
+// ==========================================
+// CUSTOM ALERT & NOTIFICATION SYSTEM
+// ==========================================
+window.tampilkanAlert = function(pesan, tipe = 'info') {
+    const modal = document.getElementById('modal-custom-alert');
+    const title = document.getElementById('alert-title');
+    const msg = document.getElementById('alert-message');
+    const iconContainer = document.getElementById('alert-icon-container');
+    const icon = document.getElementById('alert-icon');
+
+    if(!modal) { alert(pesan); return; }
+
+    msg.innerText = pesan;
+    modal.classList.remove('hidden');
+
+    if (tipe === 'warning') {
+        title.innerText = 'Perhatian';
+        title.className = 'text-lg font-black mb-2 text-amber-600';
+        iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-amber-100 text-amber-600';
+        icon.setAttribute('data-lucide', 'alert-triangle');
+    } else if (tipe === 'success') {
+        title.innerText = 'Berhasil';
+        title.className = 'text-lg font-black mb-2 text-emerald-600';
+        iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-emerald-100 text-emerald-600';
+        icon.setAttribute('data-lucide', 'check-circle');
+    } else if (tipe === 'error') {
+        title.innerText = 'Gagal';
+        title.className = 'text-lg font-black mb-2 text-rose-600';
+        iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-rose-100 text-rose-600';
+        icon.setAttribute('data-lucide', 'x-circle');
+    } else {
+        title.innerText = 'Informasi';
+        title.className = 'text-lg font-black mb-2 text-blue-600';
+        iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-blue-100 text-blue-600';
+        icon.setAttribute('data-lucide', 'info');
+    }
+    lucide.createIcons();
+};
 
 // Definisi Default Seluruh Kolom Tabel Standar
 const defaultColDefs = [
@@ -85,7 +122,6 @@ function formatWIB(isoString) {
     } catch(e) { return isoString; }
 }
 
-// Auto-Chunking Fetcher Aman untuk menembus limit 1000 baris Supabase
 async function fetchAllRows(tableName, filterStatus = 'ALL') {
     let allData = [];
     let page = 0;
@@ -131,10 +167,22 @@ document.addEventListener('DOMContentLoaded', () => {
         wmsMain.style.padding = '0'; 
     }
 
+    const tabsData = [
+        { id: 'tab-mode-grid', label: 'GRID HASIL STBJ', icon: 'layout-grid', onClick: "setMode('grid')" },
+        { id: 'tab-mode-tabel', label: 'TABEL HASIL STBJ', icon: 'table', onClick: "setMode('tabel')" }
+    ];
+    if (typeof window.renderSubmenuTabs === 'function') {
+        window.renderSubmenuTabs('container-submenu', tabsData, isMobileDevice ? 'tab-mode-grid' : 'tab-mode-tabel');
+    }
+    
+    if (typeof window.renderTableFooter === 'function') {
+        window.renderTableFooter('container-footer', 'Total Qty (Dus)');
+    }
+
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
-            if (!menu.contains(e.target) && !e.target.closest('button[title^="Filter"]')) {
+            if (!menu.contains(e.target) && !e.target.closest('th.cursor-pointer')) {
                 closeFilterMenu();
             }
         }
@@ -147,7 +195,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Inisialisasi tampilan awal langsung
     setMode(modeSekarang);
 
     setTimeout(async () => {
@@ -163,7 +210,6 @@ window.toggleActionMenuMobile = function(e) {
     if(menu) menu.classList.toggle('hidden');
 };
 
-// Kontrol Modal Pop-up Filter Tengah
 window.bukaModalFilterPopup = function() {
     updateFilterDropdowns();
     document.getElementById('modal-filter-stbj').classList.remove('hidden');
@@ -175,7 +221,6 @@ window.tutupModalFilterPopup = function() {
     document.getElementById('overlay-klik-luar').classList.add('hidden');
 };
 
-// Kontrol Sidebar Atur Kolom
 window.toggleSidebarKolom = function() {
     const sidebar = document.getElementById('sidebar-kolom');
     const overlay = document.getElementById('overlay-klik-luar');
@@ -197,6 +242,7 @@ window.tutupPopups = function() {
     document.getElementById('overlay-klik-luar').classList.add('hidden');
     document.getElementById('modal-list-katalog').classList.add('hidden');
     document.getElementById('modal-katalog').classList.add('hidden');
+    document.getElementById('modal-custom-alert').classList.add('hidden');
     closeFilterMenu();
 };
 
@@ -211,11 +257,12 @@ function loadUserPreferences() {
     if(savedRows) {
         rowsPerPage = parseInt(savedRows);
         const sel = document.getElementById('select-rows-per-page');
-        if(sel) sel.value = rowsPerPage;
+        if(sel) {
+            Array.from(sel.options).forEach(opt => { if(opt.value == rowsPerPage) opt.selected = true; });
+        }
     }
 }
 
-// Render Daftar Kolom di Sidebar Atur Kolom (Drag & Drop + Checkbox Visibilitas)
 let draggedItem = null;
 
 function renderDragList() {
@@ -252,7 +299,6 @@ function renderDragList() {
     container.innerHTML = html;
     lucide.createIcons();
 
-    // Event Listener Drag and Drop
     const items = container.querySelectorAll('.drag-col-item');
     items.forEach(item => {
         item.addEventListener('dragstart', function(e) {
@@ -321,7 +367,7 @@ window.simpanUrutanKolom = function() {
 
     toggleSidebarKolom();
     renderHeaderDanTabel();
-    alert("Urutan dan visibilitas kolom berhasil disimpan!");
+    tampilkanAlert("Urutan dan visibilitas kolom berhasil disimpan!", "success");
 };
 
 window.resetUrutanKolom = function() {
@@ -331,7 +377,7 @@ window.resetUrutanKolom = function() {
     hiddenCols = [];
     renderDragList();
     renderHeaderDanTabel();
-    alert("Urutan kolom telah direset ke default!");
+    tampilkanAlert("Urutan kolom telah direset ke default!", "success");
 };
 
 async function loadKamusDanJasper() {
@@ -348,10 +394,10 @@ async function loadKamusDanJasper() {
     } catch(e) {}
 }
 
-async function muatDataDariSupabase() {
+window.muatDataDariSupabase = async function() {
     const tbody = document.getElementById('tbody-stbj');
     if(tbody) tbody.innerHTML = `<tr><td colspan="23" class="p-10 text-center"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2 text-slate-500"></i><p class="font-bold text-slate-500 text-sm">Menarik Semua Data STBJ...</p></td></tr>`;
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
     
     try {
         const [resHasil, resManual] = await Promise.all([
@@ -367,32 +413,39 @@ async function muatDataDariSupabase() {
     } catch(err) { 
         if(tbody) tbody.innerHTML = `<tr><td colspan="23" class="p-10 text-center text-red-500 font-bold">Gagal memuat data: ${err.message}</td></tr>`; 
     }
-}
+};
 
 window.setMode = function(m) {
     const isGrid = (m === 'grid' || m === 'mobile');
     modeSekarang = isGrid ? 'grid' : 'tabel';
 
-    const activeClass = 'px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
-    const inactiveClass = 'px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase';
+    const tabsData = [
+        { id: 'tab-mode-grid', label: 'GRID HASIL STBJ', icon: 'layout-grid', onClick: "setMode('grid')" },
+        { id: 'tab-mode-tabel', label: 'TABEL HASIL STBJ', icon: 'table', onClick: "setMode('tabel')" }
+    ];
+    if (typeof window.renderSubmenuTabs === 'function') {
+        window.renderSubmenuTabs('container-submenu', tabsData, isGrid ? 'tab-mode-grid' : 'tab-mode-tabel');
+    }
 
-    const tabGrid = document.getElementById('tab-mode-grid');
-    const tabTabel = document.getElementById('tab-mode-tabel');
-
-    if(tabGrid) tabGrid.className = isGrid ? activeClass : inactiveClass;
-    if(tabTabel) tabTabel.className = !isGrid ? activeClass : inactiveClass;
-
-    // Tampilkan / Sembunyikan Konten View
     const viewGrid = document.getElementById('view-grid');
     const viewTable = document.getElementById('view-table');
     const desktopToolbar = document.getElementById('desktop-toolbar');
-    const footerPagination = document.getElementById('footer-pagination');
+    const footerPagination = document.getElementById('container-footer');
     const lvl6Footer = document.getElementById('mobile-lvl6-footer');
 
     if (viewGrid) viewGrid.classList.toggle('hidden', !isGrid);
     if (viewTable) viewTable.classList.toggle('hidden', isGrid);
     if (desktopToolbar) desktopToolbar.classList.toggle('hidden', isGrid);
-    if (footerPagination) footerPagination.classList.toggle('hidden', isGrid);
+    
+    if (footerPagination) {
+        if(isGrid) {
+            footerPagination.classList.add('hidden');
+            footerPagination.style.display = 'none';
+        } else {
+            footerPagination.classList.remove('hidden');
+            footerPagination.style.display = 'flex';
+        }
+    }
     
     if (lvl6Footer && !isGrid) {
         lvl6Footer.classList.add('hidden');
@@ -580,13 +633,12 @@ function makeStickyHeader(title, subtitle) {
     `;
 }
 
-// Cancel STBJ Mobile (Status -> HOLD LANGSIR) + Mencatat PIC Cancel
 window.cancelSTBJMobile = async function() {
     const checkedBoxes = document.querySelectorAll('.cb-stbj-lvl6:checked');
-    if (checkedBoxes.length === 0) return alert("Pilih minimal 1 kardus!");
+    if (checkedBoxes.length === 0) return tampilkanAlert("Pilih minimal 1 kardus!", "warning");
 
     const qrsToCancel = Array.from(checkedBoxes).map(cb => cb.value).filter(qr => qr && qr !== '-');
-    if (qrsToCancel.length === 0) return alert("Item manual tidak dapat di-cancel STBJ.");
+    if (qrsToCancel.length === 0) return tampilkanAlert("Item manual tidak dapat di-cancel STBJ.", "warning");
 
     if (!confirm(`Cancel ${qrsToCancel.length} item STBJ ini? Status akan diubah menjadi 'HOLD LANGSIR' oleh ${currentUser.username}.`)) return;
 
@@ -615,23 +667,22 @@ window.cancelSTBJMobile = async function() {
             }
         });
 
-        alert(`✅ SUKSES!\n${qrsToCancel.length} kardus telah masuk ke 'HOLD LANGSIR' (PIC: ${currentUser.username}).`);
+        tampilkanAlert(`${qrsToCancel.length} kardus telah masuk ke 'HOLD LANGSIR' (PIC: ${currentUser.username}).`, "success");
         renderMobileView();
     } catch (e) {
-        alert("Gagal memproses: " + e.message);
+        tampilkanAlert("Gagal memproses: " + e.message, "error");
     } finally {
         if(btn) { btn.innerHTML = oriText; btn.disabled = false; }
-        lucide.createIcons();
+        if(typeof lucide !== 'undefined') lucide.createIcons();
     }
 };
 
-// Cancel Hold Mobile (Status -> STBJ)
 window.cancelHoldMobile = async function() {
     const checkedBoxes = document.querySelectorAll('.cb-stbj-lvl6:checked');
-    if (checkedBoxes.length === 0) return alert("Pilih minimal 1 kardus hold!");
+    if (checkedBoxes.length === 0) return tampilkanAlert("Pilih minimal 1 kardus hold!", "warning");
 
     const qrsToUnhold = Array.from(checkedBoxes).map(cb => cb.value).filter(qr => qr && qr !== '-');
-    if (qrsToUnhold.length === 0) return alert("Tidak ada item scan valid.");
+    if (qrsToUnhold.length === 0) return tampilkanAlert("Tidak ada item scan valid.", "warning");
 
     if (!confirm(`Kembalikan ${qrsToUnhold.length} item hold ini ke status 'STBJ'?`)) return;
 
@@ -658,29 +709,28 @@ window.cancelHoldMobile = async function() {
             }
         });
 
-        alert(`✅ SUKSES!\n${qrsToUnhold.length} kardus dikembalikan ke status 'STBJ'.`);
+        tampilkanAlert(`${qrsToUnhold.length} kardus dikembalikan ke status 'STBJ'.`, "success");
         renderMobileView();
     } catch (e) {
-        alert("Gagal memproses: " + e.message);
+        tampilkanAlert("Gagal memproses: " + e.message, "error");
     } finally {
         if(btn) { btn.innerHTML = oriText; btn.disabled = false; }
-        lucide.createIcons();
+        if(typeof lucide !== 'undefined') lucide.createIcons();
     }
 };
 
-// Hapus Item Hold Mobile (Khusus Creator & Super Admin)
 window.hapusItemHoldMobile = async function() {
     const userRole = (currentUser.role || '').toLowerCase();
     const isSuperOrCreator = ['creator', 'super admin', 'superadmin'].includes(userRole);
     if (!isSuperOrCreator) {
-        return alert("Akses ditolak! Hanya Creator dan Super Admin yang berhak menghapus data Hold.");
+        return tampilkanAlert("Akses ditolak! Hanya Creator dan Super Admin yang berhak menghapus data Hold.", "error");
     }
 
     const checkedBoxes = document.querySelectorAll('.cb-stbj-lvl6:checked');
-    if (checkedBoxes.length === 0) return alert("Pilih minimal 1 kardus yang ingin dihapus!");
+    if (checkedBoxes.length === 0) return tampilkanAlert("Pilih minimal 1 kardus yang ingin dihapus!", "warning");
 
     const qrsToDelete = Array.from(checkedBoxes).map(cb => cb.value).filter(qr => qr && qr !== '-');
-    if (qrsToDelete.length === 0) return alert("Tidak ada item valid.");
+    if (qrsToDelete.length === 0) return tampilkanAlert("Tidak ada item valid.", "warning");
 
     if (!confirm(`⚠️ PERINGATAN: Hapus permanen ${qrsToDelete.length} item hold ini dari database?`)) return;
 
@@ -693,13 +743,13 @@ window.hapusItemHoldMobile = async function() {
         if (error) throw error;
 
         rawDataRaw = rawDataRaw.filter(r => !qrsToDelete.includes(r.qrcode));
-        alert(`✅ SUKSES!\n${qrsToDelete.length} kardus hold telah dihapus permanen.`);
+        tampilkanAlert(`${qrsToDelete.length} kardus hold telah dihapus permanen.`, "success");
         renderMobileView();
     } catch (e) {
-        alert("Gagal menghapus: " + e.message);
+        tampilkanAlert("Gagal menghapus: " + e.message, "error");
     } finally {
         if(btn) { btn.innerHTML = oriText; btn.disabled = false; }
-        lucide.createIcons();
+        if(typeof lucide !== 'undefined') lucide.createIcons();
     }
 };
 
@@ -707,7 +757,6 @@ function renderMobileView() {
     const container = document.getElementById('view-grid');
     const lvl6Footer = document.getElementById('mobile-lvl6-footer');
 
-    // Kontrol Tampilan Footer Freeze Level 6
     if (lvl6Footer) {
         if ((modeSekarang === 'grid' || modeSekarang === 'mobile') && mobileLevel === 6) {
             lvl6Footer.classList.remove('hidden');
@@ -741,7 +790,6 @@ function renderMobileView() {
         return matchesActiveFilters(r);
     });
 
-    // BAR FILTER TANGGAL YANG SELALU MUNCUL DI SEMUA TINGKATAN GRID
     let topFilterBarHtml = `
         <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-2 mb-2 shrink-0">
             <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-xl p-1 shadow-inner">
@@ -763,13 +811,12 @@ function renderMobileView() {
                 <i data-lucide="package-x" class="w-12 h-12 text-slate-300 mb-2"></i>
                 <h4 class="font-bold text-slate-700 text-sm">Tidak ada data STBJ untuk filter ini</h4>
             </div>`;
-        lucide.createIcons();
+        if(typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
 
     let html = topFilterBarHtml;
 
-    // LEVEL 1: KOTAK KISI
     if (mobileLevel === 1) {
         let totalScan = 0, totalManual = 0, totalHold = 0;
         allItems.forEach(r => {
@@ -802,8 +849,6 @@ function renderMobileView() {
             </div>
         </div>`;
     }
-
-    // LEVEL 2: TANGGAL PRODUKSI
     else if (mobileLevel === 2) {
         let sourceLabel = mobileSelectedSource === 'ALL' ? 'Hasil Scan + Manual' : (mobileSelectedSource === 'SCAN' ? 'Hasil Scan Saja' : (mobileSelectedSource === 'MANUAL' ? 'Input Manual Saja' : 'Tabel Hold'));
         let dataLvl2 = allItems.filter(r => {
@@ -821,8 +866,6 @@ function renderMobileView() {
             html += makeDrillCard(tgl, "Tanggal Produksi", tglMap[tgl], `goToMobileLevel3('${tgl}')`, 'calendar');
         });
     }
-
-    // LEVEL 3: MESIN & SHIFT
     else if (mobileLevel === 3) {
         let dataLvl3 = allItems.filter(r => {
             if (mobileSelectedSource === 'SCAN' && r.source !== 'SCAN') return false;
@@ -843,8 +886,6 @@ function renderMobileView() {
             html += makeDrillCard(`Mesin ${m} • Shift ${s}`, "Produksi Harian", msMap[key], `goToMobileLevel4('${key}')`, 'settings');
         });
     }
-
-    // LEVEL 4: ITEM SPEC
     else if (mobileLevel === 4) {
         let [mSel, sSel] = mobileSelectedMesinShift.split('_');
         let dataLvl4 = allItems.filter(r => {
@@ -866,8 +907,6 @@ function renderMobileView() {
             html += makeDrillCard(`${nama} - ${pjg} - ${grade} - ${dus}`, "Spesifikasi", itemMap[key], `goToMobileLevel5('${key}')`, 'box');
         });
     }
-
-    // LEVEL 5: SHADING
     else if (mobileLevel === 5) {
         let [mSel, sSel] = mobileSelectedMesinShift.split('_');
         let [namaSel, pjgSel, gradeSel, dusSel] = mobileSelectedItemSpec.split('_');
@@ -888,8 +927,6 @@ function renderMobileView() {
             html += makeDrillCard(shading, "Shading", shadingMap[shading], `goToMobileLevel6('${shading}')`, 'palette');
         });
     }
-
-    // LEVEL 6: DETAIL ITEM FISIK
     else if (mobileLevel === 6) {
         let [mSel, sSel] = mobileSelectedMesinShift.split('_');
         let [namaSel, pjgSel, gradeSel, dusSel] = mobileSelectedItemSpec.split('_');
@@ -1138,6 +1175,13 @@ function applySort() {
     renderTable();
 }
 
+window.sortFromMenu = function(dir) {
+    if(!currentFilterCol) return;
+    sortState = { col: currentFilterCol, isAsc: dir === 'asc' };
+    closeFilterMenu();
+    applySort();
+};
+
 function sortTable(colClass, headerEl) {
     let isAsc = sortState.col === colClass ? !sortState.isAsc : true;
     sortState = { col: colClass, isAsc: isAsc };
@@ -1153,25 +1197,25 @@ const thSort = (label, cls = "") => {
     const isHidden = hiddenCols.includes(colClass) ? 'col-hidden' : '';
     const noFilter = ['col-cb', 'col-btn', 'col-btn-edit'].includes(colClass);
     
-    const filterBtn = noFilter ? '' : `
-        <button onclick="openColumnFilter(event, '${colClass}', '${label}')" class="p-1 hover:bg-slate-700 rounded transition" title="Filter ${label}">
-            <i data-lucide="filter" class="w-3.5 h-3.5 filter-icon opacity-40 hover:opacity-100 transition-all text-white"></i>
-        </button>`;
+    let isFiltered = activeFilters[colClass] && activeFilters[colClass].length > 0;
+    let hdrBgClass = isFiltered ? 'hdr-filtered' : '';
+    let filterIconColor = isFiltered ? 'text-amber-400 opacity-100' : 'text-slate-400 opacity-40';
 
-    return `<th class="hdr-std ${cls} ${isHidden} select-none group">
+    if (noFilter) {
+        return `<th class="hdr-std ${cls} ${isHidden} select-none text-center"><div class="flex items-center justify-center w-full">${label}</div></th>`;
+    }
+
+    return `<th class="hdr-std ${cls} ${isHidden} ${hdrBgClass} select-none group cursor-pointer hover:bg-slate-700 transition" onclick="openColumnFilter(event, '${colClass}', '${label}')">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
-            <span class="cursor-pointer hover:text-blue-300 transition truncate flex-1 text-left" onclick="sortTable('${colClass}', this.closest('th'))" title="Sort ${label}">${label}</span>
+            <span class="truncate flex-1 text-left" title="${label}">${label}</span>
             <div class="flex items-center gap-1 shrink-0">
-                <button onclick="sortTable('${colClass}', this.closest('th'))" class="p-1 hover:bg-slate-700 rounded transition" title="Sort ${label}">
-                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 sort-icon opacity-40 group-hover:opacity-100 transition-opacity text-white"></i>
-                </button>
-                ${filterBtn}
+                <i data-lucide="chevron-down" class="w-4 h-4 filter-icon ${filterIconColor} group-hover:opacity-100 transition-all"></i>
             </div>
         </div>
     </th>`;
 };
 
-function openColumnFilter(event, colClass, colName) {
+window.openColumnFilter = function(event, colClass, colName) {
     event.stopPropagation();
     currentFilterCol = colClass;
     document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
@@ -1188,19 +1232,9 @@ function openColumnFilter(event, colClass, colName) {
     });
 
     let sortedValues = Array.from(uniqueValues).sort();
-    let listHtml = `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition"><input type="checkbox" id="filter-select-all" checked onchange="toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-semibold text-slate-800">(Pilih Semua)</span></label>`;
-    
-    sortedValues.forEach(val => {
-        let isChecked = true;
-        if (activeFilters[colClass] && !activeFilters[colClass].includes(val)) { isChecked = false; }
-        listHtml += `<label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-md transition filter-val-item" data-value="${encodeURIComponent(val)}">
-            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
-            <span class="truncate text-slate-600">${val}</span>
-        </label>`;
-    });
+    window.currentFilterValues = sortedValues;
+    renderFilterList('');
 
-    document.getElementById('filter-values-list').innerHTML = listHtml;
-    updateSelectAllState();
     document.getElementById('filter-search-input').value = '';
     
     const menu = document.getElementById('excel-filter-menu');
@@ -1219,49 +1253,77 @@ function openColumnFilter(event, colClass, colName) {
     menu.style.left = `${leftPos}px`;
     
     document.getElementById('filter-search-input').focus();
-}
+};
 
-function toggleAllFilterValues(checked) {
-    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
-    updateSelectAllState();
-}
+window.renderFilterList = function(searchQuery) {
+    const colClass = currentFilterCol;
+    let filteredVals = window.currentFilterValues;
+    
+    if (searchQuery) {
+        const query = searchQuery.toLowerCase().split(' ').filter(x => x);
+        filteredVals = window.currentFilterValues.filter(val => {
+            const text = String(val).toLowerCase();
+            return query.every(term => text.includes(term));
+        });
+    }
 
-function updateSelectAllState() {
-    const allCbs = document.querySelectorAll('.filter-val-cb');
-    const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
-    const selectAll = document.getElementById('filter-select-all');
-    if(!selectAll) return;
-    if(allCbs.length === checkedCbs.length) { selectAll.checked = true; selectAll.indeterminate = false; }
-    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
-    else { selectAll.checked = false; selectAll.indeterminate = true; }
-}
+    const limit = 100;
+    const displayVals = filteredVals.slice(0, limit);
 
-document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) updateSelectAllState(); });
+    let listHtml = `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded-lg transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-bold text-slate-800">(Pilih Semua)</span></label>`;
+    
+    displayVals.forEach(val => {
+        let isChecked = !activeFilters[colClass] || activeFilters[colClass].includes(val);
+        listHtml += `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded-lg transition filter-val-item" data-value="${encodeURIComponent(val)}">
+            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
+            <span class="truncate font-medium text-slate-700">${val}</span>
+        </label>`;
+    });
+
+    if (filteredVals.length > limit) {
+        listHtml += `<div class="p-2 text-center text-xs font-bold text-slate-400 italic">Menampilkan 100 dari ${filteredVals.length} hasil. Ketik untuk mencari.</div>`;
+    }
+
+    document.getElementById('filter-values-list').innerHTML = listHtml;
+    window.updateSelectAllState();
+};
 
 window.searchFilterList = function(val) {
     clearTimeout(filterTimeout);
     filterTimeout = setTimeout(() => {
-        const query = val.toLowerCase().split(' ').filter(x => x); 
         requestAnimationFrame(() => {
-            document.querySelectorAll('.filter-val-item').forEach(label => {
-                const text = decodeURIComponent(label.getAttribute('data-value')).toLowerCase();
-                let matches = query.every(term => text.includes(term));
-                label.style.display = matches ? '' : 'none';
-            });
+            window.renderFilterList(val);
         });
     }, 150);
 };
 
-function closeFilterMenu() { document.getElementById('excel-filter-menu').classList.add('hidden'); }
+window.toggleAllFilterValues = function(checked) {
+    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
+    window.updateSelectAllState();
+};
 
-function clearFilterForCurrentCol() { 
+window.updateSelectAllState = function() {
+    const allCbs = document.querySelectorAll('.filter-val-cb');
+    const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
+    const selectAll = document.getElementById('filter-select-all');
+    if(!selectAll) return;
+    if(allCbs.length === checkedCbs.length && allCbs.length > 0) { selectAll.checked = true; selectAll.indeterminate = false; }
+    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
+    else { selectAll.checked = false; selectAll.indeterminate = true; }
+};
+
+document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) window.updateSelectAllState(); });
+
+window.closeFilterMenu = function() { document.getElementById('excel-filter-menu').classList.add('hidden'); };
+
+window.clearFilterForCurrentCol = function() { 
     delete activeFilters[currentFilterCol]; 
     closeFilterMenu(); 
     applyFilters(); 
     updateFilterIcons(); 
-}
+};
 
-function applyFilterForCurrentCol() {
+window.applyFilterForCurrentCol = function() {
     const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
     const totalBoxes = document.querySelectorAll('.filter-val-cb');
     
@@ -1275,18 +1337,27 @@ function applyFilterForCurrentCol() {
     closeFilterMenu(); 
     applyFilters(); 
     updateFilterIcons();
-}
+};
 
 function updateFilterIcons() {
     document.querySelectorAll('.filter-icon').forEach(icon => {
         icon.classList.remove('text-amber-400', 'opacity-100');
-        icon.classList.add('opacity-40', 'text-white');
+        icon.classList.add('text-slate-400', 'opacity-40');
     });
+    
+    document.querySelectorAll('th.hdr-filtered').forEach(th => {
+        th.classList.remove('hdr-filtered');
+    });
+
     for (let colClass in activeFilters) {
         const th = document.querySelector(`th.${colClass}`);
         if (th) {
+            th.classList.add('hdr-filtered');
             const icon = th.querySelector('.filter-icon');
-            if (icon) { icon.classList.remove('opacity-40', 'text-white'); icon.classList.add('text-amber-400', 'opacity-100'); }
+            if (icon) { 
+                icon.classList.remove('text-slate-400', 'opacity-40'); 
+                icon.classList.add('text-amber-400', 'opacity-100'); 
+            }
         }
     }
 }
@@ -1301,14 +1372,15 @@ function hitungQtyLembar(jenis, nama, qtyDus) {
     if (j === 'LIST' || j === 'LIS') {
         if (lisData && lisData.length > 0) {
             let sortedLis = [...lisData].sort((a, b) => {
-                let lenA = (a.nama_item_lis || a.nama_item || '').length;
-                let lenB = (b.nama_item_lis || b.nama_item || '').length;
+                let lenA = String(a.nama_item_lis || a.nama_item || '').length;
+                let lenB = String(b.nama_item_lis || b.nama_item || '').length;
                 return lenB - lenA;
             });
 
             let found = sortedLis.find(l => {
-                let lisName = (l.nama_item_lis || l.nama_item || '').trim().toUpperCase();
-                return lisName !== '' && (n.includes(lisName) || lisName === n);
+                let lisName = String(l.nama_item_lis || l.nama_item || '').trim().toUpperCase();
+                if (!lisName) return false;
+                return n.includes(lisName) || lisName.includes(n);
             });
 
             if (found && found.qty_isi) {
@@ -1354,7 +1426,7 @@ function updateSelectAllUI() {
         btn.innerHTML = '<i data-lucide="check-check" class="w-3 h-3"></i>';
         btn.className = 'w-4 h-4 border border-amber-500 rounded flex items-center justify-center bg-amber-500 text-white transition mx-auto';
     }
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 window.highlightRow = function(cb, id) {
@@ -1414,7 +1486,7 @@ function renderTable() {
     if (filteredData.length === 0) {
         tbody.innerHTML = `<tr><td colspan="23" class="px-4 py-12 text-center font-bold text-slate-400">Tidak ada data cocok dengan filter.</td></tr>`;
         updatePaginationUI();
-        lucide.createIcons();
+        if(typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
 
@@ -1463,9 +1535,34 @@ function renderTable() {
     
     tbody.innerHTML = h;
     applyColumnOrder();
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
     updatePaginationUI();
 }
+
+window.changeRowsPerPage = function(val) {
+    rowsPerPage = (val === 'ALL') ? 999999 : parseInt(val);
+    localStorage.setItem('wms_rows_per_page', rowsPerPage);
+    currentPage = 1; 
+    renderTable();
+};
+
+window.jumpToPage = function(val) {
+    let p = parseInt(val);
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
+    if (isNaN(p) || p < 1) p = 1;
+    if (p > totalPages) p = totalPages;
+    
+    currentPage = p;
+    const inp = document.getElementById('input-page-jump');
+    if(inp) inp.value = currentPage;
+    renderTable();
+};
+
+window.prevPage = function() { if(currentPage > 1) { currentPage--; renderTable(); } };
+window.nextPage = function() { 
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
+    if(currentPage < totalPages) { currentPage++; renderTable(); } 
+};
 
 function updatePaginationUI() {
     const totalFiltered = filteredData.length;
@@ -1478,26 +1575,18 @@ function updatePaginationUI() {
     const lblQty = document.getElementById('lbl-total-qty');
     const lblHal = document.getElementById('lbl-halaman');
     const lblTotHal = document.getElementById('lbl-total-halaman');
+    const inpPage = document.getElementById('input-page-jump');
 
     if(lblTampil) lblTampil.innerText = totalFiltered;
     if(lblQty) lblQty.innerText = sumQty;
     if(lblHal) lblHal.innerText = currentPage;
     if(lblTotHal) lblTotHal.innerText = totalPages;
+    if(inpPage) {
+        inpPage.value = currentPage;
+        inpPage.max = totalPages;
+    }
     
     updateSelectedCount();
-}
-
-function changeRowsPerPage(val) {
-    rowsPerPage = (val === 'ALL') ? 999999 : parseInt(val);
-    localStorage.setItem('wms_rows_per_page', rowsPerPage);
-    currentPage = 1; 
-    renderTable();
-}
-
-function prevPage() { if(currentPage > 1) { currentPage--; renderTable(); } }
-function nextPage() { 
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
-    if(currentPage < totalPages) { currentPage++; renderTable(); } 
 }
 
 function updateSelectedCount() {
@@ -1508,10 +1597,10 @@ function updateSelectedCount() {
 // ========================================================
 // FUNGSI AKSI MASSAL & KATALOG
 // ========================================================
-function bukaDaftarKatalog() {
+window.bukaDaftarKatalog = function() {
     renderKatalogList();
     document.getElementById('modal-list-katalog').classList.remove('hidden');
-}
+};
 
 function renderKatalogList() {
     const tbody = document.getElementById('tbody-katalog-list');
@@ -1539,18 +1628,18 @@ function renderKatalogList() {
         </tr>`;
     });
     tbody.innerHTML = html;
-    lucide.createIcons(); 
+    if(typeof lucide !== 'undefined') lucide.createIcons(); 
 }
 
-function saringKatalogList() {
+window.saringKatalogList = function() {
     const query = document.getElementById('f-kat-search').value.toLowerCase();
     document.querySelectorAll('.row-katalog').forEach(row => {
         const text = row.getAttribute('data-search');
         row.style.display = text.includes(query) ? '' : 'none';
     });
-}
+};
 
-function bukaModalKatalogForm(isEdit = false, encodedData = null) {
+window.bukaModalKatalogForm = function(isEdit = false, encodedData = null) {
     document.getElementById('modal-list-katalog').classList.add('hidden');
     document.getElementById('modal-katalog').classList.remove('hidden');
     
@@ -1573,18 +1662,20 @@ function bukaModalKatalogForm(isEdit = false, encodedData = null) {
         document.getElementById('j-grade').value = '';
         document.getElementById('j-output').value = '';
     }
-}
+};
 
-function tutupModalJasperForm() { document.getElementById('modal-katalog').classList.add('hidden'); }
+window.tutupModalJasperForm = function() { 
+    document.getElementById('modal-katalog').classList.add('hidden'); 
+};
 
-async function simpanDataJasper() {
+window.simpanDataJasper = async function() {
     const id = document.getElementById('j-id').value;
     const nama = document.getElementById('j-nama').value.trim();
     const pjg = document.getElementById('j-pjg').value.trim();
     const grade = document.getElementById('j-grade').value.trim();
     const output = document.getElementById('j-output').value.trim();
 
-    if(!nama || !output) return alert("PERHATIAN: Nama Item Master dan Nama Output Jasper Wajib Diisi!");
+    if(!nama || !output) return tampilkanAlert("PERHATIAN: Nama Item Master dan Nama Output Jasper Wajib Diisi!", "warning");
 
     const btn = document.getElementById('btn-save-jasper');
     const oriTxt = btn.innerHTML;
@@ -1609,20 +1700,21 @@ async function simpanDataJasper() {
         await loadKamusDanJasper(); 
         renderKatalogList(); 
         muatDataDariSupabase(); 
+        tampilkanAlert("Data Jasper berhasil disimpan!", "success");
     } catch(e) {
-        alert("GAGAL MENYIMPAN: " + e.message);
+        tampilkanAlert("GAGAL MENYIMPAN: " + e.message, "error");
     } finally {
-        btn.innerHTML = oriTxt; btn.disabled = false; lucide.createIcons();
+        btn.innerHTML = oriTxt; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons();
     }
-}
+};
 
-async function aksiMassal(tipe) {
+window.aksiMassal = async function(tipe) {
     let checkedValues = [];
     selectedRows.forEach(id => {
         id.split(',').forEach(v => { if(v) checkedValues.push(v); });
     });
     
-    if(checkedValues.length === 0) return alert("Centang baris tabel terlebih dahulu!");
+    if(checkedValues.length === 0) return tampilkanAlert("Centang baris tabel terlebih dahulu!", "warning");
 
     if(tipe === 'salin') {
         let textSalin = "";
@@ -1665,7 +1757,7 @@ async function aksiMassal(tipe) {
         });
         
         navigator.clipboard.writeText(textSalin);
-        alert(`Tersalin! Buka Excel dan Paste (Ctrl+V).`);
+        tampilkanAlert(`Tersalin! Buka Excel dan Paste (Ctrl+V).`, "success");
     } 
     else if(tipe === 'hold') {
         const act = prompt(`Pilih Aksi untuk ${checkedValues.length} item:\n1 = Ubah ke HOLD STBJ\n2 = UNHOLD (Kembali ke STBJ)\n3 = Ubah ke HOLD LANGSIR`);
@@ -1675,7 +1767,7 @@ async function aksiMassal(tipe) {
         if (act === '1') newStatus = 'HOLD STBJ';
         else if (act === '2') newStatus = 'STBJ';
         else if (act === '3') newStatus = 'HOLD LANGSIR';
-        else return alert("Pilihan tidak valid. Ketik 1, 2, atau 3.");
+        else return tampilkanAlert("Pilihan tidak valid. Ketik 1, 2, atau 3.", "warning");
 
         const { error } = await db.from('hasil_stbj_langsir')
             .update({
@@ -1686,10 +1778,10 @@ async function aksiMassal(tipe) {
             .in('qrcode', checkedValues);
 
         if(!error) {
-            alert(`Berhasil mengubah status menjadi ${newStatus} (PIC: ${currentUser.username})`);
+            tampilkanAlert(`Berhasil mengubah status menjadi ${newStatus} (PIC: ${currentUser.username})`, "success");
             muatDataDariSupabase();
         } else {
-            alert("Gagal update status: " + error.message);
+            tampilkanAlert("Gagal update status: " + error.message, "error");
         }
     }
     else if (tipe === 'collect') {
@@ -1726,18 +1818,18 @@ async function aksiMassal(tipe) {
             }
             await muatDataDariSupabase();
         } catch (error) {
-            alert("Gagal Update: " + error.message);
+            tampilkanAlert("Gagal Update: " + error.message, "error");
         }
         
         if(btn) { btn.innerHTML = '<div class="bg-indigo-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="check-square" class="w-4 h-4"></i></div><div class="bg-indigo-800 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-indigo-700 transition">Collect</div>'; btn.disabled = false; }
         if(btnMob) { btnMob.innerHTML = '<i data-lucide="check-square" class="w-4 h-4 text-indigo-700"></i> Collect'; btnMob.disabled = false; }
-        lucide.createIcons();
+        if(typeof lucide !== 'undefined') lucide.createIcons();
     }
     else if(tipe === 'hapus') {
         const userRole = (currentUser.role || '').toLowerCase();
         const isSuperOrCreator = ['creator', 'super admin', 'superadmin'].includes(userRole);
         if(!isSuperOrCreator) {
-            return alert("Akses ditolak! Hanya Creator dan Super Admin yang dapat menghapus data.");
+            return tampilkanAlert("Akses ditolak! Hanya Creator dan Super Admin yang dapat menghapus data.", "error");
         }
 
         if(!confirm(`Yakin ingin menghapus permanen ${checkedValues.length} data ini dari database?`)) return;
@@ -1750,16 +1842,16 @@ async function aksiMassal(tipe) {
             const { error } = await db.from('hasil_stbj_langsir').delete().in('qrcode', checkedValues);
             if(error) throw error;
             
-            alert(`Berhasil menghapus ${checkedValues.length} data.`);
+            tampilkanAlert(`Berhasil menghapus ${checkedValues.length} data.`, "success");
             await muatDataDariSupabase();
         } catch(e) { 
-            alert("Gagal hapus: " + e.message); 
+            tampilkanAlert("Gagal hapus: " + e.message, "error"); 
         } finally {
-            if(btn) { btn.innerHTML = ori; btn.disabled = false; lucide.createIcons(); }
+            if(btn) { btn.innerHTML = ori; btn.disabled = false; if(typeof lucide !== 'undefined') lucide.createIcons(); }
         }
     }
     else if(tipe === 'xlsx') {
-        if(typeof XLSX === 'undefined') return alert("Library Excel belum termuat, pastikan ada koneksi internet.");
+        if(typeof XLSX === 'undefined') return tampilkanAlert("Library Excel belum termuat, pastikan ada koneksi internet.", "error");
         
         let ws_data = [];
         const activeHeaders = [];
@@ -1781,7 +1873,7 @@ async function aksiMassal(tipe) {
             activeHeaders.forEach(h => {
                 let val = sv[h.colClass] || '-';
                 let cleanVal = String(val).replace(/<[^>]*>?/gm, '').trim();
-                rowData.push(cleanVal);
+                rowData.push(`"${cleanVal}"`);
             });
             ws_data.push(rowData);
         });
@@ -1824,5 +1916,20 @@ function applyColumnOrder() {
 
         // Kembalikan checkbox selalu di posisi paling pertama
         if (cbCell) row.insertBefore(cbCell, row.firstChild);
+    });
+}
+
+function initResizableColumns() {
+    const cols = document.querySelectorAll('#table-stbj-main th');
+    cols.forEach(col => {
+        const existing = col.querySelector('.resizer'); if(existing) existing.remove();
+        const resizer = document.createElement('div'); resizer.classList.add('resizer'); col.appendChild(resizer);
+        let x = 0; let w = 0;
+        resizer.addEventListener('mousedown', function(e) {
+            x = e.clientX; w = parseInt(window.getComputedStyle(col).width, 10);
+            document.addEventListener('mousemove', mouseMoveHandler); document.addEventListener('mouseup', mouseUpHandler); resizer.classList.add('resizing');
+        });
+        const mouseMoveHandler = function(e) { const dx = e.clientX - x; col.style.width = `${w + dx}px`; col.style.minWidth = `${w + dx}px`; };
+        const mouseUpHandler = function() { document.removeEventListener('mousemove', mouseMoveHandler); document.removeEventListener('mouseup', mouseUpHandler); resizer.classList.remove('resizing'); };
     });
 }
