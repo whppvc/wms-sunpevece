@@ -25,38 +25,19 @@
         
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
         .col-hidden { display: none !important; }
+        .hdr-filtered { background-color: #312e81 !important; color: #fbbf24 !important; }
 
-        .hdr-std { 
-            text-align: center !important; 
-            padding: 0.5rem 0.75rem !important; 
-            font-size: 0.75rem !important; 
-            font-weight: 600 !important; 
-            text-transform: uppercase !important; 
-            letter-spacing: 0.05em !important; 
-            white-space: nowrap !important; 
-            border-bottom: 1px solid #e2e8f0 !important; 
-            background-clip: padding-box !important; 
-        }
-        
-        tr.r-row:not(.selected-row):hover td { color: #4f46e5 !important; }
-        tr.r-row:not(.selected-row):hover td button { color: #4f46e5 !important; border-color: #4f46e5 !important; }
-
-        .drag-col-item {
-            user-select: none;
-            touch-action: none;
-        }
+        .drag-col-item { user-select: none; touch-action: none; }
     </style>
 </head>
 <body class="font-sans text-slate-800">
 
     <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
-        <!-- HEADER SECTION (SUBMENU BAR) -->
+        <!-- HEADER SECTION -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200">
-            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
-                <button onclick="setMode('grid')" id="tab-mode-grid" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="layout-grid" class="w-4 h-4"></i> GRID HASIL STBJ</button>
-                <button onclick="setMode('tabel')" id="tab-mode-tabel" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="table" class="w-4 h-4"></i> TABEL HASIL STBJ</button>
-            </div>
+            <!-- KOMPONEN DINAMIS: SUBMENU TABS -->
+            <div id="container-submenu"></div>
 
             <!-- TOOLBAR ATAS (HANYA MUNCUL DI MODE TABEL) -->
             <div id="desktop-toolbar" class="hidden p-3 sm:p-4 flex items-center justify-end bg-slate-50/50 border-t border-slate-100 w-full gap-2">
@@ -95,8 +76,8 @@
         <div class="flex-1 min-h-0 bg-slate-100 p-4 overflow-hidden flex flex-col relative z-0">
             
             <!-- VIEW 1: TABEL DESKTOP -->
-            <div id="view-table" class="hidden flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-t-xl shadow-sm border border-slate-300">
-                <table class="w-full text-left whitespace-nowrap" id="table-stbj-main">
+            <div id="view-table" class="hidden flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-xl shadow-sm border border-slate-300">
+                <table class="w-full text-left border-separate border-spacing-0 whitespace-nowrap" id="main-table">
                     <thead class="sticky top-0 z-50 shadow-sm" id="thead-stbj"></thead>
                     <tbody id="tbody-stbj" class="text-slate-800">
                         <tr>
@@ -119,31 +100,8 @@
 
         </div>
 
-        <!-- FOOTER PAGINASI DESKTOP TABEL -->
-        <div id="footer-pagination" class="hidden shrink-0 w-full bg-white p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
-            <div class="flex items-center gap-2 flex-wrap justify-center">
-                <span class="bg-blue-50 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-medium ml-1">0</span></span>
-                <span class="bg-amber-50 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty (Dus): <span id="lbl-total-qty" class="text-amber-900 font-medium ml-1">0</span></span>
-                <span class="bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded text-emerald-800 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-medium ml-1">0</span></span>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-1 bg-white border border-slate-300 p-1 rounded shadow-sm">
-                    <span class="text-[10px] font-bold text-slate-500 uppercase px-1">Baris:</span>
-                    <select id="select-rows-per-page" onchange="changeRowsPerPage(this.value)" class="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 rounded outline-none cursor-pointer px-1 py-0.5 transition">
-                        <option value="10" selected>10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                        <option value="ALL">Semua</option>
-                    </select>
-                </div>
-                <div class="flex items-center gap-2 bg-white border border-slate-300 p-1 rounded shadow-sm">
-                    <button onclick="prevPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                    <span class="px-2 font-black text-xs text-slate-600 tracking-wide uppercase">Hal <span id="lbl-halaman" class="text-blue-600">1</span> / <span id="lbl-total-halaman">1</span></span>
-                    <button onclick="nextPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
-                </div>
-            </div>
-        </div>
+        <!-- KOMPONEN DINAMIS: FOOTER PAGINATION -->
+        <div id="container-footer" class="hidden shrink-0 w-full bg-white p-3 sm:p-4 flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300"></div>
 
         <!-- FOOTER FREEZE LEVEL 6 GRID -->
         <div id="mobile-lvl6-footer" class="hidden shrink-0 w-full bg-white px-4 py-3.5 z-40 shadow-[0_-8px_25px_rgba(0,0,0,0.15)] border-t border-slate-300 flex justify-between items-center">
@@ -171,6 +129,18 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- MODAL CUSTOM ALERT -->
+    <div id="modal-custom-alert" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[200] px-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 text-center flex flex-col items-center">
+            <div id="alert-icon-container" class="w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                <i id="alert-icon" data-lucide="info" class="w-8 h-8"></i>
+            </div>
+            <h3 class="text-lg font-black mb-2 text-slate-800" id="alert-title">Perhatian</h3>
+            <p class="text-sm font-semibold text-slate-500 mb-6 leading-relaxed" id="alert-message">Pesan alert di sini.</p>
+            <button onclick="document.getElementById('modal-custom-alert').classList.add('hidden')" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95">Tutup</button>
+        </div>
     </div>
 
     <!-- MODAL FILTER POP-UP ELEGAN -->
@@ -249,22 +219,28 @@
         </div>
     </div>
 
-    <!-- MODAL FILTER EXCEL HEADER -->
-    <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[120] flex flex-col font-sans text-sm overflow-hidden">
-        <div class="p-3 border-b border-slate-100 flex justify-between items-center rounded-t-lg">
+    <!-- MODAL FILTER EXCEL SPREADSHEET -->
+    <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-2xl w-64 z-[120] flex flex-col font-sans text-sm overflow-hidden">
+        <div class="p-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
             <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
-            <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+            <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-rose-500 bg-white border border-slate-200 p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
         </div>
-        <div class="p-2 border-b border-slate-200 bg-white">
+        
+        <div class="p-2 border-b border-slate-200 flex flex-col gap-1 bg-white">
+            <button onclick="sortFromMenu('asc')" class="text-left px-3 py-2 hover:bg-slate-100 rounded-lg text-xs font-bold text-slate-700 flex items-center gap-2 transition"><i data-lucide="arrow-down-a-z" class="w-4 h-4 text-blue-600"></i> Urutkan A ke Z</button>
+            <button onclick="sortFromMenu('desc')" class="text-left px-3 py-2 hover:bg-slate-100 rounded-lg text-xs font-bold text-slate-700 flex items-center gap-2 transition"><i data-lucide="arrow-up-z-a" class="w-4 h-4 text-blue-600"></i> Urutkan Z ke A</button>
+        </div>
+
+        <div class="p-2 border-b border-slate-100 bg-slate-50">
             <div class="relative">
                 <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2"></i>
-                <input type="text" id="filter-search-input" oninput="searchFilterList(this.value)" class="w-full pl-8 p-1.5 text-xs font-bold border border-slate-300 bg-slate-50 rounded focus:border-blue-500 outline-none transition" placeholder="Cari Spesifik...">
+                <input type="text" id="filter-search-input" oninput="searchFilterList(this.value)" autocomplete="off" class="w-full pl-8 p-1.5 text-xs font-bold border border-slate-300 bg-white rounded-lg focus:border-blue-500 outline-none transition shadow-inner" placeholder="Cari Spesifik...">
             </div>
         </div>
         <div class="p-2 max-h-48 overflow-y-auto flex flex-col gap-1 text-xs bg-white custom-scroll" id="filter-values-list"></div>
-        <div class="p-2 border-t border-slate-200 bg-slate-50 flex justify-between gap-2">
-            <button onclick="clearFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100 transition shadow-sm">Reset</button>
-            <button onclick="applyFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-700 transition shadow-sm">Terapkan</button>
+        <div class="p-3 border-t border-slate-200 bg-slate-50 flex justify-between gap-2">
+            <button onclick="clearFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition shadow-sm">Reset</button>
+            <button onclick="applyFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm">Terapkan</button>
         </div>
     </div>
 
@@ -299,14 +275,14 @@
             </div>
             <div class="overflow-y-auto px-4 pb-4 pt-0 flex-1 hide-scrollbar table-container">
                 <table class="w-full text-left border-separate border-spacing-0 text-sm whitespace-nowrap mt-3" id="table-katalog">
-                    <thead class="sticky top-0 z-50 shadow-sm">
+                    <thead class="sticky top-0 z-50 shadow-sm bg-slate-800 text-white">
                         <tr>
                             <th class="hdr-std w-10">EDIT</th>
                             <th class="hdr-std w-12">No</th>
                             <th class="hdr-std">Nama Item</th>
                             <th class="hdr-std">Panjang</th>
                             <th class="hdr-std border-r border-slate-500">Grade</th>
-                            <th class="hdr-std bg-slate-900 text-blue-300">NAMA JASPER</th>
+                            <th class="hdr-std text-blue-300">NAMA JASPER</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-katalog-list" class="text-center text-slate-700"></tbody>
@@ -353,9 +329,8 @@
     </div>
 
     <!-- OVERLAY -->
-    <div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-[50] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
+    <div id="overlay-klik-luar" onclick="tutupPopups()" class="hidden fixed inset-0 z-[40] bg-slate-900/20 backdrop-blur-sm transition-opacity"></div>
 
     <script src="hasil_stbj_logic.js"></script>
 </body>
 </html>
-
