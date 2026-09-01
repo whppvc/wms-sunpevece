@@ -318,7 +318,7 @@ async function initModernLayout(pageMeta) {
             <div class="min-h-screen p-4 sm:p-6 flex flex-col max-w-6xl mx-auto w-full">
                 
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-slate-700 gap-4">
-                    <h2 class="text-xl font-black text-white flex items-center gap-3"><i data-lucide="layout-grid" class="text-blue-500 w-6 h-6"></i> MENU NAVIGASI</h2>
+                    <h2 class="text-xl font-black text-white flex items-center gap-3"><i data-lucide="layout-grid" class="text-blue-500 w-6 h-6"></i> MENU WMS </h2>
                     
                     <div class="flex items-center gap-3 w-full sm:w-auto">
                         <div class="relative flex-1 sm:w-64">
