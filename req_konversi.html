@@ -20,23 +20,12 @@
         .table-container { position: relative; }
         .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        .hdr-std { 
-            text-align: center !important; 
-            padding: 0.5rem 0.75rem !important; 
-            font-size: 0.75rem !important; 
-            font-weight: 600 !important; 
-            text-transform: uppercase !important; 
-            letter-spacing: 0.05em !important; 
-            white-space: nowrap !important; 
-            border-bottom: 1px solid #e2e8f0 !important; 
-            background-clip: padding-box !important; 
-        }
-
         .tab-active { border-bottom: 3px solid #1e40af; color: #1e40af; font-weight: 900; background-color: #eff6ff; }
         .tab-inactive { color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
 
         tr.selected-row td { background-color: #ccfbf1 !important; color: #0f766e !important; }
-        body:not(.disable-hover) tr.r-row:not(.selected-row):hover td { background-color: rgba(var(--tbl-row-hover), 1) !important; color: #4f46e5 !important; }
+        .col-hidden { display: none !important; }
+        .hdr-filtered { background-color: #312e81 !important; color: #fbbf24 !important; }
         
         .resizer {
             position: absolute;
@@ -51,17 +40,13 @@
 
     <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
-        <!-- HEADER SECTION (TABS & TOOLBAR) -->
+        <!-- HEADER SECTION (SUBMENU TABS & TOOLBAR) -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-sm w-full">
-            <div class="flex border-b border-slate-200 bg-white overflow-x-auto hide-scrollbar">
-                <!-- TAB MOBILE -->
-                <button onclick="setModeReq('MOBILE')" id="tab-mobile" class="px-6 py-3.5 tab-active transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="smartphone" class="w-4 h-4"></i> MOBILE</button>
-                <button onclick="setModeReq('REQUEST')" id="tab-req" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="clock" class="w-4 h-4"></i> Request Konversi</button>
-                <button onclick="setModeReq('KONVERSI')" id="tab-konv" class="px-6 py-3.5 tab-inactive hover:bg-slate-50 transition whitespace-nowrap flex items-center gap-2 text-xs uppercase"><i data-lucide="arrow-right-left" class="w-4 h-4"></i> Tabel Konversi</button>
-            </div>
+            <!-- KOMPONEN DINAMIS: SUBMENU TABS -->
+            <div id="container-submenu"></div>
 
             <!-- TOOLBAR UTAMA (DESKTOP) -->
-            <div id="desktop-toolbar" class="p-3 sm:p-4 flex items-center justify-between bg-slate-50/50 border-t border-slate-100 w-full">
+            <div id="desktop-toolbar" class="hidden p-3 sm:p-4 flex items-center justify-between bg-slate-50/50 border-t border-slate-100 w-full">
                 <div class="flex gap-2 items-center overflow-x-auto hide-scrollbar">
                     
                     <!-- REFRESH DATA -->
@@ -88,10 +73,16 @@
                         <div class="text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide transition" style="background-color: #ea580c;" onmouseover="this.style.backgroundColor='#c2410c'" onmouseout="this.style.backgroundColor='#ea580c'">Undone</div>
                     </button>
 
-                    <!-- CANCEL KONVERSI -->
+                    <!-- CANCEL KONVERSI (REQUEST) -->
                     <button id="btn-cancel-konv" onclick="cancelKonversiMassal()" class="group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-rose-700">
                         <div class="bg-rose-800 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="x-circle" class="w-4 h-4"></i></div>
                         <div class="bg-rose-600 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-rose-500 transition">Cancel Konversi</div>
+                    </button>
+
+                    <!-- CANCEL KONVERSI OUT / IN -->
+                    <button id="btn-cancel-item-konv" onclick="cancelItemKonvMassal()" class="hidden group flex items-stretch shrink-0 cursor-pointer shadow-sm active:scale-95 transition rounded-md overflow-hidden border border-red-800">
+                        <div class="bg-red-900 text-white flex items-center justify-center px-3 py-2.5"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
+                        <div class="bg-red-700 text-white font-bold text-[11px] px-4 py-2.5 flex items-center uppercase tracking-wide group-hover:bg-red-600 transition">Cancel Konversi OUT/IN</div>
                     </button>
                 </div>
 
@@ -102,10 +93,10 @@
                     </button>
                     <div id="mobile-action-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-md border border-slate-200 z-50 flex flex-col overflow-hidden">
                         <button onclick="hapusRequest(); toggleActionMenu(event)" id="btn-hapus-req-mob" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-rose-600 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Request</button>
-                        <button onclick="salinData(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
-                        <button onclick="downloadXLS(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
-                        <button onclick="toggleSidebarKolom(); toggleActionMenu(event)" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-blue-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</button>
-                        <button onclick="bukaModalTableDesign(); toggleActionMenu(event)" class="text-left px-4 py-3 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="palette" class="w-4 h-4 text-purple-600"></i> Table Design</button>
+                        <button onclick="salinData(); toggleActionMenu(event)" id="btn-salin-data" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4 text-slate-500"></i> Salin Data</button>
+                        <button onclick="downloadXLS(); toggleActionMenu(event)" id="btn-download-xls" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel</button>
+                        <button onclick="toggleSidebarKolom(); toggleActionMenu(event)" id="btn-sidebar-kolom" class="text-left px-4 py-3 border-b border-slate-100 text-xs font-bold text-blue-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Kolom</button>
+                        <button onclick="bukaModalTableDesign(); toggleActionMenu(event)" id="btn-table-design" class="text-left px-4 py-3 text-xs font-bold text-purple-700 flex items-center gap-2 hover:bg-slate-50 transition"><i data-lucide="palette" class="w-4 h-4 text-purple-600"></i> Table Design</button>
                     </div>
                 </div>
             </div>
@@ -116,7 +107,7 @@
             
             <!-- VIEW TABEL (Mode Request & Konversi Desktop) -->
             <div id="view-table" class="hidden flex-1 min-h-0 overflow-y-auto custom-scroll table-container bg-white rounded-xl shadow-sm border border-slate-300">
-                <table class="w-full text-left whitespace-nowrap" id="main-table">
+                <table class="w-full text-left border-separate border-spacing-0 whitespace-nowrap" id="main-table">
                     <thead class="sticky top-0 z-50 shadow-sm" id="thead-req"></thead>
                     <tbody id="tbody-req" class="text-slate-800"></tbody>
                 </table>
@@ -129,40 +120,16 @@
 
         </div>
 
-        <!-- FOOTER PAGINASI (Desktop) -->
-        <div id="footer-pagination" class="hidden shrink-0 w-full bg-white p-2 sm:p-3 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300">
-            <div class="flex items-center gap-2 flex-wrap justify-center">
-                <span class="bg-blue-50 border border-blue-200 px-2.5 py-1 rounded text-blue-800 text-[11px] font-bold shadow-sm">Tampil Filter: <span id="lbl-tampil-baris" class="text-blue-900 font-medium ml-1">0</span></span>
-                <span class="bg-amber-50 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-[11px] font-bold shadow-sm">Total Qty Req: <span id="lbl-total-qty" class="text-amber-900 font-medium ml-1">0</span></span>
-                <span class="bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded text-emerald-800 text-[11px] font-bold shadow-sm">Dipilih: <span id="lbl-pilih-baris" class="text-emerald-900 font-medium ml-1">0</span></span>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-1 bg-white border border-slate-300 p-1 rounded shadow-sm">
-                    <span class="text-[10px] font-bold text-slate-500 uppercase px-1">Baris:</span>
-                    <select id="select-rows-per-page" onchange="changeRowsPerPage(this.value)" class="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 rounded outline-none cursor-pointer px-1 py-0.5 transition">
-                        <option value="10" selected>10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                        <option value="ALL">Semua</option>
-                    </select>
-                </div>
-                <div class="flex items-center gap-2 bg-white border border-slate-300 p-1 rounded shadow-sm">
-                    <button onclick="prevPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                    <span class="px-2 font-black text-xs text-slate-600 tracking-wide uppercase">Hal <span id="lbl-halaman" class="text-blue-600">1</span> / <span id="lbl-total-halaman">1</span></span>
-                    <button onclick="nextPage()" class="p-1 px-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 active:scale-95 transition"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
-                </div>
-            </div>
-        </div>
+        <!-- KOMPONEN DINAMIS: FOOTER PAGINATION (DESKTOP) -->
+        <div id="container-footer" class="hidden shrink-0 w-full bg-white p-3 sm:p-4 flex-col md:flex-row justify-between items-center gap-4 z-20 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] border-t border-slate-300"></div>
 
-        <!-- REVISI: FOOTER BOTTOM BAR KHUSUS MODE MOBILE (TOMBOL "MENU TOMBOL" LEBIH BESAR & MANTAP) -->
+        <!-- FOOTER BOTTOM BAR KHUSUS MODE MOBILE -->
         <div id="mobile-bottom-bar" class="shrink-0 w-full bg-slate-900 px-4 py-3 z-30 shadow-[0_-5px_20px_rgba(0,0,0,0.35)] border-t border-slate-800 flex justify-between items-center text-white">
             <div class="flex items-center gap-2.5">
                 <span class="text-xs font-bold text-slate-400 uppercase">Dipilih:</span>
                 <span class="text-sm font-black bg-blue-600 text-white px-3 py-1 rounded-full shadow-inner" id="lbl-mobile-selected-count">0</span>
             </div>
             
-            <!-- TOMBOL MENU TOMBOL YANG DIPERBESAR -->
             <button onclick="toggleMobileActionDrawer()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-black text-sm uppercase rounded-xl shadow-xl flex items-center gap-2.5 transition border-b-4 border-indigo-900 tracking-wider cursor-pointer">
                 <i data-lucide="menu" class="w-5 h-5"></i>
                 <span>MENU TOMBOL</span>
@@ -171,70 +138,82 @@
 
     </div>
 
-    <!-- BOTTOM SHEET / DRAWER MENU AKSI MOBILE (KISI 3 KOLOM) -->
+    <!-- MODAL CUSTOM ALERT -->
+    <div id="modal-custom-alert" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[200] px-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 text-center flex flex-col items-center">
+            <div id="alert-icon-container" class="w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                <i id="alert-icon" data-lucide="info" class="w-8 h-8"></i>
+            </div>
+            <h3 class="text-lg font-black mb-2 text-slate-800" id="alert-title">Perhatian</h3>
+            <p class="text-sm font-semibold text-slate-500 mb-6 leading-relaxed" id="alert-message">Pesan alert di sini.</p>
+            <button onclick="document.getElementById('modal-custom-alert').classList.add('hidden')" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 cursor-pointer">Tutup</button>
+        </div>
+    </div>
+
+    <!-- BOTTOM SHEET / DRAWER MENU AKSI MOBILE -->
     <div id="mobile-action-drawer" class="hidden fixed inset-x-0 bottom-0 bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 z-[120] p-5 pb-8 transform transition-transform duration-300">
         <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-4"></div>
         <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
             <h3 class="font-black text-slate-800 text-sm uppercase flex items-center gap-2">
                 <i data-lucide="layout-grid" class="w-4 h-4 text-indigo-600"></i> Menu Aksi Konversi
             </h3>
-            <button onclick="toggleMobileActionDrawer()" class="p-1 rounded-full text-slate-400 hover:bg-slate-100"><i data-lucide="x" class="w-5 h-5"></i></button>
+            <button onclick="toggleMobileActionDrawer()" class="p-1 rounded-full text-slate-400 hover:bg-slate-100 cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
         </div>
 
-        <!-- GRID 3 MENYAMPING -->
+        <!-- GRID MENU MOBILE -->
         <div class="grid grid-cols-3 gap-2.5">
             <!-- 1. Refresh -->
-            <button onclick="muatData(); toggleMobileActionDrawer()" class="p-3 bg-slate-50 hover:bg-teal-50 border border-slate-200 hover:border-teal-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95">
+            <button onclick="muatData(); toggleMobileActionDrawer()" class="p-3 bg-slate-50 hover:bg-teal-50 border border-slate-200 hover:border-teal-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer">
                 <div class="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center"><i data-lucide="refresh-cw" class="w-4 h-4"></i></div>
                 <span class="text-[10px] font-black text-slate-700 uppercase text-center leading-tight">Refresh</span>
             </button>
             
             <!-- 2. Proses Konversi -->
-            <button onclick="bukaModalProsesKonv(); toggleMobileActionDrawer()" class="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95">
+            <button onclick="bukaModalProsesKonv(); toggleMobileActionDrawer()" id="btn-proses-konv-mob" class="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer">
                 <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center"><i data-lucide="settings" class="w-4 h-4"></i></div>
                 <span class="text-[10px] font-black text-indigo-700 uppercase text-center leading-tight">Proses</span>
             </button>
 
             <!-- 3. Done -->
-            <button onclick="doneKonversiMassal(); toggleMobileActionDrawer()" class="p-3 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95">
+            <button onclick="doneKonversiMassal(); toggleMobileActionDrawer()" id="btn-done-konv-mob" class="p-3 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer">
                 <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center"><i data-lucide="check-circle" class="w-4 h-4"></i></div>
                 <span class="text-[10px] font-black text-emerald-700 uppercase text-center leading-tight">Done</span>
             </button>
 
             <!-- 4. Undone -->
-            <button onclick="undoneKonversiMassal(); toggleMobileActionDrawer()" class="p-3 bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95">
+            <button onclick="undoneKonversiMassal(); toggleMobileActionDrawer()" id="btn-undone-konv-mob" class="p-3 bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer">
                 <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
                 <span class="text-[10px] font-black text-orange-700 uppercase text-center leading-tight">Undone</span>
             </button>
 
-            <!-- 5. Cancel -->
-            <button onclick="cancelKonversiMassal(); toggleMobileActionDrawer()" class="p-3 bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95">
+            <!-- 5. Cancel Konversi (Request) -->
+            <button onclick="cancelKonversiMassal(); toggleMobileActionDrawer()" id="btn-cancel-konv-mob" class="p-3 bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer">
                 <div class="w-8 h-8 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center"><i data-lucide="x-circle" class="w-4 h-4"></i></div>
-                <span class="text-[10px] font-black text-rose-700 uppercase text-center leading-tight">Cancel</span>
+                <span class="text-[10px] font-black text-rose-700 uppercase text-center leading-tight">Cancel Konversi</span>
             </button>
 
-            <!-- 6. Hapus -->
-            <button onclick="hapusRequest(); toggleMobileActionDrawer()" class="p-3 bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95">
+            <!-- 6. Cancel Konversi OUT / IN -->
+            <button onclick="cancelItemKonvMassal(); toggleMobileActionDrawer()" id="btn-cancel-item-konv-mob" class="p-3 bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer">
+                <div class="w-8 h-8 rounded-full bg-red-100 text-red-700 flex items-center justify-center"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
+                <span class="text-[10px] font-black text-red-700 uppercase text-center leading-tight">Cancel OUT/IN</span>
+            </button>
+
+            <!-- 7. Hapus Request -->
+            <button onclick="hapusRequest(); toggleMobileActionDrawer()" id="btn-hapus-req-mob" class="p-3 bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer">
                 <div class="w-8 h-8 rounded-full bg-red-100 text-red-700 flex items-center justify-center"><i data-lucide="trash-2" class="w-4 h-4"></i></div>
                 <span class="text-[10px] font-black text-red-700 uppercase text-center leading-tight">Hapus</span>
             </button>
 
-            <!-- 7. Salin Data -->
-            <button onclick="salinData(); toggleMobileActionDrawer()" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95">
+            <!-- 8. Salin Data -->
+            <button onclick="salinData(); toggleMobileActionDrawer()" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer">
                 <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center"><i data-lucide="copy" class="w-4 h-4"></i></div>
                 <span class="text-[10px] font-black text-slate-700 uppercase text-center leading-tight">Salin</span>
             </button>
 
-            <!-- 8. Export Excel -->
-            <button onclick="downloadXLS(); toggleMobileActionDrawer()" class="p-3 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95">
+            <!-- 9. Export Excel -->
+            <button onclick="downloadXLS(); toggleMobileActionDrawer()" class="p-3 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer">
                 <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i></div>
                 <span class="text-[10px] font-black text-emerald-700 uppercase text-center leading-tight">Excel</span>
-            </button>
-
-            <!-- 9. Table Design -->
-            <button onclick="bukaModalTableDesign(); toggleMobileActionDrawer()" class="p-3 bg-slate-50 hover:bg-purple-50 border border-slate-200 hover:border-purple-300 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-95">
-                <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center"><i data-lucide="palette" class="w-4 h-4"></i></div>
-                <span class="text-[10px] font-black text-purple-700 uppercase text-center leading-tight">Design</span>
             </button>
         </div>
     </div>
@@ -245,27 +224,37 @@
             <h3 class="text-lg font-black mb-2 text-slate-800 flex items-center justify-center gap-2"><i data-lucide="settings-2" class="text-indigo-600"></i> Pilih Jenis Proses</h3>
             <p class="text-xs font-bold text-slate-500 mb-6">Pilih apakah Anda ingin melakukan Konversi OUT atau Konversi IN.</p>
             <div class="flex flex-col gap-3">
-                <button onclick="pilihJenisProses('OUT')" class="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 flex justify-center items-center gap-2"><i data-lucide="log-out"></i> 1. Konversi OUT</button>
-                <button onclick="pilihJenisProses('IN')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 flex justify-center items-center gap-2"><i data-lucide="log-in"></i> 2. Konversi IN</button>
-                <button onclick="document.getElementById('modal-proses-pilih').classList.add('hidden')" class="w-full py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase hover:bg-slate-300 transition">Batal</button>
+                <button onclick="pilihJenisProses('OUT')" class="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 flex justify-center items-center gap-2 cursor-pointer border-b-4 border-rose-800"><i data-lucide="log-out"></i> 1. Konversi OUT</button>
+                <button onclick="pilihJenisProses('IN')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 flex justify-center items-center gap-2 cursor-pointer border-b-4 border-emerald-800"><i data-lucide="log-in"></i> 2. Konversi IN</button>
+                <button onclick="document.getElementById('modal-proses-pilih').classList.add('hidden')" class="w-full py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase hover:bg-slate-300 transition cursor-pointer">Batal</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL 2: SCAN KARDUS KONVERSI -->
+    <!-- MODAL 2: SCAN KARDUS KONVERSI & INPUT AREA TUJUAN (UNTUK IN) -->
     <div id="modal-scan-konv" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[110] px-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden flex flex-col">
             <h3 id="title-scan-konv" class="text-lg font-black mb-2 flex items-center gap-2 text-indigo-700"><i data-lucide="scan-line"></i> Scan Kardus Konversi</h3>
-            <p class="text-xs font-bold text-slate-500 mb-5">Scan atau ketik QRCode kardus fisik yang akan diproses.</p>
-            <div class="space-y-4 mb-6">
+            <p class="text-xs font-bold text-slate-500 mb-4">Scan atau ketik QRCode kardus fisik yang akan diproses.</p>
+            
+            <div class="space-y-3 mb-6">
+                <!-- INPUT AREA TUJUAN (Hanya muncul saat Konversi IN) -->
+                <div id="container-area-in" class="hidden">
+                    <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-emerald-700">Pilih Area Tujuan (Konversi IN)</label>
+                    <select id="select-area-konv-in" class="w-full p-2.5 border-2 border-emerald-300 rounded-xl outline-none focus:border-emerald-600 font-bold text-xs text-slate-800 bg-emerald-50/50 cursor-pointer uppercase">
+                        <option value="">-- MEMUAT AREA... --</option>
+                    </select>
+                </div>
+
                 <div>
                     <label class="block text-[10px] font-black uppercase tracking-wide mb-1 text-slate-500">Input QRCode</label>
                     <textarea id="input-scan-konv" rows="4" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-600 font-mono font-bold text-sm text-slate-800 bg-slate-50 custom-scroll" placeholder="Scan barcode di sini..."></textarea>
                 </div>
             </div>
+            
             <div class="flex gap-3 justify-end border-t border-slate-100 pt-4 bg-slate-50 -mx-6 -mb-6 p-4 rounded-b-2xl">
-                <button type="button" onclick="document.getElementById('modal-scan-konv').classList.add('hidden')" class="px-5 py-2.5 bg-white border border-slate-300 text-slate-600 font-bold rounded-lg hover:bg-slate-50 transition text-xs uppercase">Batal</button>
-                <button type="button" onclick="verifikasiKodeKonv()" id="btn-verifikasi-konv" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-lg shadow-md text-xs uppercase transition active:scale-95 flex items-center gap-2"><i data-lucide="shield-check" class="w-4 h-4"></i> Verifikasi</button>
+                <button type="button" onclick="document.getElementById('modal-scan-konv').classList.add('hidden')" class="px-5 py-2.5 bg-white border border-slate-300 text-slate-600 font-bold rounded-lg hover:bg-slate-50 transition text-xs uppercase cursor-pointer">Batal</button>
+                <button type="button" onclick="verifikasiKodeKonv()" id="btn-verifikasi-konv" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-lg shadow-md text-xs uppercase transition active:scale-95 flex items-center gap-2 cursor-pointer border-b-2 border-indigo-900"><i data-lucide="shield-check" class="w-4 h-4"></i> Verifikasi</button>
             </div>
         </div>
     </div>
@@ -279,7 +268,7 @@
             <div class="bg-rose-50 border border-rose-200 rounded-lg p-3 mb-6 flex-1 overflow-y-auto custom-scroll text-left">
                 <ul id="list-error-konv" class="text-xs font-mono text-rose-700 font-bold space-y-3"></ul>
             </div>
-            <button type="button" onclick="document.getElementById('modal-error-konv').classList.add('hidden')" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 shrink-0">Tutup & Perbaiki</button>
+            <button type="button" onclick="document.getElementById('modal-error-konv').classList.add('hidden')" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 shrink-0 cursor-pointer">Tutup & Perbaiki</button>
         </div>
     </div>
 
@@ -289,15 +278,15 @@
             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-2xl">
                 <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="check-circle" class="w-5 h-5 text-emerald-600"></i> Hasil Verifikasi Valid</h3>
                 <div class="flex gap-2">
-                    <button onclick="document.getElementById('modal-konfirmasi-konv').classList.add('hidden')" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-bold rounded-lg text-xs uppercase transition hover:bg-slate-100 shadow-sm">Batal</button>
-                    <button onclick="eksekusiSaveKonv()" id="btn-eksekusi-save" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg text-xs uppercase transition shadow-sm flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Save</button>
+                    <button onclick="document.getElementById('modal-konfirmasi-konv').classList.add('hidden')" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-bold rounded-lg text-xs uppercase transition hover:bg-slate-100 shadow-sm cursor-pointer">Batal</button>
+                    <button onclick="eksekusiSaveKonv()" id="btn-eksekusi-save" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg text-xs uppercase transition shadow-sm flex items-center gap-2 cursor-pointer border-b-2 border-emerald-900"><i data-lucide="save" class="w-4 h-4"></i> Save</button>
                 </div>
             </div>
             <div class="p-4 bg-blue-50 border-b border-blue-100">
                 <p class="text-xs font-bold text-blue-800">Sistem memverifikasi <span id="lbl-jml-valid" class="text-lg font-black text-blue-900 mx-1">0</span> kardus siap diproses.</p>
             </div>
             <div class="overflow-y-auto flex-1 custom-scroll p-0">
-                <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+                <table class="w-full text-left border-separate border-spacing-0 text-sm whitespace-nowrap">
                     <thead class="sticky top-0 bg-slate-800 text-white shadow-sm z-10">
                         <tr>
                             <th class="p-3 text-xs font-bold uppercase tracking-wider text-center">No</th>
@@ -311,11 +300,11 @@
         </div>
     </div>
 
-    <!-- SIDEBAR FILTER LENGKAP DENGAN DROPDOWN -->
+    <!-- SIDEBAR FILTER LENGKAP -->
     <div id="sidebar-filter" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
             <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="filter" class="w-4 h-4 text-blue-600"></i> Filter Data Konversi</h3>
-            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+            <button onclick="toggleSidebarFilter()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
         <div class="p-3 flex flex-col gap-3 overflow-y-auto custom-scroll flex-1">
             <div class="grid grid-cols-2 gap-2">
@@ -364,26 +353,32 @@
                     <select id="fs-pic" onchange="saringTabelKonversi()" class="w-full p-1.5 text-xs border border-slate-300 rounded outline-none cursor-pointer bg-slate-50 uppercase"><option value="">-- Semua --</option></select>
                 </div>
             </div>
-            <button onclick="resetFilterKonversi()" class="mt-2 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg text-xs uppercase transition shrink-0">RESET FILTER</button>
+            <button onclick="resetFilterKonversi()" class="mt-2 py-3 w-full bg-slate-800 hover:bg-slate-900 text-white font-black rounded-lg text-xs uppercase transition shrink-0 cursor-pointer">RESET FILTER</button>
         </div>
     </div>
 
-    <!-- MODAL FILTER EXCEL (DESKTOP) -->
-    <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-lg w-64 z-[100] flex flex-col font-sans text-sm overflow-hidden">
-        <div class="p-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+    <!-- MODAL FILTER EXCEL SPREADSHEET (DESKTOP) -->
+    <div id="excel-filter-menu" class="hidden fixed bg-white shadow-2xl border border-slate-300 rounded-2xl w-64 z-[120] flex flex-col font-sans text-sm overflow-hidden">
+        <div class="p-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
             <span class="font-black text-slate-700 text-xs uppercase tracking-wider" id="filter-col-name">Filter</span>
-            <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-rose-500 bg-white border border-slate-200 p-1 rounded transition shadow-sm"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+            <button onclick="closeFilterMenu()" class="text-slate-400 hover:text-rose-500 bg-white border border-slate-200 p-1 rounded transition shadow-sm cursor-pointer"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
         </div>
-        <div class="p-2 border-b border-slate-200 bg-white">
+        
+        <div class="p-2 border-b border-slate-200 flex flex-col gap-1 bg-white">
+            <button onclick="sortFromMenu('asc')" class="text-left px-3 py-2 hover:bg-slate-100 rounded-lg text-xs font-bold text-slate-700 flex items-center gap-2 transition cursor-pointer"><i data-lucide="arrow-down-a-z" class="w-4 h-4 text-blue-600"></i> Urutkan A ke Z</button>
+            <button onclick="sortFromMenu('desc')" class="text-left px-3 py-2 hover:bg-slate-100 rounded-lg text-xs font-bold text-slate-700 flex items-center gap-2 transition cursor-pointer"><i data-lucide="arrow-up-z-a" class="w-4 h-4 text-blue-600"></i> Urutkan Z ke A</button>
+        </div>
+
+        <div class="p-2 border-b border-slate-100 bg-slate-50">
             <div class="relative">
                 <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2"></i>
-                <input type="text" id="filter-search-input" oninput="searchFilterList(this.value)" class="w-full pl-8 p-1.5 text-xs font-bold border border-slate-300 bg-slate-50 rounded focus:border-blue-500 outline-none transition" placeholder="Cari Spesifik...">
+                <input type="text" id="filter-search-input" oninput="searchFilterList(this.value)" autocomplete="off" class="w-full pl-8 p-1.5 text-xs font-bold border border-slate-300 bg-white rounded-lg focus:border-blue-500 outline-none transition shadow-inner" placeholder="Cari Spesifik...">
             </div>
         </div>
         <div class="p-2 max-h-48 overflow-y-auto flex flex-col gap-1 text-xs bg-white custom-scroll" id="filter-values-list"></div>
-        <div class="p-2 border-t border-slate-200 bg-slate-50 flex justify-between gap-2">
-            <button onclick="clearFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100 transition shadow-sm">Reset</button>
-            <button onclick="applyFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-700 transition shadow-sm">Terapkan</button>
+        <div class="p-3 border-t border-slate-200 bg-slate-50 flex justify-between gap-2">
+            <button onclick="clearFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition shadow-sm cursor-pointer">Reset</button>
+            <button onclick="applyFilterForCurrentCol()" class="w-1/2 py-2 text-xs font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm cursor-pointer">Terapkan</button>
         </div>
     </div>
 
@@ -391,15 +386,15 @@
     <div id="sidebar-kolom" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[80] flex flex-col">
         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
             <h3 class="font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide text-sm"><i data-lucide="columns" class="w-4 h-4 text-blue-600"></i> Atur Urutan Kolom</h3>
-            <button onclick="toggleSidebarKolom()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+            <button onclick="toggleSidebarKolom()" class="text-slate-400 hover:text-red-500 bg-white border border-slate-200 p-1.5 rounded transition cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
         <div class="p-3 bg-blue-50 border-b border-blue-100 text-xs text-blue-800 font-medium leading-relaxed">
             Tahan dan geser (Drag & Drop) kotak di bawah ini untuk mengatur urutan kolom.
         </div>
         <div class="p-3 flex flex-col gap-2 overflow-y-auto custom-scroll flex-1" id="kolom-drag-container"></div>
         <div class="p-4 border-t border-slate-200 bg-slate-50 flex gap-2">
-            <button onclick="resetUrutanKolom()" class="w-1/3 py-2.5 bg-white border border-slate-300 text-slate-600 font-bold rounded-md text-xs uppercase transition hover:bg-slate-100 shadow-sm">Reset</button>
-            <button onclick="simpanUrutanKolom()" class="w-2/3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-md text-xs uppercase transition shadow-sm flex justify-center items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Simpan</button>
+            <button onclick="resetUrutanKolom()" class="w-1/3 py-2.5 bg-white border border-slate-300 text-slate-600 font-bold rounded-md text-xs uppercase transition hover:bg-slate-100 shadow-sm cursor-pointer">Reset</button>
+            <button onclick="simpanUrutanKolom()" class="w-2/3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-md text-xs uppercase transition shadow-md flex justify-center items-center gap-2 border-b-4 border-blue-800 cursor-pointer"><i data-lucide="save" class="w-4 h-4"></i> Simpan</button>
         </div>
     </div>
 
@@ -410,3 +405,4 @@
     <script src="req_konversi_logic.js"></script>
 </body>
 </html>
+
