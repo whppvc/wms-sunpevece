@@ -1,5 +1,5 @@
 // ============================================================================
-// WMS SUNPEVECE - GLOBAL SCRIPT, ROUTE GUARD, DESIGN & FAST PERMISSION SYSTEM
+// WMS SUNPEVECE - GLOBAL SCRIPT, ROUTE GUARD, DESIGN & STRICT BUTTON ENGINE
 // ============================================================================
 
 // ==========================================
@@ -566,7 +566,7 @@ window.saveTableDesign = function() {
 };
 
 // ==========================================
-// ENFORCEMENT HAK AKSES TOMBOL GLOBAL (NATIVE CSS INJECTION - 0% CPU OVERHEAD)
+// ENFORCEMENT HAK AKSES TOMBOL GLOBAL (NATIVE CSS INJECTION - DUAL LAYER CHECK)
 // ==========================================
 window.applyButtonPermissions = async function(menuId) {
     const sessionString = localStorage.getItem('user_session');
@@ -588,11 +588,25 @@ window.applyButtonPermissions = async function(menuId) {
 
             if (isDenied && rule.button_id) {
                 const cleanId = rule.button_id.trim();
+                
+                // Layer 1: Target berdasarkan ID Element
                 deniedSelectors.push(`#${cleanId}`);
                 deniedSelectors.push(`#${cleanId}-mob`);
                 deniedSelectors.push(`#${cleanId}-main`);
                 deniedSelectors.push(`[data-button-id="${cleanId}"]`);
-                deniedSelectors.push(`button[onclick*="${cleanId}"]`);
+                
+                // Layer 2: Target berdasarkan Signature Aksi Klik (Mencegah tombol lolos)
+                if (cleanId.includes('katalog')) deniedSelectors.push('button[onclick*="bukaDaftarKatalog"]');
+                if (cleanId.includes('salin')) deniedSelectors.push('button[onclick*="salinData"]');
+                if (cleanId.includes('download') || cleanId.includes('excel')) deniedSelectors.push('button[onclick*="downloadXLS"]', 'button[onclick*="exportExcel"]');
+                if (cleanId.includes('kolom') || cleanId.includes('atur')) deniedSelectors.push('button[onclick*="toggleSidebarKolom"]');
+                if (cleanId.includes('design')) deniedSelectors.push('button[onclick*="bukaModalTableDesign"]');
+                if (cleanId.includes('collect')) deniedSelectors.push('button[onclick*="aksiMassal(\'collect\')"]');
+                if (cleanId.includes('hapus')) deniedSelectors.push('button[onclick*="aksiMassal(\'hapus\')"]');
+                if (cleanId.includes('hold')) deniedSelectors.push('button[onclick*="aksiMassal(\'hold\')"]');
+                if (cleanId.includes('cancel-langsir')) deniedSelectors.push('button[onclick*="cancelLangsir"]');
+                if (cleanId.includes('cancel-keluar')) deniedSelectors.push('button[onclick*="bukaModalCancelKeluar"]');
+                if (cleanId.includes('ganti-area')) deniedSelectors.push('button[onclick*="bukaModalGantiArea"]');
             }
         });
 
