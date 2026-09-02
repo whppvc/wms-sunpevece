@@ -1,5 +1,5 @@
 // ============================================================================
-// WMS SUNPEVECE - GLOBAL SCRIPT, ROUTE GUARD, DESIGN & UI COMPONENTS
+// WMS SUNPEVECE - GLOBAL SCRIPT, ROUTE GUARD, DESIGN & UI ACCESS ENFORCEMENT
 // ============================================================================
 
 // ==========================================
@@ -185,11 +185,8 @@ function applyTableDesign() {
         }
     };
 
-    if(document.body) {
-        runToggle();
-    } else {
-        document.addEventListener('DOMContentLoaded', runToggle);
-    }
+    if(document.body) runToggle();
+    else document.addEventListener('DOMContentLoaded', runToggle);
 }
 applyTableDesign();
 
@@ -273,7 +270,7 @@ async function initModernLayout(pageMeta) {
                     <span id="inbox-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0f172a]"></span>
                 </button>
                 <div class="relative">
-                    <button onclick="toggleProfileMenu()" class="flex items-center gap-2 p-1 hover:bg-slate-800 rounded-full transition pr-3 cursor-pointer border border-transparent hover:border-slate-700">
+                    <button onclick="toggleProfileMenu(event)" class="flex items-center gap-2 p-1 hover:bg-slate-800 rounded-full transition pr-3 cursor-pointer border border-transparent hover:border-slate-700">
                         <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black shadow-inner text-sm border border-blue-400">${initial}</div>
                         <span class="text-xs font-black uppercase text-slate-200 hidden sm:block">${user.username}</span>
                         <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 hidden sm:block"></i>
@@ -364,7 +361,7 @@ async function initModernLayout(pageMeta) {
             <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 text-slate-800 flex flex-col max-h-[85vh]">
                 <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100 shrink-0">
                     <h3 class="text-base font-black flex items-center gap-2 text-blue-700"><i data-lucide="star" class="w-5 h-5"></i> Atur Menu Favorit</h3>
-                    <button onclick="tutupModal('modal-fav-menus')" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded-lg transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <button onclick="tutupModal('modal-fav-menus')" class="text-slate-400 hover:text-red-500 bg-slate-100 p-1.5 rounded-lg transition cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
                 <p class="text-xs font-bold text-slate-500 mb-4 shrink-0">Pilih maksimal 7 menu untuk ditampilkan sebagai tombol cepat di header atas.</p>
                 
@@ -385,8 +382,8 @@ async function initModernLayout(pageMeta) {
                 </div>
 
                 <div class="flex gap-2 shrink-0 pt-3 border-t border-slate-100">
-                    <button onclick="tutupModal('modal-fav-menus')" class="w-1/3 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition text-xs uppercase">Batal</button>
-                    <button onclick="saveFavMenus()" class="w-2/3 py-2.5 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition shadow-sm text-xs uppercase flex justify-center items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Simpan Pilihan</button>
+                    <button onclick="tutupModal('modal-fav-menus')" class="w-1/3 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition text-xs uppercase cursor-pointer">Batal</button>
+                    <button onclick="saveFavMenus()" class="w-2/3 py-2.5 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition shadow-sm text-xs uppercase flex justify-center items-center gap-2 cursor-pointer"><i data-lucide="save" class="w-4 h-4"></i> Simpan Pilihan</button>
                 </div>
             </div>
         </div>
@@ -477,24 +474,10 @@ async function initModernLayout(pageMeta) {
                 </div>
                 <div id="inbox-view-list" class="flex-1 flex flex-col overflow-hidden">
                     <div class="p-3 bg-white border-b border-slate-200 flex justify-between items-center shrink-0">
-                        <button onclick="hapusPesanMassal()" class="px-4 py-2 bg-white border border-slate-300 text-rose-600 hover:bg-rose-50 font-bold rounded-md text-xs transition flex items-center gap-2 shadow-sm"><i data-lucide="trash-2" class="w-4 h-4"></i> Hapus</button>
-                        <button onclick="bukaBuatPesan()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md text-xs transition flex items-center gap-2 shadow-sm"><i data-lucide="pen-square" class="w-4 h-4"></i> Buat Pesan</button>
+                        <button onclick="tutupModal('modal-inbox')" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-md text-xs transition shadow-sm">Tutup</button>
                     </div>
-                    <div class="flex-1 overflow-x-auto overflow-y-auto hide-scrollbar bg-slate-50">
-                        <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
-                            <thead class="sticky top-0 z-10 bg-[#0f172a] text-white shadow-sm">
-                                <tr>
-                                    <th class="p-3 w-10 text-center"><input type="checkbox" onchange="toggleAllInbox(this.checked)" class="rounded text-blue-500 focus:ring-0 cursor-pointer"></th>
-                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700 text-center">Tgl Pesan</th>
-                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700 text-center">Pengirim</th>
-                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700 w-1/2 text-center">Perihal</th>
-                                    <th class="p-3 font-semibold tracking-wider border-l border-slate-700 text-center">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbody-inbox" class="text-slate-700 bg-white">
-                                <tr><td colspan="5" class="p-10 text-center text-slate-400 font-bold">Sedang memuat pesan...</td></tr>
-                            </tbody>
-                        </table>
+                    <div class="flex-1 overflow-x-auto overflow-y-auto hide-scrollbar bg-slate-50 p-6 text-center text-slate-400 font-bold">
+                        Fitur Inbox Notifikasi akan segera aktif.
                     </div>
                 </div>
             </div>
@@ -505,6 +488,13 @@ async function initModernLayout(pageMeta) {
 
     lucide.createIcons();
     renderFavMenus(); 
+
+    // Terapkan Proteksi Hak Akses Tombol untuk Halaman Ini
+    if (pageMeta && pageMeta.id) {
+        setTimeout(() => {
+            window.applyButtonPermissions(pageMeta.id);
+        }, 150);
+    }
 
     // Handle ESC Key to Close Any Open Modal
     document.addEventListener('keydown', function(e) {
@@ -578,6 +568,38 @@ window.saveTableDesign = function() {
 };
 
 // ==========================================
+// ENFORCEMENT HAK AKSES TOMBOL GLOBAL
+// ==========================================
+window.applyButtonPermissions = async function(menuId) {
+    const sessionString = localStorage.getItem('user_session');
+    if (!sessionString || !menuId) return;
+
+    const user = JSON.parse(sessionString);
+    const isCreator = user.role && user.role.toLowerCase() === 'creator';
+    if (isCreator) return; // Creator bebas akses semua tombol
+
+    try {
+        const { data, error } = await db.from('button_access').select('*').eq('menu_id', menuId);
+        if (error || !data) return;
+
+        data.forEach(rule => {
+            const btnEl = document.getElementById(rule.button_id);
+            if (!btnEl) return;
+
+            const allowedUsers = rule.allowed_users ? rule.allowed_users.split(',').map(u => u.trim()).filter(Boolean) : [];
+            
+            // Jika user tidak diizinkan, sembunyikan tombol
+            if (!allowedUsers.includes(user.username)) {
+                btnEl.style.display = 'none';
+                btnEl.classList.add('hidden');
+            }
+        });
+    } catch (e) {
+        console.warn("Gagal menerapkan button permissions:", e);
+    }
+};
+
+// ==========================================
 // ENGINE KOMPONEN DINAMIS (TABS & FOOTER)
 // ==========================================
 window.renderSubmenuTabs = function(containerId, tabsArray, activeTabId) {
@@ -591,7 +613,7 @@ window.renderSubmenuTabs = function(containerId, tabsArray, activeTabId) {
     tabsArray.forEach(t => {
         const cls = (t.id === activeTabId) ? activeClass : inactiveClass;
         const hiddenCls = t.mobileOnly ? 'sm:hidden ' : '';
-        html += `<button onclick="${t.onClick}" id="${t.id}" class="${hiddenCls}${cls}"><i data-lucide="${t.icon}" class="w-4 h-4"></i> ${t.label}</button>`;
+        html += `<button onclick="${t.onClick}" id="${t.id}" class="${hiddenCls}${cls} cursor-pointer"><i data-lucide="${t.icon}" class="w-4 h-4"></i> ${t.label}</button>`;
     });
     html += '</div>';
     
@@ -632,7 +654,7 @@ window.renderTableFooter = function(containerId, labelQty = "Total Qty (Dus)") {
             </div>
             
             <div class="flex items-center gap-1 bg-white border border-slate-300 p-1.5 rounded-lg shadow-sm">
-                <button onclick="prevPage()" class="px-3 py-1.5 bg-slate-100 text-slate-700 font-bold text-xs uppercase rounded hover:bg-slate-200 active:scale-95 transition">Prev</button>
+                <button onclick="prevPage()" class="px-3 py-1.5 bg-slate-100 text-slate-700 font-bold text-xs uppercase rounded hover:bg-slate-200 active:scale-95 transition cursor-pointer">Prev</button>
                 
                 <div class="flex items-center px-2 gap-2">
                     <span class="text-xs font-bold text-slate-500 uppercase">Hal</span>
@@ -640,7 +662,7 @@ window.renderTableFooter = function(containerId, labelQty = "Total Qty (Dus)") {
                     <span class="text-xs font-bold text-slate-500 uppercase">dari <span id="lbl-total-halaman" class="text-slate-800 font-black">1</span></span>
                 </div>
 
-                <button onclick="nextPage()" class="px-3 py-1.5 bg-slate-100 text-slate-700 font-bold text-xs uppercase rounded hover:bg-slate-200 active:scale-95 transition">Next</button>
+                <button onclick="nextPage()" class="px-3 py-1.5 bg-slate-100 text-slate-700 font-bold text-xs uppercase rounded hover:bg-slate-200 active:scale-95 transition cursor-pointer">Next</button>
             </div>
         </div>
     `;
@@ -724,7 +746,8 @@ window.toggleGridMenu = function() {
     const menu = document.getElementById('modal-grid-menu');
     if (menu.classList.contains('hidden')) {
         menu.classList.remove('hidden');
-        document.getElementById('profile-dropdown').classList.add('hidden');
+        const dd = document.getElementById('profile-dropdown');
+        if (dd) dd.classList.add('hidden');
     } else {
         menu.classList.add('hidden');
     }
