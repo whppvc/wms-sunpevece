@@ -78,10 +78,9 @@ window.tampilkanAlert = function(pesan, tipe = 'info') {
         iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-blue-100 text-blue-600';
         icon.setAttribute('data-lucide', 'info');
     }
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
 };
 
-// Definisi Default Seluruh Kolom Tabel Standar
 const defaultColDefs = [
     { id: 'col-status-data', label: 'Collect' },
     { id: 'col-troli', label: 'Troli' },
@@ -182,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
-            if (!menu.contains(e.target) && !e.target.closest('th.cursor-pointer')) {
+            if (!menu.contains(e.target) && !e.target.closest('th')) {
                 closeFilterMenu();
             }
         }
@@ -453,28 +452,12 @@ window.setMode = function(m) {
     }
 
     if (!isGrid) {
-        const btnCollect = document.getElementById('btn-massal-collect');
-        const btnCollectMob = document.getElementById('btn-massal-collect-mob');
-        const btnHold = document.getElementById('btn-hold-mob');
-        const btnHapus = document.getElementById('btn-hapus-mob');
-        
-        const userRole = (currentUser.role || '').toLowerCase();
-        const isSuperOrCreator = ['creator', 'super admin', 'superadmin'].includes(userRole);
-
-        if(btnCollect) btnCollect.classList.remove('hidden'); 
-        if(btnCollectMob) btnCollectMob.classList.remove('hidden'); 
-        if(btnHold) btnHold.classList.remove('hidden');
-        if(btnHapus) btnHapus.classList.toggle('hidden', !isSuperOrCreator);
-
         renderHeaderDanTabel();
     } else {
         renderMobileView();
     }
 };
 
-// ========================================================
-// LOGIKA MODE GRID (DRILL-DOWN 6 TINGKAT)
-// ========================================================
 function getAllUnifiedItems() {
     let list = [];
     (rawDataRaw || []).forEach(r => {
@@ -622,7 +605,7 @@ function makeDrillCard(title, subtitle, qtyText, clickAction, iconName = 'chevro
 function makeStickyHeader(title, subtitle) {
     return `
         <div class="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md -mx-4 px-4 py-2.5 border-b border-slate-300 shadow-sm flex items-center gap-3 mb-2">
-            <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0">
+            <button onclick="goBackMobile()" class="p-2.5 bg-white border border-slate-300 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 transition flex items-center gap-1.5 text-xs font-black text-slate-700 shrink-0 cursor-pointer">
                 <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i> Kembali
             </button>
             <div class="flex flex-col overflow-hidden">
@@ -795,10 +778,10 @@ function renderMobileView() {
             <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-xl p-1 shadow-inner">
                 <i data-lucide="calendar" class="w-4 h-4 text-slate-400 ml-1"></i>
                 <input type="date" id="filter-date-mobile" value="${gridFilterDate}" onchange="handleGridDateChange(this.value)" class="p-1 text-xs font-bold text-slate-700 outline-none cursor-pointer bg-transparent">
-                <button onclick="setGridAllDate()" class="px-2.5 py-1 ${gridFilterDate === '' ? 'bg-blue-600 text-white font-black' : 'bg-slate-200 text-slate-700 font-bold'} hover:bg-blue-700 hover:text-white rounded-lg text-[10px] uppercase transition">Semua</button>
+                <button onclick="setGridAllDate()" class="px-2.5 py-1 ${gridFilterDate === '' ? 'bg-blue-600 text-white font-black' : 'bg-slate-200 text-slate-700 font-bold'} hover:bg-blue-700 hover:text-white rounded-lg text-[10px] uppercase transition cursor-pointer">Semua</button>
             </div>
 
-            <button onclick="bukaModalFilterPopup()" class="px-4 py-2 bg-white rounded-xl border border-slate-300 shadow-sm active:scale-95 text-slate-700 font-bold text-xs hover:bg-slate-50 transition flex items-center gap-2">
+            <button onclick="bukaModalFilterPopup()" class="px-4 py-2 bg-white rounded-xl border border-slate-300 shadow-sm active:scale-95 text-slate-700 font-bold text-xs hover:bg-slate-50 transition flex items-center gap-2 cursor-pointer">
                 <i data-lucide="filter" class="w-4 h-4 text-blue-600"></i>
                 <span>Filter</span>
             </button>
@@ -975,9 +958,6 @@ function renderMobileView() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// ========================================================
-// LOGIKA FILTER DROPDOWN & DESKTOP SYNC
-// ========================================================
 function updateFilterDropdowns() {
     const fields = [
         { id: 'fs-tgl', key: 'tglProduksi' },
@@ -1057,14 +1037,6 @@ window.saringTabelSTBJ = function() {
         updateFilterIcons();
     }
 };
-
-// ========================================================
-// LOGIKA TABEL DESKTOP
-// ========================================================
-function switchStatusFilter(val) { 
-    statusSekarang = val; 
-    muatDataDariSupabase(); 
-}
 
 function buildProcessedData() {
     processedData = [];
@@ -1182,17 +1154,7 @@ window.sortFromMenu = function(dir) {
     applySort();
 };
 
-function sortTable(colClass, headerEl) {
-    let isAsc = sortState.col === colClass ? !sortState.isAsc : true;
-    sortState = { col: colClass, isAsc: isAsc };
-    applySort();
-    
-    document.querySelectorAll('.sort-icon').forEach(icon => { icon.setAttribute('data-lucide', 'arrow-up-down'); icon.classList.add('opacity-30'); });
-    const icon = headerEl.querySelector('.sort-icon');
-    if(icon) { icon.setAttribute('data-lucide', isAsc ? 'arrow-up-a-z' : 'arrow-down-z-a'); icon.classList.remove('opacity-30'); lucide.createIcons(); }
-}
-
-const thSort = (label, cls = "") => {
+function thSort(label, cls = "") {
     const colClass = cls.split(' ').find(c => c.startsWith('col-')) || '';
     const isHidden = hiddenCols.includes(colClass) ? 'col-hidden' : '';
     const noFilter = ['col-cb', 'col-btn', 'col-btn-edit'].includes(colClass);
@@ -1205,7 +1167,7 @@ const thSort = (label, cls = "") => {
         return `<th class="hdr-std ${cls} ${isHidden} select-none text-center"><div class="flex items-center justify-center w-full">${label}</div></th>`;
     }
 
-    return `<th class="hdr-std ${cls} ${isHidden} ${hdrBgClass} select-none group cursor-pointer hover:bg-slate-700 transition" onclick="openColumnFilter(event, '${colClass}', '${label}')">
+    return `<th class="hdr-std ${cls} ${isHidden} ${hdrBgClass} select-none group cursor-pointer hover:bg-slate-700 transition" onclick="openColumnFilter(event, '${colClass}', '${label}', this)">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
             <span class="truncate flex-1 text-left" title="${label}">${label}</span>
             <div class="flex items-center gap-1 shrink-0">
@@ -1213,12 +1175,14 @@ const thSort = (label, cls = "") => {
             </div>
         </div>
     </th>`;
-};
+}
 
-window.openColumnFilter = function(event, colClass, colName) {
-    event.stopPropagation();
+window.openColumnFilter = function(event, colClass, colName, headerEl = null) {
+    if (event) event.stopPropagation();
     currentFilterCol = colClass;
-    document.getElementById('filter-col-name').innerText = `Filter: ${colName}`;
+    
+    const titleEl = document.getElementById('filter-col-name');
+    if (titleEl) titleEl.innerText = `Filter: ${colName}`;
 
     let uniqueValues = new Set();
     processedData.forEach(row => {
@@ -1235,33 +1199,43 @@ window.openColumnFilter = function(event, colClass, colName) {
     window.currentFilterValues = sortedValues;
     renderFilterList('');
 
-    document.getElementById('filter-search-input').value = '';
+    const searchInput = document.getElementById('filter-search-input');
+    if (searchInput) searchInput.value = '';
     
     const menu = document.getElementById('excel-filter-menu');
+    if (!menu) return;
+    
     menu.classList.remove('hidden');
-    
-    const btnRect = event.currentTarget.getBoundingClientRect();
-    const menuWidth = 256; 
-    let topPos = btnRect.bottom + 4; 
-    let leftPos = btnRect.left; 
+    menu.style.display = 'flex';
+    menu.style.zIndex = '9999';
 
-    if (leftPos + menuWidth > window.innerWidth) leftPos = btnRect.right - menuWidth;
-    if (leftPos < 10) leftPos = 10;
-
-    menu.style.position = 'fixed'; 
-    menu.style.top = `${topPos}px`;
-    menu.style.left = `${leftPos}px`;
+    const targetEl = headerEl || (event ? (event.currentTarget || (event.target ? event.target.closest('th') : null)) : null);
     
-    document.getElementById('filter-search-input').focus();
+    if (targetEl && typeof targetEl.getBoundingClientRect === 'function') {
+        const btnRect = targetEl.getBoundingClientRect();
+        const menuWidth = 256; 
+        
+        let topPos = btnRect.bottom + 4; 
+        let leftPos = btnRect.left; 
+
+        if (leftPos + menuWidth > window.innerWidth) leftPos = btnRect.right - menuWidth;
+        if (leftPos < 10) leftPos = 10;
+
+        menu.style.position = 'fixed'; 
+        menu.style.top = `${topPos}px`;
+        menu.style.left = `${leftPos}px`;
+    }
+    
+    if (searchInput) searchInput.focus();
 };
 
 window.renderFilterList = function(searchQuery) {
     const colClass = currentFilterCol;
-    let filteredVals = window.currentFilterValues;
+    let filteredVals = window.currentFilterValues || [];
     
     if (searchQuery) {
         const query = searchQuery.toLowerCase().split(' ').filter(x => x);
-        filteredVals = window.currentFilterValues.filter(val => {
+        filteredVals = (window.currentFilterValues || []).filter(val => {
             const text = String(val).toLowerCase();
             return query.every(term => text.includes(term));
         });
@@ -1284,7 +1258,8 @@ window.renderFilterList = function(searchQuery) {
         listHtml += `<div class="p-2 text-center text-xs font-bold text-slate-400 italic">Menampilkan 100 dari ${filteredVals.length} hasil. Ketik untuk mencari.</div>`;
     }
 
-    document.getElementById('filter-values-list').innerHTML = listHtml;
+    const containerList = document.getElementById('filter-values-list');
+    if (containerList) containerList.innerHTML = listHtml;
     window.updateSelectAllState();
 };
 
@@ -1314,11 +1289,17 @@ window.updateSelectAllState = function() {
 
 document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) window.updateSelectAllState(); });
 
-window.closeFilterMenu = function() { document.getElementById('excel-filter-menu').classList.add('hidden'); };
+window.closeFilterMenu = function() { 
+    const menu = document.getElementById('excel-filter-menu'); 
+    if (menu) {
+        menu.classList.add('hidden'); 
+        menu.style.display = 'none';
+    }
+};
 
 window.clearFilterForCurrentCol = function() { 
     delete activeFilters[currentFilterCol]; 
-    closeFilterMenu(); 
+    window.closeFilterMenu(); 
     applyFilters(); 
     updateFilterIcons(); 
 };
@@ -1326,17 +1307,18 @@ window.clearFilterForCurrentCol = function() {
 window.applyFilterForCurrentCol = function() {
     const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
     const totalBoxes = document.querySelectorAll('.filter-val-cb');
+    const searchInp = document.getElementById('filter-search-input');
     
-    if (checkedBoxes.length === totalBoxes.length && document.getElementById('filter-search-input').value.trim() === '') {
+    if (checkedBoxes.length === totalBoxes.length && searchInp && searchInp.value.trim() === '') {
         delete activeFilters[currentFilterCol];
     } else {
         let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value));
         activeFilters[currentFilterCol] = selectedVals;
     }
     
-    closeFilterMenu(); 
+    window.closeFilterMenu(); 
     applyFilters(); 
-    updateFilterIcons();
+    updateFilterIcons(); 
 };
 
 function updateFilterIcons() {
@@ -1504,7 +1486,7 @@ function renderTable() {
         const jData = encodeURIComponent(JSON.stringify({
             id: r.jasperId, nama_item: r.namaItemAsli, panjang: r.panjang, grade: r.grade, nama_jasper: r.displayNama
         }));
-        let btnEditJasper = `<td class="px-4 py-3 text-center col-btn-edit ${hiddenCols.includes('col-btn-edit')?'col-hidden':''}"><button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition shadow-sm mx-auto flex"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>`;
+        let btnEditJasper = `<td class="px-4 py-3 text-center col-btn-edit ${hiddenCols.includes('col-btn-edit')?'col-hidden':''}"><button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition shadow-sm mx-auto flex cursor-pointer"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>`;
 
         h += `
             <tr class="${trClass}">
@@ -1573,13 +1555,12 @@ function updatePaginationUI() {
 
     const lblTampil = document.getElementById('lbl-tampil-baris');
     const lblQty = document.getElementById('lbl-total-qty');
-    const lblHal = document.getElementById('lbl-halaman');
-    const lblTotHal = document.getElementById('lbl-total-halaman');
     const inpPage = document.getElementById('input-page-jump');
+    const lblTotHal = document.getElementById('lbl-total-halaman');
 
     if(lblTampil) lblTampil.innerText = totalFiltered;
     if(lblQty) lblQty.innerText = sumQty;
-    if(lblHal) lblHal.innerText = currentPage;
+    if(lblHal = document.getElementById('lbl-halaman')) lblHal.innerText = currentPage;
     if(lblTotHal) lblTotHal.innerText = totalPages;
     if(inpPage) {
         inpPage.value = currentPage;
@@ -1616,7 +1597,7 @@ function renderKatalogList() {
         html += `
         <tr class="hover:bg-slate-50 transition text-center row-katalog border-b border-slate-200" data-search="${searchStr}">
             <td class="p-2 border-r border-slate-200">
-                <button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md shadow-sm transition active:scale-95 mx-auto flex" title="Edit Baris Ini">
+                <button onclick="bukaModalKatalogForm(true, '${jData}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md shadow-sm transition active:scale-95 mx-auto flex cursor-pointer" title="Edit Baris Ini">
                     <i data-lucide="edit-3" class="w-4 h-4"></i>
                 </button>
             </td>
@@ -1817,6 +1798,7 @@ window.aksiMassal = async function(tipe) {
                 await Promise.all(chunk.map(u => db.from('hasil_stbj_langsir').update({ status_data: u.status_data }).eq('qrcode', u.qrcode)));
             }
             await muatDataDariSupabase();
+            tampilkanAlert(`Berhasil meng-collect data!`, "success");
         } catch (error) {
             tampilkanAlert("Gagal Update: " + error.message, "error");
         }
@@ -1873,7 +1855,7 @@ window.aksiMassal = async function(tipe) {
             activeHeaders.forEach(h => {
                 let val = sv[h.colClass] || '-';
                 let cleanVal = String(val).replace(/<[^>]*>?/gm, '').trim();
-                rowData.push(`"${cleanVal}"`);
+                rowData.push(cleanVal);
             });
             ws_data.push(rowData);
         });
@@ -1883,11 +1865,11 @@ window.aksiMassal = async function(tipe) {
         XLSX.utils.book_append_sheet(wb, ws, "STBJ_Data");
         XLSX.writeFile(wb, `STBJ_${statusSekarang}_TABEL.xlsx`);
     }
-}
+};
 
 function applyColumnOrder() {
     if (!userColOrder || userColOrder.length === 0) return;
-    const table = document.getElementById('table-stbj-main');
+    const table = document.getElementById('main-table');
     if(!table) return;
     const rows = table.querySelectorAll('tr');
 
@@ -1902,25 +1884,22 @@ function applyColumnOrder() {
             if (colClass) cellMap[colClass] = c;
         });
 
-        // Pindahkan elemen yang ada di userColOrder
         userColOrder.forEach(colId => { 
             if (cellMap[colId]) row.appendChild(cellMap[colId]); 
         });
 
-        // Pindahkan elemen lain yang tidak ada di userColOrder
         cells.forEach(c => {
             if (c !== cbCell && !userColOrder.some(colId => c.classList.contains(colId))) { 
                 row.appendChild(c); 
             }
         });
 
-        // Kembalikan checkbox selalu di posisi paling pertama
         if (cbCell) row.insertBefore(cbCell, row.firstChild);
     });
 }
 
 function initResizableColumns() {
-    const cols = document.querySelectorAll('#table-stbj-main th');
+    const cols = document.querySelectorAll('#main-table th');
     cols.forEach(col => {
         const existing = col.querySelector('.resizer'); if(existing) existing.remove();
         const resizer = document.createElement('div'); resizer.classList.add('resizer'); col.appendChild(resizer);
