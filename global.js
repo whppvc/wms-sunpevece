@@ -1,5 +1,5 @@
 // ============================================================================
-// WMS SUNPEVECE - GLOBAL SCRIPT, ROUTE GUARD, DESIGN & UI ACCESS ENFORCEMENT
+// WMS SUNPEVECE - GLOBAL SCRIPT, ROUTE GUARD, DESIGN & STRICT ACCESS ENFORCEMENT
 // ============================================================================
 
 // ==========================================
@@ -88,6 +88,13 @@ style.innerHTML = `
         --tbl-row-hover: 241, 245, 249;
         --tbl-opacity: 1;
         --tbl-border: #e2e8f0;
+    }
+
+    /* KELAS KHUSUS PENGUNCIAN TOMBOL (TIDAK BISA DITIMPA OLEH JS LAIN) */
+    .perm-denied { 
+        display: none !important; 
+        visibility: hidden !important; 
+        pointer-events: none !important; 
     }
 
     .hide-scrollbar::-webkit-scrollbar { display: none; } 
@@ -395,8 +402,8 @@ async function initModernLayout(pageMeta) {
                 <h3 class="text-lg font-black mb-4 flex items-center gap-2"><i data-lucide="key-round" class="text-blue-600"></i> Ganti Password</h3>
                 <input type="password" id="input-new-password-global" placeholder="Password Baru" class="w-full p-3 border border-slate-300 rounded-lg mb-5 font-bold outline-none focus:border-blue-600 bg-slate-50">
                 <div class="flex gap-2">
-                    <button onclick="tutupModal('modal-password')" class="w-1/2 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200 transition">Batal</button>
-                    <button onclick="tutupModal('modal-password'); alert('Fitur ini akan segera aktif.');" class="w-1/2 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-sm">Simpan</button>
+                    <button onclick="tutupModal('modal-password')" class="w-1/2 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200 transition cursor-pointer">Batal</button>
+                    <button onclick="tutupModal('modal-password'); alert('Fitur ini akan segera aktif.');" class="w-1/2 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-sm cursor-pointer">Simpan</button>
                 </div>
             </div>
         </div>
@@ -420,10 +427,10 @@ async function initModernLayout(pageMeta) {
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Warna Header</label>
                         <div class="flex gap-3">
-                            <button onclick="setTdColor('hdr', '#0f172a', '#ffffff')" id="btn-hdr-#0f172a" class="w-8 h-8 rounded-full bg-[#0f172a] flex items-center justify-center text-white transition hover:scale-110"></button>
-                            <button onclick="setTdColor('hdr', '#1e3a8a', '#ffffff')" id="btn-hdr-#1e3a8a" class="w-8 h-8 rounded-full bg-[#1e3a8a] flex items-center justify-center text-white transition hover:scale-110"></button>
-                            <button onclick="setTdColor('hdr', '#064e3b', '#ffffff')" id="btn-hdr-#064e3b" class="w-8 h-8 rounded-full bg-[#064e3b] flex items-center justify-center text-white transition hover:scale-110"></button>
-                            <button onclick="setTdColor('hdr', '#475569', '#ffffff')" id="btn-hdr-#475569" class="w-8 h-8 rounded-full bg-[#475569] flex items-center justify-center text-white transition hover:scale-110"></button>
+                            <button onclick="setTdColor('hdr', '#0f172a', '#ffffff')" id="btn-hdr-#0f172a" class="w-8 h-8 rounded-full bg-[#0f172a] flex items-center justify-center text-white transition hover:scale-110 cursor-pointer"></button>
+                            <button onclick="setTdColor('hdr', '#1e3a8a', '#ffffff')" id="btn-hdr-#1e3a8a" class="w-8 h-8 rounded-full bg-[#1e3a8a] flex items-center justify-center text-white transition hover:scale-110 cursor-pointer"></button>
+                            <button onclick="setTdColor('hdr', '#064e3b', '#ffffff')" id="btn-hdr-#064e3b" class="w-8 h-8 rounded-full bg-[#064e3b] flex items-center justify-center text-white transition hover:scale-110 cursor-pointer"></button>
+                            <button onclick="setTdColor('hdr', '#475569', '#ffffff')" id="btn-hdr-#475569" class="w-8 h-8 rounded-full bg-[#475569] flex items-center justify-center text-white transition hover:scale-110 cursor-pointer"></button>
                         </div>
                     </div>
 
@@ -431,21 +438,21 @@ async function initModernLayout(pageMeta) {
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Tema Belang (Row)</label>
                             <div class="flex flex-wrap gap-2">
-                                <button onclick="setTdColor('rowTheme', 'gray')" id="btn-row-gray" class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('rowTheme', 'blue')" id="btn-row-blue" class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('rowTheme', 'green')" id="btn-row-green" class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('rowTheme', 'amber')" id="btn-row-amber" class="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('rowTheme', 'pink')" id="btn-row-pink" class="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 transition hover:scale-110"></button>
+                                <button onclick="setTdColor('rowTheme', 'gray')" id="btn-row-gray" class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 transition hover:scale-110 cursor-pointer"></button>
+                                <button onclick="setTdColor('rowTheme', 'blue')" id="btn-row-blue" class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 transition hover:scale-110 cursor-pointer"></button>
+                                <button onclick="setTdColor('rowTheme', 'green')" id="btn-row-green" class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-600 transition hover:scale-110 cursor-pointer"></button>
+                                <button onclick="setTdColor('rowTheme', 'amber')" id="btn-row-amber" class="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 transition hover:scale-110 cursor-pointer"></button>
+                                <button onclick="setTdColor('rowTheme', 'pink')" id="btn-row-pink" class="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 transition hover:scale-110 cursor-pointer"></button>
                             </div>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Tema Hover</label>
                             <div class="flex flex-wrap gap-2">
-                                <button onclick="setTdColor('hoverTheme', 'gray')" id="btn-hov-gray" class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('hoverTheme', 'blue')" id="btn-hov-blue" class="w-6 h-6 rounded-full bg-blue-200 flex items-center justify-center text-blue-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('hoverTheme', 'green')" id="btn-hov-green" class="w-6 h-6 rounded-full bg-green-200 flex items-center justify-center text-green-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('hoverTheme', 'amber')" id="btn-hov-amber" class="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center text-amber-600 transition hover:scale-110"></button>
-                                <button onclick="setTdColor('hoverTheme', 'pink')" id="btn-hov-pink" class="w-6 h-6 rounded-full bg-pink-200 flex items-center justify-center text-pink-600 transition hover:scale-110"></button>
+                                <button onclick="setTdColor('hoverTheme', 'gray')" id="btn-hov-gray" class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 transition hover:scale-110 cursor-pointer"></button>
+                                <button onclick="setTdColor('hoverTheme', 'blue')" id="btn-hov-blue" class="w-6 h-6 rounded-full bg-blue-200 flex items-center justify-center text-blue-600 transition hover:scale-110 cursor-pointer"></button>
+                                <button onclick="setTdColor('hoverTheme', 'green')" id="btn-hov-green" class="w-6 h-6 rounded-full bg-green-200 flex items-center justify-center text-green-600 transition hover:scale-110 cursor-pointer"></button>
+                                <button onclick="setTdColor('hoverTheme', 'amber')" id="btn-hov-amber" class="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center text-amber-600 transition hover:scale-110 cursor-pointer"></button>
+                                <button onclick="setTdColor('hoverTheme', 'pink')" id="btn-hov-pink" class="w-6 h-6 rounded-full bg-pink-200 flex items-center justify-center text-pink-600 transition hover:scale-110 cursor-pointer"></button>
                             </div>
                         </div>
                     </div>
@@ -460,8 +467,8 @@ async function initModernLayout(pageMeta) {
                 </div>
 
                 <div class="flex gap-2">
-                    <button onclick="tutupModal('modal-table-design')" class="w-1/2 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition">Batal</button>
-                    <button onclick="saveTableDesign()" class="w-1/2 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-sm">Simpan</button>
+                    <button onclick="tutupModal('modal-table-design')" class="w-1/2 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition cursor-pointer">Batal</button>
+                    <button onclick="saveTableDesign()" class="w-1/2 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-sm cursor-pointer">Simpan</button>
                 </div>
             </div>
         </div>
@@ -470,11 +477,11 @@ async function initModernLayout(pageMeta) {
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl border border-slate-200 text-slate-800 h-[85vh] flex flex-col overflow-hidden">
                 <div class="p-4 sm:p-5 flex justify-between items-center border-b border-slate-200 bg-slate-50 shrink-0">
                     <h3 class="text-base font-black flex items-center gap-2 text-slate-800"><i data-lucide="mail" class="text-blue-600"></i> KOTAK PESAN (INBOX)</h3>
-                    <button onclick="tutupModal('modal-inbox')" class="text-slate-400 hover:text-red-500 transition bg-white p-1.5 rounded-md border border-slate-200"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <button onclick="tutupModal('modal-inbox')" class="text-slate-400 hover:text-red-500 transition bg-white p-1.5 rounded-md border border-slate-200 cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
                 <div id="inbox-view-list" class="flex-1 flex flex-col overflow-hidden">
                     <div class="p-3 bg-white border-b border-slate-200 flex justify-between items-center shrink-0">
-                        <button onclick="tutupModal('modal-inbox')" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-md text-xs transition shadow-sm">Tutup</button>
+                        <button onclick="tutupModal('modal-inbox')" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-md text-xs transition shadow-sm cursor-pointer">Tutup</button>
                     </div>
                     <div class="flex-1 overflow-x-auto overflow-y-auto hide-scrollbar bg-slate-50 p-6 text-center text-slate-400 font-bold">
                         Fitur Inbox Notifikasi akan segera aktif.
@@ -489,11 +496,9 @@ async function initModernLayout(pageMeta) {
     lucide.createIcons();
     renderFavMenus(); 
 
-    // Terapkan Proteksi Hak Akses Tombol untuk Halaman Ini
+    // Terapkan Proteksi Hak Akses Tombol secara otomatis
     if (pageMeta && pageMeta.id) {
-        setTimeout(() => {
-            window.applyButtonPermissions(pageMeta.id);
-        }, 150);
+        window.applyButtonPermissions(pageMeta.id);
     }
 
     // Handle ESC Key to Close Any Open Modal
@@ -568,7 +573,7 @@ window.saveTableDesign = function() {
 };
 
 // ==========================================
-// ENFORCEMENT HAK AKSES TOMBOL GLOBAL
+// ENFORCEMENT HAK AKSES TOMBOL GLOBAL (REAKTIF & KUAT)
 // ==========================================
 window.applyButtonPermissions = async function(menuId) {
     const sessionString = localStorage.getItem('user_session');
@@ -582,18 +587,42 @@ window.applyButtonPermissions = async function(menuId) {
         const { data, error } = await db.from('button_access').select('*').eq('menu_id', menuId);
         if (error || !data) return;
 
-        data.forEach(rule => {
-            const btnEl = document.getElementById(rule.button_id);
-            if (!btnEl) return;
+        const enforce = () => {
+            data.forEach(rule => {
+                const allowedUsers = rule.allowed_users ? rule.allowed_users.split(',').map(u => u.trim()).filter(Boolean) : [];
+                const isDenied = !allowedUsers.includes(user.username);
 
-            const allowedUsers = rule.allowed_users ? rule.allowed_users.split(',').map(u => u.trim()).filter(Boolean) : [];
-            
-            // Jika user tidak diizinkan, sembunyikan tombol
-            if (!allowedUsers.includes(user.username)) {
-                btnEl.style.display = 'none';
-                btnEl.classList.add('hidden');
-            }
-        });
+                if (isDenied) {
+                    // Cari tombol target dengan ID utama, ID mobile, ataupun tombol dalam menu aksi (garis 3)
+                    const targetSelectors = [
+                        `#${rule.button_id}`,
+                        `#${rule.button_id}-mob`,
+                        `#${rule.button_id}-main`,
+                        `button[onclick*="${rule.button_id}"]`,
+                        `[data-button-id="${rule.button_id}"]`
+                    ];
+
+                    targetSelectors.forEach(sel => {
+                        document.querySelectorAll(sel).forEach(btnEl => {
+                            btnEl.classList.add('perm-denied');
+                            btnEl.style.setProperty('display', 'none', 'important');
+                            btnEl.setAttribute('disabled', 'true');
+                        });
+                    });
+                }
+            });
+        };
+
+        // Eksekusi langsung
+        enforce();
+
+        // Pasang Mutation Observer agar jika tombol dimunculkan oleh script lain (misal via renderTabel/setMode), tetap terkunci
+        if (!window._btnPermObserver) {
+            window._btnPermObserver = new MutationObserver(() => {
+                enforce();
+            });
+            window._btnPermObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+        }
     } catch (e) {
         console.warn("Gagal menerapkan button permissions:", e);
     }
