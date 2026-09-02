@@ -307,7 +307,7 @@ function renderStagingCards() {
         tbody.innerHTML = `
             <div class="p-10 text-center font-medium text-slate-400 h-full flex flex-col items-center justify-center">
                 <i data-lucide="package-x" class="w-12 h-12 mx-auto mb-3 opacity-30"></i> 
-                Belum ada kardus di-scan.
+                Belum ada dus di-scan.
             </div>`;
         document.getElementById('lbl-total-scan').innerText = '0';
         updateFilterDropdowns();
@@ -506,7 +506,7 @@ window.simpanNonaktifKeDB = async function() {
     const validItems = stagingData.filter(d => d.status === 'VALID');
     if(validItems.length === 0) return tampilkanAlert("Tidak ada item valid untuk diproses!", "warning");
 
-    if(!confirm(`Yakin ingin menonaktifkan ${validItems.length} kardus ini?\nBarang akan dihapus dari stok gudang, status di STBJ diubah ke NONAKTIF oleh ${currentUser.username}, dan dicatat di tabel Stok Nonaktif.`)) return;
+    if(!confirm(`Yakin ingin menonaktifkan ${validItems.length} dus ini?\nBarang akan dihapus dari stok gudang, status di STBJ diubah ke NONAKTIF oleh ${currentUser.username}, dan dicatat di tabel Stok Nonaktif.`)) return;
 
     const btn = document.getElementById('btn-save'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4 sm:w-5 sm:h-5"></i> Proses...'; btn.disabled = true;
@@ -597,7 +597,7 @@ window.simpanNonaktifKeDB = async function() {
             }
         }
 
-        tampilkanAlert(`✅ BERHASIL!\n${validItems.length} kardus telah dinonaktifkan, status STBJ diubah ke NONAKTIF oleh ${currentUser.username}, dan stok gudang telah diperbarui.`, "success");
+        tampilkanAlert(`\n${validItems.length} dus telah dinonaktifkan oleh ${currentUser.username}.`, "success");
         stagingData = [];
         renderStagingCards();
 
