@@ -133,7 +133,7 @@
         </section>
 
         <!-- ========================================== -->
-        <!-- SECTION 3: MASTER TOMBOL (FILTERED USERS & ALL ACTION BUTTONS) -->
+        <!-- SECTION 3: MASTER TOMBOL -->
         <!-- ========================================== -->
         <section id="section-tombol" class="space-y-6 hidden">
             <div class="border-b border-slate-200 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -214,7 +214,7 @@
         let userSortCol = 'id';
         let userSortAsc = true;
 
-        // KATALOG LENGKAP TOMBOL AKSI (TOOLBAR UTAMA MAUPUN DI DALAM MENU GARIS 3)
+        // KATALOG LENGKAP TOMBOL AKSI TERSTRUKTUR
         const WMS_BUTTON_CATALOG = {
             'kartu_stok': [
                 { id: 'btn-refresh-main', label: 'Refresh Data' },
@@ -238,29 +238,33 @@
             'hasil_stbj': [
                 { id: 'btn-katalog-jasper', label: 'Katalog Jasper' },
                 { id: 'btn-massal-collect', label: 'Collect Data' },
+                { id: 'btn-filter-popup', label: 'Menu Garis 3: Filter Data' },
                 { id: 'btn-hold-mob', label: 'Menu Garis 3: Ubah Status (Hold/Unhold)' },
                 { id: 'btn-hapus-mob', label: 'Menu Garis 3: Hapus Item' },
                 { id: 'btn-salin-data', label: 'Menu Garis 3: Salin Data' },
                 { id: 'btn-download-xls', label: 'Menu Garis 3: Export Excel' },
                 { id: 'btn-sidebar-kolom', label: 'Menu Garis 3: Atur Kolom' },
-                { id: 'btn-table-design', label: 'Menu Garis 3: Table Design' }
+                { id: 'btn-table-design', label: 'Menu Garis 3: Table Design' },
+                { id: 'btn-cancel-stbj-lvl6', label: 'Mobile: Cancel STBJ (Grid Lvl 6)' },
+                { id: 'btn-cancel-hold-lvl6', label: 'Mobile: Cancel Hold (Grid Lvl 6)' },
+                { id: 'btn-hapus-hold-lvl6', label: 'Mobile: Hapus Item Hold (Grid Lvl 6)' }
             ],
             'langsir': [
                 { id: 'btn-Verifikasi', label: 'Verifikasi' },
                 { id: 'btn-data-stbj', label: 'Data STBJ' },
                 { id: 'btn-tabel-hold', label: 'Tabel Hold' },
-                { id: 'btn-edit-ket', label: 'Menu Garis 3: Edit Keterangan' },
-                { id: 'btn-hold-langsir', label: 'Menu Garis 3: Hold Langsir' },
                 { id: 'btn-scan-area', label: 'Set Area Item' },
                 { id: 'btn-save', label: 'Simpan ke Gudang' },
+                { id: 'btn-edit-ket', label: 'Menu Garis 3: Edit Keterangan' },
+                { id: 'btn-hold-langsir', label: 'Menu Garis 3: Hold Langsir' },
                 { id: 'btn-salin-data', label: 'Menu Garis 3: Salin Data' },
                 { id: 'btn-undo-delete', label: 'Menu Garis 3: Undo Hapus' }
             ],
             'riwayat_langsir': [
                 { id: 'btn-ganti-area', label: 'Ganti Area' },
+                { id: 'btn-data-stbj', label: 'Data STBJ' },
                 { id: 'btn-cancel-langsir', label: 'Cancel Langsir' },
                 { id: 'btn-hapus-hold', label: 'Hapus Permanen Hold' },
-                { id: 'btn-data-stbj', label: 'Data STBJ' },
                 { id: 'btn-salin-data', label: 'Menu Garis 3: Salin Data' },
                 { id: 'btn-download-xls', label: 'Menu Garis 3: Export Excel' },
                 { id: 'btn-sidebar-kolom', label: 'Menu Garis 3: Atur Kolom' },
@@ -270,15 +274,16 @@
                 { id: 'btn-add-scan', label: 'Scan Item Keluar (+)' },
                 { id: 'btn-verifikasi', label: 'Verifikasi Keluar' },
                 { id: 'btn-save', label: 'Proses Keluar' },
-                { id: 'btn-cancel-keluar-scan', label: 'Menu Garis 3: Scan Cancel Keluar' },
-                { id: 'btn-undo-hapus', label: 'Menu Garis 3: Undo Hapus' }
+                { id: 'btn-undo-hapus', label: 'Menu Garis 3: Undo Hapus' },
+                { id: 'btn-cancel-keluar-scan', label: 'Menu Garis 3: Scan Cancel Keluar' }
             ],
             'riwayat_keluar': [
                 { id: 'btn-cancel', label: 'Cancel Keluar (Retur Hold)' },
                 { id: 'btn-salin-data', label: 'Menu Garis 3: Salin Data' },
                 { id: 'btn-download-xls', label: 'Menu Garis 3: Export Excel' },
                 { id: 'btn-sidebar-kolom', label: 'Menu Garis 3: Atur Kolom' },
-                { id: 'btn-table-design', label: 'Menu Garis 3: Table Design' }
+                { id: 'btn-table-design', label: 'Menu Garis 3: Table Design' },
+                { id: 'btn-cancel-mobile-lvl5', label: 'Mobile: Cancel Keluar (Lvl 5)' }
             ],
             'req_konversi': [
                 { id: 'btn-proses-konv', label: 'Proses Konversi (OUT / IN)' },
@@ -319,15 +324,15 @@
             'master_data': [
                 { id: 'btn-tambah-baris', label: 'Tambah Baris Baru' },
                 { id: 'btn-tambah-item', label: 'Tambah Item Baru' },
-                { id: 'btn-save', label: 'Simpan Perubahan Master' }
+                { id: 'btn-save', label: 'Simpan Perubahan Master' },
+                { id: 'btn-export-excel', label: 'Export Excel' }
             ]
         };
 
-        // State Master Tombol & Hak Akses
         let selectedMenuId = 'kartu_stok';
         let selectedUsername = '';
-        let buttonAccessMap = {}; // Format: { "menuId__buttonId": ["user1", "user2"] }
-        let menuAccessMap = {};   // Format: { "menuId": ["user1", "user2"] }
+        let buttonAccessMap = {}; 
+        let menuAccessMap = {};   
 
         // ==========================================
         // 1. NAVIGASI TAB UTAMA
@@ -571,7 +576,7 @@
         });
 
         // ==========================================
-        // 4. MASTER TOMBOL LOGIC (REVISI: FILTER USER BY MENU ACCESS)
+        // 4. MASTER TOMBOL LOGIC (STRICT ACCESS ENGINE)
         // ==========================================
         async function initMasterTombolWorkspace() {
             const menuContainer = document.getElementById('btn-master-menu-list');
@@ -582,7 +587,6 @@
             lucide.createIcons();
 
             try {
-                // 1. Muat Database Button Access & Menu Access
                 const [resBtn, resMenu, resUsers] = await Promise.all([
                     db.from('button_access').select('*'),
                     db.from('menu_access').select('*'),
@@ -602,13 +606,8 @@
 
                 allUsers = resUsers.data || [];
 
-                // 2. Render Kolom 1 (Daftar Menu)
                 renderMenuSelectionColumn();
-
-                // 3. Render Kolom 2 (Daftar User - Terfilter khusus untuk Menu Terpilih)
                 renderUserSelectionColumn();
-
-                // 4. Render Kolom 3 (Daftar Tombol & Izin Akses)
                 renderButtonMatrixColumn();
 
             } catch (err) {
@@ -631,7 +630,7 @@
                 card.onclick = () => {
                     selectedMenuId = menu.id;
                     renderMenuSelectionColumn();
-                    renderUserSelectionColumn(); // Re-filter user list saat menu berganti
+                    renderUserSelectionColumn(); 
                     renderButtonMatrixColumn();
                 };
                 card.className = `p-3 rounded-xl border transition cursor-pointer flex items-center justify-between ${
@@ -657,16 +656,13 @@
             lucide.createIcons();
         }
 
-        // REVISI UTAMA: Hanya menampilkan user yang memiliki akses ke selectedMenuId
         function renderUserSelectionColumn() {
             const container = document.getElementById('btn-master-user-list');
             
-            // Ambil daftar user yang diizinkan untuk menu ini dari menuAccessMap
             const allowedForThisMenu = menuAccessMap[selectedMenuId] !== undefined
                 ? menuAccessMap[selectedMenuId]
-                : allUsers.map(u => u.username); // Default jika belum diatur
+                : allUsers.map(u => u.username);
 
-            // Filter allUsers: Hanya sertakan jika username ada di allowedForThisMenu ATAU role-nya Creator
             const permittedUsers = allUsers.filter(user => {
                 const isCreator = (user.role || '').toLowerCase() === 'creator';
                 return isCreator || allowedForThisMenu.includes(user.username);
@@ -688,7 +684,6 @@
                 return;
             }
 
-            // Jika user yang aktif sebelumnya tidak ada di daftar izin menu ini, otomatis pilih user pertama yang berhak
             if (!permittedUsers.some(u => u.username === selectedUsername)) {
                 selectedUsername = permittedUsers[0].username;
             }
@@ -769,7 +764,6 @@
 
             buttons.forEach(btn => {
                 const key = `${selectedMenuId}__${btn.id}`;
-                // Default: jika belum pernah diatur, semua user diizinkan
                 const allowedUsers = buttonAccessMap[key] !== undefined 
                     ? buttonAccessMap[key] 
                     : allUsers.map(u => u.username);
@@ -806,7 +800,6 @@
             const btnId = cb.getAttribute('data-btn-id');
             const key = `${selectedMenuId}__${btnId}`;
 
-            // Inisialisasi jika belum ada di map
             if (buttonAccessMap[key] === undefined) {
                 buttonAccessMap[key] = allUsers.map(u => u.username);
             }
