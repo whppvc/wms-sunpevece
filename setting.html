@@ -80,8 +80,8 @@
                             <input type="text" id="input-role" class="w-full p-3 border border-slate-300 rounded-xl text-sm font-bold outline-none focus:border-blue-500 bg-slate-50 uppercase" placeholder="ADMIN / OPERATOR / PIC" required autocomplete="off">
                         </div>
                         <div class="flex gap-2 pt-2">
-                            <button type="button" id="btn-batal-edit" class="hidden w-1/2 py-3 bg-slate-200 text-slate-700 font-black rounded-xl text-xs uppercase transition hover:bg-slate-300">Batal</button>
-                            <button type="submit" id="btn-submit-user" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase transition shadow-sm flex justify-center items-center gap-2">
+                            <button type="button" id="btn-batal-edit" class="hidden w-1/2 py-3 bg-slate-200 text-slate-700 font-black rounded-xl text-xs uppercase transition hover:bg-slate-300 cursor-pointer">Batal</button>
+                            <button type="submit" id="btn-submit-user" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase transition shadow-sm flex justify-center items-center gap-2 cursor-pointer">
                                 <i data-lucide="save" class="w-4 h-4"></i> Simpan User
                             </button>
                         </div>
@@ -126,14 +126,14 @@
             
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-5xl">
                 <div id="akses-menu-container" class="space-y-4"></div>
-                <button id="btn-save-akses" class="mt-6 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl transition shadow-md flex justify-center items-center gap-2 uppercase text-sm border-b-4 border-emerald-800">
+                <button id="btn-save-akses" class="mt-6 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl transition shadow-md flex justify-center items-center gap-2 uppercase text-sm border-b-4 border-emerald-800 cursor-pointer">
                     <i data-lucide="check-circle" class="w-5 h-5"></i> Simpan Pengaturan Akses Menu
                 </button>
             </div>
         </section>
 
         <!-- ========================================== -->
-        <!-- SECTION 3: MASTER TOMBOL (BARU) -->
+        <!-- SECTION 3: MASTER TOMBOL (FILTERED USERS & ALL ACTION BUTTONS) -->
         <!-- ========================================== -->
         <section id="section-tombol" class="space-y-6 hidden">
             <div class="border-b border-slate-200 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -141,7 +141,7 @@
                     <h1 class="text-2xl font-black text-slate-800 mb-1 flex items-center gap-2.5">
                         <i data-lucide="toggle-left" class="w-7 h-7 text-emerald-600"></i> Master Akses Tombol
                     </h1>
-                    <p class="text-sm font-medium text-slate-500">Atur hak akses tombol spesifik untuk masing-masing user pada setiap modul WMS.</p>
+                    <p class="text-sm font-medium text-slate-500">Atur hak akses tombol spesifik untuk masing-masing user pada setiap modul WMS (termasuk tombol di dalam menu garis 3).</p>
                 </div>
                 <button onclick="simpanSemuaAksesTombol()" id="btn-save-tombol-top" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md transition active:scale-95 text-xs uppercase flex items-center gap-2 border-b-4 border-emerald-800 shrink-0 cursor-pointer">
                     <i data-lucide="save" class="w-4 h-4"></i> Simpan Akses Tombol
@@ -155,18 +155,18 @@
                 <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col h-[650px]">
                     <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
                         <h3 class="font-black text-xs uppercase text-slate-400 tracking-wider flex items-center gap-2">
-                            <i data-lucide="layers" class="w-4 h-4 text-blue-600"></i> 1. Pilih Menu / Modul
+                            <i data-lucide="layers" class="w-4 h-4 text-blue-600"></i> 1. Pilih Menu
                         </h3>
                         <span id="lbl-total-menu" class="text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">0 Menu</span>
                     </div>
                     <div class="flex-1 overflow-y-auto custom-scroll space-y-1.5 pr-1" id="btn-master-menu-list"></div>
                 </div>
 
-                <!-- KOLOM 2: DAFTAR USER (3 KOLOM) -->
+                <!-- KOLOM 2: DAFTAR USER YANG MEMILIKI AKSES MENU (3 KOLOM) -->
                 <div class="lg:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col h-[650px]">
                     <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
                         <h3 class="font-black text-xs uppercase text-slate-400 tracking-wider flex items-center gap-2">
-                            <i data-lucide="users" class="w-4 h-4 text-indigo-600"></i> 2. Pilih User
+                            <i data-lucide="users" class="w-4 h-4 text-indigo-600"></i> 2. User Menu Ini
                         </h3>
                         <span id="lbl-total-user" class="text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full">0 User</span>
                     </div>
@@ -180,11 +180,11 @@
                             <h3 class="font-black text-xs uppercase text-slate-400 tracking-wider flex items-center gap-2">
                                 <i data-lucide="mouse-pointer-click" class="w-4 h-4 text-emerald-600"></i> 3. Hak Akses Tombol
                             </h3>
-                            <p class="text-sm font-black text-blue-700 mt-0.5 uppercase" id="lbl-target-detail">Pilih Menu & User Terlebih Dahulu</p>
+                            <p class="text-sm font-black text-blue-700 mt-0.5 uppercase truncate max-w-[280px]" id="lbl-target-detail">Pilih Menu & User Terlebih Dahulu</p>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
-                            <button onclick="toggleAllButtonPerms(true)" class="px-2.5 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-[10px] uppercase rounded-lg border border-blue-200 transition">Pilih Semua</button>
-                            <button onclick="toggleAllButtonPerms(false)" class="px-2.5 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 font-bold text-[10px] uppercase rounded-lg border border-slate-200 transition">Hapus Semua</button>
+                            <button onclick="toggleAllButtonPerms(true)" class="px-2.5 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-[10px] uppercase rounded-lg border border-blue-200 transition cursor-pointer">Pilih Semua</button>
+                            <button onclick="toggleAllButtonPerms(false)" class="px-2.5 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 font-bold text-[10px] uppercase rounded-lg border border-slate-200 transition cursor-pointer">Hapus Semua</button>
                         </div>
                     </div>
 
@@ -198,7 +198,7 @@
 
                     <!-- TOMBOL SIMPAN BAWAH -->
                     <div class="pt-4 border-t border-slate-100 shrink-0">
-                        <button onclick="simpanSemuaAksesTombol()" id="btn-save-tombol-bottom" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md transition active:scale-95 text-xs uppercase flex justify-center items-center gap-2 border-b-4 border-emerald-800">
+                        <button onclick="simpanSemuaAksesTombol()" id="btn-save-tombol-bottom" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md transition active:scale-95 text-xs uppercase flex justify-center items-center gap-2 border-b-4 border-emerald-800 cursor-pointer">
                             <i data-lucide="check-circle" class="w-4 h-4"></i> Simpan Perubahan Akses Tombol
                         </button>
                     </div>
@@ -214,7 +214,7 @@
         let userSortCol = 'id';
         let userSortAsc = true;
 
-        // KATALOG MASTER SELURUH TOMBOL AKSI WMS PER MODUL
+        // KATALOG LENGKAP TOMBOL AKSI (TOOLBAR UTAMA MAUPUN DI DALAM MENU GARIS 3)
         const WMS_BUTTON_CATALOG = {
             'kartu_stok': [
                 { id: 'btn-refresh-main', label: 'Refresh Data' },
@@ -223,66 +223,82 @@
                 { id: 'btn-ganti-ket-main', label: 'Ganti Keterangan' },
                 { id: 'btn-req-konversi-main', label: 'Request Konversi' },
                 { id: 'btn-proses-ganti-main', label: 'Proses Label Customer' },
-                { id: 'btn-salin-data', label: 'Salin Data (Clipboard)' },
-                { id: 'btn-export-excel', label: 'Export Excel' }
+                { id: 'btn-salin-data', label: 'Menu Garis 3: Salin Data' },
+                { id: 'btn-download-xls', label: 'Menu Garis 3: Export Excel' },
+                { id: 'btn-sidebar-kolom', label: 'Menu Garis 3: Atur Kolom' },
+                { id: 'btn-table-design', label: 'Menu Garis 3: Table Design' }
             ],
             'stbj': [
                 { id: 'btn-add-scan', label: 'Scan Barcode Baru (+)' },
                 { id: 'btn-add-manual', label: 'Input Manual STBJ' },
                 { id: 'btn-cek-gudang', label: 'Verifikasi Kode' },
-                { id: 'btn-save-stbj', label: 'Simpan ke Database' },
+                { id: 'btn-save', label: 'Simpan ke Database' },
                 { id: 'btn-hold-manual', label: 'Hold Item Manual' }
             ],
             'hasil_stbj': [
                 { id: 'btn-katalog-jasper', label: 'Katalog Jasper' },
                 { id: 'btn-massal-collect', label: 'Collect Data' },
-                { id: 'btn-ubah-status', label: 'Ubah Status (Hold/Unhold)' },
-                { id: 'btn-hapus-item', label: 'Hapus Item (Super Admin)' },
-                { id: 'btn-salin-data', label: 'Salin Data' },
-                { id: 'btn-export-excel', label: 'Export Excel' }
+                { id: 'btn-hold-mob', label: 'Menu Garis 3: Ubah Status (Hold/Unhold)' },
+                { id: 'btn-hapus-mob', label: 'Menu Garis 3: Hapus Item' },
+                { id: 'btn-salin-data', label: 'Menu Garis 3: Salin Data' },
+                { id: 'btn-download-xls', label: 'Menu Garis 3: Export Excel' },
+                { id: 'btn-sidebar-kolom', label: 'Menu Garis 3: Atur Kolom' },
+                { id: 'btn-table-design', label: 'Menu Garis 3: Table Design' }
             ],
             'langsir': [
-                { id: 'btn-verifikasi', label: 'Verifikasi' },
+                { id: 'btn-Verifikasi', label: 'Verifikasi' },
                 { id: 'btn-data-stbj', label: 'Data STBJ' },
                 { id: 'btn-tabel-hold', label: 'Tabel Hold' },
-                { id: 'btn-edit-ket', label: 'Edit Keterangan' },
-                { id: 'btn-hold-langsir', label: 'Hold Langsir' },
+                { id: 'btn-edit-ket', label: 'Menu Garis 3: Edit Keterangan' },
+                { id: 'btn-hold-langsir', label: 'Menu Garis 3: Hold Langsir' },
                 { id: 'btn-scan-area', label: 'Set Area Item' },
-                { id: 'btn-save-gudang', label: 'Simpan ke Gudang' }
+                { id: 'btn-save', label: 'Simpan ke Gudang' },
+                { id: 'btn-salin-data', label: 'Menu Garis 3: Salin Data' },
+                { id: 'btn-undo-delete', label: 'Menu Garis 3: Undo Hapus' }
             ],
             'riwayat_langsir': [
                 { id: 'btn-ganti-area', label: 'Ganti Area' },
                 { id: 'btn-cancel-langsir', label: 'Cancel Langsir' },
                 { id: 'btn-hapus-hold', label: 'Hapus Permanen Hold' },
-                { id: 'btn-salin-data', label: 'Salin Data' },
-                { id: 'btn-export-excel', label: 'Export Excel' }
+                { id: 'btn-data-stbj', label: 'Data STBJ' },
+                { id: 'btn-salin-data', label: 'Menu Garis 3: Salin Data' },
+                { id: 'btn-download-xls', label: 'Menu Garis 3: Export Excel' },
+                { id: 'btn-sidebar-kolom', label: 'Menu Garis 3: Atur Kolom' },
+                { id: 'btn-table-design', label: 'Menu Garis 3: Table Design' }
             ],
             'keluar': [
                 { id: 'btn-add-scan', label: 'Scan Item Keluar (+)' },
                 { id: 'btn-verifikasi', label: 'Verifikasi Keluar' },
-                { id: 'btn-proses-keluar', label: 'Proses Keluar' },
-                { id: 'btn-cancel-keluar-scan', label: 'Scan Cancel Keluar (Pindah ke Hold)' }
+                { id: 'btn-save', label: 'Proses Keluar' },
+                { id: 'btn-cancel-keluar-scan', label: 'Menu Garis 3: Scan Cancel Keluar' },
+                { id: 'btn-undo-hapus', label: 'Menu Garis 3: Undo Hapus' }
             ],
             'riwayat_keluar': [
-                { id: 'btn-cancel-hold', label: 'Cancel Keluar (Retur Stok)' },
-                { id: 'btn-salin-data', label: 'Salin Data' },
-                { id: 'btn-export-excel', label: 'Export Excel' }
+                { id: 'btn-cancel', label: 'Cancel Keluar (Retur Hold)' },
+                { id: 'btn-salin-data', label: 'Menu Garis 3: Salin Data' },
+                { id: 'btn-download-xls', label: 'Menu Garis 3: Export Excel' },
+                { id: 'btn-sidebar-kolom', label: 'Menu Garis 3: Atur Kolom' },
+                { id: 'btn-table-design', label: 'Menu Garis 3: Table Design' }
             ],
             'req_konversi': [
                 { id: 'btn-proses-konv', label: 'Proses Konversi (OUT / IN)' },
                 { id: 'btn-done-konv', label: 'Done Konversi' },
                 { id: 'btn-undone-konv', label: 'Undone' },
                 { id: 'btn-cancel-konv', label: 'Cancel Konversi (Retur)' },
-                { id: 'btn-hapus-req', label: 'Hapus Request' },
-                { id: 'btn-salin-data', label: 'Salin Data' },
-                { id: 'btn-export-excel', label: 'Export Excel' }
+                { id: 'btn-hapus-req-mob', label: 'Menu Garis 3: Hapus Request' },
+                { id: 'btn-salin-data', label: 'Menu Garis 3: Salin Data' },
+                { id: 'btn-download-xls', label: 'Menu Garis 3: Export Excel' },
+                { id: 'btn-sidebar-kolom', label: 'Menu Garis 3: Atur Kolom' },
+                { id: 'btn-table-design', label: 'Menu Garis 3: Table Design' }
             ],
             'ganti_customer': [
                 { id: 'btn-proses-ganti', label: 'Proses Ganti Customer' },
-                { id: 'btn-cancel-req', label: 'Cancel Request' },
-                { id: 'btn-hapus-req', label: 'Hapus Request' },
-                { id: 'btn-salin-data', label: 'Salin Data' },
-                { id: 'btn-export-excel', label: 'Export Excel' }
+                { id: 'btn-cancel-req', label: 'Menu Garis 3: Cancel Request' },
+                { id: 'btn-hapus-req', label: 'Menu Garis 3: Hapus Request' },
+                { id: 'btn-salin-data', label: 'Menu Garis 3: Salin Data' },
+                { id: 'btn-download-xls', label: 'Menu Garis 3: Export Excel' },
+                { id: 'btn-sidebar-kolom', label: 'Menu Garis 3: Atur Kolom' },
+                { id: 'btn-table-design', label: 'Menu Garis 3: Table Design' }
             ],
             'po': [
                 { id: 'btn-add-po', label: 'Add Data PO' },
@@ -292,21 +308,26 @@
             ],
             'stok_nonaktif': [
                 { id: 'btn-verifikasi', label: 'Verifikasi Nonaktif' },
-                { id: 'btn-save-nonaktif', label: 'Simpan Nonaktif' },
+                { id: 'btn-save', label: 'Simpan Nonaktif' },
                 { id: 'btn-cancel-nonaktif', label: 'Cancel Nonaktif (Retur)' },
-                { id: 'btn-proses-bs', label: 'Proses BS (Hapus Permanen)' }
+                { id: 'btn-bs-massal', label: 'Proses BS (Hapus)' },
+                { id: 'btn-salin-data', label: 'Menu Garis 3: Salin Data' },
+                { id: 'btn-download-xls', label: 'Menu Garis 3: Export Excel' },
+                { id: 'btn-sidebar-kolom', label: 'Menu Garis 3: Atur Kolom' },
+                { id: 'btn-table-design', label: 'Menu Garis 3: Table Design' }
             ],
             'master_data': [
                 { id: 'btn-tambah-baris', label: 'Tambah Baris Baru' },
                 { id: 'btn-tambah-item', label: 'Tambah Item Baru' },
-                { id: 'btn-simpan-db', label: 'Simpan Perubahan Master' }
+                { id: 'btn-save', label: 'Simpan Perubahan Master' }
             ]
         };
 
-        // State Master Tombol
+        // State Master Tombol & Hak Akses
         let selectedMenuId = 'kartu_stok';
         let selectedUsername = '';
         let buttonAccessMap = {}; // Format: { "menuId__buttonId": ["user1", "user2"] }
+        let menuAccessMap = {};   // Format: { "menuId": ["user1", "user2"] }
 
         // ==========================================
         // 1. NAVIGASI TAB UTAMA
@@ -350,8 +371,8 @@
                     <td class="p-4 font-mono text-slate-500">${user.password}</td>
                     <td class="p-4"><span class="px-3 py-1 text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-700 rounded-md border border-blue-200">${user.role}</span></td>
                     <td class="p-4 text-center flex justify-center gap-2">
-                        <button onclick="editUser(${user.id}, '${user.username}', '${user.password}', '${user.role}')" class="px-3 py-1.5 bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-700 font-bold text-xs rounded-md transition flex items-center gap-1"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Edit</button>
-                        <button onclick="deleteUser(${user.id})" class="px-3 py-1.5 bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 font-bold text-xs rounded-md transition flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Hapus</button>
+                        <button onclick="editUser(${user.id}, '${user.username}', '${user.password}', '${user.role}')" class="px-3 py-1.5 bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-700 font-bold text-xs rounded-md transition flex items-center gap-1 cursor-pointer"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Edit</button>
+                        <button onclick="deleteUser(${user.id})" class="px-3 py-1.5 bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 font-bold text-xs rounded-md transition flex items-center gap-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Hapus</button>
                     </td>
                 </tr>`;
             });
@@ -457,16 +478,16 @@
                 const allUsernames = (users || []).map(u => u.username);
 
                 const { data: savedAccess } = await db.from('menu_access').select('*');
-                const accessMap = {};
+                menuAccessMap = {};
                 (savedAccess || []).forEach(row => {
-                    accessMap[row.menu_id] = row.allowed_users ? row.allowed_users.split(',').map(u => u.trim()) : [];
+                    menuAccessMap[row.menu_id] = row.allowed_users ? row.allowed_users.split(',').map(u => u.trim()) : [];
                 });
 
                 const actualMenus = APP_MENUS.filter(m => !m.isDivider);
 
                 container.innerHTML = '';
                 actualMenus.forEach(menu => {
-                    let allowedArr = accessMap[menu.id] !== undefined ? accessMap[menu.id] : allUsernames;
+                    let allowedArr = menuAccessMap[menu.id] !== undefined ? menuAccessMap[menu.id] : allUsernames;
 
                     const box = document.createElement('div');
                     box.className = "flex flex-col md:flex-row md:items-start justify-between p-5 border border-slate-200 rounded-xl bg-slate-50 shadow-sm";
@@ -492,8 +513,8 @@
                             <div class="flex justify-between items-center border-b border-slate-200 pb-2">
                                 <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Akses User</span>
                                 <div class="flex gap-2">
-                                    <button type="button" onclick="toggleMenuUsers(this, true)" class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition">Pilih Semua</button>
-                                    <button type="button" onclick="toggleMenuUsers(this, false)" class="text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-1 rounded hover:bg-slate-300 transition">Hapus Semua</button>
+                                    <button type="button" onclick="toggleMenuUsers(this, true)" class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition cursor-pointer">Pilih Semua</button>
+                                    <button type="button" onclick="toggleMenuUsers(this, false)" class="text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-1 rounded hover:bg-slate-300 transition cursor-pointer">Hapus Semua</button>
                                 </div>
                             </div>
                             <div class="flex flex-wrap gap-2 checkbox-container">
@@ -550,7 +571,7 @@
         });
 
         // ==========================================
-        // 4. MASTER TOMBOL LOGIC (BARU)
+        // 4. MASTER TOMBOL LOGIC (REVISI: FILTER USER BY MENU ACCESS)
         // ==========================================
         async function initMasterTombolWorkspace() {
             const menuContainer = document.getElementById('btn-master-menu-list');
@@ -561,31 +582,33 @@
             lucide.createIcons();
 
             try {
-                // 1. Muat Database Button Access
-                const { data: dbBtnAccess } = await db.from('button_access').select('*');
+                // 1. Muat Database Button Access & Menu Access
+                const [resBtn, resMenu, resUsers] = await Promise.all([
+                    db.from('button_access').select('*'),
+                    db.from('menu_access').select('*'),
+                    db.from('app_users').select('*').order('username', { ascending: true })
+                ]);
+
                 buttonAccessMap = {};
-                (dbBtnAccess || []).forEach(row => {
+                (resBtn.data || []).forEach(row => {
                     const key = `${row.menu_id}__${row.button_id}`;
                     buttonAccessMap[key] = row.allowed_users ? row.allowed_users.split(',').map(u => u.trim()).filter(Boolean) : [];
                 });
 
-                // 2. Muat Users
-                if (allUsers.length === 0) {
-                    const { data: users } = await db.from('app_users').select('*').order('username', { ascending: true });
-                    allUsers = users || [];
-                }
+                menuAccessMap = {};
+                (resMenu.data || []).forEach(row => {
+                    menuAccessMap[row.menu_id] = row.allowed_users ? row.allowed_users.split(',').map(u => u.trim()).filter(Boolean) : [];
+                });
 
-                if (!selectedUsername && allUsers.length > 0) {
-                    selectedUsername = allUsers[0].username;
-                }
+                allUsers = resUsers.data || [];
 
-                // 3. Render Kolom 1 (Daftar Menu)
+                // 2. Render Kolom 1 (Daftar Menu)
                 renderMenuSelectionColumn();
 
-                // 4. Render Kolom 2 (Daftar User)
+                // 3. Render Kolom 2 (Daftar User - Terfilter khusus untuk Menu Terpilih)
                 renderUserSelectionColumn();
 
-                // 5. Render Kolom 3 (Daftar Tombol)
+                // 4. Render Kolom 3 (Daftar Tombol & Izin Akses)
                 renderButtonMatrixColumn();
 
             } catch (err) {
@@ -608,6 +631,7 @@
                 card.onclick = () => {
                     selectedMenuId = menu.id;
                     renderMenuSelectionColumn();
+                    renderUserSelectionColumn(); // Re-filter user list saat menu berganti
                     renderButtonMatrixColumn();
                 };
                 card.className = `p-3 rounded-xl border transition cursor-pointer flex items-center justify-between ${
@@ -633,12 +657,43 @@
             lucide.createIcons();
         }
 
+        // REVISI UTAMA: Hanya menampilkan user yang memiliki akses ke selectedMenuId
         function renderUserSelectionColumn() {
             const container = document.getElementById('btn-master-user-list');
-            document.getElementById('lbl-total-user').innerText = `${allUsers.length} User`;
+            
+            // Ambil daftar user yang diizinkan untuk menu ini dari menuAccessMap
+            const allowedForThisMenu = menuAccessMap[selectedMenuId] !== undefined
+                ? menuAccessMap[selectedMenuId]
+                : allUsers.map(u => u.username); // Default jika belum diatur
+
+            // Filter allUsers: Hanya sertakan jika username ada di allowedForThisMenu ATAU role-nya Creator
+            const permittedUsers = allUsers.filter(user => {
+                const isCreator = (user.role || '').toLowerCase() === 'creator';
+                return isCreator || allowedForThisMenu.includes(user.username);
+            });
+
+            document.getElementById('lbl-total-user').innerText = `${permittedUsers.length} User Akses`;
             container.innerHTML = '';
 
-            allUsers.forEach(user => {
+            if (permittedUsers.length === 0) {
+                container.innerHTML = `
+                    <div class="p-6 text-center text-slate-400 font-bold text-xs flex flex-col items-center justify-center h-full">
+                        <i data-lucide="user-x" class="w-8 h-8 text-slate-300 mb-2"></i>
+                        Tidak ada user biasa yang diizinkan membuka menu ini.
+                        <span class="text-[10px] text-blue-600 mt-1 font-semibold">Atur di tab "Atur Akses Menu"</span>
+                    </div>
+                `;
+                selectedUsername = '';
+                lucide.createIcons();
+                return;
+            }
+
+            // Jika user yang aktif sebelumnya tidak ada di daftar izin menu ini, otomatis pilih user pertama yang berhak
+            if (!permittedUsers.some(u => u.username === selectedUsername)) {
+                selectedUsername = permittedUsers[0].username;
+            }
+
+            permittedUsers.forEach(user => {
                 const isSelected = (user.username === selectedUsername);
                 const isCreator = (user.role || '').toLowerCase() === 'creator';
 
@@ -683,11 +738,11 @@
 
             if (!selectedUsername) {
                 targetDetail.innerText = "Pilih User Terlebih Dahulu";
-                container.innerHTML = '<div class="p-8 text-center text-slate-400 font-bold text-xs">Silakan pilih user di kolom tengah.</div>';
+                container.innerHTML = '<div class="p-8 text-center text-slate-400 font-bold text-xs">Silakan pilih user yang memiliki akses pada kolom tengah.</div>';
                 return;
             }
 
-            targetDetail.innerText = `${menuTitle} ➔ User: ${selectedUsername}`;
+            targetDetail.innerText = `${menuTitle} ➔ ${selectedUsername}`;
             container.innerHTML = '';
 
             const currentUserObj = allUsers.find(u => u.username === selectedUsername);
@@ -698,8 +753,8 @@
                     <div class="p-6 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 flex items-start gap-3">
                         <i data-lucide="shield-alert" class="w-6 h-6 text-amber-600 shrink-0 mt-0.5"></i>
                         <div>
-                            <h4 class="font-black text-xs uppercase mb-1">User Ber-Role Creator</h4>
-                            <p class="text-xs font-medium leading-relaxed">Akun ini memiliki hak akses level Creator (Superuser). Seluruh tombol di semua menu otomatis aktif tanpa batasan.</p>
+                            <h4 class="font-black text-xs uppercase mb-1">Akun Creator (Super Administrator)</h4>
+                            <p class="text-xs font-medium leading-relaxed">User ini memiliki level Creator. Semua tombol aksi pada modul ini otomatis dapat diakses dan tidak dapat dibatasi.</p>
                         </div>
                     </div>
                 `;
@@ -722,9 +777,9 @@
                 const hasPermission = allowedUsers.includes(selectedUsername);
 
                 const row = document.createElement('label');
-                row.className = `flex items-center justify-between p-3.5 rounded-xl border transition cursor-pointer ${
+                row.className = `flex items-center justify-between p-3.5 rounded-xl border transition cursor-pointer select-none ${
                     hasPermission 
-                        ? 'bg-emerald-50/70 border-emerald-300' 
+                        ? 'bg-emerald-50/80 border-emerald-300 shadow-sm' 
                         : 'bg-slate-50 border-slate-200 opacity-60 hover:opacity-100'
                 }`;
 
@@ -733,10 +788,10 @@
                         <input type="checkbox" data-btn-id="${btn.id}" data-btn-label="${btn.label}" onchange="toggleButtonPerm(this)" class="cb-btn-perm w-5 h-5 accent-emerald-600 rounded cursor-pointer" ${hasPermission ? 'checked' : ''}>
                         <div class="flex flex-col">
                             <span class="text-xs font-black text-slate-800 leading-snug">${btn.label}</span>
-                            <span class="text-[10px] font-mono font-bold text-slate-400">ID: ${btn.id}</span>
+                            <span class="text-[10px] font-mono font-bold text-slate-400">Target ID: #${btn.id}</span>
                         </div>
                     </div>
-                    <span class="text-[10px] font-black uppercase px-2.5 py-1 rounded-lg ${
+                    <span class="text-[10px] font-black uppercase px-2.5 py-1 rounded-lg transition ${
                         hasPermission ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'
                     }">
                         ${hasPermission ? 'DIIZINKAN' : 'DISEMBUNYIKAN'}
@@ -751,7 +806,7 @@
             const btnId = cb.getAttribute('data-btn-id');
             const key = `${selectedMenuId}__${btnId}`;
 
-            // Inisialisasi jika belum ada
+            // Inisialisasi jika belum ada di map
             if (buttonAccessMap[key] === undefined) {
                 buttonAccessMap[key] = allUsers.map(u => u.username);
             }
@@ -816,7 +871,7 @@
                 const { error } = await db.from('button_access').upsert(payload, { onConflict: 'menu_id,button_id' });
                 if (error) throw error;
 
-                alert("✅ HAK AKSES TOMBOL BERHASIL DISIMPAN!\nPerubahan langsung aktif di seluruh halaman WMS.");
+                alert("✅ HAK AKSES TOMBOL BERHASIL DISIMPAN!\nTombol yang dinonaktifkan akan otomatis hilang bagi user bersangkutan.");
             } catch (err) {
                 alert("Gagal menyimpan akses tombol: " + err.message);
             } finally {
