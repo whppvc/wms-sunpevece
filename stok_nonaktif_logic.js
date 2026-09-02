@@ -492,7 +492,7 @@ window.verifikasiNonaktif = async function() {
 };
 
 // ==========================================
-// 2. SIMPAN NONAKTIF (POTONG GUDANG & UPDATE HASIL_STBJ_LANGSIR)
+// 2. SIMPAN NONAKTIF (POTONG GUDANG & CATAT USER DI HASIL_STBJ_LANGSIR)
 // ==========================================
 window.simpanNonaktifKeDB = async function() {
     if(stagingData.length === 0) return tampilkanAlert("Antrean scan kosong!", "warning");
@@ -506,7 +506,7 @@ window.simpanNonaktifKeDB = async function() {
     const validItems = stagingData.filter(d => d.status === 'VALID');
     if(validItems.length === 0) return tampilkanAlert("Tidak ada item valid untuk diproses!", "warning");
 
-    if(!confirm(`Yakin ingin menonaktifkan ${validItems.length} kardus ini?\nBarang akan dihapus dari stok gudang, status di STBJ diubah ke NONAKTIF, dan dicatat di tabel Stok Nonaktif.`)) return;
+    if(!confirm(`Yakin ingin menonaktifkan ${validItems.length} kardus ini?\nBarang akan dihapus dari stok gudang, status di STBJ diubah ke NONAKTIF oleh ${currentUser.username}, dan dicatat di tabel Stok Nonaktif.`)) return;
 
     const btn = document.getElementById('btn-save'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4 sm:w-5 sm:h-5"></i> Proses...'; btn.disabled = true;
@@ -568,9 +568,13 @@ window.simpanNonaktifKeDB = async function() {
         const { error: errNonaktif } = await db.from('stok_nonaktif').insert(insertsNonaktif);
         if(errNonaktif) throw errNonaktif;
 
-        // 2. Update status pada hasil_stbj_langsir menjadi 'NONAKTIF'
+        // 2. Update status dan pic_input pada hasil_stbj_langsir menjadi 'NONAKTIF' beserta siapa yang menonaktifkan
         await db.from('hasil_stbj_langsir')
-            .update({ status: 'NONAKTIF', keterangan: `Nonaktif oleh ${currentUser.username}` })
+            .update({ 
+                status: 'NONAKTIF', 
+                keterangan: `Nonaktif oleh ${currentUser.username}`,
+                pic_input: currentUser.username 
+            })
             .in('qrcode', qrsToDelete);
 
         // 3. Delete dari stok_global & stok_qr (Fisik Gudang)
@@ -593,7 +597,7 @@ window.simpanNonaktifKeDB = async function() {
             }
         }
 
-        tampilkanAlert(`✅ BERHASIL!\n${validItems.length} kardus telah dinonaktifkan, status STBJ diubah ke NONAKTIF, dan stok gudang telah diperbarui.`, "success");
+        tampilkanAlert(`✅ BERHASIL!\n${validItems.length} kardus telah dinonaktifkan, status STBJ diubah ke NONAKTIF oleh ${currentUser.username}, dan stok gudang telah diperbarui.`, "success");
         stagingData = [];
         renderStagingCards();
 
@@ -717,7 +721,7 @@ function renderTabelNonaktifBody() {
 window.cancelNonaktifMassal = async function() {
     const checked = document.querySelectorAll('.cb-main:checked');
     if(checked.length === 0) return tampilkanAlert("Pilih baris yang ingin di-cancel nonaktif!", "warning");
-    if(!confirm(`Yakin ingin membatalkan (Cancel) ${checked.length} item nonaktif ini?\nBarang akan dikembalikan ke kondisi 'Aman' di Stok Gudang dan status di STBJ diubah kembali ke 'IN GUDANG'.`)) return;
+    if(!confirm(`Yakin ingin membatalkan (Cancel) ${checked.length} item nonaktif ini?\nBarang akan dikembalikan ke kondisi 'Aman' di Stok Gudang dan status di STBJ diubah kembali ke 'IN GUDANG' oleh ${currentUser.username}.`)) return;
 
     const btn = document.getElementById('btn-cancel-nonaktif'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Memproses...'; btn.disabled = true;
@@ -773,9 +777,13 @@ window.cancelNonaktifMassal = async function() {
             mapAktual[keyAkt].qty++;
         });
 
-        // 1. Update status pada hasil_stbj_langsir kembali menjadi 'IN GUDANG'
+        // 1. Update status dan pic_input pada hasil_stbj_langsir kembali menjadi 'IN GUDANG'
         await db.from('hasil_stbj_langsir')
-            .update({ status: 'IN GUDANG', keterangan: 'Retur dari Nonaktif' })
+            .update({ 
+                status: 'IN GUDANG', 
+                keterangan: `Retur dari Nonaktif oleh ${currentUser.username}`,
+                pic_input: currentUser.username 
+            })
             .in('qrcode', qrsToRestore);
 
         // 2. Insert ke stok_global & stok_qr
@@ -801,7 +809,7 @@ window.cancelNonaktifMassal = async function() {
         // 4. Hapus dari stok_nonaktif
         await db.from('stok_nonaktif').delete().in('id', idsToDelete);
 
-        tampilkanAlert("✅ BERHASIL! Item telah dikembalikan ke stok gudang dan status STBJ kembali menjadi IN GUDANG.", "success");
+        tampilkanAlert(`✅ BERHASIL!\nItem telah dikembalikan ke stok gudang dan status STBJ kembali menjadi IN GUDANG (PIC: ${currentUser.username}).`, "success");
         muatDataTabel();
     } catch(e) {
         tampilkanAlert("GAGAL: " + e.message, "error");
@@ -813,7 +821,7 @@ window.cancelNonaktifMassal = async function() {
 window.prosesBSMassal = async function() {
     const checked = document.querySelectorAll('.cb-main:checked');
     if(checked.length === 0) return tampilkanAlert("Pilih baris yang ingin di-BS-kan!", "warning");
-    if(!confirm(`Yakin ingin memproses BS ${checked.length} item ini?\nItem akan dihapus permanen dari tabel Stok Nonaktif dan status di STBJ diset ke 'BS'.`)) return;
+    if(!confirm(`Yakin ingin memproses BS ${checked.length} item ini?\nItem akan dihapus permanen dari tabel Stok Nonaktif dan status di STBJ diset ke 'BS' oleh ${currentUser.username}.`)) return;
 
     const btn = document.getElementById('btn-bs-massal'); const ori = btn.innerHTML;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Memproses...'; btn.disabled = true;
@@ -828,16 +836,20 @@ window.prosesBSMassal = async function() {
     });
 
     try {
-        // 1. Update status di hasil_stbj_langsir menjadi 'BS'
+        // 1. Update status dan pic_input di hasil_stbj_langsir menjadi 'BS'
         await db.from('hasil_stbj_langsir')
-            .update({ status: 'BS', keterangan: `Barang Rusak / BS (Oleh ${currentUser.username})` })
+            .update({ 
+                status: 'BS', 
+                keterangan: `Barang Rusak / BS oleh ${currentUser.username}`,
+                pic_input: currentUser.username 
+            })
             .in('qrcode', qrsToDelete);
 
         // 2. Hapus dari stok_nonaktif
         const { error } = await db.from('stok_nonaktif').delete().in('id', idsToDelete);
         if(error) throw error;
         
-        tampilkanAlert("✅ BERHASIL! Item telah diproses BS permanen.", "success");
+        tampilkanAlert(`✅ BERHASIL!\nItem telah diproses BS permanen (PIC: ${currentUser.username}).`, "success");
         muatDataTabel();
     } catch(e) {
         tampilkanAlert("GAGAL: " + e.message, "error");
