@@ -153,13 +153,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
-            if (!menu.contains(e.target) && !e.target.closest('th.cursor-pointer')) {
+            if (!menu.contains(e.target) && !e.target.closest('th')) {
                 closeFilterMenu();
             }
         }
         const actionMenu = document.getElementById('mobile-action-menu');
         if (actionMenu && !actionMenu.classList.contains('hidden')) {
-            if (!actionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenu"]')) {
+            if (!actionMenu.contains(e.target) && !actionMenu.closest('button[onclick^="toggleActionMenu"]')) {
                 actionMenu.classList.add('hidden');
             }
         }
@@ -381,7 +381,7 @@ window.muatDataStok = async function() {
         });
         dataKSGlobal = Object.values(globalMap);
 
-        // LANGSUNG RENDER TABEL UTAMA SEGERA (Sangat Cepat!)
+        // LANGSUNG RENDER TABEL UTAMA SEGERA
         buildProcessedData();
 
         // Tarik data fisik stok_global di latar belakang untuk tab Detail
@@ -577,7 +577,7 @@ function thSort(label, cls = "") {
         return `<th class="hdr-std ${cls} ${isHidden} select-none text-center"><div class="flex items-center justify-center w-full">${label}</div></th>`;
     }
 
-    return `<th class="hdr-std ${cls} ${isHidden} ${hdrBgClass} select-none group cursor-pointer hover:bg-slate-700 transition" onclick="openColumnFilter(event, '${colClass}', '${label}')">
+    return `<th class="hdr-std ${cls} ${isHidden} ${hdrBgClass} select-none group cursor-pointer hover:bg-slate-700 transition" onclick="window.openColumnFilter(event, '${colClass}', '${label}', this)">
         <div class="flex items-center justify-between w-full min-w-max gap-4">
             <span class="truncate flex-1 text-left" title="${label}">${label}</span>
             <div class="flex items-center gap-1 shrink-0">
@@ -853,6 +853,188 @@ window.highlightRow = function(cb, id) {
     }
     updateSelectedCount();
 };
+
+// ==========================================
+// FILTER EXCEL PRO (PENANGANAN TARGET ELEMEN YANG AMAN)
+// ==========================================
+window.openColumnFilter = function(event, colClass, colName, headerEl = null) {
+    if (event) event.stopPropagation();
+    currentFilterCol = colClass;
+    
+    const titleEl = document.getElementById('filter-col-name');
+    if (titleEl) titleEl.innerText = `Filter: ${colName}`;
+
+    let uniqueValues = new Set();
+    
+    processedData.forEach(row => {
+        let showBasedOnOthers = true;
+        for (let otherCol in activeFilters) {
+            if (otherCol !== colClass) { 
+                const allowed = activeFilters[otherCol];
+                const val = row.searchValues[otherCol] || '';
+                if (!allowed.includes(val)) { showBasedOnOthers = false; break; }
+            }
+        }
+        if (showBasedOnOthers) {
+            let val = row.searchValues[colClass] || '';
+            if(val !== '') uniqueValues.add(val);
+        }
+    });
+
+    let sortedValues = Array.from(uniqueValues).sort();
+    window.currentFilterValues = sortedValues;
+    window.renderFilterList('');
+
+    const searchInput = document.getElementById('filter-search-input');
+    if (searchInput) searchInput.value = '';
+    
+    const menu = document.getElementById('excel-filter-menu');
+    if (!menu) return;
+    
+    menu.classList.remove('hidden');
+    menu.style.display = 'flex';
+    menu.style.zIndex = '9999';
+
+    // Penanganan elemen posisi yang tahan banting (mencegah error target)
+    const targetEl = headerEl || (event ? (event.currentTarget || (event.target ? event.target.closest('th') : null)) : null);
+    
+    if (targetEl && typeof targetEl.getBoundingClientRect === 'function') {
+        const btnRect = targetEl.getBoundingClientRect();
+        const menuWidth = 256; 
+        
+        let topPos = btnRect.bottom + 4; 
+        let leftPos = btnRect.left; 
+
+        if (leftPos + menuWidth > window.innerWidth) {
+            leftPos = btnRect.right - menuWidth;
+        }
+        
+        if (leftPos < 10) {
+            leftPos = 10;
+        }
+
+        menu.style.position = 'fixed'; 
+        menu.style.top = `${topPos}px`;
+        menu.style.left = `${leftPos}px`;
+    }
+    
+    if (searchInput) searchInput.focus();
+};
+
+window.renderFilterList = function(searchQuery) {
+    const colClass = currentFilterCol;
+    let filteredVals = window.currentFilterValues || [];
+    
+    if (searchQuery) {
+        const query = searchQuery.toLowerCase().split(' ').filter(x => x);
+        filteredVals = (window.currentFilterValues || []).filter(val => {
+            const text = String(val).toLowerCase();
+            return query.every(term => text.includes(term));
+        });
+    }
+
+    const limit = 100;
+    const displayVals = filteredVals.slice(0, limit);
+
+    let listHtml = `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded-lg transition"><input type="checkbox" id="filter-select-all" checked onchange="window.toggleAllFilterValues(this.checked)" class="rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500"> <span class="font-bold text-slate-800">(Pilih Semua)</span></label>`;
+    
+    displayVals.forEach(val => {
+        let isChecked = !activeFilters[colClass] || activeFilters[colClass].includes(val);
+        listHtml += `<label class="flex items-center gap-2 p-1.5 hover:bg-slate-100 cursor-pointer rounded-lg transition filter-val-item" data-value="${encodeURIComponent(val)}">
+            <input type="checkbox" class="filter-val-cb rounded text-blue-600 w-4 h-4 border-slate-300 focus:ring-blue-500" value="${encodeURIComponent(val)}" ${isChecked ? 'checked' : ''}> 
+            <span class="truncate font-medium text-slate-700">${val}</span>
+        </label>`;
+    });
+
+    if (filteredVals.length > limit) {
+        listHtml += `<div class="p-2 text-center text-xs font-bold text-slate-400 italic">Menampilkan 100 dari ${filteredVals.length} hasil. Ketik untuk mencari.</div>`;
+    }
+
+    const containerList = document.getElementById('filter-values-list');
+    if (containerList) containerList.innerHTML = listHtml;
+    window.updateSelectAllState();
+};
+
+window.searchFilterList = function(val) {
+    clearTimeout(filterTimeout);
+    filterTimeout = setTimeout(() => {
+        requestAnimationFrame(() => {
+            window.renderFilterList(val);
+        });
+    }, 150);
+};
+
+window.toggleAllFilterValues = function(checked) {
+    document.querySelectorAll('.filter-val-cb').forEach(cb => { if(cb.closest('label').style.display !== 'none') cb.checked = checked; });
+    window.updateSelectAllState();
+};
+
+window.updateSelectAllState = function() {
+    const allCbs = document.querySelectorAll('.filter-val-cb');
+    const checkedCbs = document.querySelectorAll('.filter-val-cb:checked');
+    const selectAll = document.getElementById('filter-select-all');
+    if(!selectAll) return;
+    if(allCbs.length === checkedCbs.length && allCbs.length > 0) { selectAll.checked = true; selectAll.indeterminate = false; }
+    else if(checkedCbs.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; }
+    else { selectAll.checked = false; selectAll.indeterminate = true; }
+};
+
+document.addEventListener('change', function(e) { if(e.target && e.target.classList.contains('filter-val-cb')) window.updateSelectAllState(); });
+
+window.closeFilterMenu = function() { 
+    const menu = document.getElementById('excel-filter-menu'); 
+    if (menu) {
+        menu.classList.add('hidden'); 
+        menu.style.display = 'none';
+    }
+};
+
+window.clearFilterForCurrentCol = function() {
+    delete activeFilters[currentFilterCol];
+    window.closeFilterMenu(); 
+    applyFilters(); 
+    updateFilterIcons();
+};
+
+window.applyFilterForCurrentCol = function() {
+    const checkedBoxes = document.querySelectorAll('.filter-val-cb:checked');
+    const totalBoxes = document.querySelectorAll('.filter-val-cb');
+    const searchInp = document.getElementById('filter-search-input');
+    
+    if (checkedBoxes.length === totalBoxes.length && searchInp && searchInp.value.trim() === '') {
+        delete activeFilters[currentFilterCol];
+    } else {
+        let selectedVals = Array.from(checkedBoxes).map(cb => decodeURIComponent(cb.value));
+        activeFilters[currentFilterCol] = selectedVals;
+    }
+    
+    window.closeFilterMenu(); 
+    applyFilters(); 
+    updateFilterIcons();
+};
+
+function updateFilterIcons() {
+    document.querySelectorAll('.filter-icon').forEach(icon => {
+        icon.classList.remove('text-amber-400', 'opacity-100');
+        icon.classList.add('text-slate-400', 'opacity-40');
+    });
+    
+    document.querySelectorAll('th.hdr-filtered').forEach(th => {
+        th.classList.remove('hdr-filtered');
+    });
+
+    for (let colClass in activeFilters) {
+        const th = document.querySelector(`th.${colClass}`);
+        if (th) {
+            th.classList.add('hdr-filtered');
+            const icon = th.querySelector('.filter-icon');
+            if (icon) { 
+                icon.classList.remove('text-slate-400', 'opacity-40'); 
+                icon.classList.add('text-amber-400', 'opacity-100'); 
+            }
+        }
+    }
+}
 
 // ==========================================
 // LOGIKA GANTI KETERANGAN
@@ -1349,7 +1531,7 @@ window.prosesLabelCustomerMassal = async function() {
     } finally {
         btn.innerHTML = ori;
         btn.disabled = false;
-        lucide.createIcons();
+        if(typeof lucide !== 'undefined') lucide.createIcons();
     }
 };
 
