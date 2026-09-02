@@ -1,5 +1,5 @@
 // ============================================================================
-// WMS SUNPEVECE - GLOBAL SCRIPT, ROUTE GUARD, DESIGN & STRICT ACCESS ENFORCEMENT
+// WMS SUNPEVECE - GLOBAL SCRIPT, ROUTE GUARD, DESIGN & FAST PERMISSION SYSTEM
 // ============================================================================
 
 // ==========================================
@@ -88,13 +88,6 @@ style.innerHTML = `
         --tbl-row-hover: 241, 245, 249;
         --tbl-opacity: 1;
         --tbl-border: #e2e8f0;
-    }
-
-    /* KELAS KHUSUS PENGUNCIAN TOMBOL (TIDAK BISA DITIMPA OLEH JS LAIN) */
-    .perm-denied { 
-        display: none !important; 
-        visibility: hidden !important; 
-        pointer-events: none !important; 
     }
 
     .hide-scrollbar::-webkit-scrollbar { display: none; } 
@@ -496,7 +489,7 @@ async function initModernLayout(pageMeta) {
     lucide.createIcons();
     renderFavMenus(); 
 
-    // Terapkan Proteksi Hak Akses Tombol secara otomatis
+    // Terapkan Proteksi Hak Akses Tombol secara otomatis via Injeksi CSS Murni
     if (pageMeta && pageMeta.id) {
         window.applyButtonPermissions(pageMeta.id);
     }
@@ -573,7 +566,7 @@ window.saveTableDesign = function() {
 };
 
 // ==========================================
-// ENFORCEMENT HAK AKSES TOMBOL GLOBAL (REAKTIF & KUAT)
+// ENFORCEMENT HAK AKSES TOMBOL GLOBAL (NATIVE CSS INJECTION - 0% CPU OVERHEAD)
 // ==========================================
 window.applyButtonPermissions = async function(menuId) {
     const sessionString = localStorage.getItem('user_session');
@@ -585,43 +578,40 @@ window.applyButtonPermissions = async function(menuId) {
 
     try {
         const { data, error } = await db.from('button_access').select('*').eq('menu_id', menuId);
-        if (error || !data) return;
+        if (error || !data || data.length === 0) return;
 
-        const enforce = () => {
-            data.forEach(rule => {
-                const allowedUsers = rule.allowed_users ? rule.allowed_users.split(',').map(u => u.trim()).filter(Boolean) : [];
-                const isDenied = !allowedUsers.includes(user.username);
+        let deniedSelectors = [];
 
-                if (isDenied) {
-                    // Cari tombol target dengan ID utama, ID mobile, ataupun tombol dalam menu aksi (garis 3)
-                    const targetSelectors = [
-                        `#${rule.button_id}`,
-                        `#${rule.button_id}-mob`,
-                        `#${rule.button_id}-main`,
-                        `button[onclick*="${rule.button_id}"]`,
-                        `[data-button-id="${rule.button_id}"]`
-                    ];
+        data.forEach(rule => {
+            const allowedUsers = rule.allowed_users ? rule.allowed_users.split(',').map(u => u.trim()).filter(Boolean) : [];
+            const isDenied = !allowedUsers.includes(user.username);
 
-                    targetSelectors.forEach(sel => {
-                        document.querySelectorAll(sel).forEach(btnEl => {
-                            btnEl.classList.add('perm-denied');
-                            btnEl.style.setProperty('display', 'none', 'important');
-                            btnEl.setAttribute('disabled', 'true');
-                        });
-                    });
+            if (isDenied && rule.button_id) {
+                const cleanId = rule.button_id.trim();
+                deniedSelectors.push(`#${cleanId}`);
+                deniedSelectors.push(`#${cleanId}-mob`);
+                deniedSelectors.push(`#${cleanId}-main`);
+                deniedSelectors.push(`[data-button-id="${cleanId}"]`);
+                deniedSelectors.push(`button[onclick*="${cleanId}"]`);
+            }
+        });
+
+        // Hapus style lama jika ada
+        let existingStyle = document.getElementById('wms-dynamic-btn-perms');
+        if (existingStyle) existingStyle.remove();
+
+        // Injeksi aturan CSS murni berprioritas tertinggi ke <head>
+        if (deniedSelectors.length > 0) {
+            const styleEl = document.createElement('style');
+            styleEl.id = 'wms-dynamic-btn-perms';
+            styleEl.innerHTML = `
+                ${deniedSelectors.join(',\n')} {
+                    display: none !important;
+                    visibility: hidden !important;
+                    pointer-events: none !important;
                 }
-            });
-        };
-
-        // Eksekusi langsung
-        enforce();
-
-        // Pasang Mutation Observer agar jika tombol dimunculkan oleh script lain (misal via renderTabel/setMode), tetap terkunci
-        if (!window._btnPermObserver) {
-            window._btnPermObserver = new MutationObserver(() => {
-                enforce();
-            });
-            window._btnPermObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+            `;
+            document.head.appendChild(styleEl);
         }
     } catch (e) {
         console.warn("Gagal menerapkan button permissions:", e);
