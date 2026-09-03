@@ -34,22 +34,24 @@
             height: 100%; z-index: 50;
         }
         .resizer:hover, .resizing { background-color: rgba(59, 130, 246, 0.5); }
+
+        /* TEKS VERTIKAL ALA EDGE PANEL */
+        .vertical-text-up {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            text-orientation: mixed;
+        }
     </style>
 </head>
 <body class="font-sans text-slate-800">
 
     <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
-        <!-- HEADER SECTION (SUBMENU TABS & TOMBOL BULAT MENU TOMBOL) -->
+        <!-- HEADER SECTION (SUBMENU TABS) -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-sm relative">
-            <div class="flex items-center justify-between pr-3">
+            <div class="flex items-center justify-between">
                 <!-- KOMPONEN DINAMIS: SUBMENU TABS -->
                 <div id="container-submenu" class="flex-1 overflow-x-auto hide-scrollbar"></div>
-                
-                <!-- TOMBOL INDUK BULAT GARIS 3 (MENU TOMBOL) -->
-                <button onclick="toggleMenuDrawer()" id="btn-induk-langsir" class="ml-2 w-10 h-10 rounded-full bg-slate-900 hover:bg-slate-800 text-white shadow-md active:scale-95 transition flex items-center justify-center shrink-0 cursor-pointer border border-slate-700" title="Menu Tombol">
-                    <i data-lucide="menu" class="w-5 h-5 text-indigo-400"></i>
-                </button>
             </div>
         </div>
 
@@ -68,28 +70,33 @@
 
     </div>
 
-    <!-- MODAL CUSTOM ALERT -->
-    <div id="modal-custom-alert" class="hidden fixed inset-0 items-center justify-center bg-slate-900/70 z-[200] px-4 backdrop-blur-sm transition-opacity">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 text-center flex flex-col items-center">
-            <div id="alert-icon-container" class="w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                <i id="alert-icon" data-lucide="info" class="w-8 h-8"></i>
+    <!-- TOMBOL INDUK ALA SAMSUNG EDGE PANEL (WARNA PUTIH, VERTIKAL, BISA DI-DRAG KE ATAS-BAWAH) -->
+    <div id="edge-panel-handle" style="top: 45%;" class="fixed right-0 z-40 select-none touch-none transition-shadow">
+        <div id="edge-panel-btn" class="bg-white hover:bg-slate-50 text-slate-800 border-2 border-r-0 border-slate-300 rounded-l-2xl shadow-2xl py-3 px-1.5 flex flex-col items-center justify-center gap-2 cursor-pointer active:scale-95 group">
+            <div class="p-1 rounded-lg bg-indigo-50 text-indigo-700 group-hover:bg-indigo-600 group-hover:text-white transition">
+                <i data-lucide="menu" class="w-4 h-4"></i>
             </div>
-            <h3 class="text-lg font-black mb-2 text-slate-800" id="alert-title">Perhatian</h3>
-            <p class="text-sm font-semibold text-slate-500 mb-6 leading-relaxed" id="alert-message">Pesan alert di sini.</p>
-            <button onclick="document.getElementById('modal-custom-alert').classList.add('hidden'); document.getElementById('modal-custom-alert').classList.remove('flex');" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 cursor-pointer">Tutup</button>
+            <span class="vertical-text-up text-[10px] font-black tracking-widest text-slate-600 group-hover:text-indigo-700 uppercase leading-none py-1">
+                MENU TOMBOL
+            </span>
+            <div class="flex flex-col gap-0.5 opacity-40">
+                <div class="w-1 h-1 rounded-full bg-slate-400"></div>
+                <div class="w-1 h-1 rounded-full bg-slate-400"></div>
+                <div class="w-1 h-1 rounded-full bg-slate-400"></div>
+            </div>
         </div>
     </div>
 
-    <!-- MODAL POPUP MENU TOMBOL (KISI 3 GRID) -->
-    <div id="modal-menu-drawer" class="hidden fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 p-6 flex flex-col animate-in fade-in zoom-in-95 duration-200">
-            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-                <h3 class="font-black text-slate-800 text-sm uppercase flex items-center gap-2">
-                    <i data-lucide="layout-grid" class="w-4 h-4 text-indigo-600"></i> Menu Tombol Langsir
-                </h3>
-                <button onclick="toggleMenuDrawer()" class="p-1 rounded-full text-slate-400 hover:bg-slate-100 cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
-            </div>
+    <!-- SIDEBAR DRAWER MENU TOMBOL (MELUNCUR DARI KANAN DENGAN KISI 3 GRID) -->
+    <div id="sidebar-menu-drawer" class="fixed inset-y-0 right-0 w-80 sm:w-96 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 z-[110] flex flex-col">
+        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 class="font-black text-slate-800 text-sm uppercase flex items-center gap-2">
+                <i data-lucide="layout-grid" class="w-4 h-4 text-indigo-600"></i> Menu Tombol Langsir
+            </h3>
+            <button onclick="toggleMenuDrawer()" class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
 
+        <div class="p-4 flex-1 overflow-y-auto custom-scroll">
             <!-- GRID KISI 3 KOLOM SESUAI MASTER TOMBOL -->
             <div class="grid grid-cols-3 gap-2.5">
                 <!-- 1. Ganti Area -->
@@ -146,6 +153,21 @@
                     <span class="text-[10px] font-black text-purple-700 uppercase text-center leading-tight">Design</span>
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- BACKDROP OVERLAY KHUSUS MENU DRAWER -->
+    <div id="overlay-menu-drawer" onclick="toggleMenuDrawer()" class="hidden fixed inset-0 bg-slate-900/40 z-[105] backdrop-blur-sm transition-opacity"></div>
+
+    <!-- MODAL CUSTOM ALERT -->
+    <div id="modal-custom-alert" class="hidden fixed inset-0 items-center justify-center bg-slate-900/70 z-[200] px-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 text-center flex flex-col items-center">
+            <div id="alert-icon-container" class="w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                <i id="alert-icon" data-lucide="info" class="w-8 h-8"></i>
+            </div>
+            <h3 class="text-lg font-black mb-2 text-slate-800" id="alert-title">Perhatian</h3>
+            <p class="text-sm font-semibold text-slate-500 mb-6 leading-relaxed" id="alert-message">Pesan alert di sini.</p>
+            <button onclick="document.getElementById('modal-custom-alert').classList.add('hidden'); document.getElementById('modal-custom-alert').classList.remove('flex');" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 cursor-pointer">Tutup</button>
         </div>
     </div>
 
