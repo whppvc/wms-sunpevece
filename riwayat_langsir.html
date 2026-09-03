@@ -40,16 +40,15 @@
 
     <div class="flex flex-col h-full w-full absolute inset-0 pt-[104px] z-10">
         
-        <!-- HEADER SECTION (SUBMENU TABS & FLOATING ACTION BUTTON) -->
+        <!-- HEADER SECTION (SUBMENU TABS & TOMBOL BULAT MENU TOMBOL) -->
         <div class="shrink-0 bg-white flex flex-col z-20 border-b border-slate-200 shadow-sm relative">
             <div class="flex items-center justify-between pr-3">
                 <!-- KOMPONEN DINAMIS: SUBMENU TABS -->
                 <div id="container-submenu" class="flex-1 overflow-x-auto hide-scrollbar"></div>
                 
-                <!-- TOMBOL INDUK MENU GARIS 3 (FLOATING SEJAJAR SUBMENU) -->
-                <button onclick="toggleMenuDrawer()" id="btn-induk-langsir" class="ml-2 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-md active:scale-95 transition flex items-center gap-1.5 shrink-0 cursor-pointer border border-slate-700" title="Buka Menu Aksi">
+                <!-- TOMBOL INDUK BULAT GARIS 3 (MENU TOMBOL) -->
+                <button onclick="toggleMenuDrawer()" id="btn-induk-langsir" class="ml-2 w-10 h-10 rounded-full bg-slate-900 hover:bg-slate-800 text-white shadow-md active:scale-95 transition flex items-center justify-center shrink-0 cursor-pointer border border-slate-700" title="Menu Tombol">
                     <i data-lucide="menu" class="w-5 h-5 text-indigo-400"></i>
-                    <span class="text-xs font-black uppercase tracking-wider hidden sm:inline">Aksi</span>
                 </button>
             </div>
         </div>
@@ -70,24 +69,23 @@
     </div>
 
     <!-- MODAL CUSTOM ALERT -->
-    <div id="modal-custom-alert" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/70 z-[200] px-4 backdrop-blur-sm transition-opacity">
+    <div id="modal-custom-alert" class="hidden fixed inset-0 items-center justify-center bg-slate-900/70 z-[200] px-4 backdrop-blur-sm transition-opacity">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 text-center flex flex-col items-center">
             <div id="alert-icon-container" class="w-16 h-16 rounded-full flex items-center justify-center mb-4">
                 <i id="alert-icon" data-lucide="info" class="w-8 h-8"></i>
             </div>
             <h3 class="text-lg font-black mb-2 text-slate-800" id="alert-title">Perhatian</h3>
             <p class="text-sm font-semibold text-slate-500 mb-6 leading-relaxed" id="alert-message">Pesan alert di sini.</p>
-            <button onclick="document.getElementById('modal-custom-alert').classList.add('hidden')" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 cursor-pointer">Tutup</button>
+            <button onclick="document.getElementById('modal-custom-alert').classList.add('hidden'); document.getElementById('modal-custom-alert').classList.remove('flex');" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl shadow-md text-xs uppercase transition active:scale-95 cursor-pointer">Tutup</button>
         </div>
     </div>
 
-    <!-- DRAWER MENU INDUK (KISI 3 KOLOM LENGKAP) -->
-    <div id="modal-menu-drawer" class="hidden fixed inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center bg-slate-900/60 z-[100] backdrop-blur-sm transition-opacity">
-        <div class="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 p-5 pb-8 sm:p-6 flex flex-col">
-            <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-4 sm:hidden"></div>
+    <!-- MODAL POPUP MENU TOMBOL (KISI 3 GRID) -->
+    <div id="modal-menu-drawer" class="hidden fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 p-6 flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
                 <h3 class="font-black text-slate-800 text-sm uppercase flex items-center gap-2">
-                    <i data-lucide="layout-grid" class="w-4 h-4 text-indigo-600"></i> Menu Aksi Langsir
+                    <i data-lucide="layout-grid" class="w-4 h-4 text-indigo-600"></i> Menu Tombol Langsir
                 </h3>
                 <button onclick="toggleMenuDrawer()" class="p-1 rounded-full text-slate-400 hover:bg-slate-100 cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
@@ -177,10 +175,10 @@
     </div>
 
     <!-- MODAL GANTI AREA -->
-    <div id="modal-ganti-area" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
+    <div id="modal-ganti-area" class="hidden fixed inset-0 items-center justify-center bg-slate-900/60 z-[80] px-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200">
             <h3 class="text-base font-black mb-1 flex items-center gap-2 text-slate-800"><i data-lucide="map-pin" class="text-orange-600 w-5 h-5"></i> Ganti Area Penyimpanan</h3>
-            <p class="text-xs text-slate-500 mb-5 border-b border-slate-100 pb-3 font-bold" id="teks-info-area">Memilih kardus untuk dipindah.</p>
+            <p class="text-xs text-slate-500 mb-5 border-b border-slate-100 pb-3 font-bold" id="teks-info-area">Memilih dus untuk dipindah.</p>
             <div class="mb-6">
                 <label class="block text-xs font-black uppercase tracking-wide text-slate-600 mb-2">Pilih Area Baru</label>
                 <select id="select-new-area" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-orange-500 text-slate-800 uppercase cursor-pointer bg-slate-50 text-sm font-bold transition">
@@ -195,7 +193,7 @@
     </div>
 
     <!-- MODAL STBJ GUDANG -->
-    <div id="modal-stbj-langsir" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] px-4 backdrop-blur-sm">
+    <div id="modal-stbj-langsir" class="hidden fixed inset-0 items-center justify-center bg-slate-900/60 z-[70] px-4 backdrop-blur-sm">
         <div class="bg-white shadow-2xl w-full max-w-5xl border border-slate-200 flex flex-col max-h-[85vh] rounded-2xl overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                 <h3 class="font-black text-slate-800 flex items-center gap-2 text-sm uppercase"><i data-lucide="table" class="w-5 h-5 text-purple-600"></i> Data Hasil STBJ Gudang</h3>
@@ -214,7 +212,7 @@
     </div>
 
     <!-- MODAL TABEL HOLD -->
-    <div id="modal-hold-langsir" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/60 z-[70] px-4 backdrop-blur-sm">
+    <div id="modal-hold-langsir" class="hidden fixed inset-0 items-center justify-center bg-slate-900/60 z-[70] px-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 flex flex-col max-h-[85vh]">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
                 <h3 class="font-black text-slate-800 flex items-center gap-2 text-sm uppercase"><i data-lucide="archive" class="w-5 h-5 text-amber-600"></i> Tabel Hold</h3>
