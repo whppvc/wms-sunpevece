@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.renderTableFooter('container-footer', 'Total Qty (Dus)');
     }
 
-    // Inisialisasi posisi draggable Samsung Edge Panel
+    // Inisialisasi posisi draggable Samsung Edge Panel HP
     initDraggableEdgePanel();
 
     document.addEventListener('click', function(e) {
@@ -140,6 +140,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (menu && !menu.classList.contains('hidden')) {
             if (!menu.contains(e.target) && !e.target.closest('th.cursor-pointer')) {
                 closeFilterMenu();
+            }
+        }
+        const pcActionMenu = document.getElementById('pc-action-menu');
+        if (pcActionMenu && !pcActionMenu.classList.contains('hidden')) {
+            if (!pcActionMenu.contains(e.target) && !e.target.closest('button[onclick^="toggleActionMenuPC"]')) {
+                pcActionMenu.classList.add('hidden');
             }
         }
     });
@@ -165,8 +171,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 100);
 });
 
+// DROPDOWN MENU AKSI DESKTOP (PC)
+window.toggleActionMenuPC = function(e) {
+    if(e) e.stopPropagation();
+    const menu = document.getElementById('pc-action-menu');
+    if(menu) menu.classList.toggle('hidden');
+};
+
 // ==========================================
-// DRAGGABLE SAMSUNG EDGE PANEL ENGINE
+// DRAGGABLE SAMSUNG EDGE PANEL ENGINE (KHUSUS HP)
 // ==========================================
 function initDraggableEdgePanel() {
     const handle = document.getElementById('edge-panel-handle');
@@ -288,6 +301,9 @@ window.tutupSemuaPopup = function() {
     const alertModal = document.getElementById('modal-custom-alert');
     if(alertModal) { alertModal.classList.add('hidden'); alertModal.classList.remove('flex'); }
 
+    const pcMenu = document.getElementById('pc-action-menu');
+    if(pcMenu) pcMenu.classList.add('hidden');
+
     document.getElementById('overlay-klik-luar')?.classList.add('hidden');
     
     const sidebarK = document.getElementById('sidebar-kolom');
@@ -338,6 +354,19 @@ window.gantiModeRiwayat = function(m) {
     if (typeof window.renderSubmenuTabs === 'function') {
         window.renderSubmenuTabs('container-submenu', tabsData, 'tab-r-' + m);
     }
+
+    // Toggle tombol spesifik desktop
+    const btnGA = document.getElementById('btn-ganti-area'); if(btnGA) btnGA.classList.toggle('hidden', m !== 'qr');
+    const btnCL = document.getElementById('btn-cancel-langsir'); if(btnCL) btnCL.classList.toggle('hidden', m !== 'qr');
+    
+    const userRole = (currentUser.role || '').toLowerCase();
+    const showHapus = (m === 'hold' && ['creator', 'admin', 'pic area'].includes(userRole));
+    const btnHH = document.getElementById('btn-hapus-hold'); if(btnHH) btnHH.classList.toggle('hidden', !showHapus);
+
+    // Toggle tombol spesifik mobile
+    const btnGAMob = document.getElementById('btn-ganti-area-mob'); if(btnGAMob) btnGAMob.classList.toggle('hidden', m !== 'qr');
+    const btnCLMob = document.getElementById('btn-cancel-langsir-mob'); if(btnCLMob) btnCLMob.classList.toggle('hidden', m !== 'qr');
+    const btnHHMob = document.getElementById('btn-hapus-hold-mob'); if(btnHHMob) btnHHMob.classList.toggle('hidden', !showHapus);
 
     activeFilters = {}; 
     sortState = { col: null, isAsc: true };
