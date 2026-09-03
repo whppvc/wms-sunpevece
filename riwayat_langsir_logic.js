@@ -132,6 +132,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.renderTableFooter('container-footer', 'Total Qty (Dus)');
     }
 
+    // Inisialisasi posisi draggable Samsung Edge Panel
+    initDraggableEdgePanel();
+
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('excel-filter-menu');
         if (menu && !menu.classList.contains('hidden')) {
@@ -162,16 +165,97 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 100);
 });
 
-// TOGGLE MODAL MENU TOMBOL (TIDAK LAGI BENTROK DENGAN SM:FLEX)
+// ==========================================
+// DRAGGABLE SAMSUNG EDGE PANEL ENGINE
+// ==========================================
+function initDraggableEdgePanel() {
+    const handle = document.getElementById('edge-panel-handle');
+    const btn = document.getElementById('edge-panel-btn');
+    if (!handle || !btn) return;
+
+    let isDragging = false;
+    let startY = 0;
+    let initialTop = 0;
+    let hasMoved = false;
+
+    const savedTop = localStorage.getItem('edge_panel_top_langsir');
+    if (savedTop) {
+        handle.style.top = savedTop;
+    }
+
+    const startDrag = (clientY) => {
+        isDragging = true;
+        hasMoved = false;
+        startY = clientY;
+        initialTop = handle.offsetTop;
+    };
+
+    const onDrag = (clientY) => {
+        if (!isDragging) return;
+        const deltaY = clientY - startY;
+        if (Math.abs(deltaY) > 5) {
+            hasMoved = true;
+        }
+        let newTop = initialTop + deltaY;
+        const minTop = 80;
+        const maxTop = window.innerHeight - 120;
+        if (newTop < minTop) newTop = minTop;
+        if (newTop > maxTop) newTop = maxTop;
+        handle.style.top = `${newTop}px`;
+    };
+
+    const endDrag = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        localStorage.setItem('edge_panel_top_langsir', handle.style.top);
+    };
+
+    // Mouse Events
+    btn.addEventListener('mousedown', (e) => {
+        startDrag(e.clientY);
+        const onMouseMove = (moveEvent) => onDrag(moveEvent.clientY);
+        const onMouseUp = () => {
+            endDrag();
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    });
+
+    // Touch Events
+    btn.addEventListener('touchstart', (e) => {
+        if (e.touches.length > 0) startDrag(e.touches[0].clientY);
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+        if (isDragging && e.touches.length > 0) onDrag(e.touches[0].clientY);
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => {
+        endDrag();
+    });
+
+    // Click Trigger (Hanya buka drawer jika tidak sedang menggeser handle)
+    btn.addEventListener('click', (e) => {
+        if (!hasMoved) {
+            toggleMenuDrawer();
+        }
+    });
+}
+
+// TOGGLE SLIDE-OUT SIDEBAR DRAWER MENU TOMBOL
 window.toggleMenuDrawer = function() {
-    const drawer = document.getElementById('modal-menu-drawer');
-    if (!drawer) return;
-    if (drawer.classList.contains('hidden')) {
-        drawer.classList.remove('hidden');
-        drawer.classList.add('flex');
+    const sidebar = document.getElementById('sidebar-menu-drawer');
+    const overlay = document.getElementById('overlay-menu-drawer');
+    if (!sidebar) return;
+
+    if (sidebar.classList.contains('translate-x-full')) {
+        sidebar.classList.remove('translate-x-full');
+        overlay?.classList.remove('hidden');
     } else {
-        drawer.classList.add('hidden');
-        drawer.classList.remove('flex');
+        sidebar.classList.add('translate-x-full');
+        overlay?.classList.add('hidden');
     }
 };
 
@@ -195,8 +279,11 @@ window.tutupSemuaPopup = function() {
     window.tutupModalSTBJ(); 
     window.tutupModalHold(); 
     
-    const drawer = document.getElementById('modal-menu-drawer');
-    if(drawer) { drawer.classList.add('hidden'); drawer.classList.remove('flex'); }
+    const sidebar = document.getElementById('sidebar-menu-drawer');
+    if(sidebar) sidebar.classList.add('translate-x-full');
+
+    const drawerOverlay = document.getElementById('overlay-menu-drawer');
+    if(drawerOverlay) drawerOverlay.classList.add('hidden');
 
     const alertModal = document.getElementById('modal-custom-alert');
     if(alertModal) { alertModal.classList.add('hidden'); alertModal.classList.remove('flex'); }
@@ -320,7 +407,7 @@ window.renderTabelRiwayat = function() {
 
     const rowClassBase = "transition r-row text-[13px] bg-white even:bg-slate-50 border-b border-slate-200";
 
-    // 1. SUBMENU MODE DETAIL PRODUKSI (AKUMULASI SPEK PRODUKSI)
+    // 1. SUBMENU MODE DETAIL PRODUKSI (AKUMULASI SPEK PRODUKSI + KOLOM AREA)
     if(modeRiwayat === 'produksi') {
         thead.innerHTML = `
             <tr>
@@ -330,6 +417,7 @@ window.renderTabelRiwayat = function() {
                 ${thSort('Tgl Produksi', 'col-tgl')}
                 ${thSort('Mesin', 'col-mesin text-center')}
                 ${thSort('Shift', 'col-shift text-center')}
+                ${thSort('Area', 'col-area text-center')}
                 ${thSort('Nama Item', 'col-nama')}
                 ${thSort('Panjang', 'col-pjg text-center')}
                 ${thSort('Grade', 'col-grade text-center')}
@@ -343,12 +431,14 @@ window.renderTabelRiwayat = function() {
         let groups = {};
         logLangsirRaw.forEach(r => {
             let pjgFormatted = formatPanjang(r.panjang);
-            let key = `${r.tgl_produksi}_${r.mesin}_${r.shift}_${r.nama_item}_${pjgFormatted}_${r.grade}_${r.dus}_${r.shading}_${r.customer}_${r.keterangan || '-'}`;
+            let area = r.posisi || '-';
+            let key = `${r.tgl_produksi}_${r.mesin}_${r.shift}_${area}_${r.nama_item}_${pjgFormatted}_${r.grade}_${r.dus}_${r.shading}_${r.customer}_${r.keterangan || '-'}`;
             if(!groups[key]) {
                 groups[key] = {
                     tgl: r.tgl_produksi || '-',
                     mesin: r.mesin || '-',
                     shift: r.shift || '-',
+                    area: area,
                     nama: r.nama_item || '-',
                     pjg: pjgFormatted,
                     grade: r.grade || '-',
@@ -365,7 +455,7 @@ window.renderTabelRiwayat = function() {
 
         let arr = Object.values(groups);
         if(arr.length === 0) { 
-            tbody.innerHTML = `<tr><td colspan="12" class="p-8 text-center font-medium text-slate-400">Tidak ada data produksi.</td></tr>`; 
+            tbody.innerHTML = `<tr><td colspan="13" class="p-8 text-center font-medium text-slate-400">Tidak ada data produksi.</td></tr>`; 
             applyPagination(); 
             return; 
         }
@@ -378,6 +468,7 @@ window.renderTabelRiwayat = function() {
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}" data-search="${r.tgl}">${r.tgl}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-center col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}" data-search="${r.mesin}">${r.mesin}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-center col-shift ${hiddenCols.includes('col-shift')?'col-hidden':''}" data-search="${r.shift}">${r.shift}</td>
+                    <td class="px-4 py-3 text-center col-area ${hiddenCols.includes('col-area')?'col-hidden':''}" data-search="${r.area}"><span class="text-emerald-700 font-black">${r.area}</span></td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}" data-search="${r.nama}">${r.nama}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-center col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}" data-search="${r.pjg}">${r.pjg}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-center col-grade ${hiddenCols.includes('col-grade')?'col-hidden':''}" data-search="${r.grade}">${r.grade}</td>
@@ -449,7 +540,7 @@ window.renderTabelRiwayat = function() {
                     <td class="px-4 py-3 text-center col-status ${hiddenCols.includes('col-status')?'col-hidden':''}" data-search="${itemStatus}">${statusBadge}</td>
                     <td class="px-4 py-3 text-slate-600 font-medium text-left col-waktu ${hiddenCols.includes('col-waktu')?'col-hidden':''}" data-search="${tgl}">${tgl}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-center col-troli ${hiddenCols.includes('col-troli')?'col-hidden':''}" data-search="${r.troli || '-'}">${r.troli || '-'}</td>
-                    <td class="px-4 py-3 text-center col-area ${hiddenCols.includes('col-area')?'col-hidden':''}" data-search="${r.posisi || '-'}"><span class="text-emerald-600 font-black">${r.posisi || '-'}</span></td>
+                    <td class="px-4 py-3 text-center col-area ${hiddenCols.includes('col-area')?'col-hidden':''}" data-search="${r.posisi || '-'}"><span class="text-emerald-700 font-black">${r.posisi || '-'}</span></td>
                     <td class="px-4 py-3 font-mono font-bold text-slate-900 tracking-wider text-left col-qr ${hiddenCols.includes('col-qr')?'col-hidden':''}" data-search="${r.qrcode}">${r.qrcode}</td>
                     <td class="px-4 py-3 font-medium text-slate-600 text-left col-tgl ${hiddenCols.includes('col-tgl')?'col-hidden':''}" data-search="${r.tgl_produksi || '-'}">${r.tgl_produksi || '-'}</td>
                     <td class="px-4 py-3 font-medium text-slate-600 text-center col-mesin ${hiddenCols.includes('col-mesin')?'col-hidden':''}" data-search="${r.mesin || '-'}">${r.mesin || '-'}</td>
@@ -507,7 +598,7 @@ window.renderTabelRiwayat = function() {
             h += `
                 <tr class="${rowClassBase}">
                     <td class="px-4 py-3 text-center col-cb sticky-col"><input type="checkbox" onchange="highlightRow(this)" value="agg-${i}" class="cb-row cursor-pointer w-4 h-4 text-blue-600 rounded border-slate-400 focus:ring-blue-500"></td>
-                    <td class="px-4 py-3 text-center col-area ${hiddenCols.includes('col-area')?'col-hidden':''}" data-search="${r.area}"><span class="text-emerald-600 font-black">${r.area}</span></td>
+                    <td class="px-4 py-3 text-center col-area ${hiddenCols.includes('col-area')?'col-hidden':''}" data-search="${r.area}"><span class="text-emerald-700 font-black">${r.area}</span></td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-left col-jenis ${hiddenCols.includes('col-jenis')?'col-hidden':''}" data-search="${r.jenis}">${r.jenis}</td>
                     <td class="px-4 py-3 font-semibold text-slate-800 text-left col-nama ${hiddenCols.includes('col-nama')?'col-hidden':''}" data-search="${r.nama}">${r.nama}</td>
                     <td class="px-4 py-3 font-medium text-slate-700 text-center col-pjg ${hiddenCols.includes('col-pjg')?'col-hidden':''}" data-search="${r.pjg}">${r.pjg}</td>
