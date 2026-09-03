@@ -35,6 +35,7 @@ window.tampilkanAlert = function(pesan, tipe = 'info') {
 
     msg.innerText = pesan;
     modal.classList.remove('hidden');
+    modal.classList.add('flex');
 
     if (tipe === 'warning') {
         title.innerText = 'Perhatian';
@@ -161,29 +162,47 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 100);
 });
 
-// DRAWER MENU INDUK TOGGLE
+// TOGGLE MODAL MENU TOMBOL (TIDAK LAGI BENTROK DENGAN SM:FLEX)
 window.toggleMenuDrawer = function() {
     const drawer = document.getElementById('modal-menu-drawer');
-    const overlay = document.getElementById('overlay-klik-luar');
-    if(drawer.classList.contains('hidden')) {
+    if (!drawer) return;
+    if (drawer.classList.contains('hidden')) {
         drawer.classList.remove('hidden');
-        overlay.classList.remove('hidden');
+        drawer.classList.add('flex');
     } else {
         drawer.classList.add('hidden');
-        overlay.classList.add('hidden');
+        drawer.classList.remove('flex');
     }
 };
 
-window.tutupModalArea = function() { document.getElementById('modal-ganti-area').classList.add('hidden'); };
-window.tutupModalSTBJ = function() { document.getElementById('modal-stbj-langsir').classList.add('hidden'); };
-window.tutupModalHold = function() { document.getElementById('modal-hold-langsir').classList.add('hidden'); };
+window.tutupModalArea = function() { 
+    const m = document.getElementById('modal-ganti-area');
+    if(m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+};
+
+window.tutupModalSTBJ = function() { 
+    const m = document.getElementById('modal-stbj-langsir');
+    if(m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+};
+
+window.tutupModalHold = function() { 
+    const m = document.getElementById('modal-hold-langsir');
+    if(m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+};
+
 window.tutupSemuaPopup = function() { 
     window.tutupModalArea(); 
     window.tutupModalSTBJ(); 
     window.tutupModalHold(); 
-    document.getElementById('modal-menu-drawer').classList.add('hidden');
-    document.getElementById('modal-custom-alert').classList.add('hidden');
-    document.getElementById('overlay-klik-luar').classList.add('hidden');
+    
+    const drawer = document.getElementById('modal-menu-drawer');
+    if(drawer) { drawer.classList.add('hidden'); drawer.classList.remove('flex'); }
+
+    const alertModal = document.getElementById('modal-custom-alert');
+    if(alertModal) { alertModal.classList.add('hidden'); alertModal.classList.remove('flex'); }
+
+    document.getElementById('overlay-klik-luar')?.classList.add('hidden');
+    
     const sidebarK = document.getElementById('sidebar-kolom');
     if(sidebarK) sidebarK.classList.add('translate-x-full');
     closeFilterMenu();
@@ -685,7 +704,6 @@ function updateSelectAllUI() {
 function applySelection() {
     const allRows = Array.from(document.querySelectorAll('#tbody-riwayat tr.r-row'));
     const visibleRows = allRows.filter(r => !r.classList.contains('filtered-out'));
-    
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
 
@@ -817,10 +835,12 @@ window.bukaModalGantiArea = function() {
     const cek = document.querySelectorAll('.cb-row:checked'); 
     if(cek.length === 0) return tampilkanAlert("Pilih baris terlebih dahulu dengan mencentang kotak!", "warning");
     
-    document.getElementById('teks-info-area').innerText = `Anda akan memindahkan ${cek.length} kardus ke lokasi baru.`;
+    document.getElementById('teks-info-area').innerText = `Anda akan memindahkan ${cek.length} dus ke lokasi baru.`;
     document.getElementById('select-new-area').value = ''; 
-    document.getElementById('modal-ganti-area').classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+    
+    const m = document.getElementById('modal-ganti-area');
+    if(m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+    document.getElementById('overlay-klik-luar')?.classList.remove('hidden');
 };
 
 window.eksekusiGantiArea = async function() {
@@ -892,7 +912,7 @@ window.eksekusiGantiArea = async function() {
         }
 
         tutupModalArea();
-        document.getElementById('overlay-klik-luar').classList.add('hidden');
+        document.getElementById('overlay-klik-luar')?.classList.add('hidden');
         tampilkanAlert(`${qrsToUpdate.length} item berhasil dipindahkan ke area "${newArea}".`, "success");
         await ambilSemuaData();
     } catch (error) {
@@ -908,7 +928,7 @@ window.cancelLangsir = async function() {
     const checkedBoxes = document.querySelectorAll('.cb-row:checked'); 
     if(checkedBoxes.length === 0) return tampilkanAlert("Centang minimal 1 baris yang ingin di-cancel langsir!", "warning");
     
-    if(!confirm(`Batal Langsir untuk ${checkedBoxes.length} kardus ini?\nData akan dihapus dari gudang (stok_global & stok_aktual) dan statusnya di STBJ dikembalikan ke 'HOLD LANGSIR'.`)) return;
+    if(!confirm(`Batal Langsir untuk ${checkedBoxes.length} dus ini?\nData akan dihapus dari gudang (stok_global & stok_aktual) dan statusnya di STBJ dikembalikan ke 'HOLD LANGSIR'.`)) return;
     
     const btn = document.getElementById('btn-cancel-langsir'); 
     const ori = btn ? btn.innerHTML : '';
@@ -1047,8 +1067,8 @@ window.downloadXLS = function() {
 
 window.bukaModalSTBJ = async function() {
     const mStbj = document.getElementById('modal-stbj-langsir'); 
-    if(mStbj) mStbj.classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+    if(mStbj) { mStbj.classList.remove('hidden'); mStbj.classList.add('flex'); }
+    document.getElementById('overlay-klik-luar')?.classList.remove('hidden');
 
     const tbody = document.getElementById('tbody-stbj-modal');
     if(tbody) tbody.innerHTML = '<div class="p-8 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="animate-spin w-6 h-6 mx-auto mb-2"></i> Memuat Data STBJ...</div>';
@@ -1102,8 +1122,8 @@ window.saringTabelModalSTBJ = function() {
 
 window.bukaModalHold = async function(tabelTarget = 'hold_stbj') {
     const mHold = document.getElementById('modal-hold-langsir'); 
-    if(mHold) mHold.classList.remove('hidden');
-    document.getElementById('overlay-klik-luar').classList.remove('hidden');
+    if(mHold) { mHold.classList.remove('hidden'); mHold.classList.add('flex'); }
+    document.getElementById('overlay-klik-luar')?.classList.remove('hidden');
     
     const tabStbj = document.getElementById('tab-hold-stbj');
     const tabLangsir = document.getElementById('tab-hold-langsir');
