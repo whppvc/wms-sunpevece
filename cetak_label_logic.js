@@ -1,5 +1,5 @@
 // ============================================================================
-// WMS SUNPEVECE v3.0 - CETAK LABEL ENGINE (FIX ID NOT-NULL & NO AREA)
+// WMS SUNPEVECE v3.0 - CETAK LABEL ENGINE (UUID AUTO-ID & NO AREA)
 // ============================================================================
 
 const PIN_CATEGORY = 'Cetak Label'; 
@@ -34,6 +34,18 @@ let currentSearchType = '';
 let selectedSearchData = { nama: '', kode: '', jenis: '', qty_isi: '', grade: '' };
 let searchTimeout; 
 
+// Helper Generator UUID v4 Mandiri (Mencegah Error NOT NULL ID)
+function generateUUID() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+// Helper untuk mengambil nilai kolom tanpa peduli huruf besar/kecil
 function getColValue(row, ...possibleKeys) {
     if (!row) return '';
     const rowKeys = Object.keys(row);
@@ -232,7 +244,7 @@ function populateSelect(elementId, items, placeholder) {
 }
 
 // ==========================================
-// 2. SEARCHABLE COMBOBOX PIC & LOGIN
+// 2. SEARCHABLE PIC DROPDOWN & LOGIN
 // ==========================================
 window.showPICDropdown = function() {
     const list = document.getElementById('pic-dropdown-list');
@@ -596,6 +608,7 @@ window.pilihDataSearch = function() {
         el.setAttribute('data-kode', selectedSearchData.kode);
     }
 
+    // Auto-fill Item: Jenis & Qty Isi
     if (currentSearchType === 'item') {
         const elJenis = document.getElementById('label-jenis');
         const elQtyIsi = document.getElementById('label-qty-isi');
@@ -603,6 +616,7 @@ window.pilihDataSearch = function() {
         if (elQtyIsi) elQtyIsi.value = selectedSearchData.qty_isi || '-';
     }
 
+    // Auto-fill Dus: Otomatis memilih Grade dari tabel master_dus
     if (currentSearchType === 'dus') {
         const gradeVal = selectedSearchData.grade || '';
         if (gradeVal) {
@@ -1007,13 +1021,13 @@ window.cetakLabel = async function() {
     let idKombinasi = `${item}_${panjang}_${grade}`.toUpperCase().replace(/\s/g, "");
 
     try {
-        // 1. UPDATE / INSERT SERIAL KE database_kode_unik
+        // 1. UPDATE / INSERT SERIAL KE database_kode_unik (Gunakan maybeSingle agar kebal terhadap kombinasi baru)
         let startSerial = 1;
         const { data: unikData, error: errUnik } = await db
             .from('database_kode_unik')
             .select('id, last_serial')
             .eq('id_kombinasi', idKombinasi)
-            .maybeSingle(); // Menggunakan maybeSingle agar tidak throw exception jika baris belum ada
+            .maybeSingle();
 
         if (errUnik) {
             console.warn("Notice database_kode_unik:", errUnik.message);
@@ -1029,6 +1043,7 @@ window.cetakLabel = async function() {
             if (errUpd) console.error("Gagal update database_kode_unik:", errUpd.message);
         } else {
             const { error: errIns } = await db.from('database_kode_unik').insert([{ 
+                id: generateUUID(),
                 id_kombinasi: idKombinasi, 
                 nama_item: item, 
                 panjang: panjang, 
@@ -1107,19 +1122,6 @@ window.cetakLabel = async function() {
         let currentRenderCount = 1;
         let payloadGudangArr = [];
 
-        // 3. AMBIL NEXT ID UNTUK database_gudang AGAR TIDAK VIOLATE NOT-NULL
-        let nextGudangId = null;
-        try {
-            const { data: lastRow } = await db.from('database_gudang').select('id').order('id', { ascending: false }).limit(1);
-            if (lastRow && lastRow.length > 0 && lastRow[0].id !== null && !isNaN(lastRow[0].id)) {
-                nextGudangId = parseInt(lastRow[0].id) + 1;
-            } else {
-                nextGudangId = Date.now();
-            }
-        } catch(e) {
-            nextGudangId = Date.now();
-        }
-
         for (let i = startSerial; i <= endSerial; i++) {
             let serialStr = "/" + String(i).padStart(4, '0');
             let fullBarcode = stateGlobal['label'].barcodeData + serialStr + suffixRevisi;
@@ -1173,9 +1175,9 @@ window.cetakLabel = async function() {
             sequenceImages.push(imgFrontBase64);
             sequenceImages.push(imgBackBase64); 
             
-            // PAYLOAD DENGAN ID OTOMATIS, pic_print, DAN akun (TANPA AREA & TANPA PIC)
+            // PAYLOAD DENGAN GENERATE UUID, pic_print, DAN akun (TANPA AREA & TANPA PIC)
             payloadGudangArr.push({
-                id: nextGudangId++, 
+                id: generateUUID(),                 // UUID v4 menjamin ID tidak pernah null
                 tgl_produksi: document.getElementById(`label-tgl`).value,
                 mesin: document.getElementById(`label-mesin`).value || '-',
                 shift: document.getElementById(`label-shift`).value || '-',
@@ -1187,8 +1189,8 @@ window.cetakLabel = async function() {
                 shading: document.getElementById(`label-shading`).value || '-',
                 customer: document.getElementById(`label-po`) ? document.getElementById(`label-po`).value : '-',
                 qty_print: 1,
-                pic_print: currentPIC,             // Mencatat nama PIC
-                akun: currentUser.username,        // Mencatat user login WMS
+                pic_print: currentPIC,             // Mencatat nama PIC Fisik
+                akun: currentUser.username,        // Mencatat akun user login WMS
                 kode_barcode: fullBarcode
             });
 
@@ -1206,10 +1208,10 @@ window.cetakLabel = async function() {
         nodeBack.style.transform = oldTransformBack; nodeBack.style.border = '1px solid black'; nodeBack.style.transition = '';
         wrapper.style.transform = oldWrapTransform; container.style.overflowY = oldOverflow;
         
-        // 4. SIMPAN KE database_gudang
+        // 3. SIMPAN KE database_gudang
         let { error: errGudang } = await db.from('database_gudang').insert(payloadGudangArr);
         
-        // Penanganan jika nama kolom tanggal di database masih ejaan lama (tgl_produksii)
+        // Penanganan jika kolom tanggal di database masih ejaan lama (tgl_produksii)
         if (errGudang && errGudang.message && errGudang.message.includes('tgl_produksi')) {
             const fallbackArr = payloadGudangArr.map(p => {
                 const c = { ...p, tgl_produksii: p.tgl_produksi };
@@ -1220,8 +1222,8 @@ window.cetakLabel = async function() {
             errGudang = resFallback.error;
         }
 
-        // Penanganan jika ID auto-increment database menolak ID manual dari JS
-        if (errGudang && errGudang.message && (errGudang.message.includes('identity') || errGudang.message.includes('unique'))) {
+        // Penanganan jika database sudah menyetel auto-generate id di level database
+        if (errGudang && errGudang.message && (errGudang.message.includes('identity') || errGudang.message.includes('cannot insert a non-DEFAULT value into column "id"'))) {
             const noIdArr = payloadGudangArr.map(p => {
                 const c = { ...p };
                 delete c.id;
